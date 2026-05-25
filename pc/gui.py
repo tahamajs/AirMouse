@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+Air Mouse PC Server – Beautiful Dark Mode GUI
+Supports start/stop, sensitivity slider, live log, and all gesture types.
+"""
+
 import asyncio
 import json
 import pyautogui
@@ -8,6 +13,7 @@ import threading
 from dataclasses import dataclass
 from typing import Optional
 
+# Configuration (can be extended to load from file)
 CONFIG = {
     "host": "0.0.0.0",
     "port": 8080,
@@ -59,19 +65,19 @@ class AirMouseServer:
                     self.mouse.move(msg.get('dx', 0), msg.get('dy', 0))
                 elif t == 'click':
                     self.mouse.click()
-                    await self.send_ack(msg.get('id'), writer)
+                    await self._send_ack(msg.get('id'), writer)
                     self.log("🖱️ Click")
                 elif t == 'doubleclick':
                     self.mouse.double_click()
-                    await self.send_ack(msg.get('id'), writer)
+                    await self._send_ack(msg.get('id'), writer)
                     self.log("🖱️🖱️ Double-click")
                 elif t == 'rightclick':
                     self.mouse.click(button='right')
-                    await self.send_ack(msg.get('id'), writer)
+                    await self._send_ack(msg.get('id'), writer)
                     self.log("🖱️ Right-click")
                 elif t == 'scroll':
                     self.mouse.scroll(msg.get('delta', 0))
-                    await self.send_ack(msg.get('id'), writer)
+                    await self._send_ack(msg.get('id'), writer)
                     self.log(f"📜 Scroll {msg.get('delta')}")
         except Exception as e:
             self.log(f"❌ Error: {e}")
@@ -80,7 +86,7 @@ class AirMouseServer:
             await writer.wait_closed()
             self.log(f"🔌 Disconnected: {addr}")
 
-    async def send_ack(self, msg_id, writer):
+    async def _send_ack(self, msg_id, writer):
         if msg_id:
             ack = json.dumps({'type': 'ack', 'id': msg_id})
             writer.write(ack.encode() + b'\n')
@@ -102,68 +108,91 @@ class AirMouseGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("✈️ Air Mouse Server")
-        self.root.geometry("600x500")
+        self.root.geometry("650x550")
         self.root.minsize(500, 400)
 
+        # Colors (dark theme)
         self.bg_color = "#1e1e1e"
         self.fg_color = "#d4d4d4"
         self.accent = "#007acc"
+        self.log_bg = "#252526"
 
         self.root.configure(bg=self.bg_color)
         self.setup_ui()
+
         self.server = AirMouseServer(log_callback=self.log)
         self.loop = None
         self.server_task = None
 
     def setup_ui(self):
         main_frame = tk.Frame(self.root, bg=self.bg_color)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
 
-        title = tk.Label(main_frame, text="Air Mouse Server", font=("Helvetica", 18, "bold"),
+        # Title
+        title = tk.Label(main_frame, text="Air Mouse Server", font=("Helvetica", 20, "bold"),
                          bg=self.bg_color, fg=self.accent)
         title.pack(pady=(0, 10))
 
-        self.status_label = tk.Label(main_frame, text="● Server stopped", font=("Helvetica", 10),
+        # Status indicator
+        self.status_label = tk.Label(main_frame, text="● Server stopped", font=("Helvetica", 11),
                                      bg=self.bg_color, fg="red")
         self.status_label.pack()
 
-        log_frame = tk.LabelFrame(main_frame, text="Connection Log", bg=self.bg_color, fg=self.fg_color)
-        log_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+        # Log area with frame
+        log_frame = tk.LabelFrame(main_frame, text=" Connection Log ", bg=self.bg_color,
+                                   fg=self.fg_color, font=("Helvetica", 10, "bold"))
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=15)
 
-        self.log_area = scrolledtext.ScrolledText(log_frame, height=15, bg="#252526", fg=self.fg_color,
-                                                   insertbackground='white', font=("Consolas", 10))
+        self.log_area = scrolledtext.ScrolledText(log_frame, height=18, bg=self.log_bg,
+                                                   fg=self.fg_color, insertbackground='white',
+                                                   font=("Consolas", 10), wrap=tk.WORD)
         self.log_area.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
+        # Control buttons
         btn_frame = tk.Frame(main_frame, bg=self.bg_color)
-        btn_frame.pack(fill=tk.X, pady=5)
+        btn_frame.pack(fill=tk.X, pady=8)
 
         self.start_btn = tk.Button(btn_frame, text="▶ Start Server", command=self.start_server,
-                                   bg=self.accent, fg="white", font=("Helvetica", 10, "bold"))
+                                   bg=self.accent, fg="white", font=("Helvetica", 10, "bold"),
+                                   padx=15, pady=5)
         self.start_btn.pack(side=tk.LEFT, padx=5)
 
         self.stop_btn = tk.Button(btn_frame, text="⏹ Stop Server", command=self.stop_server,
-                                  bg="#444444", fg="white", state=tk.DISABLED, font=("Helvetica", 10, "bold"))
+                                  bg="#444444", fg="white", state=tk.DISABLED,
+                                  font=("Helvetica", 10, "bold"), padx=15, pady=5)
         self.stop_btn.pack(side=tk.LEFT, padx=5)
 
+        # Sensitivity slider
         sens_frame = tk.Frame(main_frame, bg=self.bg_color)
-        sens_frame.pack(fill=tk.X, pady=10)
-        tk.Label(sens_frame, text="Mouse Sensitivity:", bg=self.bg_color, fg=self.fg_color).pack(side=tk.LEFT)
-        self.sens_slider = tk.Scale(sens_frame, from_=0.2, to=2.0, resolution=0.05, orient=tk.HORIZONTAL,
-                                    bg=self.bg_color, fg=self.fg_color, highlightthickness=0)
+        sens_frame.pack(fill=tk.X, pady=12)
+        tk.Label(sens_frame, text="Mouse Sensitivity:", bg=self.bg_color,
+                 fg=self.fg_color, font=("Helvetica", 10)).pack(side=tk.LEFT, padx=(0,10))
+
+        self.sens_slider = tk.Scale(sens_frame, from_=0.2, to=2.0, resolution=0.05,
+                                    orient=tk.HORIZONTAL, bg=self.bg_color, fg=self.fg_color,
+                                    highlightthickness=0, length=250)
         self.sens_slider.set(CONFIG["sensitivity"])
-        self.sens_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+        self.sens_slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.sens_slider.bind("<ButtonRelease-1>", self.update_sensitivity)
 
+        # Sensitivity value label
+        self.sens_value = tk.Label(sens_frame, text=f"{CONFIG['sensitivity']:.2f}",
+                                   bg=self.bg_color, fg=self.accent, width=6)
+        self.sens_value.pack(side=tk.LEFT, padx=(10,0))
+
+        # Footer
         footer = tk.Label(main_frame, text="University of Tehran – Embedded Systems Exercise",
                           font=("Helvetica", 8), bg=self.bg_color, fg="#888888")
-        footer.pack(pady=(5,0))
+        footer.pack(pady=(10,0))
 
     def log(self, msg: str):
+        """Thread‑safe log writing."""
         self.log_area.insert(tk.END, f"{msg}\n")
         self.log_area.see(tk.END)
 
     def update_sensitivity(self, event=None):
         CONFIG["sensitivity"] = self.sens_slider.get()
+        self.sens_value.config(text=f"{CONFIG['sensitivity']:.2f}")
         if hasattr(self.server, 'mouse'):
             self.server.mouse.sensitivity = CONFIG["sensitivity"]
         self.log(f"⚙️ Sensitivity changed to {CONFIG['sensitivity']:.2f}")

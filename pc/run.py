@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+One‑command launcher for Air Mouse PC server.
+Checks dependencies, installs if missing, then starts GUI.
+"""
+
 import subprocess
 import sys
 import os
@@ -15,6 +20,7 @@ def main():
         print("⚠️ Missing dependencies. Installing...")
         install_dependencies()
 
+    # Launch GUI
     from gui import AirMouseGUI
     gui = AirMouseGUI()
     gui.run()
