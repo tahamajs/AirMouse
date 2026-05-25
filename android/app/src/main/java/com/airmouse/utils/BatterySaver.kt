@@ -5,31 +5,23 @@ import android.os.Handler
 import android.os.Looper
 import com.airmouse.sensors.SensorService
 
+/**
+ * Reduces sensor sampling rate when the phone is stationary to save battery.
+ */
 class BatterySaver {
     private var handler = Handler(Looper.getMainLooper())
-    private var isLowPowerMode = false
     private var sensorService: SensorService? = null
-    private val idleTimeout = 10000L // 10 seconds of no movement
+    private var isLowPower = false
     private var lastMovementTime = System.currentTimeMillis()
-    private val movementThreshold = 0.5f
+    private val idleThresholdMs = 10000L   // 10 seconds of no movement
+    private var lastRoll = 0f
+    private var lastYaw = 0f
 
     private val checkRunnable = object : Runnable {
         override fun run() {
             if (sensorService == null) return
-            val now = System.currentTimeMillis()
-            val currentMovement = sensorService?.getMovementMagnitude() ?: 0f
-            if (currentMovement > movementThreshold) {
-                lastMovementTime = now
-                if (isLowPowerMode) {
-                    // Return to normal
-                    sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
-                    isLowPowerMode = false
-                }
-            } else if (now - lastMovementTime > idleTimeout && !isLowPowerMode) {
-                // Enter low power
-                sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_NORMAL)
-                isLowPowerMode = true
-            }
+            // This is simplified; in reality you'd need a movement magnitude callback
+            // For now, we assume BatterySaver is called by MainActivity based on sensor values.
             handler.postDelayed(this, 2000)
         }
     }
@@ -41,9 +33,34 @@ class BatterySaver {
 
     fun stop() {
         handler.removeCallbacks(checkRunnable)
-        if (isLowPowerMode) {
+        if (isLowPower) {
             sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
+            isLowPower = false
         }
         sensorService = null
+    }
+
+    fun isLowPowerMode(): Boolean = isLowPower
+
+    fun onMovement() {
+        lastMovementTime = System.currentTimeMillis()
+        if (isLowPower) {
+            // Restore normal rate
+            sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
+            isLowPower = false
+        }
+    }
+
+    // This should be called regularly from SensorService or MainActivity
+    fun updateMovement(roll: Float, yaw: Float) {
+        val delta = kotlin.math.abs(roll - lastRoll) + kotlin.math.abs(yaw - lastYaw)
+        lastRoll = roll
+        lastYaw = yaw
+        if (delta > 0.05f) {
+            onMovement()
+        } else if (!isLowPower && System.currentTimeMillis() - lastMovementTime > idleThresholdMs) {
+            sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_NORMAL)
+            isLowPower = true
+        }
     }
 }
