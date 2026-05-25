@@ -37,5 +37,28 @@
         android:layout_height="100dp"
         android:layout_gravity="center"
         android:background="@drawable/green_square" />
+<!-- Add inside the LinearLayout after the existing buttons -->
+    <SeekBar
+        android:id="@+id/sensitivity_seekbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:max="90" />
+    <TextView
+        android:id="@+id/sensitivity_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Speed: 0.5x" />
+    <Button
+        android:id="@+id/settings_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Settings" />
+    <Button
+        android:id="@+id/debug_toggle_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Show Debug" />
+
 
 </LinearLayout>

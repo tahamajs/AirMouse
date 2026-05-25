@@ -1,27 +1,21 @@
 # Submission Checklist – Air Mouse
 
-## Required Files
-- [ ] Android source code (all .kt, .xml, gradle files) in a zip
-- [ ] APK file (debug or release) named `airmouse.apk`
-- [ ] PC Python server code (`server.py` or `gui_server.py`)
-- [ ] Video (max 5 min) showing:
-  - [ ] Phone and laptop screen visible simultaneously
-  - [ ] Cursor movement (smooth, no drift)
-  - [ ] Click action
-  - [ ] Scroll up/down
-  - [ ] Calibration process briefly shown
-- [ ] Report PDF containing:
-  - [ ] Answers to 11 Perfetto questions (with screenshots)
-  - [ ] Explanation of sensor fusion method
-  - [ ] Challenges faced and solutions
-  - [ ] Team member contributions
-- [ ] Perfetto trace file (`.perfetto-trace`)
+Use this checklist before uploading to the course system.
 
-## Before Upload
-- [ ] Code compiles without errors on Android 10+
-- [ ] Python server works on target OS (tested)
-- [ ] Video shows both devices clearly
-- [ ] All team members understand every part of the code
+## Required Files (in ZIP)
+
+- [ ] **Android source code** – entire `android/` folder (including `.kt`, `.xml`, `build.gradle`, etc.)
+- [ ] **APK file** – `airmouse.apk` (debug or release)
+- [ ] **PC server code** – `pc/server.py` (or `pc/gui_server.py`)
+- [ ] **Video** – `demo.mp4` (max 5 min, showing both screens)
+- [ ] **Report PDF** – `report.pdf` containing:
+  - [ ] Answers to 11 Perfetto questions (with screenshots)
+  - [ ] Explanation of sensor fusion method (Madgwick)
+  - [ ] Calibration process summary
+  - [ ] Team member contributions (who did what)
+  - [ ] Any challenges faced and solutions
+- [ ] **Perfetto trace file** – `trace.perfetto-trace` (optional but recommended)
 
 ## Naming Convention
-`CPS-CA2-<SID1>-<SID2>-<SID3>-<SID4>.zip`
+
+Zip file must be named:

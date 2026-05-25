@@ -1,57 +1,84 @@
 package com.airmouse.network
 
 import android.util.Log
+import com.airmouse.utils.PreferencesManager
 import org.json.JSONObject
 import java.io.*
 import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 
-class DataSender(private val host: String, private val port: Int) : Thread() {
+class DataSender(private val host: String, private val port: Int, private val prefs: PreferencesManager) : Thread() {
     private var socket: Socket? = null
     private var out: DataOutputStream? = null
     private var input: BufferedReader? = null
-    private var running = false
+    @Volatile private var running = false
     private val queue = LinkedBlockingQueue<String>()
     private val pendingAcks = ConcurrentHashMap<Long, String>()
     private val ackTimeout = 500L
 
-    override fun run() {
-        try {
-            socket = Socket(host, port)
-            out = DataOutputStream(socket!!.getOutputStream())
-            input = BufferedReader(InputStreamReader(socket!!.getInputStream()))
-            running = true
+    fun updateHost(newHost: String) {
+        // Will reconnect on next attempt
+    }
 
-            thread {
-                while (running) {
+    override fun run() {
+        while (running) {
+            try {
+                connect()
+                processLoop()
+            } catch (e: Exception) {
+                Log.e("DataSender", "Connection lost, retrying in 5s...", e)
+                Thread.sleep(5000)
+            }
+        }
+    }
+
+    private fun connect() {
+        socket = Socket(host, port)
+        out = DataOutputStream(socket!!.getOutputStream())
+        input = BufferedReader(InputStreamReader(socket!!.getInputStream()))
+        Log.d("DataSender", "Connected to $host:$port")
+    }
+
+    private fun processLoop() {
+        // ACK receiver thread
+        val ackThread = Thread {
+            while (running && socket?.isConnected == true) {
+                try {
                     val line = input?.readLine() ?: break
                     if (line.contains("ack")) {
                         val id = JSONObject(line).optLong("id", -1)
                         pendingAcks.remove(id)
                     }
-                }
+                } catch (e: Exception) { break }
             }
+        }
+        ackThread.start()
 
-            while (running) {
-                val msg = queue.take()
+        // Sender loop
+        while (running && socket?.isConnected == true) {
+            val msg = queue.take()
+            try {
                 out?.writeBytes("$msg\n")
                 out?.flush()
-                if (msg.contains("\"type\":\"click\"") || msg.contains("\"type\":\"scroll\"")) {
+                if (msg.contains("\"type\":\"click\"") || msg.contains("\"type\":\"scroll\"") ||
+                    msg.contains("\"type\":\"doubleclick\"") || msg.contains("\"type\":\"rightclick\"")) {
                     val id = JSONObject(msg).optLong("id", -1)
-                    pendingAcks[id] = msg
-                    Thread.sleep(ackTimeout)
-                    if (pendingAcks.containsKey(id)) {
-                        out?.writeBytes("$msg\n")
-                        pendingAcks.remove(id)
+                    if (id != -1L) {
+                        pendingAcks[id] = msg
+                        Thread.sleep(ackTimeout)
+                        if (pendingAcks.containsKey(id)) {
+                            out?.writeBytes("$msg\n")
+                            pendingAcks.remove(id)
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                Log.e("DataSender", "Send failed", e)
+                // Re-add message to front of queue? For simplicity, just lose it.
             }
-        } catch (e: Exception) {
-            Log.e("DataSender", "Connection error", e)
-        } finally {
-            close()
         }
+        ackThread.join()
     }
 
     fun sendMove(dx: Float, dy: Float) {
@@ -71,6 +98,22 @@ class DataSender(private val host: String, private val port: Int) : Thread() {
         queue.offer(json.toString())
     }
 
+    fun sendDoubleClick() {
+        val json = JSONObject().apply {
+            put("type", "doubleclick")
+            put("id", System.currentTimeMillis())
+        }
+        queue.offer(json.toString())
+    }
+
+    fun sendRightClick() {
+        val json = JSONObject().apply {
+            put("type", "rightclick")
+            put("id", System.currentTimeMillis())
+        }
+        queue.offer(json.toString())
+    }
+
     fun sendScroll(delta: Int) {
         val json = JSONObject().apply {
             put("type", "scroll")
@@ -82,10 +125,6 @@ class DataSender(private val host: String, private val port: Int) : Thread() {
 
     fun stopSending() {
         running = false
-        close()
-    }
-
-    private fun close() {
         try {
             out?.close()
             input?.close()

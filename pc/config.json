@@ -1,0 +1,7 @@
+{
+    "host": "0.0.0.0",
+    "port": 8080,
+    "sensitivity": 0.5,
+    "log_level": "INFO",
+    "log_file": "airmouse.log"
+}
