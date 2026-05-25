@@ -2,6 +2,11 @@ package com.airmouse.domain
 
 import kotlin.math.*
 
+/**
+ * Madgwick AHRS algorithm implementation.
+ * Combines gyroscope, accelerometer, and magnetometer into a quaternion.
+ * Outputs roll, pitch, yaw angles in radians.
+ */
 class MadgwickFusion(private val beta: Float = 0.1f) {
     private var q0 = 1.0f
     private var q1 = 0.0f
@@ -11,16 +16,24 @@ class MadgwickFusion(private val beta: Float = 0.1f) {
     private var ax = 0f; private var ay = 0f; private var az = 0f
     private var mx = 0f; private var my = 0f; private var mz = 0f
 
+    /**
+     * Update the filter with new gyroscope data.
+     * @param gx Angular velocity around X (rad/s)
+     * @param gy Angular velocity around Y
+     * @param gz Angular velocity around Z
+     * @param dt Time step in seconds
+     */
     fun updateGyro(gx: Float, gy: Float, gz: Float, dt: Float) {
         var recipNorm: Float
         var s0: Float; var s1: Float; var s2: Float; var s3: Float
         var qDot1: Float; var qDot2: Float; var qDot3: Float; var qDot4: Float
 
         qDot1 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz)
-        qDot2 = 0.5f * (q0 * gx + q2 * gz - q3 * gy)
-        qDot3 = 0.5f * (q0 * gy - q1 * gz + q3 * gx)
-        qDot4 = 0.5f * (q0 * gz + q1 * gy - q2 * gx)
+        qDot2 = 0.5f * ( q0 * gx + q2 * gz - q3 * gy)
+        qDot3 = 0.5f * ( q0 * gy - q1 * gz + q3 * gx)
+        qDot4 = 0.5f * ( q0 * gz + q1 * gy - q2 * gx)
 
+        // Gradient descent correction if accelerometer data available
         if (ax != 0f && ay != 0f && az != 0f) {
             recipNorm = 1f / sqrt(ax * ax + ay * ay + az * az)
             val normAx = ax * recipNorm
@@ -64,15 +77,32 @@ class MadgwickFusion(private val beta: Float = 0.1f) {
         q3 *= recipNorm
     }
 
+    /**
+     * Update the stored accelerometer data (used in next gyro update).
+     */
     fun updateAccel(x: Float, y: Float, z: Float) {
         ax = x; ay = y; az = z
     }
 
+    /**
+     * Update the stored magnetometer data.
+     */
     fun updateMag(x: Float, y: Float, z: Float) {
         mx = x; my = y; mz = z
     }
 
+    /**
+     * @return Roll angle (rotation around X) in radians.
+     */
     fun getRoll(): Float = atan2(2f * (q0 * q1 + q2 * q3), 1f - 2f * (q1 * q1 + q2 * q2))
+
+    /**
+     * @return Pitch angle (rotation around Y) in radians.
+     */
     fun getPitch(): Float = asin(2f * (q0 * q2 - q3 * q1))
+
+    /**
+     * @return Yaw angle (rotation around Z) in radians.
+     */
     fun getYaw(): Float = atan2(2f * (q0 * q3 + q1 * q2), 1f - 2f * (q2 * q2 + q3 * q3))
 }
