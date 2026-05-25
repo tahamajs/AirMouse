@@ -1,5 +1,9 @@
 package com.airmouse.sensors
 
+/**
+ * Simple motion detector for basic click and scroll.
+ * (Not used in the enhanced version – kept for reference.)
+ */
 class MotionDetector {
     enum class Gesture { CLICK, SCROLL_UP, SCROLL_DOWN }
 

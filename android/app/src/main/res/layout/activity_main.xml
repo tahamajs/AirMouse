@@ -1,64 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:fillViewport="true">
 
-    <EditText
-        android:id="@+id/ip_edit_text"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Laptop IP Address"
-        android:inputType="phone" />
+        android:orientation="vertical">
 
-    <Button
-        android:id="@+id/calibrate_btn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Calibrate Sensors" />
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Laptop IP Address">
 
-    <Button
-        android:id="@+id/start_btn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Start Air Mouse" />
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/ipInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="phone" />
 
-    <TextView
-        android:id="@+id/status_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Not connected"
-        android:textAlignment="center" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-    <View
-        android:id="@+id/orientation_view"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:layout_gravity="center"
-        android:background="@drawable/green_square" />
-<!-- Add inside the LinearLayout after the existing buttons -->
-    <SeekBar
-        android:id="@+id/sensitivity_seekbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:max="90" />
-    <TextView
-        android:id="@+id/sensitivity_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Speed: 0.5x" />
-    <Button
-        android:id="@+id/settings_btn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Settings" />
-    <Button
-        android:id="@+id/debug_toggle_btn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Show Debug" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/calibrateButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Calibrate Sensors"
+            style="@style/Widget.Material3.Button.ElevatedButton"/>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/startButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Start Air Mouse"
+            style="@style/Widget.Material3.Button.ElevatedButton"/>
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Not connected"
+            android:textAlignment="center"
+            android:padding="8dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cursor Speed"
+            android:layout_marginTop="16dp"/>
+
+        <SeekBar
+            android:id="@+id/sensitivitySlider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="25"/>
+
+        <TextView
+            android:id="@+id/sensitivityValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="0.50x"
+            android:gravity="center"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/settingsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Settings"
+            style="@style/Widget.Material3.Button.OutlinedButton"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/debugButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show Debug"
+            style="@style/Widget.Material3.Button.TextButton"/>
+
+        <View
+            android:id="@+id/orientationIndicator"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/green_square" />
+
+    </LinearLayout>
+</ScrollView>

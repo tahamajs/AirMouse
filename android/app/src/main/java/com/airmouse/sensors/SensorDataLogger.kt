@@ -8,6 +8,10 @@ import android.hardware.SensorManager
 import java.io.File
 import java.io.FileOutputStream
 
+/**
+ * Utility class to log raw sensor data to a CSV file for offline analysis.
+ * Useful for debugging or answering Perfetto questions.
+ */
 class SensorDataLogger(private val context: Context) : SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private var logFile: File? = null
@@ -19,11 +23,12 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         val gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST)
         sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_FASTEST)
         sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_FASTEST)
 
-        logFile = File(context.getExternalFilesDir(null), "sensor_log.csv")
+        logFile = File(context.getExternalFilesDir(null), "sensor_log_${System.currentTimeMillis()}.csv")
         outputStream = FileOutputStream(logFile)
         outputStream?.write("timestamp,type,x,y,z\n".toByteArray())
         isLogging = true
