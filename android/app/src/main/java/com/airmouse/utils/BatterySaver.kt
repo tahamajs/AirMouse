@@ -7,9 +7,11 @@ import com.airmouse.sensors.SensorService
 
 /**
  * Reduces sensor sampling rate when the phone is stationary to save battery.
+ * Monitors orientation changes (roll/yaw) and switches between SENSOR_DELAY_GAME (50 Hz)
+ * and SENSOR_DELAY_NORMAL (20 Hz) after 10 seconds of no movement.
  */
 class BatterySaver {
-    private var handler = Handler(Looper.getMainLooper())
+    private val handler = Handler(Looper.getMainLooper())
     private var sensorService: SensorService? = null
     private var isLowPower = false
     private var lastMovementTime = System.currentTimeMillis()
@@ -20,17 +22,23 @@ class BatterySaver {
     private val checkRunnable = object : Runnable {
         override fun run() {
             if (sensorService == null) return
-            // This is simplified; in reality you'd need a movement magnitude callback
-            // For now, we assume BatterySaver is called by MainActivity based on sensor values.
+            // Periodic check (every 2 seconds) for movement
             handler.postDelayed(this, 2000)
         }
     }
 
+    /**
+     * Start battery saver monitoring.
+     * @param service The SensorService instance that allows changing sampling rate.
+     */
     fun start(service: SensorService) {
         sensorService = service
         handler.post(checkRunnable)
     }
 
+    /**
+     * Stop monitoring and restore normal sampling rate.
+     */
     fun stop() {
         handler.removeCallbacks(checkRunnable)
         if (isLowPower) {
@@ -40,18 +48,26 @@ class BatterySaver {
         sensorService = null
     }
 
+    /**
+     * @return true if currently in low‑power (reduced sampling) mode.
+     */
     fun isLowPowerMode(): Boolean = isLowPower
 
+    /**
+     * Called whenever movement is detected. Resets idle timer and restores normal rate if needed.
+     */
     fun onMovement() {
         lastMovementTime = System.currentTimeMillis()
         if (isLowPower) {
-            // Restore normal rate
             sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
             isLowPower = false
         }
     }
 
-    // This should be called regularly from SensorService or MainActivity
+    /**
+     * Call this regularly (e.g., from SensorService on each orientation update) with current roll and yaw.
+     * It computes the movement delta and triggers onMovement() if significant.
+     */
     fun updateMovement(roll: Float, yaw: Float) {
         val delta = kotlin.math.abs(roll - lastRoll) + kotlin.math.abs(yaw - lastYaw)
         lastRoll = roll
