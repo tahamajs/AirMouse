@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,25 +24,13 @@ import com.airmouse.sensors.SensorService
 import com.airmouse.ui.DebugOverlay
 import com.airmouse.ui.SettingsDialog
 import com.airmouse.utils.BatterySaver
-import com.airmouse.utils.PreferencesManager
 import com.airmouse.utils.NetworkUtils
+import com.airmouse.utils.PreferencesManager
 import com.airmouse.utils.SensorUtils
 import kotlinx.coroutines.launch
 
 /**
  * Main Activity for the Air Mouse application.
- * 
- * This activity integrates all modules:
- * - SensorService (sensor fusion, gesture detection)
- * - DataSender + AutoReconnect (TCP communication with PC)
- * - CalibrationHelper (gyro, mag, accel calibration)
- * - EnhancedGestureDetector (click, double-click, right-click, scroll)
- * - PreferencesManager (persistent settings)
- * - BatterySaver (adaptive sampling rate)
- * - DebugOverlay (floating debug window)
- * 
- * The UI includes IP input, sensitivity slider, calibrate/start buttons,
- * orientation indicator (green square), and settings/debug toggles.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -116,8 +105,8 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         sensorService.stop()
-        dataSender.stopSending()
-        autoReconnect.stop()
+        if (::dataSender.isInitialized) dataSender.stopSending()
+        if (::autoReconnect.isInitialized) autoReconnect.stop()
         batterySaver.stop()
         debugOverlay.hide()
     }
@@ -344,6 +333,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 EnhancedGestureDetector.Gesture.SCROLL_UP -> dataSender.sendScroll(-1)
                 EnhancedGestureDetector.Gesture.SCROLL_DOWN -> dataSender.sendScroll(1)
+                else -> { /* NONE – do nothing */ }
             }
         }
 

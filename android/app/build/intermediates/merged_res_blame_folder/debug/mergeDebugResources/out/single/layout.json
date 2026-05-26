@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.airmouse.app-mergeDebugResources-36:/layout/activity_main.xml",
+        "source": "com.airmouse.app-main-39:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.airmouse.app-mergeDebugResources-36:/layout/fragment_calibration.xml",
+        "source": "com.airmouse.app-main-39:/layout/fragment_calibration.xml"
+    },
+    {
+        "merged": "com.airmouse.app-mergeDebugResources-36:/layout/fragment_settings.xml",
+        "source": "com.airmouse.app-main-39:/layout/fragment_settings.xml"
+    },
+    {
+        "merged": "com.airmouse.app-mergeDebugResources-36:/layout/debug_overlay.xml",
+        "source": "com.airmouse.app-main-39:/layout/debug_overlay.xml"
+    }
+]

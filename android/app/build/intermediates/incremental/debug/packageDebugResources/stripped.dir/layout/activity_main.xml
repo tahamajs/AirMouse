@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- IP address input -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Laptop IP Address"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/ip_edit_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="phone"
+                android:imeOptions="actionDone" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Sensor status (optional, new) -->
+        <TextView
+            android:id="@+id/sensor_status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Checking sensors..."
+            android:textSize="12sp"
+            android:gravity="center"
+            android:layout_marginTop="8dp" />
+
+        <!-- Buttons -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/calibrate_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Calibrate Sensors"
+            android:layout_marginTop="16dp"
+            style="@style/Widget.Material3.Button.ElevatedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/start_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Start Air Mouse"
+            android:layout_marginTop="8dp"
+            style="@style/Widget.Material3.Button.ElevatedButton" />
+
+        <!-- Status text -->
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Not connected"
+            android:textAlignment="center"
+            android:padding="8dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+        <!-- Sensitivity slider -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cursor Speed"
+            android:layout_marginTop="16dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+        <SeekBar
+            android:id="@+id/sensitivity_seekbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="25" />
+
+        <TextView
+            android:id="@+id/sensitivity_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="0.50x"
+            android:gravity="center"
+            android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+        <!-- Settings and Debug -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/settings_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Settings"
+            android:layout_marginTop="16dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/debug_toggle_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show Debug"
+            style="@style/Widget.Material3.Button.TextButton" />
+
+        <!-- Orientation indicator (green square) -->
+        <View
+            android:id="@+id/orientation_view"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/green_square" />
+
+    </LinearLayout>
+</ScrollView>

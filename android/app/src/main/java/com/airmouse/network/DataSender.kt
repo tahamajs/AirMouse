@@ -29,6 +29,9 @@ class DataSender(
     // Connection state
     @Volatile private var running = false
     @Volatile private var connected = false
+    @Volatile var isConnected = false
+        private set
+
     private var socket: Socket? = null
     private var out: DataOutputStream? = null
     private var input: BufferedReader? = null
@@ -36,7 +39,8 @@ class DataSender(
     // Message queue and ACK tracking
     private val queue = LinkedBlockingQueue<String>()
     private val pendingAcks = ConcurrentHashMap<Long, String>()
-    private val ackCheckerThread = Thread { processAcks() }
+    private lateinit var ackCheckerThread: Thread
+    private lateinit var retransmitThread: Thread
 
     // Callbacks (optional, for UI feedback)
     var onConnected: (() -> Unit)? = null
@@ -56,7 +60,10 @@ class DataSender(
      */
     override fun start() {
         running = true
+        ackCheckerThread = Thread { processAcks() }
+        retransmitThread = Thread { retransmitLoop() }
         ackCheckerThread.start()
+        retransmitThread.start()
         super.start()
     }
 
@@ -85,6 +92,7 @@ class DataSender(
         out = DataOutputStream(socket!!.getOutputStream())
         input = BufferedReader(InputStreamReader(socket!!.getInputStream()))
         connected = true
+        isConnected = true
         onConnected?.invoke()
         Log.d(TAG, "Connected successfully")
     }
@@ -171,23 +179,9 @@ class DataSender(
     }
 
     /**
-     * Retransmission thread: checks pending ACKs and resends after timeout.
-     * (Called periodically from the main loop or a separate timer.)
-     * For simplicity, we integrate retransmission into the sender loop by checking pendingAcks.
-     * However, a better approach is a dedicated thread. We'll add a simple retransmission check.
+     * Retransmission loop: resends messages that have not been acknowledged after timeout.
      */
-    // We'll add a retransmission check inside the main loop.
-    // But to keep clean, we'll create a separate timer. Since we already have ackCheckerThread,
-    // we can extend it to also retransmit. Let's modify processAcks to also retransmit after timeout.
-    // Actually, the original code had retransmission immediately after sending. That's fine.
-    // I'll keep original retransmission logic inside sendMessage by adding a delayed retransmission.
-    // However, the original used Thread.sleep after send – that blocks the sender loop.
-    // Better: use a separate thread for retransmission. Let's implement that.
-
-    // We'll add a retransmission handler inside processAcks (renamed to ackAndRetransmitLoop).
-    // But to keep code simple and functional, I'll implement a dedicated retransmit thread.
-
-    private val retransmitThread = Thread {
+    private fun retransmitLoop() {
         while (running) {
             try {
                 Thread.sleep(ACK_TIMEOUT_MS)
@@ -205,16 +199,12 @@ class DataSender(
         }
     }
 
-    // Start retransmit thread in start() method
-    init {
-        retransmitThread.start()
-    }
-
     /**
      * Closes socket and streams.
      */
     private fun closeConnection() {
         connected = false
+        isConnected = false
         try {
             out?.close()
             input?.close()

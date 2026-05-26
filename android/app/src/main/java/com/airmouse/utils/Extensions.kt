@@ -3,19 +3,14 @@ package com.airmouse.utils
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 
-fun <T> MutableLiveData<T>.postValueIfNotSame(value: T) {
-    if (this.value != value) postValue(value)
-}package com.airmouse.utils
-
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-
 /**
- * Posts a new value only if it differs from the current one.
+ * Extension function to post a value only if it differs from the current one.
  * Prevents unnecessary UI updates.
  */
 fun <T> MutableLiveData<T>.postValueIfNotSame(value: T) {
-    if (this.value != value) postValue(value)
+    if (this.value != value) {
+        postValue(value)
+    }
 }
 
 /**
