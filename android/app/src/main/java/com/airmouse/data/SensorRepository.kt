@@ -7,8 +7,9 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.VibrationEffect
 import android.os.Vibrator
-import com.airmouse.domain.CalibrationUseCase
-import com.airmouse.domain.MadgwickFusion
+import com.airmouse.sensors.CalibrationHelper
+import com.airmouse.sensors.MadgwickAHRS
+import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -18,19 +19,26 @@ import kotlinx.coroutines.Dispatchers
 /**
  * Repository that provides a flow of fused orientation data (roll, yaw)
  * and also allows calibration and haptic feedback.
+ * Uses the existing CalibrationHelper and MadgwickAHRS from the original codebase.
  */
 class SensorRepository(context: Context) {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-    private val calibrationHelper = CalibrationHelper(context)
+    private val preferences = PreferencesManager(context)  // use existing PreferencesManager
+    private val calibrationHelper = CalibrationHelper(context, preferences)
 
-    suspend fun calibrateGyro() = calibrationHelper.calibrateGyro()
-    suspend fun calibrateMagnetometer(durationMs: Long) = calibrationHelper.calibrateMagnetometer(durationMs)
-    suspend fun calibrateAccelerometer() = calibrationHelper.calibrateAccelerometer()
+    suspend fun calibrateGyro(onInstruction: (String) -> Unit) = calibrationHelper.calibrateGyro(onInstruction)
+    suspend fun calibrateMagnetometer(durationMs: Long, onInstruction: (String) -> Unit) = calibrationHelper.calibrateMagnetometer(durationMs, onInstruction)
+    suspend fun calibrateAccelerometer(onInstruction: (String) -> Unit) = calibrationHelper.calibrateAccelerometer(onInstruction)
 
     fun vibrate(duration: Long) {
-        vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
+        }
     }
 
     /**
@@ -38,10 +46,12 @@ class SensorRepository(context: Context) {
      * The flow runs on a background dispatcher to avoid blocking the main thread.
      */
     val sensorEvents: Flow<SensorData> = callbackFlow {
-        val madgwick = MadgwickFusion(beta = 0.1f)
+        val madgwick = MadgwickAHRS(beta = 0.1f)
         var lastTimestamp = 0L
         var lastGyroY = 0f
         var lastAccelY = 0f
+        var lastRoll = 0f
+        var lastYaw = 0f
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
@@ -56,13 +66,6 @@ class SensorRepository(context: Context) {
                         )
                         madgwick.updateAccel(ax, ay, az)
                         lastAccelY = ay
-                        // Send after each sensor update? Wait for gyro? We'll send after gyro+mag also.
-                        // Actually we send after accelerometer because we have roll/yaw from fusion.
-                        // But roll/yaw only change after gyro updates. To avoid sending too often,
-                        // we send in both accel and gyro? We'll send only after gyro for consistency.
-                        // However, for responsiveness, we can send after every sensor type.
-                        // The standard pattern: send after magnetometer (all three received).
-                        // Simpler: send after every gyro update. We'll do that inside gyro case.
                     }
                     Sensor.TYPE_GYROSCOPE -> {
                         val gx = calibrationHelper.correctGyro(event.values[0], 0)
@@ -71,10 +74,11 @@ class SensorRepository(context: Context) {
                         madgwick.updateGyro(gx, gy, gz, dt)
                         lastGyroY = gy
 
-                        // After gyro update, fusion state includes latest accel and mag
+                        // After gyro update, we have updated orientation
                         val roll = madgwick.getRoll()
                         val yaw = madgwick.getYaw()
-                        trySend(SensorData(roll, yaw, lastGyroY, lastAccelY))
+                        lastRoll = roll
+                        lastYaw = yaw
                     }
                     Sensor.TYPE_MAGNETIC_FIELD -> {
                         val (mx, my, mz) = calibrationHelper.correctMagnetometer(
@@ -83,6 +87,10 @@ class SensorRepository(context: Context) {
                         madgwick.updateMag(mx, my, mz)
                     }
                 }
+                // Emit after each complete sensor cycle? Emit after gyro (most frequent).
+                // To avoid missing updates, we emit after each sensor event with the latest values.
+                // For smoothness, we can emit on every sensor event.
+                trySend(SensorData(lastRoll, lastYaw, lastGyroY, lastAccelY))
             }
 
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
@@ -110,52 +118,4 @@ class SensorRepository(context: Context) {
         val gyroY: Float,  // rad/s, for click detection
         val accelY: Float  // m/s², for scroll detection
     )
-
-    /**
-     * Internal helper that uses CalibrationUseCase to obtain and store calibration parameters.
-     */
-    private inner class CalibrationHelper(private val context: Context) {
-        private var gyroBias = FloatArray(3)
-        private var accelOffset = FloatArray(3)
-        private var accelScale = FloatArray(3) { 1f }
-        private var magOffset = FloatArray(3)
-        private var magScale = FloatArray(3) { 1f }
-
-        suspend fun calibrateGyro() {
-            val useCase = CalibrationUseCase(context)
-            gyroBias = useCase.calibrateGyro()
-        }
-
-        suspend fun calibrateMagnetometer(durationMs: Long) {
-            val useCase = CalibrationUseCase(context)
-            val (offset, scale) = useCase.calibrateMagnetometer(durationMs)
-            magOffset = offset
-            magScale = scale
-        }
-
-        suspend fun calibrateAccelerometer() {
-            val useCase = CalibrationUseCase(context)
-            val (offset, scale) = useCase.calibrateAccelerometerSimple()
-            accelOffset = offset
-            accelScale = scale
-        }
-
-        fun correctGyro(value: Float, axis: Int): Float = value - gyroBias[axis]
-
-        fun correctAccelerometer(x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
-            return Triple(
-                (x - accelOffset[0]) / accelScale[0],
-                (y - accelOffset[1]) / accelScale[1],
-                (z - accelOffset[2]) / accelScale[2]
-            )
-        }
-
-        fun correctMagnetometer(x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
-            return Triple(
-                (x - magOffset[0]) / magScale[0],
-                (y - magOffset[1]) / magScale[1],
-                (z - magOffset[2]) / magScale[2]
-            )
-        }
-    }
 }

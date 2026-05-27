@@ -7,8 +7,7 @@ import com.airmouse.sensors.SensorService
 
 /**
  * Reduces sensor sampling rate when the phone is stationary to save battery.
- * Monitors orientation changes (roll/yaw) and switches between SENSOR_DELAY_GAME (50 Hz)
- * and SENSOR_DELAY_NORMAL (20 Hz) after 10 seconds of no movement.
+ * Monitors orientation changes and switches to SENSOR_DELAY_NORMAL after 10s of idle.
  */
 class BatterySaver {
     private val handler = Handler(Looper.getMainLooper())
@@ -22,23 +21,23 @@ class BatterySaver {
     private val checkRunnable = object : Runnable {
         override fun run() {
             if (sensorService == null) return
-            // Periodic check (every 2 seconds) for movement
+
+            // If we haven't moved for a while and aren't in low power mode yet
+            if (!isLowPower && System.currentTimeMillis() - lastMovementTime > idleThresholdMs) {
+                sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_NORMAL)
+                isLowPower = true
+            }
+
             handler.postDelayed(this, 2000)
         }
     }
 
-    /**
-     * Start battery saver monitoring.
-     * @param service The SensorService instance that allows changing sampling rate.
-     */
     fun start(service: SensorService) {
         sensorService = service
+        lastMovementTime = System.currentTimeMillis()
         handler.post(checkRunnable)
     }
 
-    /**
-     * Stop monitoring and restore normal sampling rate.
-     */
     fun stop() {
         handler.removeCallbacks(checkRunnable)
         if (isLowPower) {
@@ -48,14 +47,8 @@ class BatterySaver {
         sensorService = null
     }
 
-    /**
-     * @return true if currently in low‑power (reduced sampling) mode.
-     */
     fun isLowPowerMode(): Boolean = isLowPower
 
-    /**
-     * Called whenever movement is detected. Resets idle timer and restores normal rate if needed.
-     */
     fun onMovement() {
         lastMovementTime = System.currentTimeMillis()
         if (isLowPower) {
@@ -64,19 +57,15 @@ class BatterySaver {
         }
     }
 
-    /**
-     * Call this regularly (e.g., from SensorService on each orientation update) with current roll and yaw.
-     * It computes the movement delta and triggers onMovement() if significant.
-     */
     fun updateMovement(roll: Float, yaw: Float) {
+        // Simple delta check for movement
         val delta = kotlin.math.abs(roll - lastRoll) + kotlin.math.abs(yaw - lastYaw)
         lastRoll = roll
         lastYaw = yaw
+
+        // Threshold for what we consider 'movement' (0.05 rad is approx 3 degrees)
         if (delta > 0.05f) {
             onMovement()
-        } else if (!isLowPower && System.currentTimeMillis() - lastMovementTime > idleThresholdMs) {
-            sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_NORMAL)
-            isLowPower = true
         }
     }
 }

@@ -1,13 +1,902 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Air Mouse Ultimate</string>
+
+    <!-- ==================== APP ==================== -->
+    <string name="app_name">AirMouse Ultimate</string>
+
+    <!-- ==================== MAIN SCREEN ==================== -->
     <string name="calibrate">Calibrate Sensors</string>
     <string name="start">Start Air Mouse</string>
+    <string name="stop">Stop Air Mouse</string>
     <string name="settings">Settings</string>
     <string name="debug">Show Debug</string>
+    <string name="hide_debug">Hide Debug</string>
+    <string name="done">Done</string>
+
+    <!-- ==================== STATUS ==================== -->
     <string name="status_not_connected">Not connected</string>
     <string name="status_active">Air Mouse Active</string>
-    <string name="speed_label">Cursor Speed</string>
+    <string name="stopped">Stopped</string>
+
+    <!-- ==================== NETWORK ==================== -->
     <string name="ip_hint">Laptop IP Address</string>
+    <string name="connected_to">Connected to %s</string>
+    <string name="reconnecting">Reconnecting…</string>
+    <string name="connection_error">Connection error: %s</string>
+    <string name="wifi_required">WiFi required to connect to PC</string>
+    <string name="signal_strength">Signal: %s (%d dBm)</string>
+    <string name="signal_default">Signal: --</string>
+    <string name="good">Good</string>
+    <string name="fair">Fair</string>
+    <string name="poor">Poor</string>
+
+    <!-- ==================== SENSOR STATUS ==================== -->
+    <string name="checking_sensors">Checking sensors…</string>
     <string name="sensor_warning_missing">Some sensors missing!</string>
     <string name="sensor_ok">All sensors available</string>
+    <string name="missing_sensors_warning">Hardware Warning: Core sensors missing</string>
+
+    <!-- ==================== CURSOR SPEED ==================== -->
+    <string name="cursor_speed">Cursor Speed</string>
+    <string name="speed_label">Cursor Speed: %1$.2fx</string>
+    <string name="speed_default">0.50x</string>
+
+    <!-- ==================== CALIBRATION (General) ==================== -->
+    <string name="calib_ready">Sensors optimized</string>
+    <string name="calib_complete">Calibration complete! Return to main screen.</string>
+    <string name="calib_failed">Calibration failed: %s</string>
+    <string name="calibrated_ready">Sensors calibrated. Ready.</string>
+    <string name="calibrating_gyro">Calibrating Gyro… Do not move.</string>
+    <string name="rotate_figure8">Rotate phone in 3D (figure‑8)…</string>
+    <string name="calibration_complete">Calibration complete!</string>
+    <string name="sensors_ready">Sensors Ready</string>
+    <string name="run_calibration_first">Run calibration first</string>
+    <string name="calibration_skipped_mag">Magnetometer not available, skipping</string>
+    <string name="error_prefix">Error: </string>
+
+    <!-- ==================== CALIBRATION STEPS ==================== -->
+    <string name="calib_step1">Step 1/3: Keep device still for gyroscope calibration</string>
+    <string name="calib_step2">Step 2/3: Move device in a figure‑8 pattern</string>
+    <string name="calib_step3">Step 3/3: Place device on a flat surface</string>
+
+    <!-- ==================== CALIBRATION INSTRUCTIONS ==================== -->
+    <string name="calib_gyro_instruction">Gyroscope calibration in progress…</string>
+    <string name="calib_mag_instruction">Magnetometer calibration in progress…</string>
+    <string name="calib_accel_instruction">Accelerometer calibration in progress…</string>
+    <string name="calib_gyro_keep_still">Keep phone still for gyro bias…</string>
+    <string name="calib_mag_figure8">Rotate phone in a figure‑8 for 15s…</string>
+    <string name="calib_instruction_step">Step %1$d: %2$s</string>
+
+    <!-- ==================== SETTINGS ==================== -->
+    <string name="settings_title">Air Mouse Settings</string>
+    <string name="gesture_sensitivity">Gesture Sensitivity</string>
+    <string name="click_speed_threshold">Click Speed Threshold</string>
+    <string name="double_click_interval">Double‑Click Interval (ms)</string>
+    <string name="scroll_sensitivity">Scroll Sensitivity</string>
+    <string name="right_click_tilt">Right‑Click Tilt Angle</string>
+    <string name="haptic_feedback">Haptic Feedback</string>
+
+    <!-- ==================== UNITS ==================== -->
+    <string name="unit_rad_s">%1$.1f rad/s</string>
+    <string name="unit_ms">%1$d ms</string>
+    <string name="unit_m_s2">%1$.1f m/s²</string>
+    <string name="unit_deg">%1$d°</string>
+
+    <!-- ==================== DIALOG / POPUP ==================== -->
+    <string name="close">Close</string>
+    <string name="invalid_ip">Invalid IP Address</string>
+
+    <!-- ==================== BATTERY OPTIMISATION ==================== -->
+    <string name="battery_whitelist_title">Battery Optimisation</string>
+    <string name="battery_whitelist_message">For stable Air Mouse operation, please disable battery optimisation for this app.</string>
+    <string name="battery_whitelist_positive">Go to Settings</string>
+    <string name="battery_whitelist_negative">Later</string>
+
+    <!-- ==================== FAB & QUICK ACTIONS ==================== -->
+    <string name="quick_calibrate">Quick Calibrate</string>
+    <string name="fab_content_description">Quick calibrate sensors</string>
+
+    <!-- ==================== LIVE SENSOR DATA ==================== -->
+    <string name="sensor_gyro">Gyro: </string>
+    <string name="sensor_accel">Accel: </string>
+    <string name="sensor_data_default">Gyro: -- | Accel: --</string>
+    <string name="sensor_data_format">Gyro: %.2f rad/s | Accel: %.2f m/s²</string>
+
+    <!-- ==================== MENU ITEMS ==================== -->
+    <string name="help_title">Help</string>
+    <string name="calibration_guide_title">Calibration Guide</string>
+    <string name="sensor_info_title">Sensor Info</string>
+    <string name="connection_guide_title">Connection Guide</string>
+    <string name="about_title">About</string>
+    <string name="license_title">License</string>
+
+    <!-- ==================== HELP CONTENT ==================== -->
+    <string name="help_content">
+        <![CDATA[
+        <b>Air Mouse Controls</b><br/><br/>
+        • <b>Move cursor</b>: Rotate phone around Z axis (horizontal) and X axis (vertical).<br/>
+        • <b>Left click</b>: Quick rotation around Y axis (leftwards).<br/>
+        • <b>Right click</b>: Tilt phone right (configurable in Settings).<br/>
+        • <b>Double click</b>: Two quick Y‑axis rotations.<br/>
+        • <b>Scroll up/down</b>: Fast linear movement along Y axis (up/down).<br/><br/>
+        <b>Tips</b><br/>
+        • Calibrate sensors before first use.<br/>
+        • Keep phone parallel to table, screen perpendicular to keyboard.<br/>
+        • Use sensitivity slider to adjust cursor speed.
+        ]]>
+    </string>
+
+    <!-- ==================== CALIBRATION GUIDE CONTENT ==================== -->
+    <string name="calibration_guide_content">
+        <![CDATA[
+        <b>How to Calibrate Sensors</b><br/><br/>
+        <b>1. Gyroscope Calibration</b><br/>
+        Place phone on a flat, still surface. Tap "Calibrate" and wait 5 seconds.<br/><br/>
+        <b>2. Magnetometer Calibration</b><br/>
+        Move phone in a figure‑8 pattern for 15 seconds. This improves orientation stability.<br/><br/>
+        <b>3. Accelerometer Calibration</b><br/>
+        Keep phone still on a flat surface. The app will measure gravity vector.<br/><br/>
+        <b>4. Completion</b><br/>
+        After calibration, the app will show "Sensors Ready". You\'re good to go!
+        ]]>
+    </string>
+
+    <!-- ==================== SENSOR INFO CONTENT ==================== -->
+    <string name="sensor_info_content">
+        <![CDATA[
+        <b>Device Sensors Used</b><br/><br/>
+        • <b>Gyroscope (3‑axis)</b>: Measures angular velocity (rad/s). Used for cursor movement and click detection.<br/>
+        • <b>Accelerometer (3‑axis)</b>: Measures linear acceleration (m/s²). Used for scroll detection and gravity reference.<br/>
+        • <b>Magnetometer (3‑axis)</b>: Measures magnetic field (µT). Used for drift correction (optional).<br/><br/>
+        <b>Missing sensors?</b><br/>
+        If any sensor is missing, the app will still work with reduced functionality (e.g., no magnetometer).
+        ]]>
+    </string>
+
+    <!-- ==================== CONNECTION GUIDE CONTENT ==================== -->
+    <string name="connection_guide_content">
+        <![CDATA[
+        <b>How to Connect to PC</b><br/><br/>
+        <b>1. On your PC</b><br/>
+        - Download and run the Air Mouse server application (provided separately).<br/>
+        - Note the PC\'s IP address (e.g., 192.168.1.100).<br/><br/>
+        <b>2. On your phone</b><br/>
+        - Connect to the same Wi‑Fi network.<br/>
+        - Enter the PC\'s IP address in the text field.<br/>
+        - Tap "Start Air Mouse".<br/><br/>
+        <b>Troubleshooting</b><br/>
+        • Ensure no firewall is blocking port 8080.<br/>
+        • Try pinging the PC from the phone.<br/>
+        • Check that both devices are on the same subnet.
+        ]]>
+    </string>
+
+    <!-- ==================== ABOUT CONTENT ==================== -->
+    <string name="about_content">
+        <![CDATA[
+        <b>Air Mouse Ultimate</b><br/>
+        Version %s<br/><br/>
+        Turn your Android phone into a wireless air mouse using motion sensors.<br/><br/>
+        <b>Developed by:</b> Arian Firoozi, Arsalan Talaee<br/>
+        <b>Instructors:</b> Dr. Mohsen Shokri, Dr. Mehdi Kargahi<br/>
+        <b>University of Tehran</b><br/>
+        Faculty of Electrical and Computer Engineering<br/>
+        Second Semester 1404-1405 (2025‑2026)<br/><br/>
+        <b>Open Source</b><br/>
+        This project is licensed under MIT.
+        ]]>
+    </string>
+
+    <!-- ==================== LICENSE CONTENT ==================== -->
+    <string name="license_content">
+        <![CDATA[
+        <b>MIT License</b><br/><br/>
+        Copyright (c) 2025‑2026 Arian Firoozi, Arsalan Talaee<br/><br/>
+        Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:<br/><br/>
+        The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.<br/><br/>
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        ]]>
+    </string>
+
+    <!-- ==================== FUTURE EXTENSIONS (placeholders) ==================== -->
+    <!-- Network discovery -->
+    <string name="discover_servers">Discover Servers</string>
+    <string name="scanning_network">Scanning network…</string>
+    <string name="no_servers_found">No Air Mouse servers found</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Profiles</string>
+    <string name="profile_default">Default</string>
+    <string name="profile_gaming">Gaming</string>
+    <string name="profile_presentation">Presentation</string>
+    <string name="save_profile">Save Profile</string>
+    <string name="load_profile">Load Profile</string>
+
+    <!-- Themes / UI -->
+    <string name="theme_title">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System default</string>
+
+    <!-- Gesture training -->
+    <string name="gesture_training_title">Gesture Training</string>
+    <string name="train_click">Train Click Gesture</string>
+    <string name="train_scroll">Train Scroll Gesture</string>
+    <string name="training_instruction">Perform the gesture now</string>
+    <string name="training_success">Gesture learned!</string>
+
+    <!-- Battery graph -->
+    <string name="battery_graph_title">Battery Usage</string>
+    <string name="battery_estimation">Estimated remaining: %1$d min</string>
+
+    <!-- Accessibility -->
+    <string name="accessibility_title">Accessibility</string>
+    <string name="announce_movement">Announce cursor movement</string>
+    <string name="announce_clicks">Announce clicks</string>
+
+    <!-- Remote feedback -->
+    <string name="pc_connected">PC connected</string>
+    <string name="pc_disconnected">PC disconnected</string>
+    <string name="low_battery_warning">Low battery – please charge</string>
+
+    <!-- Error messages (future) -->
+    <string name="error_sensor_busy">Sensor busy. Please restart the app.</string>
+    <string name="error_network_timeout">Network timeout. Check your connection.</string>
+    <string name="error_unknown">An unknown error occurred.</string>
+    <string name="status_active_format">Air Mouse Active (%s)</string>
+
+    <string name="calibration_starting">Starting calibration…</string>
+    <string name="calibration_follow_instructions">Follow the instructions on screen</string>
+    <string name="home">Home</string>
+    <string name="statistics">Statistics</string>
+    <string name="help">Help</string>
+    <string name="connection">Connection</string>
+    <string name="sensors">Sensors</string>
+    <string name="live_data">Live Data</string>
+    <string name="gesture_stats">Gesture Statistics</string>
+    <string name="session_time">Session Time</string>
+    <string name="connection">Connection</string>
+
+
+    <string name="home">Home</string>
+    <string name="statistics">Statistics</string>
+    <string name="help">Help</string>
+    <string name="connection">Connection</string>
+    <string name="sensors">Sensors</string>
+    <string name="live_data">Live Data</string>
+    <string name="gesture_stats">Gesture Statistics</string>
+    <string name="session_time">Session Time</string>
+    <string name="status_active_format">Air Mouse Active (%s)</string>
+    <string name="signal_strength">Signal: %s (%d dBm)</string>
+    <string name="good">Good</string>
+    <string name="fair">Fair</string>
+    <string name="poor">Poor</string>
+    <string name="sensor_data_format">Gyro: %.2f rad/s | Accel: %.2f m/s²</string>
+    <string name="scan_qr">Scan QR Code</string>
+
+
+    <string name="app_name">Air Mouse Pro</string>
+    <string name="home">Home</string>
+    <string name="statistics">Statistics</string>
+    <string name="help">Help</string>
+    <string name="connection">Connection</string>
+    <string name="sensors">Sensors</string>
+    <string name="live_data">Live Data</string>
+    <string name="gesture_stats">Gesture Statistics</string>
+    <string name="session_time">Session Time</string>
+    <string name="scan_qr">Scan QR Code</string>
+    <string name="start_air_mouse">Start Air Mouse</string>
+    <string name="stop">Stop</string>
+    <string name="settings">Settings</string>
+    <string name="debug">Debug</string>
+    <string name="hide_debug">Hide Debug</string>
+    <string name="calibrate">Calibrate</string>
+    <string name="calib_ready">Sensors Ready</string>
+    <string name="calib_complete">Calibration complete!</string>
+    <string name="calib_failed">Calibration failed: %s</string>
+    <string name="sensor_warning_missing">Some sensors missing</string>
+    <string name="sensor_ok">All sensors OK</string>
+    <string name="status_not_connected">Disconnected</string>
+    <string name="status_active_format">Connected to %s</string>
+    <string name="reconnecting">Reconnecting…</string>
+    <string name="wifi_required">WiFi required</string>
+    <string name="invalid_ip">Invalid IP</string>
+    <string name="run_calibration_first">Calibrate first</string>
+    <string name="connected_to">Connected to %s</string>
+    <string name="connection_error">Connection error: %s</string>
+    <string name="good">Good</string>
+    <string name="fair">Fair</string>
+    <string name="poor">Poor</string>
+    <string name="signal_default">Signal: --</string>
+    <string name="sensor_data_default">Gyro: -- | Accel: --</string>
+    <string name="sensor_data_format">Gyro: %.2f rad/s | Accel: %.2f m/s²</string>
+    <string name="signal_strength">Signal: %s (%d dBm)</string>
+    <string name="speed_label">Speed: %.2fx</string>
+    <string name="speed_default">0.50x</string>
+    <string name="cursor_speed">Cursor speed</string>
+    <string name="close">Close</string>
+    <string name="battery_whitelist_title">Battery optimisation</string>
+    <string name="battery_whitelist_message">Disable battery optimisation for stable operation</string>
+    <string name="battery_whitelist_positive">Go to settings</string>
+    <string name="battery_whitelist_negative">Later</string>
+    <string name="fab_content_description">Quick calibrate</string>
+
+    <!-- Help content (same as before) -->
+    <string name="help_title">Help</string>
+    <string name="help_content">…</string>
+    <string name="calibration_guide_title">Calibration guide</string>
+    <string name="calibration_guide_content">…</string>
+    <string name="sensor_info_title">Sensor info</string>
+    <string name="sensor_info_content">…</string>
+    <string name="connection_guide_title">Connection guide</string>
+    <string name="connection_guide_content">…</string>
+    <string name="about_title">About</string>
+    <string name="about_content">Air Mouse Pro v%s\n\nUniversity of Tehran\nEmbedded Systems</string>
+    <string name="license_title">License</string>
+    <string name="license_content">MIT License…</string>
 </resources>
+
+
+
+
+
+
+    <?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+<!-- ==================== APP ==================== -->
+<string name="app_name">Air Mouse Pro</string>
+
+<!-- ==================== BOTTOM NAVIGATION ==================== -->
+<string name="home">Home</string>
+<string name="statistics">Statistics</string>
+<string name="help">Help</string>
+
+<!-- ==================== MAIN SCREEN (Home Fragment) ==================== -->
+<string name="connection">Connection</string>
+<string name="sensors">Sensors</string>
+<string name="live_data">Live Data</string>
+<string name="calibrate">Calibrate Sensors</string>
+<string name="start">Start Air Mouse</string>
+<string name="stop">Stop Air Mouse</string>
+<string name="settings">Settings</string>
+<string name="debug">Show Debug</string>
+<string name="hide_debug">Hide Debug</string>
+<string name="scan_qr">Scan QR Code</string>
+<string name="quick_calibrate">Quick Calibrate</string>
+<string name="fab_content_description">Quick calibrate sensors</string>
+<string name="start_air_mouse">Start Air Mouse</string>
+
+<!-- ==================== STATUS MESSAGES ==================== -->
+<string name="status_not_connected">Disconnected</string>
+<string name="status_active">Air Mouse Active</string>
+<string name="status_active_format">Connected to %s</string>
+<string name="stopped">Stopped</string>
+<string name="reconnecting">Reconnecting…</string>
+<string name="done">Done</string>
+
+<!-- ==================== NETWORK & CONNECTION ==================== -->
+<string name="ip_hint">Laptop IP Address</string>
+<string name="connected_to">Connected to %s</string>
+<string name="connection_error">Connection error: %s</string>
+<string name="wifi_required">WiFi required to connect to PC</string>
+<string name="invalid_ip">Invalid IP address</string>
+<string name="signal_strength">Signal: %s (%d dBm)</string>
+<string name="signal_default">Signal: --</string>
+<string name="good">Good</string>
+<string name="fair">Fair</string>
+<string name="poor">Poor</string>
+<string name="discover_servers">Discover Servers</string>
+<string name="scanning_network">Scanning network…</string>
+<string name="no_servers_found">No Air Mouse servers found</string>
+<string name="pc_connected">PC connected</string>
+<string name="pc_disconnected">PC disconnected</string>
+
+<!-- ==================== SENSOR STATUS ==================== -->
+<string name="checking_sensors">Checking sensors…</string>
+<string name="sensor_warning_missing">Some sensors missing!</string>
+<string name="sensor_ok">All sensors available</string>
+<string name="missing_sensors_warning">Hardware Warning: Core sensors missing</string>
+<string name="sensor_gyro">Gyro: </string>
+<string name="sensor_accel">Accel: </string>
+<string name="sensor_data_default">Gyro: -- | Accel: --</string>
+<string name="sensor_data_format">Gyro: %.2f rad/s | Accel: %.2f m/s²</string>
+
+<!-- ==================== CURSOR SPEED ==================== -->
+<string name="cursor_speed">Cursor speed</string>
+<string name="speed_label">Speed: %.2fx</string>
+<string name="speed_default">0.50x</string>
+
+<!-- ==================== CALIBRATION ==================== -->
+<string name="calib_ready">Sensors ready</string>
+<string name="calib_complete">Calibration complete!</string>
+<string name="calib_failed">Calibration failed: %s</string>
+<string name="calibrated_ready">Sensors calibrated. Ready.</string>
+<string name="calibrating_gyro">Calibrating Gyro… Do not move.</string>
+<string name="rotate_figure8">Rotate phone in 3D (figure‑8)…</string>
+<string name="calibration_complete">Calibration complete!</string>
+<string name="sensors_ready">Sensors ready</string>
+<string name="run_calibration_first">Run calibration first</string>
+<string name="calibration_skipped_mag">Magnetometer not available, skipping</string>
+<string name="error_prefix">Error: </string>
+<string name="calibration_starting">Starting calibration…</string>
+<string name="calibration_follow_instructions">Follow the instructions on screen</string>
+
+<!-- Calibration steps -->
+<string name="calib_step1">Step 1/3: Keep device still for gyroscope calibration</string>
+<string name="calib_step2">Step 2/3: Move device in a figure‑8 pattern</string>
+<string name="calib_step3">Step 3/3: Place device on a flat surface</string>
+
+<!-- Calibration instructions (legacy, still used by some helpers) -->
+<string name="calib_gyro_instruction">Gyroscope calibration in progress…</string>
+<string name="calib_mag_instruction">Magnetometer calibration in progress…</string>
+<string name="calib_accel_instruction">Accelerometer calibration in progress…</string>
+<string name="calib_gyro_keep_still">Keep phone still for gyro bias…</string>
+<string name="calib_mag_figure8">Rotate phone in a figure‑8 for 15s…</string>
+<string name="calib_instruction_step">Step %1$d: %2$s</string>
+
+<!-- ==================== SETTINGS DIALOG ==================== -->
+<string name="settings_title">Air Mouse Settings</string>
+<string name="gesture_sensitivity">Gesture Sensitivity</string>
+<string name="click_speed_threshold">Click Speed Threshold</string>
+<string name="double_click_interval">Double‑Click Interval (ms)</string>
+<string name="scroll_sensitivity">Scroll Sensitivity</string>
+<string name="right_click_tilt">Right‑Click Tilt Angle</string>
+<string name="haptic_feedback">Haptic Feedback</string>
+
+<!-- ==================== STATISTICS FRAGMENT ==================== -->
+<string name="gesture_stats">Gesture Statistics</string>
+<string name="session_time">Session Time</string>
+
+<!-- ==================== UNITS ==================== -->
+<string name="unit_rad_s">%1$.1f rad/s</string>
+<string name="unit_ms">%1$d ms</string>
+<string name="unit_m_s2">%1$.1f m/s²</string>
+<string name="unit_deg">%1$d°</string>
+
+<!-- ==================== DIALOGS & POPUPS ==================== -->
+<string name="close">Close</string>
+<string name="yes">Yes</string>
+<string name="no">No</string>
+<string name="ok">OK</string>
+<string name="cancel">Cancel</string>
+<string name="retry">Retry</string>
+<string name="invalid_ip">Invalid IP address</string>
+
+<!-- ==================== BATTERY OPTIMISATION & STATS ==================== -->
+<string name="battery_whitelist_title">Battery Optimisation</string>
+<string name="battery_whitelist_message">For stable Air Mouse operation, please disable battery optimisation for this app.</string>
+<string name="battery_whitelist_positive">Go to Settings</string>
+<string name="battery_whitelist_negative">Later</string>
+<string name="battery_graph_title">Battery Usage</string>
+<string name="battery_estimation">Estimated remaining: %1$d min</string>
+<string name="low_battery_warning">Low battery – please charge</string>
+
+<!-- ==================== THEMES ==================== -->
+<string name="theme_title">Theme</string>
+<string name="theme_light">Light</string>
+<string name="theme_dark">Dark</string>
+<string name="theme_system">System default</string>
+<string name="theme_pure_black">Pure Black (AMOLED)</string>
+<string name="theme_high_contrast">High Contrast</string>
+
+<!-- ==================== PROFILES ==================== -->
+<string name="profiles_title">Profiles</string>
+<string name="profile_default">Default</string>
+<string name="profile_gaming">Gaming</string>
+<string name="profile_presentation">Presentation</string>
+<string name="save_profile">Save Profile</string>
+<string name="load_profile">Load Profile</string>
+<string name="delete_profile">Delete Profile</string>
+
+<!-- ==================== GESTURE TRAINING ==================== -->
+<string name="gesture_training_title">Gesture Training</string>
+<string name="train_click">Train Click Gesture</string>
+<string name="train_scroll">Train Scroll Gesture</string>
+<string name="training_instruction">Perform the gesture now</string>
+<string name="training_success">Gesture learned!</string>
+
+<!-- ==================== ACCESSIBILITY ==================== -->
+<string name="accessibility_title">Accessibility</string>
+<string name="announce_movement">Announce cursor movement</string>
+<string name="announce_clicks">Announce clicks</string>
+
+<!-- ==================== ERROR MESSAGES ==================== -->
+<string name="error_sensor_busy">Sensor busy. Please restart the app.</string>
+<string name="error_network_timeout">Network timeout. Check your connection.</string>
+<string name="error_unknown">An unknown error occurred.</string>
+<string name="error_permission_denied">Permission denied. Please grant the required permissions.</string>
+<string name="error_camera_unavailable">Camera unavailable. Check your device.</string>
+
+<!-- ==================== QR SCANNER ==================== -->
+<string name="qr_scanner_title">Scan Server QR Code</string>
+<string name="qr_scanner_hint">Position the QR code inside the frame</string>
+<string name="qr_permission_rationale">Camera permission is required to scan server QR codes.</string>
+<string name="qr_scan_success">Server IP set to %s</string>
+<string name="qr_scan_failed">Invalid QR code. Please scan a valid Air Mouse server QR.</string>
+
+<!-- ==================== MENU (TOOLBAR) ==================== -->
+<string name="help_title">Help</string>
+<string name="calibration_guide_title">Calibration Guide</string>
+<string name="sensor_info_title">Sensor Info</string>
+<string name="connection_guide_title">Connection Guide</string>
+<string name="about_title">About</string>
+<string name="license_title">License</string>
+
+<!-- ==================== HELP CONTENT (FULL HTML) ==================== -->
+<string name="help_content">
+        <![CDATA[
+        <b>Air Mouse Controls</b><br/><br/>
+        • <b>Move cursor</b>: Rotate phone around Z axis (horizontal) and X axis (vertical).<br/>
+        • <b>Left click</b>: Quick rotation around Y axis (leftwards).<br/>
+        • <b>Right click</b>: Tilt phone right (configurable in Settings).<br/>
+        • <b>Double click</b>: Two quick Y‑axis rotations.<br/>
+        • <b>Scroll up/down</b>: Fast linear movement along Y axis (up/down).<br/><br/>
+        <b>Tips</b><br/>
+        • Calibrate sensors before first use.<br/>
+        • Keep phone parallel to table, screen perpendicular to keyboard.<br/>
+        • Use sensitivity slider to adjust cursor speed.<br/>
+        • You can scan a QR code from your PC to auto‑fill the IP address.
+        ]]>
+    </string>
+
+<!-- Calibration guide (full) -->
+<string name="calibration_guide_content">
+        <![CDATA[
+        <b>How to Calibrate Sensors</b><br/><br/>
+        <b>1. Gyroscope Calibration</b><br/>
+        Place phone on a flat, still surface. Tap "Calibrate" and wait 5 seconds.<br/><br/>
+        <b>2. Magnetometer Calibration</b><br/>
+        Move phone in a figure‑8 pattern for 15 seconds. This improves orientation stability.<br/><br/>
+        <b>3. Accelerometer Calibration</b><br/>
+        Keep phone still on a flat surface. The app will measure gravity vector.<br/><br/>
+        <b>4. Completion</b><br/>
+        After calibration, the app will show "Sensors Ready". You\'re good to go!
+        ]]>
+    </string>
+
+<!-- Sensor info (full) -->
+<string name="sensor_info_content">
+        <![CDATA[
+        <b>Device Sensors Used</b><br/><br/>
+        • <b>Gyroscope (3‑axis)</b>: Measures angular velocity (rad/s). Used for cursor movement and click detection.<br/>
+        • <b>Accelerometer (3‑axis)</b>: Measures linear acceleration (m/s²). Used for scroll detection and gravity reference.<br/>
+        • <b>Magnetometer (3‑axis)</b>: Measures magnetic field (µT). Used for drift correction (optional).<br/><br/>
+        <b>Missing sensors?</b><br/>
+        If any sensor is missing, the app will still work with reduced functionality (e.g., no magnetometer).<br/><br/>
+        <b>Sensor fusion</b><br/>
+        We use a Madgwick filter to combine gyroscope, accelerometer and magnetometer data for accurate orientation.
+        ]]>
+    </string>
+
+<!-- Connection guide (full) -->
+<string name="connection_guide_content">
+        <![CDATA[
+        <b>How to Connect to PC</b><br/><br/>
+        <b>1. On your PC</b><br/>
+        - Download and run the Air Mouse server application (provided separately).<br/>
+        - Note the PC\'s IP address (e.g., 192.168.1.100).<br/><br/>
+        <b>2. On your phone</b><br/>
+        - Connect to the same Wi‑Fi network.<br/>
+        - Enter the PC\'s IP address in the text field, or tap the QR button to scan a QR code from the PC.<br/>
+        - Tap "Start Air Mouse".<br/><br/>
+        <b>Troubleshooting</b><br/>
+        • Ensure no firewall is blocking port 8080.<br/>
+        • Try pinging the PC from the phone.<br/>
+        • Check that both devices are on the same subnet.<br/>
+        • If using a VPN, disable it temporarily.
+        ]]>
+    </string>
+
+<!-- About (full) -->
+<string name="about_content">
+        <![CDATA[
+        <b>Air Mouse Pro</b><br/>
+        Version %s<br/><br/>
+        Turn your Android phone into a wireless air mouse using motion sensors.<br/><br/>
+        <b>Developed by:</b> Arian Firoozi, Arsalan Talaee<br/>
+        <b>Instructors:</b> Dr. Mohsen Shokri, Dr. Mehdi Kargahi<br/>
+        <b>University of Tehran</b><br/>
+        Faculty of Electrical and Computer Engineering<br/>
+        Second Semester 1404-1405 (2025‑2026)<br/><br/>
+        <b>Open Source</b><br/>
+        This project is licensed under MIT. Source code available on GitHub.
+        ]]>
+    </string>
+
+<!-- License (full MIT) -->
+<string name="license_content">
+        <![CDATA[
+        <b>MIT License</b><br/><br/>
+        Copyright (c) 2025‑2026 Arian Firoozi, Arsalan Talaee<br/><br/>
+        Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:<br/><br/>
+        The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.<br/><br/>
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        ]]>
+    </string>
+<string name="qr_scan_success">Server IP set to %s</string>
+<string name="qr_scan_failed">Invalid QR code. Please scan a valid Air Mouse server QR.</string>
+<string name="delete_profile">Delete Profile</string>
+<string name="theme_pure_black">Pure Black (AMOLED)</string>
+<string name="theme_high_contrast">High Contrast</string>
+
+
+<string name="voice_commands">Voice Commands</string>
+<string name="custom_gesture">Custom Gesture</string>
+<string name="server_log">Server Log</string>
+<string name="edge_gestures">Edge Gestures</string>
+<string name="record_gesture">Record Gesture</string>
+<string name="assign_action">Assign Action</string>
+
+
+<string name="voice_commands">Voice Commands</string>
+<string name="custom_gesture">Custom Gesture</string>
+<string name="server_log">Server Log</string>
+<string name="edge_gestures">Edge Gestures</string>
+
+<string name="custom_gesture">Custom Gesture</string>
+<string name="select_action">Select Action</string>
+<string name="record_gesture">Record Gesture (3 seconds)</string>
+<string name="gesture_not_recorded">No gesture recorded</string>
+<string name="saved_gestures">Saved Gestures</string>
+<string name="recording_gesture">Recording… Move the phone as you wish</string>
+<string name="gesture_saved">Gesture for %s saved (value: %.2f)</string>
+<string name="gesture_saved_toast">Gesture for %s saved</string>
+<string name="gesture_no_data">No movement detected. Try again.</string>
+<string name="no_gyroscope">Gyroscope not available</string>
+<string name="no_saved_gestures">No custom gestures saved yet.</string>
+
+
+<string name="voice_commands">Voice Commands</string>
+<string name="listen_command">Listen for Command</string>
+<string name="voice_ready">Tap the button and speak a command</string>
+<string name="available_commands">Available commands</string>
+<string name="voice_prompt">Say a command</string>
+<string name="command_recognized">Command: %s</string>
+<string name="voice_no_match">No command recognized</string>
+<string name="voice_failed">Voice recognition failed</string>
+<string name="unknown_command">Unknown command: %s</string>
+<string name="action_click">Click executed</string>
+<string name="action_double_click">Double click executed</string>
+<string name="action_right_click">Right click executed</string>
+<string name="action_scroll_up">Scroll up</string>
+<string name="action_scroll_down">Scroll down</string>
+<string name="action_calibrate">Starting calibration</string>
+<string name="action_start">Starting Air Mouse</string>
+<string name="action_stop">Stopping Air Mouse</string>
+<!-- Onboarding -->
+<string name="onboarding_title_1">Welcome to Air Mouse Pro</string>
+<string name="onboarding_desc_1">Turn your phone into a wireless air mouse using motion sensors.</string>
+<string name="onboarding_title_2">Intuitive Gestures</string>
+<string name="onboarding_desc_2">Rotate, tilt, and move your phone naturally to control your PC.</string>
+<string name="onboarding_title_3">Quick Connection</string>
+<string name="onboarding_desc_3">Scan a QR code or enter IP address to connect instantly.</string>
+<string name="onboarding_title_4">Advanced Features</string>
+<string name="onboarding_desc_4">Voice commands, custom gestures, statistics, and more.</string>
+<string name="onboarding_next">Next</string>
+<string name="onboarding_skip">Skip</string>
+<string name="onboarding_get_started">Get Started</string>
+
+
+<!-- Onboarding -->
+<string name="onboarding_title_1">Welcome to Air Mouse Pro</string>
+<string name="onboarding_desc_1">Turn your phone into a wireless air mouse using motion sensors.</string>
+<string name="onboarding_title_2">Intuitive Gestures</string>
+<string name="onboarding_desc_2">Rotate, tilt, and move your phone naturally to control your PC.</string>
+<string name="onboarding_title_3">Quick Connection</string>
+<string name="onboarding_desc_3">Scan a QR code or enter IP address to connect instantly.</string>
+<string name="onboarding_title_4">Advanced Features</string>
+<string name="onboarding_desc_4">Voice commands, custom gestures, statistics, and more.</string>
+<string name="onboarding_next">Next</string>
+<string name="onboarding_skip">Skip</string>
+<string name="onboarding_get_started">Get Started</string>
+</resources>
+
+
+    <?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="app_name">Air Mouse Pro</string>
+
+<!-- Bottom navigation -->
+<string name="home">Home</string>
+<string name="statistics">Statistics</string>
+<string name="help">Help</string>
+
+<!-- Drawer groups -->
+<string name="advanced">Advanced</string>
+<string name="more_features">More Features</string>
+
+<!-- Main strings -->
+<string name="connection">Connection</string>
+<string name="sensors">Sensors</string>
+<string name="live_data">Live Data</string>
+<string name="calibrate">Calibrate</string>
+<string name="start">Start</string>
+<string name="stop">Stop</string>
+<string name="settings">Settings</string>
+<string name="debug">Debug</string>
+<string name="hide_debug">Hide Debug</string>
+<string name="done">Done</string>
+<string name="status_not_connected">Disconnected</string>
+<string name="status_active_format">Connected to %s</string>
+<string name="reconnecting">Reconnecting…</string>
+<string name="connected_to">Connected to %s</string>
+<string name="connection_error">Connection error: %s</string>
+<string name="wifi_required">WiFi required</string>
+<string name="invalid_ip">Invalid IP</string>
+<string name="ip_hint">Laptop IP address</string>
+<string name="scan_qr">Scan QR code</string>
+
+<!-- Sensor & calibration -->
+<string name="sensor_ok">All sensors OK</string>
+<string name="sensor_warning_missing">Some sensors missing</string>
+<string name="calib_ready">Sensors ready</string>
+<string name="calib_complete">Calibration complete!</string>
+<string name="calib_failed">Calibration failed: %s</string>
+<string name="run_calibration_first">Run calibration first</string>
+<string name="calibration_starting">Starting calibration…</string>
+<string name="calibration_follow_instructions">Follow the on‑screen instructions</string>
+
+<!-- Cursor speed -->
+<string name="cursor_speed">Cursor speed</string>
+<string name="speed_label">Speed: %.2fx</string>
+<string name="speed_default">0.50x</string>
+
+<!-- Wi‑Fi signal -->
+<string name="good">Good</string>
+<string name="fair">Fair</string>
+<string name="poor">Poor</string>
+<string name="signal_strength">Signal: %s (%d dBm)</string>
+<string name="signal_default">Signal: --</string>
+
+<!-- Live sensor data -->
+<string name="sensor_data_default">Gyro: -- | Accel: --</string>
+<string name="sensor_data_format">Gyro: %.2f rad/s | Accel: %.2f m/s²</string>
+
+<!-- Units -->
+<string name="unit_rad_s">%1$.1f rad/s</string>
+<string name="unit_ms">%1$d ms</string>
+<string name="unit_m_s2">%1$.1f m/s²</string>
+<string name="unit_deg">%1$d°</string>
+
+<!-- Settings -->
+<string name="settings_title">Air Mouse Settings</string>
+<string name="gesture_sensitivity">Gesture sensitivity</string>
+<string name="click_speed_threshold">Click speed threshold</string>
+<string name="double_click_interval">Double‑click interval (ms)</string>
+<string name="scroll_sensitivity">Scroll sensitivity</string>
+<string name="right_click_tilt">Right‑click tilt angle</string>
+<string name="haptic_feedback">Haptic feedback</string>
+
+<!-- Battery optimisation -->
+<string name="battery_whitelist_title">Battery optimisation</string>
+<string name="battery_whitelist_message">Disable battery optimisation for stable operation</string>
+<string name="battery_whitelist_positive">Go to settings</string>
+<string name="battery_whitelist_negative">Later</string>
+
+<!-- Calibration steps -->
+<string name="calib_step1">Step 1/3: Keep device still for gyro</string>
+<string name="calib_step2">Step 2/3: Move in figure‑8</string>
+<string name="calib_step3">Step 3/3: Place on flat surface</string>
+
+<!-- QR scanner -->
+<string name="qr_scan_success">Server IP set to %s</string>
+<string name="qr_scan_failed">Invalid QR code</string>
+
+<!-- Profiles -->
+<string name="profiles_title">Profiles</string>
+<string name="save_profile">Save profile</string>
+<string name="load_profile">Load profile</string>
+<string name="delete_profile">Delete profile</string>
+
+<!-- Themes -->
+<string name="theme_title">Theme</string>
+<string name="theme_light">Light</string>
+<string name="theme_dark">Dark</string>
+<string name="theme_system">System default</string>
+<string name="theme_pure_black">Pure black (AMOLED)</string>
+<string name="theme_high_contrast">High contrast</string>
+
+<!-- Gesture training -->
+<string name="gesture_training_title">Gesture training</string>
+<string name="custom_gesture">Custom gesture</string>
+<string name="train_click">Train click</string>
+<string name="train_scroll">Train scroll</string>
+<string name="record_gesture">Record gesture (3 sec)</string>
+<string name="gesture_not_recorded">No gesture recorded</string>
+<string name="recording_gesture">Recording…</string>
+<string name="gesture_saved">Saved: %s (%.2f)</string>
+<string name="saved_gestures">Saved gestures</string>
+
+<!-- Battery graph -->
+<string name="battery_graph_title">Battery usage</string>
+<string name="battery_estimation">Estimated remaining: %d min</string>
+
+<!-- Accessibility -->
+<string name="accessibility_title">Accessibility</string>
+<string name="announce_movement">Announce cursor movement</string>
+<string name="announce_clicks">Announce clicks</string>
+
+<!-- Network discovery -->
+<string name="discover_servers">Discover servers</string>
+<string name="scanning_network">Scanning network…</string>
+<string name="no_servers_found">No servers found</string>
+
+<!-- Voice commands -->
+<string name="voice_commands">Voice commands</string>
+<string name="listen_command">Listen for command</string>
+<string name="voice_prompt">Say a command</string>
+<string name="command_recognized">Command: %s</string>
+<string name="voice_no_match">No command recognized</string>
+<string name="voice_failed">Voice recognition failed</string>
+<string name="unknown_command">Unknown command: %s</string>
+<string name="action_click">Click executed</string>
+<string name="action_scroll_up">Scroll up</string>
+<string name="action_scroll_down">Scroll down</string>
+<string name="action_calibrate">Starting calibration</string>
+<string name="action_start">Starting Air Mouse</string>
+<string name="action_stop">Stopping Air Mouse</string>
+
+<!-- Server log -->
+<string name="server_log">Server log</string>
+
+<!-- Edge gestures -->
+<string name="edge_gestures">Edge gestures</string>
+<string name="enable_edge_gestures">Enable floating action button</string>
+<string name="edge_gesture_description">Tap = click, long press = right click</string>
+
+<!-- Onboarding -->
+<string name="onboarding_title_1">Welcome to Air Mouse Pro</string>
+<string name="onboarding_desc_1">Turn your phone into a wireless air mouse using motion sensors.</string>
+<string name="onboarding_title_2">Intuitive gestures</string>
+<string name="onboarding_desc_2">Rotate, tilt and move naturally to control your PC.</string>
+<string name="onboarding_title_3">Quick connection</string>
+<string name="onboarding_desc_3">Scan a QR code or enter IP address to connect instantly.</string>
+<string name="onboarding_title_4">Advanced features</string>
+<string name="onboarding_desc_4">Voice commands, custom gestures, statistics and more.</string>
+<string name="onboarding_next">Next</string>
+<string name="onboarding_skip">Skip</string>
+<string name="onboarding_get_started">Get started</string>
+
+<!-- Dialog / generic -->
+<string name="close">Close</string>
+<string name="fab_content_description">Quick calibrate</string>
+</resources>
+
+
+<string name="information">Information</string>
+<string name="version_format">Version %s</string>
+<string name="about_description_title">What is Air Mouse Pro?</string>
+<string name="about_description_text">Air Mouse Pro turns your phone into a wireless air mouse. Use natural hand movements to control your PC cursor, click, scroll, and more – no physical mouse needed.</string>
+<string name="about_credits">Credits</string>
+<string name="about_developers">Developed by: Arian Firoozi, Arsalan Talaee</string>
+<string name="about_instructors">Instructors: Dr. Mohsen Shokri, Dr. Mehdi Kargahi</string>
+<string name="about_university">University of Tehran – Faculty of Electrical and Computer Engineering</string>
+<string name="about_tech">Technology</string>
+<string name="about_tech_details">• Madgwick AHRS sensor fusion\n• Material 3 design with dynamic theming\n• QR code connection\n• Voice commands & custom gestures\n• Real‑time statistics\n• Low‑latency UDP/TCP communication</string>
+<string name="about_license_title">Open Source License</string>
+<string name="about_license_text">This project is released under the MIT License. You are free to use, modify, and distribute it.</string>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<string name="version_format">Version %s</string>
+
+<string name="advanced">Advanced</string>
+<string name="more_features">More Features</string>
+<string name="information">Information</string>
+<string name="custom_gesture">Custom Gesture</string>
+<string name="advanced">Advanced</string>
+<string name="more_features">More Features</string>
+<string name="information">Information</string>
+<string name="training_ready">Ready for training</string>

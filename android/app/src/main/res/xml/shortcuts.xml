@@ -1,0 +1,13 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="start_airmouse"
+        android:enabled="true"
+        android:icon="@drawable/ic_play"
+        android:shortcutShortLabel="@string/start"
+        android:shortcutLongLabel="@string/start_air_mouse">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.airmouse"
+            android:targetClass="com.airmouse.ui.MainActivity" />
+    </shortcut>
+</shortcuts>

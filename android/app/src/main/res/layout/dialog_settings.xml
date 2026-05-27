@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/gesture_sensitivity"
+        android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+    <SeekBar
+        android:id="@+id/gesture_sensitivity_seek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/click_speed_threshold"
+        android:layout_marginTop="16dp"
+        android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+    <SeekBar
+        android:id="@+id/click_threshold_seek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/double_click_interval"
+        android:layout_marginTop="16dp"
+        android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+    <SeekBar
+        android:id="@+id/double_click_interval_seek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="500" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/scroll_sensitivity"
+        android:layout_marginTop="16dp"
+        android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+    <SeekBar
+        android:id="@+id/scroll_threshold_seek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/right_click_tilt"
+        android:layout_marginTop="16dp"
+        android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+    <SeekBar
+        android:id="@+id/right_click_tilt_seek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="90" />
+
+    <CheckBox
+        android:id="@+id/haptic_feedback_check"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/haptic_feedback"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>

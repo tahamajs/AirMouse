@@ -1,0 +1,73 @@
+package com.airmouse.ui.network
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.ListView
+import android.widget.TextView
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.airmouse.R
+import com.airmouse.utils.PreferencesManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.net.InetAddress
+import java.net.NetworkInterface
+import java.util.Enumeration
+
+class NetworkDiscoveryFragment : Fragment() {
+
+    private lateinit var preferences: PreferencesManager
+    private lateinit var scanButton: Button
+    private lateinit var statusText: TextView
+    private lateinit var serverList: ListView
+    private val servers = mutableListOf<String>()
+    private lateinit var adapter: ArrayAdapter<String>
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_network_discovery, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        preferences = PreferencesManager(requireContext())
+        scanButton = view.findViewById(R.id.scan_network_btn)
+        statusText = view.findViewById(R.id.network_status)
+        serverList = view.findViewById(R.id.discovered_servers_list)
+
+        adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, servers)
+        serverList.adapter = adapter
+
+        scanButton.setOnClickListener { startScan() }
+    }
+
+    private fun startScan() {
+        statusText.text = "Scanning network..."
+        lifecycleScope.launch {
+            servers.clear()
+            val found = scanLocalNetwork()
+            if (found.isNotEmpty()) {
+                servers.addAll(found)
+                statusText.text = "Found ${found.size} server(s)"
+            } else {
+                statusText.text = "No servers found"
+            }
+            adapter.notifyDataSetChanged()
+        }
+    }
+
+    private suspend fun scanLocalNetwork(): List<String> {
+        val found = mutableListOf<String>()
+        // Simulate scanning – in real app you would send broadcast on port 8080
+        delay(2000)
+        // For demo, add localhost
+        found.add("127.0.0.1")
+        return found
+    }
+}
