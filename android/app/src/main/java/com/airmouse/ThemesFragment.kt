@@ -1,38 +1,54 @@
-package com.airmouse.utils
+package com.airmouse
 
-import android.content.Context
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.RadioGroup
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.airmouse.utils.ThemeManager
+import kotlinx.coroutines.launch
 
-private val Context.dataStore by preferencesDataStore("theme_prefs")
+class ThemesFragment : Fragment() {
 
-class ThemeManager(private val context: Context) {
+    private lateinit var themeManager: ThemeManager
+    private lateinit var themeGroup: RadioGroup
 
-    private val THEME_KEY = preferencesKey<String>("theme_mode")
-
-    suspend fun setTheme(theme: String) {
-        context.dataStore.edit { it[THEME_KEY] = theme }
-        applyTheme(theme)
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_themes, container, false)
     }
 
-    suspend fun getTheme(): String {
-        return context.dataStore.data.map { it[THEME_KEY] ?: "system" }.first()
-    }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        themeManager = ThemeManager(requireContext())
+        themeGroup = view.findViewById(R.id.theme_radio_group)
 
-    fun applyTheme(theme: String) {
-        when (theme) {
-            "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            "pure_black" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            "high_contrast" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        lifecycleScope.launch {
+            val currentTheme = themeManager.getTheme()
+            when (currentTheme) {
+                "light" -> themeGroup.check(R.id.theme_light)
+                "dark" -> themeGroup.check(R.id.theme_dark)
+                "pure_black" -> themeGroup.check(R.id.theme_pure_black)
+                "high_contrast" -> themeGroup.check(R.id.theme_high_contrast)
+                else -> themeGroup.check(R.id.theme_system)
+            }
+        }
+
+        themeGroup.setOnCheckedChangeListener { _, checkedId ->
+            val theme = when (checkedId) {
+                R.id.theme_light -> "light"
+                R.id.theme_dark -> "dark"
+                R.id.theme_pure_black -> "pure_black"
+                R.id.theme_high_contrast -> "high_contrast"
+                else -> "system"
+            }
+            lifecycleScope.launch {
+                themeManager.setTheme(theme)
+            }
         }
     }
-
-    // Blocking version for compatibility
-    fun setThemeBlocking(theme: String) = runBlocking { setTheme(theme) }
-    fun getThemeBlocking(): String = runBlocking { getTheme() }
 }

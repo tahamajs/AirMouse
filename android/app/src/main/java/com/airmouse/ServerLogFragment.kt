@@ -1,4 +1,4 @@
-package com.airmouse.ui.log
+package com.airmouse
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,10 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.fragment.app.Fragment
-import com.airmouse.R
 import com.airmouse.utils.PreferencesManager
-import java.text.SimpleDateFormat
-import java.util.*
 
 class ServerLogFragment : Fragment() {
 
@@ -36,21 +33,6 @@ class ServerLogFragment : Fragment() {
         val savedLogs = preferences.getServerLogs()
         logEntries.addAll(savedLogs)
         adapter.notifyItemRangeInserted(0, savedLogs.size)
-
-        // Listen for new logs via callback
-        (requireActivity().application as? MyApplication)?.logListener = object : LogListener {
-            override fun onNewLog(message: String) {
-                requireActivity().runOnUiThread {
-                    logEntries.add(0, message)
-                    adapter.notifyItemInserted(0)
-                    recyclerView.scrollToPosition(0)
-                }
-            }
-        }
-    }
-
-    interface LogListener {
-        fun onNewLog(message: String)
     }
 
     inner class LogAdapter(private val entries: List<String>) : RecyclerView.Adapter<LogAdapter.ViewHolder>() {

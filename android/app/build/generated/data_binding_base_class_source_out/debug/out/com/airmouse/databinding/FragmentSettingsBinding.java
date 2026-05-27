@@ -9,10 +9,10 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.airmouse.R;
-import com.google.android.material.switchmaterial.SwitchMaterial;
 import java.lang.NullPointerException;
 import java.lang.Override;
 import java.lang.String;
@@ -34,7 +34,7 @@ public final class FragmentSettingsBinding implements ViewBinding {
   public final TextView doubleClickValue;
 
   @NonNull
-  public final SwitchMaterial hapticSwitch;
+  public final SwitchCompat hapticSwitch;
 
   @NonNull
   public final SeekBar scrollThresholdSeek;
@@ -50,7 +50,7 @@ public final class FragmentSettingsBinding implements ViewBinding {
 
   private FragmentSettingsBinding(@NonNull ScrollView rootView, @NonNull SeekBar clickThresholdSeek,
       @NonNull TextView clickThresholdValue, @NonNull SeekBar doubleClickSeek,
-      @NonNull TextView doubleClickValue, @NonNull SwitchMaterial hapticSwitch,
+      @NonNull TextView doubleClickValue, @NonNull SwitchCompat hapticSwitch,
       @NonNull SeekBar scrollThresholdSeek, @NonNull TextView scrollThresholdValue,
       @NonNull SeekBar tiltThresholdSeek, @NonNull TextView tiltThresholdValue) {
     this.rootView = rootView;
@@ -117,7 +117,7 @@ public final class FragmentSettingsBinding implements ViewBinding {
       }
 
       id = R.id.hapticSwitch;
-      SwitchMaterial hapticSwitch = ViewBindings.findChildViewById(rootView, id);
+      SwitchCompat hapticSwitch = ViewBindings.findChildViewById(rootView, id);
       if (hapticSwitch == null) {
         break missingId;
       }

@@ -1,4 +1,4 @@
-package com.airmouse.ui.home
+package com.airmouse
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,13 +7,12 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.airmouse.R
 import com.airmouse.network.AutoReconnect
 import com.airmouse.network.DataSender
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.EnhancedGestureDetector
 import com.airmouse.sensors.SensorService
-import com.airmouse.ui.DebugOverlay
+import com.airmouse.DebugOverlay
 import com.airmouse.ui.SettingsDialog
 import com.airmouse.utils.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -133,7 +132,7 @@ class HomeFragment : Fragment() {
         debugOverlay.setSensorService(sensorService)
 
         ipEditText.setText(preferences.getLastIp())
-        qrScanner = QRScanner(requireActivity())
+        qrScanner = QRScanner(requireActivity() as androidx.appcompat.app.AppCompatActivity)
     }
 
     private fun setupQRScanner() {
@@ -295,7 +294,7 @@ class HomeFragment : Fragment() {
         preferences.setLastIp(ip)
 
         try {
-            dataSender = DataSender(ip, PORT, preferences)
+            dataSender = DataSender.getInstance(ip, PORT, preferences) ?: return
             autoReconnect = AutoReconnect(dataSender, preferences) { newSender ->
                 dataSender = newSender
                 attachSensorCallbacks()

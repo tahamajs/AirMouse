@@ -12,6 +12,9 @@ import org.json.JSONObject
 class PreferencesManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("airmouse", Context.MODE_PRIVATE)
 
+    fun saveAccelerometerParams(offset: FloatArray, scale: FloatArray) {
+        saveAccelParams(offset, scale)
+    }
     // ----------------------------------------------------------------------
     // Basic settings
     // ----------------------------------------------------------------------

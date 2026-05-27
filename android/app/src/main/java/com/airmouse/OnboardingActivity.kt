@@ -1,11 +1,10 @@
-package com.airmouse.ui.onboarding
+package com.airmouse
+import android.view.View
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
-import com.airmouse.R
-import com.airmouse.ui.MainActivity
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
@@ -20,28 +19,30 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var btnGetStarted: MaterialButton
     private lateinit var preferences: PreferencesManager
 
-    private val onboardingItems = listOf(
-        OnboardingItem(
-            R.drawable.ic_air_mouse_pro_ultra,
-            getString(R.string.onboarding_title_1),
-            getString(R.string.onboarding_desc_1)
-        ),
-        OnboardingItem(
-            R.drawable.ic_gesture,
-            getString(R.string.onboarding_title_2),
-            getString(R.string.onboarding_desc_2)
-        ),
-        OnboardingItem(
-            R.drawable.ic_wifi,
-            getString(R.string.onboarding_title_3),
-            getString(R.string.onboarding_desc_3)
-        ),
-        OnboardingItem(
-            R.drawable.ic_stats,
-            getString(R.string.onboarding_title_4),
-            getString(R.string.onboarding_desc_4)
+    private val onboardingItems by lazy {
+        listOf(
+            OnboardingItem(
+                R.drawable.ic_calibrate, // Placeholder if ic_air_mouse_pro_ultra missing
+                getString(R.string.onboarding_title_1),
+                getString(R.string.onboarding_desc_1)
+            ),
+            OnboardingItem(
+                R.drawable.ic_calibrate,
+                getString(R.string.onboarding_title_2),
+                getString(R.string.onboarding_desc_2)
+            ),
+            OnboardingItem(
+                R.drawable.ic_calibrate,
+                getString(R.string.onboarding_title_3),
+                getString(R.string.onboarding_desc_3)
+            ),
+            OnboardingItem(
+                R.drawable.ic_calibrate,
+                getString(R.string.onboarding_title_4),
+                getString(R.string.onboarding_desc_4)
+            )
         )
-    )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

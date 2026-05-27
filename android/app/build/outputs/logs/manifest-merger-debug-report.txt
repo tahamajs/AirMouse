@@ -1,335 +1,486 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-35:12
-INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-35:12
-INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-35:12
-INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-35:12
-MERGED from [androidx.databinding:viewbinding:9.0.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/f5e7076e0a6fecc150d292abb04902bf/transformed/jetified-viewbinding-9.0.1/AndroidManifest.xml:2:1-7:12
-MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9e74ffc4352bd4263e793b4c7b60e01e/transformed/material-1.11.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/9.2.1/transforms/63daf8caf5aa00e960dd3d24b4e2ce03/transformed/constraintlayout-2.1.4/AndroidManifest.xml:2:1-11:12
-MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/25adbfa2892617245ae23a000e28e387/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/3de327505ac53bbe86ebdb26d7cece77/transformed/appcompat-1.6.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/4c28ef7e04c6c8cdcee4acd46062ad18/transformed/jetified-emoji2-views-helper-1.2.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:17:1-35:12
-MERGED from [androidx.viewpager2:viewpager2:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b3c1b38ae0152f7bbe57a71b6db6be84/transformed/jetified-viewpager2-1.0.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.fragment:fragment:1.3.6] /Users/tahamajs/.gradle/caches/9.2.1/transforms/30f0b13afb6fe0b3a359fc489ef17cf0/transformed/fragment-1.3.6/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.activity:activity:1.8.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/761da3280f6256c927978e9aafeaace9/transformed/jetified-activity-1.8.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/917d932e031782dba8331c2cc48cf24e/transformed/drawerlayout-1.1.1/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/8a75c257bab070d1c9fdebbd4db0bafd/transformed/coordinatorlayout-1.1.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/eb131492343a36963af2dc42861fccf4/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.transition:transition:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/edd53751631bec7df0b419ae890b9235/transformed/transition-1.2.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/ace082bd9a025ec4e9f2f74c8a22c83b/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9f07d272c62b8dce8d1aade85b78a3c9/transformed/vectordrawable-1.1.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a6028cc074955427af1af48e4b461355/transformed/viewpager-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/cfb0b4fbc5f35f8b902eb51fe302a195/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.loader:loader:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/81951d83b36b253ab861c5692ba26000/transformed/loader-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.recyclerview:recyclerview:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b926c5526775b6ef12b92371d5f7f666/transformed/recyclerview-1.1.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.customview:customview:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/fadaad261b7d02e02c1d7018ae258007/transformed/customview-1.1.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:17:1-30:12
-MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/bea635a8cea66c88fac205af5f18cb06/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9742f88cf99c8a660ad2c7b54d9ab102/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:17:1-35:12
-MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/db9b127eb2d79dbdb641119ed380e35f/transformed/jetified-lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/27ab6a0c69fc779d29abbe71971b50bd/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/40b51ea8fa17d1991c2fd06949f30c91/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/f728b465f221c05b4569db62395ace36/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b83ff58b2a6fbd7d6f103cbee32eab81/transformed/jetified-lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a53bb9fe2032c5e2bbd37f4d54244a21/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/5ca6cfa6656e6407396d3da623da19b5/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/cf653a9e2ba8792aafe3082feb2799a9/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.core:core-ktx:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/704b89b7fe47125fb45584f1d13d6082/transformed/jetified-core-ktx-1.12.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.datastore:datastore-preferences:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/50e076ee5dca608ed6e8c05f5f47c320/transformed/jetified-datastore-preferences-1.0.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.datastore:datastore:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/fc3c1b6aafc05dd338eced1ea98712dd/transformed/jetified-datastore-1.0.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/39315c4eb23d2ad884a781674719af9f/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/6864f52f149cdbf9db1a41b99eb03526/transformed/cursoradapter-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.cardview:cardview:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9653f6611974b1620d7f581066da3c94/transformed/cardview-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/709a9cc03122e74269c7681581835d42/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/bcf807ede907cc7c582c9ea83cd96d22/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:17:1-55:12
-MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/c0dfa33a04aebfc07f25b2d57d3a72a3/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
-MERGED from [androidx.tracing:tracing:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a19bdbf70f53efcf5eb178d097498a5d/transformed/jetified-tracing-1.0.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/72a0fb13c865669c5e607be9ae5468fd/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/1efacf73bf32a98fd9cf7d144d24c469/transformed/documentfile-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/14db3030f67f5a026d2e51dda1b90a10/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.print:print:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/ae58aba5e0ab27270231aae60b1deb6c/transformed/print-1.0.0/AndroidManifest.xml:17:1-22:12
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-52:12
+MERGED from [androidx.databinding:viewbinding:8.5.2] /Users/tahamajs/.gradle/caches/transforms-4/ae0e7bf5100d7fb9995eb3351f9bc44e/transformed/viewbinding-8.5.2/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-common:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/f45c6a4abeca948a57d8749aba50dcd0/transformed/navigation-common-2.7.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/bc996293faa4dc6a82cc744ba5a2fc9f/transformed/navigation-common-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-runtime:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/0db1c36e66e35ddbffec67494147da53/transformed/navigation-runtime-2.7.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/e5eb4e5337fc2500311ca74e4f9520da/transformed/navigation-runtime-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-fragment:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/98db9381ed40f6b9e5639038e48cc70d/transformed/navigation-fragment-2.7.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-fragment-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/4b01a69feaeed0627aa3b6a31c42d678/transformed/navigation-fragment-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-ui-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/f6cff37b90f8b7f58da6806b3b1393ec/transformed/navigation-ui-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-ui:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/5b72d80f359773b2f231351f8fed27bd/transformed/navigation-ui-2.7.7/AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/transforms-4/37bd013277d2371418a4f74250ac8f4d/transformed/material-1.11.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/transforms-4/70b7b151f3dea3fcbd741755e88cd74f/transformed/constraintlayout-2.1.4/AndroidManifest.xml:2:1-11:12
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/tahamajs/.gradle/caches/transforms-4/a7c15b971cbbc00de96bc01a9258db80/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/tahamajs/.gradle/caches/transforms-4/e256df3718cfc01d3606bd46a5010a10/transformed/appcompat-1.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.viewpager2:viewpager2:1.1.0-beta02] /Users/tahamajs/.gradle/caches/transforms-4/68eb90e20f041dd39b041d6796f7a0c2/transformed/viewpager2-1.1.0-beta02/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.recyclerview:recyclerview:1.3.2] /Users/tahamajs/.gradle/caches/transforms-4/ca3178a0a9d7048b3ea524c93cfa6db4/transformed/recyclerview-1.3.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/f473fcb7d441f7708a70222a017f72f2/transformed/emoji2-views-helper-1.2.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.fragment:fragment-ktx:1.6.2] /Users/tahamajs/.gradle/caches/transforms-4/4341f6b891851ed1a773fbfc618195c9/transformed/fragment-ktx-1.6.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.fragment:fragment:1.6.2] /Users/tahamajs/.gradle/caches/transforms-4/b1e3de3741ecbd5d033d76b26ff2fc70/transformed/fragment-1.6.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity-ktx:1.8.0] /Users/tahamajs/.gradle/caches/transforms-4/63543885f3bafe7ebd41fb42df2f5dbc/transformed/activity-ktx-1.8.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity:1.8.0] /Users/tahamajs/.gradle/caches/transforms-4/5707c756e1d8cd18054b211faff92ac8/transformed/activity-1.8.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/5a150eac2e0e1661cd0684d5f59b5b03/transformed/drawerlayout-1.1.1/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/61b219a2b665b6b546f1e59adca8aa9b/transformed/coordinatorlayout-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/d8afdba4181a1867b941ffe133fe991e/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/1e66e847deaeabda61570d33aeb4ad30/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/e972b7f3439ae3a41ed1aa77f1c7553e/transformed/vectordrawable-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/06f91cd60301ec54e20a248ff381e00d/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/978336ae91e7d9636251d683676c7178/transformed/loader-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/2f071b18b73d3d0e93ca7ea282b3e0b4/transformed/slidingpanelayout-1.2.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/0df3cf8107b3b4bfd003a0c10e967828/transformed/viewpager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.customview:customview:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/09077bf08c8a6e2743e7ae120922f09e/transformed/customview-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.transition:transition:1.4.1] /Users/tahamajs/.gradle/caches/transforms-4/9eea275808e1c1d31462c1bf97f19f64/transformed/transition-1.4.1/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/ee4c6304a5279a4dc1f6078ef214acbf/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/tahamajs/.gradle/caches/transforms-4/0119b60ec994bec3a72239745e8512ab/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/tahamajs/.gradle/caches/transforms-4/b786c37fba9ada2104ffc7a5841d0914/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/013ec019bc3f9d28df84c190ad11a37e/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/30e27eb2b4ebc72e911954564d5cf10f/transformed/lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/8459bfb3fcdc07ec0f64389e1dfdeab5/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/7247a6462daa6f195bbd99defc7a7b55/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/090621f70747368b71a5cd1bd2a1a74a/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/87307c85e243b4e0b22cdc3b5990efaf/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/2e03a0e1c225d0fd165aa4d495cc29da/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/773802fb886dc34b4df203a6aee3e129/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/bb8434bac7292cc4a489f3aa72278d89/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core-ktx:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/57ea28f9e81630393f792030f0428ab9/transformed/core-ktx-1.12.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-preferences:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/8cc12998cdaa94af31a9997aa2c5dd5a/transformed/datastore-preferences-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.datastore:datastore:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/e96b6752f8f11da0f49bb87a03188909/transformed/datastore-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.core:core-splashscreen:1.0.1] /Users/tahamajs/.gradle/caches/transforms-4/2d1db4be47427404bf6edfa5d4a18c99/transformed/core-splashscreen-1.0.1/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/f9d8f236fef759bc90e9cc7ad636aaf2/transformed/annotation-experimental-1.3.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.cardview:cardview:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/bc7a4bf277149cd725177ff7227aa107/transformed/cardview-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [com.github.PhilJay:MPAndroidChart:v3.1.0] /Users/tahamajs/.gradle/caches/transforms-4/2c16ddacf54996425363d41e5f561b49/transformed/MPAndroidChart-v3.1.0/AndroidManifest.xml:2:1-20:12
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/d814ca451105dabea02bcec90e6bcb46/transformed/cursoradapter-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/f4566fc3dff8a1f2da440ae8c618a497/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/c5afd2a504f14eeab966c4aac1675576/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/ca866bdbc050d415d0459fe8b7e4fe5e/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/cfe76d39fa66278cbfd592c3b840d9f6/transformed/tracing-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tahamajs/.gradle/caches/transforms-4/2b6757631f6c82bea10a1f71ec8ad749/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/ee03086eba8142b07f97944fe9a51105/transformed/documentfile-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/adbf308a6ff417fe0b5ebffc3d010fa0/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.print:print:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/9c62680f4c36a5b3dbcd721e56332d6c/transformed/print-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:17:1-56:12
 	package
 		INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml
 	android:versionName
 		INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml
+	xmlns:tools
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:3:5-51
 	android:versionCode
 		INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml
 	xmlns:android
 		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:11-69
 uses-permission#android.permission.INTERNET
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:4:5-67
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:5:5-67
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:4:22-64
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:5:22-64
 uses-permission#android.permission.VIBRATE
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:5:5-66
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:6:5-66
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:5:22-63
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:6:22-63
 uses-permission#android.permission.SYSTEM_ALERT_WINDOW
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:6:5-78
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:7:5-78
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:6:22-75
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:7:22-75
 uses-permission#android.permission.ACCESS_NETWORK_STATE
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:7:5-79
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:8:5-79
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:7:22-76
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:8:22-76
 uses-permission#android.permission.ACCESS_WIFI_STATE
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:8:5-76
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:9:5-76
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:8:22-73
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:9:22-73
+uses-permission#android.permission.CAMERA
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:10:5-65
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:22:5-65
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:22:5-65
+	android:name
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:10:22-62
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:11:5-77
+	android:name
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:11:22-74
+uses-permission#android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:12:5-89
+	android:name
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:12:22-86
 application
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:10:5-33:19
-INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:10:5-33:19
-MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9e74ffc4352bd4263e793b4c7b60e01e/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
-MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9e74ffc4352bd4263e793b4c7b60e01e/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
-MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/9.2.1/transforms/63daf8caf5aa00e960dd3d24b4e2ce03/transformed/constraintlayout-2.1.4/AndroidManifest.xml:9:5-20
-MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/9.2.1/transforms/63daf8caf5aa00e960dd3d24b4e2ce03/transformed/constraintlayout-2.1.4/AndroidManifest.xml:9:5-20
-MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
-MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/bcf807ede907cc7c582c9ea83cd96d22/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/bcf807ede907cc7c582c9ea83cd96d22/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:23:5-53:19
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:23:5-53:19
-MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/c0dfa33a04aebfc07f25b2d57d3a72a3/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
-MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/c0dfa33a04aebfc07f25b2d57d3a72a3/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:14:5-50:19
+INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:14:5-50:19
+MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/transforms-4/37bd013277d2371418a4f74250ac8f4d/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
+MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/transforms-4/37bd013277d2371418a4f74250ac8f4d/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
+MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/transforms-4/70b7b151f3dea3fcbd741755e88cd74f/transformed/constraintlayout-2.1.4/AndroidManifest.xml:9:5-20
+MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/transforms-4/70b7b151f3dea3fcbd741755e88cd74f/transformed/constraintlayout-2.1.4/AndroidManifest.xml:9:5-20
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:24:5-31:19
+MERGED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:24:5-31:19
+MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/c5afd2a504f14eeab966c4aac1675576/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/c5afd2a504f14eeab966c4aac1675576/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/ca866bdbc050d415d0459fe8b7e4fe5e/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/ca866bdbc050d415d0459fe8b7e4fe5e/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:46:5-54:19
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:46:5-54:19
 	android:extractNativeLibs
 		INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml
 	android:appComponentFactory
-		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
+		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:16:9-35
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:17:9-35
 	android:label
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:15:9-41
-	android:roundIcon
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:13:9-61
-	android:icon
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:12:9-56
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:16:9-41
 	android:allowBackup
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:11:9-35
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:15:9-35
 	android:theme
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:17:9-46
-activity#com.airmouse.MainActivity
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:19:9-27:20
-	android:screenOrientation
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:22:13-49
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:18:9-46
+	android:usesCleartextTraffic
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:19:9-44
+activity#com.airmouse.ui.onboarding.OnboardingActivity
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:21:9-28:20
 	android:exported
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:21:13-36
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:23:13-36
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:20:13-41
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:22:13-61
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:23:13-26:29
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:24:13-27:29
 action#android.intent.action.MAIN
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:24:17-69
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:25:17-69
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:24:25-66
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:25:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:25:17-77
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:26:17-77
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:25:27-74
-service#com.airmouse.ui.DebugOverlayService
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:29:9-31:40
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:26:27-74
+activity#com.airmouse.ui.MainActivity
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:30:9-33:52
+	android:screenOrientation
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:33:13-49
 	android:exported
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:31:13-37
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:13-37
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:30:13-51
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:31:13-44
+activity#com.journeyapps.barcodescanner.CaptureActivity
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:35:9-39:71
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:47:9-53:63
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:47:9-53:63
+	android:clearTaskOnLaunch
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:49:13-45
+	android:screenOrientation
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:38:13-51
+		REJECTED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:50:13-56
+	android:stateNotNeeded
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:51:13-42
+	android:windowSoftInputMode
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:53:13-60
+	android:theme
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:37:13-63
+		REJECTED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:52:13-54
+	tools:replace
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:39:13-68
+	android:name
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:36:13-74
+service#com.airmouse.ui.DebugOverlayService
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:41:9-43:40
+	android:exported
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:43:13-37
+	android:name
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:42:13-51
+service#com.airmouse.service.EdgeGestureService
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:45:9-48:58
+	android:exported
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:47:13-37
+	android:foregroundServiceType
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:48:13-55
+	android:name
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:46:13-55
 uses-sdk
 INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml
 INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml
-MERGED from [androidx.databinding:viewbinding:9.0.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/f5e7076e0a6fecc150d292abb04902bf/transformed/jetified-viewbinding-9.0.1/AndroidManifest.xml:5:5-44
-MERGED from [androidx.databinding:viewbinding:9.0.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/f5e7076e0a6fecc150d292abb04902bf/transformed/jetified-viewbinding-9.0.1/AndroidManifest.xml:5:5-44
-MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9e74ffc4352bd4263e793b4c7b60e01e/transformed/material-1.11.0/AndroidManifest.xml:20:5-44
-MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9e74ffc4352bd4263e793b4c7b60e01e/transformed/material-1.11.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/9.2.1/transforms/63daf8caf5aa00e960dd3d24b4e2ce03/transformed/constraintlayout-2.1.4/AndroidManifest.xml:5:5-7:41
-MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/9.2.1/transforms/63daf8caf5aa00e960dd3d24b4e2ce03/transformed/constraintlayout-2.1.4/AndroidManifest.xml:5:5-7:41
-MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/25adbfa2892617245ae23a000e28e387/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/25adbfa2892617245ae23a000e28e387/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/3de327505ac53bbe86ebdb26d7cece77/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/3de327505ac53bbe86ebdb26d7cece77/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/4c28ef7e04c6c8cdcee4acd46062ad18/transformed/jetified-emoji2-views-helper-1.2.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/4c28ef7e04c6c8cdcee4acd46062ad18/transformed/jetified-emoji2-views-helper-1.2.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.viewpager2:viewpager2:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b3c1b38ae0152f7bbe57a71b6db6be84/transformed/jetified-viewpager2-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.viewpager2:viewpager2:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b3c1b38ae0152f7bbe57a71b6db6be84/transformed/jetified-viewpager2-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.fragment:fragment:1.3.6] /Users/tahamajs/.gradle/caches/9.2.1/transforms/30f0b13afb6fe0b3a359fc489ef17cf0/transformed/fragment-1.3.6/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.fragment:fragment:1.3.6] /Users/tahamajs/.gradle/caches/9.2.1/transforms/30f0b13afb6fe0b3a359fc489ef17cf0/transformed/fragment-1.3.6/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.activity:activity:1.8.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/761da3280f6256c927978e9aafeaace9/transformed/jetified-activity-1.8.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.activity:activity:1.8.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/761da3280f6256c927978e9aafeaace9/transformed/jetified-activity-1.8.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/917d932e031782dba8331c2cc48cf24e/transformed/drawerlayout-1.1.1/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/917d932e031782dba8331c2cc48cf24e/transformed/drawerlayout-1.1.1/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/8a75c257bab070d1c9fdebbd4db0bafd/transformed/coordinatorlayout-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/8a75c257bab070d1c9fdebbd4db0bafd/transformed/coordinatorlayout-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/eb131492343a36963af2dc42861fccf4/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/eb131492343a36963af2dc42861fccf4/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.transition:transition:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/edd53751631bec7df0b419ae890b9235/transformed/transition-1.2.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.transition:transition:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/edd53751631bec7df0b419ae890b9235/transformed/transition-1.2.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/ace082bd9a025ec4e9f2f74c8a22c83b/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/ace082bd9a025ec4e9f2f74c8a22c83b/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9f07d272c62b8dce8d1aade85b78a3c9/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9f07d272c62b8dce8d1aade85b78a3c9/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a6028cc074955427af1af48e4b461355/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a6028cc074955427af1af48e4b461355/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/cfb0b4fbc5f35f8b902eb51fe302a195/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/cfb0b4fbc5f35f8b902eb51fe302a195/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.loader:loader:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/81951d83b36b253ab861c5692ba26000/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.loader:loader:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/81951d83b36b253ab861c5692ba26000/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.recyclerview:recyclerview:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b926c5526775b6ef12b92371d5f7f666/transformed/recyclerview-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.recyclerview:recyclerview:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b926c5526775b6ef12b92371d5f7f666/transformed/recyclerview-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.customview:customview:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/fadaad261b7d02e02c1d7018ae258007/transformed/customview-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.customview:customview:1.1.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/fadaad261b7d02e02c1d7018ae258007/transformed/customview-1.1.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/bea635a8cea66c88fac205af5f18cb06/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/bea635a8cea66c88fac205af5f18cb06/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9742f88cf99c8a660ad2c7b54d9ab102/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9742f88cf99c8a660ad2c7b54d9ab102/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/db9b127eb2d79dbdb641119ed380e35f/transformed/jetified-lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/db9b127eb2d79dbdb641119ed380e35f/transformed/jetified-lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/27ab6a0c69fc779d29abbe71971b50bd/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/27ab6a0c69fc779d29abbe71971b50bd/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/40b51ea8fa17d1991c2fd06949f30c91/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/40b51ea8fa17d1991c2fd06949f30c91/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/f728b465f221c05b4569db62395ace36/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/f728b465f221c05b4569db62395ace36/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b83ff58b2a6fbd7d6f103cbee32eab81/transformed/jetified-lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/b83ff58b2a6fbd7d6f103cbee32eab81/transformed/jetified-lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a53bb9fe2032c5e2bbd37f4d54244a21/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a53bb9fe2032c5e2bbd37f4d54244a21/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/5ca6cfa6656e6407396d3da623da19b5/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/5ca6cfa6656e6407396d3da623da19b5/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/cf653a9e2ba8792aafe3082feb2799a9/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/cf653a9e2ba8792aafe3082feb2799a9/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.core:core-ktx:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/704b89b7fe47125fb45584f1d13d6082/transformed/jetified-core-ktx-1.12.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.core:core-ktx:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/704b89b7fe47125fb45584f1d13d6082/transformed/jetified-core-ktx-1.12.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.datastore:datastore-preferences:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/50e076ee5dca608ed6e8c05f5f47c320/transformed/jetified-datastore-preferences-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.datastore:datastore-preferences:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/50e076ee5dca608ed6e8c05f5f47c320/transformed/jetified-datastore-preferences-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.datastore:datastore:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/fc3c1b6aafc05dd338eced1ea98712dd/transformed/jetified-datastore-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.datastore:datastore:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/fc3c1b6aafc05dd338eced1ea98712dd/transformed/jetified-datastore-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/39315c4eb23d2ad884a781674719af9f/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/39315c4eb23d2ad884a781674719af9f/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/6864f52f149cdbf9db1a41b99eb03526/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/6864f52f149cdbf9db1a41b99eb03526/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.cardview:cardview:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9653f6611974b1620d7f581066da3c94/transformed/cardview-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.cardview:cardview:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9653f6611974b1620d7f581066da3c94/transformed/cardview-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/709a9cc03122e74269c7681581835d42/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/709a9cc03122e74269c7681581835d42/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/bcf807ede907cc7c582c9ea83cd96d22/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/bcf807ede907cc7c582c9ea83cd96d22/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/c0dfa33a04aebfc07f25b2d57d3a72a3/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
-MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/c0dfa33a04aebfc07f25b2d57d3a72a3/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
-MERGED from [androidx.tracing:tracing:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a19bdbf70f53efcf5eb178d097498a5d/transformed/jetified-tracing-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.tracing:tracing:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a19bdbf70f53efcf5eb178d097498a5d/transformed/jetified-tracing-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/72a0fb13c865669c5e607be9ae5468fd/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/72a0fb13c865669c5e607be9ae5468fd/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/1efacf73bf32a98fd9cf7d144d24c469/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/1efacf73bf32a98fd9cf7d144d24c469/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/14db3030f67f5a026d2e51dda1b90a10/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/14db3030f67f5a026d2e51dda1b90a10/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.print:print:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/ae58aba5e0ab27270231aae60b1deb6c/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.print:print:1.0.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/ae58aba5e0ab27270231aae60b1deb6c/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.databinding:viewbinding:8.5.2] /Users/tahamajs/.gradle/caches/transforms-4/ae0e7bf5100d7fb9995eb3351f9bc44e/transformed/viewbinding-8.5.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.databinding:viewbinding:8.5.2] /Users/tahamajs/.gradle/caches/transforms-4/ae0e7bf5100d7fb9995eb3351f9bc44e/transformed/viewbinding-8.5.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-common:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/f45c6a4abeca948a57d8749aba50dcd0/transformed/navigation-common-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/f45c6a4abeca948a57d8749aba50dcd0/transformed/navigation-common-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/bc996293faa4dc6a82cc744ba5a2fc9f/transformed/navigation-common-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/bc996293faa4dc6a82cc744ba5a2fc9f/transformed/navigation-common-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-runtime:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/0db1c36e66e35ddbffec67494147da53/transformed/navigation-runtime-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-runtime:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/0db1c36e66e35ddbffec67494147da53/transformed/navigation-runtime-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/e5eb4e5337fc2500311ca74e4f9520da/transformed/navigation-runtime-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/e5eb4e5337fc2500311ca74e4f9520da/transformed/navigation-runtime-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-fragment:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/98db9381ed40f6b9e5639038e48cc70d/transformed/navigation-fragment-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-fragment:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/98db9381ed40f6b9e5639038e48cc70d/transformed/navigation-fragment-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-fragment-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/4b01a69feaeed0627aa3b6a31c42d678/transformed/navigation-fragment-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-fragment-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/4b01a69feaeed0627aa3b6a31c42d678/transformed/navigation-fragment-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-ui-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/f6cff37b90f8b7f58da6806b3b1393ec/transformed/navigation-ui-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-ui-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/f6cff37b90f8b7f58da6806b3b1393ec/transformed/navigation-ui-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-ui:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/5b72d80f359773b2f231351f8fed27bd/transformed/navigation-ui-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-ui:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/5b72d80f359773b2f231351f8fed27bd/transformed/navigation-ui-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/transforms-4/37bd013277d2371418a4f74250ac8f4d/transformed/material-1.11.0/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/transforms-4/37bd013277d2371418a4f74250ac8f4d/transformed/material-1.11.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/transforms-4/70b7b151f3dea3fcbd741755e88cd74f/transformed/constraintlayout-2.1.4/AndroidManifest.xml:5:5-7:41
+MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/transforms-4/70b7b151f3dea3fcbd741755e88cd74f/transformed/constraintlayout-2.1.4/AndroidManifest.xml:5:5-7:41
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/tahamajs/.gradle/caches/transforms-4/a7c15b971cbbc00de96bc01a9258db80/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/tahamajs/.gradle/caches/transforms-4/a7c15b971cbbc00de96bc01a9258db80/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/tahamajs/.gradle/caches/transforms-4/e256df3718cfc01d3606bd46a5010a10/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/tahamajs/.gradle/caches/transforms-4/e256df3718cfc01d3606bd46a5010a10/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager2:viewpager2:1.1.0-beta02] /Users/tahamajs/.gradle/caches/transforms-4/68eb90e20f041dd39b041d6796f7a0c2/transformed/viewpager2-1.1.0-beta02/AndroidManifest.xml:5:5-44
+MERGED from [androidx.viewpager2:viewpager2:1.1.0-beta02] /Users/tahamajs/.gradle/caches/transforms-4/68eb90e20f041dd39b041d6796f7a0c2/transformed/viewpager2-1.1.0-beta02/AndroidManifest.xml:5:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.3.2] /Users/tahamajs/.gradle/caches/transforms-4/ca3178a0a9d7048b3ea524c93cfa6db4/transformed/recyclerview-1.3.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.3.2] /Users/tahamajs/.gradle/caches/transforms-4/ca3178a0a9d7048b3ea524c93cfa6db4/transformed/recyclerview-1.3.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/f473fcb7d441f7708a70222a017f72f2/transformed/emoji2-views-helper-1.2.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/f473fcb7d441f7708a70222a017f72f2/transformed/emoji2-views-helper-1.2.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.fragment:fragment-ktx:1.6.2] /Users/tahamajs/.gradle/caches/transforms-4/4341f6b891851ed1a773fbfc618195c9/transformed/fragment-ktx-1.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.fragment:fragment-ktx:1.6.2] /Users/tahamajs/.gradle/caches/transforms-4/4341f6b891851ed1a773fbfc618195c9/transformed/fragment-ktx-1.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.fragment:fragment:1.6.2] /Users/tahamajs/.gradle/caches/transforms-4/b1e3de3741ecbd5d033d76b26ff2fc70/transformed/fragment-1.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.fragment:fragment:1.6.2] /Users/tahamajs/.gradle/caches/transforms-4/b1e3de3741ecbd5d033d76b26ff2fc70/transformed/fragment-1.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-ktx:1.8.0] /Users/tahamajs/.gradle/caches/transforms-4/63543885f3bafe7ebd41fb42df2f5dbc/transformed/activity-ktx-1.8.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.8.0] /Users/tahamajs/.gradle/caches/transforms-4/63543885f3bafe7ebd41fb42df2f5dbc/transformed/activity-ktx-1.8.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity:1.8.0] /Users/tahamajs/.gradle/caches/transforms-4/5707c756e1d8cd18054b211faff92ac8/transformed/activity-1.8.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.8.0] /Users/tahamajs/.gradle/caches/transforms-4/5707c756e1d8cd18054b211faff92ac8/transformed/activity-1.8.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/5a150eac2e0e1661cd0684d5f59b5b03/transformed/drawerlayout-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/5a150eac2e0e1661cd0684d5f59b5b03/transformed/drawerlayout-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/61b219a2b665b6b546f1e59adca8aa9b/transformed/coordinatorlayout-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/61b219a2b665b6b546f1e59adca8aa9b/transformed/coordinatorlayout-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/d8afdba4181a1867b941ffe133fe991e/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/d8afdba4181a1867b941ffe133fe991e/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/1e66e847deaeabda61570d33aeb4ad30/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/1e66e847deaeabda61570d33aeb4ad30/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/e972b7f3439ae3a41ed1aa77f1c7553e/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/e972b7f3439ae3a41ed1aa77f1c7553e/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/06f91cd60301ec54e20a248ff381e00d/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/06f91cd60301ec54e20a248ff381e00d/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/978336ae91e7d9636251d683676c7178/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/978336ae91e7d9636251d683676c7178/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/2f071b18b73d3d0e93ca7ea282b3e0b4/transformed/slidingpanelayout-1.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/2f071b18b73d3d0e93ca7ea282b3e0b4/transformed/slidingpanelayout-1.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/0df3cf8107b3b4bfd003a0c10e967828/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/0df3cf8107b3b4bfd003a0c10e967828/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/09077bf08c8a6e2743e7ae120922f09e/transformed/customview-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.customview:customview:1.1.0] /Users/tahamajs/.gradle/caches/transforms-4/09077bf08c8a6e2743e7ae120922f09e/transformed/customview-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.transition:transition:1.4.1] /Users/tahamajs/.gradle/caches/transforms-4/9eea275808e1c1d31462c1bf97f19f64/transformed/transition-1.4.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.transition:transition:1.4.1] /Users/tahamajs/.gradle/caches/transforms-4/9eea275808e1c1d31462c1bf97f19f64/transformed/transition-1.4.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/ee4c6304a5279a4dc1f6078ef214acbf/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/ee4c6304a5279a4dc1f6078ef214acbf/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/tahamajs/.gradle/caches/transforms-4/0119b60ec994bec3a72239745e8512ab/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/tahamajs/.gradle/caches/transforms-4/0119b60ec994bec3a72239745e8512ab/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/tahamajs/.gradle/caches/transforms-4/b786c37fba9ada2104ffc7a5841d0914/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/tahamajs/.gradle/caches/transforms-4/b786c37fba9ada2104ffc7a5841d0914/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/013ec019bc3f9d28df84c190ad11a37e/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/013ec019bc3f9d28df84c190ad11a37e/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/30e27eb2b4ebc72e911954564d5cf10f/transformed/lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/30e27eb2b4ebc72e911954564d5cf10f/transformed/lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/8459bfb3fcdc07ec0f64389e1dfdeab5/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/8459bfb3fcdc07ec0f64389e1dfdeab5/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/7247a6462daa6f195bbd99defc7a7b55/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/7247a6462daa6f195bbd99defc7a7b55/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/090621f70747368b71a5cd1bd2a1a74a/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/090621f70747368b71a5cd1bd2a1a74a/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/87307c85e243b4e0b22cdc3b5990efaf/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/87307c85e243b4e0b22cdc3b5990efaf/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/2e03a0e1c225d0fd165aa4d495cc29da/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/2e03a0e1c225d0fd165aa4d495cc29da/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/773802fb886dc34b4df203a6aee3e129/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/773802fb886dc34b4df203a6aee3e129/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/bb8434bac7292cc4a489f3aa72278d89/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/bb8434bac7292cc4a489f3aa72278d89/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core-ktx:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/57ea28f9e81630393f792030f0428ab9/transformed/core-ktx-1.12.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/57ea28f9e81630393f792030f0428ab9/transformed/core-ktx-1.12.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-preferences:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/8cc12998cdaa94af31a9997aa2c5dd5a/transformed/datastore-preferences-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.datastore:datastore-preferences:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/8cc12998cdaa94af31a9997aa2c5dd5a/transformed/datastore-preferences-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.datastore:datastore:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/e96b6752f8f11da0f49bb87a03188909/transformed/datastore-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.datastore:datastore:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/e96b6752f8f11da0f49bb87a03188909/transformed/datastore-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.core:core-splashscreen:1.0.1] /Users/tahamajs/.gradle/caches/transforms-4/2d1db4be47427404bf6edfa5d4a18c99/transformed/core-splashscreen-1.0.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.core:core-splashscreen:1.0.1] /Users/tahamajs/.gradle/caches/transforms-4/2d1db4be47427404bf6edfa5d4a18c99/transformed/core-splashscreen-1.0.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/f9d8f236fef759bc90e9cc7ad636aaf2/transformed/annotation-experimental-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/f9d8f236fef759bc90e9cc7ad636aaf2/transformed/annotation-experimental-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.cardview:cardview:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/bc7a4bf277149cd725177ff7227aa107/transformed/cardview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.cardview:cardview:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/bc7a4bf277149cd725177ff7227aa107/transformed/cardview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [com.github.PhilJay:MPAndroidChart:v3.1.0] /Users/tahamajs/.gradle/caches/transforms-4/2c16ddacf54996425363d41e5f561b49/transformed/MPAndroidChart-v3.1.0/AndroidManifest.xml:16:5-18:41
+MERGED from [com.github.PhilJay:MPAndroidChart:v3.1.0] /Users/tahamajs/.gradle/caches/transforms-4/2c16ddacf54996425363d41e5f561b49/transformed/MPAndroidChart-v3.1.0/AndroidManifest.xml:16:5-18:41
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/d814ca451105dabea02bcec90e6bcb46/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/d814ca451105dabea02bcec90e6bcb46/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/f4566fc3dff8a1f2da440ae8c618a497/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/f4566fc3dff8a1f2da440ae8c618a497/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/c5afd2a504f14eeab966c4aac1675576/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/c5afd2a504f14eeab966c4aac1675576/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/ca866bdbc050d415d0459fe8b7e4fe5e/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/ca866bdbc050d415d0459fe8b7e4fe5e/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/cfe76d39fa66278cbfd592c3b840d9f6/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/cfe76d39fa66278cbfd592c3b840d9f6/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tahamajs/.gradle/caches/transforms-4/2b6757631f6c82bea10a1f71ec8ad749/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tahamajs/.gradle/caches/transforms-4/2b6757631f6c82bea10a1f71ec8ad749/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/ee03086eba8142b07f97944fe9a51105/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/ee03086eba8142b07f97944fe9a51105/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/adbf308a6ff417fe0b5ebffc3d010fa0/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/adbf308a6ff417fe0b5ebffc3d010fa0/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/9c62680f4c36a5b3dbcd721e56332d6c/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/9c62680f4c36a5b3dbcd721e56332d6c/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:20:5-44
+MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:20:5-44
 	android:targetSdkVersion
 		INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml
 	android:minSdkVersion
 		INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml
 provider#androidx.startup.InitializationProvider
-ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/c0dfa33a04aebfc07f25b2d57d3a72a3/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
-MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/9.2.1/transforms/c0dfa33a04aebfc07f25b2d57d3a72a3/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/ca866bdbc050d415d0459fe8b7e4fe5e/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tahamajs/.gradle/caches/transforms-4/ca866bdbc050d415d0459fe8b7e4fe5e/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
 	tools:node
-		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:28:13-31
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:28:13-31
 	android:authorities
-		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:26:13-68
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:26:13-68
 	android:exported
-		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:27:13-37
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:27:13-37
 	android:name
-		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:25:13-67
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:25:13-67
 meta-data#androidx.emoji2.text.EmojiCompatInitializer
-ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
+ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
 	android:value
-		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:31:17-49
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:31:17-49
 	android:name
-		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/57d89081640d41d6ee5ebcb76ba91774/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:30:17-75
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:30:17-75
+uses-library#androidx.window.extensions
+ADDED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:25:9-27:40
+	android:required
+		ADDED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:26:13-54
+uses-library#androidx.window.sidecar
+ADDED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:28:9-30:40
+	android:required
+		ADDED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:30:13-37
+	android:name
+		ADDED from [androidx.window:window:1.0.0] /Users/tahamajs/.gradle/caches/transforms-4/633d586b240df85039fb8514354d0973/transformed/window-1.0.0/AndroidManifest.xml:29:13-51
 permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
-ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
-		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
 	android:name
-		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
 permission#com.airmouse.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
-ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
-		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
 	android:name
-		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
 uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
-ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
 	android:name
-		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
 uses-permission#com.airmouse.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
-ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
 	android:name
-		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/9c45b6825824ed2fd45e1e89c9f51f96/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
 meta-data#androidx.lifecycle.ProcessLifecycleInitializer
-ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
 	android:value
-		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
 	android:name
-		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/496ef82859ef208882344172eb252ff6/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/tahamajs/.gradle/caches/transforms-4/f544c67d3c104f3df9866ab2b60d778d/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
 meta-data#androidx.profileinstaller.ProfileInstallerInitializer
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:29:13-31:52
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:29:13-31:52
 	android:value
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:31:17-49
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:31:17-49
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:30:17-85
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:30:17-85
 receiver#androidx.profileinstaller.ProfileInstallReceiver
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:34:9-52:20
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:34:9-52:20
 	android:enabled
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:37:13-35
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:37:13-35
 	android:exported
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:38:13-36
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:38:13-36
 	android:permission
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:39:13-57
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:39:13-57
 	android:directBootAware
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:36:13-44
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:36:13-44
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:35:13-76
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:35:13-76
 intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:40:13-42:29
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:40:13-42:29
 action#androidx.profileinstaller.action.INSTALL_PROFILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:41:17-91
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:17-91
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:41:25-88
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:25-88
 intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:43:13-45:29
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:43:13-45:29
 action#androidx.profileinstaller.action.SKIP_FILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:44:17-85
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:17-85
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:44:25-82
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:25-82
 intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:46:13-48:29
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:46:13-48:29
 action#androidx.profileinstaller.action.SAVE_PROFILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:47:17-88
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:17-88
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:47:25-85
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:25-85
 intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:49:13-51:29
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:49:13-51:29
 action#androidx.profileinstaller.action.BENCHMARK_OPERATION
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:50:17-95
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:17-95
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/9.2.1/transforms/a607bd8b578721e2ff27f80f2fb7d4ec/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:50:25-92
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/tahamajs/.gradle/caches/transforms-4/72b74a112f213872418493f1315194f4/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:25-92
+uses-feature#android.hardware.camera
+ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:25:5-27:36
+	android:required
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:27:9-33
+	android:name
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:26:9-47
+uses-feature#android.hardware.camera.front
+ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:28:5-30:36
+	android:required
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:30:9-33
+	android:name
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:29:9-53
+uses-feature#android.hardware.camera.autofocus
+ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:33:5-35:36
+	android:required
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:35:9-33
+	android:name
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:34:9-57
+uses-feature#android.hardware.camera.flash
+ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:36:5-38:36
+	android:required
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:38:9-33
+	android:name
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:37:9-53
+uses-feature#android.hardware.screen.landscape
+ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:39:5-41:36
+	android:required
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:41:9-33
+	android:name
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:40:9-57
+uses-feature#android.hardware.wifi
+ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:42:5-44:36
+	android:required
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:44:9-33
+	android:name
+		ADDED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:43:9-45

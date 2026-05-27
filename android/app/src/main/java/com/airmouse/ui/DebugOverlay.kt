@@ -1,5 +1,4 @@
-// file: app/src/main/java/com/airmouse/ui/DebugOverlay.kt
-package com.airmouse.ui
+package com.airmouse
 
 import android.content.Context
 import android.content.Intent

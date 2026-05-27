@@ -1,4 +1,4 @@
-package com.airmouse.ui.help
+package com.airmouse
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,7 +8,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
-import com.airmouse.R
 import com.airmouse.utils.PreferencesManager
 
 class HelpFragment : Fragment() {
@@ -59,7 +58,7 @@ class HelpFragment : Fragment() {
         linearLayout.addView(contentView)
         cardView.removeAllViews()
         cardView.addView(linearLayout)
-        // Make card clickable to expand/collapse? Optional.
+
         cardView.setOnClickListener {
             // Toggle visibility of content
             val isVisible = contentView.visibility == View.VISIBLE

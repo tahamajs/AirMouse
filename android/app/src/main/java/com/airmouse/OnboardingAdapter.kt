@@ -1,4 +1,4 @@
-package com.airmouse.ui.onboarding
+package com.airmouse
 
 import android.view.LayoutInflater
 import android.view.View
@@ -6,7 +6,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.airmouse.R
 
 data class OnboardingItem(val imageRes: Int, val title: String, val description: String)
 

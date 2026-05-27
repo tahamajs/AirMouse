@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.airmouse.app-mergeDebugResources-35:/values-h720dp-v13/values-h720dp-v13.xml",
+            "outputFile": "com.airmouse.app-mergeDebugResources-51:/values-h720dp-v13/values-h720dp-v13.xml",
             "map": [
                 {
-                    "source": "/Users/tahamajs/.gradle/caches/9.2.1/transforms/3de327505ac53bbe86ebdb26d7cece77/transformed/appcompat-1.6.1/res/values-h720dp-v13/values-h720dp-v13.xml",
+                    "source": "/Users/tahamajs/.gradle/caches/transforms-4/e256df3718cfc01d3606bd46a5010a10/transformed/appcompat-1.6.1/res/values-h720dp-v13/values-h720dp-v13.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

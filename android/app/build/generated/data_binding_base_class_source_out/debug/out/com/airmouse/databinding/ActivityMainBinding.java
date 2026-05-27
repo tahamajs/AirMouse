@@ -4,75 +4,54 @@ package com.airmouse.databinding;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ScrollView;
-import android.widget.SeekBar;
-import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.Toolbar;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.FragmentContainerView;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.airmouse.R;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationView;
 import java.lang.NullPointerException;
 import java.lang.Override;
 import java.lang.String;
 
 public final class ActivityMainBinding implements ViewBinding {
   @NonNull
-  private final ScrollView rootView;
+  private final DrawerLayout rootView;
 
   @NonNull
-  public final Button calibrateBtn;
+  public final BottomNavigationView bottomNav;
 
   @NonNull
-  public final Button debugToggleBtn;
+  public final DrawerLayout drawerLayout;
 
   @NonNull
-  public final EditText ipEditText;
+  public final FragmentContainerView navHostFragment;
 
   @NonNull
-  public final View orientationView;
+  public final NavigationView navView;
 
   @NonNull
-  public final SeekBar sensitivitySeekbar;
+  public final Toolbar toolbar;
 
-  @NonNull
-  public final TextView sensitivityText;
-
-  @NonNull
-  public final TextView sensorStatusText;
-
-  @NonNull
-  public final Button settingsBtn;
-
-  @NonNull
-  public final Button startBtn;
-
-  @NonNull
-  public final TextView statusText;
-
-  private ActivityMainBinding(@NonNull ScrollView rootView, @NonNull Button calibrateBtn,
-      @NonNull Button debugToggleBtn, @NonNull EditText ipEditText, @NonNull View orientationView,
-      @NonNull SeekBar sensitivitySeekbar, @NonNull TextView sensitivityText,
-      @NonNull TextView sensorStatusText, @NonNull Button settingsBtn, @NonNull Button startBtn,
-      @NonNull TextView statusText) {
+  private ActivityMainBinding(@NonNull DrawerLayout rootView,
+      @NonNull BottomNavigationView bottomNav, @NonNull DrawerLayout drawerLayout,
+      @NonNull FragmentContainerView navHostFragment, @NonNull NavigationView navView,
+      @NonNull Toolbar toolbar) {
     this.rootView = rootView;
-    this.calibrateBtn = calibrateBtn;
-    this.debugToggleBtn = debugToggleBtn;
-    this.ipEditText = ipEditText;
-    this.orientationView = orientationView;
-    this.sensitivitySeekbar = sensitivitySeekbar;
-    this.sensitivityText = sensitivityText;
-    this.sensorStatusText = sensorStatusText;
-    this.settingsBtn = settingsBtn;
-    this.startBtn = startBtn;
-    this.statusText = statusText;
+    this.bottomNav = bottomNav;
+    this.drawerLayout = drawerLayout;
+    this.navHostFragment = navHostFragment;
+    this.navView = navView;
+    this.toolbar = toolbar;
   }
 
   @Override
   @NonNull
-  public ScrollView getRoot() {
+  public DrawerLayout getRoot() {
     return rootView;
   }
 
@@ -97,69 +76,34 @@ public final class ActivityMainBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
-      id = R.id.calibrate_btn;
-      Button calibrateBtn = ViewBindings.findChildViewById(rootView, id);
-      if (calibrateBtn == null) {
+      id = R.id.bottom_nav;
+      BottomNavigationView bottomNav = ViewBindings.findChildViewById(rootView, id);
+      if (bottomNav == null) {
         break missingId;
       }
 
-      id = R.id.debug_toggle_btn;
-      Button debugToggleBtn = ViewBindings.findChildViewById(rootView, id);
-      if (debugToggleBtn == null) {
+      DrawerLayout drawerLayout = (DrawerLayout) rootView;
+
+      id = R.id.nav_host_fragment;
+      FragmentContainerView navHostFragment = ViewBindings.findChildViewById(rootView, id);
+      if (navHostFragment == null) {
         break missingId;
       }
 
-      id = R.id.ip_edit_text;
-      EditText ipEditText = ViewBindings.findChildViewById(rootView, id);
-      if (ipEditText == null) {
+      id = R.id.nav_view;
+      NavigationView navView = ViewBindings.findChildViewById(rootView, id);
+      if (navView == null) {
         break missingId;
       }
 
-      id = R.id.orientation_view;
-      View orientationView = ViewBindings.findChildViewById(rootView, id);
-      if (orientationView == null) {
+      id = R.id.toolbar;
+      Toolbar toolbar = ViewBindings.findChildViewById(rootView, id);
+      if (toolbar == null) {
         break missingId;
       }
 
-      id = R.id.sensitivity_seekbar;
-      SeekBar sensitivitySeekbar = ViewBindings.findChildViewById(rootView, id);
-      if (sensitivitySeekbar == null) {
-        break missingId;
-      }
-
-      id = R.id.sensitivity_text;
-      TextView sensitivityText = ViewBindings.findChildViewById(rootView, id);
-      if (sensitivityText == null) {
-        break missingId;
-      }
-
-      id = R.id.sensor_status_text;
-      TextView sensorStatusText = ViewBindings.findChildViewById(rootView, id);
-      if (sensorStatusText == null) {
-        break missingId;
-      }
-
-      id = R.id.settings_btn;
-      Button settingsBtn = ViewBindings.findChildViewById(rootView, id);
-      if (settingsBtn == null) {
-        break missingId;
-      }
-
-      id = R.id.start_btn;
-      Button startBtn = ViewBindings.findChildViewById(rootView, id);
-      if (startBtn == null) {
-        break missingId;
-      }
-
-      id = R.id.status_text;
-      TextView statusText = ViewBindings.findChildViewById(rootView, id);
-      if (statusText == null) {
-        break missingId;
-      }
-
-      return new ActivityMainBinding((ScrollView) rootView, calibrateBtn, debugToggleBtn,
-          ipEditText, orientationView, sensitivitySeekbar, sensitivityText, sensorStatusText,
-          settingsBtn, startBtn, statusText);
+      return new ActivityMainBinding((DrawerLayout) rootView, bottomNav, drawerLayout,
+          navHostFragment, navView, toolbar);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

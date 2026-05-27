@@ -1,4 +1,4 @@
-package com.airmouse.ui.statistics
+package com.airmouse.ui.statistics   // adjust package to your actual package
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -26,13 +26,18 @@ class StatisticsFragment : Fragment() {
 
     private var sessionStartTime = 0L
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         return inflater.inflate(R.layout.fragment_statistics, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         preferences = PreferencesManager(requireContext())
+
         gestureCountText = view.findViewById(R.id.gesture_count_text)
         sessionTimeText = view.findViewById(R.id.session_time_text)
         barChart = view.findViewById(R.id.gesture_chart)
@@ -47,7 +52,7 @@ class StatisticsFragment : Fragment() {
         val scroll = preferences.getScrollCount()
         val right = preferences.getRightClickCount()
         val double = preferences.getDoubleClickCount()
-        gestureCountText.text = "Clicks: $click  |  Scrolls: $scroll  |  Right: $right  |  Double: $double"
+        gestureCountText.text = getString(R.string.gesture_counts, click, scroll, right, double)
         updateChart(click, scroll, right, double)
     }
 
@@ -69,12 +74,10 @@ class StatisticsFragment : Fragment() {
         )
         val dataSet = BarDataSet(entries, "Gestures")
         dataSet.setColors(
-            intArrayOf(
-                android.graphics.Color.parseColor("#FF5722"),
-                android.graphics.Color.parseColor("#4CAF50"),
-                android.graphics.Color.parseColor("#2196F3"),
-                android.graphics.Color.parseColor("#FFC107")
-            )
+            android.graphics.Color.parseColor("#FF5722"),
+            android.graphics.Color.parseColor("#4CAF50"),
+            android.graphics.Color.parseColor("#2196F3"),
+            android.graphics.Color.parseColor("#FFC107")
         )
         dataSet.valueTextSize = 12f
         val barData = BarData(dataSet)

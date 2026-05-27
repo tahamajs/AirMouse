@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.airmouse.app-mergeDebugResources-35:/values-v24/values-v24.xml",
+            "outputFile": "com.airmouse.app-mergeDebugResources-51:/values-v24/values-v24.xml",
             "map": [
                 {
-                    "source": "/Users/tahamajs/.gradle/caches/9.2.1/transforms/9e74ffc4352bd4263e793b4c7b60e01e/transformed/material-1.11.0/res/values-v24/values-v24.xml",
+                    "source": "/Users/tahamajs/.gradle/caches/transforms-4/37bd013277d2371418a4f74250ac8f4d/transformed/material-1.11.0/res/values-v24/values-v24.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,9,12,15",
                         "startColumns": "4,4,4,4,4,4,4,4",
@@ -23,7 +23,7 @@
                     }
                 },
                 {
-                    "source": "/Users/tahamajs/.gradle/caches/9.2.1/transforms/3de327505ac53bbe86ebdb26d7cece77/transformed/appcompat-1.6.1/res/values-v24/values-v24.xml",
+                    "source": "/Users/tahamajs/.gradle/caches/transforms-4/e256df3718cfc01d3606bd46a5010a10/transformed/appcompat-1.6.1/res/values-v24/values-v24.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",
