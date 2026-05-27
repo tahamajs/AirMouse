@@ -1,0 +1,232 @@
+# ====================
+# Android / Gradle builds
+# ====================
+/build
+/*/build
+*/build/
+*/build/*
+**/build/
+**/build/*
+.cxx
+*.apk
+*.aab
+*.dex
+*.class
+*.lock
+gradle-app.setting
+.gradle
+/local.properties
+/.cxx
+*.stl
+*.so
+*.o
+*.a
+*.dylib
+*.dll
+*.exe
+
+# ====================
+# Native / NDK
+# ====================
+.externalNativeBuild
+*.so
+*.dSYM
+*.nfs*
+*.obj
+*.log
+
+# ====================
+# IntelliJ IDEA / Android Studio
+# ====================
+.idea/
+.idea/*
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/modules.xml
+.idea/navEditor.xml
+.idea/deploymentTargetDropDown.xml
+.idea/kotlinc.xml
+.idea/caches/
+.idea/compiler.xml
+.idea/jarRepositories.xml
+.idea/misc.xml
+.idea/vcs.xml
+.idea/shelf/
+.idea/runConfigurations/
+.idea/codeStyles/
+.idea/inspectionProfiles/
+.idea/sonarlint/
+.idea/*.iml
+*.iml
+*.ipr
+*.iws
+*.swp
+*~
+
+# ====================
+# Eclipse / other IDEs
+# ====================
+.classpath
+.project
+.settings/
+*.launch
+.metadata/
+
+# ====================
+# Version control / patch files
+# ====================
+*.patch
+*.orig
+*.rej
+*.orig.*
+*.old
+*.real
+*.original
+*.bak
+*.backup
+*.temp
+*.tmp
+*.log
+
+# ====================
+# OS generated files
+# ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.dmg
+*.iso
+*.torrent
+
+# ====================
+# Secrets / credentials / keystores
+# ====================
+*.jks
+*.keystore
+*.p12
+*.pem
+*.crt
+*.cer
+*.der
+*.key
+*.pkcs8
+*.pkcs12
+*.google_services.json
+google-services.json
+secrets.properties
+keystore.properties
+debug.keystore
+signing.properties
+*.env
+.env.*
+local.properties
+gradle.properties.local
+~/.android/debug.keystore
+~/.android/avd/
+~/.gradle/gradle.properties
+
+# ====================
+# Firebase / Google services
+# ====================
+/google-services.json
+/GoogleService-Info.plist
+firebase-debug.log
+*.p12
+*.p8
+
+# ====================
+# Performance / profiling
+# ====================
+*.hprof
+*.heap
+*.trace
+*.cpuprofile
+*.jfr
+*.dump
+
+# ====================
+# Logs and crash reports
+# ====================
+*.log
+*.txt.log
+crashlytics-build.properties
+*.crash
+*.stackdump
+
+# ====================
+# Test outputs
+# ====================
+/test-output/
+/test-results/
+/coverage/
+/jacoco/
+/build/reports/
+/build/test-results/
+*.exec
+
+# ====================
+# Packaging / distribution
+# ====================
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.deb
+*.rpm
+*.msi
+*.exe
+
+# ====================
+# Dependency downloads (avoid accidental commits)
+# ====================
+/node_modules/
+/.idea/libraries/
+/captures/
+/outputs/
+/reports/
+/tmp/
+*.lazy
+
+# ====================
+# Python / other language leftovers (if any)
+# ====================
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ====================
+# Gradle wrapper (keep wrapper.jar, but ignore specific versions? Usually fine)
+# ====================
+/gradle/wrapper/gradle-wrapper.properties
+!gradle-wrapper.jar
+
+# ====================
+# Build scan / remote cache
+# ====================
+/.build-scan/
+/build-scan.log
+/.gradle-build-scan/
+/.gradle/configuration-cache/
+
+# ====================
+# User-specific files
+# ====================
+*.swp
+*.swo
+*~
+*.DS_Store
+*.localized
+# ====================
+# End of .gitignore

@@ -4,6 +4,8 @@ package com.airmouse.databinding;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -12,8 +14,6 @@ import androidx.annotation.Nullable;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.airmouse.R;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.textfield.TextInputEditText;
 import java.lang.NullPointerException;
 import java.lang.Override;
 import java.lang.String;
@@ -23,13 +23,13 @@ public final class ActivityMainBinding implements ViewBinding {
   private final ScrollView rootView;
 
   @NonNull
-  public final MaterialButton calibrateBtn;
+  public final Button calibrateBtn;
 
   @NonNull
-  public final MaterialButton debugToggleBtn;
+  public final Button debugToggleBtn;
 
   @NonNull
-  public final TextInputEditText ipEditText;
+  public final EditText ipEditText;
 
   @NonNull
   public final View orientationView;
@@ -44,19 +44,18 @@ public final class ActivityMainBinding implements ViewBinding {
   public final TextView sensorStatusText;
 
   @NonNull
-  public final MaterialButton settingsBtn;
+  public final Button settingsBtn;
 
   @NonNull
-  public final MaterialButton startBtn;
+  public final Button startBtn;
 
   @NonNull
   public final TextView statusText;
 
-  private ActivityMainBinding(@NonNull ScrollView rootView, @NonNull MaterialButton calibrateBtn,
-      @NonNull MaterialButton debugToggleBtn, @NonNull TextInputEditText ipEditText,
-      @NonNull View orientationView, @NonNull SeekBar sensitivitySeekbar,
-      @NonNull TextView sensitivityText, @NonNull TextView sensorStatusText,
-      @NonNull MaterialButton settingsBtn, @NonNull MaterialButton startBtn,
+  private ActivityMainBinding(@NonNull ScrollView rootView, @NonNull Button calibrateBtn,
+      @NonNull Button debugToggleBtn, @NonNull EditText ipEditText, @NonNull View orientationView,
+      @NonNull SeekBar sensitivitySeekbar, @NonNull TextView sensitivityText,
+      @NonNull TextView sensorStatusText, @NonNull Button settingsBtn, @NonNull Button startBtn,
       @NonNull TextView statusText) {
     this.rootView = rootView;
     this.calibrateBtn = calibrateBtn;
@@ -99,19 +98,19 @@ public final class ActivityMainBinding implements ViewBinding {
     int id;
     missingId: {
       id = R.id.calibrate_btn;
-      MaterialButton calibrateBtn = ViewBindings.findChildViewById(rootView, id);
+      Button calibrateBtn = ViewBindings.findChildViewById(rootView, id);
       if (calibrateBtn == null) {
         break missingId;
       }
 
       id = R.id.debug_toggle_btn;
-      MaterialButton debugToggleBtn = ViewBindings.findChildViewById(rootView, id);
+      Button debugToggleBtn = ViewBindings.findChildViewById(rootView, id);
       if (debugToggleBtn == null) {
         break missingId;
       }
 
       id = R.id.ip_edit_text;
-      TextInputEditText ipEditText = ViewBindings.findChildViewById(rootView, id);
+      EditText ipEditText = ViewBindings.findChildViewById(rootView, id);
       if (ipEditText == null) {
         break missingId;
       }
@@ -141,13 +140,13 @@ public final class ActivityMainBinding implements ViewBinding {
       }
 
       id = R.id.settings_btn;
-      MaterialButton settingsBtn = ViewBindings.findChildViewById(rootView, id);
+      Button settingsBtn = ViewBindings.findChildViewById(rootView, id);
       if (settingsBtn == null) {
         break missingId;
       }
 
       id = R.id.start_btn;
-      MaterialButton startBtn = ViewBindings.findChildViewById(rootView, id);
+      Button startBtn = ViewBindings.findChildViewById(rootView, id);
       if (startBtn == null) {
         break missingId;
       }

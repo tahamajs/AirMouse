@@ -15,6 +15,7 @@ def install_dependencies():
 def main():
     try:
         import pyautogui
+        import qrcode
         print("✅ Dependencies satisfied.")
     except ImportError:
         print("⚠️ Missing dependencies. Installing...")

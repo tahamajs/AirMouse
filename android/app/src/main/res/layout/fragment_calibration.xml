@@ -3,13 +3,14 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:gravity="center">
 
     <TextView
         android:id="@+id/calibration_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Starting calibration..."
+        android:text="@string/calibration_starting"
         android:textAlignment="center"
         android:textAppearance="?attr/textAppearanceTitleMedium"
         android:layout_marginBottom="16dp" />
@@ -24,7 +25,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Follow the instructions on screen"
+        android:text="@string/calibration_follow_instructions"
         android:textAlignment="center"
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:layout_marginTop="16dp"

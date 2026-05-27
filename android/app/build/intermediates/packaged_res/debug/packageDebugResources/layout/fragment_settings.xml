@@ -1,20 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:layout_height="wrap_content">
 
-    <TextView android:text="Click speed threshold (rad/s)" />
-    <SeekBar android:id="@+id/clickThresholdSeek" android:max="100" android:progress="50" />
-    <TextView android:id="@+id/clickThresholdValue" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <TextView android:text="Double-click max interval (ms)" android:layout_marginTop="16dp" />
-    <SeekBar android:id="@+id/doubleClickSeek" android:max="80" android:progress="20" />
-    <TextView android:id="@+id/doubleClickValue" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Gesture Sensitivity"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:layout_marginBottom="16dp" />
 
-    <TextView android:text="Right-click tilt angle (degrees)" android:layout_marginTop="16dp" />
-    <SeekBar android:id="@+id/tiltThresholdSeek" android:max="100" android:progress="100" />
-    <TextView android:id="@+id/tiltThresholdValue" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Click Speed Threshold" />
+        <SeekBar
+            android:id="@+id/clickThresholdSeek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100" />
+        <TextView
+            android:id="@+id/clickThresholdValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
 
-</LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Double-Click Interval (ms)"
+            android:layout_marginTop="16dp" />
+        <SeekBar
+            android:id="@+id/doubleClickSeek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="80" />
+        <TextView
+            android:id="@+id/doubleClickValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scroll Sensitivity"
+            android:layout_marginTop="16dp" />
+        <SeekBar
+            android:id="@+id/scrollThresholdSeek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="75" />
+        <TextView
+            android:id="@+id/scrollThresholdValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Right-Click Tilt Angle"
+            android:layout_marginTop="16dp" />
+        <SeekBar
+            android:id="@+id/tiltThresholdSeek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="90" />
+        <TextView
+            android:id="@+id/tiltThresholdValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/hapticSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Haptic Feedback"
+            android:checked="true" />
+
+    </LinearLayout>
+</ScrollView>

@@ -10,66 +10,62 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- IP address input -->
-        <com.google.android.material.textfield.TextInputLayout
+        <!-- IP address input (simple EditText, no Material dependency) -->
+        <EditText
+            android:id="@+id/ip_edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Laptop IP Address"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+            android:hint="@string/ip_hint"
+            android:inputType="phone"
+            android:imeOptions="actionDone"
+            android:autofillHints="ipAddress"
+            android:padding="12dp"
+            android:background="@android:drawable/editbox_background_normal"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/ip_edit_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="phone"
-                android:imeOptions="actionDone" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Sensor status (optional, new) -->
+        <!-- Sensor status -->
         <TextView
             android:id="@+id/sensor_status_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Checking sensors..."
+            android:text="@string/checking_sensors"
             android:textSize="12sp"
             android:gravity="center"
             android:layout_marginTop="8dp" />
 
-        <!-- Buttons -->
-        <com.google.android.material.button.MaterialButton
+        <!-- Calibrate button -->
+        <Button
             android:id="@+id/calibrate_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Calibrate Sensors"
-            android:layout_marginTop="16dp"
-            style="@style/Widget.Material3.Button.ElevatedButton" />
+            android:text="@string/calibrate"
+            android:layout_marginTop="16dp" />
 
-        <com.google.android.material.button.MaterialButton
+        <!-- Start button -->
+        <Button
             android:id="@+id/start_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Start Air Mouse"
-            android:layout_marginTop="8dp"
-            style="@style/Widget.Material3.Button.ElevatedButton" />
+            android:text="@string/start"
+            android:layout_marginTop="8dp" />
 
         <!-- Status text -->
         <TextView
             android:id="@+id/status_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Not connected"
+            android:text="@string/not_connected"
             android:textAlignment="center"
             android:padding="8dp"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
         <!-- Sensitivity slider -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Cursor Speed"
+            android:text="@string/cursor_speed"
             android:layout_marginTop="16dp"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
         <SeekBar
             android:id="@+id/sensitivity_seekbar"
@@ -82,27 +78,26 @@
             android:id="@+id/sensitivity_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="0.50x"
+            android:text="@string/speed_default"
             android:gravity="center"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
+            android:textAppearance="?android:attr/textAppearanceMedium" />
 
-        <!-- Settings and Debug -->
-        <com.google.android.material.button.MaterialButton
+        <!-- Settings button -->
+        <Button
             android:id="@+id/settings_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Settings"
-            android:layout_marginTop="16dp"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            android:text="@string/settings"
+            android:layout_marginTop="16dp" />
 
-        <com.google.android.material.button.MaterialButton
+        <!-- Debug toggle button -->
+        <Button
             android:id="@+id/debug_toggle_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Show Debug"
-            style="@style/Widget.Material3.Button.TextButton" />
+            android:text="@string/show_debug" />
 
-        <!-- Orientation indicator (green square) -->
+        <!-- Orientation indicator -->
         <View
             android:id="@+id/orientation_view"
             android:layout_width="100dp"

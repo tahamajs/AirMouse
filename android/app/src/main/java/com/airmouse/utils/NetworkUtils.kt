@@ -32,7 +32,7 @@ object NetworkUtils {
 
     /**
      * Returns the current IP address of the device (first non‑loopback IPv4 address).
-     * This is useful for debugging but not required for the Air Mouse server connection.
+     * Useful for debugging.
      */
     fun getLocalIpAddress(): String? {
         try {

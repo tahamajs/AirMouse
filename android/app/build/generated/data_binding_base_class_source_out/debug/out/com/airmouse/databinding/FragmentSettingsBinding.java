@@ -4,7 +4,7 @@ package com.airmouse.databinding;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -12,13 +12,14 @@ import androidx.annotation.Nullable;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.airmouse.R;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import java.lang.NullPointerException;
 import java.lang.Override;
 import java.lang.String;
 
 public final class FragmentSettingsBinding implements ViewBinding {
   @NonNull
-  private final LinearLayout rootView;
+  private final ScrollView rootView;
 
   @NonNull
   public final SeekBar clickThresholdSeek;
@@ -33,27 +34,40 @@ public final class FragmentSettingsBinding implements ViewBinding {
   public final TextView doubleClickValue;
 
   @NonNull
+  public final SwitchMaterial hapticSwitch;
+
+  @NonNull
+  public final SeekBar scrollThresholdSeek;
+
+  @NonNull
+  public final TextView scrollThresholdValue;
+
+  @NonNull
   public final SeekBar tiltThresholdSeek;
 
   @NonNull
   public final TextView tiltThresholdValue;
 
-  private FragmentSettingsBinding(@NonNull LinearLayout rootView,
-      @NonNull SeekBar clickThresholdSeek, @NonNull TextView clickThresholdValue,
-      @NonNull SeekBar doubleClickSeek, @NonNull TextView doubleClickValue,
+  private FragmentSettingsBinding(@NonNull ScrollView rootView, @NonNull SeekBar clickThresholdSeek,
+      @NonNull TextView clickThresholdValue, @NonNull SeekBar doubleClickSeek,
+      @NonNull TextView doubleClickValue, @NonNull SwitchMaterial hapticSwitch,
+      @NonNull SeekBar scrollThresholdSeek, @NonNull TextView scrollThresholdValue,
       @NonNull SeekBar tiltThresholdSeek, @NonNull TextView tiltThresholdValue) {
     this.rootView = rootView;
     this.clickThresholdSeek = clickThresholdSeek;
     this.clickThresholdValue = clickThresholdValue;
     this.doubleClickSeek = doubleClickSeek;
     this.doubleClickValue = doubleClickValue;
+    this.hapticSwitch = hapticSwitch;
+    this.scrollThresholdSeek = scrollThresholdSeek;
+    this.scrollThresholdValue = scrollThresholdValue;
     this.tiltThresholdSeek = tiltThresholdSeek;
     this.tiltThresholdValue = tiltThresholdValue;
   }
 
   @Override
   @NonNull
-  public LinearLayout getRoot() {
+  public ScrollView getRoot() {
     return rootView;
   }
 
@@ -102,6 +116,24 @@ public final class FragmentSettingsBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.hapticSwitch;
+      SwitchMaterial hapticSwitch = ViewBindings.findChildViewById(rootView, id);
+      if (hapticSwitch == null) {
+        break missingId;
+      }
+
+      id = R.id.scrollThresholdSeek;
+      SeekBar scrollThresholdSeek = ViewBindings.findChildViewById(rootView, id);
+      if (scrollThresholdSeek == null) {
+        break missingId;
+      }
+
+      id = R.id.scrollThresholdValue;
+      TextView scrollThresholdValue = ViewBindings.findChildViewById(rootView, id);
+      if (scrollThresholdValue == null) {
+        break missingId;
+      }
+
       id = R.id.tiltThresholdSeek;
       SeekBar tiltThresholdSeek = ViewBindings.findChildViewById(rootView, id);
       if (tiltThresholdSeek == null) {
@@ -114,9 +146,9 @@ public final class FragmentSettingsBinding implements ViewBinding {
         break missingId;
       }
 
-      return new FragmentSettingsBinding((LinearLayout) rootView, clickThresholdSeek,
-          clickThresholdValue, doubleClickSeek, doubleClickValue, tiltThresholdSeek,
-          tiltThresholdValue);
+      return new FragmentSettingsBinding((ScrollView) rootView, clickThresholdSeek,
+          clickThresholdValue, doubleClickSeek, doubleClickValue, hapticSwitch, scrollThresholdSeek,
+          scrollThresholdValue, tiltThresholdSeek, tiltThresholdValue);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

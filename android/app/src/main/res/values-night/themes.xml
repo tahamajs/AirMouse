@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base dark theme (used automatically when system night mode is on) -->
+    <style name="Theme.AirMouse" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Status & navigation bars -->
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/background_primary</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <!-- Brand colors (same as light, but you can optionally darken them) -->
+        <item name="colorPrimary">@color/deep_orange_500</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/deep_orange_700</item>
+        <item name="colorOnPrimaryContainer">@color/white</item>
+
+        <item name="colorSecondary">@color/amber_500</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="colorSecondaryContainer">@color/amber_700</item>
+        <item name="colorOnSecondaryContainer">@color/black</item>
+
+        <!-- Surface & background (dark overrides) -->
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="android:windowBackground">@color/background_primary</item>
+        <item name="colorBackground">@color/background_primary</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+
+        <!-- Error -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/white</item>
+
+        <!-- Typography (same as light – just reference the existing styles) -->
+        <item name="textAppearanceHeadline1">@style/TextAppearance.AirMouse.Headline1</item>
+        <item name="textAppearanceHeadline2">@style/TextAppearance.AirMouse.Headline2</item>
+        <item name="textAppearanceHeadline3">@style/TextAppearance.AirMouse.Headline3</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.AirMouse.BodyLarge</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.AirMouse.BodyMedium</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.AirMouse.BodySmall</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.AirMouse.LabelLarge</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.AirMouse.TitleMedium</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.AirMouse.TitleLarge</item>
+
+        <!-- Shape (same as light) -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.AirMouse.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.AirMouse.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.AirMouse.Large</item>
+
+        <!-- Dialogs (same theme, will inherit dark colours) -->
+        <item name="android:dialogTheme">@style/Theme.AirMouse.Dialog</item>
+
+        <!-- Widget styles (reuse the light definitions – they work in dark mode because colors are dynamic) -->
+        <item name="materialButtonStyle">@style/Widget.AirMouse.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.AirMouse.Button.Outlined</item>
+        <item name="materialButtonTonalStyle">@style/Widget.AirMouse.Button.Tonal</item>
+        <item name="materialButtonTextStyle">@style/Widget.AirMouse.Button.Text</item>
+        <item name="materialCardViewStyle">@style/Widget.AirMouse.CardView</item>
+        <item name="bottomNavigationStyle">@style/Widget.AirMouse.BottomNavigation</item>
+        <item name="floatingActionButtonStyle">@style/Widget.AirMouse.FAB</item>
+        <item name="textInputStyle">@style/Widget.AirMouse.TextInputLayout</item>
+        <item name="switchStyle">@style/Widget.AirMouse.Switch</item>
+        <item name="checkboxStyle">@style/Widget.AirMouse.CheckBox</item>
+        <item name="radioButtonStyle">@style/Widget.AirMouse.RadioButton</item>
+        <item name="seekBarStyle">@style/Widget.AirMouse.SeekBar</item>
+        <item name="toolbarStyle">@style/Widget.AirMouse.Toolbar</item>
+        <item name="actionBarTheme">@style/Theme.AirMouse.ActionBar</item>
+        <item name="navigationViewStyle">@style/Widget.AirMouse.NavigationView</item>
+    </style>
+
+    <!-- Dark version of the splash screen (uses same animated icon, but background can be dark) -->
+    <style name="Theme.AirMouse.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_calibrate</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.AirMouse</item>
+    </style>
+
+    <!-- Dark version of the dialog theme -->
+    <style name="Theme.AirMouse.Dialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:windowMinWidthMajor">90%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="colorPrimary">@color/deep_orange_500</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/Widget.Air.Button.Positive</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/Widget.Air.Button.Negative</item>
+    </style>
+
+</resources>
+
+
+    <?xml version="1.0" encoding="utf-8"?>
+<resources>
+<style name="Theme.AirMouse" parent="Theme.Material3.DayNight.NoActionBar">
+    <item name="android:statusBarColor">@color/black</item>
+    <item name="android:windowLightStatusBar">false</item>
+    <item name="android:navigationBarColor">@color/background_primary</item>
+    <item name="colorSurface">@color/surface</item>
+    <item name="colorOnSurface">@color/text_primary</item>
+    <item name="android:windowBackground">@color/background_primary</item>
+</style>
+
+<style name="Theme.AirMouse.PureBlack" parent="Theme.AirMouse">
+    <item name="android:windowBackground">@color/black_pure</item>
+    <item name="colorSurface">@color/black_pure</item>
+    <item name="colorBackground">@color/black_pure</item>
+    <item name="colorSurfaceVariant">@color/black_pure</item>
+</style>
+
+<style name="Theme.AirMouse.HighContrast" parent="Theme.AirMouse">
+    <item name="colorPrimary">@color/deep_orange_500</item>
+    <item name="colorOnPrimary">@color/white</item>
+    <item name="colorSecondary">@color/amber_500</item>
+    <item name="colorOnSecondary">@color/black</item>
+    <item name="android:windowBackground">@color/black</item>
+    <item name="colorSurface">@color/black</item>
+    <item name="colorOnSurface">@color/white</item>
+</style>
+
+<style name="Theme.AirMouse.Splash" parent="Theme.SplashScreen">
+    <item name="windowSplashScreenBackground">@color/black</item>
+    <item name="windowSplashScreenAnimatedIcon">@drawable/ic_calibrate</item>
+    <item name="windowSplashScreenAnimationDuration">1000</item>
+    <item name="postSplashScreenTheme">@style/Theme.AirMouse</item>
+</style>
+</resources>

@@ -7,7 +7,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.airmouse.utils.BatterySaver
 import com.airmouse.utils.PreferencesManager
-import kotlin.math.abs
 
 class SensorService(
     private val context: Context,
@@ -23,7 +22,7 @@ class SensorService(
     private var magnetometer: Sensor? = null
 
     private val madgwick = MadgwickAHRS(beta = 0.1f)
-    private var timestamp = 0L
+    private var lastTimestamp = 0L
 
     private var orientationCallback: ((roll: Float, yaw: Float) -> Unit)? = null
     private var gestureCallback: ((EnhancedGestureDetector.Gesture) -> Unit)? = null
@@ -35,6 +34,7 @@ class SensorService(
     private var lastAccelY = 0f
 
     fun start() {
+        if (isRunning) return
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
@@ -45,27 +45,20 @@ class SensorService(
         sensorManager.registerListener(this, gyroscope, delay)
         sensorManager.registerListener(this, magnetometer, delay)
         isRunning = true
+        lastTimestamp = 0L
     }
 
     fun stop() {
-        sensorManager.unregisterListener(this)
-        isRunning = false
-    }
-
-    fun setSamplingRate(delay: Int) {
         if (!isRunning) return
         sensorManager.unregisterListener(this)
-        sensorManager.registerListener(this, accelerometer, delay)
-        sensorManager.registerListener(this, gyroscope, delay)
-        sensorManager.registerListener(this, magnetometer, delay)
+        isRunning = false
     }
 
     override fun onSensorChanged(event: SensorEvent) {
         if (!isRunning) return
 
-        val now = System.currentTimeMillis()
-        val dt = if (timestamp == 0L) 0.01f else (now - timestamp) / 1000f
-        timestamp = now
+        val dt = if (lastTimestamp == 0L) 0.01f else (event.timestamp - lastTimestamp) * 1e-9f
+        lastTimestamp = event.timestamp
 
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
@@ -92,7 +85,6 @@ class SensorService(
                 if (gesture != EnhancedGestureDetector.Gesture.NONE) {
                     gestureCallback?.invoke(gesture)
                 }
-
                 batterySaver.updateMovement(roll, yaw)
             }
             Sensor.TYPE_MAGNETIC_FIELD -> {
