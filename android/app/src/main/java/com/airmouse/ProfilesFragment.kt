@@ -1,4 +1,4 @@
-package com.airmouse.ui.profiles
+package com.airmouse
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,7 +8,6 @@ import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.airmouse.R
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.launch
 
@@ -58,7 +57,7 @@ class ProfilesFragment : Fragment() {
     }
 
     private fun loadSelectedProfile() {
-        val selected = profileSpinner.selectedItem.toString()
+        val selected = profileSpinner.selectedItem?.toString() ?: return
         currentProfile = selected
         lifecycleScope.launch {
             val sensitivity = preferences.getProfileSensitivity(selected)
@@ -83,7 +82,7 @@ class ProfilesFragment : Fragment() {
     }
 
     private fun deleteSelectedProfile() {
-        val selected = profileSpinner.selectedItem.toString()
+        val selected = profileSpinner.selectedItem?.toString() ?: return
         if (selected == "Default") {
             Toast.makeText(requireContext(), "Cannot delete default profile", Toast.LENGTH_SHORT).show()
             return

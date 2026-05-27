@@ -1,4 +1,4 @@
-package com.airmouse.ui.gesture
+package com.airmouse
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,8 +7,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.airmouse.R
-import com.airmouse.sensors.EnhancedGestureDetector
+import androidx.lifecycle.lifecycleScope
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -40,13 +39,11 @@ class GestureTrainingFragment : Fragment() {
 
     private fun startTraining(type: String) {
         statusText.text = "Training $type gesture... Perform the gesture now"
-        // Here you would read sensor data for a few seconds and compute thresholds
-        // For demo, we simulate and save default values
         lifecycleScope.launch {
             delay(3000)
             when (type) {
                 "click" -> {
-                    preferences.setClickThreshold(12.0f) // example
+                    preferences.setClickThreshold(12.0f)
                     statusText.text = "Click gesture learned!"
                 }
                 "scroll" -> {

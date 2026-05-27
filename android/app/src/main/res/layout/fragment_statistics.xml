@@ -1,40 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:padding="16dp">
 
-    <LinearLayout
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        app:cardCornerRadius="24dp"
+        android:layout_marginBottom="16dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/help_card_controls"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="24dp"
-            android:layout_marginBottom="16dp" />
+            android:orientation="vertical"
+            android:padding="20dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/help_card_calibration"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/gesture_stats"
+                android:textAppearance="?attr/textAppearanceTitleLarge" />
+
+            <TextView
+                android:id="@+id/gesture_count_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Clicks: 0  |  Scrolls: 0"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+            <com.github.mikephil.charting.charts.BarChart
+                android:id="@+id/gesture_chart"
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_marginTop="16dp" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="24dp">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="24dp"
-            android:layout_marginBottom="16dp" />
+            android:orientation="vertical"
+            android:padding="20dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/help_card_sensors"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="24dp"
-            android:layout_marginBottom="16dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/session_time"
+                android:textAppearance="?attr/textAppearanceTitleLarge" />
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/help_card_connection"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="24dp" />
+            <TextView
+                android:id="@+id/session_time_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="00:00:00"
+                android:textAppearance="?attr/textAppearanceHeadline2" />
 
-    </LinearLayout>
-</ScrollView>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

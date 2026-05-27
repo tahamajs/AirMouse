@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- Main sections (also in bottom navigation) -->
     <group android:checkableBehavior="single">
         <item
             android:id="@+id/homeFragment"
@@ -17,7 +15,6 @@
             android:title="@string/help" />
     </group>
 
-    <!-- Advanced features -->
     <group android:title="@string/advanced">
         <item
             android:id="@+id/profilesFragment"
@@ -49,7 +46,6 @@
             android:title="@string/discover_servers" />
     </group>
 
-    <!-- More features -->
     <group android:title="@string/more_features">
         <item
             android:id="@+id/voiceCommandFragment"
@@ -65,12 +61,10 @@
             android:title="@string/edge_gestures" />
     </group>
 
-    <!-- Information -->
     <group android:title="@string/information">
         <item
             android:id="@+id/aboutFragment"
             android:icon="@drawable/ic_about"
             android:title="@string/about_title" />
     </group>
-
 </menu>

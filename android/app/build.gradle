@@ -1,17 +1,16 @@
 plugins {
-    id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'kotlin-kapt'
+    id 'com.android.application'
 }
 
 android {
     namespace 'com.airmouse'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.airmouse"
         minSdk 29
-        targetSdk 34
+        targetSdk 36
         versionCode 3
         versionName "3.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -47,6 +46,13 @@ android {
         }
         debug {
             debuggable true
+        }
+    }
+
+    ndkVersion "26.1.10909125"
+    packaging {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
 }

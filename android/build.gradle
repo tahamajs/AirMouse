@@ -1,11 +1,24 @@
+buildscript {
+    repositories {
+        maven { url 'https://maven.myket.ir' }
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.2'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22'
+    }
+}
+
 plugins {
-    id 'com.android.application' version '9.0.1' apply false
-    id 'com.android.library' version '9.0.1' apply false
-    id 'org.jetbrains.kotlin.android' version '2.2.10' apply false
+    id 'com.android.application' version '8.5.2' apply false
+    id 'com.android.library' version '8.5.2' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
 }
 
 allprojects {
     repositories {
+        maven { url 'https://maven.myket.ir' }
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' }

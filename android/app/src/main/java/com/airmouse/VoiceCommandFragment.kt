@@ -1,4 +1,4 @@
-package com.airmouse.ui.voice
+package com.airmouse
 
 import android.content.Intent
 import android.os.Bundle
@@ -9,7 +9,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import com.airmouse.R
+import androidx.navigation.fragment.findNavController
 import com.airmouse.network.DataSender
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.button.MaterialButton
@@ -20,7 +20,6 @@ class VoiceCommandFragment : Fragment() {
     private lateinit var listenButton: MaterialButton
     private lateinit var resultText: TextView
     private lateinit var preferences: PreferencesManager
-    private var dataSender: DataSender? = null
 
     private val voiceLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
@@ -83,8 +82,7 @@ class VoiceCommandFragment : Fragment() {
                 showFeedback(R.string.action_scroll_down)
             }
             command.contains("calibrate") -> {
-                // Navigate to HomeFragment and trigger calibration
-                findNavController().navigate(R.id.action_voice_to_home)
+                findNavController().navigate(R.id.homeFragment)
                 showFeedback(R.string.action_calibrate)
             }
             command.contains("start") -> {
@@ -100,8 +98,6 @@ class VoiceCommandFragment : Fragment() {
     }
 
     private fun sendAction(action: String) {
-        // Access the global DataSender from MainActivity or via singleton
-        // For simplicity, we'll use a static reference (you can improve with DI)
         val sender = DataSender.getInstance()
         when (action) {
             "click" -> sender?.sendClick()
@@ -128,6 +124,4 @@ class VoiceCommandFragment : Fragment() {
             vibrator.vibrate(durationMs)
         }
     }
-
-    private fun findNavController() = androidx.navigation.findNavController(requireView())
 }

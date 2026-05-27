@@ -6,62 +6,61 @@
 
     <fragment
         android:id="@+id/homeFragment"
-        android:name="com.airmouse.ui.home.HomeFragment"
+        android:name="com.airmouse.HomeFragment"
         android:label="@string/home" />
     <fragment
         android:id="@+id/statisticsFragment"
-        android:name="com.airmouse.ui.statistics.StatisticsFragment"
+        android:name="com.airmouse.StatisticsFragment"
         android:label="@string/statistics" />
     <fragment
         android:id="@+id/helpFragment"
-        android:name="com.airmouse.ui.help.HelpFragment"
+        android:name="com.airmouse.HelpFragment"
         android:label="@string/help" />
     <fragment
         android:id="@+id/profilesFragment"
-        android:name="com.airmouse.ui.profiles.ProfilesFragment"
+        android:name="com.airmouse.ProfilesFragment"
         android:label="@string/profiles_title" />
     <fragment
         android:id="@+id/themesFragment"
-        android:name="com.airmouse.ui.themes.ThemesFragment"
+        android:name="com.airmouse.ThemesFragment"
         android:label="@string/theme_title" />
     <fragment
         android:id="@+id/gestureTrainingFragment"
-        android:name="com.airmouse.ui.gesture.GestureTrainingFragment"
+        android:name="com.airmouse.GestureTrainingFragment"
         android:label="@string/gesture_training_title" />
     <fragment
         android:id="@+id/customGestureFragment"
-        android:name="com.airmouse.ui.gesture.CustomGestureRecorderFragment"
+        android:name="com.airmouse.CustomGestureRecorderFragment"
         android:label="@string/custom_gesture" />
     <fragment
         android:id="@+id/batteryFragment"
-        android:name="com.airmouse.ui.battery.BatteryGraphFragment"
+        android:name="com.airmouse.BatteryGraphFragment"
         android:label="@string/battery_graph_title" />
     <fragment
         android:id="@+id/accessibilityFragment"
-        android:name="com.airmouse.ui.accessibility.AccessibilityFragment"
+        android:name="com.airmouse.AccessibilityFragment"
         android:label="@string/accessibility_title" />
     <fragment
         android:id="@+id/networkDiscoveryFragment"
-        android:name="com.airmouse.ui.network.NetworkDiscoveryFragment"
+        android:name="com.airmouse.NetworkDiscoveryFragment"
         android:label="@string/discover_servers" />
     <fragment
         android:id="@+id/voiceCommandFragment"
-        android:name="com.airmouse.ui.voice.VoiceCommandFragment"
+        android:name="com.airmouse.VoiceCommandFragment"
         android:label="@string/voice_commands" />
     <fragment
         android:id="@+id/serverLogFragment"
-        android:name="com.airmouse.ui.log.ServerLogFragment"
+        android:name="com.airmouse.ServerLogFragment"
         android:label="@string/server_log" />
     <fragment
         android:id="@+id/edgeGesturesFragment"
-        android:name="com.airmouse.ui.edge.EdgeGesturesFragment"
+        android:name="com.airmouse.EdgeGesturesFragment"
         android:label="@string/edge_gestures" />
     <fragment
         android:id="@+id/aboutFragment"
-        android:name="com.airmouse.ui.about.AboutFragment"
+        android:name="com.airmouse.AboutFragment"
         android:label="@string/about_title" />
 
-    <!-- Action for voice command to navigate back to home -->
     <action
         android:id="@+id/action_voice_to_home"
         app:destination="@id/homeFragment" />

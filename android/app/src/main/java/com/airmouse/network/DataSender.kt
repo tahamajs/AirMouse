@@ -21,11 +21,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * - Connection status callbacks.
  * - Integration with LogManager for debugging.
  */
-class DataSender private constructor(
+class DataSender(
     private var ip: String,
     private val port: Int,
     private val prefs: PreferencesManager
 ) {
+
+    @Volatile var isConnected: Boolean = false
+        private set
     companion object {
         private const val TAG = "DataSender"
         private const val ACK_TIMEOUT_MS = 500L

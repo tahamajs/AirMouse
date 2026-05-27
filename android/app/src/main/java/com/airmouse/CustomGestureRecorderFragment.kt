@@ -1,4 +1,4 @@
-package com.airmouse.ui.gesture
+package com.airmouse
 
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -13,7 +13,6 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.airmouse.R
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
@@ -23,7 +22,7 @@ import kotlinx.coroutines.launch
 class CustomGestureRecorderFragment : Fragment(), SensorEventListener {
 
     private lateinit var sensorManager: SensorManager
-    private lateinit var gyroscope: Sensor
+    private var gyroscope: Sensor? = null
     private lateinit var preferences: PreferencesManager
     private lateinit var actionSpinner: Spinner
     private lateinit var recordButton: MaterialButton
@@ -60,15 +59,16 @@ class CustomGestureRecorderFragment : Fragment(), SensorEventListener {
     }
 
     private fun startRecording() {
-        if (gyroscope == null) {
+        val gyro = gyroscope
+        if (gyro == null) {
             statusText.text = getString(R.string.no_gyroscope)
             return
         }
         recordedValues.clear()
         isRecording = true
         statusText.text = getString(R.string.recording_gesture)
-        sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME)
-        recordingJob = lifecycleScope.launch {
+        sensorManager.registerListener(this, gyro, SensorManager.SENSOR_DELAY_GAME)
+        recordingJob = viewLifecycleOwner.lifecycleScope.launch {
             delay(3000)
             stopRecording()
         }

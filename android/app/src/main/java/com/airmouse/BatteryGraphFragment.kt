@@ -1,5 +1,7 @@
 package com.airmouse.ui.battery
 
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -27,7 +29,8 @@ class BatteryGraphFragment : Fragment() {
     private var index = 0
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.fragment_battery, container, false)
@@ -60,18 +63,25 @@ class BatteryGraphFragment : Fragment() {
     }
 
     private fun updateBatteryData() {
-        val batteryManager = requireContext().getSystemService(BatteryManager::class.java)
-        val level = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        val temperature = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_TEMPERATURE) / 10f
+        val batteryIntent = requireContext().registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
 
-        batteryLevelText.text = "Battery Level: $level%"
-        batteryTempText.text = "Temperature: ${temperature}°C"
+        // Get battery level
+        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val batteryPct = if (level >= 0 && scale > 0) (level * 100 / scale) else 0
+
+        // Get temperature (milli Celsius) – this works on all Android versions
+        val tempMilli = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+        val temperature = tempMilli / 10f
+
+        batteryLevelText.text = getString(R.string.battery_level_format, batteryPct)
+        batteryTempText.text = getString(R.string.battery_temp_format, temperature)
 
         temperatureHistory.add(Entry(index.toFloat(), temperature))
         index++
         if (temperatureHistory.size > 20) temperatureHistory.removeAt(0)
 
-        val dataSet = LineDataSet(temperatureHistory, "Temperature (°C)")
+        val dataSet = LineDataSet(temperatureHistory, getString(R.string.battery_temp_chart_label))
         dataSet.color = android.graphics.Color.parseColor("#FF5722")
         dataSet.setDrawCircles(false)
         dataSet.lineWidth = 2f

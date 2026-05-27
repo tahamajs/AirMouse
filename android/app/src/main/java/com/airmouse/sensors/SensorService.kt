@@ -15,6 +15,13 @@ class SensorService(
     private val preferences: PreferencesManager,
     private val batterySaver: BatterySaver
 ) : SensorEventListener {
+    fun setSamplingRate(delay: Int) {
+        if (!isRunning) return
+        sensorManager.unregisterListener(this)
+        sensorManager.registerListener(this, accelerometer, delay)
+        sensorManager.registerListener(this, gyroscope, delay)
+        sensorManager.registerListener(this, magnetometer, delay)
+    }
 
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null

@@ -1,14 +1,11 @@
+package com.airmouse
 
-package com.airmouse.ui.edge
-
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Switch
 import androidx.fragment.app.Fragment
-import com.airmouse.R
 import com.airmouse.network.DataSender
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -57,7 +54,6 @@ class EdgeGesturesFragment : Fragment() {
                 )
                 (rootView as? ViewGroup)?.addView(this, params)
                 setOnClickListener {
-                    // Simulate click
                     DataSender.getInstance()?.sendClick()
                     Snackbar.make(requireView(), "Edge gesture: Click", Snackbar.LENGTH_SHORT).show()
                 }
@@ -66,7 +62,6 @@ class EdgeGesturesFragment : Fragment() {
                     Snackbar.make(requireView(), "Edge gesture: Right Click", Snackbar.LENGTH_SHORT).show()
                     true
                 }
-                // Make draggable (optional)
             }
         }
         floatingButton?.visibility = View.VISIBLE
