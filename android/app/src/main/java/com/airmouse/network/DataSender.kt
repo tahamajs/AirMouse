@@ -1,5 +1,6 @@
 package com.airmouse.network
 
+import android.os.Trace
 import android.util.Log
 import com.airmouse.utils.LogManager
 import com.airmouse.utils.PreferencesManager
@@ -136,9 +137,14 @@ class DataSender(
      */
     fun sendMove(dx: Float, dy: Float) {
         if (!isRunning) return
+        Trace.beginSection("AirMouseNetworkSendMove")
+        try {
         val msg = "{\"type\":\"move\",\"dx\":$dx,\"dy\":$dy}\n"
         writer?.print(msg)
         writer?.flush()
+        } finally {
+            Trace.endSection()
+        }
     }
 
     /**
@@ -176,6 +182,8 @@ class DataSender(
      */
     private fun sendWithAck(type: String, delta: Int = 0) {
         if (!isRunning) return
+        Trace.beginSection("AirMouseNetworkSendAckCommand")
+        try {
         val id = messageId.incrementAndGet()
         val msg = if (type == "scroll") {
             "{\"type\":\"$type\",\"delta\":$delta,\"id\":$id}\n"
@@ -197,6 +205,9 @@ class DataSender(
                 writer?.flush()
                 // You could add a second retry here, but one retry is enough for most cases
             }
+        }
+        } finally {
+            Trace.endSection()
         }
     }
 
