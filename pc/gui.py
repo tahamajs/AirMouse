@@ -12,7 +12,8 @@ import asyncio
 import json
 import pyautogui
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+from tkinter import ttk, scrolledtext, messagebox, filedialog
+import tkinter.font as tkfont
 import threading
 import socket
 import os
@@ -140,15 +141,17 @@ class UDPDiscoveryServer:
 
 # -------------------- TCP Air Mouse Server --------------------
 class AirMouseTCPServer:
-    def __init__(self, log_callback, stats_callback):
+    def __init__(self, log_callback, stats_callback, connections_callback=None):
         self.host = CONFIG["host"]
         self.port = CONFIG["port"]
         self.mouse = MouseController()
         self.log_callback = log_callback
         self.stats_callback = stats_callback
+        self.connections_callback = connections_callback
         self._server = None
         self.connections = 0
-        self.active_connections = set()
+        # map of addr(tuple)->writer so GUI can request disconnects if needed
+        self.active_connections: Dict[tuple, object] = {}
 
     def log(self, msg: str) -> None:
         if self.log_callback:
@@ -157,10 +160,17 @@ class AirMouseTCPServer:
     def update_stats(self):
         if self.stats_callback:
             self.stats_callback(self.mouse.get_stats())
+        if self.connections_callback:
+            # provide a list of connected addresses for the GUI
+            try:
+                addrs = [f"{a[0]}:{a[1]}" for a in list(self.active_connections.keys())]
+            except Exception:
+                addrs = []
+            self.connections_callback(addrs)
 
     async def handle_client(self, reader, writer):
         addr = writer.get_extra_info('peername')
-        self.active_connections.add(addr)
+        self.active_connections[addr] = writer
         self.connections += 1
         self.log(f"✅ Connected: {addr} (active: {len(self.active_connections)})")
         self.update_stats()
@@ -177,7 +187,11 @@ class AirMouseTCPServer:
         except Exception as e:
             self.log(f"❌ Error: {e}")
         finally:
-            self.active_connections.discard(addr)
+            # remove connection mapping
+            try:
+                del self.active_connections[addr]
+            except Exception:
+                pass
             writer.close()
             await writer.wait_closed()
             self.log(f"🔌 Disconnected: {addr} (active: {len(self.active_connections)})")
@@ -247,13 +261,20 @@ class AirMouseGUI:
         self.danger = "#ef5b5b"
 
         self.root.configure(bg=self.bg_color)
-        self.root.option_add("*Font", "Segoe UI 10")
-        self.root.option_add("*TCombobox*Listbox.font", "Segoe UI 10")
+        # Configure default font safely using tkinter.font to avoid option parsing issues
+        default_font = tkfont.nametofont("TkDefaultFont")
+        try:
+            default_font.configure(family="Segoe UI", size=10)
+        except Exception:
+            # Fallback if font not available on system
+            default_font.configure(size=10)
+        # Keep a sensible default button padding
         self.root.option_add("*TButton.padding", 8)
         self._setup_styles()
         self.setup_ui()
 
-        self.tcp_server = AirMouseTCPServer(self.log, self.update_stats_display)
+        # pass a callback to update connection list when clients connect/disconnect
+        self.tcp_server = AirMouseTCPServer(self.log, self.update_stats_display, connections_callback=self._update_connection_list)
         # IP provider function for UDP discovery (will be set after UI is ready)
         self.udp_server = UDPDiscoveryServer(CONFIG["discovery_port"], self.log,
                                              ip_provider=self.get_selected_ip)
@@ -262,6 +283,8 @@ class AirMouseGUI:
 
         self.refresh_ip_list()
         self.update_qr_code()
+        # Setup tray (if available)
+        self._init_tray()
 
     def _setup_styles(self):
         style = ttk.Style(self.root)
@@ -320,6 +343,33 @@ class AirMouseGUI:
         shell = tk.Frame(self.root, bg=self.bg_color)
         shell.pack(fill=tk.BOTH, expand=True)
 
+        # --- Menu Bar ---
+        menubar = tk.Menu(self.root)
+        filemenu = tk.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Start Server	Ctrl+S", command=self.start_servers)
+        filemenu.add_command(label="Stop Server	Ctrl+T", command=self.stop_servers, state="disabled")
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit	Ctrl+Q", command=self.root.quit)
+        menubar.add_cascade(label="File", menu=filemenu)
+
+        viewmenu = tk.Menu(menubar, tearoff=0)
+        viewmenu.add_command(label="Refresh IP List	Ctrl+R", command=self.refresh_ip_list)
+        viewmenu.add_command(label="Clear Logs", command=self._clear_logs)
+        menubar.add_cascade(label="View", menu=viewmenu)
+
+        helpmenu = tk.Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="About", command=self._show_about)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+
+        self.root.config(menu=menubar)
+
+        # keyboard shortcuts
+        self.root.bind_all('<Control-s>', lambda e: self.start_servers())
+        self.root.bind_all('<Control-S>', lambda e: self.start_servers())
+        self.root.bind_all('<Control-t>', lambda e: self.stop_servers())
+        self.root.bind_all('<Control-r>', lambda e: self.refresh_ip_list())
+        self.root.bind_all('<Control-q>', lambda e: self.root.quit())
+
         header = tk.Frame(shell, bg=self.surface, highlightthickness=1, highlightbackground=self.border_color)
         header.pack(fill=tk.X, padx=18, pady=(18, 12))
 
@@ -348,15 +398,30 @@ class AirMouseGUI:
         left_col.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
         left_col.columnconfigure(0, weight=1)
 
+        # Connection list panel (compact, non-scrolling)
+        conn_card, conn_body = self._card(left_col, "Connected Clients", "Active client addresses")
+        conn_card.grid(row=5, column=0, sticky="ew", pady=(0, 12))
+        conn_body.columnconfigure(0, weight=1)
+        self.conn_listbox = tk.Listbox(conn_body, bg=self.card_bg, fg=self.fg_color, highlightthickness=0, bd=0, activestyle='none', selectbackground=self.surface_alt)
+        self.conn_listbox.pack(fill=tk.BOTH, expand=False)
+        btn_row = tk.Frame(conn_body, bg=self.card_bg)
+        btn_row.pack(fill=tk.X, pady=(8, 0))
+        self.disconnect_btn = ttk.Button(btn_row, text="Disconnect Selected", command=self.disconnect_selected, style="Danger.TButton")
+        self.disconnect_btn.pack(side=tk.LEFT)
+        self.disconnect_btn['state'] = tk.DISABLED
         right_col = tk.Frame(content, bg=self.bg_color)
         right_col.grid(row=0, column=1, sticky="nsew")
         right_col.rowconfigure(1, weight=1)
         right_col.columnconfigure(0, weight=1)
+        # Accessibility: (focus configuration moved to after buttons are created)
 
         summary_card, summary_body = self._card(left_col, "Runtime Summary", "Live server status and counters")
+        self.save_qr_btn.configure(takefocus=True)
         summary_card.grid(row=0, column=0, sticky="ew", pady=(0, 12))
 
         summary_top = tk.Frame(summary_body, bg=self.card_bg)
+        # initial focus for accessibility
+        self.ip_combo.focus_set()
         summary_top.pack(fill=tk.X)
         summary_top.columnconfigure((0, 1, 2), weight=1)
 
@@ -412,6 +477,9 @@ class AirMouseGUI:
         self.qr_label.pack(pady=(6, 10))
         self.qr_text = ttk.Label(qr_panel, text="", style="Hint.TLabel", justify=tk.CENTER)
         self.qr_text.pack(fill=tk.X)
+        # Save QR button
+        self.save_qr_btn = ttk.Button(qr_panel, text="Save QR", command=self.save_qr_image, style="Accent.TButton")
+        self.save_qr_btn.pack(pady=(8, 0))
 
         controls_card, controls_body = self._card(left_col, "Server Controls", "Start or stop the TCP and UDP services")
         controls_card.grid(row=3, column=0, sticky="ew", pady=(0, 12))
@@ -461,8 +529,15 @@ class AirMouseGUI:
         ttk.Label(live_summary, text="Compatibility", style="Hint.TLabel").pack(anchor="w")
         ttk.Label(live_summary, text="Works best on the same Wi-Fi network with Android 10+ and cleartext traffic enabled.", style="Hint.TLabel", wraplength=500).pack(anchor="w", pady=(4, 0))
 
-        footer = ttk.Label(shell, text="University of Tehran • Embedded Systems Exercise", style="Subtitle.TLabel")
-        footer.pack(anchor="center", pady=(0, 12))
+        # Status bar at the bottom
+        status_bar = tk.Frame(self.root, bg=self.surface, height=28)
+        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.status_left = ttk.Label(status_bar, text="Server stopped", style="Status.TLabel")
+        self.status_left.pack(side=tk.LEFT, padx=(12, 6))
+        self.status_middle = ttk.Label(status_bar, text="No IP selected", style="Hint.TLabel")
+        self.status_middle.pack(side=tk.LEFT, padx=(6, 12))
+        self.status_right = ttk.Label(status_bar, text="Connections: 0", style="Hint.TLabel")
+        self.status_right.pack(side=tk.RIGHT, padx=(6, 12))
 
         self.log_area.configure(state=tk.NORMAL)
         self.log_area.insert(tk.END, "Air Mouse server is ready. Select an endpoint, then start the server.\n")
@@ -472,6 +547,30 @@ class AirMouseGUI:
         self.log_area.delete("1.0", tk.END)
         self.log_area.insert(tk.END, "Logs cleared.\n")
         self.log_area.see(tk.END)
+        self.log("🧹 Logs cleared by user")
+
+    def save_qr_image(self):
+        if not hasattr(self, 'last_qr_pil') or self.last_qr_pil is None:
+            messagebox.showwarning("Save QR", "No QR image available to save.")
+            return
+        filename = filedialog.asksaveasfilename(defaultextension='.png', filetypes=[('PNG Image', '*.png')], title='Save QR code')
+        if not filename:
+            return
+        try:
+            self.last_qr_pil.save(filename)
+            self.log(f"💾 Saved QR to {filename}")
+            messagebox.showinfo("Save QR", f"Saved QR code to {filename}")
+        except Exception as e:
+            messagebox.showerror("Save QR", f"Failed to save QR: {e}")
+
+    def _show_about(self):
+        about_text = (
+            "Air Mouse Server\n\n"
+            "Desktop companion for Air Mouse Android app.\n"
+            "Provides discovery, TCP command handling, and a live dashboard.\n\n"
+            "University of Tehran — Embedded Systems\n"
+        )
+        messagebox.showinfo("About Air Mouse", about_text)
 
     # ---- NEW IP utility functions ----
     def get_all_ips(self) -> List[str]:
@@ -593,6 +692,8 @@ class AirMouseGUI:
         qr.make(fit=True)
         img = qr.make_image(fill_color="#111111", back_color="#ffffff").convert("RGB")
         img = img.resize((220, 220))
+        # keep the PIL image for saving/export
+        self.last_qr_pil = img
         self.qr_image = ImageTk.PhotoImage(img)
         self.qr_label.config(image=self.qr_image)
         if hasattr(self, "qr_text"):
@@ -609,6 +710,8 @@ class AirMouseGUI:
     def update_stats_display(self, stats: Dict):
         self.stats_label.config(text=f"Clicks: {stats['clicks']}  •  Dbl: {stats['double_clicks']}  •  Right: {stats['right_clicks']}  •  Scroll: {stats['scrolls']}")
         self.conn_label.config(text=f"Connections: {len(self.tcp_server.active_connections)}")
+        # update status bar too
+        self.status_right.config(text=f"Connections: {len(self.tcp_server.active_connections)}")
 
     def update_sensitivity(self, event=None):
         CONFIG["sensitivity"] = self.sens_slider.get()
@@ -617,6 +720,8 @@ class AirMouseGUI:
             self.tcp_server.mouse.sensitivity = CONFIG["sensitivity"]
         save_config()
         self.log(f"⚙️ Sensitivity changed to {CONFIG['sensitivity']:.2f}")
+        # reflect in status bar
+        self.status_middle.config(text=f"Sensitivity: {CONFIG['sensitivity']:.2f}")
 
     # ---- Server start/stop ----
     def start_servers(self):
@@ -643,6 +748,10 @@ class AirMouseGUI:
         self.tcp_task = threading.Thread(target=run_loop, daemon=True)
         self.tcp_task.start()
         self.log("🚀 Servers started (TCP + UDP discovery)")
+        # update menus/status
+        self.status_left.config(text="Server running")
+        self.status_pill.config(text="Server running", bg=self.success)
+        self.status_right.config(text=f"Connections: {len(self.tcp_server.active_connections)}")
 
     def stop_servers(self):
         if self.loop:
@@ -653,6 +762,9 @@ class AirMouseGUI:
         self.status_label.config(text="Server stopped")
         self.status_pill.config(text="Server stopped", bg=self.danger)
         self.log("🛑 Servers stopped")
+        self.status_left.config(text="Server stopped")
+        self.status_pill.config(text="Server stopped", bg=self.danger)
+        self.status_right.config(text=f"Connections: {len(self.tcp_server.active_connections)}")
 
     def run(self):
         self.root.mainloop()
