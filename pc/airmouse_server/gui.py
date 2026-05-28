@@ -131,6 +131,7 @@ class AirMouseGUI:
         viewmenu = tk.Menu(menubar, tearoff=0)
         viewmenu.add_command(label="Refresh IP List Ctrl+R", command=self.refresh_ip_list)
         viewmenu.add_command(label="Clear Logs", command=self._clear_logs)
+        viewmenu.add_command(label="Rotate Logs", command=self._rotate_logs)
         viewmenu.add_checkbutton(label="Always on Top", variable=tk.BooleanVar(value=CONFIG.get("always_on_top", False)), command=self._toggle_always_on_top)
         menubar.add_cascade(label="View", menu=viewmenu)
 
@@ -580,15 +581,14 @@ class AirMouseGUI:
             ip, port_str = ip_port.rsplit(":", 1)
             port = int(port_str)
             addr = (ip, port)
-            writer = self.tcp_server.active_connections.get(addr, {}).get('writer')
-            if writer:
-                if self.loop and self.loop.is_running():
-                    asyncio.run_coroutine_threadsafe(self._close_writer(writer), self.loop)
-                else:
-                    writer.close()
-                self.log(f"🔌 Requesting disconnect of {ip_port}")
+            # Prefer server-side async close on the server's event loop
+            if self.loop and self.loop.is_running():
+                asyncio.run_coroutine_threadsafe(self.tcp_server.close_connection(addr), self.loop)
+                self.log(f"🔌 Scheduled server-side close for {ip_port}")
             else:
-                self.log(f"⚠️ No active writer for {ip_port}", "warning")
+                # fallback: best-effort immediate close
+                self.tcp_server.disconnect_client(addr)
+                self.log(f"🔌 Requested immediate close for {ip_port}")
         except Exception as e:
             self.log(f"❌ Error disconnecting {addr_str}: {e}", "error")
 
@@ -598,6 +598,23 @@ class AirMouseGUI:
             await writer.wait_closed()
         except Exception:
             pass
+
+    def _rotate_logs(self):
+        try:
+            import datetime
+            if not os.path.exists('logs'):
+                os.makedirs('logs')
+            timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+            fname = os.path.join('logs', f'airmouse-log-{timestamp}.txt')
+            with open(fname, 'w', encoding='utf-8') as f:
+                for _, line in self.log_lines:
+                    f.write(line + '\n')
+            # keep last 500 lines in memory/UI
+            self.log_lines = self.log_lines[-500:]
+            self._render_filtered_log()
+            self.log(f"🗄️ Rotated logs to {fname}", "info")
+        except Exception as e:
+            self.log(f"⚠️ Failed to rotate logs: {e}", "error")
 
     def start_servers(self):
         self.start_btn.config(state=tk.DISABLED)
