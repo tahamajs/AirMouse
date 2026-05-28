@@ -23,7 +23,6 @@ class CalibrationActivity : AppCompatActivity() {
 
     private var currentStep = 0
     private val totalSteps = CalibrationPagerAdapter.STEP_COUNT
-    private var timerRunning = false
     private var secondsElapsed = 0
     private val handler = Handler(Looper.getMainLooper())
     private val timerRunnable = object : Runnable {
@@ -47,10 +46,10 @@ class CalibrationActivity : AppCompatActivity() {
         stopBtn = findViewById(R.id.stopBtn)
 
         viewPager.adapter = CalibrationPagerAdapter(this)
-        viewPager.isUserInputEnabled = false   // swipe only via buttons
+        viewPager.isUserInputEnabled = false
 
-        // Start timer automatically
-        startTimer()
+        // Start timer
+        handler.postDelayed(timerRunnable, 1000)
 
         backBtn.setOnClickListener {
             if (currentStep > 0) {
@@ -61,18 +60,13 @@ class CalibrationActivity : AppCompatActivity() {
         }
 
         nextBtn.setOnClickListener {
-            val fragment = supportFragmentManager.findFragmentByTag("f${currentStep}") as? CalibrationStepFragment
-            if (fragment?.isStepComplete() == true) {
-                if (currentStep < totalSteps - 1) {
-                    currentStep++
-                    viewPager.currentItem = currentStep
-                    resetStepState()
-                } else {
-                    // All steps done – save and finish
-                    fragment.saveCalibrationData()
-                    stopTimer()
-                    showSuccessDialog()
-                }
+            if (currentStep < totalSteps - 1) {
+                currentStep++
+                viewPager.currentItem = currentStep
+                resetStepState()
+            } else {
+                // Finish – save final data if needed
+                showSuccessDialog()
             }
         }
 
@@ -88,14 +82,15 @@ class CalibrationActivity : AppCompatActivity() {
             }
         })
 
-        // Initially show first step
         updateButtons()
     }
 
-    private fun resetStepState() {
-        // Reset fragment's UI if needed (each fragment handles its own start)
-        // But we can communicate with fragment to reset its status
-        val fragment = supportFragmentManager.findFragmentByTag("f${currentStep}") as? CalibrationStepFragment
+    fun onStepComplete() {
+        nextBtn.isEnabled = true
+    }
+
+    fun resetStepState() {
+        val fragment = supportFragmentManager.findFragmentByTag("f${currentStep}") as? com.airmouse.calibration.CalibrationStepFragment
         fragment?.resetUI()
         nextBtn.isEnabled = fragment?.isStepComplete() ?: false
         updateButtons()
@@ -103,31 +98,14 @@ class CalibrationActivity : AppCompatActivity() {
 
     private fun updateButtons() {
         backBtn.isEnabled = currentStep > 0
-        // Next enabled only if current step complete (checked in fragment)
-        // We'll rely on fragment callback, but for now enable/disable via fragment method
-        val fragment = supportFragmentManager.findFragmentByTag("f${currentStep}") as? CalibrationStepFragment
-        nextBtn.isEnabled = fragment?.isStepComplete() ?: false
-    }
-
-    fun onStepComplete() {
-        // Called from fragment when its calibration finishes successfully
-        nextBtn.isEnabled = true
-    }
-
-    private fun startTimer() {
-        timerRunning = true
-        handler.postDelayed(timerRunnable, 1000)
-    }
-
-    private fun stopTimer() {
-        timerRunning = false
-        handler.removeCallbacks(timerRunnable)
+        // Next button enabled only if step is complete (set by fragment callback)
     }
 
     private fun showSuccessDialog() {
+        handler.removeCallbacks(timerRunnable)
         AlertDialog.Builder(this)
             .setTitle("Calibration Complete")
-            .setMessage("All sensors calibrated successfully!")
+            .setMessage("All sensors calibrated!")
             .setPositiveButton("OK") { _, _ -> finish() }
             .show()
     }
@@ -135,14 +113,14 @@ class CalibrationActivity : AppCompatActivity() {
     private fun showAbortDialog() {
         AlertDialog.Builder(this)
             .setTitle("Abort Calibration?")
-            .setMessage("Are you sure you want to stop? Progress will be lost.")
+            .setMessage("Progress will be lost.")
             .setPositiveButton("Yes") { _, _ -> finish() }
             .setNegativeButton("No", null)
             .show()
     }
 
     override fun onDestroy() {
-        stopTimer()
+        handler.removeCallbacks(timerRunnable)
         super.onDestroy()
     }
 }

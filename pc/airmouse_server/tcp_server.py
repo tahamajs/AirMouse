@@ -109,3 +109,12 @@ class AirMouseTCPServer:
             self._server.close()
             await self._server.wait_closed()
             self.log("🛑 TCP server stopped")
+
+
+if t == 'hello':
+    name = msg.get('name', 'Unknown')
+    self.active_connections[addr]['name'] = name
+    self.log(f"🖥️ Client identified as '{name}'")
+
+
+    addrs = [f"{info.get('name','Unknown')} ({a[0]}:{a[1]})" for a, info in self.active_connections.items()]
