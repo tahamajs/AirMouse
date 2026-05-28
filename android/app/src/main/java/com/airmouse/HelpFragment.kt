@@ -27,6 +27,9 @@ class HelpFragment : Fragment() {
         preferences = PreferencesManager(requireContext())
 
         // Populate help cards with content
+        val hint = view.findViewById<TextView>(R.id.help_hint_text)
+        hint?.text = getString(R.string.help_cards_hint)
+
         setupHelpCard(view.findViewById(R.id.help_card_controls),
             getString(R.string.help_title), getString(R.string.help_content))
         setupHelpCard(view.findViewById(R.id.help_card_calibration),
@@ -54,15 +57,29 @@ class HelpFragment : Fragment() {
             textSize = 14f
             setPadding(0, 16, 0, 0)
         }
-        linearLayout.addView(titleView)
+        // Add chevron to title to indicate expandability
+        val chevron = TextView(cardView.context).apply {
+            text = "›"
+            textSize = 18f
+            setPadding(8, 0, 0, 0)
+        }
+        val titleContainer = LinearLayout(cardView.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(titleView)
+            addView(chevron)
+        }
+        linearLayout.addView(titleContainer)
         linearLayout.addView(contentView)
         cardView.removeAllViews()
         cardView.addView(linearLayout)
 
         cardView.setOnClickListener {
-            // Toggle visibility of content
+            // Toggle visibility of content and rotate chevron
             val isVisible = contentView.visibility == View.VISIBLE
             contentView.visibility = if (isVisible) View.GONE else View.VISIBLE
+            chevron.rotation = if (isVisible) 0f else 90f
         }
+        // start collapsed
+        contentView.visibility = View.GONE
     }
 }

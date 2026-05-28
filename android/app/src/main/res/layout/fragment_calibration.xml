@@ -166,6 +166,15 @@
             android:text="@string/calibration_action_skip_mag"
             android:layout_marginBottom="8dp" />
 
+        <TextView
+            android:id="@+id/skip_mag_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:alpha="0.85"
+            android:text="@string/calibration_skip_mag_note"
+            android:layout_marginBottom="12dp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/reset_btn"
             style="@style/Widget.Material3.Button.TextButton"
