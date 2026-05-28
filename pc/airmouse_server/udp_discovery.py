@@ -6,7 +6,7 @@ from .config import CONFIG
 class UDPDiscoveryServer:
     def __init__(self, log_callback, ip_provider):
         self.port = CONFIG.get("discovery_port", 8081)
-        self.log = log_callback
+        self.log = log_callback or (lambda msg, level="info": None)
         self.ip_provider = ip_provider
         self.socket = None
         self.running = False
@@ -14,12 +14,15 @@ class UDPDiscoveryServer:
     def start(self):
         if self.running:
             return
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind(('', self.port))
-        self.running = True
-        threading.Thread(target=self._listen, daemon=True).start()
-        self.log(f"🔍 UDP discovery listening on port {self.port}")
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.socket.bind(('', self.port))
+            self.running = True
+            threading.Thread(target=self._listen, daemon=True).start()
+            self.log(f"🔍 UDP discovery listening on port {self.port}", "info")
+        except OSError as e:
+            self.log(f"❌ Could not start UDP discovery: {e}", "error")
 
     def _listen(self):
         while self.running:
@@ -34,9 +37,12 @@ class UDPDiscoveryServer:
                         "ip": chosen_ip
                     })
                     self.socket.sendto(response.encode(), addr)
-                    self.log(f"📡 Responded to {addr[0]} with {chosen_ip}")
-            except Exception:
-                pass
+                    self.log(f"📡 Responded to {addr[0]} with {chosen_ip}", "info")
+            except socket.timeout:
+                continue
+            except Exception as e:
+                if self.running:
+                    self.log(f"⚠️ UDP error: {e}", "warning")
 
     def stop(self):
         self.running = False

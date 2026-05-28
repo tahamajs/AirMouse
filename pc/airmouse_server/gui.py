@@ -561,12 +561,13 @@ class AirMouseGUI:
     def _update_connection_list(self, addresses: list):
         def _update():
             self.conn_listbox.delete(0, tk.END)
-            for addr in addresses:
-                # Add client details: uptime, latency placeholder
-                self.conn_listbox.insert(tk.END, f"{addr} (connected)")
+            for addr_str in addresses:
+                self.conn_listbox.insert(tk.END, addr_str)
             self.disconnect_btn['state'] = tk.NORMAL if self.conn_listbox.size() > 0 else tk.DISABLED
         self.root.after(0, _update)
 
+
+    
     def disconnect_selected(self):
         selection = self.conn_listbox.curselection()
         if not selection:
