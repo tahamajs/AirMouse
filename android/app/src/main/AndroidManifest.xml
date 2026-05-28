@@ -35,7 +35,7 @@
 
         <!-- Main Activity (no launcher) -->
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 

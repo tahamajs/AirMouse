@@ -1,4 +1,4 @@
-package com.airmouse
+package com.airmouse.ui
 
 import android.content.Context
 import android.content.Intent

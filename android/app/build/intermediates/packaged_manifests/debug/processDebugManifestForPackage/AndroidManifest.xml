@@ -52,6 +52,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@drawable/ic_calibrate"
         android:supportsRtl="true"
+        android:testOnly="true"
         android:theme="@style/Theme.AirMouse"
         android:usesCleartextTraffic="true" >
 
@@ -72,7 +73,7 @@
 
         <!-- Main Activity (no launcher) -->
         <activity
-            android:name="com.airmouse.MainActivity"
+            android:name="com.airmouse.ui.MainActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 

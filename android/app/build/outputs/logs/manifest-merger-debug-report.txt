@@ -174,14 +174,14 @@ category#android.intent.category.LAUNCHER
 ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:17-77
 	android:name
 		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:27-74
-activity#com.airmouse.MainActivity
+activity#com.airmouse.ui.MainActivity
 ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:37:9-40:52
 	android:screenOrientation
 		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:40:13-49
 	android:exported
 		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:39:13-37
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:38:13-41
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:38:13-44
 service#com.airmouse.DebugOverlayService
 ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:44:9-46:40
 	android:exported

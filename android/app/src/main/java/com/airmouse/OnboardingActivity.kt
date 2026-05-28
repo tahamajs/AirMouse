@@ -6,7 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.viewpager2.widget.ViewPager2
 import com.airmouse.R
-import com.airmouse.MainActivity
+import com.airmouse.ui.MainActivity
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
