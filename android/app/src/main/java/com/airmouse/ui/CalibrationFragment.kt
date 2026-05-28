@@ -25,6 +25,7 @@ class CalibrationFragment : Fragment() {
     private lateinit var startButton: MaterialButton
     private lateinit var skipMagButton: MaterialButton
     private lateinit var resetButton: MaterialButton
+    private lateinit var skipMagNote: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -45,6 +46,7 @@ class CalibrationFragment : Fragment() {
         progressBar = view.findViewById(R.id.calibration_progress)
         startButton = view.findViewById(R.id.start_guided_btn)
         skipMagButton = view.findViewById(R.id.skip_mag_btn)
+        skipMagNote = view.findViewById(R.id.skip_mag_note)
         resetButton = view.findViewById(R.id.reset_btn)
 
         resetUi()
@@ -53,6 +55,9 @@ class CalibrationFragment : Fragment() {
             statusText.setText(R.string.sensor_warning_missing)
             startButtonsEnabled(false)
         }
+        // hide skip note if magnetometer is present
+        val hasMag = SensorUtils.hasMagnetometer(requireContext())
+        skipMagNote.visibility = if (hasMag) android.view.View.GONE else android.view.View.VISIBLE
 
         startButton.setOnClickListener {
             runCalibration(includeMagnetometer = true)

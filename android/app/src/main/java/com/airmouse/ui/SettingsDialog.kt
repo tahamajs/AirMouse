@@ -88,9 +88,9 @@ class SettingsDialog(
         }
 
         dialog = AlertDialog.Builder(context)
-            .setTitle("Air Mouse Settings")
+            .setTitle(context.getString(R.string.settings_title))
             .setView(view)
-            .setPositiveButton("Done") { _, _ -> onDismiss() }
+            .setPositiveButton(context.getString(R.string.done)) { _, _ -> onDismiss() }
             .create()
     }
 

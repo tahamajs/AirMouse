@@ -31,6 +31,7 @@ class NetworkDiscoveryFragment : Fragment() {
     private lateinit var scanButton: Button
     private lateinit var statusText: TextView
     private lateinit var serverList: ListView
+    private lateinit var scanProgress: android.widget.ProgressBar
     private val servers = mutableListOf<DiscoveredServer>()
     private lateinit var adapter: ArrayAdapter<DiscoveredServer>
 
@@ -50,6 +51,7 @@ class NetworkDiscoveryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         preferences = PreferencesManager(requireContext())
         scanButton = view.findViewById(R.id.scan_network_btn)
+        scanProgress = view.findViewById(R.id.scan_progress)
         statusText = view.findViewById(R.id.network_status)
         serverList = view.findViewById(R.id.discovered_servers_list)
 
@@ -68,7 +70,9 @@ class NetworkDiscoveryFragment : Fragment() {
 
     private fun startScan() {
         scanButton.isEnabled = false
-        statusText.text = getString(R.string.scanning_network)
+        scanButton.text = getString(R.string.scanning_network)
+        scanProgress.visibility = android.view.View.VISIBLE
+        statusText.text = getString(R.string.network_scan_in_progress)
         lifecycleScope.launch {
             servers.clear()
             val found = withContext(Dispatchers.IO) { scanLocalNetwork() }
@@ -79,7 +83,9 @@ class NetworkDiscoveryFragment : Fragment() {
                 statusText.text = getString(R.string.no_servers_found)
             }
             adapter.notifyDataSetChanged()
+            scanProgress.visibility = android.view.View.GONE
             scanButton.isEnabled = true
+            scanButton.text = getString(R.string.scan_network)
         }
     }
 

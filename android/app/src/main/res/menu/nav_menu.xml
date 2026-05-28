@@ -10,16 +10,24 @@
             android:icon="@drawable/ic_stats"
             android:title="@string/statistics" />
         <item
+            android:id="@+id/networkDiscoveryFragment"
+            android:icon="@drawable/ic_wifi"
+            android:title="@string/discover_servers" />
+        <item
+            android:id="@+id/calibrationFragment"
+            android:icon="@drawable/ic_calibrate"
+            android:title="@string/calibration_title" />
+        <item
             android:id="@+id/helpFragment"
             android:icon="@drawable/ic_help"
             android:title="@string/help" />
-            <item
-                android:id="@+id/calibrationFragment"
-                android:icon="@drawable/ic_calibrate"
-                android:title="@string/calibration_title" />
     </group>
 
-    <group android:title="@string/advanced">
+    <group android:title="@string/settings_title">
+        <item
+            android:id="@+id/settings_dialog"
+            android:icon="@drawable/ic_profile"
+            android:title="@string/settings_title" />
         <item
             android:id="@+id/profilesFragment"
             android:icon="@drawable/ic_profile"
@@ -29,40 +37,32 @@
             android:icon="@drawable/ic_theme"
             android:title="@string/theme_title" />
         <item
-            android:id="@+id/gestureTrainingFragment"
-            android:icon="@drawable/ic_gesture"
-            android:title="@string/gesture_training_title" />
-        <item
             android:id="@+id/customGestureFragment"
             android:icon="@drawable/ic_gesture"
             android:title="@string/custom_gesture" />
-        <item
-            android:id="@+id/batteryFragment"
-            android:icon="@drawable/ic_battery"
-            android:title="@string/battery_graph_title" />
         <item
             android:id="@+id/accessibilityFragment"
             android:icon="@drawable/ic_accessibility"
             android:title="@string/accessibility_title" />
         <item
-            android:id="@+id/networkDiscoveryFragment"
-            android:icon="@drawable/ic_wifi"
-            android:title="@string/discover_servers" />
+            android:id="@+id/edgeGesturesFragment"
+            android:icon="@drawable/ic_gesture"
+            android:title="@string/edge_gestures" />
     </group>
 
     <group android:title="@string/more_features">
         <item
-            android:id="@+id/voiceCommandFragment"
-            android:icon="@drawable/ic_voice"
-            android:title="@string/voice_commands" />
+            android:id="@+id/batteryFragment"
+            android:icon="@drawable/ic_battery"
+            android:title="@string/battery_graph_title" />
         <item
             android:id="@+id/serverLogFragment"
             android:icon="@drawable/ic_log"
             android:title="@string/server_log" />
         <item
-            android:id="@+id/edgeGesturesFragment"
-            android:icon="@drawable/ic_gesture"
-            android:title="@string/edge_gestures" />
+            android:id="@+id/voiceCommandFragment"
+            android:icon="@drawable/ic_voice"
+            android:title="@string/voice_commands" />
     </group>
 
     <group android:title="@string/information">
