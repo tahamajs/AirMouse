@@ -61,6 +61,11 @@ class HomeFragment : Fragment() {
         private const val OVERLAY_PERMISSION_REQUEST = 100
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        qrScanner = QRScanner(this)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_home, container, false)
     }
@@ -132,7 +137,6 @@ class HomeFragment : Fragment() {
         debugOverlay.setSensorService(sensorService)
 
         ipEditText.setText(preferences.getLastIp())
-        qrScanner = QRScanner(requireActivity() as androidx.appcompat.app.AppCompatActivity)
     }
 
     private fun setupQRScanner() {

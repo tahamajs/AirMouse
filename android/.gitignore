@@ -126,6 +126,7 @@ google-services.json
 secrets.properties
 keystore.properties
 debug.keystore
+!app/debug.keystore
 signing.properties
 *.env
 .env.*

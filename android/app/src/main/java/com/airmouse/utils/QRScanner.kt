@@ -5,32 +5,33 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
-class QRScanner(private val activity: AppCompatActivity) {
+class QRScanner(private val fragment: Fragment) {
 
-    private val requestPermissionLauncher = activity.registerForActivityResult(
+    private val requestPermissionLauncher = fragment.registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
             startScan()
         } else {
-            android.app.AlertDialog.Builder(activity)
+            val context = fragment.requireContext()
+            android.app.AlertDialog.Builder(context)
                 .setTitle("Camera permission needed")
                 .setMessage("Please allow camera to scan QR codes.")
                 .setPositiveButton("OK") { _, _ ->
-                    activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        android.net.Uri.parse("package:${activity.packageName}")))
+                    fragment.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.parse("package:${context.packageName}")))
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
         }
     }
 
-    private val scanLauncher = activity.registerForActivityResult(ScanContract()) { result ->
+    private val scanLauncher = fragment.registerForActivityResult(ScanContract()) { result ->
         if (result.contents != null) {
             onScanResult?.invoke(result.contents)
         } else {
@@ -42,7 +43,8 @@ class QRScanner(private val activity: AppCompatActivity) {
     var onScanFailed: (() -> Unit)? = null
 
     fun startScan() {
-        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+        val context = fragment.requireContext()
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
             return
         }
