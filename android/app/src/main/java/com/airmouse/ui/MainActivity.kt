@@ -93,3 +93,7 @@ val connectionIcon = findViewById<ImageView>(R.id.connectionStatusIcon)
 DataSender.getInstance()?.connectionLiveData?.observe(this) { isConnected ->
     connectionIcon.setImageResource(if (isConnected) R.drawable.ic_connected else R.drawable.ic_disconnected)
 }
+val connectionIcon = findViewById<ImageView>(R.id.connectionStatusIcon)
+DataSender.getInstance()?.connectionLiveData?.observe(this) { isConnected ->
+    connectionIcon.setImageResource(if (isConnected) R.drawable.ic_connected else R.drawable.ic_disconnected)
+}

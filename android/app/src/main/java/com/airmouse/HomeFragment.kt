@@ -496,3 +496,7 @@ class HomeFragment : Fragment() {
 
 val deviceName = binding.deviceNameEdit.text.toString().ifEmpty { "AirMouse" }
 dataSender.sendHello(deviceName)
+
+
+val deviceName = binding.deviceNameEdit.text.toString().ifEmpty { "AirMouse" }
+dataSender.sendHello(deviceName)
