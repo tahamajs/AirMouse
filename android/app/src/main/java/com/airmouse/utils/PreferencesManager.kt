@@ -210,3 +210,4 @@ class PreferencesManager(context: Context) {
     fun isOnboardingCompleted(): Boolean = prefs.getBoolean("onboarding_completed", false)
     fun setOnboardingCompleted(completed: Boolean) = prefs.edit().putBoolean("onboarding_completed", completed).apply()
 }
+v

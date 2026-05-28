@@ -1,70 +1,60 @@
-package com.airmouse
+package com.airmouse.ui
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.fragment.app.Fragment
+import com.airmouse.R
 import com.airmouse.utils.LogManager
-import com.airmouse.utils.PreferencesManager
 
 class ServerLogFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: LogAdapter
-    private val logEntries = mutableListOf<String>()
-    private lateinit var preferences: PreferencesManager
-    private val logListener = object : LogManager.LogListener {
-        override fun onNewLog(message: String) {
-            if (!isAdded) return
-            requireActivity().runOnUiThread {
-                logEntries.add(0, message)
-                while (logEntries.size > 200) logEntries.removeAt(logEntries.lastIndex)
-                adapter.notifyDataSetChanged()
-                recyclerView.scrollToPosition(0)
-            }
-        }
-    }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_server_log, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        preferences = PreferencesManager(requireContext())
-        recyclerView = view.findViewById(R.id.log_recycler)
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View? {
+        val view = inflater.inflate(R.layout.fragment_server_log, container, false)
+        recyclerView = view.findViewById(R.id.logRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        adapter = LogAdapter(logEntries)
+        adapter = LogAdapter()
         recyclerView.adapter = adapter
 
-        // Load persisted logs
-        val savedLogs = preferences.getServerLogs()
-        logEntries.addAll(savedLogs)
-        adapter.notifyItemRangeInserted(0, savedLogs.size)
-        LogManager.addListener(logListener)
+        LogManager.logEntries.observe(viewLifecycleOwner) { entries ->
+            adapter.submitList(entries)
+        }
+        return view
+    }
+}
+
+class LogAdapter : RecyclerView.Adapter<LogAdapter.ViewHolder>() {
+    private var entries: List<LogManager.LogEntry> = emptyList()
+
+    fun submitList(list: List<LogManager.LogEntry>) {
+        entries = list
+        notifyDataSetChanged()
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        LogManager.removeListener(logListener)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(android.R.layout.simple_list_item_2, parent, false)
+        return ViewHolder(view)
     }
 
-    inner class LogAdapter(private val entries: List<String>) : RecyclerView.Adapter<LogAdapter.ViewHolder>() {
-        inner class ViewHolder(val textView: TextView) : RecyclerView.ViewHolder(textView)
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val tv = TextView(parent.context)
-            tv.setPadding(16, 12, 16, 12)
-            tv.textSize = 12f
-            tv.typeface = android.graphics.Typeface.MONOSPACE
-            return ViewHolder(tv)
-        }
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            holder.textView.text = entries[position]
-        }
-        override fun getItemCount() = entries.size
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val entry = entries[position]
+        holder.text1.text = "${entry.timestamp} [${entry.level}]"
+        holder.text2.text = entry.message
+    }
+
+    override fun getItemCount() = entries.size
+
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val text1: android.widget.TextView = itemView.findViewById(android.R.id.text1)
+        val text2: android.widget.TextView = itemView.findViewById(android.R.id.text2)
     }
 }
