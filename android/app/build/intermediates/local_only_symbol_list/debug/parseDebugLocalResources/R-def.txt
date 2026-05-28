@@ -117,6 +117,7 @@ id help_card_calibration
 id help_card_connection
 id help_card_controls
 id help_card_sensors
+id help_hint_text
 id homeFragment
 id ip_edit_text
 id live_log_text
@@ -141,6 +142,7 @@ id right_click_tilt_seek
 id save_profile_btn
 id saved_gestures_list
 id scan_network_btn
+id scan_progress
 id scan_qr_btn
 id scrollThresholdSeek
 id scrollThresholdValue
@@ -152,7 +154,9 @@ id sensor_status_text
 id serverLogFragment
 id session_time_text
 id settings_btn
+id settings_dialog
 id skip_mag_btn
+id skip_mag_note
 id start_btn
 id start_guided_btn
 id statisticsFragment
@@ -217,6 +221,7 @@ string about_tech
 string about_tech_details
 string about_title
 string about_university
+string about_version_label
 string accessibility_title
 string action_calibrate
 string action_click
@@ -231,6 +236,7 @@ string announce_clicks
 string announce_movement
 string app_name
 string available_commands
+string available_commands_list
 string battery_estimation
 string battery_graph_title
 string battery_level_format
@@ -270,6 +276,7 @@ string calibration_intro
 string calibration_needed_prompt
 string calibration_open_failed
 string calibration_ready_prompt
+string calibration_skip_mag_note
 string calibration_skipped_mag
 string calibration_starting
 string calibration_status_accel
@@ -278,6 +285,9 @@ string calibration_status_error
 string calibration_status_gyro
 string calibration_status_idle
 string calibration_status_mag
+string calibration_step1_title
+string calibration_step2_title
+string calibration_step3_title
 string calibration_title
 string cancel
 string checking_sensors
@@ -309,6 +319,8 @@ string error_sensor_busy
 string error_unknown
 string fab_content_description
 string fair
+string found_servers
+string found_servers_count
 string gesture_chart_label
 string gesture_counts
 string gesture_no_data
@@ -321,6 +333,7 @@ string gesture_training_title
 string good
 string haptic_feedback
 string help
+string help_cards_hint
 string help_content
 string help_title
 string hide_debug
@@ -340,9 +353,13 @@ string log_placeholder
 string low_battery_warning
 string missing_sensors_warning
 string more_features
+string network_discovery_hint
+string network_not_scanned
+string network_scan_in_progress
 string no
 string no_gyroscope
 string no_saved_gestures
+string no_servers_found
 string ok
 string onboarding_desc_1
 string onboarding_desc_2
@@ -376,6 +393,7 @@ string rotate_figure8
 string run_calibration_first
 string save_profile
 string saved_gestures
+string scan_network
 string scan_qr
 string scanning_network
 string scroll_sensitivity
@@ -429,6 +447,7 @@ string unit_rad_s
 string unknown_command
 string version_format
 string voice_commands
+string voice_commands_hint
 string voice_failed
 string voice_no_match
 string voice_prompt
