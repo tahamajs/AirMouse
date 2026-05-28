@@ -52,13 +52,42 @@ class AirMouseTCPServer:
         self.log("🛑 TCP server stopped", "info")
 
     def disconnect_client(self, addr: Tuple[str, int]):
+        """Request a synchronous disconnect for `addr` from calling thread.
+        Prefer scheduling `await close_connection(addr)` on the server loop for async safety.
+        """
         info = self.active_connections.get(addr)
-        if info and 'writer' in info:
-            writer = info['writer']
+        if not info:
+            return
+        writer = info.get('writer')
+        try:
+            # best-effort close; caller may be outside event loop
+            writer.close()
+        except Exception:
+            pass
+
+    async def close_connection(self, addr: Tuple[str, int]):
+        """Asynchronously close and cleanup a specific active connection.
+        Safe to call from the server's asyncio loop or via `asyncio.run_coroutine_threadsafe`.
+        """
+        info = self.active_connections.get(addr)
+        if not info:
+            return
+        writer = info.get('writer')
+        try:
+            writer.close()
             try:
-                writer.close()
+                await writer.wait_closed()
             except Exception:
                 pass
+        except Exception:
+            pass
+        # final cleanup; remove from active map and update UI
+        try:
+            del self.active_connections[addr]
+        except KeyError:
+            pass
+        self.log(f"🔌 Server closed connection {addr[0]}:{addr[1]}", "info")
+        self._update_connections_list()
 
     def _update_connections_list(self):
         if self.connections_callback:
