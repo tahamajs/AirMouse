@@ -28,10 +28,6 @@
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/activity_main.xml"
     },
     {
-        "merged": "com.airmouse.app-mergeDebugResources-52:/layout/fragment_battery.xml",
-        "source": "com.airmouse.app-main-55:/layout/fragment_battery.xml"
-    },
-    {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-mergeDebugResources-52:/layout/fragment_profiles.xml",
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/fragment_profiles.xml"
     },
@@ -48,12 +44,12 @@
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/fragment_server_log.xml"
     },
     {
-        "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-mergeDebugResources-52:/layout/fragment_battery.xml",
-        "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/fragment_battery.xml"
-    },
-    {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-mergeDebugResources-52:/layout/fragment_themes.xml",
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/fragment_themes.xml"
+    },
+    {
+        "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-mergeDebugResources-52:/layout/fragment_battery.xml",
+        "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/fragment_battery.xml"
     },
     {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-mergeDebugResources-52:/layout/fragment_edge_gestures.xml",
@@ -62,6 +58,10 @@
     {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-mergeDebugResources-52:/layout/fragment_gesture_training.xml",
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/fragment_gesture_training.xml"
+    },
+    {
+        "merged": "com.airmouse.app-mergeDebugResources-52:/layout/nav_header.xml",
+        "source": "com.airmouse.app-main-55:/layout/nav_header.xml"
     },
     {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-mergeDebugResources-52:/layout/fragment_about.xml",

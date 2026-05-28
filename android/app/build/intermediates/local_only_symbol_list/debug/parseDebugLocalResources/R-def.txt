@@ -68,9 +68,9 @@ id action_help
 id action_license
 id action_sensor_info
 id action_spinner
-id action_voice_to_home
 id announce_clicks_switch
 id announce_movement_switch
+id appbar
 id batteryFragment
 id battery_chart
 id battery_level_text
@@ -278,6 +278,7 @@ string error_sensor_busy
 string error_unknown
 string fab_content_description
 string fair
+string gesture_chart_label
 string gesture_counts
 string gesture_no_data
 string gesture_not_recorded

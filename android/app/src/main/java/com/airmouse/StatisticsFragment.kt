@@ -1,10 +1,11 @@
-package com.airmouse.ui.statistics   // adjust package to your actual package
+package com.airmouse.ui.statistics
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.airmouse.R
@@ -72,12 +73,12 @@ class StatisticsFragment : Fragment() {
             BarEntry(2f, right.toFloat()),
             BarEntry(3f, double.toFloat())
         )
-        val dataSet = BarDataSet(entries, "Gestures")
+        val dataSet = BarDataSet(entries, getString(R.string.gesture_chart_label))
         dataSet.setColors(
-            android.graphics.Color.parseColor("#FF5722"),
-            android.graphics.Color.parseColor("#4CAF50"),
-            android.graphics.Color.parseColor("#2196F3"),
-            android.graphics.Color.parseColor("#FFC107")
+            "#FF5722".toColorInt(),
+            "#4CAF50".toColorInt(),
+            "#2196F3".toColorInt(),
+            "#FFC107".toColorInt()
         )
         dataSet.valueTextSize = 12f
         val barData = BarData(dataSet)

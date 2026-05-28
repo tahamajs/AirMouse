@@ -162,7 +162,8 @@
     <string name="error_unknown">An unknown error occurred.</string>
     <string name="fab_content_description">Quick calibrate</string>
     <string name="fair">Fair</string>
-    <string name="gesture_counts">Clicks: %d  |  Scrolls: %d  |  Right: %d  |  Double: %d</string>
+    <string name="gesture_chart_label">Gestures</string>
+    <string formatted="false" name="gesture_counts">Clicks: %d  |  Scrolls: %d  |  Right: %d  |  Double: %d</string>
     <string name="gesture_no_data">No movement detected. Try again.</string>
     <string name="gesture_not_recorded">No gesture recorded</string>
     <string formatted="false" name="gesture_saved">Gesture for %s saved (value: %.2f)</string>

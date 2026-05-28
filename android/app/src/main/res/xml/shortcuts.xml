@@ -8,6 +8,6 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.airmouse"
-            android:targetClass="com.airmouse.ui.MainActivity" />
+            android:targetClass="com.airmouse.MainActivity" />
     </shortcut>
 </shortcuts>

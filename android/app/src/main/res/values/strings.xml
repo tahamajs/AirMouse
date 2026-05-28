@@ -273,7 +273,11 @@
     <string name="battery_level_format">Battery Level: %d%%</string>
     <string name="battery_temp_format">Temperature: %.1f°C</string>
     <string name="temperature_label">Temperature (°C)</string>
-    <string name="gesture_counts">Clicks: %d  |  Scrolls: %d  |  Right: %d  |  Double: %d</string>
     <string name="temperature_chart_label">Temperature (°C)</string>
     <string name="battery_temp_chart_label">Temperature (°C)</string>
+    <string name="gesture_chart_label">Gestures</string>
+    <string name="gesture_counts" formatted="false">Clicks: %d  |  Scrolls: %d  |  Right: %d  |  Double: %d</string>
+
+
+
 </resources>

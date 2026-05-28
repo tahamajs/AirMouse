@@ -1,4 +1,4 @@
-package com.airmouse
+package com.airmouse.ui.onboarding
 
 import android.view.LayoutInflater
 import android.view.View
@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.airmouse.R
 
 data class OnboardingItem(val imageRes: Int, val title: String, val description: String)
 
@@ -24,7 +25,7 @@ class OnboardingAdapter(private val items: List<OnboardingItem>) :
         holder.descriptionView.text = item.description
     }
 
-    override fun getItemCount() = items.size
+    override fun getItemCount(): Int = items.size
 
     class OnboardingViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageView: ImageView = itemView.findViewById(R.id.onboarding_image)

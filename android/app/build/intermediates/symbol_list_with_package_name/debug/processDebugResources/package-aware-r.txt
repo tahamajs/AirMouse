@@ -3292,7 +3292,6 @@ id action_mode_close_button
 id action_sensor_info
 id action_spinner
 id action_text
-id action_voice_to_home
 id actions
 id activity_chooser_view_content
 id add
@@ -3308,6 +3307,7 @@ id announce_clicks_switch
 id announce_movement_switch
 id antiClockwise
 id anticipate
+id appbar
 id arc
 id asConfigured
 id async
@@ -4208,6 +4208,7 @@ string fab_content_description
 string fab_transformation_scrim_behavior
 string fab_transformation_sheet_behavior
 string fair
+string gesture_chart_label
 string gesture_counts
 string gesture_no_data
 string gesture_not_recorded

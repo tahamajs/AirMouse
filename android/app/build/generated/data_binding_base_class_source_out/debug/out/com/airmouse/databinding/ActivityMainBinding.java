@@ -12,6 +12,7 @@ import androidx.fragment.app.FragmentContainerView;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.airmouse.R;
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationView;
 import java.lang.NullPointerException;
@@ -21,6 +22,9 @@ import java.lang.String;
 public final class ActivityMainBinding implements ViewBinding {
   @NonNull
   private final DrawerLayout rootView;
+
+  @NonNull
+  public final AppBarLayout appbar;
 
   @NonNull
   public final BottomNavigationView bottomNav;
@@ -37,11 +41,12 @@ public final class ActivityMainBinding implements ViewBinding {
   @NonNull
   public final Toolbar toolbar;
 
-  private ActivityMainBinding(@NonNull DrawerLayout rootView,
+  private ActivityMainBinding(@NonNull DrawerLayout rootView, @NonNull AppBarLayout appbar,
       @NonNull BottomNavigationView bottomNav, @NonNull DrawerLayout drawerLayout,
       @NonNull FragmentContainerView navHostFragment, @NonNull NavigationView navView,
       @NonNull Toolbar toolbar) {
     this.rootView = rootView;
+    this.appbar = appbar;
     this.bottomNav = bottomNav;
     this.drawerLayout = drawerLayout;
     this.navHostFragment = navHostFragment;
@@ -76,6 +81,12 @@ public final class ActivityMainBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
+      id = R.id.appbar;
+      AppBarLayout appbar = ViewBindings.findChildViewById(rootView, id);
+      if (appbar == null) {
+        break missingId;
+      }
+
       id = R.id.bottom_nav;
       BottomNavigationView bottomNav = ViewBindings.findChildViewById(rootView, id);
       if (bottomNav == null) {
@@ -102,7 +113,7 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityMainBinding((DrawerLayout) rootView, bottomNav, drawerLayout,
+      return new ActivityMainBinding((DrawerLayout) rootView, appbar, bottomNav, drawerLayout,
           navHostFragment, navView, toolbar);
     }
     String missingId = rootView.getResources().getResourceName(id);

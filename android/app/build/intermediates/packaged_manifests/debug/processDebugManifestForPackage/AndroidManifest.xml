@@ -14,17 +14,17 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <permission
         android:name="com.airmouse.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="com.airmouse.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- Don't require camera, as this requires a rear camera. This allows it to work on the Nexus 7 -->
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="false" />
+    <uses-permission android:name="com.airmouse.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+
     <uses-feature
         android:name="android.hardware.camera.front"
         android:required="false" /> <!-- TODO replace above two with next line after Android 4.2 -->
@@ -47,39 +47,43 @@
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:debuggable="true"
         android:extractNativeLibs="false"
+        android:icon="@drawable/ic_calibrate"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:roundIcon="@drawable/ic_calibrate"
         android:supportsRtl="true"
         android:testOnly="true"
         android:theme="@style/Theme.AirMouse"
         android:usesCleartextTraffic="true" >
+
+        <!-- Onboarding (launcher) -->
+
+
+        <!-- Onboarding (launcher) -->
         <activity
-            android:name="com.airmouse.ui.onboarding.OnboardingActivity"
-            android:exported="true" >
+            android:name="com.airmouse.onboarding.OnboardingActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AirMouse.Splash" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Main Activity (no launcher) -->
         <activity
-            android:name="com.airmouse.ui.MainActivity"
+            android:name="com.airmouse.MainActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
-        <activity
-            android:name="com.journeyapps.barcodescanner.CaptureActivity"
-            android:clearTaskOnLaunch="true"
-            android:screenOrientation="fullSensor"
-            android:stateNotNeeded="true"
-            android:theme="@style/Theme.AppCompat.NoActionBar"
-            android:windowSoftInputMode="stateAlwaysHidden" />
 
         <service
             android:name="com.airmouse.ui.DebugOverlayService"
             android:exported="false" />
-        <service
-            android:name="com.airmouse.service.EdgeGestureService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse" />
+
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
 
         <provider
             android:name="androidx.startup.InitializationProvider"
@@ -122,6 +126,14 @@
                 <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
             </intent-filter>
         </receiver>
+
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:clearTaskOnLaunch="true"
+            android:screenOrientation="sensorLandscape"
+            android:stateNotNeeded="true"
+            android:theme="@style/zxing_CaptureTheme"
+            android:windowSoftInputMode="stateAlwaysHidden" />
     </application>
 
 </manifest>
