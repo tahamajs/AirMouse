@@ -1,186 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:padding="16dp">
+    android:background="#0f1115">
 
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Bottom control bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:background="#171b22"
+        android:padding="16dp">
 
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="6dp"
-            android:layout_marginBottom="16dp">
+            android:gravity="center"
+            android:orientation="horizontal">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_timer"
+                android:contentDescription="Timer"
+                android:tint="#96a0ae" />
+
+            <TextView
+                android:id="@+id/timerText"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp"
-                android:background="@drawable/bg_card_gradient">
+                android:text="00:00"
+                android:textColor="#e5e7eb"
+                android:textSize="16sp"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/calibration_title"
-                    android:textAppearance="?attr/textAppearanceHeadlineSmall"
-                    android:textColor="@android:color/white" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/calibration_intro"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:textColor="@android:color/white" />
-
-                <ProgressBar
-                    android:id="@+id/calibration_progress"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:max="100"
-                    android:progress="0" />
-
-                <TextView
-                    android:id="@+id/calibration_status"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/calibration_status_idle"
-                    android:textAlignment="center"
-                    android:textColor="@android:color/white"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="20dp"
-            android:layout_marginBottom="12dp">
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
+            <Button
+                android:id="@+id/backBtn"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Back"
+                android:enabled="false"
+                android:textColor="#e5e7eb"
+                android:backgroundTint="#2b3341" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                        android:text="@string/calibration_step1_title"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+            <Button
+                android:id="@+id/nextBtn"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Next"
+                android:layout_marginStart="8dp"
+                android:enabled="false"
+                android:textColor="#ffffff"
+                android:backgroundTint="#007acc" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/calib_step1_detail"
-                    android:layout_marginTop="6dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="20dp"
-            android:layout_marginBottom="12dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                        android:text="@string/calibration_step2_title"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/calib_step2_detail"
-                    android:layout_marginTop="6dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="20dp"
-            android:layout_marginBottom="16dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                        android:text="@string/calibration_step3_title"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/calib_step3_detail"
-                    android:layout_marginTop="6dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            android:id="@+id/calibration_instruction"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:padding="16dp"
-            android:background="@drawable/bg_card_outline"
-            android:text="@string/calibration_ready_prompt"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/start_guided_btn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/calibration_action_start"
-            app:icon="@drawable/ic_calibrate"
-            app:iconGravity="textStart"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/skip_mag_btn"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/calibration_action_skip_mag"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/skip_mag_note"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodySmall"
-            android:alpha="0.85"
-            android:text="@string/calibration_skip_mag_note"
-            android:layout_marginBottom="12dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/reset_btn"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/calibration_action_reset" />
-
+            <Button
+                android:id="@+id/stopBtn"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Stop"
+                android:layout_marginStart="8dp"
+                android:textColor="#ffffff"
+                android:backgroundTint="#ef5b5b" />
+        </LinearLayout>
     </LinearLayout>
-</ScrollView>
+</LinearLayout>
