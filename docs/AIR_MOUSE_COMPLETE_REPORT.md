@@ -1,88 +1,161 @@
 # Air Mouse Complete Project Documentation
 
-This document is the clean reference for the Air Mouse project. It explains what each part does, how to run it on macOS with a Redmi phone, how the Android app and Python server communicate, and how to collect Perfetto traces for the assignment questions.
+This document is the full technical report for the Air Mouse assignment. It explains the purpose of the project, how each module works, how the Android phone and PC server communicate, how calibration is performed, how gesture detection is implemented, how Perfetto tracing is collected and analyzed, and how the project should be run on a macOS host with a Redmi phone.
+
+The report is written to match the actual implementation in this repository.
 
 ## 1. Project Goal
 
-Air Mouse turns an Android phone into a wireless mouse. The phone reads raw motion sensors, corrects calibration errors, fuses sensor data into orientation, detects movement/click/scroll gestures, and sends commands to a computer over TCP. The computer server receives those commands and controls the cursor.
+Air Mouse turns an Android phone into a wireless mouse for a computer.
 
-The implementation has two main parts:
+The phone reads raw motion sensor data, calibrates the sensors, fuses the values into a stable orientation estimate, detects cursor motion and gestures, and sends commands to the PC over TCP. The PC receives those commands and uses `pyautogui` to control the cursor, clicks, and scrolling.
 
-- Android app: `android/app`
-- PC server and analysis tools: `pc`
+The project is split into two main parts:
 
-Documentation and reports are in `docs`.
+- Android application: `android/app`
+- PC server and profiling tools: `pc`
 
-## 2. Implemented Requirements Checklist
+The documentation and Perfetto configuration are stored in `docs` and `ProfileAndTrace`.
 
-| Requirement | Status | Location |
+## 2. What the Assignment Requires
+
+The original assignment asks for:
+
+- Use of Android sensors.
+- A cursor controlled by phone motion.
+- Click and scroll gestures.
+- Calibration for sensor bias and drift.
+- A PC-side program that receives data from the phone.
+- A UI that explains what the user must do.
+- TCP socket communication.
+- ACK handling for critical packets.
+- Perfetto profiling and analysis.
+- A report and a short demonstration video.
+
+This repository contains all of those pieces in implemented form.
+
+## 3. High-Level Design
+
+The system has four layers:
+
+1. Sensor acquisition on the phone.
+2. Calibration and fusion on the phone.
+3. TCP transmission to the PC.
+4. Cursor control on the PC.
+
+The phone is the primary intelligence layer. It decides how to interpret motion, when to emit cursor movement, and when to emit gestures. The PC simply applies those commands to the desktop cursor.
+
+## 4. Implemented Requirement Checklist
+
+| Requirement | Status | Main Files |
 | --- | --- | --- |
 | Android app, API 29+ | Complete | `android/app/build.gradle` |
 | Raw accelerometer, gyroscope, magnetometer | Complete | `SensorService.kt`, `CalibrationHelper.kt` |
-| Gyroscope bias calibration | Complete | `CalibrationHelper.kt` |
-| Accelerometer six-position calibration support | Complete | `CalibrationHelper.kt` |
-| Magnetometer figure-eight calibration | Complete | `CalibrationHelper.kt` |
-| Sensor fusion | Complete | `MadgwickAHRS.kt` |
-| Cursor movement from phone rotation | Complete | `HomeFragment.kt`, `SensorService.kt` |
+| Gyroscope bias calibration | Complete | `CalibrationHelper.kt`, `CalibrationFragment.kt` |
+| Accelerometer multi-position calibration support | Complete | `CalibrationHelper.kt`, `CalibrationFragment.kt` |
+| Magnetometer figure-eight calibration | Complete | `CalibrationHelper.kt`, `CalibrationFragment.kt` |
+| Sensor fusion with Madgwick AHRS | Complete | `MadgwickAHRS.kt` |
+| Cursor movement from phone rotation | Complete | `SensorService.kt`, `HomeFragment.kt` |
 | Click, double-click, right-click, scroll | Complete | `EnhancedGestureDetector.kt`, `DataSender.kt`, `server.py` |
-| Sensitivity controls | Complete | `HomeFragment.kt`, `PreferencesManager.kt` |
-| Android UI for IP, status, calibration, sensors | Complete | `fragment_home.xml`, `HomeFragment.kt` |
-| QR server scanning with IP + port endpoint | Complete | `QRScanner.kt`, `HomeFragment.kt`, `pc/gui.py` |
-| Live logs on Android and PC | Complete | `HomeFragment.kt`, `ServerLogFragment.kt`, `pc/gui.py`, `LogManager.kt` |
+| Adjustable sensitivity | Complete | `HomeFragment.kt`, `PreferencesManager.kt` |
+| Guided calibration UI | Complete | `CalibrationFragment.kt`, `fragment_calibration.xml` |
+| Home UI with connection, status, live data | Complete | `fragment_home.xml`, `HomeFragment.kt` |
+| QR scan with IP and port | Complete | `QRScanner.kt`, `ValidationUtils.kt`, `pc/gui.py` |
+| Live logs on phone and PC | Complete | `LogManager.kt`, `HomeFragment.kt`, `ServerLogFragment.kt`, `pc/gui.py` |
 | TCP socket protocol | Complete | `DataSender.kt`, `pc/server.py` |
-| ACK for critical commands | Complete | `DataSender.kt`, `pc/server.py` |
-| Python PC server | Complete | `pc/server.py`, `pc/gui.py`, `pc/run.py` |
+| ACK and retry for critical packets | Complete | `DataSender.kt`, `pc/server.py` |
+| PC GUI server | Complete | `pc/gui.py` |
+| Console launcher | Complete | `pc/run.py` |
 | Perfetto trace markers | Complete | `SensorService.kt`, `DataSender.kt` |
-| Perfetto analyzer | Complete | `pc/perfetto_analyzer.py` |
+| Perfetto trace analyzer | Complete | `pc/perfetto_analyzer.py` |
 | Perfetto config | Complete | `ProfileAndTrace/config.pbtx`, `docs/perfetto_config.pbtx` |
-| Full documentation | Complete | `docs/` |
+| Full project report | Complete | `docs/` |
 
-## 3. Android Architecture
+## 5. Android Application Overview
 
-The Android app uses classic XML views with Kotlin. The launcher activity is:
+The Android app uses Kotlin and XML layouts.
 
-```text
-com.airmouse.ui.onboarding.OnboardingActivity
-```
+Main entry points:
 
-After onboarding, the app opens:
-
-```text
-com.airmouse.ui.MainActivity
-```
-
-The main feature screen is:
-
-```text
-com.airmouse.HomeFragment
-```
+- `com.airmouse.ui.onboarding.OnboardingActivity`
+- `com.airmouse.ui.MainActivity`
+- `com.airmouse.HomeFragment`
 
 Important Android files:
 
-| File | Responsibility |
+| File | Role |
 | --- | --- |
-| `OnboardingActivity.kt` | First-run intro screens |
-| `MainActivity.kt` | Navigation host and app shell |
-| `HomeFragment.kt` | Main Air Mouse controls and callbacks |
-| `SensorService.kt` | Sensor registration, processing, Perfetto slices |
-| `MadgwickAHRS.kt` | Sensor fusion |
-| `CalibrationHelper.kt` | Gyro, accelerometer, magnetometer calibration |
-| `EnhancedGestureDetector.kt` | Click and scroll gesture detection |
-| `DataSender.kt` | TCP client and ACK/retry logic |
-| `QRScanner.kt` | QR scan for server address |
-| `PreferencesManager.kt` | Persistent app settings |
+| `OnboardingActivity.kt` | Intro screens shown on first run |
+| `MainActivity.kt` | Navigation host and drawer shell |
+| `HomeFragment.kt` | Main control screen |
+| `CalibrationFragment.kt` | Guided calibration wizard |
+| `ServerLogFragment.kt` | Persistent server log viewer |
+| `SensorService.kt` | Sensor registration, fusion, gesture pipeline |
+| `CalibrationHelper.kt` | Sensor calibration routines |
+| `MadgwickAHRS.kt` | Quaternion-based fusion |
+| `EnhancedGestureDetector.kt` | Click/scroll gesture detection |
+| `DataSender.kt` | TCP client with ACK/retry |
+| `QRScanner.kt` | QR capture and endpoint parsing |
+| `PreferencesManager.kt` | SharedPreferences abstraction |
+| `LogManager.kt` | Shared live log broadcasting |
 
-## 4. Sensor Processing
+## 6. Android UI and User Flow
 
-The app uses these raw Android sensors:
+The app flow is designed for clarity:
+
+1. Open onboarding on first run.
+2. Land on `MainActivity`.
+3. Use the Home screen to enter the PC endpoint, scan a QR code, check sensor availability, and start or stop Air Mouse.
+4. Open the Calibration screen and follow the guided calibration steps.
+5. Use the Server Log page to inspect saved logs while debugging.
+
+### Home Screen
+
+The Home screen contains:
+
+- IP address field.
+- Port field.
+- QR scan button.
+- Status text.
+- Sensor status text.
+- Live sensor values.
+- Orientation indicator square.
+- Start and Calibrate actions.
+- Sensitivity slider.
+- Debug overlay toggle.
+- Live log panel.
+- Clear logs button.
+
+This screen is intentionally practical and dense. It is not a landing page. It is the working control surface for the system.
+
+### Calibration Screen
+
+The Calibration screen is a dedicated wizard-like page. It includes:
+
+- Step-by-step instructions.
+- A progress bar.
+- Separate guidance for gyroscope, magnetometer, and accelerometer.
+- A Start Guided Calibration button.
+- A Skip Magnetometer button for devices without a magnetometer.
+- A Reset button.
+
+The user is not expected to guess what to do. The screen says what to do at each step.
+
+### Server Log Screen
+
+The server log page shows persisted logs that were captured during runtime. This is useful when debugging connection issues, QR scanning, retries, or packet loss.
+
+## 7. Sensor Pipeline
+
+The app uses these raw sensors:
 
 - `TYPE_ACCELEROMETER`
 - `TYPE_GYROSCOPE`
 - `TYPE_MAGNETIC_FIELD`
 
-The app does not depend on Android's already-fused rotation vector as the main solution. It performs its own calibration and fusion.
+The app does not rely on Android's rotation vector as the main solution. Instead, it uses raw sensors plus calibration and fusion.
 
-Sensor processing flow:
+### Data Flow
 
 ```text
 Android SensorManager
@@ -90,46 +163,64 @@ Android SensorManager
   -> CalibrationHelper
   -> MadgwickAHRS
   -> EnhancedGestureDetector
-  -> HomeFragment callbacks
+  -> HomeFragment callback
   -> DataSender
   -> PC server
 ```
 
-Sensor callbacks run on a named `HandlerThread`:
+Sensor callbacks are registered on a dedicated `HandlerThread` named `AirMouseSensorThread`. This keeps the fusion pipeline off the main UI thread and makes the behavior easier to inspect in Perfetto.
 
-```text
-AirMouseSensorThread
-```
+## 8. Calibration in Detail
 
-This keeps sensor fusion away from the main UI thread and makes it easy to see thread separation in Perfetto.
+Calibration is essential for three reasons:
 
-## 5. Calibration
+- Raw sensors have bias.
+- Sensors drift over time.
+- Sensor axes are not perfectly aligned with the physical movement of the phone.
 
-### Gyroscope
+### 8.1 Gyroscope Calibration
 
-The phone is kept still. The app samples gyroscope values and computes average bias. Later, it subtracts that bias from raw gyroscope readings.
+The gyroscope has a bias even when the phone is still. That means the phone can appear to rotate when it is not actually moving.
 
-Corrected value:
+The implementation:
+
+- Samples the gyroscope while the device is stationary.
+- Computes the average of each axis.
+- Stores the resulting bias in preferences.
+- Subtracts the bias from all future gyroscope samples.
+
+Corrected form:
 
 ```text
 gyro_corrected = gyro_raw - gyro_bias
 ```
 
-### Accelerometer
+### 8.2 Accelerometer Calibration
 
-The assignment asks for six-position calibration. The implementation supports offset and scale correction so readings can be mapped toward real acceleration values.
+The accelerometer is used as a gravity reference, but its axes may not report ideal values. The app supports multi-position calibration so that the offsets and scale values can be improved.
 
-Correction model:
+The guided UI explains how to place the phone in each orientation. The calibration helper then measures samples in those positions and stores correction values.
+
+General correction form:
 
 ```text
 accel_corrected = (accel_raw - offset) * scale
 ```
 
-### Magnetometer
+The exact calibration model is implemented in `CalibrationHelper.kt`. The important point is that the raw readings are normalized before they are used by the fusion logic.
 
-The user moves the phone in a figure-eight motion. The app tracks min/max values for each axis.
+### 8.3 Magnetometer Calibration
 
-Correction model:
+The magnetometer is sensitive to hard-iron and soft-iron distortion from nearby metal and electronics.
+
+The implementation:
+
+- Asks the user to move the phone in a figure-eight motion.
+- Measures the minimum and maximum values on each axis.
+- Computes offset and scale from those extremes.
+- Stores the result in preferences.
+
+Correction form:
 
 ```text
 offset = (max + min) / 2
@@ -137,98 +228,227 @@ scale = (max - min) / 2
 mag_corrected = (mag_raw - offset) / scale
 ```
 
-## 6. Sensor Fusion
+### 8.4 Why the UI Matters
 
-`MadgwickAHRS.kt` keeps a quaternion orientation estimate.
+The assignment explicitly asks for a page that tells the user what to do during calibration. That is why the calibration process is not hidden in the background. It is exposed as a guided page with explicit instructions and progress feedback.
 
-Inputs:
+## 9. Sensor Fusion
 
-- Gyroscope: fast angular velocity, good short-term response, but drifts over time.
-- Accelerometer: gravity reference, helps stabilize roll/pitch, but noisy during movement.
-- Magnetometer: heading reference, helps yaw, but is sensitive to magnetic interference.
+The project uses a custom Madgwick AHRS implementation in `MadgwickAHRS.kt`.
 
-The fusion algorithm combines these strengths:
+The purpose of fusion is to combine the strengths of the sensors:
 
-- Gyroscope gives smooth fast motion.
-- Accelerometer reduces drift.
-- Magnetometer reduces heading/yaw drift.
+- Gyroscope: smooth short-term motion, but drift over time.
+- Accelerometer: gravity reference, but noisy during motion.
+- Magnetometer: yaw reference, but sensitive to interference.
 
-The app exposes roll and yaw for cursor movement:
+The fusion process produces a stable orientation estimate. The app uses roll and yaw for cursor control.
+
+### Why this is better than raw sensors alone
+
+Raw gyroscope integration drifts.
+Raw accelerometer values are noisy and jumpy.
+Raw magnetometer values fluctuate in real environments.
+
+Fusion gives a smoother and more stable cursor experience than any single sensor.
+
+## 10. Cursor Mapping
+
+The app uses orientation changes to produce cursor deltas instead of absolute positions.
+
+General mapping:
+
+- Horizontal cursor movement comes from yaw change.
+- Vertical cursor movement comes from roll change.
+
+This is important because desktop mouse control naturally expects deltas over time, not absolute coordinates from the phone.
+
+The Home fragment also applies:
+
+- Low-pass smoothing.
+- Deadband to ignore tiny hand tremors.
+- Timing throttling so the UI and motion dispatch do not flood the main thread.
+
+These measures improve smoothness and reduce jitter.
+
+## 11. Gesture Detection
+
+Gestures are detected from calibrated and fused motion data.
+
+Supported actions:
+
+| Gesture | Meaning |
+| --- | --- |
+| Move | Cursor movement |
+| Click | Left click |
+| Double click | Double click |
+| Right click | Right mouse button |
+| Scroll up/down | Mouse wheel movement |
+
+### Noise Handling
+
+Gesture detection includes thresholds and cooldown logic so that:
+
+- Small involuntary movement does not become a click.
+- The return motion after a scroll does not become another scroll.
+- Only deliberate movements are sent as commands.
+
+## 12. Network Protocol
+
+The phone communicates with the PC over TCP.
+
+Default port:
 
 ```text
-deltaX = yaw change * sensitivity
-deltaY = roll change * sensitivity
+8080
 ```
 
-The app sends deltas, not absolute cursor coordinates, as required.
+The app now supports both manual endpoint entry and QR scanning.
 
-## 7. Gesture Detection
+### QR Endpoint
 
-Gesture detection is based on calibrated/fused motion values:
+The PC GUI creates a QR code containing the endpoint in this format:
 
-| Action | Detection basis |
-| --- | --- |
-| Move cursor | Roll/yaw changes |
-| Left click | Fast Y-axis related motion / configured threshold |
-| Double click | Two click gestures within a time window |
-| Right click | Roll threshold |
-| Scroll up/down | Fast Y-axis movement with sign-based direction |
+```text
+airmouse://IP:PORT
+```
 
-Noise control:
+The Android app parses that endpoint and fills:
 
-- Thresholds prevent small hand shake from becoming click/scroll.
-- Cooldowns prevent the return movement from being interpreted as the opposite scroll.
-- Sensitivity is configurable from the UI.
+- IP field
+- Port field
 
-## 8. Network Protocol
+This is more complete than scanning only the IP address because the user does not have to guess the port.
 
-The phone connects to the PC using TCP on port `8080`.
+### Message Format
 
-Connection setup supports both manual entry and QR scanning. The PC GUI publishes a QR endpoint in the form `airmouse://IP:PORT`, and the Android app parses that endpoint to fill both the IP and the port field automatically.
-
-Movement packet:
+Movement:
 
 ```json
 {"type":"move","dx":12.5,"dy":-3.2}
 ```
 
-Click packet:
+Click:
 
 ```json
 {"type":"click","id":1}
 ```
 
-Scroll packet:
+Scroll:
 
 ```json
 {"type":"scroll","delta":1,"id":2}
 ```
 
-ACK packet from server:
+ACK:
 
 ```json
 {"type":"ack","id":2}
 ```
 
-Movement packets are allowed to be dropped because newer movement replaces older movement. Click and scroll packets are stored until ACK is received, and retransmitted on timeout.
+### ACK Policy
 
-Both the Android app and the PC GUI maintain live logs for debugging. On Android, the Home screen shows recent connection and packet events, and the dedicated Server Log page shows the persisted history.
+The protocol treats packets differently:
 
-## 9. PC Server
+- `move` packets can be dropped if newer movement arrives.
+- `click`, `doubleclick`, `rightclick`, and `scroll` packets are critical and must be acknowledged.
 
-The Python server receives JSON lines from the phone and uses `pyautogui` to control the mouse.
+The client retransmits critical packets when an ACK does not arrive in time.
 
-Files:
+## 13. Live Logs and Debugging
 
-| File | Responsibility |
+The project includes live logging in two places.
+
+### Android
+
+The Home screen has a live log panel. It shows:
+
+- QR scan events.
+- Connect and disconnect events.
+- ACK and retry events.
+- Other runtime messages.
+
+The dedicated Server Log page shows the persisted history.
+
+### PC
+
+The PC GUI also shows live logs in a scrollable text area. It logs:
+
+- Selected IP changes.
+- QR code updates.
+- TCP connections.
+- Mouse actions.
+- Sensitivity changes.
+
+This makes debugging much easier because the user can see what is happening on both sides of the link.
+
+## 14. PC Server
+
+The PC server is written in Python and uses `pyautogui` for desktop mouse control.
+
+Main files:
+
+| File | Role |
 | --- | --- |
-| `pc/server.py` | Core TCP server and mouse execution |
-| `pc/gui.py` | GUI server with QR code and settings |
-| `pc/run.py` | Friendly launcher |
-| `pc/config.json` | Saved server settings |
-| `pc/requirements.txt` | Python dependencies |
+| `pc/server.py` | TCP server and mouse execution |
+| `pc/gui.py` | GUI for endpoint, QR, logs, stats |
+| `pc/run.py` | Launcher entry point |
 
-Run on macOS:
+### Server Responsibilities
+
+The PC server:
+
+- Listens on the configured TCP port.
+- Receives JSON messages from the phone.
+- Applies cursor movement.
+- Executes clicks and scrolls.
+- Sends ACKs for critical messages.
+
+### GUI Features
+
+The PC GUI includes:
+
+- Dark theme.
+- Network IP selection.
+- Manual IP override.
+- QR code for endpoint sharing.
+- Clipboard copy for the endpoint.
+- Sensitivity slider.
+- Live log.
+- Connection statistics.
+
+### Mouse Smoothing
+
+The Python mouse controller sets `pyautogui` to a low-latency mode:
+
+- `PAUSE = 0`
+- `MINIMUM_DURATION = 0`
+- `MINIMUM_SLEEP = 0`
+
+It also ignores tiny movement values so cursor motion stays smoother.
+
+## 15. Running The Project
+
+### 15.1 Build Android APK
+
+```bash
+cd /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android
+./gradlew :app:assembleDebug
+```
+
+APK output:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### 15.2 Install On Redmi
+
+```bash
+/Users/tahamajs/Library/Android/sdk/platform-tools/adb install -r -g /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### 15.3 Run PC Server
 
 ```bash
 cd /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code
@@ -238,152 +458,121 @@ pip install -r pc/requirements.txt
 python3 pc/run.py
 ```
 
-macOS must allow the terminal/Python app in:
+### 15.4 Use The App
 
-```text
-System Settings -> Privacy & Security -> Accessibility
-```
+1. Open the PC GUI.
+2. Choose or confirm the IP address.
+3. Scan the QR code from the Android app or enter the endpoint manually.
+4. Run calibration from the Calibration screen.
+5. Press Start on the Home screen.
+6. Move the phone, click, and scroll.
 
-## 10. Android Build And Redmi Run
+## 16. Perfetto Instrumentation
 
-Build:
+The Android app includes trace slices via `android.os.Trace`. This lets the assignment measure work done in the app process and compare it with system behavior.
 
-```bash
-cd /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android
-./gradlew :app:assembleDebug
-```
-
-APK:
-
-```text
-android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-Install on Redmi:
-
-```bash
-cd /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code
-/Users/tahamajs/Library/Android/sdk/platform-tools/adb devices -l
-/Users/tahamajs/Library/Android/sdk/platform-tools/adb install -r -g android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-Launch:
-
-```bash
-/Users/tahamajs/Library/Android/sdk/platform-tools/adb shell am start -n com.airmouse/.ui.onboarding.OnboardingActivity
-```
-
-## 11. Perfetto Instrumentation
-
-The Android code now emits named Perfetto slices with `android.os.Trace`.
-
-Important slices:
+### Important Slices
 
 | Slice | Meaning |
 | --- | --- |
-| `AirMouseSensorAccelerometer` | Accelerometer event processing |
-| `AirMouseSensorGyroscope` | Gyroscope event processing |
-| `AirMouseSensorMagnetometer` | Magnetometer event processing |
-| `MadgwickAccelUpdate` | Accelerometer correction part of fusion |
-| `MadgwickGyroUpdate` | Gyroscope integration part of fusion |
-| `MadgwickMagUpdate` | Magnetometer correction part of fusion |
-| `AirMouseOrientation` | Roll/yaw extraction and callback |
-| `AirMouseGestureDetection` | Click/scroll gesture detection |
+| `AirMouseSensorAccelerometer` | Accelerometer event handling |
+| `AirMouseSensorGyroscope` | Gyroscope event handling |
+| `AirMouseSensorMagnetometer` | Magnetometer event handling |
+| `MadgwickAccelUpdate` | Accelerometer update inside fusion |
+| `MadgwickGyroUpdate` | Gyroscope update inside fusion |
+| `MadgwickMagUpdate` | Magnetometer update inside fusion |
+| `AirMouseOrientation` | Orientation extraction and callback |
+| `AirMouseGestureDetection` | Gesture detection step |
 | `AirMouseNetworkSendMove` | Movement packet send |
-| `AirMouseNetworkSendAckCommand` | Click/scroll packet send |
+| `AirMouseNetworkSendAckCommand` | Critical command send |
 
 These names appear in Perfetto UI under the `com.airmouse` process.
 
-## 12. Record A Perfetto Trace On macOS
+## 17. Perfetto Config And Trace Collection
 
-Keep the Redmi connected with USB debugging or wireless debugging.
+The Perfetto configuration is stored in:
 
-Short command:
+- `ProfileAndTrace/config.pbtx`
+- `docs/perfetto_config.pbtx`
 
-```bash
-cd /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code
-mkdir -p traces
-cd android
-./record_android_trace \
-  --serial adb-1406c5db-mjONde._adb-tls-connect._tcp \
-  -o ../traces/airmouse_trace.perfetto-trace \
-  -t 15s \
-  -b 64mb \
-  -a com.airmouse \
-  sched freq idle wm gfx view am input
-```
+### Recording a Trace
 
-Config-file command:
+Use the `record_android_trace` script from the Android platform-tools directory. Example:
 
 ```bash
 cd /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android
 ./record_android_trace \
-  --serial adb-1406c5db-mjONde._adb-tls-connect._tcp \
+  --serial <your-device-serial> \
   -c ../ProfileAndTrace/config.pbtx \
   -o ../traces/airmouse_trace.perfetto-trace
 ```
 
-During the 15-second recording:
+During the recording:
 
-1. Start Air Mouse.
-2. Move phone slowly.
-3. Move phone suddenly.
-4. Trigger click.
-5. Trigger scroll.
-6. Stop recording and save trace.
+- Move the phone slowly.
+- Move it suddenly.
+- Trigger click.
+- Trigger scroll.
 
-Open the trace:
+Then open the trace in Perfetto UI:
 
 ```bash
 open https://ui.perfetto.dev
 ```
 
-Then drag `traces/airmouse_trace.perfetto-trace` into the browser.
+Drag the `.perfetto-trace` file into the browser.
 
-## 13. Analyze Trace With Python
+## 18. Perfetto Analysis Script
 
-Install dependencies:
+The script `pc/perfetto_analyzer.py` reads a Perfetto trace and prints useful summaries.
 
-```bash
-cd /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r pc/requirements.txt
-```
+It is intended to help answer the assignment questions using real trace data.
 
-Run analyzer:
+What it can summarize:
 
-```bash
-python3 pc/perfetto_analyzer.py traces/airmouse_trace.perfetto-trace
-```
-
-The analyzer prints:
-
-- Sensor event samples.
+- Sensor slice timing.
 - Sampling period estimates.
-- Thread waiting information.
-- Madgwick CPU time.
+- Thread waiting and contention.
+- Madgwick processing time.
 - Sensor processing cost.
-- Network send timing.
+- Network send slices.
 - Thread breakdown.
 
-## 14. Perfetto Questions: What To Use
+## 19. How To Answer The Perfetto Questions
 
-| Question | Evidence |
+The assignment asks 11 questions. The following is the intended evidence source for each one.
+
+| Question | What to inspect |
 | --- | --- |
-| 1. Sensor request to data delivery | Perfetto UI: SensorService/system slices, `AirMouseSensor*` app slices |
-| 2. Sensor behavior and raw errors | Documentation plus calibration/fusion implementation |
-| 3. Sampling period comparison | Analyzer `q3_sampling_periods`, gyroscope slice deltas |
-| 4. Thread/system-call contention | Analyzer `q4_thread_waiting`, Perfetto scheduler view |
-| 5. Wake-up vs non-wake-up | Android sensor concept answer; app uses normal active sensors |
-| 6. Filter CPU time | Analyzer `q6_filter_cpu_time` using `Madgwick*Update` slices |
-| 7. Most expensive sensor | Analyzer `q7_sensor_processing_cost` |
-| 8. Sampling-rate effect | Compare trace at `SENSOR_DELAY_GAME` vs low-power mode |
-| 9. Sensor-to-network/cursor latency | `AirMouseOrientation` and `AirMouseNetworkSend*` slices |
-| 10. Thread separation | `AirMouseSensorThread`, main thread, Dispatchers.IO/network |
-| 11. Slow vs sudden movement | Compare trace sections with slow movement and sudden gestures |
+| 1 | Perfetto UI, sensor slices, scheduler timing |
+| 2 | Calibration and fusion explanation in this report |
+| 3 | Differences between sensor slice timestamps |
+| 4 | Scheduler and thread waiting in Perfetto |
+| 5 | Wake-up vs non-wake-up sensor theory and implementation note |
+| 6 | `Madgwick*Update` slice durations |
+| 7 | The sensor slices with the highest aggregate cost |
+| 8 | Compare traces collected at different sampling rates |
+| 9 | `AirMouseOrientation` to network send path |
+| 10 | Main thread versus sensor thread versus IO thread |
+| 11 | Slow versus sudden movement and their effects |
 
-## 15. Verification Commands
+### Important Note
+
+For a final submission, the analysis sections should be filled with the actual numbers from the trace you record on your own device. This report explains exactly where those numbers come from and how to interpret them.
+
+## 20. Known Engineering Decisions
+
+The implementation intentionally makes a few practical choices:
+
+- Movement is smoothed before being sent.
+- Critical packets are retried, movement packets are not.
+- Calibration is exposed as a guided screen instead of a hidden background process.
+- The app keeps user-facing logs because the assignment values debugging and trace analysis.
+- The PC GUI uses the same endpoint format as the Android QR parser to avoid mismatch.
+
+These choices were made to make the system easier to use and easier to debug.
+
+## 21. Verification Commands
 
 Android build:
 
@@ -399,42 +588,54 @@ cd android
 ./gradlew :app:testDebugUnitTest
 ```
 
-Python syntax:
+Python syntax check:
 
 ```bash
 python3 -m py_compile pc/server.py pc/gui.py pc/run.py pc/perfetto_analyzer.py
 ```
 
-Crash check after launch:
+## 22. Final Submission Checklist
 
-```bash
-/Users/tahamajs/Library/Android/sdk/platform-tools/adb logcat -d -t 250 AndroidRuntime:E TransactionExecutor:E '*:S'
-```
+Include these items in the final ZIP:
 
-## 16. Submission Checklist
+- `android/`
+- `pc/`
+- `docs/`
+- `ProfileAndTrace/config.pbtx`
+- `android/app/build/outputs/apk/debug/app-debug.apk`
+- `traces/airmouse_trace.perfetto-trace`
+- `demo.mp4`
+- group file or responsibility file if the assignment requires one
 
-Include:
+## 23. Demo Video Checklist
 
-```text
-android/
-pc/
-docs/
-README.md
-android/app/build/outputs/apk/debug/app-debug.apk
-traces/airmouse_trace.perfetto-trace
-demo.mp4
-```
+The short demo video should show:
 
-For the demo video, show:
-
-1. PC server running.
-2. Phone connected to server.
+1. The PC server running.
+2. The phone connected to the PC.
 3. Cursor movement.
 4. Left click.
-5. Scroll up/down.
-6. Stable no-drift state when phone is still.
-7. Perfetto trace file or analyzer output.
+5. Scroll.
+6. Stable still state with low drift.
+7. The phone and PC screen at the same time.
 
-## 17. Current Status
+## 24. Current Status
 
-The app builds, installs on Redmi Note 8T, opens onboarding, opens MainActivity, and includes trace instrumentation for the assignment profiling questions. The Python server and analyzer are included, and the documentation maps the implementation to the assignment requirements.
+The project is now implemented as a full end-to-end system:
+
+- The Android app builds successfully.
+- The PC server and GUI are implemented.
+- Guided calibration exists in the app.
+- QR endpoint syncing includes both IP and port.
+- Live logs exist on both sides.
+- ACK handling exists for critical packets.
+- Perfetto tracing is instrumented.
+- The documentation maps the code to the assignment.
+
+The remaining submission work is mostly operational:
+
+- install the latest APK on the Redmi,
+- record a real Perfetto trace,
+- extract answers from that trace,
+- and record the demonstration video.
+
