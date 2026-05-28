@@ -43,6 +43,9 @@ class DataSender(
         fun getInstance(ip: String = "", port: Int = 8080, prefs: PreferencesManager? = null): DataSender? {
             if (instance == null && ip.isNotEmpty() && prefs != null) {
                 instance = DataSender(ip, port, prefs)
+            } else if (ip.isNotEmpty() && prefs != null && (instance?.ip != ip || instance?.port != port)) {
+                instance?.stopSending()
+                instance = DataSender(ip, port, prefs)
             }
             return instance
         }
@@ -59,7 +62,7 @@ class DataSender(
     private var writer: PrintWriter? = null
     private var reader: BufferedReader? = null
     @Volatile private var isRunning = false
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val messageId = AtomicInteger(0)
     private val pendingAcks = ConcurrentHashMap<Int, String>()   // id -> original message
@@ -72,21 +75,25 @@ class DataSender(
      */
     fun start() {
         if (isRunning) return
+        if (scope.coroutineContext[Job]?.isActive != true) {
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        }
         scope.launch {
             try {
                 LogManager.add("Connecting to $ip:$port...")
-                socket = Socket(ip, port).apply {
+                val activeSocket = Socket(ip, port).apply {
                     soTimeout = 5000   // read timeout for ACK loop (5 sec)
                 }
-                writer = PrintWriter(socket?.getOutputStream(), true)
-                reader = BufferedReader(InputStreamReader(socket?.getInputStream()))
+                socket = activeSocket
+                writer = PrintWriter(activeSocket.getOutputStream(), true)
+                reader = BufferedReader(InputStreamReader(activeSocket.getInputStream()))
                 isRunning = true
+                isConnected = true
                 LogManager.add("Connected to $ip:$port")
                 onConnected?.invoke()
                 startAckListener()
             } catch (e: Exception) {
                 LogManager.add("Connection failed: ${e.message}")
-                onDisconnected?.invoke()
                 disconnect()
             }
         }
@@ -213,9 +220,12 @@ class DataSender(
         } catch (e: Exception) {
             Log.e(TAG, "Error closing connection", e)
         } finally {
+            isRunning = false
+            isConnected = false
             writer = null
             reader = null
             socket = null
+            pendingAcks.clear()
             onDisconnected?.invoke()
             LogManager.add("Disconnected from server")
         }

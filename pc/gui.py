@@ -28,6 +28,22 @@ CONFIG = {
     "accent_color": "#007acc"
 }
 
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+
+def load_config() -> Dict:
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        return {**CONFIG, **loaded}
+    except (OSError, json.JSONDecodeError):
+        return CONFIG.copy()
+
+def save_config() -> None:
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(CONFIG, f, indent=4)
+
+CONFIG = load_config()
+
 # -------------------- Mouse Controller --------------------
 @dataclass
 class MouseController:
@@ -74,6 +90,8 @@ class UDPDiscoveryServer:
         self.running = False
 
     def start(self):
+        if self.running:
+            return
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(('', self.port))
@@ -242,6 +260,9 @@ class AirMouseGUI:
         self.qr_label.pack()
         tk.Label(left_frame, text="Scan with Android app", font=("Helvetica", 9),
                  bg=self.bg_color, fg=self.fg_color).pack()
+        self.qr_text = tk.Label(left_frame, text="", font=("Helvetica", 10, "bold"),
+                                bg=self.bg_color, fg=self.accent)
+        self.qr_text.pack(pady=(6, 0))
 
         # Right pane: log area
         log_frame = tk.LabelFrame(main_frame, text=" Live Log ", bg=self.bg_color,
@@ -299,6 +320,7 @@ class AirMouseGUI:
         self.sens_value.config(text=f"{CONFIG['sensitivity']:.2f}")
         if hasattr(self.tcp_server, 'mouse'):
             self.tcp_server.mouse.sensitivity = CONFIG["sensitivity"]
+        save_config()
         self.log(f"⚙️ Sensitivity changed to {CONFIG['sensitivity']:.2f}")
 
     def generate_qr_code(self):
@@ -308,6 +330,8 @@ class AirMouseGUI:
         img = qr.resize((180, 180))
         self.qr_image = ImageTk.PhotoImage(img)
         self.qr_label.config(image=self.qr_image)
+        if hasattr(self, "qr_text"):
+            self.qr_text.config(text=qr_data)
 
     def get_local_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -332,8 +356,16 @@ class AirMouseGUI:
         def run_loop():
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
-            self.udp_server.start()
-            self.loop.run_until_complete(self.tcp_server.start())
+            try:
+                self.udp_server.start()
+                self.loop.run_until_complete(self.tcp_server.start())
+            except OSError as exc:
+                self.log(f"❌ Could not start server: {exc}")
+                self.root.after(0, lambda: self.status_label.config(text="● Server error", fg="#ff6b6b"))
+                self.root.after(0, lambda: self.start_btn.config(state=tk.NORMAL))
+                self.root.after(0, lambda: self.stop_btn.config(state=tk.DISABLED))
+            finally:
+                self.udp_server.stop()
 
         self.tcp_task = threading.Thread(target=run_loop, daemon=True)
         self.tcp_task.start()

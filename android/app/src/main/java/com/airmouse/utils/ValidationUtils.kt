@@ -8,4 +8,18 @@ object ValidationUtils {
     )
 
     fun isValidIp(ip: String): Boolean = IP_ADDRESS_PATTERN.matcher(ip).matches()
+
+    fun extractIpAddress(value: String): String? {
+        val trimmed = value.trim()
+        if (isValidIp(trimmed)) return trimmed
+
+        val hostPart = trimmed
+            .removePrefix("http://")
+            .removePrefix("https://")
+            .substringBefore("/")
+            .substringBefore("?")
+            .substringBefore(":")
+
+        return hostPart.takeIf { isValidIp(it) }
+    }
 }
