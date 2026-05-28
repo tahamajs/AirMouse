@@ -94,12 +94,19 @@
     <string name="calib_mag_figure8">Rotate phone in a figure‑8 for 15s…</string>
     <string name="calib_mag_instruction">Magnetometer calibration in progress…</string>
     <string name="calib_ready">Sensors ready</string>
+    <string name="calib_ready_to_connect">Calibrated. Enter the PC IP and press Start.</string>
     <string name="calib_step1">Step 1/3: Keep device still for gyro</string>
+    <string name="calib_step1_detail">Lay the phone flat on a table and keep your hands off it while the gyroscope bias is measured.</string>
     <string name="calib_step2">Step 2/3: Move in figure‑8</string>
+    <string name="calib_step2_detail">Rotate the phone smoothly in a wide figure‑8 pattern so the magnetometer can see all directions.</string>
     <string name="calib_step3">Step 3/3: Place on flat surface</string>
+    <string name="calib_step3_detail">Place the phone flat again and keep it still so the accelerometer can calibrate gravity.</string>
     <string name="calibrate">Calibrate</string>
     <string name="calibrated_ready">Sensors calibrated. Ready.</string>
     <string name="calibrating_gyro">Calibrating Gyro… Do not move.</string>
+    <string name="calibration_action_reset">Reset Status</string>
+    <string name="calibration_action_skip_mag">Skip Magnetometer</string>
+    <string name="calibration_action_start">Start Guided Calibration</string>
     <string name="calibration_complete">Calibration complete!</string>
     <string name="calibration_follow_instructions">Follow the on‑screen instructions</string>
     <string name="calibration_guide_content">
@@ -116,8 +123,19 @@
         ]]>
     </string>
     <string name="calibration_guide_title">Calibration Guide</string>
+    <string name="calibration_intro">Follow each step carefully. Keep the phone steady when asked, and move it in the requested pattern only during the measuring step.</string>
+    <string name="calibration_needed_prompt">Calibration needed. Open Calibration and follow the steps.</string>
+    <string name="calibration_open_failed">Could not open the calibration screen.</string>
+    <string name="calibration_ready_prompt">Tap Start Guided Calibration to begin. The app will show each step and update the progress bar.</string>
     <string name="calibration_skipped_mag">Magnetometer not available, skipping</string>
     <string name="calibration_starting">Starting calibration…</string>
+    <string name="calibration_status_accel">Accelerometer: place phone flat</string>
+    <string name="calibration_status_done">Calibration complete. Return to Home and press Start.</string>
+    <string name="calibration_status_error">Calibration failed. Check the instructions and try again.</string>
+    <string name="calibration_status_gyro">Gyroscope: keep the phone still</string>
+    <string name="calibration_status_idle">Ready to begin calibration</string>
+    <string name="calibration_status_mag">Magnetometer: draw a slow figure‑8</string>
+    <string name="calibration_title">Calibration</string>
     <string name="cancel">Cancel</string>
     <string name="checking_sensors">Checking sensors…</string>
     <string name="click_speed_threshold">Click speed threshold</string>
@@ -284,8 +302,11 @@
     <string name="statistics">Statistics</string>
     <string name="status_active">Air Mouse Active</string>
     <string name="status_active_format">Connected to %s</string>
+    <string name="status_connected_syncing">Connected. Cursor sync is live.</string>
     <string name="status_not_connected">Disconnected</string>
+    <string name="status_waiting_reconnect">Connection lost. Waiting to reconnect…</string>
     <string name="stop">Stop</string>
+    <string name="stop_before_calibration">Stop Air Mouse before calibrating.</string>
     <string name="stopped">Stopped</string>
     <string name="temperature_chart_label">Temperature (°C)</string>
     <string name="temperature_label">Temperature (°C)</string>

@@ -20,6 +20,10 @@
     <string name="status_not_connected">Disconnected</string>
     <string name="status_active">Air Mouse Active</string>
     <string name="status_active_format">Connected to %s</string>
+    <string name="status_connected_syncing">Connected. Cursor sync is live.</string>
+    <string name="status_waiting_reconnect">Connection lost. Waiting to reconnect…</string>
+    <string name="calibration_needed_prompt">Calibration needed. Open Calibration and follow the steps.</string>
+    <string name="calib_ready_to_connect">Calibrated. Enter the PC IP and press Start.</string>
     <string name="stopped">Stopped</string>
     <string name="reconnecting">Reconnecting…</string>
     <string name="ip_hint">Laptop IP address</string>
@@ -66,6 +70,8 @@
     <string name="calibration_action_start">Start Guided Calibration</string>
     <string name="calibration_action_skip_mag">Skip Magnetometer</string>
     <string name="calibration_action_reset">Reset Status</string>
+    <string name="stop_before_calibration">Stop Air Mouse before calibrating.</string>
+    <string name="calibration_open_failed">Could not open the calibration screen.</string>
     <string name="calibration_status_idle">Ready to begin calibration</string>
     <string name="calibration_status_gyro">Gyroscope: keep the phone still</string>
     <string name="calibration_status_mag">Magnetometer: draw a slow figure‑8</string>
