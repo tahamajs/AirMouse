@@ -1,10 +1,11 @@
-package com.airmouse
-import android.view.View
+package com.airmouse.ui.onboarding
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
+import com.airmouse.R
+import com.airmouse.MainActivity
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
@@ -19,30 +20,28 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var btnGetStarted: MaterialButton
     private lateinit var preferences: PreferencesManager
 
-    private val onboardingItems by lazy {
-        listOf(
-            OnboardingItem(
-                R.drawable.ic_calibrate, // Placeholder if ic_air_mouse_pro_ultra missing
-                getString(R.string.onboarding_title_1),
-                getString(R.string.onboarding_desc_1)
-            ),
-            OnboardingItem(
-                R.drawable.ic_calibrate,
-                getString(R.string.onboarding_title_2),
-                getString(R.string.onboarding_desc_2)
-            ),
-            OnboardingItem(
-                R.drawable.ic_calibrate,
-                getString(R.string.onboarding_title_3),
-                getString(R.string.onboarding_desc_3)
-            ),
-            OnboardingItem(
-                R.drawable.ic_calibrate,
-                getString(R.string.onboarding_title_4),
-                getString(R.string.onboarding_desc_4)
-            )
+    private val onboardingItems = listOf(
+        OnboardingItem(
+            R.drawable.ic_air_mouse_pro_ultra,
+            getString(R.string.onboarding_title_1),
+            getString(R.string.onboarding_desc_1)
+        ),
+        OnboardingItem(
+            R.drawable.ic_gesture,
+            getString(R.string.onboarding_title_2),
+            getString(R.string.onboarding_desc_2)
+        ),
+        OnboardingItem(
+            R.drawable.ic_wifi,
+            getString(R.string.onboarding_title_3),
+            getString(R.string.onboarding_desc_3)
+        ),
+        OnboardingItem(
+            R.drawable.ic_stats,
+            getString(R.string.onboarding_title_4),
+            getString(R.string.onboarding_desc_4)
         )
-    }
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,8 +88,8 @@ class OnboardingActivity : AppCompatActivity() {
 
     private fun updateButtons(position: Int) {
         val isLast = position == onboardingItems.size - 1
-        btnNext.visibility = if (isLast) View.GONE else View.VISIBLE
-        btnGetStarted.visibility = if (isLast) View.VISIBLE else View.GONE
+        btnNext.visibility = if (isLast) android.view.View.GONE else android.view.View.VISIBLE
+        btnGetStarted.visibility = if (isLast) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     private fun finishOnboarding() {

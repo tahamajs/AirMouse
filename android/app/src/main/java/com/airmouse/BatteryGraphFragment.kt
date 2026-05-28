@@ -3,12 +3,12 @@ package com.airmouse.ui.battery
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.airmouse.R
@@ -64,13 +64,10 @@ class BatteryGraphFragment : Fragment() {
 
     private fun updateBatteryData() {
         val batteryIntent = requireContext().registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-
-        // Get battery level
         val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
         val batteryPct = if (level >= 0 && scale > 0) (level * 100 / scale) else 0
 
-        // Get temperature (milli Celsius) – this works on all Android versions
         val tempMilli = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
         val temperature = tempMilli / 10f
 
@@ -82,7 +79,7 @@ class BatteryGraphFragment : Fragment() {
         if (temperatureHistory.size > 20) temperatureHistory.removeAt(0)
 
         val dataSet = LineDataSet(temperatureHistory, getString(R.string.battery_temp_chart_label))
-        dataSet.color = android.graphics.Color.parseColor("#FF5722")
+        dataSet.color = "#FF5722".toColorInt()
         dataSet.setDrawCircles(false)
         dataSet.lineWidth = 2f
         dataSet.valueTextSize = 10f
