@@ -3,6 +3,7 @@ package com.airmouse.ui.onboarding
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.viewpager2.widget.ViewPager2
 import com.airmouse.R
 import com.airmouse.MainActivity
@@ -23,6 +24,7 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var onboardingItems: List<OnboardingItem>
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_onboarding)
 
