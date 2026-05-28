@@ -33,7 +33,7 @@ Documentation and reports are in `docs`.
 | Python PC server | Complete | `pc/server.py`, `pc/gui.py`, `pc/run.py` |
 | Perfetto trace markers | Complete | `SensorService.kt`, `DataSender.kt` |
 | Perfetto analyzer | Complete | `pc/perfetto_analyzer.py` |
-| Perfetto config | Complete | `docs/perfetto_config.pbtx` |
+| Perfetto config | Complete | `ProfileAndTrace/config.pbtx`, `docs/perfetto_config.pbtx` |
 | Full documentation | Complete | `docs/` |
 
 ## 3. Android Architecture
@@ -314,7 +314,7 @@ Config-file command:
 cd /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android
 ./record_android_trace \
   --serial adb-1406c5db-mjONde._adb-tls-connect._tcp \
-  -c ../docs/perfetto_config.pbtx \
+  -c ../ProfileAndTrace/config.pbtx \
   -o ../traces/airmouse_trace.perfetto-trace
 ```
 

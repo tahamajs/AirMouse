@@ -55,13 +55,18 @@ class MouseController:
 
     def __post_init__(self):
         pyautogui.FAILSAFE = True
+        pyautogui.PAUSE = 0
+        pyautogui.MINIMUM_DURATION = 0
+        pyautogui.MINIMUM_SLEEP = 0
         self.stats = {"clicks":0, "double_clicks":0, "right_clicks":0, "scrolls":0}
         logger.info(f"Mouse sensitivity = {self.sensitivity}")
 
     def move(self, dx: float, dy: float) -> None:
         dx = max(-50, min(50, dx * self.sensitivity))
         dy = max(-50, min(50, dy * self.sensitivity))
-        pyautogui.moveRel(dx, dy, duration=0.0)
+        if abs(dx) < 0.15 and abs(dy) < 0.15:
+            return
+        pyautogui.moveRel(dx, dy, duration=0.0, tween=pyautogui.linear)
 
     def click(self, button: str = 'left') -> None:
         pyautogui.click(button=button)

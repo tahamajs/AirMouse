@@ -19,6 +19,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class HomeFragment : Fragment() {
 
@@ -55,10 +56,18 @@ class HomeFragment : Fragment() {
     private var isActive = false
     private var currentGyroY = 0f
     private var currentAccelY = 0f
+    private var smoothedMoveX = 0f
+    private var smoothedMoveY = 0f
+    private var lastMoveDispatchMs = 0L
+    private var lastUiUpdateMs = 0L
 
     companion object {
         private const val PORT = 8080
         private const val OVERLAY_PERMISSION_REQUEST = 100
+        private const val MOVE_EMA_ALPHA = 0.25f
+        private const val MOVE_DEADBAND = 0.8f
+        private const val MOVE_MIN_INTERVAL_MS = 16L
+        private const val UI_MIN_INTERVAL_MS = 50L
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -296,6 +305,9 @@ class HomeFragment : Fragment() {
             return
         }
         preferences.setLastIp(ip)
+        smoothedMoveX = 0f
+        smoothedMoveY = 0f
+        lastMoveDispatchMs = 0L
 
         try {
             dataSender = DataSender.getInstance(ip, PORT, preferences) ?: return
@@ -331,13 +343,29 @@ class HomeFragment : Fragment() {
     private fun attachSensorCallbacks() {
         sensorService.setOnOrientationChange { roll, yaw ->
             val sensitivity = preferences.getSensitivity()
-            val deltaX = (yaw - lastOrientation.second) * sensitivity * 120.0f
-            val deltaY = (roll - lastOrientation.first) * sensitivity * 120.0f
+            val rawDeltaX = (yaw - lastOrientation.second) * sensitivity * 120.0f
+            val rawDeltaY = (roll - lastOrientation.first) * sensitivity * 120.0f
             lastOrientation = Pair(roll, yaw)
-            dataSender.sendMove(deltaX, deltaY)
-            activity?.runOnUiThread {
-                updateUIIndicator(yaw)
-                debugOverlay.updateValues(roll, yaw, currentGyroY, currentAccelY)
+
+            smoothedMoveX += (rawDeltaX - smoothedMoveX) * MOVE_EMA_ALPHA
+            smoothedMoveY += (rawDeltaY - smoothedMoveY) * MOVE_EMA_ALPHA
+
+            val now = System.currentTimeMillis()
+            if (now - lastMoveDispatchMs >= MOVE_MIN_INTERVAL_MS) {
+                lastMoveDispatchMs = now
+                val sendX = if (abs(smoothedMoveX) >= MOVE_DEADBAND) smoothedMoveX else 0f
+                val sendY = if (abs(smoothedMoveY) >= MOVE_DEADBAND) smoothedMoveY else 0f
+                if (sendX != 0f || sendY != 0f) {
+                    dataSender.sendMove(sendX, sendY)
+                }
+            }
+            val uiNow = System.currentTimeMillis()
+            if (uiNow - lastUiUpdateMs >= UI_MIN_INTERVAL_MS) {
+                lastUiUpdateMs = uiNow
+                activity?.runOnUiThread {
+                    updateUIIndicator(yaw)
+                    debugOverlay.updateValues(roll, yaw, currentGyroY, currentAccelY)
+                }
             }
             batterySaver.updateMovement(roll, yaw)
         }

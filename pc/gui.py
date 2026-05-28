@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
 """
 Air Mouse PC Server – Professional Dark Mode GUI
-Features: QR code display, UDP discovery, real‑time stats, live log, sensitivity slider.
+Features:
+- QR code display (updates with selected IP)
+- UDP discovery (responds with selected IP/port)
+- Real‑time stats, live log, sensitivity slider
+- Multi‑IP detection with manual override and refresh
 """
 
 import asyncio
 import json
 import pyautogui
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, messagebox
 import threading
 import socket
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from PIL import Image, ImageTk
 import qrcode
 from io import BytesIO
+import netifaces   # <-- NEW: cross‑platform interface listing
 
 # -------------------- Configuration --------------------
 CONFIG = {
@@ -25,7 +30,8 @@ CONFIG = {
     "port": 8080,
     "discovery_port": 8081,
     "sensitivity": 0.5,
-    "accent_color": "#007acc"
+    "accent_color": "#007acc",
+    "selected_ip": ""   # NEW: stored manually selected IP
 }
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
@@ -53,10 +59,18 @@ class MouseController:
     right_click_count: int = 0
     scroll_count: int = 0
 
+    def __post_init__(self):
+        pyautogui.FAILSAFE = True
+        pyautogui.PAUSE = 0
+        pyautogui.MINIMUM_DURATION = 0
+        pyautogui.MINIMUM_SLEEP = 0
+
     def move(self, dx: float, dy: float) -> None:
         dx = max(-50, min(50, dx * self.sensitivity))
         dy = max(-50, min(50, dy * self.sensitivity))
-        pyautogui.moveRel(dx, dy, duration=0.0)
+        if abs(dx) < 0.15 and abs(dy) < 0.15:
+            return
+        pyautogui.moveRel(dx, dy, duration=0.0, tween=pyautogui.linear)
 
     def click(self, button: str = 'left') -> None:
         pyautogui.click(button=button)
@@ -83,9 +97,10 @@ class MouseController:
 
 # -------------------- UDP Discovery Server --------------------
 class UDPDiscoveryServer:
-    def __init__(self, port: int, callback):
+    def __init__(self, port: int, callback, ip_provider):
         self.port = port
         self.callback = callback
+        self.ip_provider = ip_provider   # function returning the selected IP
         self.socket = None
         self.running = False
 
@@ -105,12 +120,14 @@ class UDPDiscoveryServer:
                 data, addr = self.socket.recvfrom(1024)
                 msg = data.decode().strip()
                 if msg == "AIRMOUSE_DISCOVER":
+                    chosen_ip = self.ip_provider()
                     response = json.dumps({
                         "type": "discovery_response",
-                        "port": CONFIG["port"]
+                        "port": CONFIG["port"],
+                        "ip": chosen_ip   # send the selected IP so the phone can connect
                     })
                     self.socket.sendto(response.encode(), addr)
-                    self.callback(f"📡 Responded to discovery from {addr[0]}")
+                    self.callback(f"📡 Responded to discovery from {addr[0]} with IP {chosen_ip}")
             except Exception:
                 pass
 
@@ -211,8 +228,8 @@ class AirMouseGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("✈️ Air Mouse Server – Professional Edition")
-        self.root.geometry("800x700")
-        self.root.minsize(700, 600)
+        self.root.geometry("850x750")   # slightly larger for extra UI
+        self.root.minsize(750, 650)
 
         # Colours
         self.bg_color = "#1e1e1e"
@@ -224,12 +241,14 @@ class AirMouseGUI:
         self.setup_ui()
 
         self.tcp_server = AirMouseTCPServer(self.log, self.update_stats_display)
-        self.udp_server = UDPDiscoveryServer(CONFIG["discovery_port"], self.log)
+        # IP provider function for UDP discovery (will be set after UI is ready)
+        self.udp_server = UDPDiscoveryServer(CONFIG["discovery_port"], self.log,
+                                             ip_provider=self.get_selected_ip)
         self.loop = None
         self.tcp_task = None
 
-        self.generate_qr_code()
-        self.update_ip_display()
+        self.refresh_ip_list()
+        self.update_qr_code()
 
     def setup_ui(self):
         main_frame = tk.Frame(self.root, bg=self.bg_color)
@@ -253,6 +272,50 @@ class AirMouseGUI:
                                     font=("Helvetica", 10), bg=self.bg_color, fg=self.fg_color)
         self.stats_label.pack(side=tk.LEFT, padx=10)
 
+        # ---- New IP management section ----
+        ip_frame = tk.LabelFrame(main_frame, text=" Network IP Address ", bg=self.bg_color,
+                                 fg=self.fg_color, font=("Helvetica", 10, "bold"))
+        ip_frame.pack(fill=tk.X, pady=(10, 5))
+
+        ip_control = tk.Frame(ip_frame, bg=self.bg_color)
+        ip_control.pack(fill=tk.X, padx=5, pady=5)
+
+        tk.Label(ip_control, text="Use:", bg=self.bg_color, fg=self.fg_color,
+                 font=("Helvetica", 10)).pack(side=tk.LEFT, padx=(0,5))
+
+        self.ip_var = tk.StringVar()
+        self.ip_combo = ttk.Combobox(ip_control, textvariable=self.ip_var,
+                                     state="readonly", width=20)
+        self.ip_combo.pack(side=tk.LEFT, padx=5)
+        self.ip_combo.bind("<<ComboboxSelected>>", self.on_ip_selected)
+
+        self.refresh_btn = tk.Button(ip_control, text="🔄", command=self.refresh_ip_list,
+                                     bg=self.bg_color, fg="white", font=("Helvetica", 9))
+        self.refresh_btn.pack(side=tk.LEFT, padx=5)
+
+        self.copy_btn = tk.Button(ip_control, text="📋 Copy", command=self.copy_ip,
+                                  bg=self.bg_color, fg="white", font=("Helvetica", 9))
+        self.copy_btn.pack(side=tk.LEFT, padx=5)
+
+        # Manual IP override (hidden until checkbox)
+        self.manual_ip_var = tk.StringVar()
+        self.manual_entry = tk.Entry(ip_control, textvariable=self.manual_ip_var,
+                                     width=15, bg="#3c3c3c", fg=self.fg_color,
+                                     insertbackground='white', state=tk.DISABLED)
+        self.manual_entry.pack(side=tk.LEFT, padx=(15,5))
+
+        self.manual_check = tk.IntVar()
+        self.manual_cb = tk.Checkbutton(ip_control, text="Manual", variable=self.manual_check,
+                                        command=self.toggle_manual_ip,
+                                        bg=self.bg_color, fg=self.fg_color,
+                                        selectcolor=self.bg_color)
+        self.manual_cb.pack(side=tk.LEFT)
+
+        # Current IP display
+        self.current_ip_label = tk.Label(ip_frame, text="", font=("Helvetica", 9, "bold"),
+                                         bg=self.bg_color, fg=self.accent)
+        self.current_ip_label.pack(pady=(0,5))
+
         # Left pane: QR code
         left_frame = tk.Frame(main_frame, bg=self.bg_color)
         left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0,15))
@@ -268,7 +331,7 @@ class AirMouseGUI:
         log_frame = tk.LabelFrame(main_frame, text=" Live Log ", bg=self.bg_color,
                                   fg=self.fg_color, font=("Helvetica", 10, "bold"))
         log_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        self.log_area = scrolledtext.ScrolledText(log_frame, height=25, bg=self.log_bg,
+        self.log_area = scrolledtext.ScrolledText(log_frame, height=22, bg=self.log_bg,
                                                    fg=self.fg_color, insertbackground='white',
                                                    font=("Consolas", 10), wrap=tk.WORD)
         self.log_area.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -305,6 +368,83 @@ class AirMouseGUI:
                           font=("Helvetica", 8), bg=self.bg_color, fg="#888888")
         footer.pack(pady=(10,0))
 
+    # ---- NEW IP utility functions ----
+    def get_all_ips(self) -> List[str]:
+        """Return list of all IPv4 addresses except loopback."""
+        ips = []
+        try:
+            for iface in netifaces.interfaces():
+                addrs = netifaces.ifaddresses(iface)
+                for addr in addrs.get(netifaces.AF_INET, []):
+                    ip = addr.get('addr')
+                    if ip and not ip.startswith('127.'):
+                        # add interface name in parentheses for clarity
+                        ips.append(f"{ip} ({iface})")
+        except Exception as e:
+            self.log(f"⚠️ IP scan error: {e}")
+        return sorted(set(ips), key=lambda x: x.split()[0])
+
+    def refresh_ip_list(self):
+        """Refresh the IP combo box and select the best IP."""
+        ip_options = self.get_all_ips()
+        if not ip_options:
+            ip_options = ["127.0.0.1 (no network)"]
+        self.ip_combo['values'] = ip_options
+
+        # Attempt to select a stored or sensible default
+        preferred = CONFIG.get("selected_ip", "")
+        if preferred and preferred in ip_options:
+            self.ip_combo.set(preferred)
+        elif ip_options:
+            self.ip_combo.set(ip_options[0])
+        self.on_ip_selected()
+
+    def get_selected_ip(self) -> str:
+        """Return just the IP part from the combo selection."""
+        if self.manual_check.get():
+            return self.manual_ip_var.get().strip()
+        sel = self.ip_var.get()
+        return sel.split()[0] if sel else "127.0.0.1"
+
+    def on_ip_selected(self, event=None):
+        """Update QR code and current IP display when selection changes."""
+        if self.manual_check.get():
+            return
+        sel = self.get_selected_ip()
+        CONFIG["selected_ip"] = sel
+        save_config()
+        self.current_ip_label.config(text=f"Current IP: {sel}:{CONFIG['port']}")
+        self.update_qr_code()
+
+    def toggle_manual_ip(self):
+        """Enable/disable manual IP entry."""
+        if self.manual_check.get():
+            self.manual_entry.config(state=tk.NORMAL)
+            self.ip_combo.config(state=tk.DISABLED)
+            self.manual_ip_var.set(self.get_selected_ip())
+        else:
+            self.manual_entry.config(state=tk.DISABLED)
+            self.ip_combo.config(state="readonly")
+            self.on_ip_selected()
+
+    def copy_ip(self):
+        """Copy the current IP:port to clipboard."""
+        ip_port = f"{self.get_selected_ip()}:{CONFIG['port']}"
+        self.root.clipboard_clear()
+        self.root.clipboard_append(ip_port)
+        self.log(f"📋 Copied to clipboard: {ip_port}")
+
+    def update_qr_code(self):
+        """Generate QR code from the currently selected IP:port."""
+        ip = self.get_selected_ip()
+        qr_data = f"{ip}:{CONFIG['port']}"
+        qr = qrcode.make(qr_data)
+        img = qr.resize((180, 180))
+        self.qr_image = ImageTk.PhotoImage(img)
+        self.qr_label.config(image=self.qr_image)
+        if hasattr(self, "qr_text"):
+            self.qr_text.config(text=qr_data)
+
     def log(self, msg: str):
         self.log_area.insert(tk.END, f"{msg}\n")
         self.log_area.see(tk.END)
@@ -323,31 +463,7 @@ class AirMouseGUI:
         save_config()
         self.log(f"⚙️ Sensitivity changed to {CONFIG['sensitivity']:.2f}")
 
-    def generate_qr_code(self):
-        local_ip = self.get_local_ip()
-        qr_data = f"{local_ip}:{CONFIG['port']}" if local_ip else "192.168.1.100:8080"
-        qr = qrcode.make(qr_data)
-        img = qr.resize((180, 180))
-        self.qr_image = ImageTk.PhotoImage(img)
-        self.qr_label.config(image=self.qr_image)
-        if hasattr(self, "qr_text"):
-            self.qr_text.config(text=qr_data)
-
-    def get_local_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-        except Exception:
-            ip = "127.0.0.1"
-        finally:
-            s.close()
-        return ip
-
-    def update_ip_display(self):
-        ip = self.get_local_ip()
-        self.log(f"🌐 Local IP: {ip}")
-
+    # ---- Server start/stop ----
     def start_servers(self):
         self.start_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
