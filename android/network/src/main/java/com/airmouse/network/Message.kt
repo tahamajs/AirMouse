@@ -1,32 +1,52 @@
 package com.airmouse.network
 
-import kotlinx.serialization.Serializable
+data class MoveMessage(
+	val type: String = "move",
+	val dx: Float,
+	val dy: Float
+)
 
-@Serializable
-sealed interface ClientMessage
+data class ClickMessage(
+	val type: String = "click",
+	val id: Long? = null
+)
 
-@Serializable
-@kotlinx.serialization.SerialName("move")
-data class Move(val dx: Float, val dy: Float): ClientMessage
+data class DoubleClickMessage(
+	val type: String = "doubleclick",
+	val id: Long? = null
+)
 
-@Serializable
-@kotlinx.serialization.SerialName("click")
-data class Click(val id: String? = null): ClientMessage
+data class RightClickMessage(
+	val type: String = "rightclick",
+	val id: Long? = null
+)
 
-@Serializable
-@kotlinx.serialization.SerialName("doubleclick")
-data class DoubleClick(val id: String? = null): ClientMessage
+data class ScrollMessage(
+	val type: String = "scroll",
+	val delta: Int,
+	val id: Long? = null
+)
 
-@Serializable
-@kotlinx.serialization.SerialName("rightclick")
-data class RightClick(val id: String? = null): ClientMessage
+data class HelloMessage(
+	val type: String = "hello",
+	val name: String
+)
 
-@Serializable
-@kotlinx.serialization.SerialName("scroll")
-data class Scroll(val delta: Int, val id: String? = null): ClientMessage
+data class AckMessage(
+	val type: String = "ack",
+	val id: Long
+)
 
-@Serializable
-data class Ack(val type: String = "ack", val id: String)
+data class DiscoveryResponse(
+	val type: String = "discovery_response",
+	val ip: String,
+	val port: Int,
+	val mdns: String? = null
+)
 
-@Serializable
-data class DiscoveryResponse(val type: String = "discovery_response", val ip: String, val port: Int, val mdns: String? = null)
+data class DiscoveredServer(
+	val host: String,
+	val port: Int
+) {
+	override fun toString(): String = "$host:$port"
+}
