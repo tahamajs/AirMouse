@@ -20,34 +20,14 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var btnGetStarted: MaterialButton
     private lateinit var preferences: PreferencesManager
 
-    private val onboardingItems = listOf(
-        OnboardingItem(
-            R.drawable.ic_air_mouse_pro_ultra,
-            getString(R.string.onboarding_title_1),
-            getString(R.string.onboarding_desc_1)
-        ),
-        OnboardingItem(
-            R.drawable.ic_gesture,
-            getString(R.string.onboarding_title_2),
-            getString(R.string.onboarding_desc_2)
-        ),
-        OnboardingItem(
-            R.drawable.ic_wifi,
-            getString(R.string.onboarding_title_3),
-            getString(R.string.onboarding_desc_3)
-        ),
-        OnboardingItem(
-            R.drawable.ic_stats,
-            getString(R.string.onboarding_title_4),
-            getString(R.string.onboarding_desc_4)
-        )
-    )
+    private lateinit var onboardingItems: List<OnboardingItem>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_onboarding)
 
         preferences = PreferencesManager(this)
+        onboardingItems = createOnboardingItems()
 
         viewPager = findViewById(R.id.view_pager)
         tabLayout = findViewById(R.id.tab_layout)
@@ -96,5 +76,30 @@ class OnboardingActivity : AppCompatActivity() {
         preferences.setOnboardingCompleted(true)
         startActivity(Intent(this, MainActivity::class.java))
         finish()
+    }
+
+    private fun createOnboardingItems(): List<OnboardingItem> {
+        return listOf(
+            OnboardingItem(
+                R.drawable.ic_air_mouse_pro_ultra,
+                getString(R.string.onboarding_title_1),
+                getString(R.string.onboarding_desc_1)
+            ),
+            OnboardingItem(
+                R.drawable.ic_gesture,
+                getString(R.string.onboarding_title_2),
+                getString(R.string.onboarding_desc_2)
+            ),
+            OnboardingItem(
+                R.drawable.ic_wifi,
+                getString(R.string.onboarding_title_3),
+                getString(R.string.onboarding_desc_3)
+            ),
+            OnboardingItem(
+                R.drawable.ic_stats,
+                getString(R.string.onboarding_title_4),
+                getString(R.string.onboarding_desc_4)
+            )
+        )
     }
 }

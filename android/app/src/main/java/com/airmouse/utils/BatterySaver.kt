@@ -51,8 +51,8 @@ class BatterySaver {
 
     fun onMovement() {
         lastMovementTime = System.currentTimeMillis()
+        sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
         if (isLowPower) {
-            sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
             isLowPower = false
         }
     }
