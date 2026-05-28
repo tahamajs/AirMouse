@@ -50,7 +50,7 @@ class QRScanner(private val fragment: Fragment) {
         }
         val options = ScanOptions()
         options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-        options.setPrompt("Scan server QR code")
+        options.setPrompt("Scan the PC endpoint QR code")
         options.setCameraId(0)
         options.setBeepEnabled(true)
         options.setBarcodeImageEnabled(true)

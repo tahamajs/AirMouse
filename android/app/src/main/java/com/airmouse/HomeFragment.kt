@@ -38,6 +38,7 @@ class HomeFragment : Fragment() {
 
     // UI elements
     private lateinit var ipEditText: EditText
+    private lateinit var portEditText: EditText
     private lateinit var statusText: TextView
     private lateinit var orientationIndicator: View
     private lateinit var calibrateBtn: Button
@@ -49,6 +50,8 @@ class HomeFragment : Fragment() {
     private lateinit var sensorStatusText: TextView
     private lateinit var connectionQualityText: TextView
     private lateinit var sensorDataText: TextView
+    private lateinit var liveLogText: TextView
+    private lateinit var clearLogsBtn: Button
     private lateinit var fabCalibrate: FloatingActionButton
     private lateinit var scanQrBtn: com.google.android.material.button.MaterialButton
 
@@ -61,6 +64,23 @@ class HomeFragment : Fragment() {
     private var smoothedMoveY = 0f
     private var lastMoveDispatchMs = 0L
     private var lastUiUpdateMs = 0L
+    private var latestLogEntry = ""
+
+    private val liveLogListener = object : LogManager.LogListener {
+        override fun onNewLog(message: String) {
+            latestLogEntry = message
+            if (!isAdded) return
+            requireActivity().runOnUiThread {
+                if (!::liveLogText.isInitialized) return@runOnUiThread
+                val current = liveLogText.text?.toString().orEmpty()
+                val updated = when {
+                    current.isBlank() || current == getString(R.string.log_placeholder) -> message
+                    else -> "$message\n$current"
+                }
+                liveLogText.text = updated.take(8000)
+            }
+        }
+    }
 
     companion object {
         private const val PORT = 8080
@@ -91,6 +111,12 @@ class HomeFragment : Fragment() {
         startWifiMonitoring()
         startSensorDataUpdates()
         updateCalibrationStatusUi()
+        clearLogsBtn.setOnClickListener {
+            liveLogText.text = getString(R.string.log_placeholder)
+            preferences.clearServerLogs()
+            latestLogEntry = ""
+            Toast.makeText(requireContext(), R.string.log_cleared, Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onResume() {
@@ -113,10 +139,12 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         stopAirMouseInternal()
         debugOverlay.hide()
+        LogManager.removeListener(liveLogListener)
     }
 
     private fun bindViews(view: View) {
         ipEditText = view.findViewById(R.id.ip_edit_text)
+        portEditText = view.findViewById(R.id.port_edit_text)
         statusText = view.findViewById(R.id.status_text)
         orientationIndicator = view.findViewById(R.id.orientation_view)
         calibrateBtn = view.findViewById(R.id.calibrate_btn)
@@ -128,6 +156,8 @@ class HomeFragment : Fragment() {
         sensorStatusText = view.findViewById(R.id.sensor_status_text)
         connectionQualityText = view.findViewById(R.id.connection_quality_text)
         sensorDataText = view.findViewById(R.id.sensor_data_text)
+        liveLogText = view.findViewById(R.id.live_log_text)
+        clearLogsBtn = view.findViewById(R.id.clear_logs_btn)
         fabCalibrate = view.findViewById(R.id.fab_calibrate)
         scanQrBtn = view.findViewById(R.id.scan_qr_btn)
     }
@@ -137,6 +167,8 @@ class HomeFragment : Fragment() {
         preferences = PreferencesManager(requireContext())
         batterySaver = BatterySaver()
         debugOverlay = DebugOverlay(requireContext())
+        LogManager.setPersistenceCallback { preferences.addServerLog(it) }
+        LogManager.addListener(liveLogListener)
 
         calibrationHelper = CalibrationHelper(requireContext(), preferences)
         gestureDetector = EnhancedGestureDetector(requireContext(), preferences, vibrator)
@@ -144,14 +176,20 @@ class HomeFragment : Fragment() {
         debugOverlay.setSensorService(sensorService)
 
         ipEditText.setText(preferences.getLastIp())
+        portEditText.setText(preferences.getLastPort().toString())
+        renderSavedLogs()
     }
 
     private fun setupQRScanner() {
         qrScanner.onScanResult = { scannedData ->
-            val ip = ValidationUtils.extractIpAddress(scannedData)
-            if (ip != null) {
-                ipEditText.setText(ip)
-                Toast.makeText(requireContext(), getString(R.string.qr_scan_success, ip), Toast.LENGTH_SHORT).show()
+            val endpoint = ValidationUtils.parseEndpoint(scannedData, preferences.getLastPort())
+            if (endpoint != null) {
+                ipEditText.setText(endpoint.host)
+                portEditText.setText(endpoint.port.toString())
+                preferences.setLastIp(endpoint.host)
+                preferences.setLastPort(endpoint.port)
+                LogManager.add("QR scan set endpoint ${endpoint.host}:${endpoint.port}")
+                Toast.makeText(requireContext(), getString(R.string.qr_scan_success, "${endpoint.host}:${endpoint.port}"), Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(requireContext(), R.string.qr_scan_failed, Toast.LENGTH_SHORT).show()
             }
@@ -281,33 +319,41 @@ class HomeFragment : Fragment() {
             ipEditText.error = getString(R.string.invalid_ip)
             return
         }
+        val port = portEditText.text.toString().trim().toIntOrNull()?.coerceIn(1, 65535)
+        if (port == null) {
+            portEditText.error = getString(R.string.invalid_port)
+            return
+        }
         if (!NetworkUtils.isWifiConnected(requireContext())) {
             Toast.makeText(requireContext(), R.string.wifi_required, Toast.LENGTH_SHORT).show()
             return
         }
         preferences.setLastIp(ip)
+        preferences.setLastPort(port)
         smoothedMoveX = 0f
         smoothedMoveY = 0f
         lastMoveDispatchMs = 0L
 
         try {
-            dataSender = DataSender.getInstance(ip, PORT, preferences) ?: return
+            dataSender = DataSender.getInstance(ip, port, preferences) ?: return
             autoReconnect = AutoReconnect(dataSender, preferences) { newSender ->
                 dataSender = newSender
                 attachSensorCallbacks()
             }
             dataSender.onConnected = {
                 requireActivity().runOnUiThread {
-                    statusText.text = getString(R.string.status_active_format, ip)
+                    statusText.text = getString(R.string.status_active_format, "$ip:$port")
                     connectionQualityText.text = getString(R.string.status_connected_syncing)
-                    Snackbar.make(requireView(), getString(R.string.connected_to, ip), Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(requireView(), getString(R.string.connected_to, "$ip:$port"), Snackbar.LENGTH_SHORT).show()
                     if (preferences.isHapticEnabled()) vibrate(50)
+                    LogManager.add("Connected to $ip:$port")
                 }
             }
             dataSender.onDisconnected = {
                 requireActivity().runOnUiThread {
                     statusText.text = getString(R.string.reconnecting)
                     connectionQualityText.text = getString(R.string.status_waiting_reconnect)
+                    LogManager.add("Disconnected from $ip:$port, retrying...")
                 }
             }
             attachSensorCallbacks()
@@ -412,6 +458,9 @@ class HomeFragment : Fragment() {
         }
         calibrateBtn.isEnabled = !isActive
         fabCalibrate.visibility = if (isActive) View.GONE else View.VISIBLE
+        if (::liveLogText.isInitialized && liveLogText.text.isNullOrBlank()) {
+            renderSavedLogs()
+        }
     }
 
     private fun updateUIIndicator(yaw: Float) {
@@ -434,5 +483,10 @@ class HomeFragment : Fragment() {
         SettingsDialog(requireContext(), preferences) {
             gestureDetector.reloadThresholds()
         }.show()
+    }
+
+    private fun renderSavedLogs() {
+        val saved = preferences.getServerLogs()
+        liveLogText.text = if (saved.isNotEmpty()) saved.joinToString("\n") else getString(R.string.log_placeholder)
     }
 }

@@ -45,6 +45,9 @@ class PreferencesManager(context: Context) {
     fun getLastIp(): String = prefs.getString("last_ip", "") ?: ""
     fun setLastIp(ip: String) = prefs.edit().putString("last_ip", ip).apply()
 
+    fun getLastPort(): Int = prefs.getInt("last_port", 8080)
+    fun setLastPort(port: Int) = prefs.edit().putInt("last_port", port.coerceIn(1, 65535)).apply()
+
     // ----------------------------------------------------------------------
     // Calibration data
     // ----------------------------------------------------------------------
@@ -189,6 +192,8 @@ class PreferencesManager(context: Context) {
         val data = prefs.getString("server_logs", "") ?: ""
         return data.split("\n").filter { it.isNotBlank() }
     }
+
+    fun clearServerLogs() = prefs.edit().remove("server_logs").apply()
 
     // ----------------------------------------------------------------------
     // Custom gestures (store numeric template values)
