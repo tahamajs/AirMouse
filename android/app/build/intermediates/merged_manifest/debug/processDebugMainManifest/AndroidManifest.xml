@@ -60,7 +60,7 @@
 
         <!-- Onboarding (launcher) -->
         <activity
-            android:name="com.airmouse.onboarding.OnboardingActivity"
+            android:name="com.airmouse.ui.onboarding.OnboardingActivity"
             android:exported="true"
             android:theme="@style/Theme.AirMouse.Splash" >
             <intent-filter>
@@ -77,7 +77,7 @@
             android:screenOrientation="portrait" />
 
         <service
-            android:name="com.airmouse.ui.DebugOverlayService"
+            android:name="com.airmouse.DebugOverlayService"
             android:exported="false" />
 
         <meta-data

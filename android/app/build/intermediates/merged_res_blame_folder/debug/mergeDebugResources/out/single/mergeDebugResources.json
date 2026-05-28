@@ -20,12 +20,12 @@
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/drawable/ic_wifi.xml"
     },
     {
-        "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/layout_dialog_settings.xml.flat",
-        "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/dialog_settings.xml"
-    },
-    {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/drawable_ic_stats.xml.flat",
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/drawable/ic_stats.xml"
+    },
+    {
+        "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/layout_dialog_settings.xml.flat",
+        "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/dialog_settings.xml"
     },
     {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/layout_fragment_home.xml.flat",
@@ -36,12 +36,12 @@
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/layout/fragment_server_log.xml"
     },
     {
-        "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/drawable_ic_play.xml.flat",
-        "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/drawable/ic_play.xml"
-    },
-    {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/menu_main_menu.xml.flat",
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/menu/main_menu.xml"
+    },
+    {
+        "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/drawable_ic_play.xml.flat",
+        "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/drawable/ic_play.xml"
     },
     {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/drawable_ic_battery.xml.flat",
@@ -98,10 +98,6 @@
     {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/drawable_ic_about.xml.flat",
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/drawable/ic_about.xml"
-    },
-    {
-        "merged": "com.airmouse.app-debug-53:/layout_nav_header.xml.flat",
-        "source": "com.airmouse.app-main-55:/layout/nav_header.xml"
     },
     {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/drawable_ic_air_mouse_background.xml.flat",
@@ -202,10 +198,6 @@
     {
         "merged": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-debug-53:/drawable_ic_home.xml.flat",
         "source": "/Users/tahamajs/.gradle/daemon/8.7/com.airmouse.app-main-55:/drawable/ic_home.xml"
-    },
-    {
-        "merged": "com.airmouse.app-debug-53:/xml_shortcuts.xml.flat",
-        "source": "com.airmouse.app-main-55:/xml/shortcuts.xml"
     },
     {
         "merged": "com.airmouse.app-debug-53:/navigation_nav_graph.xml.flat",
