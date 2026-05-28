@@ -10,7 +10,11 @@ import com.airmouse.sensors.SensorService
  * Monitors orientation changes and switches to SENSOR_DELAY_NORMAL after 10s of idle.
  */
 class BatterySaver {
-    private val handler = Handler(Looper.getMainLooper())
+    private val handler = try {
+        Handler(Looper.getMainLooper())
+    } catch (_: RuntimeException) {
+        null
+    }
     private var sensorService: SensorService? = null
     private var isLowPower = false
     private var lastMovementTime = System.currentTimeMillis()
@@ -28,18 +32,18 @@ class BatterySaver {
                 isLowPower = true
             }
 
-            handler.postDelayed(this, 2000)
+            handler?.postDelayed(this, 2000)
         }
     }
 
     fun start(service: SensorService) {
         sensorService = service
         lastMovementTime = System.currentTimeMillis()
-        handler.post(checkRunnable)
+        handler?.post(checkRunnable)
     }
 
     fun stop() {
-        handler.removeCallbacks(checkRunnable)
+        handler?.removeCallbacks(checkRunnable)
         if (isLowPower) {
             sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
             isLowPower = false

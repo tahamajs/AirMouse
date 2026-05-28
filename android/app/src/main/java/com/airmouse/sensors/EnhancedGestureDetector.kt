@@ -35,7 +35,11 @@ class EnhancedGestureDetector(
     private var rightClickTiltThreshold: Float = 45f
     private var rightClickDurationMs: Long = 500L
 
-    private val handler = Handler(Looper.getMainLooper())
+    private val handler = try {
+        Handler(Looper.getMainLooper())
+    } catch (_: RuntimeException) {
+        null
+    }
 
     init {
         reloadThresholds()
@@ -64,7 +68,7 @@ class EnhancedGestureDetector(
             if (potentialDoubleClick) {
                 // Second flick within window → double click
                 potentialDoubleClick = false
-                pendingClickRunnable?.let { handler.removeCallbacks(it) }
+                pendingClickRunnable?.let { handler?.removeCallbacks(it) }
                 pendingClickRunnable = null
                 vibrate(50)
                 return Gesture.DOUBLE_CLICK
@@ -95,7 +99,7 @@ class EnhancedGestureDetector(
                     }
                 }
                 pendingClickRunnable = runnable
-                handler.postDelayed(runnable, doubleClickMaxInterval)
+                handler?.postDelayed(runnable, doubleClickMaxInterval)
                 vibrate(30)
                 return Gesture.CLICK
             }
