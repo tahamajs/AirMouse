@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.airmouse.network.AutoReconnect
 import com.airmouse.network.DataSender
 import com.airmouse.sensors.CalibrationHelper
@@ -89,10 +90,7 @@ class HomeFragment : Fragment() {
         checkSensorAvailability()
         startWifiMonitoring()
         startSensorDataUpdates()
-
-        if (preferences.isCalibrated()) {
-            statusText.text = getString(R.string.calib_ready)
-        }
+        updateCalibrationStatusUi()
     }
 
     override fun onResume() {
@@ -194,7 +192,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        calibrateBtn.setOnClickListener { startCalibration() }
+        calibrateBtn.setOnClickListener { openCalibrationWizard() }
         startBtn.setOnClickListener { if (isActive) stopAirMouse() else startAirMouse() }
         settingsBtn.setOnClickListener { showSettingsDialog() }
         debugToggleBtn.setOnClickListener {
@@ -206,7 +204,7 @@ class HomeFragment : Fragment() {
             }
         }
         fabCalibrate.setOnClickListener {
-            startCalibration()
+            openCalibrationWizard()
             fabCalibrate.startAnimation(android.view.animation.AnimationUtils.loadAnimation(requireContext(), android.R.anim.fade_in))
         }
         scanQrBtn.setOnClickListener { qrScanner.startScan() }
@@ -261,32 +259,15 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun startCalibration() {
-        lifecycleScope.launch {
-            calibrateBtn.isEnabled = false
-            fabCalibrate.isEnabled = false
-            try {
-                calibrationHelper.calibrateGyro { instruction ->
-                    requireActivity().runOnUiThread { statusText.text = instruction }
-                }
-                if (SensorUtils.hasMagnetometer(requireContext())) {
-                    calibrationHelper.calibrateMagnetometer(15000) { instruction ->
-                        requireActivity().runOnUiThread { statusText.text = instruction }
-                    }
-                }
-                calibrationHelper.calibrateAccelerometer { instruction ->
-                    requireActivity().runOnUiThread { statusText.text = instruction }
-                }
-                statusText.text = getString(R.string.calib_complete)
-                Toast.makeText(requireContext(), R.string.calib_ready, Toast.LENGTH_SHORT).show()
-                if (preferences.isHapticEnabled()) vibrate(100)
-            } catch (e: Exception) {
-                statusText.text = getString(R.string.calib_failed, e.message ?: "Unknown")
-                Snackbar.make(requireView(), getString(R.string.calib_failed, e.message ?: ""), Snackbar.LENGTH_LONG).show()
-            } finally {
-                calibrateBtn.isEnabled = true
-                fabCalibrate.isEnabled = true
-            }
+    private fun openCalibrationWizard() {
+        if (isActive) {
+            Toast.makeText(requireContext(), R.string.stop_before_calibration, Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            findNavController().navigate(R.id.calibrationFragment)
+        } catch (_: IllegalArgumentException) {
+            Toast.makeText(requireContext(), R.string.calibration_open_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -318,12 +299,16 @@ class HomeFragment : Fragment() {
             dataSender.onConnected = {
                 requireActivity().runOnUiThread {
                     statusText.text = getString(R.string.status_active_format, ip)
+                    connectionQualityText.text = getString(R.string.status_connected_syncing)
                     Snackbar.make(requireView(), getString(R.string.connected_to, ip), Snackbar.LENGTH_SHORT).show()
                     if (preferences.isHapticEnabled()) vibrate(50)
                 }
             }
             dataSender.onDisconnected = {
-                requireActivity().runOnUiThread { statusText.text = getString(R.string.reconnecting) }
+                requireActivity().runOnUiThread {
+                    statusText.text = getString(R.string.reconnecting)
+                    connectionQualityText.text = getString(R.string.status_waiting_reconnect)
+                }
             }
             attachSensorCallbacks()
             dataSender.start()
@@ -338,6 +323,7 @@ class HomeFragment : Fragment() {
         startBtn.text = getString(R.string.stop)
         calibrateBtn.isEnabled = false
         fabCalibrate.hide()
+        updateCalibrationStatusUi()
     }
 
     private fun attachSensorCallbacks() {
@@ -401,7 +387,7 @@ class HomeFragment : Fragment() {
     private fun stopAirMouse() {
         stopAirMouseInternal()
         startBtn.text = getString(R.string.start)
-        statusText.text = getString(R.string.status_not_connected)
+        updateCalibrationStatusUi()
         calibrateBtn.isEnabled = true
         fabCalibrate.show()
     }
@@ -412,6 +398,20 @@ class HomeFragment : Fragment() {
         if (::batterySaver.isInitialized) batterySaver.stop()
         if (::autoReconnect.isInitialized) autoReconnect.stop()
         if (::dataSender.isInitialized) dataSender.stopSending()
+    }
+
+    private fun updateCalibrationStatusUi() {
+        val message = when {
+            isActive -> getString(R.string.status_active)
+            preferences.isCalibrated() -> getString(R.string.calib_ready_to_connect)
+            else -> getString(R.string.calibration_needed_prompt)
+        }
+        statusText.text = message
+        if (!isActive) {
+            connectionQualityText.text = getString(R.string.status_not_connected)
+        }
+        calibrateBtn.isEnabled = !isActive
+        fabCalibrate.visibility = if (isActive) View.GONE else View.VISIBLE
     }
 
     private fun updateUIIndicator(yaw: Float) {
