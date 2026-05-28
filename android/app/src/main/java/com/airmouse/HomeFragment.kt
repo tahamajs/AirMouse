@@ -335,8 +335,10 @@ class HomeFragment : Fragment() {
             val deltaY = (roll - lastOrientation.first) * sensitivity * 120.0f
             lastOrientation = Pair(roll, yaw)
             dataSender.sendMove(deltaX, deltaY)
-            updateUIIndicator(yaw)
-            debugOverlay.updateValues(roll, yaw, currentGyroY, currentAccelY)
+            activity?.runOnUiThread {
+                updateUIIndicator(yaw)
+                debugOverlay.updateValues(roll, yaw, currentGyroY, currentAccelY)
+            }
             batterySaver.updateMovement(roll, yaw)
         }
         sensorService.setOnGestureDetected { gesture ->
