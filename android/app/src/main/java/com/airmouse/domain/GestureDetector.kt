@@ -38,6 +38,10 @@ class GestureDetector(private val prefs: PreferencesManager) {
         this.listener = listener
     }
 
+    fun reloadThresholds() {
+        reset()
+    }
+
     /**
      * Main detection method. Call on every sensor update (e.g., 50 Hz).
      * @param gyroY Angular velocity around Y‑axis (rad/s)

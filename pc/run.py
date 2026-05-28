@@ -17,6 +17,7 @@ def main():
         import pyautogui
         import qrcode
         import PIL
+        import netifaces
         print("✅ Dependencies satisfied.")
     except ImportError:
         print("⚠️ Missing dependencies. Installing...")

@@ -31,7 +31,9 @@ CONFIG = {
     "discovery_port": 8081,
     "sensitivity": 0.5,
     "accent_color": "#007acc",
-    "selected_ip": ""   # NEW: stored manually selected IP
+    "selected_ip": "",
+    "manual_ip_enabled": False,
+    "manual_ip_value": ""
 }
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
@@ -284,6 +286,8 @@ class AirMouseGUI:
                  font=("Helvetica", 10)).pack(side=tk.LEFT, padx=(0,5))
 
         self.ip_var = tk.StringVar()
+        self.manual_ip_var = tk.StringVar()
+        self.manual_ip_var.trace_add("write", self.on_manual_ip_changed)
         self.ip_combo = ttk.Combobox(ip_control, textvariable=self.ip_var,
                                      state="readonly", width=20)
         self.ip_combo.pack(side=tk.LEFT, padx=5)
@@ -298,7 +302,6 @@ class AirMouseGUI:
         self.copy_btn.pack(side=tk.LEFT, padx=5)
 
         # Manual IP override (hidden until checkbox)
-        self.manual_ip_var = tk.StringVar()
         self.manual_entry = tk.Entry(ip_control, textvariable=self.manual_ip_var,
                                      width=15, bg="#3c3c3c", fg=self.fg_color,
                                      insertbackground='white', state=tk.DISABLED)
@@ -391,18 +394,33 @@ class AirMouseGUI:
             ip_options = ["127.0.0.1 (no network)"]
         self.ip_combo['values'] = ip_options
 
+        if CONFIG.get("manual_ip_enabled") and CONFIG.get("manual_ip_value"):
+            manual_ip = CONFIG["manual_ip_value"].strip()
+            self.manual_check.set(1)
+            self.ip_combo.config(state=tk.DISABLED)
+            self.manual_entry.config(state=tk.NORMAL)
+            self.manual_ip_var.set(manual_ip)
+            self.current_ip_label.config(text=f"Current IP: {manual_ip}:{CONFIG['port']}")
+            self.update_qr_code()
+            return
+
         # Attempt to select a stored or sensible default
         preferred = CONFIG.get("selected_ip", "")
         if preferred and preferred in ip_options:
             self.ip_combo.set(preferred)
         elif ip_options:
             self.ip_combo.set(ip_options[0])
+        self.manual_check.set(0)
+        self.ip_combo.config(state="readonly")
+        self.manual_entry.config(state=tk.DISABLED)
         self.on_ip_selected()
 
     def get_selected_ip(self) -> str:
         """Return just the IP part from the combo selection."""
         if self.manual_check.get():
-            return self.manual_ip_var.get().strip()
+            manual_ip = self.manual_ip_var.get().strip()
+            if manual_ip:
+                return manual_ip
         sel = self.ip_var.get()
         return sel.split()[0] if sel else "127.0.0.1"
 
@@ -412,6 +430,7 @@ class AirMouseGUI:
             return
         sel = self.get_selected_ip()
         CONFIG["selected_ip"] = sel
+        CONFIG["manual_ip_enabled"] = False
         save_config()
         self.current_ip_label.config(text=f"Current IP: {sel}:{CONFIG['port']}")
         self.update_qr_code()
@@ -422,14 +441,35 @@ class AirMouseGUI:
             self.manual_entry.config(state=tk.NORMAL)
             self.ip_combo.config(state=tk.DISABLED)
             self.manual_ip_var.set(self.get_selected_ip())
+            CONFIG["manual_ip_enabled"] = True
+            CONFIG["manual_ip_value"] = self.manual_ip_var.get().strip()
+            save_config()
         else:
             self.manual_entry.config(state=tk.DISABLED)
             self.ip_combo.config(state="readonly")
+            CONFIG["manual_ip_enabled"] = False
+            CONFIG["manual_ip_value"] = self.manual_ip_var.get().strip()
+            CONFIG["selected_ip"] = self.get_selected_ip()
+            save_config()
             self.on_ip_selected()
+
+    def on_manual_ip_changed(self, *_):
+        """Persist manual IP edits so they survive restarts."""
+        if not self.manual_check.get():
+            return
+        manual_ip = self.manual_ip_var.get().strip()
+        if not manual_ip:
+            return
+        CONFIG["manual_ip_enabled"] = True
+        CONFIG["manual_ip_value"] = manual_ip
+        save_config()
+        self.current_ip_label.config(text=f"Current IP: {manual_ip}:{CONFIG['port']}")
+        self.update_qr_code()
 
     def copy_ip(self):
         """Copy the current endpoint to clipboard."""
-        ip_port = f"airmouse://{self.get_selected_ip()}:{CONFIG['port']}"
+        ip = self.get_selected_ip()
+        ip_port = f"airmouse://{ip}:{CONFIG['port']}"
         self.root.clipboard_clear()
         self.root.clipboard_append(ip_port)
         self.log(f"📋 Copied to clipboard: {ip_port}")
@@ -437,6 +477,9 @@ class AirMouseGUI:
     def update_qr_code(self):
         """Generate QR code from the currently selected endpoint."""
         ip = self.get_selected_ip()
+        if not ip:
+            self.qr_text.config(text="No IP selected")
+            return
         qr_data = f"airmouse://{ip}:{CONFIG['port']}"
         qr = qrcode.QRCode(
             version=None,

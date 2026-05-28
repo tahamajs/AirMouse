@@ -35,6 +35,7 @@ class AutoReconnect(
                         // Create a new DataSender (constructor is now public)
                         val newSender = DataSender(ip, port, prefs)
                         dataSender = newSender
+                        DataSender.setInstance(newSender)
                         onNewSender(newSender)
                         newSender.start()
                         Log.d(TAG, "New DataSender started for $ip:$port")

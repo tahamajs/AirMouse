@@ -8,10 +8,10 @@ import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.airmouse.domain.GestureDetector
 import com.airmouse.network.AutoReconnect
 import com.airmouse.network.DataSender
 import com.airmouse.sensors.CalibrationHelper
-import com.airmouse.sensors.EnhancedGestureDetector
 import com.airmouse.sensors.SensorService
 import com.airmouse.DebugOverlay
 import com.airmouse.ui.SettingsDialog
@@ -27,7 +27,7 @@ class HomeFragment : Fragment() {
     // Core components
     private lateinit var sensorService: SensorService
     private lateinit var calibrationHelper: CalibrationHelper
-    private lateinit var gestureDetector: EnhancedGestureDetector
+    private lateinit var gestureDetector: GestureDetector
     private lateinit var dataSender: DataSender
     private lateinit var autoReconnect: AutoReconnect
     private lateinit var preferences: PreferencesManager
@@ -171,7 +171,7 @@ class HomeFragment : Fragment() {
         LogManager.addListener(liveLogListener)
 
         calibrationHelper = CalibrationHelper(requireContext(), preferences)
-        gestureDetector = EnhancedGestureDetector(requireContext(), preferences, vibrator)
+        gestureDetector = GestureDetector(preferences)
         sensorService = SensorService(requireContext(), calibrationHelper, gestureDetector, preferences, batterySaver)
         debugOverlay.setSensorService(sensorService)
 
@@ -317,11 +317,13 @@ class HomeFragment : Fragment() {
         val ip = ipEditText.text.toString().trim()
         if (!ValidationUtils.isValidIp(ip)) {
             ipEditText.error = getString(R.string.invalid_ip)
+            Toast.makeText(requireContext(), R.string.invalid_ip, Toast.LENGTH_SHORT).show()
             return
         }
         val port = portEditText.text.toString().trim().toIntOrNull()?.coerceIn(1, 65535)
         if (port == null) {
             portEditText.error = getString(R.string.invalid_port)
+            Toast.makeText(requireContext(), R.string.invalid_port, Toast.LENGTH_SHORT).show()
             return
         }
         if (!NetworkUtils.isWifiConnected(requireContext())) {

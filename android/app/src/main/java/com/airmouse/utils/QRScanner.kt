@@ -1,6 +1,7 @@
 package com.airmouse.utils
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
@@ -44,6 +45,15 @@ class QRScanner(private val fragment: Fragment) {
 
     fun startScan() {
         val context = fragment.requireContext()
+        if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+            AlertDialog.Builder(context)
+                .setTitle("Camera unavailable")
+                .setMessage("This device does not have a camera available for QR scanning.")
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            onScanFailed?.invoke()
+            return
+        }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
             return

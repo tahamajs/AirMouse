@@ -310,6 +310,11 @@
     <string name="signal_strength" formatted="false">Signal: %s (%d dBm)</string>
     <string name="discover_servers">Discover Servers</string>
     <string name="scanning_network">Scanning network…</string>
+    <string name="network_discovery_hint">Tap Scan to broadcast on the local network. Select a server to copy it into the Home screen.</string>
+    <string name="network_not_scanned">Not scanned yet</string>
+    <string name="no_servers_found">No Air Mouse servers found</string>
+    <string name="found_servers_count">Found %d server(s)</string>
+    <string name="found_servers">Selected %s</string>
     <string name="start_air_mouse">Start Air Mouse</string>
     <string name="battery_level_format">Battery Level: %d%%</string>
     <string name="battery_temp_format">Temperature: %.1f°C</string>
