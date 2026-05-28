@@ -1,56 +1,33 @@
 package com.airmouse.network
 
-import android.util.Log
-import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.*
+import com.airmouse.utils.LogManager
 
 class AutoReconnect(
-    private var dataSender: DataSender,
-    private val prefs: PreferencesManager,
-    private val onNewSender: (DataSender) -> Unit
+    private val ip: String,
+    private val port: Int,
+    private val onReconnect: () -> Unit
 ) {
-
-    companion object {
-        private const val TAG = "AutoReconnect"
-        private const val CHECK_INTERVAL_MS = 5000L
-    }
-
+    private var job: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var isRunning = false
 
     fun start() {
-        if (isRunning) return
-        isRunning = true
-        scope.launch {
-            Log.d(TAG, "AutoReconnect started")
-            while (isRunning) {
-                delay(CHECK_INTERVAL_MS)
-                if (!dataSender.isConnected) {
-                    Log.w(TAG, "Connection lost, triggering reconnect...")
-                    dataSender.stopSending()
-
-                    val ip = prefs.getLastIp()
-                    val port = prefs.getLastPort()
-                    if (ip.isNotBlank()) {
-                        // Create a new DataSender (constructor is now public)
-                        val newSender = DataSender(ip, port, prefs)
-                        dataSender = newSender
-                        DataSender.setInstance(newSender)
-                        onNewSender(newSender)
-                        newSender.start()
-                        Log.d(TAG, "New DataSender started for $ip:$port")
-                    } else {
-                        Log.e(TAG, "No stored IP address, cannot reconnect")
-                    }
+        job = scope.launch {
+            while (isActive) {
+                LogManager.add("AutoReconnect: trying to reconnect...")
+                try {
+                    DataSender.getInstance(ip, port, null)?.start()
+                    onReconnect()   // success – stop reconnecting
+                    break
+                } catch (e: Exception) {
+                    LogManager.add("Reconnect failed: ${e.message}")
+                    delay(3000)
                 }
             }
         }
     }
 
     fun stop() {
-        if (!isRunning) return
-        isRunning = false
-        scope.cancel()
-        Log.d(TAG, "AutoReconnect stopped")
+        job?.cancel()
     }
 }
