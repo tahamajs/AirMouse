@@ -77,3 +77,11 @@
         app:headerLayout="@layout/nav_header" />
 
 </androidx.drawerlayout.widget.DrawerLayout>
+
+
+<LinearLayout ...>
+    <androidx.appcompat.widget.Toolbar android:id="@+id/toolbar" ...>
+        <ImageView android:id="@+id/connectionStatusIcon" ... />
+    </androidx.appcompat.widget.Toolbar>
+    <FrameLayout android:id="@+id/container" ... />
+</LinearLayout>

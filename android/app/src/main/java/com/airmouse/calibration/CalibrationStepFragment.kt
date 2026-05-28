@@ -3,5 +3,5 @@ package com.airmouse.calibration
 interface CalibrationStepFragment {
     fun isStepComplete(): Boolean
     fun resetUI()
-    fun saveCalibrationData()   // called when finishing last step
+    fun saveCalibrationData()
 }

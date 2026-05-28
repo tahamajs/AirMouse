@@ -3,13 +3,8 @@
     android:gravity="center" android:orientation="vertical" android:padding="24dp"
     android:background="#0f1115">
 
-    <ImageView android:id="@+id/phoneAnimation"
-        android:layout_width="160dp" android:layout_height="160dp"
-        android:src="@drawable/avd_phone_flat_to_vertical"
-        android:layout_marginBottom="16dp"/>
-
-    <TextView android:id="@+id/instructionText"
-        android:text="Flat on table, screen up"
+    <TextView android:id="@+id/statusText"
+        android:text="Place phone on flat surface and press Start"
         android:textColor="#e5e7eb" android:textSize="16sp" android:textAlignment="center"
         android:layout_marginBottom="16dp"/>
 

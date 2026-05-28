@@ -270,3 +270,35 @@ class DataSender(
         LogManager.add("Host updated to $ip")
     }
 }
+
+
+
+
+(Add sendHello(deviceName) method and include device name in the hello message.)
+
+val connectionLiveData = MutableLiveData(false)
+network/DataSender.kt (add device name support and LiveData)
+I'll provide the essential modifications to the existing DataSender:
+
+Add a MutableLiveData:
+
+kotlin
+val connectionLiveData = MutableLiveData(false)
+Inside start():
+
+kotlin
+isConnected = true
+connectionLiveData.postValue(true)
+Inside disconnect():
+
+kotlin
+isConnected = false
+connectionLiveData.postValue(false)
+Add method:
+
+kotlin
+fun sendHello(deviceName: String) {
+    val msg = "{\"type\":\"hello\",\"name\":\"$deviceName\"}\n"
+    writer?.print(msg)
+    writer?.flush()
+}

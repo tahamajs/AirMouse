@@ -161,6 +161,15 @@
     <string name="connection_guide_title">Connection Guide</string>
     <string name="about_title">About</string>
     <string name="license_title">License</string>
+
+
+
+    <string name="calibration_status_idle">Ready to calibrate</string>
+    <string name="calibration_status_gyro">Calibrating gyroscope…</string>
+    <string name="calibration_status_mag">Calibrating magnetometer…</string>
+    <string name="calibration_status_accel">Calibrating accelerometer…</string>
+    <string name="calibration_status_done">Calibration complete</string>
+    ...
     <string name="help_content">
         <![CDATA[
         <b>Quick Start</b><br/><br/>

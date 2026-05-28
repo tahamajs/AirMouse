@@ -85,3 +85,11 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 }
+DataSender.getInstance().connectionLiveData.observe(this) { isConnected ->
+    updateConnectionIcon(isConnected)
+}
+
+val connectionIcon = findViewById<ImageView>(R.id.connectionStatusIcon)
+DataSender.getInstance()?.connectionLiveData?.observe(this) { isConnected ->
+    connectionIcon.setImageResource(if (isConnected) R.drawable.ic_connected else R.drawable.ic_disconnected)
+}

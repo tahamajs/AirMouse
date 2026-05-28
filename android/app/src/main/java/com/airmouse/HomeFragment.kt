@@ -492,3 +492,7 @@ class HomeFragment : Fragment() {
         liveLogText.text = if (saved.isNotEmpty()) saved.joinToString("\n") else getString(R.string.log_placeholder)
     }
 }
+
+
+val deviceName = binding.deviceNameEdit.text.toString().ifEmpty { "AirMouse" }
+dataSender.sendHello(deviceName)
