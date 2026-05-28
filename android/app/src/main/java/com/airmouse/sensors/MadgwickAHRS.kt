@@ -230,6 +230,16 @@ class MadgwickAHRS(beta: Float = 0.1f) {
     }
 
     /**
+     * Reset orientation to identity quaternion (no rotation).
+     */
+    fun reset() {
+        quaternion[0] = 1f
+        quaternion[1] = 0f
+        quaternion[2] = 0f
+        quaternion[3] = 0f
+    }
+
+    /**
      * Normalize the quaternion to unit length.
      */
     private fun normalizeQuaternion() {

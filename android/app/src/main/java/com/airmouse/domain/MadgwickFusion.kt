@@ -1,5 +1,6 @@
 package com.airmouse.domain
 
+import com.airmouse.sensors.MadgwickAHRS
 import kotlin.math.*
 
 /**
