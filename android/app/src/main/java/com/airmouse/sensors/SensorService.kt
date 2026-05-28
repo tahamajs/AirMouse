@@ -95,7 +95,7 @@ class SensorService(
                     )
                     Trace.beginSection("MadgwickAccelUpdate")
                     try {
-                        madgwick.updateAccel(ax, ay, az)
+                        madgwick.updateAccel(ax, ay, az, dt)
                     } finally {
                         Trace.endSection()
                     }
@@ -140,7 +140,7 @@ class SensorService(
                     )
                     Trace.beginSection("MadgwickMagUpdate")
                     try {
-                        madgwick.updateMag(mx, my, mz)
+                        madgwick.updateMag(mx, my, mz, dt)
                     } finally {
                         Trace.endSection()
                     }

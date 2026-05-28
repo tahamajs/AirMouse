@@ -11,6 +11,7 @@ import java.io.PrintWriter
 import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import org.json.JSONObject
 
 /**
  * TCP client that sends sensor data to the PC server.
@@ -125,8 +126,7 @@ class DataSender(
      */
     private fun extractId(json: String): Int? {
         return try {
-            val regex = "\"id\":(\\d+)".toRegex()
-            regex.find(json)?.groupValues?.get(1)?.toIntOrNull()
+            JSONObject(json).optInt("id", -1).takeIf { it >= 0 }
         } catch (e: Exception) {
             null
         }
