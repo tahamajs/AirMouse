@@ -3,6 +3,18 @@
 *.pyo
 *.pyd
 
+*====================
+# Android Studio / IntelliJ IDEA
+# ====================
+.idea/  
+
+# ====================
+# Gradle
+
+.gradle
+/build
+*/build
+    
 
 
 
