@@ -1,0 +1,1 @@
+"""Optional log manager for the Android side, not used by PC."""

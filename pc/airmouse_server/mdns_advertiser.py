@@ -8,21 +8,21 @@ class MDNSAdvertiser:
         self.zeroconf = None
         self.info = None
 
-    def start(self, ip, port):
+    def start(self, ip: str, port: int):
         try:
             self.zeroconf = Zeroconf()
             service_type = "_airmouse._tcp.local."
-            service_name = f"{CONFIG['mDNS_name']}.{service_type}"
+            name = f"{CONFIG.get('mDNS_name', 'airmouse')}.{service_type}"
             self.info = ServiceInfo(
                 service_type,
-                service_name,
+                name,
                 addresses=[socket.inet_aton(ip)],
                 port=port,
                 properties={"version": "1.0"},
-                server=f"{CONFIG['mDNS_name']}.local."
+                server=f"{CONFIG.get('mDNS_name', 'airmouse')}.local."
             )
             self.zeroconf.register_service(self.info)
-            self.log(f"🌐 mDNS advertised as {CONFIG['mDNS_name']}.local:{port}")
+            self.log(f"🌐 mDNS advertised as {CONFIG.get('mDNS_name', 'airmouse')}.local:{port}")
         except Exception as e:
             self.log(f"⚠️ mDNS failed: {e}")
 

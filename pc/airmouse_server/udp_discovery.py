@@ -4,9 +4,9 @@ import threading
 from .config import CONFIG
 
 class UDPDiscoveryServer:
-    def __init__(self, callback, ip_provider):
-        self.port = CONFIG["discovery_port"]
-        self.callback = callback
+    def __init__(self, log_callback, ip_provider):
+        self.port = CONFIG.get("discovery_port", 8081)
+        self.log = log_callback
         self.ip_provider = ip_provider
         self.socket = None
         self.running = False
@@ -19,7 +19,7 @@ class UDPDiscoveryServer:
         self.socket.bind(('', self.port))
         self.running = True
         threading.Thread(target=self._listen, daemon=True).start()
-        self.callback(f"🔍 UDP discovery listening on port {self.port}")
+        self.log(f"🔍 UDP discovery listening on port {self.port}")
 
     def _listen(self):
         while self.running:
@@ -30,11 +30,11 @@ class UDPDiscoveryServer:
                     chosen_ip = self.ip_provider()
                     response = json.dumps({
                         "type": "discovery_response",
-                        "port": CONFIG["port"],
+                        "port": CONFIG.get("port", 8080),
                         "ip": chosen_ip
                     })
                     self.socket.sendto(response.encode(), addr)
-                    self.callback(f"📡 Responded to discovery from {addr[0]} with IP {chosen_ip}")
+                    self.log(f"📡 Responded to {addr[0]} with {chosen_ip}")
             except Exception:
                 pass
 

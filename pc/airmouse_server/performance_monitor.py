@@ -1,9 +1,10 @@
 import psutil
 import threading
+import time
 
 class PerformanceMonitor:
-    def __init__(self, update_interval=2.0):
-        self.interval = update_interval
+    def __init__(self, interval=2.0):
+        self.interval = interval
         self._cpu = 0.0
         self._mem = 0.0
         self._running = False
@@ -21,7 +22,6 @@ class PerformanceMonitor:
         while self._running:
             self._cpu = psutil.cpu_percent(interval=None)
             self._mem = psutil.virtual_memory().percent
-            import time
             time.sleep(self.interval)
 
     @property

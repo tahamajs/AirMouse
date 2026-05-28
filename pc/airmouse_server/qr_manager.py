@@ -1,10 +1,8 @@
 import qrcode
 from PIL import Image, ImageTk
-from .config import CONFIG
 
 class QRManager:
-    def __init__(self, log_callback=None):
-        self.log = log_callback or print
+    def __init__(self):
         self.last_pil_image = None
         self.tk_image = None
 

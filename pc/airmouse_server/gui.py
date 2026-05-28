@@ -45,7 +45,7 @@ class AirMouseGUI:
         self.setup_ui()
 
         # Backend services
-        self.qr_manager = QRManager(self.log)
+        self.qr_manager = QRManager()
         self.tcp_server = AirMouseTCPServer(
             self.log, self.update_stats_display,
             connections_callback=self._update_connection_list,
@@ -63,6 +63,7 @@ class AirMouseGUI:
         self._apply_always_on_top()
         self.perf_monitor.start()
         self._update_performance_label()
+        self._init_keyboard_shortcuts()
 
     # ---------- Style & Helpers ----------
     def _setup_styles(self):
@@ -122,12 +123,15 @@ class AirMouseGUI:
         filemenu.add_command(label="Start Server   Ctrl+S", command=self.start_servers)
         filemenu.add_command(label="Stop Server    Ctrl+T", command=self.stop_servers, state="disabled")
         filemenu.add_separator()
-        filemenu.add_command(label="Exit           Ctrl+Q", command=self.root.quit)
+        filemenu.add_command(label="Exit           Ctrl+Q", command=self._quit_app)
         menubar.add_cascade(label="File", menu=filemenu)
+
         viewmenu = tk.Menu(menubar, tearoff=0)
         viewmenu.add_command(label="Refresh IP List Ctrl+R", command=self.refresh_ip_list)
         viewmenu.add_command(label="Clear Logs", command=self._clear_logs)
+        viewmenu.add_checkbutton(label="Always on Top", variable=tk.BooleanVar(value=CONFIG.get("always_on_top", False)), command=self._toggle_always_on_top)
         menubar.add_cascade(label="View", menu=viewmenu)
+
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label="About", command=self._show_about)
         menubar.add_cascade(label="Help", menu=helpmenu)
@@ -164,23 +168,15 @@ class AirMouseGUI:
         right_col.columnconfigure(0, weight=1)
 
         # ---- LEFT COLUMN CARDS ----
-        # 1. Runtime Summary
         self.build_summary_card(left_col)
-        # 2. Network Endpoint (IP, manual, mDNS)
         self.build_ip_card(left_col)
-        # 3. Pairing QR
         self.build_qr_card(left_col)
-        # 4. Server Controls
         self.build_controls_card(left_col)
-        # 5. Sensitivity
         self.build_sensitivity_card(left_col)
-        # 6. Connected Clients (with scroll & disconnect)
         self.build_connections_card(left_col)
 
         # ---- RIGHT COLUMN ----
-        # 7. Live Log
         self.build_log_card(right_col)
-        # 8. Server Diagnostics & performance
         self.build_diagnostics_card(right_col)
 
         # Status bar at bottom
@@ -245,7 +241,7 @@ class AirMouseGUI:
         mdns_row = tk.Frame(body, bg=self.card_bg)
         mdns_row.pack(fill=tk.X, pady=(10,0))
         ttk.Label(mdns_row, text="mDNS hostname:", style="Hint.TLabel").pack(side=tk.LEFT)
-        self.mdns_label = ttk.Label(mdns_row, text=f"{CONFIG['mDNS_name']}.local", style="Metric.TLabel")
+        self.mdns_label = ttk.Label(mdns_row, text=f"{CONFIG.get('mDNS_name', 'airmouse')}.local", style="Metric.TLabel")
         self.mdns_label.pack(side=tk.LEFT, padx=(6,0))
         ttk.Button(mdns_row, text="Copy", command=self._copy_mdns, style="Accent.TButton").pack(side=tk.RIGHT)
 
@@ -277,10 +273,10 @@ class AirMouseGUI:
         sens_top = tk.Frame(body, bg=self.card_bg)
         sens_top.pack(fill=tk.X)
         ttk.Label(sens_top, text="Sensitivity", style="Hint.TLabel").pack(side=tk.LEFT)
-        self.sens_value = ttk.Label(sens_top, text=f"{CONFIG['sensitivity']:.2f}", style="Metric.TLabel")
+        self.sens_value = ttk.Label(sens_top, text=f"{CONFIG.get('sensitivity', 0.5):.2f}", style="Metric.TLabel")
         self.sens_value.pack(side=tk.RIGHT)
         self.sens_slider = ttk.Scale(body, from_=0.2, to=2.0, orient=tk.HORIZONTAL, style="Dark.Horizontal.TScale")
-        self.sens_slider.set(CONFIG["sensitivity"])
+        self.sens_slider.set(CONFIG.get("sensitivity", 0.5))
         self.sens_slider.pack(fill=tk.X, pady=(10,4))
         self.sens_slider.bind("<ButtonRelease-1>", self.update_sensitivity)
 
@@ -307,10 +303,31 @@ class AirMouseGUI:
         card.grid(row=0, column=0, sticky="nsew")
         body.rowconfigure(0, weight=1)
         body.columnconfigure(0, weight=1)
+
+        # Log toolbar: search, filters, export
+        toolbar = tk.Frame(body, bg=self.card_bg)
+        toolbar.pack(fill=tk.X, pady=(0,6))
+        ttk.Label(toolbar, text="Filter:", style="Hint.TLabel").pack(side=tk.LEFT, padx=(0,4))
+        self.log_filter_var = tk.StringVar(value="")
+        self.log_search_entry = tk.Entry(toolbar, textvariable=self.log_filter_var, bg=self.surface_alt, fg=self.fg_color, insertbackground=self.fg_color, relief=tk.FLAT)
+        self.log_search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=4)
+        self.log_search_entry.bind("<KeyRelease>", self._apply_log_filter)
+
+        self.log_info_var = tk.BooleanVar(value=True)
+        self.log_warn_var = tk.BooleanVar(value=True)
+        self.log_error_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(toolbar, text="Info", variable=self.log_info_var, command=self._apply_log_filter).pack(side=tk.LEFT, padx=2)
+        ttk.Checkbutton(toolbar, text="Warn", variable=self.log_warn_var, command=self._apply_log_filter).pack(side=tk.LEFT, padx=2)
+        ttk.Checkbutton(toolbar, text="Error", variable=self.log_error_var, command=self._apply_log_filter).pack(side=tk.LEFT, padx=2)
+
+        ttk.Button(toolbar, text="Export Log", command=self._export_log, style="Accent.TButton").pack(side=tk.RIGHT, padx=2)
+
         self.log_area = scrolledtext.ScrolledText(body, height=18, bg=self.log_bg, fg=self.fg_color,
                                                   insertbackground=self.fg_color, font=("SF Mono", 10),
                                                   relief=tk.FLAT, wrap=tk.WORD, padx=12, pady=12)
-        self.log_area.grid(row=0, column=0, sticky="nsew")
+        self.log_area.grid(row=1, column=0, sticky="nsew")
+        # Store raw log lines for filtering
+        self.log_lines = []
 
     def build_diagnostics_card(self, parent):
         card, body = self._card(parent, "Server Diagnostics", "Quick status and maintenance actions")
@@ -328,17 +345,49 @@ class AirMouseGUI:
                   style="Hint.TLabel", wraplength=500).pack(anchor="w", pady=(4,0))
 
     # ---------- Helper methods for UI actions ----------
-    def log(self, msg: str):
-        def append():
-            self.log_area.insert(tk.END, f"{msg}\n")
-            self.log_area.see(tk.END)
-        self.root.after(0, append)
+    def log(self, msg: str, level: str = "info"):
+        """Log message with level: info, warning, error"""
+        prefix = {"info": "ℹ️", "warning": "⚠️", "error": "❌"}.get(level, "ℹ️")
+        full_msg = f"{prefix} {msg}"
+        self.log_lines.append((level, full_msg))
+        self._render_filtered_log()
+
+    def _apply_log_filter(self, event=None):
+        self._render_filtered_log()
+
+    def _render_filtered_log(self):
+        self.log_area.configure(state=tk.NORMAL)
+        self.log_area.delete("1.0", tk.END)
+        keyword = self.log_filter_var.get().lower()
+        show_info = self.log_info_var.get()
+        show_warn = self.log_warn_var.get()
+        show_error = self.log_error_var.get()
+        for level, line in self.log_lines:
+            if keyword and keyword not in line.lower():
+                continue
+            if level == "info" and not show_info:
+                continue
+            if level == "warning" and not show_warn:
+                continue
+            if level == "error" and not show_error:
+                continue
+            self.log_area.insert(tk.END, line + "\n")
+        self.log_area.see(tk.END)
+        self.log_area.configure(state=tk.DISABLED)
 
     def _clear_logs(self):
-        self.log_area.delete("1.0", tk.END)
-        self.log_area.insert(tk.END, "Logs cleared.\n")
-        self.log_area.see(tk.END)
-        self.log("🧹 Logs cleared by user")
+        self.log_lines.clear()
+        self._render_filtered_log()
+        self.log("Logs cleared", "info")
+
+    def _export_log(self):
+        filename = filedialog.asksaveasfilename(defaultextension=".log", filetypes=[("Log files", "*.log"), ("Text files", "*.txt")])
+        if not filename:
+            return
+        with open(filename, "w", encoding="utf-8") as f:
+            for _, line in self.log_lines:
+                f.write(line + "\n")
+        messagebox.showinfo("Export", f"Log saved to {filename}")
 
     def save_qr_image(self):
         if not self.qr_manager.last_pil_image:
@@ -366,7 +415,7 @@ class AirMouseGUI:
                     if ip and not ip.startswith('127.'):
                         ips.append(f"{ip} ({iface})")
         except Exception as e:
-            self.log(f"⚠️ IP scan error: {e}")
+            self.log(f"IP scan error: {e}", "error")
         return sorted(set(ips), key=lambda x: x.split()[0])
 
     def refresh_ip_list(self):
@@ -380,7 +429,7 @@ class AirMouseGUI:
             self.ip_combo.config(state=tk.DISABLED)
             self.manual_entry.config(state=tk.NORMAL)
             self.manual_ip_var.set(manual_ip)
-            self.current_ip_label.config(text=f"Current IP: {manual_ip}:{CONFIG['port']}")
+            self.current_ip_label.config(text=f"Current IP: {manual_ip}:{CONFIG.get('port', 8080)}")
             self.update_qr_code()
             return
         preferred = CONFIG.get("selected_ip", "")
@@ -407,8 +456,8 @@ class AirMouseGUI:
         sel = self.get_selected_ip()
         CONFIG["selected_ip"] = sel
         CONFIG["manual_ip_enabled"] = False
-        save_config()
-        self.current_ip_label.config(text=f"Current IP: {sel}:{CONFIG['port']}")
+        save_config(CONFIG)
+        self.current_ip_label.config(text=f"Current IP: {sel}:{CONFIG.get('port', 8080)}")
         self.update_qr_code()
 
     def toggle_manual_ip(self):
@@ -418,12 +467,12 @@ class AirMouseGUI:
             self.manual_ip_var.set(self.get_selected_ip())
             CONFIG["manual_ip_enabled"] = True
             CONFIG["manual_ip_value"] = self.manual_ip_var.get().strip()
-            save_config()
+            save_config(CONFIG)
         else:
             self.manual_entry.config(state=tk.DISABLED)
             self.ip_combo.config(state="readonly")
             CONFIG["manual_ip_enabled"] = False
-            save_config()
+            save_config(CONFIG)
             self.on_ip_selected()
 
     def on_manual_ip_changed(self, *_):
@@ -434,20 +483,20 @@ class AirMouseGUI:
             return
         CONFIG["manual_ip_enabled"] = True
         CONFIG["manual_ip_value"] = manual_ip
-        save_config()
-        self.current_ip_label.config(text=f"Current IP: {manual_ip}:{CONFIG['port']}")
+        save_config(CONFIG)
+        self.current_ip_label.config(text=f"Current IP: {manual_ip}:{CONFIG.get('port', 8080)}")
         self.update_qr_code()
 
     def copy_ip(self):
         ip = self.get_selected_ip()
-        ip_port = f"airmouse://{ip}:{CONFIG['port']}"
+        ip_port = f"airmouse://{ip}:{CONFIG.get('port', 8080)}"
         self.root.clipboard_clear()
         self.root.clipboard_append(ip_port)
         self.log(f"📋 Copied to clipboard: {ip_port}")
 
     def _copy_mdns(self):
         self.root.clipboard_clear()
-        self.root.clipboard_append(f"{CONFIG['mDNS_name']}.local")
+        self.root.clipboard_append(f"{CONFIG.get('mDNS_name', 'airmouse')}.local")
         self.log(f"📋 Copied mDNS hostname to clipboard")
 
     def update_qr_code(self):
@@ -455,9 +504,9 @@ class AirMouseGUI:
         if not ip:
             self.qr_text.config(text="No IP selected")
             return
-        img = self.qr_manager.generate(ip, CONFIG["port"])
+        img = self.qr_manager.generate(ip, CONFIG.get("port", 8080))
         self.qr_label.config(image=img)
-        self.qr_text.config(text=f"airmouse://{ip}:{CONFIG['port']}")
+        self.qr_text.config(text=f"airmouse://{ip}:{CONFIG.get('port', 8080)}")
 
     def update_stats_display(self, stats: Dict):
         self.stats_label.config(text=f"Clicks: {stats['clicks']}  •  Dbl: {stats['double_clicks']}  •  Right: {stats['right_clicks']}  •  Scroll: {stats['scrolls']}")
@@ -468,7 +517,7 @@ class AirMouseGUI:
         CONFIG["sensitivity"] = self.sens_slider.get()
         self.sens_value.config(text=f"{CONFIG['sensitivity']:.2f}")
         self.tcp_server.mouse.sensitivity = CONFIG["sensitivity"]
-        save_config()
+        save_config(CONFIG)
         self.log(f"⚙️ Sensitivity changed to {CONFIG['sensitivity']:.2f}")
         self.status_middle.config(text=f"Sensitivity: {CONFIG['sensitivity']:.2f}")
 
@@ -498,9 +547,9 @@ class AirMouseGUI:
                     writer.close()
                 self.log(f"🔌 Requesting disconnect of {addr_str}")
             else:
-                self.log(f"⚠️ No active writer for {addr_str}")
+                self.log(f"⚠️ No active writer for {addr_str}", "warning")
         except Exception as e:
-            self.log(f"❌ Error disconnecting {addr_str}: {e}")
+            self.log(f"❌ Error disconnecting {addr_str}: {e}", "error")
 
     async def _close_writer(self, writer):
         try:
@@ -510,7 +559,8 @@ class AirMouseGUI:
             pass
 
     def _update_mouse_test(self, dx, dy):
-        pass  # can be implemented with a canvas
+        # Placeholder for mouse test canvas
+        pass
 
     def start_servers(self):
         self.start_btn.config(state=tk.DISABLED)
@@ -523,11 +573,11 @@ class AirMouseGUI:
             asyncio.set_event_loop(self.loop)
             try:
                 ip = self.get_selected_ip()
-                self.mdns_advertiser.start(ip, CONFIG["port"])
+                self.mdns_advertiser.start(ip, CONFIG.get("port", 8080))
                 self.udp_server.start()
                 self.loop.run_until_complete(self.tcp_server.start())
             except OSError as exc:
-                self.log(f"❌ Could not start server: {exc}")
+                self.log(f"Could not start server: {exc}", "error")
                 self.root.after(0, lambda: self.status_label.config(text="Server error"))
                 self.root.after(0, lambda: self.status_pill.config(text="Server error", bg=self.danger))
                 self.root.after(0, lambda: self.start_btn.config(state=tk.NORMAL))
@@ -558,11 +608,22 @@ class AirMouseGUI:
     def _apply_always_on_top(self):
         self.root.attributes("-topmost", CONFIG.get("always_on_top", False))
 
+    def _toggle_always_on_top(self):
+        CONFIG["always_on_top"] = not CONFIG.get("always_on_top", False)
+        save_config(CONFIG)
+        self._apply_always_on_top()
+
     def _update_performance_label(self):
         cpu = self.perf_monitor.cpu_usage
         mem = self.perf_monitor.memory_usage
         self.perf_label.config(text=f"CPU: {cpu:.0f}%  MEM: {mem:.0f}%")
         self.root.after(2000, self._update_performance_label)
+
+    def _init_keyboard_shortcuts(self):
+        self.root.bind_all('<Control-s>', lambda e: self.start_servers())
+        self.root.bind_all('<Control-t>', lambda e: self.stop_servers())
+        self.root.bind_all('<Control-r>', lambda e: self.refresh_ip_list())
+        self.root.bind_all('<Control-q>', lambda e: self._quit_app())
 
     def _on_close(self):
         self.root.withdraw()  # minimize to tray if tray is running
