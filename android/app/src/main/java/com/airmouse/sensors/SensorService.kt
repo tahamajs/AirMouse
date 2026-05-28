@@ -8,13 +8,14 @@ import android.hardware.SensorManager
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Trace
+import com.airmouse.domain.GestureDetector
 import com.airmouse.utils.BatterySaver
 import com.airmouse.utils.PreferencesManager
 
 class SensorService(
     private val context: Context,
     private val calibrationHelper: CalibrationHelper,
-    private val gestureDetector: EnhancedGestureDetector,
+    private val gestureDetector: GestureDetector,
     private val preferences: PreferencesManager,
     private val batterySaver: BatterySaver
 ) : SensorEventListener {
@@ -38,7 +39,7 @@ class SensorService(
     private var lastTimestamp = 0L
 
     private var orientationCallback: ((roll: Float, yaw: Float) -> Unit)? = null
-    private var gestureCallback: ((EnhancedGestureDetector.Gesture) -> Unit)? = null
+    private var gestureCallback: ((GestureDetector.Gesture) -> Unit)? = null
     private var gyroUpdateCallback: ((Float) -> Unit)? = null
     private var accelUpdateCallback: ((Float) -> Unit)? = null
 
@@ -61,6 +62,12 @@ class SensorService(
         sensorManager.registerListener(this, magnetometer, delay, sensorHandler)
         isRunning = true
         lastTimestamp = 0L
+        gestureDetector.reset()
+        gestureDetector.setListener(object : GestureDetector.Listener {
+            override fun onGestureDetected(gesture: GestureDetector.Gesture) {
+                gestureCallback?.invoke(gesture)
+            }
+        })
     }
 
     fun stop() {
@@ -70,6 +77,7 @@ class SensorService(
         sensorThread = null
         sensorHandler = null
         isRunning = false
+        gestureDetector.reset()
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -120,10 +128,7 @@ class SensorService(
 
                     Trace.beginSection("AirMouseGestureDetection")
                     try {
-                        val gesture = gestureDetector.detect(lastGyroY, lastAccelY, roll)
-                        if (gesture != EnhancedGestureDetector.Gesture.NONE) {
-                            gestureCallback?.invoke(gesture)
-                        }
+                        gestureDetector.detect(lastGyroY, lastAccelY, roll)
                     } finally {
                         Trace.endSection()
                     }
@@ -149,7 +154,7 @@ class SensorService(
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
 
     fun setOnOrientationChange(callback: (roll: Float, yaw: Float) -> Unit) { orientationCallback = callback }
-    fun setOnGestureDetected(callback: (EnhancedGestureDetector.Gesture) -> Unit) { gestureCallback = callback }
+    fun setOnGestureDetected(callback: (GestureDetector.Gesture) -> Unit) { gestureCallback = callback }
     fun setOnGyroUpdate(callback: (Float) -> Unit) { gyroUpdateCallback = callback }
     fun setOnAccelUpdate(callback: (Float) -> Unit) { accelUpdateCallback = callback }
 

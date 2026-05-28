@@ -11,6 +11,13 @@
         android:text="@string/discover_servers"
         android:textAppearance="?attr/textAppearanceTitleLarge" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/network_discovery_hint"
+        android:textAppearance="?attr/textAppearanceBodyMedium" />
+
     <Button
         android:id="@+id/scan_network_btn"
         android:layout_width="match_parent"
@@ -23,7 +30,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Not scanned"
+        android:text="@string/network_not_scanned"
         android:gravity="center" />
 
     <ListView

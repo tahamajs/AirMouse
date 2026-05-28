@@ -15,24 +15,29 @@ from dataclasses import dataclass
 from typing import Optional, Dict
 
 # ---------- Configuration ----------
-CONFIG_FILE = "config.json"
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 DEFAULT_CONFIG = {
     "host": "0.0.0.0",
     "port": 8080,
     "discovery_port": 8081,
     "sensitivity": 0.5,
     "log_level": "INFO",
-    "log_file": "airmouse.log"
+    "log_file": "airmouse.log",
+    "selected_ip": ""
 }
 
 def load_config() -> dict:
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    else:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(DEFAULT_CONFIG, f, indent=4)
-        return DEFAULT_CONFIG
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                loaded = json.load(f)
+            return {**DEFAULT_CONFIG, **loaded}
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(DEFAULT_CONFIG, f, indent=4)
+    return DEFAULT_CONFIG.copy()
 
 config = load_config()
 
@@ -88,8 +93,9 @@ class MouseController:
 
 # ---------- UDP Discovery ----------
 class UDPDiscovery:
-    def __init__(self, port: int):
+    def __init__(self, port: int, ip_provider):
         self.port = port
+        self.ip_provider = ip_provider
         self.sock = None
 
     def start(self):
@@ -104,9 +110,13 @@ class UDPDiscovery:
             try:
                 data, addr = self.sock.recvfrom(1024)
                 if data.decode().strip() == "AIRMOUSE_DISCOVER":
-                    resp = json.dumps({"type":"discovery_response","port":config["port"]})
+                    resp = json.dumps({
+                        "type": "discovery_response",
+                        "port": config["port"],
+                        "ip": self.ip_provider()
+                    })
                     self.sock.sendto(resp.encode(), addr)
-                    logger.info(f"Discovery response sent to {addr[0]}")
+                    logger.info(f"Discovery response sent to {addr[0]} ({self.ip_provider()}:{config['port']})")
             except:
                 break
 
@@ -120,7 +130,20 @@ class AirMouseServer:
         self.host = config["host"]
         self.port = config["port"]
         self.mouse = MouseController()
-        self.udp = UDPDiscovery(config["discovery_port"])
+        self.udp = UDPDiscovery(config["discovery_port"], self.get_discovery_ip)
+
+    def get_discovery_ip(self) -> str:
+        configured = config.get("selected_ip", "").strip()
+        if configured:
+            return configured
+        try:
+            probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            probe.connect(("8.8.8.8", 80))
+            ip = probe.getsockname()[0]
+            probe.close()
+            return ip
+        except Exception:
+            return "127.0.0.1"
 
     async def handle_client(self, reader, writer):
         addr = writer.get_extra_info('peername')
