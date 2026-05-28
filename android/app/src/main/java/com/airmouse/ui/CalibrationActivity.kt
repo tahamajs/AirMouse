@@ -124,3 +124,56 @@ class CalibrationActivity : AppCompatActivity() {
         super.onDestroy()
     }
 }
+
+
+private fun updateOverallProgress() {
+    // Each step contributes 100/totalSteps percent
+    val progress = (currentStep + 1) * 100 / totalSteps
+    findViewById<ProgressBar>(R.id.overallProgress).progress = progress
+}
+
+
+val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+
+
+// In onCreate, get references
+private lateinit var overallProgress: ProgressBar
+
+overallProgress = findViewById(R.id.overallProgress)
+
+fun onStepComplete() {
+    nextBtn.isEnabled = true
+    updateOverallProgress()
+    // Vibrate
+    val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    if (vibrator.hasVibrator()) {
+        vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+    }
+}
+
+private fun updateOverallProgress() {
+    val progress = (currentStep + 1) * 100 / totalSteps
+    overallProgress.progress = progress
+}
+
+
+// In onCreate, get references
+private lateinit var overallProgress: ProgressBar
+
+overallProgress = findViewById(R.id.overallProgress)
+
+fun onStepComplete() {
+    nextBtn.isEnabled = true
+    updateOverallProgress()
+    // Vibrate
+    val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    if (vibrator.hasVibrator()) {
+        vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+    }
+}
+
+private fun updateOverallProgress() {
+    val progress = (currentStep + 1) * 100 / totalSteps
+    overallProgress.progress = progress
+}

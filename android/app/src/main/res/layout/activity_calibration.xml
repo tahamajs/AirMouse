@@ -1,0 +1,26 @@
+<ProgressBar
+    android:id="@+id/overallProgress"
+    style="?android:attr/progressBarStyleHorizontal"
+    android:layout_width="match_parent"
+    android:layout_height="6dp"
+    android:max="100"
+    android:progress="0"
+    android:progressTint="#007acc"
+    android:backgroundTint="#2b3341"/>
+
+
+    <LinearLayout ...>
+    <ProgressBar
+        android:id="@+id/overallProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="#007acc"
+        android:backgroundTint="#2b3341"/>
+
+    <androidx.viewpager2.widget.ViewPager2 ... />
+
+    <!-- bottom control bar unchanged -->
+</LinearLayout>

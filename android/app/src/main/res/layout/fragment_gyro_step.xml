@@ -16,3 +16,15 @@
     <Button android:id="@+id/startBtn" android:text="Start"
         android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
+
+
+
+<LinearLayout ...>
+    <ImageView
+        android:id="@+id/phoneImage"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:src="@drawable/ic_phone"
+        android:layout_marginBottom="24dp"/>
+    <!-- ... other views -->
+</LinearLayout>

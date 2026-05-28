@@ -12,3 +12,7 @@
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent" android:layout_height="wrap_content" android:max="200"/>
 </LinearLayout>
+<com.airmouse.calibration.MagAnimationView
+    android:layout_width="200dp"
+    android:layout_height="200dp"
+    android:layout_marginBottom="16dp"/>

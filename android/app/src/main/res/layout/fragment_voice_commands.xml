@@ -84,3 +84,18 @@
 
     </LinearLayout>
 </ScrollView>
+
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0f1115"
+    android:gravity="center"
+    android:orientation="vertical">
+
+    <TextView
+        android:text="Voice Command (Coming Soon)"
+        android:textColor="#96a0ae"
+        android:textSize="18sp"/>
+</LinearLayout>
