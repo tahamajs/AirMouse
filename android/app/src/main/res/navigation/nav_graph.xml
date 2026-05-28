@@ -16,4 +16,8 @@
         android:id="@+id/helpFragment"
         android:name="com.airmouse.HelpFragment"
         android:label="@string/help" />
+    <fragment
+        android:id="@+id/calibrationFragment"
+        android:name="com.airmouse.ui.CalibrationFragment"
+        android:label="@string/calibration_title" />
 </navigation>

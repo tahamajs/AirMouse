@@ -2,8 +2,9 @@
     "host": "0.0.0.0",
     "port": 8080,
     "discovery_port": 8081,
-    "sensitivity": 0.5,
+    "sensitivity": 0.9,
+    "accent_color": "#007acc",
+    "selected_ip": "192.168.1.106",
     "log_level": "INFO",
-    "log_file": "airmouse.log",
-    "accent_color": "#007acc"
+    "log_file": "airmouse.log"
 }
