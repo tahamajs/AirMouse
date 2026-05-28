@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.airmouse">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -25,7 +24,7 @@
 
         <!-- Onboarding (launcher) -->
         <activity
-            android:name=".onboarding.OnboardingActivity"
+            android:name=".ui.onboarding.OnboardingActivity"
             android:exported="true"
             android:theme="@style/Theme.AirMouse.Splash">
             <intent-filter>
@@ -43,7 +42,7 @@
 
 
         <service
-            android:name=".ui.DebugOverlayService"
+            android:name=".DebugOverlayService"
             android:exported="false" />
 
         <meta-data
