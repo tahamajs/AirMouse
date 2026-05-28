@@ -76,7 +76,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Step 1"
+                        android:text="@string/calibration_step1_title"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                 <TextView
@@ -102,7 +102,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Step 2"
+                        android:text="@string/calibration_step2_title"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                 <TextView
@@ -128,7 +128,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Step 3"
+                        android:text="@string/calibration_step3_title"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                 <TextView

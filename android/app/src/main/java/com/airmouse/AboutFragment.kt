@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.airmouse.BuildConfig
 
 class AboutFragment : Fragment() {
     override fun onCreateView(
@@ -18,7 +19,6 @@ class AboutFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val versionText = view.findViewById<TextView>(R.id.version_text)
-        // Using a default version if BuildConfig is not yet generated
-        versionText?.text = getString(R.string.version_format, "3.0.0")
+        versionText?.text = getString(R.string.version_format, BuildConfig.VERSION_NAME)
     }
 }

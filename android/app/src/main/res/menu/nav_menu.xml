@@ -13,6 +13,10 @@
             android:id="@+id/helpFragment"
             android:icon="@drawable/ic_help"
             android:title="@string/help" />
+            <item
+                android:id="@+id/calibrationFragment"
+                android:icon="@drawable/ic_calibrate"
+                android:title="@string/calibration_title" />
     </group>
 
     <group android:title="@string/advanced">

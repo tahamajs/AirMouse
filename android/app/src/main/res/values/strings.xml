@@ -77,6 +77,9 @@
     <string name="calibration_action_start">Start Guided Calibration</string>
     <string name="calibration_action_skip_mag">Skip Magnetometer</string>
     <string name="calibration_action_reset">Reset Status</string>
+    <string name="calibration_step1_title">Step 1: Gyroscope</string>
+    <string name="calibration_step2_title">Step 2: Magnetometer</string>
+    <string name="calibration_step3_title">Step 3: Accelerometer</string>
     <string name="stop_before_calibration">Stop Air Mouse before calibrating.</string>
     <string name="calibration_open_failed">Could not open the calibration screen.</string>
     <string name="calibration_status_idle">Ready to begin calibration</string>
@@ -158,66 +161,73 @@
     <string name="license_title">License</string>
     <string name="help_content">
         <![CDATA[
+        <b>Quick Start</b><br/><br/>
+        1. Install and run the Air Mouse server on your PC.<br/>
+        2. Make sure both devices are connected to the same Wi‑Fi network.<br/>
+        3. Enter the PC IP address or scan the QR code from the server.<br/>
+        4. Calibrate the sensors before the first session.<br/>
+        5. Tap <b>Start Air Mouse</b> and adjust sensitivity if needed.<br/><br/>
         <b>Air Mouse Controls</b><br/><br/>
-        • <b>Move cursor</b>: Rotate phone around Z axis (horizontal) and X axis (vertical).<br/>
-        • <b>Left click</b>: Quick rotation around Y axis (leftwards).<br/>
-        • <b>Right click</b>: Tilt phone right (configurable in Settings).<br/>
-        • <b>Double click</b>: Two quick Y‑axis rotations.<br/>
-        • <b>Scroll up/down</b>: Fast linear movement along Y axis (up/down).<br/><br/>
-        <b>Tips</b><br/>
-        • Calibrate sensors before first use.<br/>
-        • Keep phone parallel to table, screen perpendicular to keyboard.<br/>
-        • Use sensitivity slider to adjust cursor speed.<br/>
-        • You can scan a QR code from your PC to auto‑fill the IP address.
+        • <b>Move cursor</b>: Rotate the phone smoothly to move the pointer.<br/>
+        • <b>Left click</b>: Perform a short quick flick gesture.<br/>
+        • <b>Right click</b>: Tilt the phone to the configured right-click angle.<br/>
+        • <b>Double click</b>: Perform two quick click gestures in succession.<br/>
+        • <b>Scroll up/down</b>: Move the phone vertically with a faster, shorter motion.<br/><br/>
+        <b>Practical Tips</b><br/>
+        • Keep the phone steady during calibration and while not actively moving the cursor.<br/>
+        • Start with medium sensitivity, then increase it only if the pointer feels slow.<br/>
+        • If gestures feel delayed, check Wi‑Fi quality and keep the phone close to the PC.<br/>
+        • Use the drawer to open calibration, statistics, logs, and the advanced tools.
         ]]>
     </string>
     <string name="calibration_guide_content">
         <![CDATA[
-        <b>How to Calibrate Sensors</b><br/><br/>
+        <b>Why Calibration Matters</b><br/><br/>
+        Calibration removes sensor drift and makes cursor movement, clicks, and scrolling more reliable.<br/><br/>
         <b>1. Gyroscope Calibration</b><br/>
-        Place phone on a flat, still surface. Tap "Calibrate" and wait 5 seconds.<br/><br/>
+        Place the phone flat on a stable table and do not touch it while the app measures the bias offset.<br/><br/>
         <b>2. Magnetometer Calibration</b><br/>
-        Move phone in a figure‑8 pattern for 15 seconds. This improves orientation stability.<br/><br/>
+        Slowly move the phone through a wide figure‑8 pattern so it can sample the surrounding magnetic field from multiple angles.<br/><br/>
         <b>3. Accelerometer Calibration</b><br/>
-        Keep phone still on a flat surface. The app will measure gravity vector.<br/><br/>
+        Put the phone flat again and keep it still so the app can capture the gravity reference used for motion detection.<br/><br/>
         <b>4. Completion</b><br/>
-        After calibration, the app will show "Sensors Ready". You\'re good to go!
+        When the progress bar reaches 100%, return to the Home screen and press Start. If the room has strong magnetic noise, repeat calibration once more.
         ]]>
     </string>
     <string name="sensor_info_content">
         <![CDATA[
         <b>Device Sensors Used</b><br/><br/>
-        • <b>Gyroscope (3‑axis)</b>: Measures angular velocity (rad/s). Used for cursor movement and click detection.<br/>
-        • <b>Accelerometer (3‑axis)</b>: Measures linear acceleration (m/s²). Used for scroll detection and gravity reference.<br/>
-        • <b>Magnetometer (3‑axis)</b>: Measures magnetic field (µT). Used for drift correction (optional).<br/><br/>
+        • <b>Gyroscope (3‑axis)</b>: Tracks angular velocity and powers the cursor movement and click gestures.<br/>
+        • <b>Accelerometer (3‑axis)</b>: Detects linear motion, gravity direction, and scroll gestures.<br/>
+        • <b>Magnetometer (3‑axis)</b>: Improves heading stability and reduces long-term drift when available.<br/><br/>
+        <b>How the app uses them</b><br/>
+        The app combines sensor streams with a Madgwick filter and gesture detectors so the cursor remains responsive while still filtering noise and tremor.<br/><br/>
         <b>Missing sensors?</b><br/>
-        If any sensor is missing, the app will still work with reduced functionality (e.g., no magnetometer).<br/><br/>
-        <b>Sensor fusion</b><br/>
-        We use a Madgwick filter to combine gyroscope, accelerometer and magnetometer data for accurate orientation.
+        The app keeps working even if a sensor is not available, but some features will be simplified or disabled to preserve stability.
         ]]>
     </string>
     <string name="connection_guide_content">
         <![CDATA[
         <b>How to Connect to PC</b><br/><br/>
         <b>1. On your PC</b><br/>
-        - Download and run the Air Mouse server application (provided separately).<br/>
-        - Note the PC\'s IP address (e.g., 192.168.1.100).<br/><br/>
+        • Start the Air Mouse server application.<br/>
+        • Keep the server window open so it can accept connections.<br/>
+        • Copy the local IP address shown by the server or encode it in the QR code.<br/><br/>
         <b>2. On your phone</b><br/>
-        - Connect to the same Wi‑Fi network.<br/>
-        - Enter the PC\'s IP address in the text field, or tap the QR button to scan a QR code from the PC.<br/>
-        - Tap "Start Air Mouse".<br/><br/>
+        • Connect to the same Wi‑Fi network as the PC.<br/>
+        • Enter the IP address manually or use the QR scanner to fill it automatically.<br/>
+        • Tap <b>Start Air Mouse</b> after calibration is complete.<br/><br/>
         <b>Troubleshooting</b><br/>
-        • Ensure no firewall is blocking port 8080.<br/>
-        • Try pinging the PC from the phone.<br/>
-        • Check that both devices are on the same subnet.<br/>
-        • If using a VPN, disable it temporarily.
+        • Verify that firewall rules allow the server port used by the desktop app.<br/>
+        • Make sure both devices are on the same subnet and that VPN is disabled while testing.<br/>
+        • If the connection fails, re-check the IP address and restart the server once.
         ]]>
     </string>
     <string name="about_content">
         <![CDATA[
         <b>Air Mouse Pro</b><br/>
         Version %s<br/><br/>
-        Turn your Android phone into a wireless air mouse using motion sensors.<br/><br/>
+        Turn your Android phone into a wireless air mouse using motion sensors, gesture recognition, and guided setup screens that are built for a complete end-to-end experience.<br/><br/>
         <b>Developed by:</b> Arian Firoozi, Arsalan Talaee<br/>
         <b>Instructors:</b> Dr. Mohsen Shokri, Dr. Mehdi Kargahi<br/>
         <b>University of Tehran</b><br/>
@@ -240,6 +250,8 @@
     <string name="listen_command">Listen for command</string>
     <string name="voice_ready">Tap the button and speak a command</string>
     <string name="available_commands">Available commands</string>
+    <string name="voice_commands_hint">Speak one of the supported actions below, then review the result before sending another command.</string>
+    <string name="available_commands_list">• click\n• double click\n• right click\n• scroll up\n• scroll down\n• calibrate\n• start\n• stop</string>
     <string name="voice_prompt">Say a command</string>
     <string name="command_recognized">Command: %s</string>
     <string name="voice_no_match">No command recognized</string>
@@ -282,6 +294,7 @@
     <string name="version_format">Version %s</string>
     <string name="about_description_title">What is Air Mouse Pro?</string>
     <string name="about_description_text">Air Mouse Pro turns your phone into a wireless air mouse. Use natural hand movements to control your PC cursor, click, scroll, and more – no physical mouse needed.</string>
+    <string name="about_version_label">App Version</string>
     <string name="about_credits">Credits</string>
     <string name="about_developers">Developed by: Arian Firoozi, Arsalan Talaee</string>
     <string name="about_instructors">Instructors: Dr. Mohsen Shokri, Dr. Mehdi Kargahi</string>

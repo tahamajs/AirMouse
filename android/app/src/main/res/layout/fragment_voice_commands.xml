@@ -28,6 +28,13 @@
                     android:text="@string/voice_commands"
                     android:textAppearance="?attr/textAppearanceTitleLarge" />
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/voice_commands_hint"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/voice_listen_btn"
                     android:layout_width="match_parent"
@@ -69,7 +76,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="• click\n• double click\n• right click\n• scroll up\n• scroll down\n• calibrate\n• start\n• stop"
+                    android:text="@string/available_commands_list"
                     android:textAppearance="?attr/textAppearanceBodyMedium" />
 
             </LinearLayout>
