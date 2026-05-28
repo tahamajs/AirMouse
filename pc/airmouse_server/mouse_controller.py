@@ -5,7 +5,7 @@ from .config import CONFIG
 
 @dataclass
 class MouseController:
-    sensitivity: float = CONFIG["sensitivity"]
+    sensitivity: float = CONFIG.get("sensitivity", 0.5)
     click_count: int = 0
     double_click_count: int = 0
     right_click_count: int = 0
