@@ -169,8 +169,7 @@
     <string name="calibration_status_mag">Calibrating magnetometer…</string>
     <string name="calibration_status_accel">Calibrating accelerometer…</string>
     <string name="calibration_status_done">Calibration complete</string>
-    ...
-    <string name="help_content">
+...    <string name="help_content">
         <![CDATA[
         <b>Quick Start</b><br/><br/>
         1. Install and run the Air Mouse server on your PC.<br/>

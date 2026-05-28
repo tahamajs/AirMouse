@@ -302,3 +302,28 @@ fun sendHello(deviceName: String) {
     writer?.print(msg)
     writer?.flush()
 }
+val connectionLiveData = MutableLiveData(false)
+
+
+Add a MutableLiveData:
+
+kotlin
+val connectionLiveData = MutableLiveData(false)
+Inside start():
+
+kotlin
+isConnected = true
+connectionLiveData.postValue(true)
+Inside disconnect():
+
+kotlin
+isConnected = false
+connectionLiveData.postValue(false)
+Add method:
+
+kotlin
+fun sendHello(deviceName: String) {
+    val msg = "{\"type\":\"hello\",\"name\":\"$deviceName\"}\n"
+    writer?.print(msg)
+    writer?.flush()
+}
