@@ -137,8 +137,8 @@ class HomeFragment : Fragment() {
 
     private fun setupQRScanner() {
         qrScanner.onScanResult = { scannedData ->
-            val ip = scannedData.split(":").lastOrNull() ?: scannedData
-            if (ValidationUtils.isValidIp(ip)) {
+            val ip = ValidationUtils.extractIpAddress(scannedData)
+            if (ip != null) {
                 ipEditText.setText(ip)
                 Toast.makeText(requireContext(), getString(R.string.qr_scan_success, ip), Toast.LENGTH_SHORT).show()
             } else {
