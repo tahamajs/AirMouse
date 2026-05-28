@@ -6,6 +6,7 @@ import asyncio
 import socket
 import os
 import json
+import time
 from typing import List, Dict, Optional
 import netifaces
 from PIL import Image
@@ -49,7 +50,7 @@ class AirMouseGUI:
         self.tcp_server = AirMouseTCPServer(
             self.log, self.update_stats_display,
             connections_callback=self._update_connection_list,
-            move_callback=self._update_mouse_test
+            move_callback=None
         )
         self.udp_server = UDPDiscoveryServer(self.log, ip_provider=self.get_selected_ip)
         self.mdns_advertiser = MDNSAdvertiser(self.log)
@@ -64,6 +65,7 @@ class AirMouseGUI:
         self.perf_monitor.start()
         self._update_performance_label()
         self._init_keyboard_shortcuts()
+        self._load_connection_history()
 
     # ---------- Style & Helpers ----------
     def _setup_styles(self):
@@ -133,6 +135,7 @@ class AirMouseGUI:
         menubar.add_cascade(label="View", menu=viewmenu)
 
         helpmenu = tk.Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="Connection Wizard", command=self._show_connection_wizard)
         helpmenu.add_command(label="About", command=self._show_about)
         menubar.add_cascade(label="Help", menu=helpmenu)
         self.root.config(menu=menubar)
@@ -224,6 +227,7 @@ class AirMouseGUI:
         self.ip_combo = ttk.Combobox(selection_row, textvariable=self.ip_var, state="readonly", width=34, style="Dark.TCombobox")
         self.ip_combo.pack(fill=tk.X, pady=(6,8))
         self.ip_combo.bind("<<ComboboxSelected>>", self.on_ip_selected)
+        self.ip_combo.bind("<Button-1>", self._copy_ip_to_clipboard)  # auto-copy on click
         action_row = tk.Frame(body, bg=self.card_bg)
         action_row.pack(fill=tk.X, pady=(6,0))
         self.refresh_btn = ttk.Button(action_row, text="Refresh", command=self.refresh_ip_list, style="Accent.TButton")
@@ -301,32 +305,43 @@ class AirMouseGUI:
     def build_log_card(self, parent):
         card, body = self._card(parent, "Live Log", "Connections, gestures, discovery responses, and errors")
         card.grid(row=0, column=0, sticky="nsew")
-        body.rowconfigure(0, weight=1)
+        # Configure body for grid
+        body.rowconfigure(0, weight=0)  # toolbar row
+        body.rowconfigure(1, weight=1)  # log area row
         body.columnconfigure(0, weight=1)
 
-        # Log toolbar: search, filters, export
+        # Log toolbar: search, filters, export (using grid)
         toolbar = tk.Frame(body, bg=self.card_bg)
-        toolbar.pack(fill=tk.X, pady=(0,6))
-        ttk.Label(toolbar, text="Filter:", style="Hint.TLabel").pack(side=tk.LEFT, padx=(0,4))
+        toolbar.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        toolbar.columnconfigure(1, weight=1)  # search entry expands
+
+        ttk.Label(toolbar, text="Filter:", style="Hint.TLabel").grid(row=0, column=0, padx=(0, 4))
         self.log_filter_var = tk.StringVar(value="")
-        self.log_search_entry = tk.Entry(toolbar, textvariable=self.log_filter_var, bg=self.surface_alt, fg=self.fg_color, insertbackground=self.fg_color, relief=tk.FLAT)
-        self.log_search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=4)
+        self.log_search_entry = tk.Entry(toolbar, textvariable=self.log_filter_var, bg=self.surface_alt,
+                                        fg=self.fg_color, insertbackground=self.fg_color, relief=tk.FLAT)
+        self.log_search_entry.grid(row=0, column=1, sticky="ew", padx=4)
         self.log_search_entry.bind("<KeyRelease>", self._apply_log_filter)
 
         self.log_info_var = tk.BooleanVar(value=True)
         self.log_warn_var = tk.BooleanVar(value=True)
         self.log_error_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(toolbar, text="Info", variable=self.log_info_var, command=self._apply_log_filter).pack(side=tk.LEFT, padx=2)
-        ttk.Checkbutton(toolbar, text="Warn", variable=self.log_warn_var, command=self._apply_log_filter).pack(side=tk.LEFT, padx=2)
-        ttk.Checkbutton(toolbar, text="Error", variable=self.log_error_var, command=self._apply_log_filter).pack(side=tk.LEFT, padx=2)
+        ttk.Checkbutton(toolbar, text="Info", variable=self.log_info_var,
+                        command=self._apply_log_filter).grid(row=0, column=2, padx=2)
+        ttk.Checkbutton(toolbar, text="Warn", variable=self.log_warn_var,
+                        command=self._apply_log_filter).grid(row=0, column=3, padx=2)
+        ttk.Checkbutton(toolbar, text="Error", variable=self.log_error_var,
+                        command=self._apply_log_filter).grid(row=0, column=4, padx=2)
 
-        ttk.Button(toolbar, text="Export Log", command=self._export_log, style="Accent.TButton").pack(side=tk.RIGHT, padx=2)
+        ttk.Button(toolbar, text="Export Log", command=self._export_log,
+                style="Accent.TButton").grid(row=0, column=5, padx=2)
 
-        self.log_area = scrolledtext.ScrolledText(body, height=18, bg=self.log_bg, fg=self.fg_color,
-                                                  insertbackground=self.fg_color, font=("SF Mono", 10),
-                                                  relief=tk.FLAT, wrap=tk.WORD, padx=12, pady=12)
+        # Log text area (using grid)
+        self.log_area = scrolledtext.ScrolledText(
+            body, height=18, bg=self.log_bg, fg=self.fg_color,
+            insertbackground=self.fg_color, font=("SF Mono", 10),
+            relief=tk.FLAT, wrap=tk.WORD, padx=12, pady=12
+        )
         self.log_area.grid(row=1, column=0, sticky="nsew")
-        # Store raw log lines for filtering
         self.log_lines = []
 
     def build_diagnostics_card(self, parent):
@@ -340,9 +355,13 @@ class AirMouseGUI:
         self.qr_hint_label.pack(side=tk.RIGHT)
         live_summary = tk.Frame(body, bg=self.card_bg)
         live_summary.pack(fill=tk.X, pady=(12,0))
-        ttk.Label(live_summary, text="Compatibility", style="Hint.TLabel").pack(anchor="w")
-        ttk.Label(live_summary, text="Works best on the same Wi-Fi network with Android 10+ and cleartext traffic enabled.",
-                  style="Hint.TLabel", wraplength=500).pack(anchor="w", pady=(4,0))
+        ttk.Label(live_summary, text="Connection Options", style="Section.TLabel").pack(anchor="w")
+        # Future transports: Bluetooth, USB
+        btn_frame = tk.Frame(live_summary, bg=self.card_bg)
+        btn_frame.pack(fill=tk.X, pady=(4,0))
+        ttk.Button(btn_frame, text="Wi-Fi (TCP)", command=lambda: None, state="disabled").pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="Bluetooth (coming soon)", command=lambda: messagebox.showinfo("Bluetooth", "Bluetooth support is planned for a future update.")).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="USB (ADB reverse)", command=lambda: messagebox.showinfo("USB", "Use 'adb reverse tcp:8080 tcp:8080' then connect to 127.0.0.1:8080 on phone.")).pack(side=tk.LEFT, padx=2)
 
     # ---------- Helper methods for UI actions ----------
     def log(self, msg: str, level: str = "info"):
@@ -405,6 +424,19 @@ class AirMouseGUI:
     def _show_about(self):
         messagebox.showinfo("About Air Mouse", "Air Mouse Server\n\nProfessional desktop companion for the Air Mouse Android app.\nUniversity of Tehran — Embedded Systems")
 
+    def _show_connection_wizard(self):
+        wizard_text = (
+            "=== Connection Wizard ===\n\n"
+            "1. Ensure your PC and Android phone are on the same Wi-Fi network.\n"
+            "2. Select the correct network interface (IP) from the dropdown, or scan the QR code.\n"
+            "3. Click 'Start Server'.\n"
+            "4. On the Android app, either:\n"
+            "   - Scan the QR code, or\n"
+            "   - Enter the IP:Port manually, or\n"
+            "   - Use mDNS: {}.local:{}".format(CONFIG.get("mDNS_name", "airmouse"), CONFIG.get("port", 8080))
+        )
+        messagebox.showinfo("Connection Wizard", wizard_text)
+
     def get_all_ips(self) -> List[str]:
         ips = []
         try:
@@ -459,6 +491,15 @@ class AirMouseGUI:
         save_config(CONFIG)
         self.current_ip_label.config(text=f"Current IP: {sel}:{CONFIG.get('port', 8080)}")
         self.update_qr_code()
+        # Auto-copy to clipboard for convenience
+        self._copy_ip_to_clipboard()
+
+    def _copy_ip_to_clipboard(self, event=None):
+        ip = self.get_selected_ip()
+        ip_port = f"airmouse://{ip}:{CONFIG.get('port', 8080)}"
+        self.root.clipboard_clear()
+        self.root.clipboard_append(ip_port)
+        self.log(f"📋 Copied to clipboard: {ip_port}")
 
     def toggle_manual_ip(self):
         if self.manual_check.get():
@@ -488,11 +529,7 @@ class AirMouseGUI:
         self.update_qr_code()
 
     def copy_ip(self):
-        ip = self.get_selected_ip()
-        ip_port = f"airmouse://{ip}:{CONFIG.get('port', 8080)}"
-        self.root.clipboard_clear()
-        self.root.clipboard_append(ip_port)
-        self.log(f"📋 Copied to clipboard: {ip_port}")
+        self._copy_ip_to_clipboard()
 
     def _copy_mdns(self):
         self.root.clipboard_clear()
@@ -525,7 +562,8 @@ class AirMouseGUI:
         def _update():
             self.conn_listbox.delete(0, tk.END)
             for addr in addresses:
-                self.conn_listbox.insert(tk.END, addr)
+                # Add client details: uptime, latency placeholder
+                self.conn_listbox.insert(tk.END, f"{addr} (connected)")
             self.disconnect_btn['state'] = tk.NORMAL if self.conn_listbox.size() > 0 else tk.DISABLED
         self.root.after(0, _update)
 
@@ -535,8 +573,10 @@ class AirMouseGUI:
             messagebox.showinfo("Disconnect", "No client selected.")
             return
         addr_str = self.conn_listbox.get(selection[0])
+        # Extract IP:Port from the string (remove extra details)
+        ip_port = addr_str.split(' ')[0]
         try:
-            ip, port_str = addr_str.rsplit(":", 1)
+            ip, port_str = ip_port.rsplit(":", 1)
             port = int(port_str)
             addr = (ip, port)
             writer = self.tcp_server.active_connections.get(addr, {}).get('writer')
@@ -545,9 +585,9 @@ class AirMouseGUI:
                     asyncio.run_coroutine_threadsafe(self._close_writer(writer), self.loop)
                 else:
                     writer.close()
-                self.log(f"🔌 Requesting disconnect of {addr_str}")
+                self.log(f"🔌 Requesting disconnect of {ip_port}")
             else:
-                self.log(f"⚠️ No active writer for {addr_str}", "warning")
+                self.log(f"⚠️ No active writer for {ip_port}", "warning")
         except Exception as e:
             self.log(f"❌ Error disconnecting {addr_str}: {e}", "error")
 
@@ -557,10 +597,6 @@ class AirMouseGUI:
             await writer.wait_closed()
         except Exception:
             pass
-
-    def _update_mouse_test(self, dx, dy):
-        # Placeholder for mouse test canvas
-        pass
 
     def start_servers(self):
         self.start_btn.config(state=tk.DISABLED)
@@ -591,6 +627,8 @@ class AirMouseGUI:
         self.log("🚀 Servers started (TCP + UDP + mDNS)")
         self.tray.update_status(True)
         self.status_left.config(text="Server running")
+        # Notify sound (simple bell)
+        self.root.bell()
 
     def stop_servers(self):
         if self.loop:
@@ -604,6 +642,7 @@ class AirMouseGUI:
         self.log("🛑 Servers stopped")
         self.tray.update_status(False)
         self.status_left.config(text="Server stopped")
+        self.root.bell()
 
     def _apply_always_on_top(self):
         self.root.attributes("-topmost", CONFIG.get("always_on_top", False))
@@ -624,6 +663,10 @@ class AirMouseGUI:
         self.root.bind_all('<Control-t>', lambda e: self.stop_servers())
         self.root.bind_all('<Control-r>', lambda e: self.refresh_ip_list())
         self.root.bind_all('<Control-q>', lambda e: self._quit_app())
+
+    def _load_connection_history(self):
+        # Could be extended to remember last connected clients
+        pass
 
     def _on_close(self):
         self.root.withdraw()  # minimize to tray if tray is running
