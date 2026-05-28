@@ -7,6 +7,13 @@
     "selected_ip": "192.168.1.106",
     "manual_ip_enabled": false,
     "manual_ip_value": "",
+    "mDNS_name": "airmouse",
+    "always_on_top": false,
+    "log_filters": {
+        "info": true,
+        "warning": true,
+        "error": true
+    },
     "log_level": "INFO",
     "log_file": "airmouse.log"
 }
