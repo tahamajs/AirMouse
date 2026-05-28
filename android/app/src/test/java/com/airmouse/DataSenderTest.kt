@@ -1,7 +1,7 @@
 package com.airmouse
 
 import com.airmouse.network.DataSender
-import com.airmouse.utils.PreferencesManager
+import com.airmouse.network.ConnectionStore
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -9,7 +9,7 @@ import org.mockito.kotlin.mock
 
 class DataSenderTest {
 
-    private val mockPrefs: PreferencesManager = mock()
+    private val mockPrefs: ConnectionStore = mock()
     private val sender = DataSender("127.0.0.1", 8080, mockPrefs)
 
     @Test

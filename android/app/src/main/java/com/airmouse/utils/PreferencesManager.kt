@@ -2,6 +2,7 @@ package com.airmouse.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.airmouse.network.ConnectionStore
 import org.json.JSONObject
 
 /**
@@ -9,7 +10,7 @@ import org.json.JSONObject
  * Stores user settings, calibration data, gesture counts, profiles, themes, and more.
  * All methods are synchronous and work with SharedPreferences.
  */
-class PreferencesManager(context: Context) {
+class PreferencesManager(context: Context) : ConnectionStore {
     private val prefs: SharedPreferences = context.getSharedPreferences("airmouse", Context.MODE_PRIVATE)
 
     fun saveAccelerometerParams(offset: FloatArray, scale: FloatArray) {
@@ -42,11 +43,11 @@ class PreferencesManager(context: Context) {
     fun isHapticEnabled(): Boolean = prefs.getBoolean("haptic_enabled", true)
     fun setHapticEnabled(enabled: Boolean) = prefs.edit().putBoolean("haptic_enabled", enabled).apply()
 
-    fun getLastIp(): String = prefs.getString("last_ip", "") ?: ""
-    fun setLastIp(ip: String) = prefs.edit().putString("last_ip", ip).apply()
+    override fun getLastIp(): String = prefs.getString("last_ip", "") ?: ""
+    override fun setLastIp(ip: String) = prefs.edit().putString("last_ip", ip).apply()
 
-    fun getLastPort(): Int = prefs.getInt("last_port", 8080)
-    fun setLastPort(port: Int) = prefs.edit().putInt("last_port", port.coerceIn(1, 65535)).apply()
+    override fun getLastPort(): Int = prefs.getInt("last_port", 8080)
+    override fun setLastPort(port: Int) = prefs.edit().putInt("last_port", port.coerceIn(1, 65535)).apply()
 
     // ----------------------------------------------------------------------
     // Calibration data
