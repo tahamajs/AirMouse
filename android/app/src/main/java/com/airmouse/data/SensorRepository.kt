@@ -55,16 +55,15 @@ class SensorRepository(context: Context) {
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
-                val now = System.currentTimeMillis()
-                val dt = if (lastTimestamp == 0L) 0.01f else (now - lastTimestamp) / 1000f
-                lastTimestamp = now
+                val dt = if (lastTimestamp == 0L) 0.01f else (event.timestamp - lastTimestamp) * 1e-9f
+                lastTimestamp = event.timestamp
 
                 when (event.sensor.type) {
                     Sensor.TYPE_ACCELEROMETER -> {
                         val (ax, ay, az) = calibrationHelper.correctAccelerometer(
                             event.values[0], event.values[1], event.values[2]
                         )
-                        madgwick.updateAccel(ax, ay, az)
+                        madgwick.updateAccel(ax, ay, az, dt)
                         lastAccelY = ay
                     }
                     Sensor.TYPE_GYROSCOPE -> {
@@ -84,7 +83,7 @@ class SensorRepository(context: Context) {
                         val (mx, my, mz) = calibrationHelper.correctMagnetometer(
                             event.values[0], event.values[1], event.values[2]
                         )
-                        madgwick.updateMag(mx, my, mz)
+                        madgwick.updateMag(mx, my, mz, dt)
                     }
                 }
                 // Emit after each complete sensor cycle? Emit after gyro (most frequent).

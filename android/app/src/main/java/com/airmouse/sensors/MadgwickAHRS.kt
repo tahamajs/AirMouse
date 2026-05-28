@@ -53,7 +53,7 @@ class MadgwickAHRS(beta: Float = 0.1f) {
      * @param ay accelerometer y-axis (m/s²)
      * @param az accelerometer z-axis (m/s²)
      */
-    fun updateAccel(ax: Float, ay: Float, az: Float) {
+    fun updateAccel(ax: Float, ay: Float, az: Float, dt: Float) {
         val q0 = quaternion[0]
         val q1 = quaternion[1]
         val q2 = quaternion[2]
@@ -82,13 +82,11 @@ class MadgwickAHRS(beta: Float = 0.1f) {
         val q2Dot = -beta * 2f * ez
         val q3Dot = 0f  // Not used in this simplified accelerometer-only correction
 
-        // Integrate (no dt here – this correction is added to the gyro-driven update elsewhere)
-        // This method is typically called together with updateGyro. For simplicity,
-        // we store the correction to be applied later. Here we directly adjust quaternion.
-        quaternion[0] += q0Dot * 0.01f  // small step, assumes dt is handled externally
-        quaternion[1] += q1Dot * 0.01f
-        quaternion[2] += q2Dot * 0.01f
-        quaternion[3] += q3Dot * 0.01f
+        val step = if (dt > 0f) dt else 0.01f
+        quaternion[0] += q0Dot * step
+        quaternion[1] += q1Dot * step
+        quaternion[2] += q2Dot * step
+        quaternion[3] += q3Dot * step
 
         normalizeQuaternion()
     }
@@ -99,7 +97,7 @@ class MadgwickAHRS(beta: Float = 0.1f) {
      * @param my magnetometer y-axis (µT)
      * @param mz magnetometer z-axis (µT)
      */
-    fun updateMag(mx: Float, my: Float, mz: Float) {
+    fun updateMag(mx: Float, my: Float, mz: Float, dt: Float) {
         val q0 = quaternion[0]
         val q1 = quaternion[1]
         val q2 = quaternion[2]
@@ -145,10 +143,11 @@ class MadgwickAHRS(beta: Float = 0.1f) {
         val q2Dot = -beta * ez
         val q3Dot = 0f
 
-        quaternion[0] += q0Dot * 0.01f
-        quaternion[1] += q1Dot * 0.01f
-        quaternion[2] += q2Dot * 0.01f
-        quaternion[3] += q3Dot * 0.01f
+        val step = if (dt > 0f) dt else 0.01f
+        quaternion[0] += q0Dot * step
+        quaternion[1] += q1Dot * step
+        quaternion[2] += q2Dot * step
+        quaternion[3] += q3Dot * step
 
         normalizeQuaternion()
     }
@@ -174,9 +173,9 @@ class MadgwickAHRS(beta: Float = 0.1f) {
         // First update with gyroscope
         updateGyro(gx, gy, gz, dt)
         // Then apply accelerometer correction
-        updateAccel(ax, ay, az)
+        updateAccel(ax, ay, az, dt)
         // Then apply magnetometer correction
-        updateMag(mx, my, mz)
+        updateMag(mx, my, mz, dt)
     }
 
     /**
@@ -200,7 +199,8 @@ class MadgwickAHRS(beta: Float = 0.1f) {
         val q1 = quaternion[1]
         val q2 = quaternion[2]
         val q3 = quaternion[3]
-        return kotlin.math.asin(2f * (q0 * q2 - q3 * q1)).toFloat()
+        val value = 2f * (q0 * q2 - q3 * q1)
+        return kotlin.math.asin(value.coerceIn(-1f, 1f)).toFloat()
     }
 
     /**

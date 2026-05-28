@@ -7,10 +7,14 @@ Checks dependencies, installs if missing, then starts GUI.
 import subprocess
 import sys
 import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+REQUIREMENTS_FILE = BASE_DIR / "requirements.txt"
 
 def install_dependencies():
     print("📦 Installing required packages...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(REQUIREMENTS_FILE)])
 
 def main():
     try:
@@ -24,6 +28,7 @@ def main():
         install_dependencies()
 
     # Launch GUI
+    sys.path.insert(0, str(BASE_DIR))
     from gui import AirMouseGUI
     gui = AirMouseGUI()
     gui.run()

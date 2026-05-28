@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 /**
  * Handles calibration of gyroscope (bias), magnetometer (hard‑iron),
@@ -142,15 +143,19 @@ class CalibrationHelper(
 
             // Compute offset and scale for each axis using ±1g measurements
             // Expected gravity: +9.81 for positive, -9.81 for negative
+            var scaleWarning = false
             for (i in 0..2) {
                 val posMeas = measured[2 * i][i]
                 val negMeas = measured[2 * i + 1][i]
-                accelScale[i] = (posMeas - negMeas) / 19.62f
-                if (accelScale[i] == 0f) accelScale[i] = 1f
+                val scale = (posMeas - negMeas) / 19.62f
+                accelScale[i] = if (scale.isFinite() && abs(scale) in 0.5f..2.0f) scale else {
+                    scaleWarning = true
+                    1f
+                }
                 accelOffset[i] = (posMeas + negMeas) / 2f
             }
             prefs.saveAccelParams(accelOffset, accelScale)
-            onInstruction("Accelerometer calibrated!")
+            onInstruction(if (scaleWarning) "Accelerometer calibrated with fallback scale values." else "Accelerometer calibrated!")
         } finally {
             sensorThread.quitSafely()
         }
@@ -206,7 +211,11 @@ class CalibrationHelper(
                 (max[1] - min[1]) / 2f,
                 (max[2] - min[2]) / 2f
             )
-            for (i in 0..2) if (magScale[i] == 0f) magScale[i] = 1f
+            for (i in 0..2) {
+                if (!magScale[i].isFinite() || abs(magScale[i]) !in 0.5f..2.0f) {
+                    magScale[i] = 1f
+                }
+            }
 
             prefs.saveMagnetometerParams(magOffset, magScale)
             onInstruction("Magnetometer optimized!")

@@ -229,17 +229,28 @@ class AirMouseTCPServer:
 class AirMouseGUI:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("✈️ Air Mouse Server – Professional Edition")
-        self.root.geometry("850x750")   # slightly larger for extra UI
-        self.root.minsize(750, 650)
+        self.root.title("Air Mouse Server")
+        self.root.geometry("1180x820")
+        self.root.minsize(1020, 720)
 
-        # Colours
-        self.bg_color = "#1e1e1e"
-        self.fg_color = "#d4d4d4"
+        self.bg_color = "#0f1115"
+        self.surface = "#171b22"
+        self.surface_alt = "#1d2430"
+        self.card_bg = "#202734"
+        self.fg_color = "#e5e7eb"
+        self.muted_color = "#96a0ae"
+        self.border_color = "#2b3341"
+        self.log_bg = "#0c1016"
         self.accent = CONFIG["accent_color"]
-        self.log_bg = "#252526"
+        self.success = "#2ecc71"
+        self.warning = "#f5a524"
+        self.danger = "#ef5b5b"
 
         self.root.configure(bg=self.bg_color)
+        self.root.option_add("*Font", "Segoe UI 10")
+        self.root.option_add("*TCombobox*Listbox.font", "Segoe UI 10")
+        self.root.option_add("*TButton.padding", 8)
+        self._setup_styles()
         self.setup_ui()
 
         self.tcp_server = AirMouseTCPServer(self.log, self.update_stats_display)
@@ -252,124 +263,215 @@ class AirMouseGUI:
         self.refresh_ip_list()
         self.update_qr_code()
 
+    def _setup_styles(self):
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+
+        style.configure("TFrame", background=self.bg_color)
+        style.configure("Card.TFrame", background=self.card_bg, relief="flat")
+        style.configure("Header.TFrame", background=self.surface)
+        style.configure("TLabel", background=self.bg_color, foreground=self.fg_color)
+        style.configure("Title.TLabel", background=self.surface, foreground=self.fg_color, font=("Segoe UI Semibold", 24))
+        style.configure("Subtitle.TLabel", background=self.surface, foreground=self.muted_color, font=("Segoe UI", 11))
+        style.configure("Section.TLabel", background=self.card_bg, foreground=self.fg_color, font=("Segoe UI Semibold", 12))
+        style.configure("Metric.TLabel", background=self.card_bg, foreground=self.fg_color, font=("Segoe UI Semibold", 13))
+        style.configure("Hint.TLabel", background=self.card_bg, foreground=self.muted_color, font=("Segoe UI", 9))
+        style.configure("Status.TLabel", background=self.surface, foreground=self.fg_color, font=("Segoe UI Semibold", 10))
+        style.configure("TCheckbutton", background=self.card_bg, foreground=self.fg_color)
+        style.configure("TButton", background=self.card_bg, foreground=self.fg_color, borderwidth=0, focusthickness=0)
+        style.map("TButton", background=[("active", self.surface_alt)])
+        style.configure("Primary.TButton", background=self.accent, foreground="white", font=("Segoe UI Semibold", 10))
+        style.map("Primary.TButton", background=[("active", self._adjust_color(self.accent, -18))])
+        style.configure("Danger.TButton", background=self.danger, foreground="white", font=("Segoe UI Semibold", 10))
+        style.map("Danger.TButton", background=[("active", self._adjust_color(self.danger, -18))])
+        style.configure("Accent.TButton", background=self.surface_alt, foreground=self.fg_color)
+        style.map("Accent.TButton", background=[("active", self.card_bg)])
+        style.configure("Dark.Horizontal.TScale", background=self.card_bg, troughcolor=self.surface_alt, sliderthickness=18)
+        style.configure("Dark.TCombobox", fieldbackground=self.surface_alt, background=self.surface_alt, foreground=self.fg_color, arrowcolor=self.fg_color)
+        style.map("Dark.TCombobox", fieldbackground=[("readonly", self.surface_alt)], foreground=[("readonly", self.fg_color)])
+
+    def _adjust_color(self, hex_color: str, offset: int) -> str:
+        hex_color = hex_color.lstrip("#")
+        red = max(0, min(255, int(hex_color[0:2], 16) + offset))
+        green = max(0, min(255, int(hex_color[2:4], 16) + offset))
+        blue = max(0, min(255, int(hex_color[4:6], 16) + offset))
+        return f"#{red:02x}{green:02x}{blue:02x}"
+
+    def _card(self, parent, title: str, subtitle: Optional[str] = None):
+        frame = tk.Frame(parent, bg=self.card_bg, highlightthickness=1, highlightbackground=self.border_color)
+        frame.columnconfigure(0, weight=1)
+        header = tk.Frame(frame, bg=self.card_bg)
+        header.grid(row=0, column=0, sticky="ew", padx=18, pady=(16, 0))
+        ttk.Label(header, text=title, style="Section.TLabel").pack(anchor="w")
+        if subtitle:
+            ttk.Label(header, text=subtitle, style="Hint.TLabel").pack(anchor="w", pady=(4, 0))
+        body = tk.Frame(frame, bg=self.card_bg)
+        body.grid(row=1, column=0, sticky="nsew", padx=18, pady=16)
+        return frame, body
+
+    def _status_pill(self, parent, text: str, color: str):
+        pill = tk.Label(parent, text=text, bg=color, fg="white", font=("Segoe UI Semibold", 10), padx=12, pady=5)
+        return pill
+
     def setup_ui(self):
-        main_frame = tk.Frame(self.root, bg=self.bg_color)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        shell = tk.Frame(self.root, bg=self.bg_color)
+        shell.pack(fill=tk.BOTH, expand=True)
 
-        # Title
-        title = tk.Label(main_frame, text="Air Mouse Server Pro", font=("Helvetica", 20, "bold"),
-                         bg=self.bg_color, fg=self.accent)
-        title.pack(pady=(0, 10))
+        header = tk.Frame(shell, bg=self.surface, highlightthickness=1, highlightbackground=self.border_color)
+        header.pack(fill=tk.X, padx=18, pady=(18, 12))
 
-        # Status bar
-        status_frame = tk.Frame(main_frame, bg=self.bg_color)
-        status_frame.pack(fill=tk.X, pady=5)
-        self.status_label = tk.Label(status_frame, text="● Server stopped", font=("Helvetica", 11),
-                                     bg=self.bg_color, fg="red")
-        self.status_label.pack(side=tk.LEFT, padx=(0,20))
-        self.conn_label = tk.Label(status_frame, text="Connections: 0", font=("Helvetica", 10),
-                                   bg=self.bg_color, fg=self.fg_color)
-        self.conn_label.pack(side=tk.LEFT, padx=10)
-        self.stats_label = tk.Label(status_frame, text="Clicks:0 Dbl:0 Right:0 Scroll:0",
-                                    font=("Helvetica", 10), bg=self.bg_color, fg=self.fg_color)
-        self.stats_label.pack(side=tk.LEFT, padx=10)
+        header_inner = tk.Frame(header, bg=self.surface)
+        header_inner.pack(fill=tk.X, padx=22, pady=20)
 
-        # ---- New IP management section ----
-        ip_frame = tk.LabelFrame(main_frame, text=" Network IP Address ", bg=self.bg_color,
-                                 fg=self.fg_color, font=("Helvetica", 10, "bold"))
-        ip_frame.pack(fill=tk.X, pady=(10, 5))
+        left_header = tk.Frame(header_inner, bg=self.surface)
+        left_header.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        ip_control = tk.Frame(ip_frame, bg=self.bg_color)
-        ip_control.pack(fill=tk.X, padx=5, pady=5)
+        ttk.Label(left_header, text="Air Mouse Server", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(left_header, text="Desktop endpoint, discovery responder, and live motion control dashboard", style="Subtitle.TLabel").pack(anchor="w", pady=(6, 0))
 
-        tk.Label(ip_control, text="Use:", bg=self.bg_color, fg=self.fg_color,
-                 font=("Helvetica", 10)).pack(side=tk.LEFT, padx=(0,5))
+        self.status_pill = self._status_pill(header_inner, "Server stopped", self.danger)
+        self.status_pill.pack(side=tk.RIGHT, anchor="e")
+
+        self.root.rowconfigure(1, weight=1)
+        self.root.columnconfigure(0, weight=1)
+
+        content = tk.Frame(shell, bg=self.bg_color)
+        content.pack(fill=tk.BOTH, expand=True, padx=18, pady=(0, 18))
+        content.columnconfigure(0, weight=1)
+        content.columnconfigure(1, weight=2)
+        content.rowconfigure(0, weight=1)
+
+        left_col = tk.Frame(content, bg=self.bg_color)
+        left_col.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        left_col.columnconfigure(0, weight=1)
+
+        right_col = tk.Frame(content, bg=self.bg_color)
+        right_col.grid(row=0, column=1, sticky="nsew")
+        right_col.rowconfigure(1, weight=1)
+        right_col.columnconfigure(0, weight=1)
+
+        summary_card, summary_body = self._card(left_col, "Runtime Summary", "Live server status and counters")
+        summary_card.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+
+        summary_top = tk.Frame(summary_body, bg=self.card_bg)
+        summary_top.pack(fill=tk.X)
+        summary_top.columnconfigure((0, 1, 2), weight=1)
+
+        self.status_label = ttk.Label(summary_top, text="Server stopped", style="Metric.TLabel")
+        self.status_label.grid(row=0, column=0, sticky="w")
+        self.conn_label = ttk.Label(summary_top, text="Connections: 0", style="Metric.TLabel")
+        self.conn_label.grid(row=0, column=1, sticky="w")
+        self.stats_label = ttk.Label(summary_top, text="Clicks: 0  •  Dbl: 0  •  Right: 0  •  Scroll: 0", style="Metric.TLabel")
+        self.stats_label.grid(row=0, column=2, sticky="w")
+
+        self.current_ip_label = ttk.Label(summary_body, text="Selected endpoint will appear here", style="Hint.TLabel")
+        self.current_ip_label.pack(anchor="w", pady=(10, 0))
+
+        ip_card, ip_body = self._card(left_col, "Network Endpoint", "Choose the IP address to advertise to the Android app")
+        ip_card.grid(row=1, column=0, sticky="ew", pady=(0, 12))
+        ip_body.columnconfigure(0, weight=1)
+
+        selection_row = tk.Frame(ip_body, bg=self.card_bg)
+        selection_row.pack(fill=tk.X)
+
+        ttk.Label(selection_row, text="Interface", style="Hint.TLabel").pack(anchor="w")
 
         self.ip_var = tk.StringVar()
         self.manual_ip_var = tk.StringVar()
         self.manual_ip_var.trace_add("write", self.on_manual_ip_changed)
-        self.ip_combo = ttk.Combobox(ip_control, textvariable=self.ip_var,
-                                     state="readonly", width=20)
-        self.ip_combo.pack(side=tk.LEFT, padx=5)
+        self.ip_combo = ttk.Combobox(selection_row, textvariable=self.ip_var, state="readonly", width=34, style="Dark.TCombobox")
+        self.ip_combo.pack(fill=tk.X, pady=(6, 8))
         self.ip_combo.bind("<<ComboboxSelected>>", self.on_ip_selected)
 
-        self.refresh_btn = tk.Button(ip_control, text="🔄", command=self.refresh_ip_list,
-                                     bg=self.bg_color, fg="white", font=("Helvetica", 9))
-        self.refresh_btn.pack(side=tk.LEFT, padx=5)
+        action_row = tk.Frame(ip_body, bg=self.card_bg)
+        action_row.pack(fill=tk.X, pady=(6, 0))
+        self.refresh_btn = ttk.Button(action_row, text="Refresh", command=self.refresh_ip_list, style="Accent.TButton")
+        self.refresh_btn.pack(side=tk.LEFT)
+        self.copy_btn = ttk.Button(action_row, text="Copy Endpoint", command=self.copy_ip, style="Accent.TButton")
+        self.copy_btn.pack(side=tk.LEFT, padx=(10, 0))
 
-        self.copy_btn = tk.Button(ip_control, text="📋 Copy", command=self.copy_ip,
-                                  bg=self.bg_color, fg="white", font=("Helvetica", 9))
-        self.copy_btn.pack(side=tk.LEFT, padx=5)
-
-        # Manual IP override (hidden until checkbox)
-        self.manual_entry = tk.Entry(ip_control, textvariable=self.manual_ip_var,
-                                     width=15, bg="#3c3c3c", fg=self.fg_color,
-                                     insertbackground='white', state=tk.DISABLED)
-        self.manual_entry.pack(side=tk.LEFT, padx=(15,5))
-
+        manual_row = tk.Frame(ip_body, bg=self.card_bg)
+        manual_row.pack(fill=tk.X, pady=(12, 0))
         self.manual_check = tk.IntVar()
-        self.manual_cb = tk.Checkbutton(ip_control, text="Manual", variable=self.manual_check,
-                                        command=self.toggle_manual_ip,
-                                        bg=self.bg_color, fg=self.fg_color,
-                                        selectcolor=self.bg_color)
-        self.manual_cb.pack(side=tk.LEFT)
+        self.manual_cb = ttk.Checkbutton(manual_row, text="Use manual IP", variable=self.manual_check, command=self.toggle_manual_ip)
+        self.manual_cb.pack(anchor="w")
+        self.manual_entry = tk.Entry(manual_row, textvariable=self.manual_ip_var, bg=self.surface_alt, fg=self.fg_color, insertbackground=self.fg_color, relief=tk.FLAT, disabledbackground=self.surface_alt, disabledforeground=self.muted_color)
+        self.manual_entry.pack(fill=tk.X, pady=(8, 0))
 
-        # Current IP display
-        self.current_ip_label = tk.Label(ip_frame, text="", font=("Helvetica", 9, "bold"),
-                                         bg=self.bg_color, fg=self.accent)
-        self.current_ip_label.pack(pady=(0,5))
+        qr_card, qr_body = self._card(left_col, "Pairing QR", "Scan this endpoint from the Android app")
+        qr_card.grid(row=2, column=0, sticky="ew", pady=(0, 12))
 
-        # Left pane: QR code
-        left_frame = tk.Frame(main_frame, bg=self.bg_color)
-        left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0,15))
-        self.qr_label = tk.Label(left_frame, bg=self.bg_color)
-        self.qr_label.pack()
-        tk.Label(left_frame, text="Scan with Android app", font=("Helvetica", 9),
-                 bg=self.bg_color, fg=self.fg_color).pack()
-        self.qr_text = tk.Label(left_frame, text="", font=("Helvetica", 10, "bold"),
-                                bg=self.bg_color, fg=self.accent)
-        self.qr_text.pack(pady=(6, 0))
+        qr_panel = tk.Frame(qr_body, bg=self.card_bg)
+        qr_panel.pack(fill=tk.BOTH, expand=True)
+        qr_panel.columnconfigure(0, weight=1)
 
-        # Right pane: log area
-        log_frame = tk.LabelFrame(main_frame, text=" Live Log ", bg=self.bg_color,
-                                  fg=self.fg_color, font=("Helvetica", 10, "bold"))
-        log_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        self.log_area = scrolledtext.ScrolledText(log_frame, height=22, bg=self.log_bg,
-                                                   fg=self.fg_color, insertbackground='white',
-                                                   font=("Consolas", 10), wrap=tk.WORD)
-        self.log_area.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.qr_label = tk.Label(qr_panel, bg=self.card_bg)
+        self.qr_label.pack(pady=(6, 10))
+        self.qr_text = ttk.Label(qr_panel, text="", style="Hint.TLabel", justify=tk.CENTER)
+        self.qr_text.pack(fill=tk.X)
 
-        # Control buttons
-        btn_frame = tk.Frame(main_frame, bg=self.bg_color)
-        btn_frame.pack(fill=tk.X, pady=15)
-        self.start_btn = tk.Button(btn_frame, text="▶ Start Server", command=self.start_servers,
-                                   bg=self.accent, fg="white", font=("Helvetica", 10, "bold"),
-                                   padx=20, pady=6)
-        self.start_btn.pack(side=tk.LEFT, padx=5)
-        self.stop_btn = tk.Button(btn_frame, text="⏹ Stop Server", command=self.stop_servers,
-                                  bg="#444444", fg="white", state=tk.DISABLED,
-                                  font=("Helvetica", 10, "bold"), padx=20, pady=6)
-        self.stop_btn.pack(side=tk.LEFT, padx=5)
+        controls_card, controls_body = self._card(left_col, "Server Controls", "Start or stop the TCP and UDP services")
+        controls_card.grid(row=3, column=0, sticky="ew", pady=(0, 12))
 
-        # Sensitivity slider
-        sens_frame = tk.Frame(main_frame, bg=self.bg_color)
-        sens_frame.pack(fill=tk.X, pady=10)
-        tk.Label(sens_frame, text="Mouse Sensitivity:", bg=self.bg_color,
-                 fg=self.fg_color, font=("Helvetica", 10)).pack(side=tk.LEFT, padx=(0,10))
-        self.sens_slider = tk.Scale(sens_frame, from_=0.2, to=2.0, resolution=0.05,
-                                    orient=tk.HORIZONTAL, bg=self.bg_color, fg=self.fg_color,
-                                    highlightthickness=0, length=250)
+        button_row = tk.Frame(controls_body, bg=self.card_bg)
+        button_row.pack(fill=tk.X)
+        self.start_btn = ttk.Button(button_row, text="Start Server", command=self.start_servers, style="Primary.TButton")
+        self.start_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.stop_btn = ttk.Button(button_row, text="Stop Server", command=self.stop_servers, style="Danger.TButton")
+        self.stop_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(12, 0))
+
+        sens_card, sens_body = self._card(left_col, "Cursor Sensitivity", "Tune pointer speed for smooth cursor control")
+        sens_card.grid(row=4, column=0, sticky="ew")
+
+        sens_body.columnconfigure(0, weight=1)
+        sens_top = tk.Frame(sens_body, bg=self.card_bg)
+        sens_top.pack(fill=tk.X)
+        ttk.Label(sens_top, text="Sensitivity", style="Hint.TLabel").pack(side=tk.LEFT)
+        self.sens_value = ttk.Label(sens_top, text=f"{CONFIG['sensitivity']:.2f}", style="Metric.TLabel")
+        self.sens_value.pack(side=tk.RIGHT)
+
+        self.sens_slider = ttk.Scale(sens_body, from_=0.2, to=2.0, orient=tk.HORIZONTAL, style="Dark.Horizontal.TScale")
         self.sens_slider.set(CONFIG["sensitivity"])
-        self.sens_slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.sens_slider.pack(fill=tk.X, pady=(10, 4))
         self.sens_slider.bind("<ButtonRelease-1>", self.update_sensitivity)
-        self.sens_value = tk.Label(sens_frame, text=f"{CONFIG['sensitivity']:.2f}",
-                                   bg=self.bg_color, fg=self.accent, width=6)
-        self.sens_value.pack(side=tk.LEFT, padx=(10,0))
 
-        # Footer
-        footer = tk.Label(main_frame, text="University of Tehran – Embedded Systems Exercise",
-                          font=("Helvetica", 8), bg=self.bg_color, fg="#888888")
-        footer.pack(pady=(10,0))
+        log_card, log_body = self._card(right_col, "Live Log", "Connections, gestures, discovery responses, and errors")
+        log_card.grid(row=0, column=0, sticky="nsew")
+        log_body.rowconfigure(0, weight=1)
+        log_body.columnconfigure(0, weight=1)
+
+        self.log_area = scrolledtext.ScrolledText(log_body, height=18, bg=self.log_bg, fg=self.fg_color, insertbackground=self.fg_color, font=("SF Mono", 10), relief=tk.FLAT, wrap=tk.WORD, padx=12, pady=12)
+        self.log_area.grid(row=0, column=0, sticky="nsew")
+
+        diagnostics_card, diagnostics_body = self._card(right_col, "Server Diagnostics", "Quick status and maintenance actions")
+        diagnostics_card.grid(row=1, column=0, sticky="ew", pady=(12, 0))
+
+        diagnostics_top = tk.Frame(diagnostics_body, bg=self.card_bg)
+        diagnostics_top.pack(fill=tk.X)
+        self.clear_logs_btn = ttk.Button(diagnostics_top, text="Clear Logs", command=self._clear_logs, style="Accent.TButton")
+        self.clear_logs_btn.pack(side=tk.LEFT)
+        self.qr_hint_label = ttk.Label(diagnostics_top, text="Ready for pairing", style="Hint.TLabel")
+        self.qr_hint_label.pack(side=tk.RIGHT)
+
+        live_summary = tk.Frame(diagnostics_body, bg=self.card_bg)
+        live_summary.pack(fill=tk.X, pady=(12, 0))
+        ttk.Label(live_summary, text="Compatibility", style="Hint.TLabel").pack(anchor="w")
+        ttk.Label(live_summary, text="Works best on the same Wi-Fi network with Android 10+ and cleartext traffic enabled.", style="Hint.TLabel", wraplength=500).pack(anchor="w", pady=(4, 0))
+
+        footer = ttk.Label(shell, text="University of Tehran • Embedded Systems Exercise", style="Subtitle.TLabel")
+        footer.pack(anchor="center", pady=(0, 12))
+
+        self.log_area.configure(state=tk.NORMAL)
+        self.log_area.insert(tk.END, "Air Mouse server is ready. Select an endpoint, then start the server.\n")
+        self.log_area.see(tk.END)
+
+    def _clear_logs(self):
+        self.log_area.delete("1.0", tk.END)
+        self.log_area.insert(tk.END, "Logs cleared.\n")
+        self.log_area.see(tk.END)
 
     # ---- NEW IP utility functions ----
     def get_all_ips(self) -> List[str]:
@@ -497,13 +599,15 @@ class AirMouseGUI:
             self.qr_text.config(text=qr_data)
 
     def log(self, msg: str):
-        self.log_area.insert(tk.END, f"{msg}\n")
-        self.log_area.see(tk.END)
+        def append():
+            self.log_area.insert(tk.END, f"{msg}\n")
+            self.log_area.see(tk.END)
+
+        if self.root.winfo_exists():
+            self.root.after(0, append)
 
     def update_stats_display(self, stats: Dict):
-        self.stats_label.config(
-            text=f"Clicks:{stats['clicks']} Dbl:{stats['double_clicks']} Right:{stats['right_clicks']} Scroll:{stats['scrolls']}"
-        )
+        self.stats_label.config(text=f"Clicks: {stats['clicks']}  •  Dbl: {stats['double_clicks']}  •  Right: {stats['right_clicks']}  •  Scroll: {stats['scrolls']}")
         self.conn_label.config(text=f"Connections: {len(self.tcp_server.active_connections)}")
 
     def update_sensitivity(self, event=None):
@@ -518,7 +622,8 @@ class AirMouseGUI:
     def start_servers(self):
         self.start_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
-        self.status_label.config(text="● Server running", fg="lightgreen")
+        self.status_label.config(text="Server running")
+        self.status_pill.config(text="Server running", bg=self.success)
 
         def run_loop():
             self.loop = asyncio.new_event_loop()
@@ -528,7 +633,8 @@ class AirMouseGUI:
                 self.loop.run_until_complete(self.tcp_server.start())
             except OSError as exc:
                 self.log(f"❌ Could not start server: {exc}")
-                self.root.after(0, lambda: self.status_label.config(text="● Server error", fg="#ff6b6b"))
+                self.root.after(0, lambda: self.status_label.config(text="Server error"))
+                self.root.after(0, lambda: self.status_pill.config(text="Server error", bg=self.danger))
                 self.root.after(0, lambda: self.start_btn.config(state=tk.NORMAL))
                 self.root.after(0, lambda: self.stop_btn.config(state=tk.DISABLED))
             finally:
@@ -544,7 +650,8 @@ class AirMouseGUI:
         self.udp_server.stop()
         self.start_btn.config(state=tk.NORMAL)
         self.stop_btn.config(state=tk.DISABLED)
-        self.status_label.config(text="● Server stopped", fg="red")
+        self.status_label.config(text="Server stopped")
+        self.status_pill.config(text="Server stopped", bg=self.danger)
         self.log("🛑 Servers stopped")
 
     def run(self):

@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.airmouse.R
 import com.airmouse.sensors.CalibrationHelper
+import com.airmouse.utils.SensorUtils
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
@@ -47,6 +48,11 @@ class CalibrationFragment : Fragment() {
         resetButton = view.findViewById(R.id.reset_btn)
 
         resetUi()
+        val hasCoreSensors = SensorUtils.hasGyroscope(requireContext()) && SensorUtils.hasAccelerometer(requireContext())
+        if (!hasCoreSensors) {
+            statusText.setText(R.string.sensor_warning_missing)
+            startButtonsEnabled(false)
+        }
 
         startButton.setOnClickListener {
             runCalibration(includeMagnetometer = true)
