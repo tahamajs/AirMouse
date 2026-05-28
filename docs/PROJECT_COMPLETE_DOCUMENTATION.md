@@ -289,3 +289,15 @@ android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Remove generated build folders if the course asks for a smaller source ZIP, but keep the APK separately.
+
+## 15. Current Verification Status
+
+Verified on 2026-05-28:
+
+- Android debug APK builds successfully with `./gradlew :app:assembleDebug`.
+- Android unit tests pass with `./gradlew :app:testDebugUnitTest`.
+- PC server files pass syntax checks with `python3 -m py_compile pc/server.py pc/gui.py pc/run.py pc/perfetto_analyzer.py`.
+- Redmi Note 8T install succeeds through ADB.
+- Onboarding launches on the Redmi without the previous `MaterialButton` inflate crash.
+- Skipping onboarding opens `com.airmouse.ui.MainActivity` on the Redmi without `AndroidRuntime` or `TransactionExecutor` crashes.
+- QR scanning is registered against the `HomeFragment` lifecycle so MainActivity no longer crashes with `LifecycleOwners must call register before they are STARTED`.
