@@ -405,23 +405,23 @@ class HomeFragment : Fragment() {
         }
         sensorService.setOnGestureDetected { gesture ->
             when (gesture) {
-                EnhancedGestureDetector.Gesture.CLICK -> {
+                GestureDetector.Gesture.CLICK -> {
                     dataSender.sendClick()
                     if (preferences.isHapticEnabled()) vibrate(30)
                     preferences.incrementClick()
                 }
-                EnhancedGestureDetector.Gesture.DOUBLE_CLICK -> {
+                GestureDetector.Gesture.DOUBLE_CLICK -> {
                     dataSender.sendDoubleClick()
                     if (preferences.isHapticEnabled()) vibrate(60)
                     preferences.incrementDoubleClick()
                 }
-                EnhancedGestureDetector.Gesture.RIGHT_CLICK -> {
+                GestureDetector.Gesture.RIGHT_CLICK -> {
                     dataSender.sendRightClick()
                     if (preferences.isHapticEnabled()) vibrate(80)
                     preferences.incrementRightClick()
                 }
-                EnhancedGestureDetector.Gesture.SCROLL_UP, EnhancedGestureDetector.Gesture.SCROLL_DOWN -> {
-                    dataSender.sendScroll(if (gesture == EnhancedGestureDetector.Gesture.SCROLL_UP) -1 else 1)
+                GestureDetector.Gesture.SCROLL_UP, GestureDetector.Gesture.SCROLL_DOWN -> {
+                    dataSender.sendScroll(if (gesture == GestureDetector.Gesture.SCROLL_UP) -1 else 1)
                     if (preferences.isHapticEnabled()) vibrate(20)
                     preferences.incrementScroll()
                 }
