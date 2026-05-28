@@ -338,6 +338,31 @@ class AirMouseGUI:
     def _status_pill(self, parent, text: str, color: str):
         pill = tk.Label(parent, text=text, bg=color, fg="white", font=("Segoe UI Semibold", 10), padx=12, pady=5)
         return pill
+    def _update_connection_list(self, addresses: list):
+        """Update the connection listbox with the currently connected clients."""
+        def _update():
+            self.conn_listbox.delete(0, tk.END)
+            for addr in addresses:
+                self.conn_listbox.insert(tk.END, addr)
+            # Enable/disable disconnect button based on selection
+            if self.conn_listbox.size() > 0:
+                self.disconnect_btn['state'] = tk.NORMAL
+            else:
+                self.disconnect_btn['state'] = tk.DISABLED
+        # schedule on the main thread
+        self.root.after(0, _update)
+    def _update_connection_list(self, addresses: list):
+        """Refresh the connected clients listbox."""
+        def _update():
+            self.conn_listbox.delete(0, tk.END)
+            for addr in addresses:
+                self.conn_listbox.insert(tk.END, addr)
+            self.disconnect_btn['state'] = tk.NORMAL if self.conn_listbox.size() > 0 else tk.DISABLED
+        self.root.after(0, _update)
+
+    def _init_tray(self):
+        """Optional system tray icon; do nothing for now."""
+        pass
 
     def setup_ui(self):
         shell = tk.Frame(self.root, bg=self.bg_color)
@@ -402,28 +427,53 @@ class AirMouseGUI:
         conn_card, conn_body = self._card(left_col, "Connected Clients", "Active client addresses")
         conn_card.grid(row=5, column=0, sticky="ew", pady=(0, 12))
         conn_body.columnconfigure(0, weight=1)
-        self.conn_listbox = tk.Listbox(conn_body, bg=self.card_bg, fg=self.fg_color, highlightthickness=0, bd=0, activestyle='none', selectbackground=self.surface_alt)
-        self.conn_listbox.pack(fill=tk.BOTH, expand=False)
+
+        # Use a frame to hold listbox + scrollbar
+        list_frame = tk.Frame(conn_body, bg=self.card_bg)
+        list_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.conn_listbox = tk.Listbox(
+            list_frame,
+            bg=self.card_bg,
+            fg=self.fg_color,
+            highlightthickness=0,
+            bd=0,
+            activestyle='none',
+            selectbackground=self.surface_alt,
+            yscrollcommand=lambda *args: conn_scrollbar.set(*args)
+        )
+
+        conn_scrollbar = tk.Scrollbar(
+            list_frame,
+            orient=tk.VERTICAL,
+            command=self.conn_listbox.yview,
+            bg=self.surface_alt,
+            troughcolor=self.card_bg
+        )
+
+        self.conn_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        conn_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
         btn_row = tk.Frame(conn_body, bg=self.card_bg)
         btn_row.pack(fill=tk.X, pady=(8, 0))
         self.disconnect_btn = ttk.Button(btn_row, text="Disconnect Selected", command=self.disconnect_selected, style="Danger.TButton")
         self.disconnect_btn.pack(side=tk.LEFT)
         self.disconnect_btn['state'] = tk.DISABLED
-        right_col = tk.Frame(content, bg=self.bg_color)
-        right_col.grid(row=0, column=1, sticky="nsew")
-        right_col.rowconfigure(1, weight=1)
-        right_col.columnconfigure(0, weight=1)
+
+
         # Accessibility: (focus configuration moved to after buttons are created)
 
         summary_card, summary_body = self._card(left_col, "Runtime Summary", "Live server status and counters")
-        self.save_qr_btn.configure(takefocus=True)
+        # self.save_qr_btn.configure(takefocus=True)
         summary_card.grid(row=0, column=0, sticky="ew", pady=(0, 12))
 
         summary_top = tk.Frame(summary_body, bg=self.card_bg)
         # initial focus for accessibility
-        self.ip_combo.focus_set()
+        # self.ip_combo.focus_set()
         summary_top.pack(fill=tk.X)
         summary_top.columnconfigure((0, 1, 2), weight=1)
+        # self.ip_combo.focus_set()   # ← safe here
+
 
         self.status_label = ttk.Label(summary_top, text="Server stopped", style="Metric.TLabel")
         self.status_label.grid(row=0, column=0, sticky="w")
@@ -490,6 +540,9 @@ class AirMouseGUI:
         self.start_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.stop_btn = ttk.Button(button_row, text="Stop Server", command=self.stop_servers, style="Danger.TButton")
         self.stop_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(12, 0))
+        # Accessibility: enable keyboard focus (after widgets exist)
+        self.start_btn.configure(takefocus=True)
+        self.stop_btn.configure(takefocus=True)
 
         sens_card, sens_body = self._card(left_col, "Cursor Sensitivity", "Tune pointer speed for smooth cursor control")
         sens_card.grid(row=4, column=0, sticky="ew")
@@ -505,6 +558,11 @@ class AirMouseGUI:
         self.sens_slider.set(CONFIG["sensitivity"])
         self.sens_slider.pack(fill=tk.X, pady=(10, 4))
         self.sens_slider.bind("<ButtonRelease-1>", self.update_sensitivity)
+
+        right_col = tk.Frame(content, bg=self.bg_color)
+        right_col.grid(row=0, column=1, sticky="nsew")
+        right_col.rowconfigure(1, weight=1)
+        right_col.columnconfigure(0, weight=1)
 
         log_card, log_body = self._card(right_col, "Live Log", "Connections, gestures, discovery responses, and errors")
         log_card.grid(row=0, column=0, sticky="nsew")
@@ -615,7 +673,40 @@ class AirMouseGUI:
         self.ip_combo.config(state="readonly")
         self.manual_entry.config(state=tk.DISABLED)
         self.on_ip_selected()
+    def disconnect_selected(self):
+        """Close the connection of the selected client."""
+        selection = self.conn_listbox.curselection()
+        if not selection:
+            messagebox.showinfo("Disconnect", "No client selected.")
+            return
+        index = selection[0]
+        addr_str = self.conn_listbox.get(index)
+        try:
+            ip, port_str = addr_str.rsplit(":", 1)
+            port = int(port_str)
+            addr = (ip, port)
+            writer = self.tcp_server.active_connections.get(addr)
+            if writer is None:
+                self.log(f"⚠️ No active writer for {addr_str}")
+                return
+            # Schedule asynchronous close in the event loop
+            if self.loop and self.loop.is_running():
+                asyncio.run_coroutine_threadsafe(self._close_writer(writer), self.loop)
+            else:
+                writer.close()
+            self.log(f"🔌 Requesting disconnect of {addr_str}")
+        except Exception as e:
+            self.log(f"❌ Error disconnecting {addr_str}: {e}")
 
+    async def _close_writer(self, writer):
+        try:
+            writer.close()
+            await writer.wait_closed()
+        except Exception:
+            pass
+
+
+        
     def get_selected_ip(self) -> str:
         """Return just the IP part from the combo selection."""
         if self.manual_check.get():

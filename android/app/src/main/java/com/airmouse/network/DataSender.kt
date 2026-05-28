@@ -109,17 +109,26 @@ class DataSender(
     private fun startAckListener() {
         scope.launch {
             while (isRunning) {
-                val line = reader?.readLine() ?: break
-                if (line.contains("\"type\":\"ack\"")) {
-                    val id = extractId(line)
-                    if (id != null && pendingAcks.remove(id) != null) {
-                        LogManager.add("ACK received for message $id")
+                try {
+                    val line = reader?.readLine() ?: break
+                    if (line.contains("\"type\":\"ack\"")) {
+                        val id = extractId(line)
+                        if (id != null && pendingAcks.remove(id) != null) {
+                            LogManager.add("ACK received for message $id")
+                        }
                     }
+                } catch (e: java.net.SocketTimeoutException) {
+                    // Timeout is normal when no ACK is expected; just continue listening.
+                    continue
+                } catch (e: java.io.IOException) {
+                    // Connection broken, exit the loop.
+                    break
                 }
             }
             disconnect()
         }
     }
+
 
     /**
      * Extracts the 'id' integer from a JSON ACK message.
