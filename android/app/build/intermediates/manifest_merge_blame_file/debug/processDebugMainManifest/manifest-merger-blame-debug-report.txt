@@ -78,75 +78,75 @@
 43-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.gradle/caches/transforms-4/7bbff1fa68c8337698777028df42f6d0/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:44:9-33
 44
 45    <application
-45-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:13:5-52:19
+45-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:13:5-53:19
 46        android:allowBackup="true"
 46-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:14:9-35
 47        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
 47-->[androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
 48        android:debuggable="true"
 49        android:extractNativeLibs="false"
-50        android:icon="@drawable/ic_calibrate"
-50-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:15:9-46
+50        android:icon="@mipmap/ic_launcher"
+50-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:15:9-43
 51        android:label="@string/app_name"
-51-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:17:9-41
+51-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:18:9-41
 52        android:networkSecurityConfig="@xml/network_security_config"
-52-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:21:9-69
-53        android:roundIcon="@drawable/ic_calibrate"
-53-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:16:9-51
+52-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:22:9-69
+53        android:roundIcon="@mipmap/ic_launcher"
+53-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:16:9-48
 54        android:supportsRtl="true"
-54-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:18:9-35
+54-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:19:9-35
 55        android:theme="@style/Theme.AirMouse"
-55-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:19:9-46
+55-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:20:9-46
 56        android:usesCleartextTraffic="true" >
-56-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:20:9-44
+56-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:21:9-44
 57
 58        <!-- Onboarding (launcher) -->
 59
 60
 61        <!-- Onboarding (launcher) -->
 62        <activity
-62-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:26:9-34:20
+62-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:27:9-35:20
 63            android:name="com.airmouse.ui.onboarding.OnboardingActivity"
-63-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:27:13-61
+63-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:28:13-61
 64            android:exported="true"
-64-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:28:13-36
+64-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:29:13-36
 65            android:theme="@style/Theme.AirMouse.Splash" >
-65-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:29:13-57
+65-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:30:13-57
 66            <intent-filter>
-66-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:30:13-33:29
+66-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:31:13-34:29
 67                <action android:name="android.intent.action.MAIN" />
-67-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:31:17-69
-67-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:31:25-66
+67-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:17-69
+67-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:25-66
 68
 69                <category android:name="android.intent.category.LAUNCHER" />
-69-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:17-77
-69-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:27-74
+69-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:33:17-77
+69-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:33:27-74
 70            </intent-filter>
 71        </activity>
 72
 73        <!-- Main Activity (no launcher) -->
 74        <activity
-74-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:37:9-40:52
+74-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:38:9-41:52
 75            android:name="com.airmouse.ui.MainActivity"
-75-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:38:13-44
+75-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:39:13-44
 76            android:exported="false"
-76-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:39:13-37
+76-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:40:13-37
 77            android:screenOrientation="portrait" />
-77-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:40:13-49
+77-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:41:13-49
 78
 79        <service
-79-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:44:9-46:40
+79-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:45:9-47:40
 80            android:name="com.airmouse.DebugOverlayService"
-80-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:45:13-48
+80-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:46:13-48
 81            android:exported="false" />
-81-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:46:13-37
+81-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:47:13-37
 82
 83        <meta-data
-83-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:48:9-50:49
+83-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:49:9-51:49
 84            android:name="android.app.shortcuts"
-84-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:49:13-49
+84-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:50:13-49
 85            android:resource="@xml/shortcuts" />
-85-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:50:13-46
+85-->/Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:51:13-46
 86
 87        <provider
 87-->[androidx.emoji2:emoji2:1.2.0] /Users/tahamajs/.gradle/caches/transforms-4/e8d5f4c1d4d95bf9308bb04b47b21d91/transformed/emoji2-1.2.0/AndroidManifest.xml:24:9-32:20

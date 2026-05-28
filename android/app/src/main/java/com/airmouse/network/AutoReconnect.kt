@@ -30,13 +30,14 @@ class AutoReconnect(
                     dataSender.stopSending()
 
                     val ip = prefs.getLastIp()
+                    val port = prefs.getLastPort()
                     if (ip.isNotBlank()) {
                         // Create a new DataSender (constructor is now public)
-                        val newSender = DataSender(ip, 8080, prefs)
+                        val newSender = DataSender(ip, port, prefs)
                         dataSender = newSender
                         onNewSender(newSender)
                         newSender.start()
-                        Log.d(TAG, "New DataSender started for $ip")
+                        Log.d(TAG, "New DataSender started for $ip:$port")
                     } else {
                         Log.e(TAG, "No stored IP address, cannot reconnect")
                     }

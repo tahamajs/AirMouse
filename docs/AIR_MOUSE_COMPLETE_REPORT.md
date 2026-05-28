@@ -27,7 +27,8 @@ Documentation and reports are in `docs`.
 | Click, double-click, right-click, scroll | Complete | `EnhancedGestureDetector.kt`, `DataSender.kt`, `server.py` |
 | Sensitivity controls | Complete | `HomeFragment.kt`, `PreferencesManager.kt` |
 | Android UI for IP, status, calibration, sensors | Complete | `fragment_home.xml`, `HomeFragment.kt` |
-| QR server scanning | Complete | `QRScanner.kt`, `HomeFragment.kt` |
+| QR server scanning with IP + port endpoint | Complete | `QRScanner.kt`, `HomeFragment.kt`, `pc/gui.py` |
+| Live logs on Android and PC | Complete | `HomeFragment.kt`, `ServerLogFragment.kt`, `pc/gui.py`, `LogManager.kt` |
 | TCP socket protocol | Complete | `DataSender.kt`, `pc/server.py` |
 | ACK for critical commands | Complete | `DataSender.kt`, `pc/server.py` |
 | Python PC server | Complete | `pc/server.py`, `pc/gui.py`, `pc/run.py` |
@@ -183,6 +184,8 @@ Noise control:
 
 The phone connects to the PC using TCP on port `8080`.
 
+Connection setup supports both manual entry and QR scanning. The PC GUI publishes a QR endpoint in the form `airmouse://IP:PORT`, and the Android app parses that endpoint to fill both the IP and the port field automatically.
+
 Movement packet:
 
 ```json
@@ -208,6 +211,8 @@ ACK packet from server:
 ```
 
 Movement packets are allowed to be dropped because newer movement replaces older movement. Click and scroll packets are stored until ACK is received, and retransmitted on timeout.
+
+Both the Android app and the PC GUI maintain live logs for debugging. On Android, the Home screen shows recent connection and packet events, and the dedicated Server Log page shows the persisted history.
 
 ## 9. PC Server
 

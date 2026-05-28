@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-54:12
-INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-54:12
-INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-54:12
-INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-54:12
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-55:12
+INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-55:12
+INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-55:12
+INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:2:1-55:12
 MERGED from [androidx.databinding:viewbinding:8.5.2] /Users/tahamajs/.gradle/caches/transforms-4/ae0e7bf5100d7fb9995eb3351f9bc44e/transformed/viewbinding-8.5.2/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.navigation:navigation-common:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/f45c6a4abeca948a57d8749aba50dcd0/transformed/navigation-common-2.7.7/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-common-ktx:2.7.7] /Users/tahamajs/.gradle/caches/transforms-4/bc996293faa4dc6a82cc744ba5a2fc9f/transformed/navigation-common-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
@@ -114,8 +114,8 @@ MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.grad
 	android:name
 		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:11:19-57
 application
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:13:5-52:19
-INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:13:5-52:19
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:13:5-53:19
+INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:13:5-53:19
 MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/transforms-4/37bd013277d2371418a4f74250ac8f4d/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.11.0] /Users/tahamajs/.gradle/caches/transforms-4/37bd013277d2371418a4f74250ac8f4d/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/tahamajs/.gradle/caches/transforms-4/70b7b151f3dea3fcbd741755e88cd74f/transformed/constraintlayout-2.1.4/AndroidManifest.xml:9:5-20
@@ -141,59 +141,59 @@ MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/tahamajs/.grad
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.12.0] /Users/tahamajs/.gradle/caches/transforms-4/c9cd83be15381d3aa5343fb66962032e/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:18:9-35
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:19:9-35
 	android:label
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:17:9-41
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:18:9-41
 	android:roundIcon
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:16:9-51
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:16:9-48
 	android:icon
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:15:9-46
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:15:9-43
 	android:allowBackup
 		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:14:9-35
 	android:theme
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:19:9-46
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:20:9-46
 	android:networkSecurityConfig
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:21:9-69
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:22:9-69
 	android:usesCleartextTraffic
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:20:9-44
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:21:9-44
 activity#com.airmouse.ui.onboarding.OnboardingActivity
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:26:9-34:20
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:27:9-35:20
 	android:exported
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:28:13-36
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:29:13-36
 	android:theme
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:29:13-57
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:30:13-57
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:27:13-61
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:28:13-61
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:30:13-33:29
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:31:13-34:29
 action#android.intent.action.MAIN
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:31:17-69
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:17-69
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:31:25-66
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:17-77
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:33:17-77
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:32:27-74
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:33:27-74
 activity#com.airmouse.ui.MainActivity
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:37:9-40:52
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:38:9-41:52
 	android:screenOrientation
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:40:13-49
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:41:13-49
 	android:exported
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:39:13-37
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:40:13-37
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:38:13-44
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:39:13-44
 service#com.airmouse.DebugOverlayService
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:44:9-46:40
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:45:9-47:40
 	android:exported
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:46:13-37
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:47:13-37
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:45:13-48
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:46:13-48
 meta-data#android.app.shortcuts
-ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:48:9-50:49
+ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:49:9-51:49
 	android:resource
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:50:13-46
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:51:13-46
 	android:name
-		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:49:13-49
+		ADDED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml:50:13-49
 uses-sdk
 INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/AndroidManifest.xml

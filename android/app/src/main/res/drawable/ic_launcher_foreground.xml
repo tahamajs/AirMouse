@@ -1,0 +1,75 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Horizontal rotation arc (Z axis) -->
+    <path
+        android:strokeColor="#FFC107"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M20,54 C20,36 34,24 54,24 C74,24 88,36 88,54"/>
+
+    <!-- Vertical rotation arc (X axis) -->
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,20 C72,20 84,34 84,54 C84,74 72,88 54,88 C36,88 24,74 24,54"/>
+
+    <!-- Arrow heads for Z axis -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M22,58 L16,54 L22,50 Z"/>
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M86,50 L92,54 L86,58 Z"/>
+
+    <!-- Arrow heads for X axis -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M50,22 L54,16 L58,22 Z"/>
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M58,86 L54,92 L50,86 Z"/>
+
+    <!-- Mouse cursor body (white with black outline) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,28 L66,66 L58,68 L52,78 L48,76 L54,66 L44,58 Z"
+        android:strokeColor="#000000"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round"/>
+
+    <!-- Quick rotation (Y axis) – click indicator arc -->
+    <path
+        android:strokeColor="#F44336"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M76,32 C82,38 86,46 86,54 C86,68 74,82 58,84"/>
+    <!-- Arrowhead for click -->
+    <path
+        android:fillColor="#F44336"
+        android:pathData="M60,80 L54,85 L60,90 Z"/>
+
+    <!-- Scroll up indicator (line + arrow) -->
+    <path
+        android:strokeColor="#9C27B0"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M28,78 L28,96"/>
+    <path
+        android:fillColor="#9C27B0"
+        android:pathData="M24,94 L28,102 L32,94 Z"/>
+
+    <!-- Scroll down indicator -->
+    <path
+        android:strokeColor="#9C27B0"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M80,78 L80,96"/>
+    <path
+        android:fillColor="#9C27B0"
+        android:pathData="M76,94 L80,86 L84,94 Z"/>
+</vector>

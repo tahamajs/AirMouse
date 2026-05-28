@@ -52,6 +52,8 @@ drawable ic_calibrate
 drawable ic_gesture
 drawable ic_help
 drawable ic_home
+drawable ic_launcher_background
+drawable ic_launcher_foreground
 drawable ic_log
 drawable ic_menu
 drawable ic_play
@@ -86,6 +88,7 @@ id calibrationFragment
 id calibration_instruction
 id calibration_progress
 id calibration_status
+id clear_logs_btn
 id clickThresholdSeek
 id clickThresholdValue
 id click_threshold_seek
@@ -116,6 +119,7 @@ id help_card_controls
 id help_card_sensors
 id homeFragment
 id ip_edit_text
+id live_log_text
 id load_profile_btn
 id log_recycler
 id nav_graph
@@ -127,6 +131,7 @@ id onboarding_description
 id onboarding_image
 id onboarding_title
 id orientation_view
+id port_edit_text
 id profile_name_input
 id profile_spinner
 id profilesFragment
@@ -276,6 +281,7 @@ string calibration_status_mag
 string calibration_title
 string cancel
 string checking_sensors
+string clear_logs
 string click_speed_threshold
 string close
 string command_recognized
@@ -294,6 +300,7 @@ string double_click_interval
 string edge_gesture_description
 string edge_gestures
 string enable_edge_gestures
+string endpoint_hint
 string error_camera_unavailable
 string error_network_timeout
 string error_permission_denied
@@ -320,12 +327,16 @@ string hide_debug
 string home
 string information
 string invalid_ip
+string invalid_port
 string ip_hint
 string license_content
 string license_title
 string listen_command
 string live_data
+string live_log
 string load_profile
+string log_cleared
+string log_placeholder
 string low_battery_warning
 string missing_sensors_warning
 string more_features
@@ -345,6 +356,7 @@ string onboarding_title_2
 string onboarding_title_3
 string onboarding_title_4
 string poor
+string port_hint
 string profile_default
 string profile_gaming
 string profile_presentation

@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.fragment.app.Fragment
+import com.airmouse.utils.LogManager
 import com.airmouse.utils.PreferencesManager
 
 class ServerLogFragment : Fragment() {
@@ -16,6 +17,17 @@ class ServerLogFragment : Fragment() {
     private lateinit var adapter: LogAdapter
     private val logEntries = mutableListOf<String>()
     private lateinit var preferences: PreferencesManager
+    private val logListener = object : LogManager.LogListener {
+        override fun onNewLog(message: String) {
+            if (!isAdded) return
+            requireActivity().runOnUiThread {
+                logEntries.add(0, message)
+                while (logEntries.size > 200) logEntries.removeAt(logEntries.lastIndex)
+                adapter.notifyDataSetChanged()
+                recyclerView.scrollToPosition(0)
+            }
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_server_log, container, false)
@@ -33,6 +45,12 @@ class ServerLogFragment : Fragment() {
         val savedLogs = preferences.getServerLogs()
         logEntries.addAll(savedLogs)
         adapter.notifyItemRangeInserted(0, savedLogs.size)
+        LogManager.addListener(logListener)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        LogManager.removeListener(logListener)
     }
 
     inner class LogAdapter(private val entries: List<String>) : RecyclerView.Adapter<LogAdapter.ViewHolder>() {

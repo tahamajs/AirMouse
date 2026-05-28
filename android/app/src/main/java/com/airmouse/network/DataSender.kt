@@ -33,6 +33,7 @@ class DataSender(
     companion object {
         private const val TAG = "DataSender"
         private const val ACK_TIMEOUT_MS = 500L
+        private const val MAX_ACK_RETRIES = 3
         private var instance: DataSender? = null
 
         /**
@@ -66,7 +67,8 @@ class DataSender(
     private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val messageId = AtomicInteger(0)
-    private val pendingAcks = ConcurrentHashMap<Int, String>()   // id -> original message
+    private data class PendingCommand(val message: String, var retries: Int = 0)
+    private val pendingAcks = ConcurrentHashMap<Int, PendingCommand>()
 
     var onConnected: (() -> Unit)? = null
     var onDisconnected: (() -> Unit)? = null
@@ -194,20 +196,29 @@ class DataSender(
         writer?.flush()
         LogManager.add("Sent $type (id=$id)")
 
-        pendingAcks[id] = msg
-
-        // Schedule retransmission if no ACK received within timeout
-        scope.launch {
-            delay(ACK_TIMEOUT_MS)
-            if (pendingAcks.containsKey(id)) {
-                LogManager.add("Timeout for $type (id=$id), retransmitting...")
-                writer?.print(msg)
-                writer?.flush()
-                // You could add a second retry here, but one retry is enough for most cases
-            }
-        }
+        pendingAcks[id] = PendingCommand(msg)
+        scheduleRetry(id, type)
         } finally {
             Trace.endSection()
+        }
+    }
+
+    private fun scheduleRetry(id: Int, type: String) {
+        scope.launch {
+            delay(ACK_TIMEOUT_MS)
+            val pending = pendingAcks[id] ?: return@launch
+            if (!isRunning) return@launch
+            if (pending.retries >= MAX_ACK_RETRIES) {
+                pendingAcks.remove(id)
+                LogManager.add("ACK timeout for $type (id=$id) after $MAX_ACK_RETRIES retries")
+                return@launch
+            }
+
+            pending.retries++
+            LogManager.add("Timeout for $type (id=$id), retransmitting (${pending.retries}/$MAX_ACK_RETRIES)...")
+            writer?.print(pending.message)
+            writer?.flush()
+            scheduleRetry(id, type)
         }
     }
 

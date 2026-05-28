@@ -50,6 +50,22 @@
                         android:inputType="phone" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:startIconDrawable="@android:drawable/ic_menu_manage"
+                    app:boxBackgroundColor="@android:color/white">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/port_edit_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/port_hint"
+                        android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <!-- Scan QR button added here -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/scan_qr_btn"
@@ -202,6 +218,58 @@
                     android:layout_gravity="center"
                     android:layout_marginTop="16dp"
                     android:background="@drawable/green_square" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Live Log Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="6dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/live_log"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/clear_logs_btn"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/clear_logs"
+                        app:icon="@android:drawable/ic_menu_close_clear_cancel" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/live_log_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="120dp"
+                    android:background="@drawable/bg_card_outline"
+                    android:padding="12dp"
+                    android:text="@string/log_placeholder"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:typeface="monospace"
+                    android:textIsSelectable="true" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

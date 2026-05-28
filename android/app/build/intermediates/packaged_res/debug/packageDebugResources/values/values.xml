@@ -138,6 +138,7 @@
     <string name="calibration_title">Calibration</string>
     <string name="cancel">Cancel</string>
     <string name="checking_sensors">Checking sensors…</string>
+    <string name="clear_logs">Clear logs</string>
     <string name="click_speed_threshold">Click speed threshold</string>
     <string name="close">Close</string>
     <string name="command_recognized">Command: %s</string>
@@ -172,6 +173,7 @@
     <string name="edge_gesture_description">Tap = click, long press = right click</string>
     <string name="edge_gestures">Edge Gestures</string>
     <string name="enable_edge_gestures">Enable floating action button</string>
+    <string name="endpoint_hint">IP or QR endpoint</string>
     <string name="error_camera_unavailable">Camera unavailable. Check your device.</string>
     <string name="error_network_timeout">Network timeout. Check your connection.</string>
     <string name="error_permission_denied">Permission denied. Please grant the required permissions.</string>
@@ -212,6 +214,7 @@
     <string name="home">Home</string>
     <string name="information">Information</string>
     <string name="invalid_ip">Invalid IP</string>
+    <string name="invalid_port">Invalid port</string>
     <string name="ip_hint">Laptop IP address</string>
     <string name="license_content">
         <![CDATA[
@@ -225,7 +228,10 @@
     <string name="license_title">License</string>
     <string name="listen_command">Listen for command</string>
     <string name="live_data">Live Data</string>
+    <string name="live_log">Live Log</string>
     <string name="load_profile">Load profile</string>
+    <string name="log_cleared">Log cleared.</string>
+    <string name="log_placeholder">Logs will appear here as the app runs.</string>
     <string name="low_battery_warning">Low battery – please charge</string>
     <string name="missing_sensors_warning">Hardware Warning: Core sensors missing</string>
     <string name="more_features">More Features</string>
@@ -245,6 +251,7 @@
     <string name="onboarding_title_3">Quick Connection</string>
     <string name="onboarding_title_4">Advanced Features</string>
     <string name="poor">Poor</string>
+    <string name="port_hint">Port</string>
     <string name="profile_default">Default</string>
     <string name="profile_gaming">Gaming</string>
     <string name="profile_presentation">Presentation</string>

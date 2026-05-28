@@ -428,18 +428,26 @@ class AirMouseGUI:
             self.on_ip_selected()
 
     def copy_ip(self):
-        """Copy the current IP:port to clipboard."""
-        ip_port = f"{self.get_selected_ip()}:{CONFIG['port']}"
+        """Copy the current endpoint to clipboard."""
+        ip_port = f"airmouse://{self.get_selected_ip()}:{CONFIG['port']}"
         self.root.clipboard_clear()
         self.root.clipboard_append(ip_port)
         self.log(f"📋 Copied to clipboard: {ip_port}")
 
     def update_qr_code(self):
-        """Generate QR code from the currently selected IP:port."""
+        """Generate QR code from the currently selected endpoint."""
         ip = self.get_selected_ip()
-        qr_data = f"{ip}:{CONFIG['port']}"
-        qr = qrcode.make(qr_data)
-        img = qr.resize((180, 180))
+        qr_data = f"airmouse://{ip}:{CONFIG['port']}"
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=8,
+            border=2,
+        )
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#111111", back_color="#ffffff").convert("RGB")
+        img = img.resize((220, 220))
         self.qr_image = ImageTk.PhotoImage(img)
         self.qr_label.config(image=self.qr_image)
         if hasattr(self, "qr_text"):
