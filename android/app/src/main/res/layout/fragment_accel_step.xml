@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:padding="24dp"
+    android:background="#0f1115">
+
+    <TextView
+        android:id="@+id/stepTitle"
+        android:text="Accelerometer Calibration"
+        android:textColor="#e5e7eb"
+        android:textSize="20sp"
+        android:textAlignment="center"
+        android:layout_marginBottom="8dp"/>
+
+    <ImageView
+        android:id="@+id/phoneAnimation"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:src="@drawable/avd_phone_flat_to_vertical"
+        android:layout_marginBottom="16dp"
+        android:contentDescription="Phone position animation"/>
+
+    <TextView
+        android:id="@+id/instructionText"
+        android:text="Place phone flat, screen up"
+        android:textColor="#e5e7eb"
+        android:textSize="16sp"
+        android:textAlignment="center"
+        android:layout_marginBottom="24dp"/>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100"
+        android:visibility="invisible"/>
+
+    <Button
+        android:id="@+id/startBtn"
+        android:text="Start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+</LinearLayout>
