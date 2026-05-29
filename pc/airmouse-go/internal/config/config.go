@@ -8,53 +8,53 @@ import (
 )
 
 type Config struct {
-	// Server configuration
-	Host             string   `json:"host"`
-	Port             int      `json:"port"`
-	WebSocketPort    int      `json:"websocket_port"`
-	UDPPort          int      `json:"udp_port"`
-	EnableWebSocket  bool     `json:"enable_websocket"`
-	EnableUDP        bool     `json:"enable_udp"`
-	EnableTCP        bool     `json:"enable_tcp"`
-	EnableBluetooth  bool     `json:"enable_bluetooth"`
-	EnableSerial     bool     `json:"enable_serial"`
-	
-	// Bluetooth configuration
-	BluetoothAdapter string   `json:"bluetooth_adapter"`
-	BLEEnabled       bool     `json:"ble_enabled"`
-	HIDProxyEnabled  bool     `json:"hid_proxy_enabled"`
-	
+	// Server
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	WebSocketPort int    `json:"websocket_port"`
+	UDPPort       int    `json:"udp_port"`
+	EnableTCP     bool   `json:"enable_tcp"`
+	EnableWebSocket bool `json:"enable_websocket"`
+	EnableUDP     bool   `json:"enable_udp"`
+	EnableBluetooth bool `json:"enable_bluetooth"`
+	EnableSerial  bool   `json:"enable_serial"`
+
+	// Bluetooth
+	BluetoothAdapter string `json:"bluetooth_adapter"`
+	BLEEnabled       bool   `json:"ble_enabled"`
+	HIDProxyEnabled  bool   `json:"hid_proxy_enabled"`
+
 	// Security
-	AuthEnabled      bool     `json:"auth_enabled"`
-	AuthTokens       []string `json:"auth_tokens"`
-	EncryptionKey    string   `json:"encryption_key"`
-	
+	AuthEnabled   bool     `json:"auth_enabled"`
+	AuthTokens    []string `json:"auth_tokens"`
+	EncryptionKey string   `json:"encryption_key"`
+
 	// Performance
-	Sensitivity          float64 `json:"sensitivity"`
-	MoveRateLimit        int     `json:"move_rate_limit"`        // moves per second
-	BufferSize           int     `json:"buffer_size"`
-	HeartbeatInterval    int     `json:"heartbeat_interval"`     // seconds
-	ConnectionTimeout    int     `json:"connection_timeout"`     // seconds
-	
-	// Device management
-	MaxClients           int     `json:"max_clients"`
-	ClientNames          bool    `json:"client_names"`
-	DeviceRegistry       bool    `json:"device_registry"`
-	
+	Sensitivity       float64 `json:"sensitivity"`
+	MoveRateLimit     int     `json:"move_rate_limit"`
+	BufferSize        int     `json:"buffer_size"`
+	HeartbeatInterval int     `json:"heartbeat_interval"`
+	ConnectionTimeout int     `json:"connection_timeout"`
+
+	// Device
+	MaxClients     int  `json:"max_clients"`
+	ClientNames    bool `json:"client_names"`
+	DeviceRegistry bool `json:"device_registry"`
+
 	// Discovery
-	DiscoveryPort        int     `json:"discovery_port"`
-	MDNSName             string  `json:"mdns_name"`
-	
+	DiscoveryPort int    `json:"discovery_port"`
+	MDNSName      string `json:"mdns_name"`
+
 	// UI
-	AccentColor          string  `json:"accent_color"`
-	Theme                string  `json:"theme"` // dark, light, pure_black, high_contrast, ocean, sunset, forest, purple, cherry, neon, lavender, mint, peach, sky
-	AlwaysOnTop          bool    `json:"always_on_top"`
-	ShowTrayIcon         bool    `json:"show_tray_icon"`
-	
+	AccentColor  string `json:"accent_color"`
+	Theme        string `json:"theme"`
+	AlwaysOnTop  bool   `json:"always_on_top"`
+	ShowTrayIcon bool   `json:"show_tray_icon"`
+
 	// Logging
-	LogLevel             string  `json:"log_level"`
-	LogFile              string  `json:"log_file"`
-	
+	LogLevel string `json:"log_level"`
+	LogFile  string `json:"log_file"`
+
 	mu sync.RWMutex
 }
 
@@ -70,41 +70,41 @@ func Get() *Config {
 
 func loadOrDefault() *Config {
 	cfg := &Config{
-		Host:                "0.0.0.0",
-		Port:                8080,
-		WebSocketPort:       8081,
-		UDPPort:             8082,
-		EnableWebSocket:     true,
-		EnableUDP:           true,
-		EnableTCP:           true,
-		EnableBluetooth:     true,
-		EnableSerial:        true,
-		BluetoothAdapter:    "default",
-		BLEEnabled:          true,
-		HIDProxyEnabled:     false,
-		AuthEnabled:         false,
-		AuthTokens:          []string{},
-		EncryptionKey:       "",
-		Sensitivity:         0.5,
-		MoveRateLimit:       60,
-		BufferSize:          1024,
-		HeartbeatInterval:   10,
-		ConnectionTimeout:   30,
-		MaxClients:          10,
-		ClientNames:         true,
-		DeviceRegistry:      true,
-		DiscoveryPort:       8083,
-		MDNSName:            "airmouse",
-		AccentColor:         "#007acc",
-		Theme:               "dark",
-		AlwaysOnTop:         false,
-		ShowTrayIcon:        true,
-		LogLevel:            "info",
-		LogFile:             "airmouse.log",
+		Host:              "0.0.0.0",
+		Port:              8080,
+		WebSocketPort:     8081,
+		UDPPort:           8082,
+		EnableTCP:         true,
+		EnableWebSocket:   true,
+		EnableUDP:         true,
+		EnableBluetooth:   true,
+		EnableSerial:      true,
+		BluetoothAdapter:  "default",
+		BLEEnabled:        true,
+		HIDProxyEnabled:   false,
+		AuthEnabled:       false,
+		AuthTokens:        []string{},
+		EncryptionKey:     "",
+		Sensitivity:       0.5,
+		MoveRateLimit:     60,
+		BufferSize:        1024,
+		HeartbeatInterval: 10,
+		ConnectionTimeout: 30,
+		MaxClients:        10,
+		ClientNames:       true,
+		DeviceRegistry:    true,
+		DiscoveryPort:     8083,
+		MDNSName:          "airmouse",
+		AccentColor:       "#007acc",
+		Theme:             "dark",
+		AlwaysOnTop:       false,
+		ShowTrayIcon:      true,
+		LogLevel:          "info",
+		LogFile:           "airmouse.log",
 	}
-	
-	configPath := getConfigPath()
-	if data, err := os.ReadFile(configPath); err == nil {
+
+	path := getConfigPath()
+	if data, err := os.ReadFile(path); err == nil {
 		json.Unmarshal(data, cfg)
 	}
 	return cfg
@@ -113,7 +113,6 @@ func loadOrDefault() *Config {
 func (c *Config) Save() error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err

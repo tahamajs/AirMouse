@@ -47,7 +47,8 @@ func (m *mouseController) executeDoubleClick() {
 }
 
 func (m *mouseController) executeScroll(delta int) {
-	// macOS uses scroll events
-	scrollAmount := C.int(delta * 10)
-	C.CGEventScrollWheel(C.CGEventCreate(nil), 0, scrollAmount, 0)
+	// Use CGEventCreateScrollWheelEvent
+	C.CGEventRef event := C.CGEventCreateScrollWheelEvent(NULL, 0, 1, C.int32(delta))
+	C.CGEventPost(C.kCGHIDEventTap, event)
+	C.CFRelease(event)
 }
