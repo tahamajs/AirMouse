@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.airmouse.R
@@ -20,7 +19,7 @@ class ServerLogFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_server_log, container, false)
-        recyclerView = view.findViewById(R.id.logRecyclerView)
+        recyclerView = view.findViewById(R.id.log_recycler)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         adapter = LogAdapter()
         recyclerView.adapter = adapter
