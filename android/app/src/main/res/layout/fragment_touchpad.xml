@@ -1,25 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1A1A2E">
+    android:background="#0c1016">
 
+    <!-- Touch surface with subtle radial gradient overlay -->
     <View
         android:id="@+id/touchSurface"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#16213E"
-        android:focusable="true"
-        android:clickable="true" />
+        android:background="@drawable/bg_touchpad_gradient" />
 
-    <TextView
-        android:id="@+id/touchHint"
+    <!-- Hint overlay (fades out after first use – optional) -->
+    <LinearLayout
+        android:id="@+id/hintOverlay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="Swipe to move\nTap to click\nTwo‑finger scroll"
-        android:textColor="#80FFFFFF"
-        android:textSize="18sp"
-        android:textAlignment="center"
-        android:alpha="0.6"/>
+        android:orientation="vertical"
+        android:gravity="center"
+        android:alpha="0.5"
+        android:padding="32dp">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_touchpad_gesture"
+            android:tint="#80FFFFFF"
+            android:contentDescription="@string/touchpad_hint" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Swipe to move\nTap to click\nTwo‑finger scroll"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textAlignment="center"
+            android:lineSpacingExtra="4dp"
+            android:layout_marginTop="16dp"
+            android:fontFamily="sans-serif-light" />
+    </LinearLayout>
+
+    <!-- Visual feedback for clicks (subtle ripple) – hidden by default -->
+    <View
+        android:id="@+id/clickFeedback"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/circle_ripple"
+        android:visibility="gone"
+        android:layout_gravity="center"
+        android:alpha="0.7" />
 </FrameLayout>
