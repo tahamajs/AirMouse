@@ -13,9 +13,9 @@ class CalibrationPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter
     override fun getItemCount() = STEP_COUNT
 
     override fun createFragment(position: Int): Fragment = when (position) {
-        0 -> GyroStepFragment()
-        1 -> AccelStepFragment()
-        2 -> MagStepFragment()
+        0 -> GyroComposeFragment()
+        1 -> AccelComposeFragment()
+        2 -> MagComposeFragment()
         else -> throw IllegalArgumentException()
     }
 }
