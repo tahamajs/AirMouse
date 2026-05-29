@@ -17,6 +17,7 @@ import com.airmouse.DebugOverlay
 import com.airmouse.ui.SettingsDialog
 import com.airmouse.utils.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.slider.Slider
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,17 +42,17 @@ class HomeFragment : Fragment() {
     private lateinit var portEditText: EditText
     private lateinit var statusText: TextView
     private lateinit var orientationIndicator: View
-    private lateinit var calibrateBtn: Button
-    private lateinit var startBtn: Button
-    private lateinit var sensitivitySeekBar: SeekBar
+    private lateinit var calibrateBtn: com.google.android.material.button.MaterialButton
+    private lateinit var startBtn: com.google.android.material.button.MaterialButton
+    private lateinit var sensitivitySlider: Slider
     private lateinit var sensitivityText: TextView
-    private lateinit var settingsBtn: Button
-    private lateinit var debugToggleBtn: Button
+    private lateinit var settingsBtn: com.google.android.material.button.MaterialButton
+    private lateinit var debugToggleBtn: com.google.android.material.button.MaterialButton
     private lateinit var sensorStatusText: TextView
     private lateinit var connectionQualityText: TextView
     private lateinit var sensorDataText: TextView
     private lateinit var liveLogText: TextView
-    private lateinit var clearLogsBtn: Button
+    private lateinit var clearLogsBtn: com.google.android.material.button.MaterialButton
     private lateinit var fabCalibrate: FloatingActionButton
     private lateinit var scanQrBtn: com.google.android.material.button.MaterialButton
 
@@ -67,7 +68,6 @@ class HomeFragment : Fragment() {
     private var latestLogEntry = ""
 
     companion object {
-        private const val PORT = 8080
         private const val OVERLAY_PERMISSION_REQUEST = 100
         private const val MOVE_EMA_ALPHA = 0.25f
         private const val MOVE_DEADBAND = 0.8f
@@ -132,7 +132,7 @@ class HomeFragment : Fragment() {
         orientationIndicator = view.findViewById(R.id.orientation_view)
         calibrateBtn = view.findViewById(R.id.calibrate_btn)
         startBtn = view.findViewById(R.id.start_btn)
-        sensitivitySeekBar = view.findViewById(R.id.sensitivity_seekbar)
+        sensitivitySlider = view.findViewById(R.id.sensitivity_seekbar)
         sensitivityText = view.findViewById(R.id.sensitivity_text)
         settingsBtn = view.findViewById(R.id.settings_btn)
         debugToggleBtn = view.findViewById(R.id.debug_toggle_btn)
@@ -196,19 +196,15 @@ class HomeFragment : Fragment() {
 
     private fun setupSensitivitySlider() {
         val savedSensitivity = preferences.getSensitivity()
-        val progress = ((savedSensitivity - 0.2f) / 1.8f * 100).toInt().coerceIn(0, 100)
-        sensitivitySeekBar.progress = progress
+        val progress = ((savedSensitivity - 0.2f) / 1.8f * 100).coerceIn(0f, 100f)
+        sensitivitySlider.value = progress
         sensitivityText.text = getString(R.string.speed_label, savedSensitivity)
 
-        sensitivitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val sensitivity = 0.2f + (progress / 100f) * 1.8f
-                sensitivityText.text = getString(R.string.speed_label, sensitivity)
-                if (fromUser) preferences.setSensitivity(sensitivity)
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+        sensitivitySlider.addOnChangeListener { _, value, fromUser ->
+            val sensitivity = 0.2f + (value / 100f) * 1.8f
+            sensitivityText.text = getString(R.string.speed_label, sensitivity)
+            if (fromUser) preferences.setSensitivity(sensitivity)
+        }
     }
 
     private fun setupClickListeners() {
