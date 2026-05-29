@@ -21,7 +21,7 @@ type Config struct {
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		// return defaults
+		// Default configuration
 		return &Config{
 			Host:          "0.0.0.0",
 			Port:          8080,
@@ -32,8 +32,7 @@ func Load(path string) (*Config, error) {
 		}, nil
 	}
 	var cfg Config
-	err = json.Unmarshal(data, &cfg)
-	if err != nil {
+	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
