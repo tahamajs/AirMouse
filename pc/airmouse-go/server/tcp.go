@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 	"time"
+
 	"airmouse-go/control"
 )
 
@@ -189,6 +190,16 @@ func (s *TCPServer) sendStats() {
 	}
 }
 
+// DisconnectByAddr closes the connection for the given address string.
+func (s *TCPServer) DisconnectByAddr(addr string) {
+	s.mu.Lock()
+	c, ok := s.conns[addr]
+	s.mu.Unlock()
+	if ok && c != nil {
+		c.conn.Close()
+	}
+}
+
 func (s *TCPServer) Stop() {
-	// In a full implementation, close the listener and all connections.
+	// In a full implementation, close the listener; for now we rely on process exit.
 }

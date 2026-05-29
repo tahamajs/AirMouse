@@ -3,15 +3,16 @@ package control
 import (
 	"math"
 	"sync/atomic"
+
 	"github.com/go-vgo/robotgo"
 )
 
 type MouseController struct {
-	sensitivity     float64
-	clickCount      int64
-	doubleClickCnt  int64
-	rightClickCnt   int64
-	scrollCount     int64
+	sensitivity    float64
+	clickCount     int64
+	doubleClickCnt int64
+	rightClickCnt  int64
+	scrollCount    int64
 }
 
 func NewMouseController(sensitivity float64) *MouseController {

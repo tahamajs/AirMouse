@@ -2,8 +2,9 @@ package server
 
 import (
 	"fmt"
-	"github.com/hashicorp/mdns"
 	"os"
+
+	"github.com/hashicorp/mdns"
 )
 
 func StartMDNS(name string, ip string, port int, logFn func(string)) {
@@ -20,5 +21,5 @@ func StartMDNS(name string, ip string, port int, logFn func(string)) {
 		return
 	}
 	logFn(fmt.Sprintf("🌐 mDNS advertised as %s.local:%d", name, port))
-	// The server runs indefinitely; no need to block.
+	// Runs forever; no need to block.
 }

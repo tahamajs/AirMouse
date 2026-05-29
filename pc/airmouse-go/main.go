@@ -6,8 +6,6 @@ import (
 	"airmouse-go/server"
 	"airmouse-go/ui"
 	"fmt"
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
 	"os"
 )
 
@@ -19,15 +17,12 @@ func main() {
 	}
 
 	mouseCtrl := control.NewMouseController(cfg.Sensitivity)
-	a := app.NewWithID("com.airmouse.server")
-	w := a.NewWindow("Air Mouse Pro Server")
+	app := ui.NewApp(cfg, mouseCtrl)
 
-	// Build UI with all backend components
-	ui.Setup(w, a, cfg, mouseCtrl)
-
-	// Start background services
+	// Start background discovery services
 	go server.StartUDPDiscovery(cfg.DiscoveryPort, func() string { return cfg.SelectedIP }, ui.Log)
 	go server.StartMDNS(cfg.MDNSName, cfg.SelectedIP, cfg.Port, ui.Log)
 
-	w.ShowAndRun()
+	// Run the GUI (blocking)
+	app.Run()
 }
