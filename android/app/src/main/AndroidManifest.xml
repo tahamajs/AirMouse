@@ -8,7 +8,11 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
+    <!-- Bluetooth HID permissions (API 31+) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
@@ -21,6 +25,10 @@
         android:theme="@style/Theme.AirMouse"
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config">
+        <service
+            android:name=".bluetooth.BluetoothMouseService"
+            android:enabled="true"
+            android:exported="false" />
 
         <activity
             android:name=".ui.onboarding.OnboardingActivity"
