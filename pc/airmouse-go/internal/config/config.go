@@ -169,3 +169,32 @@ EnablePersonalization:   true,
 PersonalizationBuffer:   2000,
 PersonalizationInterval: 3600,
 AutoSwapModel:           true,
+
+
+type Config struct {
+    // ... existing fields ...
+
+    // Predictive movement (Kalman filter)
+    EnablePredictive       bool    `json:"enable_predictive"`
+    PredictiveBlendFactor  float64 `json:"predictive_blend_factor"`
+    PredictiveDt           float64 `json:"predictive_dt"` // not needed dynamic
+}
+
+
+EnablePredictive:      true,
+PredictiveBlendFactor: 0.6,
+
+
+func (c *Config) SetPredictiveEnabled(enabled bool) {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    c.EnablePredictive = enabled
+    c.Save()
+}
+
+func (c *Config) SetPredictiveBlendFactor(factor float64) {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    c.PredictiveBlendFactor = factor
+    c.Save()
+}

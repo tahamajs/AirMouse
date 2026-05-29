@@ -680,3 +680,87 @@ func (m *mouseController) Move(dx, dy float64) {
     m.lastCursorX += dx
     m.lastCursorY += dy
 }
+
+// internal/control/mouse.go – add inside mouseController struct
+type mouseController struct {
+    // ... existing fields ...
+    
+    // Predictive movement
+    predictor *predictive.MovementPredictor
+    predEnabled bool
+}
+
+// NewMouseController now optionally creates predictor (default enabled).
+func NewMouseController(sensitivity float64) MouseController {
+    m := &mouseController{
+        sensitivity:   sensitivity,
+        smoothing:     true,
+        acceleration:  false,
+        moveRateLimit: rateLimitPerSec,
+        predEnabled:   true,
+        // Create predictor with 20ms default dt and 0.6 blend factor
+        predictor: predictive.NewMovementPredictor(0.02, 0.6),
+    }
+    return m
+}
+
+// EnablePredictive turns the Kalman predictor on/off.
+func (m *mouseController) EnablePredictive(enabled bool) {
+    m.predEnabled = enabled
+    if m.predictor != nil {
+        m.predictor.SetEnabled(enabled)
+    }
+}
+
+// SetPredictiveBlendFactor adjusts the prediction weight (0-1).
+func (m *mouseController) SetPredictiveBlendFactor(factor float64) {
+    if m.predictor != nil {
+        m.predictor.SetBlendFactor(factor)
+    }
+}
+
+// Move – modified to use predictor
+func (m *mouseController) Move(dx, dy float64) {
+    // Rate limiting
+    now := time.Now()
+    if now.Sub(m.lastMoveTime) > time.Second {
+        m.moveCount = 0
+        m.lastMoveTime = now
+    }
+    m.moveCount++
+    if m.moveCount > m.moveRateLimit {
+        return
+    }
+
+    // Apply sensitivity
+    dx *= m.sensitivity
+    dy *= m.sensitivity
+
+    // ---- PREDICTIVE FILTERING ----
+    if m.predEnabled && m.predictor != nil {
+        // Feed raw movement into predictor, get smoothed + predicted
+        dx, dy = m.predictor.AddMovement(dx, dy)
+    } else {
+        // Fallback to EMA smoothing
+        dx, dy = m.applySmoothing(dx, dy)
+    }
+
+    // Apply acceleration (if enabled)
+    if m.acceleration {
+        speed := math.Sqrt(dx*dx + dy*dy)
+        if speed > 5 {
+            factor := 1.0 + m.accelFactor*(speed/50.0)
+            if factor > 3.0 {
+                factor = 3.0
+            }
+            dx *= factor
+            dy *= factor
+        }
+    }
+
+    if math.Abs(dx) < minMoveDelta && math.Abs(dy) < minMoveDelta {
+        return
+    }
+
+    m.executeMove(dx, dy)
+}

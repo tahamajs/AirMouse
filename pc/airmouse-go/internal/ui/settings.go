@@ -194,3 +194,21 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
 		tab.aiCheck,
 	)
 }
+
+
+// inside NewSettingsTab
+predictiveCheck := widget.NewCheck("Predictive Movement (Kalman filter)", func(b bool) {
+    cfg.SetPredictiveEnabled(b)
+    mouse.EnablePredictive(b)
+})
+predictiveCheck.SetChecked(cfg.EnablePredictive)
+
+blendSlider := widget.NewSlider(0, 1)
+blendSlider.Step = 0.05
+blendSlider.Value = cfg.PredictiveBlendFactor
+blendLabel := widget.NewLabel(fmt.Sprintf("Prediction blend: %.2f", cfg.PredictiveBlendFactor))
+blendSlider.OnChanged = func(v float64) {
+    cfg.SetPredictiveBlendFactor(v)
+    mouse.SetPredictiveBlendFactor(v)
+    blendLabel.SetText(fmt.Sprintf("Prediction blend: %.2f", v))
+}
