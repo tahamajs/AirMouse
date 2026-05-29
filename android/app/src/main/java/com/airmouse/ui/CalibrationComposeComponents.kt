@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import com.airmouse.R
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun CalibrationHeader(status: String, overallProgress: Int) {
@@ -48,7 +49,11 @@ fun CalibrationHeader(status: String, overallProgress: Int) {
             // load from assets if provided: assets/lottie_success.json
             val composition by rememberLottieComposition(LottieCompositionSpec.Asset("lottie_success.json"))
             val progress by animateLottieCompositionAsState(composition)
-            LottieAnimation(composition, progress, modifier = Modifier.size(64.dp))
+            if (composition != null) {
+                LottieAnimation(composition = composition, progress = { progress }, modifier = Modifier.size(64.dp))
+            } else {
+                Text("✓", color = Color(0xFF4CAF50), fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            }
         }
     }
 }

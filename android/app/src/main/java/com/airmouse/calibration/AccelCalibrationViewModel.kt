@@ -28,6 +28,7 @@ class AccelCalibrationViewModel(application: Application) : AndroidViewModel(app
     val timerText: StateFlow<String> = _timerText
 
     private var collecting = false
+    private var completed = false
     private val samples = mutableListOf<FloatArray>()
     private var sampleCount = 0
     private val targetSamples = 120
@@ -38,6 +39,7 @@ class AccelCalibrationViewModel(application: Application) : AndroidViewModel(app
             return
         }
         collecting = true
+        completed = false
         samples.clear(); sampleCount = 0; _progress.value = 0
         _status.value = "Place phone in the requested orientation"
         viewModelScope.launch {
@@ -60,6 +62,16 @@ class AccelCalibrationViewModel(application: Application) : AndroidViewModel(app
         _status.value = "Stopped"
     }
 
+    fun reset() {
+        stopCollection()
+        samples.clear()
+        sampleCount = 0
+        completed = false
+        _progress.value = 0
+        _status.value = "Ready"
+        _timerText.value = "01:15"
+    }
+
     private fun evaluateData() {
         sensorManager.unregisterListener(this)
         collecting = false
@@ -75,9 +87,12 @@ class AccelCalibrationViewModel(application: Application) : AndroidViewModel(app
         meanX /= n; meanY /= n; meanZ /= n
         // save via CalibrationManager
         CalibrationManager(getApplication()).setAccelCalibrated(true)
+        completed = true
         _status.value = "Accel calibrated"
         _progress.value = 100
     }
+
+    fun isComplete(): Boolean = completed
 
     override fun onSensorChanged(event: SensorEvent) {
         if (!collecting || event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
