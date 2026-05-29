@@ -1,3 +1,4 @@
+// file: calibration/GyroStepFragment.kt
 package com.airmouse.calibration
 
 import android.animation.ValueAnimator
@@ -12,40 +13,47 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.airmouse.R
 import com.airmouse.sensors.CalibrationManager
 import com.airmouse.ui.CalibrationActivity
-import java.util.Locale
-import kotlin.math.abs
+import kotlin.math.sqrt
 
 class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment {
 
     private lateinit var sensorManager: SensorManager
     private var gyroSensor: Sensor? = null
     private var accelSensor: Sensor? = null
-    private val samples = mutableListOf<FloatArray>()
+    private val gyroSamples = mutableListOf<FloatArray>()
     private var sampleCount = 0
-    private val targetSamples = 100
+    private val targetSamples = 150
     private var collecting = false
     private var stepComplete = false
     private var dataValid = false
 
-    private lateinit var statusText: TextView
+    // UI
+    private lateinit var instructionCard: CardView
+    private lateinit var instructionText: TextView
+    private lateinit var coachMessage: TextView
+    private lateinit var varianceMeter: ProgressBar
     private lateinit var progressBar: ProgressBar
     private lateinit var startBtn: Button
     private lateinit var retryBtn: Button
     private lateinit var phoneImage: ImageView
     private var breathAnimator: ValueAnimator? = null
 
-    // stationarity check
-    private val accelSamples = mutableListOf<FloatArray>()
-    private var phoneMoving = false
+    // Stationarity check using accelerometer
+    private val accelWindow = mutableListOf<FloatArray>()
+    private var currentVariance = 0f
+    private val VARIANCE_THRESHOLD = 0.15f
 
     private var secondsLeft = GYRO_TIME_LIMIT
     private val handler = Handler(Looper.getMainLooper())
@@ -54,25 +62,28 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
             if (!collecting) return
             if (secondsLeft <= 0) {
                 stopCollection()
-                checkDataValidity()
+                evaluateData()
                 return
             }
             val mins = secondsLeft / 60
             val secs = secondsLeft % 60
-            (activity as? CalibrationActivity)?.setTimerText(String.format(Locale.getDefault(), "%02d:%02d", mins, secs))
+            (activity as? CalibrationActivity)?.setTimerText(String.format("%02d:%02d", mins, secs))
             secondsLeft--
             handler.postDelayed(this, 1000)
         }
     }
 
     companion object {
-        private const val GYRO_TIME_LIMIT = 30
-        private const val ACCEL_VARIANCE_THRESHOLD = 0.1f
+        private const val GYRO_TIME_LIMIT = 45
+        private const val WINDOW_SIZE = 20
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_gyro_step, container, false)
-        statusText = view.findViewById(R.id.statusText)
+        instructionCard = view.findViewById(R.id.instructionCard)
+        instructionText = view.findViewById(R.id.instructionText)
+        coachMessage = view.findViewById(R.id.coachMessage)
+        varianceMeter = view.findViewById(R.id.varianceMeter)
         progressBar = view.findViewById(R.id.progressBar)
         startBtn = view.findViewById(R.id.startBtn)
         retryBtn = view.findViewById(R.id.retryBtn)
@@ -93,15 +104,30 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
     }
 
     private fun startCollection() {
-        if (gyroSensor == null || accelSensor == null) return
-        collecting = true; stepComplete = false; dataValid = false
-        startBtn.visibility = View.GONE; retryBtn.visibility = View.GONE
-        progressBar.visibility = View.VISIBLE; progressBar.progress = 0
-        accelSamples.clear()
+        if (gyroSensor == null || accelSensor == null) {
+            Toast.makeText(requireContext(), "Gyroscope or accelerometer missing", Toast.LENGTH_SHORT).show()
+            return
+        }
+        collecting = true
+        stepComplete = false
+        dataValid = false
+        gyroSamples.clear()
+        accelWindow.clear()
+        sampleCount = 0
+        currentVariance = 0f
 
-        (activity as? CalibrationActivity)?.setStatusHeader(getString(R.string.gyro_collecting_header))
-        statusText.text = getString(R.string.gyro_collecting)
-        startBreathing()
+        startBtn.visibility = View.GONE
+        retryBtn.visibility = View.GONE
+        progressBar.visibility = View.VISIBLE
+        varianceMeter.visibility = View.VISIBLE
+        varianceMeter.progress = 0
+        progressBar.progress = 0
+
+        instructionText.text = getString(R.string.gyro_instruction)
+        coachMessage.text = getString(R.string.gyro_coach_keep_still)
+        startBreathingAnimation()
+
+        (activity as? CalibrationActivity)?.setStatusHeader(getString(R.string.gyro_status_header))
 
         secondsLeft = GYRO_TIME_LIMIT
         handler.post(countdownRunnable)
@@ -109,44 +135,73 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
         sensorManager.registerListener(this, accelSensor, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
+    private fun startBreathingAnimation() {
+        phoneImage.post {
+            breathAnimator = ValueAnimator.ofFloat(1f, 1.06f).apply {
+                duration = 1200
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                interpolator = AccelerateDecelerateInterpolator()
+                addUpdateListener {
+                    val scale = it.animatedValue as Float
+                    phoneImage.scaleX = scale
+                    phoneImage.scaleY = scale
+                }
+                start()
+            }
+        }
+    }
+
+    private fun stopBreathingAnimation() {
+        breathAnimator?.cancel()
+        phoneImage.animate().scaleX(1f).scaleY(1f).setDuration(200).start()
+    }
+
     override fun onSensorChanged(event: SensorEvent) {
         if (!collecting) return
         when (event.sensor.type) {
             Sensor.TYPE_GYROSCOPE -> {
                 if (sampleCount < targetSamples) {
-                    samples.add(event.values.clone()); sampleCount++
+                    gyroSamples.add(event.values.clone())
+                    sampleCount++
                     activity?.runOnUiThread {
                         progressBar.progress = (sampleCount * 100) / targetSamples
-                        statusText.text = getString(R.string.gyro_progress, sampleCount, targetSamples)
                     }
                 }
                 if (sampleCount >= targetSamples) {
                     stopCollection()
-                    checkDataValidity()
+                    evaluateData()
                 }
             }
             Sensor.TYPE_ACCELEROMETER -> {
-                if (accelSamples.size < 20) {
-                    accelSamples.add(event.values.clone())
-                } else {
-                    var meanX = 0f; var meanY = 0f; var meanZ = 0f
-                    for (s in accelSamples) { meanX += s[0]; meanY += s[1]; meanZ += s[2] }
-                    val n = accelSamples.size.toFloat()
-                    meanX /= n; meanY /= n; meanZ /= n
-                    var varX = 0f; var varY = 0f; var varZ = 0f
-                    for (s in accelSamples) {
-                        varX += (s[0] - meanX) * (s[0] - meanX)
-                        varY += (s[1] - meanY) * (s[1] - meanY)
-                        varZ += (s[2] - meanZ) * (s[2] - meanZ)
+                accelWindow.add(event.values.clone())
+                if (accelWindow.size > WINDOW_SIZE) accelWindow.removeAt(0)
+                if (accelWindow.size == WINDOW_SIZE) {
+                    var sumX = 0f; var sumY = 0f; var sumZ = 0f
+                    for (a in accelWindow) {
+                        sumX += a[0]; sumY += a[1]; sumZ += a[2]
                     }
-                    varX /= n; varY /= n; varZ /= n
-                    phoneMoving = varX > ACCEL_VARIANCE_THRESHOLD || varY > ACCEL_VARIANCE_THRESHOLD || varZ > ACCEL_VARIANCE_THRESHOLD
-                    if (phoneMoving) {
-                        activity?.runOnUiThread {
-                            Toast.makeText(requireContext(), R.string.gyro_phone_moving, Toast.LENGTH_SHORT).show()
+                    val meanX = sumX / WINDOW_SIZE
+                    val meanY = sumY / WINDOW_SIZE
+                    val meanZ = sumZ / WINDOW_SIZE
+                    var varX = 0f; var varY = 0f; var varZ = 0f
+                    for (a in accelWindow) {
+                        varX += (a[0] - meanX) * (a[0] - meanX)
+                        varY += (a[1] - meanY) * (a[1] - meanY)
+                        varZ += (a[2] - meanZ) * (a[2] - meanZ)
+                    }
+                    currentVariance = (varX + varY + varZ) / (3 * WINDOW_SIZE)
+                    val variancePercent = (1f - (currentVariance / VARIANCE_THRESHOLD).coerceIn(0f, 1f)) * 100
+                    activity?.runOnUiThread {
+                        varianceMeter.progress = variancePercent.toInt()
+                        if (currentVariance > VARIANCE_THRESHOLD) {
+                            coachMessage.text = getString(R.string.gyro_coach_moving)
+                            coachMessage.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_red_dark))
+                        } else {
+                            coachMessage.text = getString(R.string.gyro_coach_stable)
+                            coachMessage.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_green_dark))
                         }
                     }
-                    accelSamples.clear()
                 }
             }
         }
@@ -155,73 +210,76 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
     private fun stopCollection() {
         sensorManager.unregisterListener(this)
         collecting = false
-        stopBreathing()
+        stopBreathingAnimation()
         handler.removeCallbacks(countdownRunnable)
     }
 
-    private fun checkDataValidity() {
-        if (phoneMoving || samples.size < targetSamples) {
-            dataValid = false; stepComplete = false
+    private fun evaluateData() {
+        if (currentVariance > VARIANCE_THRESHOLD || gyroSamples.size < targetSamples) {
+            dataValid = false
             activity?.runOnUiThread {
-                statusText.text = getString(R.string.gyro_failed)
+                coachMessage.text = getString(R.string.gyro_failed_movement)
+                coachMessage.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_red_dark))
                 retryBtn.visibility = View.VISIBLE
-                startBtn.visibility = View.GONE
+                progressBar.visibility = View.INVISIBLE
+                varianceMeter.visibility = View.INVISIBLE
             }
         } else {
-            saveData()
-        }
-    }
-
-    private fun saveData() {
-        var bx = 0f; var by = 0f; var bz = 0f
-        for (s in samples) { bx += s[0]; by += s[1]; bz += s[2] }
-        val count = samples.size.toFloat().coerceAtLeast(1f)
-        val bias = floatArrayOf(bx / count, by / count, bz / count)
-        CalibrationManager(requireContext()).saveGyroBias(bias)
-        dataValid = true; stepComplete = true
-        (activity as? CalibrationActivity)?.onStepComplete()
-        activity?.runOnUiThread {
-            statusText.text = getString(R.string.gyro_done)
-            startBtn.visibility = View.VISIBLE; startBtn.text = getString(R.string.btn_recalibrate); startBtn.isEnabled = true
-            retryBtn.visibility = View.GONE
-        }
-    }
-
-    private fun startBreathing() {
-        phoneImage.post {
-            breathAnimator = ValueAnimator.ofFloat(1f, 1.08f).apply {
-                duration = 800; repeatMode = ValueAnimator.REVERSE; repeatCount = ValueAnimator.INFINITE
-                addUpdateListener {
-                    val scale = it.animatedValue as Float
-                    phoneImage.scaleX = scale; phoneImage.scaleY = scale
-                }
-                start()
+            saveCalibrationData()
+            dataValid = true
+            stepComplete = true
+            activity?.runOnUiThread {
+                (activity as? CalibrationActivity)?.onStepComplete()
+                coachMessage.text = getString(R.string.gyro_done)
+                coachMessage.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_green_dark))
+                instructionText.text = getString(R.string.gyro_complete)
+                startBtn.visibility = View.GONE
+                retryBtn.visibility = View.GONE
             }
         }
     }
 
-    private fun stopBreathing() {
-        breathAnimator?.cancel()
-        phoneImage.animate().scaleX(1f).scaleY(1f).duration = 200
+    private fun saveCalibrationData() {
+        var bx = 0f; var by = 0f; var bz = 0f
+        for (s in gyroSamples) {
+            bx += s[0]; by += s[1]; bz += s[2]
+        }
+        val n = gyroSamples.size.toFloat()
+        val bias = floatArrayOf(bx / n, by / n, bz / n)
+        CalibrationManager(requireContext()).saveGyroBias(bias)
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
     override fun isStepComplete() = stepComplete
     override fun isDataValid() = dataValid
-
     override fun resetUI() {
-        stepComplete = false; dataValid = false
-        startBtn.isEnabled = true; startBtn.visibility = View.VISIBLE; startBtn.text = getString(R.string.btn_start_collection)
+        stepComplete = false
+        dataValid = false
+        sampleCount = 0
+        gyroSamples.clear()
+        accelWindow.clear()
+        currentVariance = 0f
+
+        startBtn.isEnabled = true
+        startBtn.visibility = View.VISIBLE
+        startBtn.text = getString(R.string.btn_start_collection)
         retryBtn.visibility = View.GONE
         progressBar.visibility = View.INVISIBLE
-        statusText.text = getString(R.string.gyro_ready)
-        secondsLeft = GYRO_TIME_LIMIT; handler.removeCallbacks(countdownRunnable)
-        (activity as? CalibrationActivity)?.setTimerText("00:30")
+        varianceMeter.visibility = View.INVISIBLE
+        instructionText.text = getString(R.string.gyro_ready)
+        coachMessage.text = getString(R.string.gyro_ready_desc)
+        coachMessage.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.white))
+        stopBreathingAnimation()
+        phoneImage.scaleX = 1f
+        phoneImage.scaleY = 1f
+
+        secondsLeft = GYRO_TIME_LIMIT
+        handler.removeCallbacks(countdownRunnable)
+        (activity as? CalibrationActivity)?.setTimerText("00:45")
     }
 
     override fun saveCalibrationData() = Unit
-    override fun getProgress(): Int = (sampleCount * 100) / targetSamples
-
+    override fun getProgress(): Int = if (targetSamples > 0) (sampleCount * 100) / targetSamples else 0
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
     override fun onDestroyView() {
         super.onDestroyView()
         sensorManager.unregisterListener(this)

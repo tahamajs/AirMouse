@@ -398,10 +398,116 @@
     <string name="accel_done">✅ Accelerometer calibration complete!</string>
 
 
+<!-- Calibration strings -->
+<string name="accel_flat_up_title">Screen Up</string>
+<string name="accel_flat_up_desc">Place phone flat on table, screen facing UP</string>
+<string name="accel_flat_down_title">Screen Down</string>
+<string name="accel_flat_down_desc">Place phone flat, screen facing DOWN</string>
+<string name="accel_vertical_top_title">Vertical (Top Up)</string>
+<string name="accel_vertical_top_desc">Hold phone vertically, top edge up</string>
+<string name="accel_vertical_bottom_title">Vertical (Top Down)</string>
+<string name="accel_vertical_bottom_desc">Hold phone vertically, top edge down</string>
+<string name="accel_left_title">Left Edge Up</string>
+<string name="accel_left_desc">Hold phone with left edge pointing up</string>
+<string name="accel_right_title">Right Edge Up</string>
+<string name="accel_right_desc">Hold phone with right edge pointing up</string>
+<string name="accel_coach_keep_still">Keep the phone perfectly still…</string>
+<string name="accel_coach_stable">✓ Stable – collecting data</string>
+<string name="accel_coach_unstable">✗ Phone moving – please hold still</string>
+<string name="accel_wrong_orientation">Orientation mismatch (error: %.2f m/s²). Retry.</string>
+<string name="accel_retry_prompt">Tap Retry to try this position again</string>
+<string name="accel_next_position_ready">Great! Ready for next position.</string>
+<string name="accel_done">All positions recorded! Calibration saved.</string>
+<string name="accel_complete_title">Accelerometer Calibrated</string>
+<string name="accel_complete_desc">You can now use motion control.</string>
+<string name="accel_no_samples">No stable samples collected. Please retry.</string>
+<string name="accel_position_header">Position %d of %d</string>
 
+<string name="gyro_instruction">Keep the phone absolutely still on a flat surface</string>
+<string name="gyro_coach_keep_still">Waiting for stillness...</string>
+<string name="gyro_coach_stable">Stable – recording gyro bias</string>
+<string name="gyro_coach_moving">Movement detected – please keep phone still</string>
+<string name="gyro_failed_movement">Too much movement. Tap Retry.</string>
+<string name="gyro_done">Gyroscope calibrated ✓</string>
+<string name="gyro_complete">Gyro bias successfully measured</string>
+<string name="gyro_ready">Ready to calibrate gyroscope</string>
+<string name="gyro_ready_desc">Place phone on a stationary surface, then press Start</string>
+<string name="gyro_status_header">Gyroscope calibration</string>
 
+<string name="mag_instruction">Move the phone in a figure‑8 pattern</string>
+<string name="mag_coach_move">Wave the phone gently in a figure‑8</string>
+<string name="mag_collecting_samples">Collecting samples: %d/%d</string>
+<string name="mag_enough_data">Enough data – finishing…</string>
+<string name="mag_insufficient_data">Not enough samples. Please retry.</string>
+<string name="mag_done">Magnetometer calibrated ✓</string>
+<string name="mag_complete">Hard iron offsets computed</string>
+<string name="mag_ready">Magnetometer calibration ready</string>
+<string name="mag_ready_desc">Press Start and follow the moving dot</string>
+<string name="mag_not_available">Magnetometer not available</string>
+<string name="mag_status_header">Magnetometer calibration</string>
 
+<!-- Home screen strings -->
+<string name="signal_good">Good</string>
+<string name="signal_fair">Fair</string>
+<string name="signal_poor">Poor</string>
+<!-- Accelerometer calibration -->
+<string name="accel_flat_up_title">Screen Up</string>
+<string name="accel_flat_up_desc">Place phone flat on table, screen facing UP</string>
+<string name="accel_flat_down_title">Screen Down</string>
+<string name="accel_flat_down_desc">Place phone flat, screen facing DOWN</string>
+<string name="accel_vertical_top_title">Vertical (Top Up)</string>
+<string name="accel_vertical_top_desc">Hold phone vertically, top edge up</string>
+<string name="accel_vertical_bottom_title">Vertical (Top Down)</string>
+<string name="accel_vertical_bottom_desc">Hold phone vertically, top edge down</string>
+<string name="accel_left_title">Left Edge Up</string>
+<string name="accel_left_desc">Hold phone with left edge pointing up</string>
+<string name="accel_right_title">Right Edge Up</string>
+<string name="accel_right_desc">Hold phone with right edge pointing up</string>
+<string name="accel_coach_keep_still">Keep the phone perfectly still…</string>
+<string name="accel_coach_stable">✓ Stable – collecting data</string>
+<string name="accel_coach_unstable">✗ Phone moving – please hold still</string>
+<string name="accel_wrong_orientation">Orientation mismatch (error: %.2f m/s²). Retry.</string>
+<string name="accel_retry_prompt">Tap Retry to try this position again</string>
+<string name="accel_next_position_ready">Great! Ready for next position.</string>
+<string name="accel_done">All positions recorded! Calibration saved.</string>
+<string name="accel_complete_title">Accelerometer Calibrated</string>
+<string name="accel_complete_desc">You can now use motion control.</string>
+<string name="accel_no_samples">No stable samples collected. Please retry.</string>
+<string name="accel_position_header">Position %d of %d</string>
 
+<!-- Gyroscope calibration -->
+<string name="gyro_instruction">Keep the phone absolutely still on a flat surface</string>
+<string name="gyro_coach_keep_still">Waiting for stillness...</string>
+<string name="gyro_coach_stable">Stable – recording gyro bias</string>
+<string name="gyro_coach_moving">Movement detected – please keep phone still</string>
+<string name="gyro_failed_movement">Too much movement. Tap Retry.</string>
+<string name="gyro_done">Gyroscope calibrated ✓</string>
+<string name="gyro_complete">Gyro bias successfully measured</string>
+<string name="gyro_ready">Ready to calibrate gyroscope</string>
+<string name="gyro_ready_desc">Place phone on a stationary surface, then press Start</string>
+<string name="gyro_status_header">Gyroscope calibration</string>
+
+<!-- Magnetometer calibration -->
+<string name="mag_instruction">Move the phone in a figure‑8 pattern</string>
+<string name="mag_coach_move">Wave the phone gently in a figure‑8</string>
+<string name="mag_collecting_samples">Collecting samples: %d/%d</string>
+<string name="mag_enough_data">Enough data – finishing…</string>
+<string name="mag_insufficient_data">Not enough samples. Please retry.</string>
+<string name="mag_done">Magnetometer calibrated ✓</string>
+<string name="mag_complete">Hard iron offsets computed</string>
+<string name="mag_ready">Magnetometer calibration ready</string>
+<string name="mag_ready_desc">Press Start and follow the moving dot</string>
+<string name="mag_not_available">Magnetometer not available</string>
+<string name="mag_status_header">Magnetometer calibration</string>
+
+<string name="collection_progress">Data collection</string>
+<string name="stability_meter">Stability</string>
+<string name="variance_meter">Stationarity</string>
+<string name="btn_start_collection">Start</string>
+<string name="btn_record_position">Record Position</string>
+<string name="btn_retry">Retry</string>
+<string name="accel_ready">Ready to record position</string>
+<!-- all other strings as previously provided -->
 
     <string name="mag_not_enough_samples">Not enough samples collected. Move the phone more and retry.</string>
 </resources>

@@ -53,4 +53,19 @@
     <color name="text_disabled">@color/grey_500</color>
     <color name="text_hint">@color/grey_400</color>
     <color name="text_on_surface_inverse">@color/white</color>
+        <color name="background_dark">#0f1115</color>
+    <color name="surface_dark">#1d2430</color>
+    <color name="text_primary">#e5e7eb</color>
+    <color name="text_secondary">#96a0ae</color>
+
+    <!-- Accents -->
+    <color name="accent_blue">#007acc</color>
+    <color name="accent_orange">#FF9800</color>
+    <color name="success_green">#4CAF50</color>
+    <color name="error_red">#F44336</color>
+
+    <!-- Progress bars -->
+    <color name="progress_accent">#007acc</color>
+    <color name="progress_bg">#2b3341</color>
+
 </resources>

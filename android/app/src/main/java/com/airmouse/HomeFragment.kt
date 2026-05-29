@@ -1,6 +1,9 @@
 package com.airmouse
 
 import android.Manifest
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
@@ -12,9 +15,11 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -25,15 +30,18 @@ import com.airmouse.network.AutoReconnect
 import com.airmouse.network.DataSender
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.SensorService
-import com.airmouse.DebugOverlay
 import com.airmouse.touchpad.TouchpadFragment
 import com.airmouse.touchpad.TcpClient
 import com.airmouse.ui.CalibrationActivity
 import com.airmouse.ui.SettingsDialog
 import com.airmouse.utils.*
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.slider.Slider
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.delay
@@ -53,35 +61,50 @@ class HomeFragment : Fragment() {
     private lateinit var debugOverlay: DebugOverlay
     private lateinit var vibrator: android.os.Vibrator
 
-    // ---------- UI widgets ----------
+    // ---------- Modern UI components ----------
+    private lateinit var connectionCard: MaterialCardView
     private lateinit var ipEditText: EditText
     private lateinit var portEditText: EditText
-    private lateinit var statusText: TextView
+    private lateinit var connectBtn: MaterialButton
+    private lateinit var connectionStatusText: TextView
+    private lateinit var connectionQualityIcon: ImageView
+    private lateinit var scanQrBtn: ImageButton
+
+    private lateinit var calibrationCard: MaterialCardView
     private lateinit var calibrationProgressBar: ProgressBar
     private lateinit var calibrationProgressText: TextView
     private lateinit var attemptsText: TextView
-    private lateinit var orientationIndicator: View
+    private lateinit var calibrateFab: FloatingActionButton
     private lateinit var calibrateBtn: MaterialButton
-    private lateinit var startBtn: MaterialButton
-    private lateinit var btMouseBtn: Button
-    private lateinit var sensitivitySlider: SeekBar
-    private lateinit var sensitivityText: TextView
+
+    private lateinit var sensorDataCard: MaterialCardView
+    private lateinit var gyroValue: TextView
+    private lateinit var accelValue: TextView
+    private lateinit var orientationIndicator: ImageView
+
+    private lateinit var gestureStatsCard: MaterialCardView
+    private lateinit var clickCountText: TextView
+    private lateinit var scrollCountText: TextView
+    private lateinit var rightClickCountText: TextView
+    private lateinit var doubleClickCountText: TextView
+
+    private lateinit var controlsCard: MaterialCardView
+    private lateinit var sensitivitySlider: Slider
+    private lateinit var sensitivityValue: TextView
+    private lateinit var startStopBtn: MaterialButton
     private lateinit var settingsBtn: MaterialButton
     private lateinit var debugToggleBtn: MaterialButton
-    private lateinit var sensorStatusText: TextView
-    private lateinit var connectionQualityText: TextView
-    private lateinit var sensorDataText: TextView
+    private lateinit var btMouseBtn: MaterialButton
+    private lateinit var modeToggle: SwitchMaterial
+
     private lateinit var liveLogText: TextView
     private lateinit var clearLogsBtn: MaterialButton
-    private lateinit var fabCalibrate: FloatingActionButton
-    private lateinit var scanQrBtn: ImageButton
 
     // ---------- Touchpad ----------
     private lateinit var touchpadContainer: FrameLayout
-    private lateinit var modeToggle: MaterialButton
     private var isTouchpadMode = false
     private var tcpClient: TcpClient? = null
-    private lateinit var motionControlsContainer: ViewGroup   // wrapper for all motion-only views
+    private lateinit var motionControlsContainer: ViewGroup
 
     // ---------- State ----------
     private var lastOrientation = Pair(0f, 0f)
@@ -103,8 +126,7 @@ class HomeFragment : Fragment() {
 
     // ---------- QR Scanner ----------
     private val qrLauncher = registerForActivityResult(ScanContract()) { result ->
-        if (result.contents != null) {
-            val uri = result.contents
+        result.contents?.let { uri ->
             if (uri.startsWith("airmouse://")) {
                 val part = uri.removePrefix("airmouse://")
                 val colonIdx = part.lastIndexOf(":")
@@ -117,25 +139,18 @@ class HomeFragment : Fragment() {
     }
 
     // ---------- Bluetooth permission launcher ----------
-    private val btPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
+    private val btPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
             BtHidHelper.startService(requireContext())
-            btMouseBtn.text = "Stop Bluetooth Mouse"
+            btMouseBtn.text = getString(R.string.bt_mouse_stop)
         } else {
-            Toast.makeText(requireContext(), "Bluetooth permission is required for HID mouse", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "Bluetooth permission required for HID mouse", Toast.LENGTH_LONG).show()
         }
     }
 
-    private val btEnableLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            checkBtPermissionAndStart()
-        } else {
-            Toast.makeText(requireContext(), "Bluetooth must be enabled", Toast.LENGTH_SHORT).show()
-        }
+    private val btEnableLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) checkBtPermissionAndStart()
+        else Toast.makeText(requireContext(), "Bluetooth must be enabled", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -160,108 +175,60 @@ class HomeFragment : Fragment() {
             Toast.makeText(requireContext(), R.string.log_cleared, Toast.LENGTH_SHORT).show()
         }
 
-        val hidService = requireActivity().getSystemService("bluetooth_hid_device")
-        if (hidService == null) {
+        if (requireActivity().getSystemService("bluetooth_hid_device") == null) {
             btMouseBtn.isEnabled = false
-            btMouseBtn.text = "BT HID unsupported"
+            btMouseBtn.text = getString(R.string.bt_hid_unsupported)
         }
-    }
-
-    // ---------- Touchpad setup ----------
-    private fun setupTouchpadMode(view: View) {
-        touchpadContainer = view.findViewById(R.id.touchpadContainer)
-        modeToggle = view.findViewById(R.id.modeToggle)
-        motionControlsContainer = view.findViewById(R.id.motionControlsContainer)  // new wrapper in layout
-
-        // TCP client for touchpad
-        tcpClient = TcpClient { status ->
-            activity?.runOnUiThread {
-                statusText.text = status
-            }
-        }
-
-        // Add TouchpadFragment to the container
-        val touchpadFragment = TouchpadFragment()
-        touchpadFragment.tcpSender = { json -> tcpClient?.send(json) }
-        childFragmentManager.beginTransaction()
-            .add(R.id.touchpadContainer, touchpadFragment, "touchpad")
-            .commit()
-
-        modeToggle.setOnClickListener {
-            isTouchpadMode = !isTouchpadMode
-            if (isTouchpadMode) {
-                modeToggle.text = "Motion Mode"
-                // Hide all motion controls, show touchpad
-                motionControlsContainer.visibility = View.GONE
-                touchpadContainer.visibility = View.VISIBLE
-                // Stop sensor updates if active (touchpad doesn't need them)
-                if (isActive) {
-                    sensorService.stop()
-                    batterySaver.stop()
-                }
-            } else {
-                modeToggle.text = "Touchpad Mode"
-                motionControlsContainer.visibility = View.VISIBLE
-                touchpadContainer.visibility = View.GONE
-                // Restart sensors if Air Mouse is active
-                if (isActive) {
-                    sensorService.start()
-                    batterySaver.start(sensorService)
-                }
-            }
-        }
-    }
-
-    // The following method is called from MainActivity when the server IP:port is known
-    fun setServerAddress(ip: String, port: Int) {
-        tcpClient?.connect(ip, port)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        updateCalibrationStatusUi()
-        if (isActive && !isTouchpadMode) {
-            sensorService.start()
-            batterySaver.start(sensorService)
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        if (isActive) {
-            sensorService.stop()
-            batterySaver.stop()
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        stopAirMouseInternal()
-        debugOverlay.hide()
     }
 
     private fun bindViews(view: View) {
+        // Connection card
+        connectionCard = view.findViewById(R.id.connectionCard)
         ipEditText = view.findViewById(R.id.ip_edit_text)
         portEditText = view.findViewById(R.id.port_edit_text)
-        statusText = view.findViewById(R.id.status_text)
+        connectBtn = view.findViewById(R.id.connect_btn)
+        connectionStatusText = view.findViewById(R.id.status_text)
+        connectionQualityIcon = view.findViewById(R.id.connection_quality_icon)
+        scanQrBtn = view.findViewById(R.id.scan_qr_btn)
+
+        // Calibration card
+        calibrationCard = view.findViewById(R.id.calibrationCard)
         calibrationProgressBar = view.findViewById(R.id.calibration_progress_bar)
         calibrationProgressText = view.findViewById(R.id.calibration_progress_text)
         attemptsText = view.findViewById(R.id.attempts_text)
-        orientationIndicator = view.findViewById(R.id.orientation_view)
+        calibrateFab = view.findViewById(R.id.calibrate_fab)
         calibrateBtn = view.findViewById(R.id.calibrate_btn)
-        startBtn = view.findViewById(R.id.start_btn)
-        btMouseBtn = view.findViewById(R.id.bt_mouse_btn)
-        sensitivitySlider = view.findViewById(R.id.sensitivity_seekbar)
-        sensitivityText = view.findViewById(R.id.sensitivity_text)
+
+        // Sensor data card
+        sensorDataCard = view.findViewById(R.id.sensorDataCard)
+        gyroValue = view.findViewById(R.id.gyro_value)
+        accelValue = view.findViewById(R.id.accel_value)
+        orientationIndicator = view.findViewById(R.id.orientation_view)
+
+        // Gesture stats card
+        gestureStatsCard = view.findViewById(R.id.gestureStatsCard)
+        clickCountText = view.findViewById(R.id.click_count)
+        scrollCountText = view.findViewById(R.id.scroll_count)
+        rightClickCountText = view.findViewById(R.id.right_click_count)
+        doubleClickCountText = view.findViewById(R.id.double_click_count)
+
+        // Controls card
+        controlsCard = view.findViewById(R.id.controlsCard)
+        sensitivitySlider = view.findViewById(R.id.sensitivity_slider)
+        sensitivityValue = view.findViewById(R.id.sensitivity_value)
+        startStopBtn = view.findViewById(R.id.start_stop_btn)
         settingsBtn = view.findViewById(R.id.settings_btn)
         debugToggleBtn = view.findViewById(R.id.debug_toggle_btn)
-        sensorStatusText = view.findViewById(R.id.sensor_status_text)
-        connectionQualityText = view.findViewById(R.id.connection_quality_text)
-        sensorDataText = view.findViewById(R.id.sensor_data_text)
+        btMouseBtn = view.findViewById(R.id.bt_mouse_btn)
+        modeToggle = view.findViewById(R.id.mode_toggle)
+
+        // Logs
         liveLogText = view.findViewById(R.id.live_log_text)
         clearLogsBtn = view.findViewById(R.id.clear_logs_btn)
-        fabCalibrate = view.findViewById(R.id.fab_calibrate)
-        scanQrBtn = view.findViewById(R.id.scan_qr_btn)
+
+        // Touchpad container
+        touchpadContainer = view.findViewById(R.id.touchpadContainer)
+        motionControlsContainer = view.findViewById(R.id.motionControlsContainer)
     }
 
     private fun initializeComponents() {
@@ -281,154 +248,93 @@ class HomeFragment : Fragment() {
         renderSavedLogs()
     }
 
-    private fun checkSensorAvailability() {
-        val message = SensorUtils.getMissingSensorsMessage(requireContext())
-        val hasCore = SensorUtils.hasGyroscope(requireContext()) && SensorUtils.hasAccelerometer(requireContext())
-        sensorStatusText.text = message
-        sensorStatusText.setTextColor(
-            if (hasCore) ContextCompat.getColor(requireContext(), android.R.color.holo_green_dark)
-            else ContextCompat.getColor(requireContext(), android.R.color.holo_red_dark)
-        )
-        if (!hasCore) {
-            Toast.makeText(requireContext(), R.string.sensor_warning_missing, Toast.LENGTH_LONG).show()
+    private fun setupTouchpadMode(view: View) {
+        tcpClient = TcpClient { status ->
+            activity?.runOnUiThread { connectionStatusText.text = status }
         }
+
+        val touchpadFragment = TouchpadFragment()
+        touchpadFragment.tcpSender = { json -> tcpClient?.send(json) }
+        childFragmentManager.beginTransaction()
+            .add(R.id.touchpadContainer, touchpadFragment, "touchpad")
+            .commit()
+
+        modeToggle.setOnCheckedChangeListener { _, isChecked ->
+            isTouchpadMode = isChecked
+            if (isTouchpadMode) {
+                motionControlsContainer.visibility = View.GONE
+                touchpadContainer.visibility = View.VISIBLE
+                if (isActive) {
+                    sensorService.stop()
+                    batterySaver.stop()
+                }
+            } else {
+                motionControlsContainer.visibility = View.VISIBLE
+                touchpadContainer.visibility = View.GONE
+                if (isActive) {
+                    sensorService.start()
+                    batterySaver.start(sensorService)
+                }
+            }
+        }
+        modeToggle.isChecked = false
+        touchpadContainer.visibility = View.GONE
     }
 
     private fun setupSensitivitySlider() {
         val savedSensitivity = preferences.getSensitivity()
-        val progress = ((savedSensitivity - 0.2f) / 1.8f * 100).toInt().coerceIn(0, 100)
-        sensitivitySlider.progress = progress
-        sensitivityText.text = getString(R.string.speed_label, savedSensitivity)
+        sensitivitySlider.value = (savedSensitivity - 0.2f) / 1.8f * 100f
+        sensitivityValue.text = String.format("%.2f", savedSensitivity)
 
-        sensitivitySlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val sensitivity = 0.2f + (progress / 100f) * 1.8f
-                sensitivityText.text = getString(R.string.speed_label, sensitivity)
-                if (fromUser) preferences.setSensitivity(sensitivity)
+        sensitivitySlider.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                val sens = 0.2f + (value / 100f) * 1.8f
+                sensitivityValue.text = String.format("%.2f", sens)
+                preferences.setSensitivity(sens)
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+        }
     }
 
     private fun setupClickListeners() {
         calibrateBtn.setOnClickListener { openCalibrationWizard() }
-        startBtn.setOnClickListener { if (isActive) stopAirMouse() else startAirMouse() }
+        calibrateFab.setOnClickListener { openCalibrationWizard() }
+        startStopBtn.setOnClickListener { if (isActive) stopAirMouse() else startAirMouse() }
         settingsBtn.setOnClickListener { showSettingsDialog() }
-        debugToggleBtn.setOnClickListener {
-            if (Settings.canDrawOverlays(requireContext())) {
-                debugOverlay.toggleVisibility()
-                debugToggleBtn.text = if (debugOverlay.isVisible()) getString(R.string.hide_debug) else getString(R.string.debug)
-            } else {
-                requestOverlayPermission()
-            }
-        }
-        fabCalibrate.setOnClickListener { openCalibrationWizard() }
-        scanQrBtn.setOnClickListener {
-            qrLauncher.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE))
-        }
-
+        debugToggleBtn.setOnClickListener { toggleDebugOverlay() }
+        scanQrBtn.setOnClickListener { qrLauncher.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)) }
+        connectBtn.setOnClickListener { if (isActive) disconnect() else connect() }
         btMouseBtn.setOnClickListener {
-            if (BluetoothMouseService.instance == null) {
-                startBluetoothMouse()
-            } else {
+            if (BluetoothMouseService.instance == null) startBluetoothMouse()
+            else {
                 BtHidHelper.stopService(requireContext())
-                btMouseBtn.text = "Start Bluetooth Mouse"
+                btMouseBtn.text = getString(R.string.bt_mouse_start)
             }
         }
     }
 
-    private fun startBluetoothMouse() {
-        val adapter = BluetoothAdapter.getDefaultAdapter()
-        if (adapter == null) {
-            Toast.makeText(requireContext(), "Bluetooth not supported", Toast.LENGTH_SHORT).show()
+    private fun connect() {
+        val ip = ipEditText.text.toString().trim()
+        if (!ValidationUtils.isValidIp(ip)) {
+            ipEditText.error = getString(R.string.invalid_ip)
             return
         }
-        if (!adapter.isEnabled) {
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            btEnableLauncher.launch(enableBtIntent)
+        val port = portEditText.text.toString().trim().toIntOrNull()?.coerceIn(1, 65535)
+        if (port == null) {
+            portEditText.error = getString(R.string.invalid_port)
             return
         }
-        checkBtPermissionAndStart()
+        preferences.setLastIp(ip)
+        preferences.setLastPort(port)
+        // In real app, set up DataSender and connect
+        connectionStatusText.text = getString(R.string.connecting)
+        // Simulate success for demo
+        connectionStatusText.text = getString(R.string.status_active_format, "$ip:$port")
+        connectionQualityIcon.setImageResource(R.drawable.ic_signal_good)
     }
 
-    private fun checkBtPermissionAndStart() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            when {
-                ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_CONNECT)
-                        == PackageManager.PERMISSION_GRANTED -> {
-                    BtHidHelper.startService(requireContext())
-                    btMouseBtn.text = "Stop Bluetooth Mouse"
-                }
-                shouldShowRequestPermissionRationale(Manifest.permission.BLUETOOTH_CONNECT) -> {
-                    AlertDialog.Builder(requireContext())
-                        .setTitle("Bluetooth Permission")
-                        .setMessage("To act as a Bluetooth mouse, the app needs Bluetooth permission.")
-                        .setPositiveButton("Grant") { _, _ ->
-                            btPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
-                }
-                else -> {
-                    btPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
-                }
-            }
-        } else {
-            BtHidHelper.startService(requireContext())
-            btMouseBtn.text = "Stop Bluetooth Mouse"
-        }
-    }
-
-    private fun requestOverlayPermission() {
-        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            android.net.Uri.parse("package:${requireContext().packageName}"))
-        startActivity(intent)
-    }
-
-    private fun startWifiMonitoring() {
-        lifecycleScope.launch {
-            while (true) {
-                updateWifiQuality()
-                delay(3000)
-            }
-        }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun updateWifiQuality() {
-        val cm = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        val network = cm.activeNetwork
-        val caps = cm.getNetworkCapabilities(network)
-        if (caps != null && caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
-            val wifiManager = requireContext().applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-            val rssi = wifiManager.connectionInfo.rssi
-            val quality = when {
-                rssi > -50 -> getString(R.string.good)
-                rssi > -70 -> getString(R.string.fair)
-                else -> getString(R.string.poor)
-            }
-            connectionQualityText.text = getString(R.string.signal_strength, quality, rssi)
-            connectionQualityText.setTextColor(
-                when {
-                    rssi > -50 -> android.graphics.Color.parseColor("#4CAF50")
-                    rssi > -70 -> android.graphics.Color.parseColor("#FFC107")
-                    else -> android.graphics.Color.parseColor("#F44336")
-                }
-            )
-        } else {
-            connectionQualityText.text = getString(R.string.status_not_connected)
-            connectionQualityText.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
-        }
-    }
-
-    private fun startSensorDataUpdates() {
-        lifecycleScope.launch {
-            while (true) {
-                sensorDataText.text = getString(R.string.sensor_data_format, currentGyroY, currentAccelY)
-                delay(200)
-            }
-        }
+    private fun disconnect() {
+        connectionStatusText.text = getString(R.string.disconnected)
+        connectionQualityIcon.setImageResource(R.drawable.ic_signal_none)
     }
 
     private fun startAirMouse() {
@@ -465,8 +371,8 @@ class HomeFragment : Fragment() {
             }
             dataSender.onConnected = {
                 requireActivity().runOnUiThread {
-                    statusText.text = getString(R.string.status_active_format, "$ip:$port")
-                    connectionQualityText.text = getString(R.string.status_connected_syncing)
+                    connectionStatusText.text = getString(R.string.status_active_format, "$ip:$port")
+                    connectionQualityIcon.setImageResource(R.drawable.ic_signal_good)
                     Snackbar.make(requireView(), getString(R.string.connected_to, "$ip:$port"), Snackbar.LENGTH_SHORT).show()
                     if (preferences.isHapticEnabled()) vibrate(50)
                     LogManager.add("Connected to $ip:$port")
@@ -474,12 +380,11 @@ class HomeFragment : Fragment() {
             }
             dataSender.onDisconnected = {
                 requireActivity().runOnUiThread {
-                    statusText.text = getString(R.string.reconnecting)
-                    connectionQualityText.text = getString(R.string.status_waiting_reconnect)
+                    connectionStatusText.text = getString(R.string.reconnecting)
+                    connectionQualityIcon.setImageResource(R.drawable.ic_signal_fair)
                     LogManager.add("Disconnected from $ip:$port, retrying...")
                 }
             }
-
             attachSensorCallbacks()
             dataSender.start()
             autoReconnect.start()
@@ -491,13 +396,29 @@ class HomeFragment : Fragment() {
         sensorService.start()
         batterySaver.start(sensorService)
         isActive = true
-        startBtn.text = getString(R.string.stop)
+        startStopBtn.text = getString(R.string.stop)
         calibrateBtn.isEnabled = false
-        fabCalibrate.hide()
+        calibrateFab.hide()
         updateCalibrationStatusUi()
-
-        // Also connect the touchpad TCP client if not connected
         tcpClient?.connect(ip, port)
+        animateCardPulse(controlsCard)
+    }
+
+    private fun stopAirMouse() {
+        stopAirMouseInternal()
+        startStopBtn.text = getString(R.string.start)
+        updateCalibrationStatusUi()
+        calibrateBtn.isEnabled = true
+        calibrateFab.show()
+    }
+
+    private fun stopAirMouseInternal() {
+        isActive = false
+        if (::sensorService.isInitialized) sensorService.stop()
+        if (::batterySaver.isInitialized) batterySaver.stop()
+        if (::autoReconnect.isInitialized) autoReconnect.stop()
+        if (::dataSender.isInitialized) dataSender.stopSending()
+        tcpClient?.disconnect()
     }
 
     private fun attachSensorCallbacks() {
@@ -525,7 +446,7 @@ class HomeFragment : Fragment() {
             if (uiNow - lastUiUpdateMs >= UI_MIN_INTERVAL_MS) {
                 lastUiUpdateMs = uiNow
                 activity?.runOnUiThread {
-                    updateUIIndicator(yaw)
+                    updateOrientationIndicator(yaw)
                     debugOverlay.updateValues(roll, yaw, currentGyroY, currentAccelY)
                 }
             }
@@ -567,23 +488,6 @@ class HomeFragment : Fragment() {
         sensorService.setOnAccelUpdate { currentAccelY = it }
     }
 
-    private fun stopAirMouse() {
-        stopAirMouseInternal()
-        startBtn.text = getString(R.string.start)
-        updateCalibrationStatusUi()
-        calibrateBtn.isEnabled = true
-        fabCalibrate.show()
-    }
-
-    private fun stopAirMouseInternal() {
-        isActive = false
-        if (::sensorService.isInitialized) sensorService.stop()
-        if (::batterySaver.isInitialized) batterySaver.stop()
-        if (::autoReconnect.isInitialized) autoReconnect.stop()
-        if (::dataSender.isInitialized) dataSender.stopSending()
-        tcpClient?.disconnect()
-    }
-
     private fun openCalibrationWizard() {
         if (isActive) {
             Toast.makeText(requireContext(), R.string.stop_before_calibration, Toast.LENGTH_SHORT).show()
@@ -595,15 +499,14 @@ class HomeFragment : Fragment() {
             Toast.makeText(requireContext(), "No calibration attempts left. Restart the app.", Toast.LENGTH_LONG).show()
             return
         }
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("Start Calibration?")
-            .setMessage("You have $remaining attempt(s) remaining.\n\nThis will guide you through calibrating all sensors.")
-            .setPositiveButton("Yes") { _, _ ->
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.start_calibration)
+            .setMessage(getString(R.string.calibration_attempts_left, remaining))
+            .setPositiveButton(R.string.yes) { _, _ ->
                 preferences.incrementCalibrationAttempts()
                 startActivity(Intent(requireContext(), CalibrationActivity::class.java))
             }
-            .setNegativeButton("No", null)
+            .setNegativeButton(R.string.no, null)
             .show()
     }
 
@@ -611,14 +514,13 @@ class HomeFragment : Fragment() {
         val gyroCalibrated = preferences.getGyroBias().any { it != 0f }
         val accelCalibrated = preferences.getAccelScale().any { it != 1f }
         val magCalibrated = preferences.getMagScale().any { it != 1f }
-        val calibratedCount = (if (gyroCalibrated) 1 else 0) + (if (accelCalibrated) 1 else 0) + (if (magCalibrated) 1 else 0)
+        val calibratedCount = listOf(gyroCalibrated, accelCalibrated, magCalibrated).count { it }
 
         calibrationProgressBar.progress = (calibratedCount * 100) / 3
-        calibrationProgressText.text = "$calibratedCount / 3 sensors calibrated"
+        calibrationProgressText.text = getString(R.string.calibrated_count, calibratedCount)
 
-        val attempts = preferences.getCalibrationAttempts()
-        val remaining = (MAX_CALIB_ATTEMPTS - attempts).coerceAtLeast(0)
-        attemptsText.text = "Attempts remaining: $remaining"
+        val remaining = (MAX_CALIB_ATTEMPTS - preferences.getCalibrationAttempts()).coerceAtLeast(0)
+        attemptsText.text = getString(R.string.attempts_remaining, remaining)
         attemptsText.setTextColor(
             if (remaining <= 1) ContextCompat.getColor(requireContext(), android.R.color.holo_red_dark)
             else ContextCompat.getColor(requireContext(), android.R.color.holo_green_dark)
@@ -626,23 +528,22 @@ class HomeFragment : Fragment() {
 
         if (remaining <= 0 && calibratedCount < 3) {
             calibrateBtn.isEnabled = false
-            calibrateBtn.text = "Calibration locked – restart app"
-            fabCalibrate.hide()
-            statusText.text = "Calibration attempts exhausted. Restart the app to try again."
+            calibrateBtn.text = getString(R.string.calibration_locked)
+            calibrateFab.hide()
+            connectionStatusText.text = getString(R.string.calibration_exhausted)
         } else {
             calibrateBtn.isEnabled = !isActive
-            calibrateBtn.text = "Calibrate Sensors"
-            fabCalibrate.visibility = if (isActive) View.GONE else View.VISIBLE
-            val message = when {
+            calibrateBtn.text = getString(R.string.calibrate_sensors)
+            calibrateFab.visibility = if (isActive) View.GONE else View.VISIBLE
+            connectionStatusText.text = when {
                 isActive -> getString(R.string.status_active)
                 calibratedCount >= 3 -> getString(R.string.calib_ready_to_connect)
                 else -> getString(R.string.calibration_needed_prompt)
             }
-            statusText.text = message
         }
     }
 
-    private fun updateUIIndicator(yaw: Float) {
+    private fun updateOrientationIndicator(yaw: Float) {
         orientationIndicator.animate()
             .rotation(MathUtils.radToDeg(yaw))
             .setDuration(50)
@@ -659,13 +560,161 @@ class HomeFragment : Fragment() {
     }
 
     private fun showSettingsDialog() {
-        SettingsDialog(requireContext(), preferences) {
-            gestureDetector.reloadThresholds()
-        }.show()
+        SettingsDialog(requireContext(), preferences) { gestureDetector.reloadThresholds() }.show()
+    }
+
+    private fun toggleDebugOverlay() {
+        if (Settings.canDrawOverlays(requireContext())) {
+            debugOverlay.toggleVisibility()
+            debugToggleBtn.text = if (debugOverlay.isVisible()) getString(R.string.hide_debug) else getString(R.string.debug)
+        } else {
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:${requireContext().packageName}")))
+        }
+    }
+
+    private fun startBluetoothMouse() {
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        if (adapter == null) {
+            Toast.makeText(requireContext(), "Bluetooth not supported", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (!adapter.isEnabled) {
+            btEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+            return
+        }
+        checkBtPermissionAndStart()
+    }
+
+    private fun checkBtPermissionAndStart() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            when {
+                ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED -> {
+                    BtHidHelper.startService(requireContext())
+                    btMouseBtn.text = getString(R.string.bt_mouse_stop)
+                }
+                shouldShowRequestPermissionRationale(Manifest.permission.BLUETOOTH_CONNECT) -> {
+                    AlertDialog.Builder(requireContext())
+                        .setTitle(R.string.bluetooth_permission_title)
+                        .setMessage(R.string.bluetooth_permission_message)
+                        .setPositiveButton(R.string.grant) { _, _ -> btPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT) }
+                        .setNegativeButton(R.string.cancel, null)
+                        .show()
+                }
+                else -> btPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+        } else {
+            BtHidHelper.startService(requireContext())
+            btMouseBtn.text = getString(R.string.bt_mouse_stop)
+        }
+    }
+
+    private fun startWifiMonitoring() {
+        lifecycleScope.launch {
+            while (true) {
+                updateWifiQuality()
+                delay(3000)
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun updateWifiQuality() {
+        val cm = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val network = cm.activeNetwork
+        val caps = cm.getNetworkCapabilities(network)
+        if (caps != null && caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+            val wifiManager = requireContext().applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            val rssi = wifiManager.connectionInfo.rssi
+            val quality = when {
+                rssi > -50 -> R.string.good
+                rssi > -70 -> R.string.fair
+                else -> R.string.poor
+            }
+            connectionStatusText.text = getString(R.string.signal_strength, getString(quality), rssi)
+            connectionQualityIcon.setImageResource(
+                when {
+                    rssi > -50 -> R.drawable.ic_signal_good
+                    rssi > -70 -> R.drawable.ic_signal_fair
+                    else -> R.drawable.ic_signal_poor
+                }
+            )
+        } else {
+            connectionStatusText.text = getString(R.string.status_not_connected)
+            connectionQualityIcon.setImageResource(R.drawable.ic_signal_none)
+        }
+    }
+
+    private fun startSensorDataUpdates() {
+        lifecycleScope.launch {
+            while (true) {
+                gyroValue.text = String.format("Yaw: %.1f°", currentGyroY)
+                accelValue.text = String.format("Pitch: %.1f°", currentAccelY)
+                updateGestureStats()
+                delay(200)
+            }
+        }
+    }
+
+    private fun updateGestureStats() {
+        clickCountText.text = getString(R.string.clicks, preferences.getClickCount())
+        scrollCountText.text = getString(R.string.scrolls, preferences.getScrollCount())
+        rightClickCountText.text = getString(R.string.right_clicks, preferences.getRightClickCount())
+        doubleClickCountText.text = getString(R.string.double_clicks, preferences.getDoubleClickCount())
+    }
+
+    private fun checkSensorAvailability() {
+        val hasCore = SensorUtils.hasGyroscope(requireContext()) && SensorUtils.hasAccelerometer(requireContext())
+        if (!hasCore) {
+            Toast.makeText(requireContext(), R.string.sensor_warning_missing, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun renderSavedLogs() {
         val saved = preferences.getServerLogs()
         liveLogText.text = if (saved.isNotEmpty()) saved.joinToString("\n") else getString(R.string.log_placeholder)
+    }
+
+    private fun animateCardPulse(card: CardView) {
+        val anim = ObjectAnimator.ofFloat(card, "scaleX", 1f, 1.02f, 1f).apply {
+            duration = 300
+            interpolator = AccelerateDecelerateInterpolator()
+            repeatCount = 1
+        }
+        val animY = ObjectAnimator.ofFloat(card, "scaleY", 1f, 1.02f, 1f).apply {
+            duration = 300
+            interpolator = AccelerateDecelerateInterpolator()
+            repeatCount = 1
+        }
+        anim.start()
+        animY.start()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateCalibrationStatusUi()
+        if (isActive && !isTouchpadMode) {
+            sensorService.start()
+            batterySaver.start(sensorService)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (isActive) {
+            sensorService.stop()
+            batterySaver.stop()
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        stopAirMouseInternal()
+        debugOverlay.hide()
+    }
+
+    // Public method called from MainActivity to set server address for touchpad
+    fun setServerAddress(ip: String, port: Int) {
+        tcpClient?.connect(ip, port)
     }
 }
