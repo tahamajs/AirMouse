@@ -1,6 +1,7 @@
 package com.airmouse
 
 import android.Manifest
+import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
@@ -25,9 +26,12 @@ import com.airmouse.network.DataSender
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.SensorService
 import com.airmouse.DebugOverlay
+import com.airmouse.touchpad.TouchpadFragment
+import com.airmouse.touchpad.TcpClient
 import com.airmouse.ui.CalibrationActivity
 import com.airmouse.ui.SettingsDialog
 import com.airmouse.utils.*
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 import com.journeyapps.barcodescanner.ScanContract
@@ -35,7 +39,6 @@ import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import android.app.Activity
 
 class HomeFragment : Fragment() {
 
@@ -58,20 +61,27 @@ class HomeFragment : Fragment() {
     private lateinit var calibrationProgressText: TextView
     private lateinit var attemptsText: TextView
     private lateinit var orientationIndicator: View
-    private lateinit var calibrateBtn: com.google.android.material.button.MaterialButton
-    private lateinit var startBtn: com.google.android.material.button.MaterialButton
-    private lateinit var btMouseBtn: Button                     // Bluetooth mouse toggle
+    private lateinit var calibrateBtn: MaterialButton
+    private lateinit var startBtn: MaterialButton
+    private lateinit var btMouseBtn: Button
     private lateinit var sensitivitySlider: SeekBar
     private lateinit var sensitivityText: TextView
-    private lateinit var settingsBtn: com.google.android.material.button.MaterialButton
-    private lateinit var debugToggleBtn: com.google.android.material.button.MaterialButton
+    private lateinit var settingsBtn: MaterialButton
+    private lateinit var debugToggleBtn: MaterialButton
     private lateinit var sensorStatusText: TextView
     private lateinit var connectionQualityText: TextView
     private lateinit var sensorDataText: TextView
     private lateinit var liveLogText: TextView
-    private lateinit var clearLogsBtn: com.google.android.material.button.MaterialButton
+    private lateinit var clearLogsBtn: MaterialButton
     private lateinit var fabCalibrate: FloatingActionButton
     private lateinit var scanQrBtn: ImageButton
+
+    // ---------- Touchpad ----------
+    private lateinit var touchpadContainer: FrameLayout
+    private lateinit var modeToggle: MaterialButton
+    private var isTouchpadMode = false
+    private var tcpClient: TcpClient? = null
+    private lateinit var motionControlsContainer: ViewGroup   // wrapper for all motion-only views
 
     // ---------- State ----------
     private var lastOrientation = Pair(0f, 0f)
@@ -105,43 +115,8 @@ class HomeFragment : Fragment() {
             }
         }
     }
-    // Inside HomeFragment class
-    private var isTouchpadMode = false
-    private lateinit var motionFragment: YourExistingMotionFragment   // your current UI
-    private lateinit var touchpadFragment: TouchpadFragment
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        motionFragment = ... // your existing fragment / UI
-        touchpadFragment = TouchpadFragment()
-        touchpadFragment.tcpSender = { json -> sendToServer(json) } // your TCP send function
-
-        childFragmentManager.beginTransaction()
-            .add(R.id.modeContainer, motionFragment, "motion")
-            .add(R.id.modeContainer, touchpadFragment, "touchpad")
-            .hide(touchpadFragment)
-            .commit()
-
-        val modeToggle = view.findViewById<MaterialButton>(R.id.modeToggle)
-        modeToggle.setOnClickListener {
-            isTouchpadMode = !isTouchpadMode
-            if (isTouchpadMode) {
-                modeToggle.text = "Motion Mode"
-                childFragmentManager.beginTransaction()
-                    .hide(motionFragment)
-                    .show(touchpadFragment)
-                    .commit()
-            } else {
-                modeToggle.text = "Touchpad Mode"
-                childFragmentManager.beginTransaction()
-                    .hide(touchpadFragment)
-                    .show(motionFragment)
-                    .commit()
-            }
-        }
-    }
-    // ---------- Bluetooth permission launcher (modern) ----------
+    // ---------- Bluetooth permission launcher ----------
     private val btPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -153,12 +128,10 @@ class HomeFragment : Fragment() {
         }
     }
 
-    // ---------- Bluetooth enable launcher ----------
     private val btEnableLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            // Bluetooth turned on, now check permission
             checkBtPermissionAndStart()
         } else {
             Toast.makeText(requireContext(), "Bluetooth must be enabled", Toast.LENGTH_SHORT).show()
@@ -173,6 +146,7 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
         initializeComponents()
+        setupTouchpadMode(view)
         setupSensitivitySlider()
         setupClickListeners()
         checkSensorAvailability()
@@ -186,7 +160,6 @@ class HomeFragment : Fragment() {
             Toast.makeText(requireContext(), R.string.log_cleared, Toast.LENGTH_SHORT).show()
         }
 
-        // Disable BT button if HID is not supported
         val hidService = requireActivity().getSystemService("bluetooth_hid_device")
         if (hidService == null) {
             btMouseBtn.isEnabled = false
@@ -194,10 +167,60 @@ class HomeFragment : Fragment() {
         }
     }
 
+    // ---------- Touchpad setup ----------
+    private fun setupTouchpadMode(view: View) {
+        touchpadContainer = view.findViewById(R.id.touchpadContainer)
+        modeToggle = view.findViewById(R.id.modeToggle)
+        motionControlsContainer = view.findViewById(R.id.motionControlsContainer)  // new wrapper in layout
+
+        // TCP client for touchpad
+        tcpClient = TcpClient { status ->
+            activity?.runOnUiThread {
+                statusText.text = status
+            }
+        }
+
+        // Add TouchpadFragment to the container
+        val touchpadFragment = TouchpadFragment()
+        touchpadFragment.tcpSender = { json -> tcpClient?.send(json) }
+        childFragmentManager.beginTransaction()
+            .add(R.id.touchpadContainer, touchpadFragment, "touchpad")
+            .commit()
+
+        modeToggle.setOnClickListener {
+            isTouchpadMode = !isTouchpadMode
+            if (isTouchpadMode) {
+                modeToggle.text = "Motion Mode"
+                // Hide all motion controls, show touchpad
+                motionControlsContainer.visibility = View.GONE
+                touchpadContainer.visibility = View.VISIBLE
+                // Stop sensor updates if active (touchpad doesn't need them)
+                if (isActive) {
+                    sensorService.stop()
+                    batterySaver.stop()
+                }
+            } else {
+                modeToggle.text = "Touchpad Mode"
+                motionControlsContainer.visibility = View.VISIBLE
+                touchpadContainer.visibility = View.GONE
+                // Restart sensors if Air Mouse is active
+                if (isActive) {
+                    sensorService.start()
+                    batterySaver.start(sensorService)
+                }
+            }
+        }
+    }
+
+    // The following method is called from MainActivity when the server IP:port is known
+    fun setServerAddress(ip: String, port: Int) {
+        tcpClient?.connect(ip, port)
+    }
+
     override fun onResume() {
         super.onResume()
         updateCalibrationStatusUi()
-        if (isActive) {
+        if (isActive && !isTouchpadMode) {
             sensorService.start()
             batterySaver.start(sensorService)
         }
@@ -217,7 +240,6 @@ class HomeFragment : Fragment() {
         debugOverlay.hide()
     }
 
-    // ---------- Initialization ----------
     private fun bindViews(view: View) {
         ipEditText = view.findViewById(R.id.ip_edit_text)
         portEditText = view.findViewById(R.id.port_edit_text)
@@ -306,7 +328,6 @@ class HomeFragment : Fragment() {
             qrLauncher.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE))
         }
 
-        // Bluetooth mouse toggle
         btMouseBtn.setOnClickListener {
             if (BluetoothMouseService.instance == null) {
                 startBluetoothMouse()
@@ -354,7 +375,6 @@ class HomeFragment : Fragment() {
                 }
             }
         } else {
-            // No runtime permission needed on older Android
             BtHidHelper.startService(requireContext())
             btMouseBtn.text = "Stop Bluetooth Mouse"
         }
@@ -366,7 +386,6 @@ class HomeFragment : Fragment() {
         startActivity(intent)
     }
 
-    // ---------- WiFi & Sensor Monitoring ----------
     private fun startWifiMonitoring() {
         lifecycleScope.launch {
             while (true) {
@@ -412,7 +431,6 @@ class HomeFragment : Fragment() {
         }
     }
 
-    // ---------- Connection & Sending ----------
     private fun startAirMouse() {
         if (!preferences.isCalibrated()) {
             Toast.makeText(requireContext(), R.string.run_calibration_first, Toast.LENGTH_SHORT).show()
@@ -477,6 +495,9 @@ class HomeFragment : Fragment() {
         calibrateBtn.isEnabled = false
         fabCalibrate.hide()
         updateCalibrationStatusUi()
+
+        // Also connect the touchpad TCP client if not connected
+        tcpClient?.connect(ip, port)
     }
 
     private fun attachSensorCallbacks() {
@@ -560,9 +581,9 @@ class HomeFragment : Fragment() {
         if (::batterySaver.isInitialized) batterySaver.stop()
         if (::autoReconnect.isInitialized) autoReconnect.stop()
         if (::dataSender.isInitialized) dataSender.stopSending()
+        tcpClient?.disconnect()
     }
 
-    // ---------- Calibration UI (progress + attempts) ----------
     private fun openCalibrationWizard() {
         if (isActive) {
             Toast.makeText(requireContext(), R.string.stop_before_calibration, Toast.LENGTH_SHORT).show()
