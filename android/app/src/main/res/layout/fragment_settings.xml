@@ -9,101 +9,169 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Click Speed Threshold -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/click_speed_threshold"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
-
-        <SeekBar
-            android:id="@+id/clickThresholdSeek"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="100" />
+            app:cardCornerRadius="12dp"
+            android:layout_marginBottom="12dp">
 
-        <TextView
-            android:id="@+id/clickThresholdValue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        <!-- Double Click Interval -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/double_click_interval"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/click_speed_threshold"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
 
-        <SeekBar
-            android:id="@+id/doubleClickSeek"
+                <SeekBar
+                    android:id="@+id/clickThresholdSeek"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progressTint="?attr/colorPrimary" />
+
+                <TextView
+                    android:id="@+id/clickThresholdValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="80" />
+            app:cardCornerRadius="12dp"
+            android:layout_marginBottom="12dp">
 
-        <TextView
-            android:id="@+id/doubleClickValue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        <!-- Scroll Speed Threshold -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/scroll_sensitivity"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/double_click_interval"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
 
-        <SeekBar
-            android:id="@+id/scrollThresholdSeek"
+                <SeekBar
+                    android:id="@+id/doubleClickSeek"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="80"
+                    android:progressTint="?attr/colorPrimary" />
+
+                <TextView
+                    android:id="@+id/doubleClickValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="75" />
+            app:cardCornerRadius="12dp"
+            android:layout_marginBottom="12dp">
 
-        <TextView
-            android:id="@+id/scrollThresholdValue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        <!-- Right Click Tilt Angle -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/right_click_tilt"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/scroll_sensitivity"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
 
-        <SeekBar
-            android:id="@+id/tiltThresholdSeek"
+                <SeekBar
+                    android:id="@+id/scrollThresholdSeek"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="75"
+                    android:progressTint="?attr/colorPrimary" />
+
+                <TextView
+                    android:id="@+id/scrollThresholdValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="90" />
+            app:cardCornerRadius="12dp"
+            android:layout_marginBottom="12dp">
 
-        <TextView
-            android:id="@+id/tiltThresholdValue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/right_click_tilt"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                <SeekBar
+                    android:id="@+id/tiltThresholdSeek"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="90"
+                    android:progressTint="?attr/colorPrimary" />
+
+                <TextView
+                    android:id="@+id/tiltThresholdValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Haptic Feedback -->
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            app:cardCornerRadius="12dp">
 
-            <TextView
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/haptic_feedback" />
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/hapticSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/haptic_feedback"
+                    android:textAppearance="?attr/textAppearanceBody1" />
 
-        </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/hapticSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </ScrollView>

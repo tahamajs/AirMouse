@@ -18,7 +18,7 @@ class MDNSAdvertiser:
                 name,
                 addresses=[socket.inet_aton(ip)],
                 port=port,
-                properties={"version": "1.0"},
+                properties={"version": "1.0.0"},
                 server=f"{CONFIG.get('mDNS_name', 'airmouse')}.local."
             )
             self.zeroconf.register_service(self.info)
