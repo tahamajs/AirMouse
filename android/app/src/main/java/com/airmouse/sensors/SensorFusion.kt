@@ -1,6 +1,7 @@
 package com.airmouse.sensors
 
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.sqrt
 
 object SensorFusion {
@@ -37,6 +38,16 @@ object SensorFusion {
         var _2q1mx: Float; var _2bx: Float; var _2bz: Float
         var _4bx: Float; var _4bz: Float
         var _8bx: Float; var _8bz: Float
+        val _2q0 = 2.0f * q0
+        val _2q1 = 2.0f * q1
+        val _2q2 = 2.0f * q2
+        val _2q3 = 2.0f * q3
+        val _4q0 = 4.0f * q0
+        val _4q1 = 4.0f * q1
+        val _4q2 = 4.0f * q2
+        val _4q3 = 4.0f * q3
+        val _8q1 = 8.0f * q1
+        val _8q2 = 8.0f * q2
 
         // Convert gyroscope to rad/s
         val gx_rad = Math.toRadians(gx.toDouble()).toFloat()
@@ -69,17 +80,6 @@ object SensorFusion {
                 _2q0my = 2.0f * q0 * myNorm
                 _2q0mz = 2.0f * q0 * mzNorm
                 _2q1mx = 2.0f * q1 * mxNorm
-                val _2q0 = 2.0f * q0
-                val _2q1 = 2.0f * q1
-                val _2q2 = 2.0f * q2
-                val _2q3 = 2.0f * q3
-                val _4q0 = 4.0f * q0
-                val _4q1 = 4.0f * q1
-                val _4q2 = 4.0f * q2
-                val _4q3 = 4.0f * q3
-                val _8q1 = 8.0f * q1
-                val _8q2 = 8.0f * q2
-
                 // Reference direction of Earth's magnetic field
                 hx = mxNorm * q0 * q0 - _2q0my * q3 + _2q0mz * q2 + mxNorm * q1 * q1 + _2q1 * myNorm * q2 + _2q1 * mzNorm * q3 - mxNorm * q2 * q2 - mxNorm * q3 * q3
                 hy = _2q0mx * q3 + myNorm * q0 * q0 - _2q0mz * q1 + _2q1mx * q2 - myNorm * q1 * q1 + myNorm * q2 * q2 + _2q2 * mzNorm * q3 - myNorm * q3 * q3

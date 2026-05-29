@@ -22,8 +22,12 @@ class CalibrationManager(context: Context) {
 
     fun saveMagCalibration(offset: FloatArray, scale: FloatArray) {
         prefs.edit()
-            .putFloat("mag_off_x", offset[0]); .putFloat("mag_off_y", offset[1]); .putFloat("mag_off_z", offset[2])
-            .putFloat("mag_scale_x", scale[0]); .putFloat("mag_scale_y", scale[1]); .putFloat("mag_scale_z", scale[2])
+            .putFloat("mag_off_x", offset[0])
+            .putFloat("mag_off_y", offset[1])
+            .putFloat("mag_off_z", offset[2])
+            .putFloat("mag_scale_x", scale[0])
+            .putFloat("mag_scale_y", scale[1])
+            .putFloat("mag_scale_z", scale[2])
             .apply()
     }
 
