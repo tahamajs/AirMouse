@@ -1,11 +1,10 @@
-pyautogui==0.9.54
-qrcode==7.4.2
 Pillow>=10.0.0
-pandas
-perfetto
-netifaces
-zeroconf
-pystray
-Pillow
-plyer
+qrcode>=7.4.2
+netifaces>=0.11.0
+zeroconf>=0.115.0
+pystray>=0.20.0
+pyautogui>=0.9.54
+psutil>=5.9.0
+ttkbootstrap>=0.8.0   # optional: modern ttk theme (can be used to further beautify UI)
+pyinstaller>=5.11.0   # optional: create standalone executables
 
