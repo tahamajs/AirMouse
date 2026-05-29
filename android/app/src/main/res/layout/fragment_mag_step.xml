@@ -1,76 +1,109 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:background="#0f1115">
+    android:background="@color/background_dark"
+    android:fillViewport="true"
+    android:padding="16dp">
 
-    <androidx.cardview.widget.CardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="#1d2430">
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
 
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="24dp">
+            app:cardCornerRadius="24dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="@color/surface_dark">
 
-            <!-- Figure‑8 animation -->
-            <com.airmouse.calibration.MagAnimationView
-                android:id="@+id/magAnimation"
-                android:layout_width="220dp"
-                android:layout_height="220dp"
-                android:layout_gravity="center"
-                android:layout_marginBottom="24dp" />
-
-            <TextView
-                android:id="@+id/statusText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/mag_ready"
-                android:textColor="#e5e7eb"
-                android:textSize="16sp"
-                android:textAlignment="center"
-                android:layout_gravity="center"
-                android:layout_marginBottom="8dp" />
-
-            <ProgressBar
-                android:id="@+id/progressBar"
-                style="?android:attr/progressBarStyleHorizontal"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:max="200"
-                android:progress="0"
-                android:visibility="invisible"
-                android:progressTint="#007acc"
-                android:backgroundTint="#2b3341" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
 
-            <Button
-                android:id="@+id/startBtn"
-                android:layout_width="wrap_content"
-                android:layout_height="52dp"
-                android:text="@string/btn_start_collection"
-                android:layout_gravity="center"
-                android:layout_marginTop="24dp"
-                android:textColor="#ffffff"
-                android:background="@drawable/btn_rounded_accent"
-                android:minWidth="200dp" />
-            <Button
-                android:id="@+id/retryBtn"
-                android:layout_width="wrap_content"
-                android:layout_height="52dp"
-                android:text="@string/btn_retry"
-                android:visibility="gone"
-                android:textColor="#ffffff"
-                android:background="@drawable/btn_rounded_danger"
-                android:layout_marginTop="8dp" />
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+                <!-- Figure‑8 coverage view -->
+                <com.airmouse.calibration.MagStepFragment.CoverageView
+                    android:id="@+id/coverageView"
+                    android:layout_width="220dp"
+                    android:layout_height="220dp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="24dp" />
 
-</LinearLayout>
+                <!-- Instruction -->
+                <TextView
+                    android:id="@+id/instructionText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/mag_instruction"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textAlignment="center"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Progress bar -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/collection_progress"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="4dp" />
+
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:max="200"
+                    android:progress="0"
+                    android:visibility="invisible"
+                    android:progressTint="@color/progress_accent"
+                    android:backgroundTint="@color/progress_bg" />
+
+                <!-- Coach message -->
+                <TextView
+                    android:id="@+id/coachMessage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/mag_ready_desc"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textAlignment="center"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="24dp" />
+
+                <!-- Buttons -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/startBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="56dp"
+                    android:text="@string/btn_start_collection"
+                    android:layout_gravity="center"
+                    android:textColor="@android:color/white"
+                    app:cornerRadius="28dp"
+                    app:backgroundTint="@color/accent_blue"
+                    android:minWidth="200dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/retryBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="56dp"
+                    android:text="@string/btn_retry"
+                    android:visibility="gone"
+                    android:textColor="@android:color/white"
+                    app:cornerRadius="28dp"
+                    app:backgroundTint="@color/error_red"
+                    android:layout_marginTop="12dp" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</ScrollView>
