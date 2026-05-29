@@ -21,5 +21,5 @@ func StartMDNS(name string, ip string, port int, logFn func(string)) {
 		return
 	}
 	logFn(fmt.Sprintf("🌐 mDNS advertised as %s.local:%d", name, port))
-	// Runs forever; no need to block.
+	// Runs forever.
 }

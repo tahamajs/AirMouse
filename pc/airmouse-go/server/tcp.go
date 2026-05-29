@@ -201,5 +201,11 @@ func (s *TCPServer) DisconnectByAddr(addr string) {
 }
 
 func (s *TCPServer) Stop() {
-	// In a full implementation, close the listener; for now we rely on process exit.
+	// Close all connections
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, c := range s.conns {
+		c.conn.Close()
+	}
+	s.conns = make(map[string]*client)
 }

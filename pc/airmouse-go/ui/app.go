@@ -35,7 +35,7 @@ var (
 	tcpServer *server.TCPServer
 	cfg       *config.Config
 
-	// UI widgets shared across tabs
+	// UI widgets (shared across tabs)
 	statusPill *widget.Label
 	statsLabel *widget.Label
 	connLabel  *widget.Label
@@ -55,6 +55,10 @@ var (
 	perfRunning bool
 	perfLabel   *widget.Label
 
+	// Network fields (so we can read them from any tab)
+	ipEntry   *widget.Entry
+	portEntry *widget.Entry
+
 	mu sync.Mutex
 )
 
@@ -63,7 +67,6 @@ type logLine struct {
 	Message string
 }
 
-// Log adds a message to the log.
 func Log(msg string) { LogLevel("info", msg) }
 
 func LogLevel(level, msg string) {
@@ -74,7 +77,7 @@ func LogLevel(level, msg string) {
 	refreshFilteredLog()
 }
 
-// NewApp creates the Fyne application with a beautiful multi‑tab UI.
+// NewApp creates the entire Fyne application with a stunning multi‑tab UI.
 func NewApp(cfgFile *config.Config, mouseCtrl *control.MouseController) fyne.App {
 	cfg = cfgFile
 	mouse = mouseCtrl
@@ -84,7 +87,7 @@ func NewApp(cfgFile *config.Config, mouseCtrl *control.MouseController) fyne.App
 	w := a.NewWindow("Air Mouse Pro Server")
 	window = w
 
-	// ---------- Shared Header ----------
+	// ---------- Header (shared) ----------
 	statusPill = widget.NewLabelWithStyle("Server stopped", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	statusPill.BackgroundColor = color.NRGBA{R: 239, G: 91, B: 91, A: 255}
 	title := widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -93,22 +96,13 @@ func NewApp(cfgFile *config.Config, mouseCtrl *control.MouseController) fyne.App
 		container.NewCenter(statusPill),
 	)
 
-	// ---------- Dashboard Tab ----------
+	// ---------- Tabs ----------
 	dashboard := buildDashboardTab()
-
-	// ---------- Network Tab ----------
 	networkTab := buildNetworkTab()
-
-	// ---------- Clients Tab ----------
 	clientsTab := buildClientsTab()
-
-	// ---------- Settings Tab ----------
 	settingsTab := buildSettingsTab()
-
-	// ---------- Logs Tab ----------
 	logsTab := buildLogsTab()
 
-	// ---------- Assemble tabs ----------
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), dashboard),
 		container.NewTabItemWithIcon("Network", theme.ComputerIcon(), networkTab),
@@ -126,7 +120,7 @@ func NewApp(cfgFile *config.Config, mouseCtrl *control.MouseController) fyne.App
 		fyne.NewMenuItem("Exit", func() { a.Quit() }),
 	)
 	viewMenu := fyne.NewMenu("View",
-		fyne.NewMenuItem("Refresh IP List", func() { /* refresh IP dropdown */ }),
+		fyne.NewMenuItem("Refresh IP List", func() { ipEntry.Text = getLocalIP() }),
 		fyne.NewMenuItem("Clear Logs", func() {
 			mu.Lock()
 			logLines = nil
@@ -149,16 +143,15 @@ func NewApp(cfgFile *config.Config, mouseCtrl *control.MouseController) fyne.App
 	)
 	w.SetMainMenu(fyne.NewMainMenu(fileMenu, viewMenu, helpMenu))
 
-	// ---------- Performance Monitor ----------
+	// ---------- Bottom Status Bar ----------
 	perfLabel = widget.NewLabel("CPU: ---%  MEM: ---%")
 	go updatePerformance()
 
-	// ---------- Final layout ----------
 	content := container.NewBorder(
-		header,          // top
-		perfLabel,       // bottom
-		nil, nil,        // left, right
-		tabs,            // center
+		header,
+		perfLabel,
+		nil, nil,
+		tabs,
 	)
 
 	w.SetContent(content)
@@ -177,32 +170,43 @@ func buildDashboardTab() fyne.CanvasObject {
 
 	startBtn := widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() { startServer() })
 	stopBtn := widget.NewButtonWithIcon("Stop Server", theme.MediaStopIcon(), func() { stopServer() })
-	controls := container.NewHBox(startBtn, stopBtn)
 
-	return container.NewVBox(
+	// Recent activity preview (mini log)
+	miniLog := widget.NewLabel("No recent activity")
+	go func() {
+		for {
+			time.Sleep(2 * time.Second)
+			mu.Lock()
+			if len(logLines) > 0 {
+				last := logLines[len(logLines)-1].Message
+				miniLog.SetText(last)
+			}
+			mu.Unlock()
+		}
+	}()
+
+	dash := container.NewVBox(
 		widget.NewLabelWithStyle("Server Dashboard", fyne.TextAlignCenter, fyne.TextStyle{Bold: true, Italic: true}),
 		widget.NewSeparator(),
-		controls,
+		container.NewHBox(startBtn, stopBtn),
 		widget.NewSeparator(),
 		statsLabel,
 		connLabel,
 		widget.NewSeparator(),
-		widget.NewLabel("Quick Guide:"),
-		widget.NewLabel("1. Go to Network tab and select IP"),
-		widget.NewLabel("2. Generate QR code"),
-		widget.NewLabel("3. Start server"),
-		widget.NewLabel("4. Connect from your Android app"),
+		widget.NewLabelWithStyle("Recent Activity", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		miniLog,
 	)
+	return container.NewScroll(dash)
 }
 
 // ---------- Network Tab ----------
 func buildNetworkTab() fyne.CanvasObject {
-	ipEntry := widget.NewEntry()
+	ipEntry = widget.NewEntry()
 	ipEntry.SetPlaceHolder("192.168.1.x")
 	ipEntry.Text = getLocalIP()
-	portEntry := widget.NewEntry()
+	portEntry = widget.NewEntry()
 	portEntry.SetPlaceHolder("8080")
-	portEntry.Text = "8080"
+	portEntry.Text = strconv.Itoa(cfg.Port)
 
 	ipLabel := widget.NewLabel("Current endpoint: (none)")
 
@@ -247,7 +251,7 @@ func buildNetworkTab() fyne.CanvasObject {
 	manualIPEntry.SetPlaceHolder("Manual IP address")
 	manualIPCheck := widget.NewCheck("Use manual IP", nil)
 
-	return container.NewVBox(
+	netTab := container.NewVBox(
 		widget.NewLabelWithStyle("Network Endpoint", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		ipEntry, portEntry,
@@ -257,6 +261,7 @@ func buildNetworkTab() fyne.CanvasObject {
 		qrImage,
 		ipLabel,
 	)
+	return container.NewScroll(netTab)
 }
 
 // ---------- Clients Tab ----------
@@ -291,23 +296,21 @@ func buildClientsTab() fyne.CanvasObject {
 func buildSettingsTab() fyne.CanvasObject {
 	sensSlider := widget.NewSlider(0.2, 2.0)
 	sensSlider.Value = cfg.Sensitivity
+	sensLabel := widget.NewLabel(fmt.Sprintf("Sensitivity: %.2f", cfg.Sensitivity))
 	sensSlider.OnChanged = func(v float64) {
 		mouse.sensitivity = v
 		cfg.Sensitivity = v
+		sensLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", v))
 		config.Save("config.json", cfg)
 	}
-	sensLabel := widget.NewLabel(fmt.Sprintf("Sensitivity: %.2f", cfg.Sensitivity))
-	sensSlider.OnChanged = func(v float64) { sensLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", v)) }
 
 	alwaysOnTopCheck := widget.NewCheck("Always on Top", func(b bool) {
 		cfg.AlwaysOnTop = b
-		// Fyne doesn't support always-on-top directly via API, but we can log the setting.
 		config.Save("config.json", cfg)
 	})
 	alwaysOnTopCheck.SetChecked(cfg.AlwaysOnTop)
 
 	themeSelect := widget.NewSelect([]string{"Dark", "Light", "Pure Black", "High Contrast"}, func(s string) {
-		// Apply theme (simplified – in a real app you'd reload the window)
 		Log("Theme changed to " + s)
 	})
 
@@ -378,13 +381,10 @@ func buildLogsTab() fyne.CanvasObject {
 // ---------- Server actions ----------
 func startServer() {
 	if tcpServer != nil {
-		return // already running
+		return
 	}
-	// For simplicity, use the IP/port from the network tab (we store them globally if needed)
-	// In a full implementation you'd get them from the entry fields.
-	port := cfg.Port
-	ip := cfg.Host
-	tcpServer = server.NewTCPServer(ip, port, mouse, Log, updateStats, updateConnList)
+	port, _ := strconv.Atoi(portEntry.Text)
+	tcpServer = server.NewTCPServer("0.0.0.0", port, mouse, Log, updateStats, updateConnList)
 	if err := tcpServer.Start(); err != nil {
 		LogLevel("error", "TCP start error: "+err.Error())
 		return
