@@ -27,25 +27,23 @@ func (m *mouseController) Move(dx, dy float64) {
 	if math.Abs(dx) < 0.15 && math.Abs(dy) < 0.15 {
 		return
 	}
-	// Get current mouse position via AppleScript
-	script := `tell application "System Events"
-		set p to current position of mouse
-		set x to item 1 of p
-		set y to item 2 of p
-		return (x as string) & "," & (y as string)
-	end tell`
-	out, err := exec.Command("osascript", "-e", script).Output()
+	// Get current mouse position
+	out, err := exec.Command("osascript", "-e",
+		`tell application "System Events" to get current position of mouse`,
+	).Output()
 	if err != nil {
 		return
 	}
 	var curX, curY float64
-	fmt.Sscanf(string(out), "%f,%f", &curX, &curY)
+	fmt.Sscanf(string(out), "%f, %f", &curX, &curY)
 	newX := int(curX + dx)
 	newY := int(curY + dy)
-	// Move mouse using MouseTools (or coregraphics via C, but we avoid C here)
-	// Using AppleScript to set mouse position (requires accessibility permissions)
-	moveScript := fmt.Sprintf(`tell application "System Events" to set position of mouse to {%d, %d}`, newX, newY)
-	exec.Command("osascript", "-e", moveScript).Run()
+	// Set new position
+	script := fmt.Sprintf(
+		`tell application "System Events" to set position of mouse to {%d, %d}`,
+		newX, newY,
+	)
+	exec.Command("osascript", "-e", script).Run()
 }
 
 func (m *mouseController) Click(button string) {
@@ -53,7 +51,11 @@ func (m *mouseController) Click(button string) {
 	if button == "right" {
 		btn = "2"
 	}
-	exec.Command("osascript", "-e", fmt.Sprintf(`tell application "System Events" to click at (current position of mouse) with button %s`, btn)).Run()
+	script := fmt.Sprintf(
+		`tell application "System Events" to click at (current position of mouse) with button %s`,
+		btn,
+	)
+	exec.Command("osascript", "-e", script).Run()
 	if button == "left" {
 		atomic.AddInt64(&m.clickCount, 1)
 	} else if button == "right" {
@@ -62,15 +64,15 @@ func (m *mouseController) Click(button string) {
 }
 
 func (m *mouseController) DoubleClick() {
-	exec.Command("osascript", "-e", `tell application "System Events" to double click at (current position of mouse)`).Run()
+	exec.Command("osascript", "-e",
+		`tell application "System Events" to double click at (current position of mouse)`,
+	).Run()
 	atomic.AddInt64(&m.doubleClickCnt, 1)
 }
 
 func (m *mouseController) Scroll(delta int) {
-	// scroll via AppleScript: simulate scroll wheel (may not work in all apps)
-	// For simplicity, we use the keyboard shortcut for scrolling (Page Up/Down) or leave it
-	// Better: use a small tool like "cliclick" if available; fallback to nothing.
-	// We'll just log a message.
+	// macOS AppleScript does not support true scrolling easily.
+	// For demonstration, we just increment the counter.
 	atomic.AddInt64(&m.scrollCount, 1)
 }
 
