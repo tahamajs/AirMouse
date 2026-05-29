@@ -6,55 +6,52 @@
     android:orientation="vertical"
     android:background="#0f1115">
 
-    <!-- Modern header with gradient background -->
-    <LinearLayout
+    <!-- Compose header (migrated) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/headerCompose"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Backward-compatible hidden header elements (kept for activity state) -->
+    <TextView
+        android:id="@+id/statusHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/header_gradient"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:visibility="gone"
+        android:text="@string/calibration_welcome" />
 
-        <TextView
-            android:id="@+id/statusHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/calibration_welcome"
-            android:textColor="#ffffff"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:gravity="center" />
+    <ProgressBar
+        android:id="@+id/overallProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:visibility="gone"
+        android:max="100"
+        android:progress="0" />
 
-        <!-- Task progress row (large) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="8dp">
+    <!-- Hidden legacy controls for gradual migration (kept to avoid changing activity logic) -->
+    <TextView
+        android:id="@+id/timerText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:text="00:00" />
 
-            <TextView
-                android:id="@+id/taskProgressText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/tasks_remaining"
-                android:textColor="#e0e0e0"
-                android:textSize="14sp"
-                android:drawablePadding="8dp"
-                android:drawableStart="@drawable/ic_checklist" />
-        </LinearLayout>
-
-        <!-- Big overall progress bar – FIXED STYLE -->
-        <ProgressBar
-            android:id="@+id/overallProgress"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="12dp"
-            android:max="100"
-            android:progress="0"
-            android:layout_marginTop="12dp"
-            android:progressTint="#007acc"
-            android:backgroundTint="#2b3341" />
-    </LinearLayout>
+    <Button
+        android:id="@+id/backBtn"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+    <Button
+        android:id="@+id/nextBtn"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+    <Button
+        android:id="@+id/stopBtn"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
 
     <!-- Task checklist (horizontal) -->
     <LinearLayout
@@ -127,66 +124,10 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
-
-    <!-- Modern bottom control bar -->
-    <LinearLayout
+    <!-- Compose bottom controls (migrated) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/bottomCompose"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/bottom_bar_gradient"
-        android:padding="16dp">
-
-        <TextView
-            android:id="@+id/timerText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/time_placeholder"
-            android:textColor="#ffffff"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_gravity="center"
-            android:drawableStart="@drawable/ic_timer"
-            android:drawablePadding="8dp"
-            android:drawableTint="#007acc" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp"
-            android:gravity="center">
-
-            <Button
-                android:id="@+id/backBtn"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_back"
-                android:enabled="false"
-                android:textColor="#e5e7eb"
-                android:background="@drawable/btn_rounded_dark" />
-
-            <Button
-                android:id="@+id/nextBtn"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_next"
-                android:layout_marginStart="12dp"
-                android:enabled="false"
-                android:textColor="#ffffff"
-                android:background="@drawable/btn_rounded_accent" />
-
-            <Button
-                android:id="@+id/stopBtn"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_stop"
-                android:layout_marginStart="12dp"
-                android:textColor="#ffffff"
-                android:background="@drawable/btn_rounded_danger" />
-        </LinearLayout>
-    </LinearLayout>
+        android:layout_height="wrap_content" />
 
 </LinearLayout>

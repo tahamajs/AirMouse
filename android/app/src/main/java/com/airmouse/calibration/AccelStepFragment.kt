@@ -169,6 +169,7 @@ class AccelStepFragment : Fragment(), SensorEventListener, CalibrationStepFragme
 
         secondsLeft = ACCEL_TIME_LIMIT
         handler.post(countdownRunnable)
+        (activity as? CalibrationActivity)?.changeState(com.airmouse.calibration.CalibrationState.COLLECTING)
         sensorManager.registerListener(this, accelSensor, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
@@ -235,7 +236,9 @@ class AccelStepFragment : Fragment(), SensorEventListener, CalibrationStepFragme
             samplesPerPosition[currentPosIndex].add(event.values.clone())
             sampleCount++
             activity?.runOnUiThread {
-                progressBar.progress = (sampleCount * 100) / targetSamples
+                    val p = (sampleCount * 100) / targetSamples
+                    progressBar.progress = p
+                    (activity as? com.airmouse.ui.CalibrationActivity)?.updateStepProgress(p)
             }
         }
 

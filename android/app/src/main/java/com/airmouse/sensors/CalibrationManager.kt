@@ -46,4 +46,6 @@ class CalibrationManager(context: Context) {
     fun setAccelCalibrated(calibrated: Boolean) {
         prefs.edit().putBoolean("accel_calibrated", calibrated).apply()
     }
+
+    fun isAccelCalibrated(): Boolean = prefs.getBoolean("accel_calibrated", false)
 }
