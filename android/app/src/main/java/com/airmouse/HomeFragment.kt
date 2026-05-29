@@ -109,63 +109,63 @@ class HomeFragment : Fragment() {
             sensorService.start()
             batterySaver.start(sensorService)
         }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        if (isActive) {
-            sensorService.stop()
-            batterySaver.stop()
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        stopAirMouseInternal()
-        debugOverlay.hide()
-    }
-
-    private fun bindViews(view: View) {
-        ipEditText = view.findViewById(R.id.ip_edit_text)
-        portEditText = view.findViewById(R.id.port_edit_text)
-        statusText = view.findViewById(R.id.status_text)
-        orientationIndicator = view.findViewById(R.id.orientation_view)
-        calibrateBtn = view.findViewById(R.id.calibrate_btn)
-        startBtn = view.findViewById(R.id.start_btn)
-        sensitivitySlider = view.findViewById(R.id.sensitivity_seekbar)
-        sensitivityText = view.findViewById(R.id.sensitivity_text)
-        settingsBtn = view.findViewById(R.id.settings_btn)
-        debugToggleBtn = view.findViewById(R.id.debug_toggle_btn)
-        sensorStatusText = view.findViewById(R.id.sensor_status_text)
-        connectionQualityText = view.findViewById(R.id.connection_quality_text)
-        sensorDataText = view.findViewById(R.id.sensor_data_text)
-        liveLogText = view.findViewById(R.id.live_log_text)
-        clearLogsBtn = view.findViewById(R.id.clear_logs_btn)
-        fabCalibrate = view.findViewById(R.id.fab_calibrate)
-        scanQrBtn = view.findViewById(R.id.scan_qr_btn)
-    }
-
-    private fun initializeComponents() {
-        vibrator = requireContext().getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
-        preferences = PreferencesManager(requireContext())
-        batterySaver = BatterySaver()
-        debugOverlay = DebugOverlay(requireContext())
-        LogManager.init(requireContext())
-
-        calibrationHelper = CalibrationHelper(requireContext(), preferences)
-        gestureDetector = GestureDetector(preferences)
-        sensorService = SensorService(requireContext(), calibrationHelper, gestureDetector, preferences, batterySaver)
-        debugOverlay.setSensorService(sensorService)
-
-        ipEditText.setText(preferences.getLastIp())
-        portEditText.setText(preferences.getLastPort().toString())
-        renderSavedLogs()
-    }
-
-    private fun setupQRScanner() {
-        qrScanner.onScanResult = { scannedData ->
-            val endpoint = ValidationUtils.parseEndpoint(scannedData, preferences.getLastPort())
-            if (endpoint != null) {
+            val ip = ipEditText.text.toString().trim()
+            if (!ValidationUtils.isValidIp(ip)) {
+                ipEditText.error = getString(R.string.invalid_ip)
+                Toast.makeText(requireContext(), R.string.invalid_ip, Toast.LENGTH_SHORT).show()
+                return
+            }
+            val port = portEditText.text.toString().trim().toIntOrNull()?.coerceIn(1, 65535)
+            if (port == null) {
+                portEditText.error = getString(R.string.invalid_port)
+                Toast.makeText(requireContext(), R.string.invalid_port, Toast.LENGTH_SHORT).show()
+                return
+            }
+            if (!NetworkUtils.isWifiConnected(requireContext())) {
+                Toast.makeText(requireContext(), R.string.wifi_required, Toast.LENGTH_SHORT).show()
+                return
+            }
+            preferences.setLastIp(ip)
+            preferences.setLastPort(port)
+            smoothedMoveX = 0f
+            smoothedMoveY = 0f
+            lastMoveDispatchMs = 0L
+            try {
+                dataSender = DataSender.getInstance(ip, port, preferences) ?: return
+                autoReconnect = AutoReconnect(dataSender, preferences, onReconnect = { newSender ->
+                    dataSender = newSender
+                    attachSensorCallbacks()
+                })
+                dataSender.onConnected = {
+                    requireActivity().runOnUiThread {
+                        statusText.text = getString(R.string.status_active_format, "$ip:$port")
+                        connectionQualityText.text = getString(R.string.status_connected_syncing)
+                        Snackbar.make(requireView(), getString(R.string.connected_to, "$ip:$port"), Snackbar.LENGTH_SHORT).show()
+                        if (preferences.isHapticEnabled()) vibrate(50)
+                        LogManager.add("Connected to $ip:$port")
+                    }
+                }
+                dataSender.onDisconnected = {
+                    requireActivity().runOnUiThread {
+                        statusText.text = getString(R.string.reconnecting)
+                        connectionQualityText.text = getString(R.string.status_waiting_reconnect)
+                        LogManager.add("Disconnected from $ip:$port, retrying...")
+                    }
+                }
+                attachSensorCallbacks()
+                dataSender.start()
+                autoReconnect.start()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), getString(R.string.connection_error, e.message), Toast.LENGTH_LONG).show()
+                return
+            }
+            sensorService.start()
+            batterySaver.start(sensorService)
+            isActive = true
+            startBtn.text = getString(R.string.stop)
+            calibrateBtn.isEnabled = false
+            fabCalibrate.hide()
+            updateCalibrationStatusUi()
                 ipEditText.setText(endpoint.host)
                 portEditText.setText(endpoint.port.toString())
                 preferences.setLastIp(endpoint.host)

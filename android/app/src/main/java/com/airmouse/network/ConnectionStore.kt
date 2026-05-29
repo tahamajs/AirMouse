@@ -1,9 +1,8 @@
 package com.airmouse.network
 
 /**
- * Lightweight data holder for connection information used by the app UI.
- * Renamed to ConnectionInfo to avoid colliding with the ConnectionStore interface
- * defined in the `network` Gradle module.
+ * Data class for connection details. 
+ * Renamed from ConnectionStore to avoid clash with the interface in :network.
  */
 data class ConnectionInfo(
     val ip: String,
