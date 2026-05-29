@@ -56,3 +56,7 @@ func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
 		atomic.LoadInt64(&m.rightClickCnt),
 		atomic.LoadInt64(&m.scrollCount)
 }
+
+func (m *mouseController) SetSensitivity(s float64) {
+	m.sensitivity = s
+}
