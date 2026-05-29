@@ -26,6 +26,33 @@
         <item name="colorOnError">@color/white</item>
     </style>
 
+    <!-- Explicit light / dark variants for easier switching -->
+    <style name="Theme.AirMouse.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/deep_orange_700</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/background_primary</item>
+        <item name="colorPrimary">@color/deep_orange_500</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/deep_orange_100</item>
+        <item name="colorOnPrimaryContainer">@color/deep_orange_900</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:windowBackground">@color/background_primary</item>
+    </style>
+
+    <style name="Theme.AirMouse.Dark" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@color/deep_orange_800</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/background_primary</item>
+        <item name="colorPrimary">@color/deep_orange_500</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:windowBackground">@color/background_primary</item>
+    </style>
+
     <style name="Theme.AirMouse.PureBlack" parent="Theme.AirMouse">
         <item name="android:windowBackground">@color/black_pure</item>
         <item name="colorSurface">@color/black_pure</item>

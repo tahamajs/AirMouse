@@ -35,11 +35,13 @@
 
     <color name="background_primary">#121212</color>
     <color name="background_secondary">#1E1E1E</color>
-    <color name="surface">#1E1E1E</color>
-    <color name="surface_variant">#2C2C2C</color>
+    <color name="surface">#121316</color>
+    <color name="surface_variant">#1E1F22</color>
+    <color name="surface_dark">#0b0c0d</color>
 
-    <color name="text_primary">@color/grey_900</color>
-    <color name="text_secondary">@color/grey_700</color>
-    <color name="text_disabled">@color/grey_500</color>
-    <color name="text_hint">@color/grey_400</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B3B3B3</color>
+    <color name="text_disabled">#7F7F7F</color>
+    <color name="text_hint">#9E9E9E</color>
+    <color name="text_on_surface_inverse">#FFFFFF</color>
 </resources>
