@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.airmouse.R
 import com.airmouse.calibration.CalibrationPagerAdapter
+import com.airmouse.calibration.CalibrationState
 import com.airmouse.calibration.CalibrationStepFragment
 
 class CalibrationActivity : AppCompatActivity() {
@@ -27,6 +28,7 @@ class CalibrationActivity : AppCompatActivity() {
 
     private var currentStep = 0
     private val totalSteps = CalibrationPagerAdapter.STEP_COUNT
+    private var state: CalibrationState = CalibrationState.IDLE
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,7 +43,38 @@ class CalibrationActivity : AppCompatActivity() {
         statusHeader = findViewById(R.id.statusHeader)
 
         viewPager.adapter = CalibrationPagerAdapter(this)
+        // Smooth fade+scale transition between calibration pages
+        viewPager.setPageTransformer { page, position ->
+            val absPos = kotlin.math.abs(position)
+            page.alpha = 1f - absPos.coerceIn(0f, 1f)
+            val scale = 1f - (absPos * 0.08f)
+            page.scaleX = scale
+            page.scaleY = scale
+        }
         viewPager.isUserInputEnabled = false
+
+        // Compose integration: set header and bottom controls (gradual migration)
+        val headerCompose = findViewById<androidx.compose.ui.platform.ComposeView>(R.id.headerCompose)
+        headerCompose.setContent {
+            androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf(getString(R.string.calibration_welcome))
+            }
+            // read progress from hidden overallProgress for backward compatibility
+            val prog = overallProgress.progress
+            com.airmouse.ui.CalibrationHeader(status = getString(R.string.calibration_welcome), overallProgress = prog)
+        }
+
+        val bottomCompose = findViewById<androidx.compose.ui.platform.ComposeView>(R.id.bottomCompose)
+        bottomCompose.setContent {
+            com.airmouse.ui.CalibrationBottomControls(
+                timerText = timerText.text.toString(),
+                onBack = { backBtn.performClick() },
+                onNext = { nextBtn.performClick() },
+                onStop = { stopBtn.performClick() },
+                backEnabled = backBtn.isEnabled,
+                nextEnabled = nextBtn.isEnabled
+            )
+        }
 
         timerText.text = "00:00"
         statusHeader.text = getString(R.string.calibration_welcome)
@@ -90,6 +123,31 @@ class CalibrationActivity : AppCompatActivity() {
     /** Called by fragments to update the timer display. */
     fun setTimerText(text: String) {
         runOnUiThread { timerText.text = text }
+    }
+
+    fun changeState(newState: CalibrationState) {
+        state = newState
+        // small visual feedback based on state (could be expanded later)
+        runOnUiThread {
+            when (state) {
+                CalibrationState.COLLECTING -> statusHeader.alpha = 1f
+                CalibrationState.EVALUATING -> statusHeader.alpha = 0.9f
+                CalibrationState.STEP_COMPLETE -> statusHeader.alpha = 1f
+                CalibrationState.COMPLETE -> statusHeader.text = getString(R.string.calibration_done)
+                CalibrationState.ABORTED -> statusHeader.text = getString(R.string.calibration_aborted)
+                else -> {}
+            }
+        }
+    }
+
+    /** Allows fragments to update a small step progress indicator (optional). */
+    fun updateStepProgress(percent: Int) {
+        // For now use overallProgress as an immediate visual proxy
+        runOnUiThread {
+            // combine current step and inner percent for smoother overall progress feel
+            val base = currentStep * 100 / totalSteps
+            overallProgress.progress = (base + percent / totalSteps).coerceIn(0, 100)
+        }
     }
 
     /** Called by fragments to update the header. */

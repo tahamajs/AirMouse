@@ -131,6 +131,7 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
 
         secondsLeft = GYRO_TIME_LIMIT
         handler.post(countdownRunnable)
+        (activity as? CalibrationActivity)?.changeState(com.airmouse.calibration.CalibrationState.COLLECTING)
         sensorManager.registerListener(this, gyroSensor, SensorManager.SENSOR_DELAY_FASTEST)
         sensorManager.registerListener(this, accelSensor, SensorManager.SENSOR_DELAY_FASTEST)
     }
@@ -165,7 +166,9 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
                     gyroSamples.add(event.values.clone())
                     sampleCount++
                     activity?.runOnUiThread {
-                        progressBar.progress = (sampleCount * 100) / targetSamples
+                        val p = (sampleCount * 100) / targetSamples
+                        progressBar.progress = p
+                        (activity as? com.airmouse.ui.CalibrationActivity)?.updateStepProgress(p)
                     }
                 }
                 if (sampleCount >= targetSamples) {
@@ -215,6 +218,7 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
     }
 
     private fun evaluateData() {
+        (activity as? CalibrationActivity)?.changeState(com.airmouse.calibration.CalibrationState.EVALUATING)
         if (currentVariance > VARIANCE_THRESHOLD || gyroSamples.size < targetSamples) {
             dataValid = false
             activity?.runOnUiThread {
@@ -230,6 +234,7 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
             stepComplete = true
             activity?.runOnUiThread {
                 (activity as? CalibrationActivity)?.onStepComplete()
+                (activity as? CalibrationActivity)?.changeState(com.airmouse.calibration.CalibrationState.STEP_COMPLETE)
                 coachMessage.text = getString(R.string.gyro_done)
                 coachMessage.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_green_dark))
                 instructionText.text = getString(R.string.gyro_complete)

@@ -117,6 +117,7 @@ class MagStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment
 
         secondsLeft = MAG_TIME_LIMIT
         handler.post(countdownRunnable)
+        (activity as? CalibrationActivity)?.changeState(com.airmouse.calibration.CalibrationState.COLLECTING)
         sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
@@ -127,6 +128,7 @@ class MagStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment
         activity?.runOnUiThread {
             val percent = (sampleCount * 100 / targetSamples).coerceAtMost(100)
             progressBar.progress = percent
+            (activity as? com.airmouse.ui.CalibrationActivity)?.updateStepProgress(percent)
             coverageView.updateCoverage(percent)
             if (sampleCount >= targetSamples) {
                 coachMessage.text = getString(R.string.mag_enough_data)
@@ -172,6 +174,7 @@ class MagStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment
         stepComplete = true
         activity?.runOnUiThread {
             (activity as? CalibrationActivity)?.onStepComplete()
+            (activity as? CalibrationActivity)?.changeState(com.airmouse.calibration.CalibrationState.STEP_COMPLETE)
             coachMessage.text = getString(R.string.mag_done)
             coachMessage.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_green_dark))
             instructionText.text = getString(R.string.mag_complete)
