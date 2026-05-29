@@ -157,7 +157,14 @@ type Config struct {
     AutoSwapModel           bool    `json:"auto_swap_model"`
 }
 
-
+type Config struct {
+    // ... existing fields ...
+    
+    // AI Smoothing
+    EnableAISmoothing  bool    `json:"enable_ai_smoothing"`
+    AIModelPath        string  `json:"ai_model_path"`
+    AIBlendFactor      float64 `json:"ai_blend_factor"`
+}
 EnablePersonalization:   true,
 PersonalizationBuffer:   2000,
 PersonalizationInterval: 3600,
