@@ -5,7 +5,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -34,15 +33,21 @@ class DataSender(
             store: ConnectionStore? = null
         ): DataSender? {
             val current = instance
-            return when {
-                current == null && host.isNotBlank() && store != null -> {
-                    DataSender(host, port, store).also { instance = it }
+            if (current != null) {
+                if (host.isNotBlank() && store != null) {
+                    val needsReplacement = current.host != host || current.port != port
+                    if (needsReplacement) {
+                        current.stopSending()
+                        return DataSender(host, port, store).also { instance = it }
+                    }
                 }
-                host.isNotBlank() && store != null && (current.host != host || current.port != port) -> {
-                    current.stopSending()
-                    DataSender(host, port, store).also { instance = it }
-                }
-                else -> current
+                return current
+            }
+
+            return if (host.isNotBlank() && store != null) {
+                DataSender(host, port, store).also { instance = it }
+            } else {
+                null
             }
         }
 
@@ -96,7 +101,10 @@ class DataSender(
     }
 
     private suspend fun readLoop() {
-        while (running && isActive) {
+        while (running) {
+            val job = scope.coroutineContext[Job]
+            if (job == null || !job.isActive) break
+
             val line = try {
                 reader?.readLine()
             } catch (_: java.net.SocketTimeoutException) {
