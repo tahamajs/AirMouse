@@ -163,6 +163,37 @@ class CalibrationActivity : AppCompatActivity() {
         }
     }
 
+    fun goToNextStepFromUi() {
+        val fragment = supportFragmentManager.findFragmentByTag("f$currentStep") as? CalibrationStepFragment
+        if (fragment?.isDataValid() != true) {
+            Toast.makeText(this, "Please complete this step successfully before proceeding.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (currentStep < totalSteps - 1) {
+            currentStep++
+            viewPager.currentItem = currentStep
+            resetStepState()
+        } else {
+            val prefs = com.airmouse.utils.PreferencesManager(this)
+            prefs.setCalibrated(true)
+            changeState(CalibrationState.COMPLETE)
+            showSuccessDialog()
+        }
+    }
+
+    fun goToPreviousStepFromUi() {
+        if (currentStep > 0) {
+            currentStep--
+            viewPager.currentItem = currentStep
+            resetStepState()
+        }
+    }
+
+    fun abortFromUi() {
+        changeState(CalibrationState.ABORTED)
+        showAbortDialog()
+    }
+
     fun resetStepState() {
         val fragment = supportFragmentManager.findFragmentByTag("f${currentStep}") as? CalibrationStepFragment
         fragment?.resetUI()
