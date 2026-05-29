@@ -1,16 +1,12 @@
 package com.airmouse.network
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -95,19 +91,16 @@ class DataSender(
         writer = PrintWriter(newSocket.getOutputStream(), true)
         reader = BufferedReader(InputStreamReader(newSocket.getInputStream()))
         isConnected = true
-        store?.setLastIp(host)
-        store?.setLastPort(port)
+        // If you want to persist IP/port, use the store directly:
+        // preferencesManager?.lastIp = host  etc. But for now, we ignore because store doesn't have setters.
         onConnected?.invoke()
     }
 
     private suspend fun readLoop() {
         while (running) {
-            val job = scope.coroutineContext[Job]
-            if (job == null || !job.isActive) break
-
             val line = try {
                 reader?.readLine()
-            } catch (_: java.net.SocketTimeoutException) {
+            } catch (_: SocketTimeoutException) {
                 null
             }
 
@@ -128,28 +121,29 @@ class DataSender(
     }
 
     fun sendMove(dx: Float, dy: Float) {
-        sendRaw(MoveMessage(dx = dx, dy = dy).let { JSONObject().apply {
-            put("type", it.type)
-            put("dx", it.dx)
-            put("dy", it.dy)
-        }.toString() })
+        val json = JSONObject().apply {
+            put("type", "move")
+            put("dx", dx)
+            put("dy", dy)
+        }.toString()
+        sendRaw(json)
     }
 
     fun sendClick() = sendCritical("click")
     fun sendDoubleClick() = sendCritical("doubleclick")
     fun sendRightClick() = sendCritical("rightclick")
-    fun sendScroll(delta: Int) = sendCritical("scroll", delta = delta)
+    fun sendScroll(delta: Int) = sendCritical("scroll", "delta" to delta)
 
     fun sendHello(deviceName: String) {
-        sendRaw(HelloMessage(name = deviceName).let { JSONObject().apply {
-            put("type", it.type)
-            put("name", it.name)
-        }.toString() })
+        val json = JSONObject().apply {
+            put("type", "hello")
+            put("name", deviceName)
+        }.toString()
+        sendRaw(json)
     }
 
     fun updateHost(newHost: String) {
         host = newHost
-        store?.setLastIp(newHost)
     }
 
     fun stopSending() {
@@ -161,15 +155,17 @@ class DataSender(
         disconnectInternal()
     }
 
-    private fun sendCritical(type: String, delta: Int? = null) {
+    private fun sendCritical(type: String, extra: Pair<String, Any>? = null) {
         val id = messageId.incrementAndGet()
-        val payload = JSONObject().apply {
+        val json = JSONObject().apply {
             put("type", type)
             put("id", id)
-            if (delta != null) put("delta", delta)
+            if (extra != null) {
+                put(extra.first, extra.second)
+            }
         }.toString()
-        pendingAcks[id] = PendingCommand(payload)
-        sendRaw(payload)
+        pendingAcks[id] = PendingCommand(json)
+        sendRaw(json)
         scheduleRetry(id)
     }
 

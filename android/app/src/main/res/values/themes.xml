@@ -6,6 +6,24 @@
         <item name="windowSplashScreenAnimationDuration">1000</item>
         <item name="postSplashScreenTheme">@style/Theme.AirMouse</item>
     </style>
+        <style name="Theme.AirMouse.Modern" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+            <item name="colorPrimary">#007acc</item>
+            <item name="colorPrimaryVariant">#005f99</item>
+            <item name="colorOnPrimary">#ffffff</item>
+            <item name="colorSecondary">#4CAF50</item>
+            <item name="colorSecondaryVariant">#388E3C</item>
+            <item name="colorOnSecondary">#ffffff</item>
+            <item name="android:colorBackground">#0f1115</item>
+            <item name="colorSurface">#171b22</item>
+            <item name="colorOnSurface">#e5e7eb</item>
+            <item name="colorError">#ef5b5b</item>
+            <item name="android:statusBarColor">#0f1115</item>
+            <item name="android:navigationBarColor">#0f1115</item>
+        </style>
+
+
+
+
 
     <style name="Theme.AirMouse" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_700</item>

@@ -1,4 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
@@ -6,27 +8,69 @@
     android:padding="24dp"
     android:background="#0f1115">
 
-    <com.airmouse.calibration.MagAnimationView
-        android:id="@+id/magAnimation"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/statusText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:text="Move phone in figure‑8 pattern..."
-        android:textColor="#e5e7eb"
-        android:textSize="16sp"
-        android:textAlignment="center" />
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        style="?android:attr/progressBarStyleHorizontal"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:max="200" />
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="#1d2430">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- Figure‑8 animation -->
+            <com.airmouse.calibration.MagAnimationView
+                android:id="@+id/magAnimation"
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_gravity="center"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mag_ready"
+                android:textColor="#e5e7eb"
+                android:textSize="16sp"
+                android:textAlignment="center"
+                android:layout_gravity="center"
+                android:layout_marginBottom="8dp" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:max="200"
+                android:progress="0"
+                android:visibility="invisible"
+                android:progressTint="#007acc"
+                android:backgroundTint="#2b3341" />
+
+            <Button
+                android:id="@+id/startBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:text="@string/btn_start_collection"
+                android:layout_gravity="center"
+                android:layout_marginTop="24dp"
+                android:textColor="#ffffff"
+                android:background="@drawable/btn_rounded_accent"
+                android:minWidth="200dp" />
+            <Button
+                android:id="@+id/retryBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:text="@string/btn_retry"
+                android:visibility="gone"
+                android:textColor="#ffffff"
+                android:background="@drawable/btn_rounded_danger"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
 </LinearLayout>

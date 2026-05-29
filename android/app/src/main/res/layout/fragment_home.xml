@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="@color/background_primary">
+    android:background="#0f1115">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -12,302 +11,360 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <com.google.android.material.card.MaterialCardView
+        <!-- Status & Sensor Card -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="28dp"
-            app:cardElevation="6dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#1d2430"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="24dp"
-                android:background="@drawable/bg_card_gradient">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Air Mouse"
-                    android:textColor="@android:color/white"
-                    android:textAppearance="?attr/textAppearanceHeadlineMedium" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Professional motion-based control with live connection feedback"
-                    android:textColor="@android:color/white"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:alpha="0.9" />
+                android:padding="16dp">
 
                 <TextView
                     android:id="@+id/status_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:background="@drawable/bg_card_outline"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp"
-                    android:text="Disconnected"
-                    android:textColor="@android:color/white"
-                    android:textAppearance="?attr/textAppearanceLabelLarge" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Connection"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:text="Server IP"
-                    android:textAppearance="?attr/textAppearanceLabelLarge" />
-
-                <EditText
-                    android:id="@+id/ip_edit_text"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:background="@drawable/bg_input"
-                    android:hint="192.168.1.10"
-                    android:inputType="phone"
-                    android:textColor="@color/text_primary"
-                    android:textColorHint="@color/text_secondary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Port"
-                    android:textAppearance="?attr/textAppearanceLabelLarge" />
-
-                <EditText
-                    android:id="@+id/port_edit_text"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:background="@drawable/bg_input"
-                    android:hint="9876"
-                    android:inputType="number"
-                    android:textColor="@color/text_primary"
-                    android:textColorHint="@color/text_secondary" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/scan_qr_btn"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="Scan QR Code"
-                    app:icon="@android:drawable/ic_menu_camera"
-                    app:iconGravity="textStart" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Live status"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                    android:text="@string/calibration_needed_prompt"
+                    android:textColor="#e5e7eb"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="4dp" />
 
                 <TextView
                     android:id="@+id/sensor_status_text"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
                     android:text="Sensors ready"
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:textColor="#96a0ae"
+                    android:textSize="12sp" />
+                <!-- Inside the first CardView, after sensor_status_text -->
+                <ProgressBar
+                    android:id="@+id/calibration_progress_bar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressTint="#007acc"
+                    android:backgroundTint="#2b3341"
+                    android:layout_marginTop="8dp" />
 
                 <TextView
-                    android:id="@+id/connection_quality_text"
-                    android:layout_width="match_parent"
+                    android:id="@+id/calibration_progress_text"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Connection quality"
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:text="0 / 3 sensors calibrated"
+                    android:textColor="#96a0ae"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp" />
 
                 <TextView
-                    android:id="@+id/sensor_data_text"
+                    android:id="@+id/attempts_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Calibration attempts remaining: 5"
+                    android:textColor="#4CAF50"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp" />
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Sensor data"
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
 
-                <View
-                    android:id="@+id/orientation_view"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="16dp"
-                    android:background="@drawable/green_square" />
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_wifi"
+                        android:tint="#96a0ae" />
+
+                    <TextView
+                        android:id="@+id/connection_quality_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/status_not_connected"
+                        android:textColor="#96a0ae"
+                        android:textSize="12sp"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
+
+                <!-- Orientation Indicator -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_mini_indicator">
+
+                    <View
+                        android:id="@+id/orientation_view"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:background="@drawable/ic_green_dot" />
+                </FrameLayout>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </androidx.cardview.widget.CardView>
 
-        <com.google.android.material.card.MaterialCardView
+        <!-- Connection Card -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="2dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#1d2430"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Connect to Server"
+                    android:textColor="#e5e7eb"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <EditText
+                        android:id="@+id/ip_edit_text"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/input_background"
+                        android:paddingHorizontal="12dp"
+                        android:hint="Server IP"
+                        android:textColor="#e5e7eb"
+                        android:textColorHint="#6b7280"
+                        android:inputType="phone" />
+
+                    <EditText
+                        android:id="@+id/port_edit_text"
+                        android:layout_width="80dp"
+                        android:layout_height="52dp"
+                        android:background="@drawable/input_background"
+                        android:paddingHorizontal="12dp"
+                        android:hint="Port"
+                        android:textColor="#e5e7eb"
+                        android:textColorHint="#6b7280"
+                        android:inputType="number"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp">
+
+                    <Button
+                        android:id="@+id/start_btn"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="Connect"
+                        android:textColor="#ffffff"
+                        android:background="@drawable/btn_rounded_accent" />
+
+                    <ImageButton
+                        android:id="@+id/scan_qr_btn"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:src="@drawable/ic_qr_scanner"
+                        android:background="@drawable/btn_rounded_dark"
+                        android:layout_marginStart="8dp"
+                        android:tint="#ffffff" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/calibrate_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Calibrate Sensors"
+                    android:textColor="#ffffff"
+                    android:background="@drawable/btn_rounded_accent"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Sensitivity Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#1d2430"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Sensitivity"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                    android:textColor="#e5e7eb"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="8dp" />
 
-                <com.google.android.material.slider.Slider
+                <SeekBar
                     android:id="@+id/sensitivity_seekbar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:valueFrom="0"
-                    android:valueTo="100"
-                    android:value="50" />
+                    android:max="100"
+                    android:progress="50"
+                    android:thumb="@drawable/thumb_accent"
+                    android:progressTint="#007acc"
+                    android:backgroundTint="#2b3341" />
 
                 <TextView
                     android:id="@+id/sensitivity_text"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:gravity="center"
-                    android:text="Balanced"
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:text="1.0x"
+                    android:textColor="#96a0ae"
+                    android:textSize="12sp"
+                    android:layout_gravity="end" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </androidx.cardview.widget.CardView>
 
-        <com.google.android.material.card.MaterialCardView
+        <!-- Sensor Data & Debug Card -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="2dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#1d2430"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/sensor_data_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Session log"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                    android:text="Gyro Y: 0.0  |  Accel Y: 0.0"
+                    android:textColor="#96a0ae"
+                    android:textSize="12sp" />
 
-                <TextView
-                    android:id="@+id/live_log_text"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:minHeight="140dp"
-                    android:background="@drawable/bg_card_outline"
-                    android:padding="14dp"
-                    android:text="Logs will appear here"
-                    android:textAppearance="?attr/textAppearanceBodySmall" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/clear_logs_btn"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Clear Logs"
-                    app:icon="@android:drawable/ic_menu_delete"
-                    app:iconGravity="textStart" />
+                    <Button
+                        android:id="@+id/settings_btn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Settings"
+                        android:textColor="#ffffff"
+                        android:background="@drawable/btn_small_dark"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/debug_toggle_btn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Debug"
+                        android:textColor="#ffffff"
+                        android:background="@drawable/btn_small_dark"
+                        android:textSize="12sp"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </androidx.cardview.widget.CardView>
 
-        <LinearLayout
+        <!-- Live Log Preview Card -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#1d2430"
+            android:layout_marginBottom="16dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/settings_btn"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Settings"
-                app:icon="@drawable/ic_theme"
-                app:iconGravity="textStart" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/debug_toggle_btn"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:text="Debug"
-                app:icon="@drawable/ic_log"
-                app:iconGravity="textStart" />
-        </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/calibrate_btn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="Calibrate Sensors"
-            app:icon="@drawable/ic_calibrate"
-            app:iconGravity="textStart"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Live Log"
+                        android:textColor="#e5e7eb"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/start_btn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Start Control"
-            app:icon="@drawable/ic_play"
-            app:iconGravity="textStart" />
+                    <Button
+                        android:id="@+id/clear_logs_btn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Clear"
+                        android:textColor="#ffffff"
+                        android:background="@drawable/btn_small_dark"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="100dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/log_background">
+
+                    <TextView
+                        android:id="@+id/live_log_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/log_placeholder"
+                        android:textColor="#96a0ae"
+                        android:textSize="12sp"
+                        android:padding="8dp" />
+                </ScrollView>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Floating Action Button (optional, matches fabCalibrate) -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_calibrate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginTop="16dp"
-            android:src="@drawable/ic_calibrate" />
+            android:layout_gravity="end|bottom"
+            android:layout_margin="16dp"
+            android:src="@drawable/ic_phone"
+            android:backgroundTint="#007acc"
+            android:tint="#ffffff" />
 
     </LinearLayout>
-
-</androidx.core.widget.NestedScrollView>
+</ScrollView>

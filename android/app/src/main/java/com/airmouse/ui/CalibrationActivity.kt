@@ -1,17 +1,19 @@
 package com.airmouse.ui
 
+import android.content.Context
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.View
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.airmouse.R
 import com.airmouse.calibration.CalibrationPagerAdapter
-import java.util.Locale
+import com.airmouse.calibration.CalibrationStepFragment
 
 class CalibrationActivity : AppCompatActivity() {
 
@@ -20,20 +22,11 @@ class CalibrationActivity : AppCompatActivity() {
     private lateinit var backBtn: Button
     private lateinit var nextBtn: Button
     private lateinit var stopBtn: Button
+    private lateinit var overallProgress: ProgressBar
+    private lateinit var statusHeader: TextView
 
     private var currentStep = 0
     private val totalSteps = CalibrationPagerAdapter.STEP_COUNT
-    private var secondsElapsed = 0
-    private val handler = Handler(Looper.getMainLooper())
-    private val timerRunnable = object : Runnable {
-        override fun run() {
-            secondsElapsed++
-            val minutes = secondsElapsed / 60
-            val secs = secondsElapsed % 60
-            timerText.text = String.format(Locale.getDefault(), "%02d:%02d", minutes, secs)
-            handler.postDelayed(this, 1000)
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,12 +37,14 @@ class CalibrationActivity : AppCompatActivity() {
         backBtn = findViewById(R.id.backBtn)
         nextBtn = findViewById(R.id.nextBtn)
         stopBtn = findViewById(R.id.stopBtn)
+        overallProgress = findViewById(R.id.overallProgress)
+        statusHeader = findViewById(R.id.statusHeader)
 
         viewPager.adapter = CalibrationPagerAdapter(this)
         viewPager.isUserInputEnabled = false
 
-        // Start timer
-        handler.postDelayed(timerRunnable, 1000)
+        timerText.text = "00:00"
+        statusHeader.text = getString(R.string.calibration_welcome)
 
         backBtn.setOnClickListener {
             if (currentStep > 0) {
@@ -60,12 +55,19 @@ class CalibrationActivity : AppCompatActivity() {
         }
 
         nextBtn.setOnClickListener {
+            val fragment = supportFragmentManager.findFragmentByTag("f${currentStep}") as? CalibrationStepFragment
+            if (fragment?.isDataValid() != true) {
+                Toast.makeText(this, "Please complete this step successfully before proceeding.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             if (currentStep < totalSteps - 1) {
                 currentStep++
                 viewPager.currentItem = currentStep
                 resetStepState()
             } else {
-                // Finish – save final data if needed
+                // All steps completed – mark calibration as done and finish
+                val prefs = com.airmouse.utils.PreferencesManager(this)
+                prefs.setCalibrated(true)
                 showSuccessDialog()
             }
         }
@@ -85,12 +87,29 @@ class CalibrationActivity : AppCompatActivity() {
         updateButtons()
     }
 
+    /** Called by fragments to update the timer display. */
+    fun setTimerText(text: String) {
+        runOnUiThread { timerText.text = text }
+    }
+
+    /** Called by fragments to update the header. */
+    fun setStatusHeader(text: String) {
+        runOnUiThread { statusHeader.text = text }
+    }
+
+    /** Called by fragments when they complete their step successfully. */
     fun onStepComplete() {
         nextBtn.isEnabled = true
+        updateOverallProgress()
+        // Short vibration feedback
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        if (vibrator.hasVibrator()) {
+            vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+        }
     }
 
     fun resetStepState() {
-        val fragment = supportFragmentManager.findFragmentByTag("f${currentStep}") as? com.airmouse.calibration.CalibrationStepFragment
+        val fragment = supportFragmentManager.findFragmentByTag("f${currentStep}") as? CalibrationStepFragment
         fragment?.resetUI()
         nextBtn.isEnabled = fragment?.isStepComplete() ?: false
         updateButtons()
@@ -98,14 +117,23 @@ class CalibrationActivity : AppCompatActivity() {
 
     private fun updateButtons() {
         backBtn.isEnabled = currentStep > 0
-        // Next button enabled only if step is complete (set by fragment callback)
+        // Change next button text on last step
+        if (currentStep == totalSteps - 1) {
+            nextBtn.text = "Finish"
+        } else {
+            nextBtn.text = "Next"
+        }
+    }
+
+    private fun updateOverallProgress() {
+        val progress = (currentStep + 1) * 100 / totalSteps
+        overallProgress.progress = progress
     }
 
     private fun showSuccessDialog() {
-        handler.removeCallbacks(timerRunnable)
         AlertDialog.Builder(this)
             .setTitle("Calibration Complete")
-            .setMessage("All sensors calibrated!")
+            .setMessage("All sensors calibrated successfully! You can now start the Air Mouse.")
             .setPositiveButton("OK") { _, _ -> finish() }
             .show()
     }
@@ -113,14 +141,9 @@ class CalibrationActivity : AppCompatActivity() {
     private fun showAbortDialog() {
         AlertDialog.Builder(this)
             .setTitle("Abort Calibration?")
-            .setMessage("Progress will be lost.")
+            .setMessage("Progress will be lost. Are you sure?")
             .setPositiveButton("Yes") { _, _ -> finish() }
             .setNegativeButton("No", null)
             .show()
-    }
-
-    override fun onDestroy() {
-        handler.removeCallbacks(timerRunnable)
-        super.onDestroy()
     }
 }
