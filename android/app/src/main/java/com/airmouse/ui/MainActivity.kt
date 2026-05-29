@@ -111,3 +111,86 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
+
+// MainActivity.kt – add to existing class
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import com.airmouse.gesture.GestureInferenceService
+import com.airmouse.network.WebSocketManager
+import com.airmouse.proximity.ProximityAwareService
+
+class MainActivity : AppCompatActivity() {
+
+    // ... existing code ...
+
+    // Gesture inference
+    private var inferenceService: GestureInferenceService? = null
+    private var isInferenceBound = false
+
+    // Proximity service
+    private var proximityIntent: Intent? = null
+
+    private val inferenceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            inferenceService = (service as GestureInferenceService.LocalBinder).getService()
+            isInferenceBound = true
+            inferenceService?.onGestureDetected = { gesture, confidence ->
+                Log.d("Gesture", "Detected: $gesture ($confidence)")
+                WebSocketManager.sendGesture(gesture, confidence)
+                if (confidence > 0.8f && preferences.isHapticEnabled()) {
+                    vibrate(50)
+                }
+            }
+            inferenceService?.start()
+        }
+        override fun onServiceDisconnected(name: ComponentName?) {
+            inferenceService = null
+            isInferenceBound = false
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // ... existing setup ...
+
+        // WebSocket connection
+        val ip = preferences.getLastIp()
+        val port = preferences.getLastPort() + 1  // WebSocket port = TCP+1
+        WebSocketManager.connect("ws://$ip:$port")
+        WebSocketManager.onConnected = {
+            runOnUiThread { statusText.text = "WebSocket connected" }
+        }
+        WebSocketManager.onDisconnected = {
+            runOnUiThread { statusText.text = "WebSocket disconnected" }
+        }
+
+        // Start & bind gesture inference service
+        val inferenceIntent = Intent(this, GestureInferenceService::class.java)
+        startService(inferenceIntent)
+        bindService(inferenceIntent, inferenceConnection, Context.BIND_AUTO_CREATE)
+
+        // Proximity service (start on demand, e.g., from settings)
+        proximityIntent = Intent(this, ProximityAwareService::class.java)
+    }
+
+    override fun onDestroy() {
+        if (isInferenceBound) unbindService(inferenceConnection)
+        WebSocketManager.disconnect()
+        stopService(proximityIntent)
+        super.onDestroy()
+    }
+
+    private fun vibrate(duration: Long) {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(android.os.VibrationEffect.createOneShot(duration, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
+        }
+    }
+}

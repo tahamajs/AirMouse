@@ -350,3 +350,27 @@ func (s *Server) unlockScreen() {
     // Note: Auto-unlock typically requires password or is disabled for security
     log.Println("Proximity unlock requested - implement if desired")
 }
+
+
+// Inside websocket message switch:
+case "gesture":
+    var payload struct {
+        Gesture    string  `json:"gesture"`
+        Confidence float64 `json:"confidence"`
+    }
+    if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+        log.Printf("Gesture: %s (%.2f)", payload.Gesture, payload.Confidence)
+        // Execute system action
+        switch payload.Gesture {
+        case "LeftSwipe":
+            robotgo.KeyTap("media_prev")
+        case "RightSwipe":
+            robotgo.KeyTap("media_next")
+        case "CircleCW":
+            robotgo.KeyTap("audio_vol_up")
+        case "CircleCCW":
+            robotgo.KeyTap("audio_vol_down")
+        case "ThumbsUp":
+            robotgo.KeyTap("media_play_pause")
+        }
+    }

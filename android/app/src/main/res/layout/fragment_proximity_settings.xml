@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="24dp"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Proximity Lock/Unlock"
+                android:textAppearance="?attr/textAppearanceTitleLarge"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Enable Service"/>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/proximity_enable_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="PC Bluetooth MAC Address"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="AA:BB:CC:DD:EE:FF">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/server_mac_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Near Threshold (unlock distance)"/>
+
+            <SeekBar
+                android:id="@+id/near_threshold_seek"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="50"
+                android:progress="20"/>
+
+            <TextView
+                android:id="@+id/near_threshold_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2.0 m"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Far Threshold (lock distance)"/>
+
+            <SeekBar
+                android:id="@+id/far_threshold_seek"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="40"/>
+
+            <TextView
+                android:id="@+id/far_threshold_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="4.0 m"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/save_proximity_btn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Save Settings"
+                app:icon="@android:drawable/ic_menu_save"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>

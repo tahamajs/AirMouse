@@ -100,4 +100,7 @@
         android:name="android.support.FILE_PROVIDER_PATHS"
         android:resource="@xml/file_paths" />
 </provider>
+
+<activity android:name=".ui.GestureStudioActivity" />
+<activity android:name=".ui.ProximitySettingsFragment" /> <!-- or use fragment in nav graph -->
 </manifest>
