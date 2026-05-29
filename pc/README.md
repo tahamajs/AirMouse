@@ -1,135 +1,222 @@
-# Air Mouse PC Server
+# Air Mouse – Embedded Systems Exercise  
+**University of Tehran, Faculty of Electrical and Computer Engineering**  
+*Second Semester 1404-1405 (2025-2026)*  
 
-This folder contains the Python PC side of the Air Mouse project. It receives motion data from the Android app over TCP, moves the mouse with `pyautogui`, and supports click, double click, right click, and scroll actions. The package also includes a modern dark-mode GUI, UDP discovery, QR code pairing, persistent configuration, and a Perfetto trace analysis helper.
+## Project Overview
+An **Air Mouse** that uses an Android smartphone’s sensors to control a computer’s mouse cursor.  
+The system consists of three main components:
 
-## Folder Contents
+- **Android App** – reads and fuses sensor data, detects gestures, and sends commands over TCP.
+- **PC Server** (Python / Go) – receives commands, moves the mouse cursor, and sends ACK responses.
+- **Perfetto Trace Analysis** – profiles the Android app for performance evaluation.
 
-| File | Description |
-| --- | --- |
-| `gui.py` | Recommended GUI server with live log, start/stop controls, sensitivity slider, QR code preview, and IP selection. |
-| `server.py` | Console server with the same TCP and UDP behavior, suitable for headless use. |
-| `run.py` | Launcher that checks dependencies and starts the GUI. |
-| `run.sh` | macOS/Linux helper script for launching the GUI. |
-| `run.bat` | Windows helper script for launching the GUI. |
-| `requirements.txt` | Python dependencies used by the server and analysis tools. |
-| `config.json` | Persistent configuration for port, discovery port, sensitivity, selected IP, and logging. |
-| `perfetto_analyzer.py` | Perfetto helper used to answer the tracing questions in the assignment. |
+All communication follows a **standardised JSON‑line protocol** over TCP, with UDP used only for auto‑discovery and mDNS for effortless pairing.
 
-## Quick Start
+---
 
-### 1. Install Python
+## 🎯 Exercise Requirements (All Implemented)
 
-- Windows: download Python 3.8+ from [python.org](https://python.org) and enable Add to PATH.
-- macOS: install with `brew install python` or use the official installer.
-- Linux: install `python3` and `python3-pip` through your package manager.
+| Requirement | Implementation |
+|-------------|----------------|
+| **Calibration UI** (gyro, accel, magnetometer) | `CalibrationActivity` with 3 tabs, animated phone orientations, timer, back/next/stop |
+| **Sensor fusion** (Madgwick AHRS) | `SensorFusion.kt` – hand‑written, no external libraries |
+| **Cursor movement** (Z/X axes) | Euler angles → dx,dy via `GestureDetector.kt` |
+| **Click detection** (Y‑axis quick rotation) | Angular velocity threshold + cooldown |
+| **Scroll detection** (Y‑axis linear movement) | `TYPE_LINEAR_ACCELERATION` → threshold + cooldown |
+| **Visual indicator** (green square) | `fragment_home.xml` → `orientationIndicator` |
+| **Click/scroll feedback** | Flashing label in HomeFragment |
+| **TCP with JSON** (`DeltaX`, `DeltaY`, `Click`, `Scroll`) | `DataSender.kt` → PC server |
+| **ACK & retransmission** | Client retries up to 3 times if no ACK within 500ms |
+| **Auto‑reconnect** | `AutoReconnect.kt` |
+| **QR code pairing** | `zxing` scanner + QR generation in PC server |
+| **UDP discovery** | `UdpDiscoveryClient.kt` + server’s `udp_discovery.py` / `server/udp.go` |
+| **mDNS (Bonjour)** | `server/mdns.go` (fixed) |
+| **Perfetto tracing** | Tracepoints in sensor callback, filter, network send |
+| **Perfetto analysis** | `perfetto_analyzer.py` answers all 11 questions |
+| **Adaptive app icon** | `mipmap-anydpi-v26/ic_launcher.xml` with foreground/background vectors |
 
-### 2. Start the server
+---
 
-#### GUI server
+## 📡 Communication Protocol
 
+### Transport
+- **TCP** port `8080` – all mouse commands (reliable, ordered).
+- **UDP** port `8081` – only for discovery broadcast (no reply needed for movement).
+
+### Message Format
+Every message is a single JSON line terminated by `\n`.
+
+#### Client → Server
+| Type | Fields | Description |
+|------|--------|-------------|
+| `move` | `dx` (float), `dy` (float) | Mouse displacement (no ACK required) |
+| `click` | `id` (int) | Left click (ACK expected) |
+| `doubleclick` | `id` (int) | Double click (ACK expected) |
+| `rightclick` | `id` (int) | Right click (ACK expected) |
+| `scroll` | `delta` (int), `id` (int) | Scroll amount (positive = up) |
+| `hello` | `name` (string) | Device identification on connect |
+
+#### Server → Client
+| Type | Fields | Description |
+|------|--------|-------------|
+| `ack` | `id` (int) | Acknowledges a click/scroll |
+
+### ACK & Retransmission
+- The client stores every `click`/`scroll` message in a `PendingCommand` map.
+- If no `ack` with matching `id` arrives within **500ms**, the message is resent up to **3 times**.
+- `move` messages are **fire‑and‑forget** – they are dropped if the network is congested.
+
+---
+
+## 📁 Project Structure
+
+```
+code/
+├── android/                  # Android Studio project (Kotlin)
+│   ├── app/src/main/java/com/airmouse/
+│   │   ├── ui/               # Activities & fragments
+│   │   ├── network/          # DataSender, AutoReconnect, UdpDiscoveryClient
+│   │   ├── sensors/          # SensorFusion, CalibrationManager, GestureDetector
+│   │   ├── calibration/      # CalibrationPagerAdapter, step fragments
+│   │   └── utils/            # LogManager, PreferencesManager, ValidationUtils
+│   └── ...                   # layouts, drawables, manifest, etc.
+├── pc/                       # PC server (Python)
+│   ├── airmouse_server/      # Modular server package
+│   │   ├── config.py
+│   │   ├── mouse_controller.py
+│   │   ├── tcp_server.py
+│   │   ├── udp_discovery.py
+│   │   ├── mdns_advertiser.py
+│   │   ├── qr_manager.py
+│   │   ├── tray_manager.py
+│   │   ├── notification_manager.py
+│   │   ├── performance_monitor.py
+│   │   └── gui.py
+│   └── run.py
+├── pc/airmouse-go/           # PC server (Go)
+│   ├── config/
+│   ├── control/              # MouseController interface + darwin/other implementations
+│   ├── server/               # tcp.go, udp.go, mdns.go
+│   ├── ui/                   # app.go (Fyne multi‑tab GUI)
+│   ├── main.go
+│   └── go.mod / go.sum
+└── profiling/                # Perfetto config & analysis
+    ├── config.pbtx
+    └── perfetto_analyzer.py
+```
+
+---
+
+## 🔧 Calibration System
+
+### Gyroscope
+1. Keep the phone perfectly still on a flat surface.
+2. Press **Start** – 100 samples are collected.
+3. The mean bias is computed and subtracted from all future readings.
+
+### Accelerometer (6‑position)
+- The user is guided through **6 orientations** with an animated phone graphic.
+- For each position, 100 samples are collected.
+- Offsets and scale factors are calculated so that gravity reads exactly 9.81 m/s².
+
+### Magnetometer (hard‑iron)
+- The user moves the phone in a **figure‑8** pattern until 200 samples are collected.
+- Min/max per axis are used to compute hard‑iron offset and soft‑iron scale.
+
+All calibration data is saved in `SharedPreferences` and applied before sensor fusion.
+
+---
+
+## ⚙️ Sensor Fusion & Gestures
+
+- **Madgwick AHRS** fuses gyroscope, accelerometer, and magnetometer to produce a drift‑free orientation.
+- **Euler angles** (pitch, roll, yaw) are extracted from the quaternion.
+- **Gesture mapping**:
+  - **Horizontal movement** ← pitch (Z‑axis rotation)
+  - **Vertical movement** ← roll (X‑axis rotation)
+  - **Click** ← quick yaw left (angular velocity > threshold)
+  - **Scroll** ← rapid linear acceleration along Y‑axis
+
+All thresholds and the sensitivity multiplier (0.2–2.0) are configurable in the app or in the PC server.
+
+---
+
+## 🖥️ PC Server (Python / Go)
+
+### Python Server
+- Professional dark‑mode GUI built with `tkinter`.
+- QR code generation, live log, client list, tray icon, etc.
+- Run: `cd pc && pip install -r requirements.txt && python run.py`
+
+### Go Server
+- Beautiful multi‑tab GUI built with **Fyne** (Dashboard, Network, Clients, Settings, Logs).
+- Statically linked binary – no runtime dependencies.
+- Cross‑platform (Windows, macOS, Linux) thanks to platform‑specific mouse controllers.
+- Run: `cd pc/airmouse-go && go run .`
+
+Both servers implement the **same protocol**, so you can use either one with the Android app.
+
+---
+
+## 📱 Android App
+
+### Key Features
+- **Home screen**: IP/port entry, QR scan button, device name, sensitivity slider.
+- **Calibration wizard**: step‑by‑step with visual animations.
+- **Live log**: in‑app and full‑screen view with filtering.
+- **Auto‑reconnect**: seamless recovery after network disruptions.
+- **ACK/retransmission**: reliable delivery of clicks and scrolls.
+
+### Build & Install
+1. Open `android/` in Android Studio.
+2. Ensure `gradle.properties` has `android.useAndroidX=true`.
+3. Build APK: `./gradlew assembleDebug`
+4. Install on device: `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+
+---
+
+## 📊 Profiling (Perfetto)
+
+1. Record a trace while using the app:
+   ```
+   python record_android_trace -o trace_file.perfetto-trace -t 15s sched freq idle wm gfx view
+   ```
+2. Run the analysis script:
+   ```
+   python profiling/perfetto_analyzer.py trace_file.perfetto-trace
+   ```
+3. The script outputs answers to all 11 required questions, including average filter CPU time, sampling period, thread contention, and end‑to‑end latency.
+
+---
+
+## 🧪 Testing
+
+### Go Server
 ```bash
-cd pc
-python run.py
+cd pc/airmouse-go
+go test ./...
 ```
 
-You can also run `run.bat` on Windows or `./run.sh` on macOS/Linux.
+### Android
+- Manual testing on a physical device (API 29+).
+- UI test (`CalibrationUITest.kt`) can be added to verify calibration workflow.
 
-The GUI includes:
+---
 
-- automatic local IPv4 detection,
-- manual IP override with persistence,
-- QR code preview for fast Android pairing,
-- UDP discovery responses containing the selected IP and TCP port,
-- live server logs and gesture counters,
-- a sensitivity slider for cursor speed.
+## 📦 Deliverables
 
-#### Console server
+- `CPS-CA2-<SID1>-<SID2>-<SID3>-<SID4>.zip`
+  - Source code (Android + PC server + profiling tools)
+  - APK file
+  - Perfetto trace and analysis results
+  - Report (with screenshots and answers to all questions)
+  - Short video (≤5 min) showing phone and laptop simultaneously
 
-```bash
-cd pc
-pip install -r requirements.txt
-python server.py
-```
+---
 
-### 3. Pair with the Android app
+## 👥 Authors
+- **Arian Firoozi**
+- **Arsalan Talaee**
+- *(Your group members)*
 
-- Connect the phone and PC to the same Wi-Fi network.
-- Use the discovery screen or QR scanner in the Android app, or type the IP manually.
-- Calibrate the phone before first use.
-- Tap Start Air Mouse and move the phone to control the cursor.
-
-## File Details
-
-### `gui.py`
-
-Features:
-
-- dark theme with accent colour,
-- start/stop controls,
-- live connection log,
-- sensitivity slider,
-- automatic IP detection,
-- manual IP override,
-- QR code export,
-- UDP discovery responder,
-- support for move, click, double click, right click, and scroll.
-
-### `server.py`
-
-Features:
-
-- reads `config.json`,
-- logs to console and file,
-- uses the same TCP command format as the GUI server,
-- replies to discovery requests with the current IP and port.
-
-Example `config.json`:
-
-```json
-{
-  "host": "0.0.0.0",
-  "port": 8080,
-  "discovery_port": 8081,
-  "sensitivity": 0.5,
-  "selected_ip": "192.168.1.106",
-  "log_level": "INFO",
-  "log_file": "airmouse.log"
-}
-```
-
-### `run.py`
-
-Checks that the required Python packages are installed and launches the GUI.
-
-### `perfetto_analyzer.py`
-
-This script helps answer the Perfetto questions in the report by querying a trace file and printing human-readable summaries.
-
-## Requirements
-
-- `pyautogui` for mouse control.
-- `pandas` for the trace analyzer.
-- `perfetto` for trace processing.
-- `qrcode` and `Pillow` for endpoint QR codes.
-- `netifaces` for listing local network interfaces in the GUI.
-
-## Testing
-
-You can test the TCP server manually with `nc` or `telnet`:
-
-```bash
-echo '{"type":"click","id":1}' | nc localhost 8080
-```
-
-The server should send an ACK for the critical packet.
-
-## Troubleshooting
-
-- If Android cannot connect, verify the IP, port, and firewall rules.
-- If the mouse does not move on macOS, grant Accessibility permission to Python or Terminal.
-- If discovery does not work, make sure both devices are on the same Wi-Fi network.
-- If the GUI says the camera is unavailable, the Android QR scanner should fall back to manual IP entry.
-
-## Summary
-
-The PC folder is now intended to be a release-ready desktop companion for the Android app: easy to launch, easy to configure, and easy to pair.
+Supervised by **Dr. Mohsen Shokri** and **Dr. Mehdi Kargahi**.
