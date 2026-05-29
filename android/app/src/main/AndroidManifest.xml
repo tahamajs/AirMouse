@@ -104,3 +104,8 @@
 <activity android:name=".ui.GestureStudioActivity" />
 <activity android:name=".ui.ProximitySettingsFragment" /> <!-- or use fragment in nav graph -->
 </manifest>
+
+
+<service android:name=".orientation.OrientationMonitorService"
+    android:foregroundServiceType="dataSync"
+    android:exported="false" />

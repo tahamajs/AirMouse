@@ -374,3 +374,21 @@ case "gesture":
             robotgo.KeyTap("media_play_pause")
         }
     }
+
+
+	// Add to your WebSocket message processing (e.g., in websocket.go)
+case "control":
+    var payload struct {
+        Command string `json:"command"`
+    }
+    if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+        switch payload.Command {
+        case "pause_movement":
+            // Set a flag to ignore incoming movement events
+            globalMovementPaused = true
+            log.Println("Movement paused by orientation service")
+        case "resume_movement":
+            globalMovementPaused = false
+            log.Println("Movement resumed by orientation service")
+        }
+    }
