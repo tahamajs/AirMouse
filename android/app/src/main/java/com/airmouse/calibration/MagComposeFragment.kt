@@ -17,8 +17,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.airmouse.ui.CalibrationBottomControls
 import com.airmouse.ui.CalibrationHeader
+import androidx.compose.runtime.LaunchedEffect
 
-class MagComposeFragment : Fragment() {
+class MagComposeFragment : Fragment(), CalibrationStepFragment {
     private lateinit var viewModel: MagCalibrationViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -28,6 +29,10 @@ class MagComposeFragment : Fragment() {
             val progress by viewModel.progress.collectAsState()
             val status by viewModel.status.collectAsState()
             val timer by viewModel.timerText.collectAsState()
+
+            LaunchedEffect(Unit) {
+                if (progress == 0) viewModel.startCollection()
+            }
 
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 CalibrationHeader(status = status, overallProgress = progress)
@@ -40,9 +45,25 @@ class MagComposeFragment : Fragment() {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("Draw a figure‑8 motion to map the field", color = Color.White)
                 Spacer(modifier = Modifier.weight(1f))
-                CalibrationBottomControls(timerText = timer, onBack = {}, onNext = { viewModel.stopCollection() }, onStop = { viewModel.stopCollection() }, backEnabled = false, nextEnabled = progress>=100)
+                CalibrationBottomControls(
+                    timerText = timer,
+                    onBack = {},
+                    onNext = { viewModel.stopCollection() },
+                    onStop = { viewModel.stopCollection() },
+                    backEnabled = false,
+                    nextEnabled = progress >= 100
+                )
             }
         }
         return composeView
     }
+
+    override fun isStepComplete(): Boolean = viewModel.isComplete()
+    override fun resetUI() {
+        viewModel.reset()
+        viewModel.startCollection()
+    }
+    override fun saveCalibrationData() = Unit
+    override fun getProgress(): Int = viewModel.progress.value
+    override fun isDataValid(): Boolean = viewModel.isComplete()
 }

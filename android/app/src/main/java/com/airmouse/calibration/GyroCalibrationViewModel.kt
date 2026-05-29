@@ -30,6 +30,7 @@ class GyroCalibrationViewModel(application: Application) : AndroidViewModel(appl
     val timerText: StateFlow<String> = _timerText
 
     private var collecting = false
+    private var completed = false
     private val samples = mutableListOf<FloatArray>()
     private var sampleCount = 0
     private val targetSamples = 150
@@ -40,6 +41,7 @@ class GyroCalibrationViewModel(application: Application) : AndroidViewModel(appl
             return
         }
         collecting = true
+        completed = false
         samples.clear()
         sampleCount = 0
         _status.value = "Collecting — keep device still"
@@ -68,6 +70,16 @@ class GyroCalibrationViewModel(application: Application) : AndroidViewModel(appl
         _status.value = "Stopped"
     }
 
+    fun reset() {
+        stopCollection()
+        samples.clear()
+        sampleCount = 0
+        completed = false
+        _progress.value = 0
+        _status.value = "Ready"
+        _timerText.value = "00:45"
+    }
+
     private fun evaluateData() {
         sensorManager.unregisterListener(this)
         collecting = false
@@ -82,9 +94,12 @@ class GyroCalibrationViewModel(application: Application) : AndroidViewModel(appl
         val biasx = bx / n; val biasy = by / n; val biasz = bz / n
         // Save bias (use CalibrationManager)
         CalibrationManager(getApplication()).saveGyroBias(floatArrayOf(biasx, biasy, biasz))
+        completed = true
         _status.value = "Gyro calibrated"
         _progress.value = 100
     }
+
+    fun isComplete(): Boolean = completed
 
     override fun onSensorChanged(event: SensorEvent) {
         if (!collecting) return

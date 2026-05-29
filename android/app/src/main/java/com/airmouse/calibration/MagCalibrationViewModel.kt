@@ -27,13 +27,14 @@ class MagCalibrationViewModel(application: Application) : AndroidViewModel(appli
     val timerText: StateFlow<String> = _timerText
 
     private var collecting = false
+    private var completed = false
     private val samples = mutableListOf<FloatArray>()
     private var sampleCount = 0
     private val targetSamples = 300
 
     fun startCollection() {
         if (magSensor == null) { _status.value = "Magnetometer not available"; return }
-        collecting = true; samples.clear(); sampleCount = 0; _progress.value = 0
+        collecting = true; completed = false; samples.clear(); sampleCount = 0; _progress.value = 0
         _status.value = "Move phone in figure‑8"
         viewModelScope.launch {
             sensorManager.registerListener(this@MagCalibrationViewModel, magSensor, SensorManager.SENSOR_DELAY_FASTEST)
@@ -53,6 +54,16 @@ class MagCalibrationViewModel(application: Application) : AndroidViewModel(appli
         _status.value = "Stopped"
     }
 
+    fun reset() {
+        stopCollection()
+        samples.clear()
+        sampleCount = 0
+        completed = false
+        _progress.value = 0
+        _status.value = "Ready"
+        _timerText.value = "01:00"
+    }
+
     private fun finishCalibration() {
         sensorManager.unregisterListener(this)
         collecting = false
@@ -68,9 +79,12 @@ class MagCalibrationViewModel(application: Application) : AndroidViewModel(appli
         val offset = floatArrayOf((maxX + minX) / 2f, (maxY + minY) / 2f, (maxZ + minZ) / 2f)
         val scale = floatArrayOf((maxX - minX) / 2f, (maxY - minY) / 2f, (maxZ - minZ) / 2f)
         CalibrationManager(getApplication()).saveMagCalibration(offset, scale)
+        completed = true
         _status.value = "Mag calibrated"
         _progress.value = 100
     }
+
+    fun isComplete(): Boolean = completed
 
     override fun onSensorChanged(event: SensorEvent) {
         if (!collecting || event.sensor.type != Sensor.TYPE_MAGNETIC_FIELD) return
