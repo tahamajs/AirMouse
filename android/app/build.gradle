@@ -130,6 +130,7 @@ dependencies {
     implementation 'androidx.compose.runtime:runtime-livedata:1.5.0'
     // Lottie for Compose (optional animations)
     implementation 'com.airbnb.android:lottie-compose:6.1.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.12.0'
