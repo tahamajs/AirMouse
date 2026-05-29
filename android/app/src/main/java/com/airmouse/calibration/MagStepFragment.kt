@@ -29,7 +29,9 @@ class MagStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment
     private lateinit var progressBar: ProgressBar
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_mag_step, container, false)
         statusText = view.findViewById(R.id.statusText)
@@ -37,8 +39,6 @@ class MagStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment
 
         sensorManager = requireActivity().getSystemService(Context.SENSOR_SERVICE) as SensorManager
         magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-
-        // Auto-start when this fragment becomes visible
         sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_FASTEST)
         return view
     }
@@ -55,7 +55,7 @@ class MagStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment
         }
         if (sampleCount >= targetSamples) {
             sensorManager.unregisterListener(this)
-            saveCalibrationData()
+            persistCalibrationData()
             stepComplete = true
             (activity as? CalibrationActivity)?.onStepComplete()
             activity?.runOnUiThread {
@@ -64,17 +64,14 @@ class MagStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment
         }
     }
 
-    private fun saveCalibrationData() {
+    private fun persistCalibrationData() {
         val min = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE)
         val max = floatArrayOf(Float.MIN_VALUE, Float.MIN_VALUE, Float.MIN_VALUE)
-        for (s in samples) {
+        for (sample in samples) {
             for (i in 0..2) {
-                if (s[i] < min[i]) min[i] = s[i]
-                if (s[i] > max[i]) max[i] = s[i]
-        val max = floatArrayOf(Float.MIN_VALUE, Float.MIN_VALUE, Float.MIN_VALUE)
-        for (s in samples) for (i in 0..2) {
-            if (s[i] < min[i]) min[i] = s[i]
-            if (s[i] > max[i]) max[i] = s[i]
+                if (sample[i] < min[i]) min[i] = sample[i]
+                if (sample[i] > max[i]) max[i] = sample[i]
+            }
         }
         val offset = FloatArray(3) { (max[it] + min[it]) / 2f }
         val scale = FloatArray(3) { (max[it] - min[it]) / 2f }
@@ -82,12 +79,22 @@ class MagStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment
     }
 
     override fun isStepComplete() = stepComplete
+
     override fun resetUI() {
-        stepComplete = false; sampleCount = 0; samples.clear()
-        progressBar.progress = 0; statusText.text = "Move phone in figure‑8 pattern..."
+        stepComplete = false
+        sampleCount = 0
+        samples.clear()
+        progressBar.progress = 0
+        statusText.text = "Move phone in figure‑8 pattern..."
         sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_FASTEST)
     }
-    override fun saveCalibrationData() {}
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-    override fun onDestroyView() { super.onDestroyView(); sensorManager.unregisterListener(this) }
+
+    override fun saveCalibrationData() = Unit
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        sensorManager.unregisterListener(this)
+    }
 }
