@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1A1A2E">
+
+    <View
+        android:id="@+id/touchSurface"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#16213E"
+        android:focusable="true"
+        android:clickable="true" />
+
+    <TextView
+        android:id="@+id/touchHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Swipe to move\nTap to click\nTwo‑finger scroll"
+        android:textColor="#80FFFFFF"
+        android:textSize="18sp"
+        android:textAlignment="center"
+        android:alpha="0.6"/>
+</FrameLayout>

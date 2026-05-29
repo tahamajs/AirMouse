@@ -139,7 +139,13 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
-
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/modeToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Touchpad Mode"
+                        app:icon="@drawable/ic_touchpad"
+                        style="@style/Widget.Material3.Button.TonalButton"/>
                     <EditText
                         android:id="@+id/ip_edit_text"
                         android:layout_width="0dp"
@@ -188,6 +194,16 @@
                         android:background="@drawable/btn_rounded_dark"
                         android:layout_marginStart="8dp"
                         android:tint="#ffffff" />
+
+
+                    <Button
+                        android:id="@+id/bt_mouse_btn"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:text="Start Bluetooth Mouse"
+                        android:textColor="#ffffff"
+                        android:background="@drawable/btn_rounded_accent"
+                        android:layout_marginTop="8dp" />
                 </LinearLayout>
 
                 <Button
