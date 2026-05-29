@@ -194,3 +194,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
+
+// In MainActivity.onCreate()
+PreferencesHelper.init(applicationContext)
+if (PreferencesHelper.isAutoPauseEnabled()) {
+    startService(Intent(this, OrientationMonitorService::class.java))
+}

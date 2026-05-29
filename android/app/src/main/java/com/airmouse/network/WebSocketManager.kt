@@ -111,6 +111,17 @@ object WebSocketManager {
         send(json.toString())
     }
 
+    // NEW: Send pause/resume command
+    fun sendPauseMovement(pause: Boolean) {
+        val json = JSONObject().apply {
+            put("type", "control")
+            put("payload", JSONObject().apply {
+                put("command", if (pause) "pause_movement" else "resume_movement")
+            })
+        }
+        send(json.toString())
+    }
+
     fun disconnect() {
         webSocket?.close(1000, "Manual disconnect")
         webSocket = null

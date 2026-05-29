@@ -194,3 +194,19 @@ func (s *Server) GetStats() map[string]interface{} {
 	defer s.mu.RUnlock()
 	return map[string]interface{}{"clients": len(s.clients)}
 }
+
+
+case "control":
+    var payload struct {
+        Command string `json:"command"`
+    }
+    if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+        switch payload.Command {
+        case "pause_movement":
+            control.SetMovementPaused(true)
+            logger.LogInfo("Movement paused by client (orientation monitor)")
+        case "resume_movement":
+            control.SetMovementPaused(false)
+            logger.LogInfo("Movement resumed by client")
+        }
+    }

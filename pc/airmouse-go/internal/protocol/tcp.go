@@ -211,3 +211,11 @@ func (s *Server) GetStats() map[string]interface{} {
 		"clients": len(s.clients),
 	}
 }
+
+
+case "move":
+    // If movement is paused, ignore this move event
+    if control.IsMovementPaused() {
+        return
+    }
+    // ... existing movement code ...
