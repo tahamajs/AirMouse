@@ -12,7 +12,6 @@ const (
 	TypeWebSocket DeviceType = "websocket"
 	TypeUDP       DeviceType = "udp"
 	TypeBluetooth DeviceType = "bluetooth"
-	TypeSerial    DeviceType = "serial"
 )
 
 type DeviceInfo struct {
@@ -35,10 +34,10 @@ type BLEDevice struct {
 }
 
 type Manager struct {
-	devices      map[string]*DeviceInfo
-	bleDevices   map[string]*BLEDevice
-	mu           sync.RWMutex
-	callbacks    []func(*DeviceInfo)
+	devices    map[string]*DeviceInfo
+	bleDevices map[string]*BLEDevice
+	mu         sync.RWMutex
+	callbacks  []func(*DeviceInfo)
 }
 
 func NewManager() *Manager {
@@ -51,7 +50,6 @@ func NewManager() *Manager {
 func (m *Manager) RegisterDevice(id string, devType DeviceType, name string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
 	m.devices[id] = &DeviceInfo{
 		ID:          id,
 		Name:        name,
@@ -61,92 +59,66 @@ func (m *Manager) RegisterDevice(id string, devType DeviceType, name string) {
 		Status:      "connected",
 		Metadata:    make(map[string]interface{}),
 	}
-	
 	m.notifyCallbacks(m.devices[id])
 }
 
 func (m *Manager) UnregisterDevice(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
-	if device, exists := m.devices[id]; exists {
-		device.Status = "disconnected"
-		m.notifyCallbacks(device)
+	if dev, ok := m.devices[id]; ok {
+		dev.Status = "disconnected"
+		m.notifyCallbacks(dev)
 		delete(m.devices, id)
 	}
 }
 
-func (m *Manager) UpdateDeviceActivity(id string) {
+func (m *Manager) UpdateDeviceName(id, name string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
-	if device, exists := m.devices[id]; exists {
-		device.LastActive = time.Now()
-	}
-}
-
-func (m *Manager) UpdateDeviceName(id string, name string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	if device, exists := m.devices[id]; exists {
-		device.Name = name
-		m.notifyCallbacks(device)
+	if dev, ok := m.devices[id]; ok {
+		dev.Name = name
+		m.notifyCallbacks(dev)
 	}
 }
 
 func (m *Manager) UpdateBLEDevice(addr, name string, rssi int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
-	if device, exists := m.bleDevices[addr]; exists {
-		device.RSSI = rssi
+	if d, ok := m.bleDevices[addr]; ok {
+		d.RSSI = rssi
 	} else {
-		m.bleDevices[addr] = &BLEDevice{
-			Addr: addr,
-			Name: name,
-			RSSI: rssi,
-		}
+		m.bleDevices[addr] = &BLEDevice{Addr: addr, Name: name, RSSI: rssi}
 	}
-}
-
-func (m *Manager) GetDevice(id string) *DeviceInfo {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	return m.devices[id]
 }
 
 func (m *Manager) GetAllDevices() []*DeviceInfo {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
-	devices := make([]*DeviceInfo, 0, len(m.devices))
-	for _, device := range m.devices {
-		devices = append(devices, device)
+	devs := make([]*DeviceInfo, 0, len(m.devices))
+	for _, d := range m.devices {
+		devs = append(devs, d)
 	}
-	return devices
+	return devs
 }
 
 func (m *Manager) GetBLEDevices() []*BLEDevice {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
-	devices := make([]*BLEDevice, 0, len(m.bleDevices))
-	for _, device := range m.bleDevices {
-		devices = append(devices, device)
+	devs := make([]*BLEDevice, 0, len(m.bleDevices))
+	for _, d := range m.bleDevices {
+		devs = append(devs, d)
 	}
-	return devices
+	return devs
 }
 
-func (m *Manager) OnDeviceChange(callback func(*DeviceInfo)) {
+func (m *Manager) OnDeviceChange(cb func(*DeviceInfo)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.callbacks = append(m.callbacks, callback)
+	m.callbacks = append(m.callbacks, cb)
 }
 
-func (m *Manager) notifyCallbacks(device *DeviceInfo) {
+func (m *Manager) notifyCallbacks(dev *DeviceInfo) {
 	for _, cb := range m.callbacks {
-		go cb(device)
+		go cb(dev)
 	}
 }

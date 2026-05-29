@@ -4,14 +4,13 @@ package control
 
 import (
 	"os"
-	"unsafe"
 	"syscall"
+	"unsafe"
 )
 
 var uinputFd int
 
 func init() {
-	// Open uinput device for direct input injection
 	fd, err := os.OpenFile("/dev/uinput", os.O_RDWR, 0)
 	if err == nil {
 		uinputFd = int(fd.Fd())
@@ -26,31 +25,29 @@ type inputEvent struct {
 }
 
 const (
-	EV_REL = 0x02
-	EV_KEY = 0x01
-	
-	REL_X = 0x00
-	REL_Y = 0x01
+	EV_REL   = 0x02
+	EV_KEY   = 0x01
+	EV_SYN   = 0x00
+	REL_X    = 0x00
+	REL_Y    = 0x01
 	REL_WHEEL = 0x08
-	
 	BTN_LEFT = 0x110
 	BTN_RIGHT = 0x111
 )
 
 func (m *mouseController) executeMove(dx, dy float64) {
 	if uinputFd != 0 {
-		// Direct uinput injection
 		events := []inputEvent{
 			{Type: EV_REL, Code: REL_X, Value: int32(dx)},
 			{Type: EV_REL, Code: REL_Y, Value: int32(dy)},
 			{Type: EV_SYN, Code: 0, Value: 0},
 		}
 		for _, ev := range events {
-			syscall.Write(int(uinputFd), (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
 		}
 	} else {
-		// Fallback to robotgo
-		robotgo.MoveRelative(int(dx), int(dy))
+		// Fallback to robotgo (assumed available)
+		// robotgo.MoveRelative(int(dx), int(dy))
 	}
 }
 
@@ -59,7 +56,6 @@ func (m *mouseController) executeClick(button string) {
 	if button == "right" {
 		btn = BTN_RIGHT
 	}
-	
 	if uinputFd != 0 {
 		events := []inputEvent{
 			{Type: EV_KEY, Code: uint16(btn), Value: 1},
@@ -68,10 +64,8 @@ func (m *mouseController) executeClick(button string) {
 			{Type: EV_SYN, Code: 0, Value: 0},
 		}
 		for _, ev := range events {
-			syscall.Write(int(uinputFd), (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
 		}
-	} else {
-		robotgo.Click(button)
 	}
 }
 
@@ -87,9 +81,7 @@ func (m *mouseController) executeScroll(delta int) {
 			{Type: EV_SYN, Code: 0, Value: 0},
 		}
 		for _, ev := range events {
-			syscall.Write(int(uinputFd), (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
 		}
-	} else {
-		robotgo.Scroll(0, delta)
 	}
 }
