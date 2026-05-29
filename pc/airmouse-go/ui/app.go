@@ -67,6 +67,7 @@ type logLine struct {
 	Message string
 }
 
+// Log adds a message to the log (exported for server modules)
 func Log(msg string) { LogLevel("info", msg) }
 
 func LogLevel(level, msg string) {
@@ -77,7 +78,7 @@ func LogLevel(level, msg string) {
 	refreshFilteredLog()
 }
 
-// NewApp creates the entire Fyne application with a stunning multi‑tab UI.
+// NewApp creates the Fyne application with a beautiful multi‑tab UI.
 func NewApp(cfgFile *config.Config, mouseCtrl *control.MouseController) fyne.App {
 	cfg = cfgFile
 	mouse = mouseCtrl
@@ -312,6 +313,7 @@ func buildSettingsTab() fyne.CanvasObject {
 
 	themeSelect := widget.NewSelect([]string{"Dark", "Light", "Pure Black", "High Contrast"}, func(s string) {
 		Log("Theme changed to " + s)
+		// In a real app, you would reconfigure the theme.
 	})
 
 	return container.NewVBox(
@@ -495,3 +497,4 @@ func onReady() {
 func onExit() {
 	os.Exit(0)
 }
+
