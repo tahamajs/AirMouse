@@ -96,3 +96,16 @@ class SettingsDialog(
 
     fun show() = dialog.show()
 }
+
+
+val prefs = getSharedPreferences("airmouse_prefs", MODE_PRIVATE)
+val autoPauseSwitch = findViewById<SwitchCompat>(R.id.auto_pause_switch)
+autoPauseSwitch.isChecked = prefs.getBoolean("auto_pause_enabled", false)
+autoPauseSwitch.setOnCheckedChangeListener { _, isChecked ->
+    prefs.edit().putBoolean("auto_pause_enabled", isChecked).apply()
+    if (isChecked) {
+        startService(Intent(this, OrientationMonitorService::class.java))
+    } else {
+        stopService(Intent(this, OrientationMonitorService::class.java))
+    }
+}

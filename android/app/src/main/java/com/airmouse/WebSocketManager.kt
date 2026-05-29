@@ -71,3 +71,16 @@ object WebSocketManager {
         isConnected = false
     }
 }
+
+
+// inside WebSocketManager.kt companion object or class
+
+fun sendPauseMovement(pause: Boolean) {
+    val json = JSONObject().apply {
+        put("type", "control")
+        put("payload", JSONObject().apply {
+            put("command", if (pause) "pause_movement" else "resume_movement")
+        })
+    }
+    send(json.toString())
+}
