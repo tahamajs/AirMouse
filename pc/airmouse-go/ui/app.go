@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"strings"   // <-- add this
 
 	"airmouse-go/config"
 	"airmouse-go/control"
@@ -34,27 +35,31 @@ var (
 	tcpServer *server.TCPServer
 	cfg       *config.Config
 
-	// Header
 	statusPill *widget.Label
+	perfRunning bool       // <-- make sure this line exists
 
-	// Dashboard widgets
+	// Dashboard
 	statsLabel   *widget.Label
 	connLabel    *widget.Label
 	endpointLabel *widget.Label
 	mdnsLabel    *widget.Label
 	uptimeLabel  *widget.Label
+	startBtn     *widget.Button
+	stopBtn      *widget.Button
+	serverStart  time.Time
 
-	// Network widgets
-	ipEntry    *widget.Entry
-	portEntry  *widget.Entry
-	qrImage    *canvas.Image
+	// Network
+	ipEntry   *widget.Entry
+	portEntry *widget.Entry
+	qrImage   *canvas.Image
+
+	// IP list
 	ipList     *widget.List
 	ipListData []string
 
-	// Clients widgets
-	connList  *widget.List
-	connData  []string
-	clientMu  sync.Mutex
+	// Clients
+	connList *widget.List
+	connData []string
 
 	// Logs
 	logEntry *widget.Entry
@@ -65,8 +70,7 @@ var (
 	showError = true
 
 	// Performance
-	perfRunning bool
-	perfLabel   *widget.Label
+	perfLabel *widget.Label
 
 	mu sync.Mutex
 )
@@ -97,7 +101,6 @@ func NewApp(cfgFile *config.Config, mouseCtrl control.MouseController) fyne.App 
 
 	// ---------- Header ----------
 	statusPill = widget.NewLabelWithStyle("Server stopped", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-
 	title := widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	header := container.NewVBox(
 		container.NewCenter(title),
@@ -139,10 +142,16 @@ func NewApp(cfgFile *config.Config, mouseCtrl control.MouseController) fyne.App 
 	helpMenu := fyne.NewMenu("Help",
 		fyne.NewMenuItem("Connection Wizard", func() {
 			dialog.ShowInformation("Connection Wizard",
-				"1. Connect PC and phone to same Wi‑Fi\n"+
-					"2. Start server\n"+
-					"3. On phone, scan QR or enter IP:port\n"+
-					"4. Move phone to control mouse", w)
+				"1. Make sure your PC and phone are on the same Wi‑Fi network.\n"+
+					"2. Select the correct IP in the Network tab (or scan the QR code).\n"+
+					"3. Click 'Start Server'.\n"+
+					"4. Open the Air Mouse Android app and either:\n"+
+					"   - Scan the QR code from the Network tab, or\n"+
+					"   - Enter the IP and port manually (shown in Dashboard after start).\n\n"+
+					"Tip: You can also use mDNS: airmouse.local:8080 if your network supports Bonjour.", w)
+		}),
+		fyne.NewMenuItem("What's my IP?", func() {
+			dialog.ShowInformation("Your IP", "Your local IP is: "+getLocalIP()+"\nUse this in the Android app.", w)
 		}),
 		fyne.NewMenuItem("About", func() {
 			dialog.ShowInformation("About Air Mouse",
@@ -166,7 +175,6 @@ func NewApp(cfgFile *config.Config, mouseCtrl control.MouseController) fyne.App 
 	w.Resize(fyne.NewSize(1100, 720))
 	w.Show()
 
-	// Auto‑start IP list refresh
 	refreshIPList()
 
 	return a
@@ -178,10 +186,13 @@ func buildDashboardTab() fyne.CanvasObject {
 	connLabel = widget.NewLabel("Connections: 0")
 	endpointLabel = widget.NewLabel("Endpoint: not set")
 	mdnsLabel = widget.NewLabel("mDNS: not advertised")
-	uptimeLabel = widget.NewLabel("Uptime: 00:00")
+	uptimeLabel = widget.NewLabel("Uptime: --:--:--")
 
-	startBtn := widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() { startServer() })
-	stopBtn := widget.NewButtonWithIcon("Stop Server", theme.MediaStopIcon(), func() { stopServer() })
+	startBtn = widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() { startServer() })
+	stopBtn = widget.NewButtonWithIcon("Stop Server", theme.MediaStopIcon(), func() { stopServer() })
+
+	statusHint := widget.NewLabel("To begin, go to the Network tab, select your IP, then start the server.")
+	statusHint.Alignment = fyne.TextAlignCenter
 
 	miniLog := widget.NewLabel("No recent activity")
 	go func() {
@@ -197,7 +208,6 @@ func buildDashboardTab() fyne.CanvasObject {
 	}()
 
 	// Uptime ticker
-	serverStart := time.Time{}
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
@@ -211,6 +221,7 @@ func buildDashboardTab() fyne.CanvasObject {
 	dash := container.NewVBox(
 		widget.NewLabelWithStyle("Server Dashboard", fyne.TextAlignCenter, fyne.TextStyle{Bold: true, Italic: true}),
 		widget.NewSeparator(),
+		statusHint,
 		container.NewHBox(startBtn, stopBtn),
 		widget.NewSeparator(),
 		statsLabel,
@@ -228,10 +239,10 @@ func buildDashboardTab() fyne.CanvasObject {
 // ---------- Network Tab ----------
 func buildNetworkTab() fyne.CanvasObject {
 	ipEntry = widget.NewEntry()
-	ipEntry.SetPlaceHolder("192.168.1.x")
+	ipEntry.SetPlaceHolder("e.g., 192.168.1.10")
 	ipEntry.Text = getLocalIP()
 	portEntry = widget.NewEntry()
-	portEntry.SetPlaceHolder("8080")
+	portEntry.SetPlaceHolder("e.g., 8080")
 	portEntry.Text = strconv.Itoa(cfg.Port)
 
 	refreshBtn := widget.NewButton("Refresh", func() { refreshIPList() })
@@ -239,9 +250,9 @@ func buildNetworkTab() fyne.CanvasObject {
 		endpoint := fmt.Sprintf("airmouse://%s:%s", ipEntry.Text, portEntry.Text)
 		window.Clipboard().SetContent(endpoint)
 		Log("📋 Copied: " + endpoint)
+		dialog.ShowInformation("Copied", "Endpoint copied to clipboard!", window)
 	})
 
-	// IP list
 	ipListData = []string{}
 	ipList = widget.NewList(
 		func() int { return len(ipListData) },
@@ -252,8 +263,7 @@ func buildNetworkTab() fyne.CanvasObject {
 	)
 	ipList.OnSelected = func(id widget.ListItemID) {
 		if id >= 0 && id < len(ipListData) {
-			// Extract IP from "192.168.1.5 (en0)" format
-			parts := split(ipListData[id], " ")
+			parts := strings.Split(ipListData[id], " ")
 			if len(parts) > 0 {
 				ipEntry.SetText(parts[0])
 			}
@@ -263,9 +273,8 @@ func buildNetworkTab() fyne.CanvasObject {
 	qrImage = canvas.NewImageFromImage(nil)
 	qrImage.FillMode = canvas.ImageFillOriginal
 
-	genQrBtn := widget.NewButton("Generate QR", func() {
-		updateQR()
-	})
+	genQrBtn := widget.NewButton("Generate QR", func() { updateQR() })
+	genQrBtn.Importance = widget.HighImportance
 	saveQrBtn := widget.NewButton("Save QR", func() {
 		dialog.ShowFileSave(func(file fyne.URIWriteCloser, err error) {
 			if err != nil || file == nil {
@@ -279,7 +288,7 @@ func buildNetworkTab() fyne.CanvasObject {
 	})
 
 	manualIPEntry := widget.NewEntry()
-	manualIPEntry.SetPlaceHolder("Manual IP address")
+	manualIPEntry.SetPlaceHolder("Manual IP (e.g., for VPN)")
 	manualIPCheck := widget.NewCheck("Use manual IP", func(b bool) {
 		if b {
 			ipEntry.SetText(manualIPEntry.Text)
@@ -288,14 +297,14 @@ func buildNetworkTab() fyne.CanvasObject {
 		}
 	})
 
-	// Auto‑generate QR when IP/port changes
+	// Auto‑generate QR on IP/port change
 	ipEntry.OnChanged = func(s string) { updateQR() }
 	portEntry.OnChanged = func(s string) { updateQR() }
 
 	netTab := container.NewVBox(
 		widget.NewLabelWithStyle("Network Endpoint", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		widget.NewLabel("Available IPs (click to select):"),
+		widget.NewLabel("Select your local IP from the list below, or enter it manually:"),
 		container.NewScroll(ipList),
 		ipEntry,
 		portEntry,
@@ -331,8 +340,9 @@ func buildClientsTab() fyne.CanvasObject {
 	})
 	disconnectAllBtn := widget.NewButton("Disconnect All", func() {
 		if tcpServer != nil {
-			// Implement DisconnectAll on server side
 			Log("Disconnecting all clients")
+			tcpServer.Stop()
+			tcpServer = nil
 		}
 	})
 
@@ -439,22 +449,25 @@ func buildLogsTab() fyne.CanvasObject {
 }
 
 // ---------- Server actions ----------
-var serverStartTime time.Time
-
 func startServer() {
 	if tcpServer != nil {
+		dialog.ShowInformation("Already running", "Server is already active.", window)
 		return
 	}
 	port, _ := strconv.Atoi(portEntry.Text)
 	tcpServer = server.NewTCPServer("0.0.0.0", port, mouse, Log, updateStats, updateConnList)
 	if err := tcpServer.Start(); err != nil {
 		LogLevel("error", "TCP start error: "+err.Error())
+		dialog.ShowError(err, window)
 		return
 	}
-	serverStartTime = time.Now()
+	serverStart = time.Now()
 	statusPill.SetText("Server running")
 	endpointLabel.SetText(fmt.Sprintf("Endpoint: %s:%d", getLocalIP(), port))
 	mdnsLabel.SetText(fmt.Sprintf("mDNS: %s.local:%d", cfg.MDNSName, port))
+	startBtn.Disable()
+	stopBtn.Enable()
+	dialog.ShowInformation("Server started", fmt.Sprintf("Server is running on %s:%d\nScan the QR code in the Network tab with your phone.", getLocalIP(), port), window)
 }
 
 func stopServer() {
@@ -462,10 +475,12 @@ func stopServer() {
 		tcpServer.Stop()
 		tcpServer = nil
 	}
-	serverStartTime = time.Time{}
+	serverStart = time.Time{}
 	statusPill.SetText("Server stopped")
 	endpointLabel.SetText("Endpoint: not set")
 	mdnsLabel.SetText("mDNS: not advertised")
+	startBtn.Enable()
+	stopBtn.Disable()
 }
 
 func updateStats(clicks, dbl, right, scroll int) {
@@ -473,9 +488,7 @@ func updateStats(clicks, dbl, right, scroll int) {
 }
 
 func updateConnList(list []string) {
-	clientMu.Lock()
 	connData = list
-	clientMu.Unlock()
 	connLabel.SetText(fmt.Sprintf("Connections: %d", len(list)))
 	connList.Refresh()
 }
@@ -485,7 +498,7 @@ func refreshFilteredLog() {
 	defer mu.Unlock()
 	var buf bytes.Buffer
 	for _, l := range logLines {
-		if filterVar != "" && !contains(l.Message, filterVar) {
+		if filterVar != "" && !strings.Contains(l.Message, filterVar) {
 			continue
 		}
 		if l.Level == "info" && !showInfo {
@@ -502,16 +515,6 @@ func refreshFilteredLog() {
 	logEntry.SetText(buf.String())
 }
 
-func contains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
-// Helper to refresh the IP list
 func refreshIPList() {
 	ipListData = getIPList()
 	ipList.Refresh()
@@ -525,7 +528,7 @@ func getIPList() []string {
 	}
 	for _, addr := range addrs {
 		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
-			ips = append(ips, fmt.Sprintf("%s (%s)", ipnet.IP.String(), "en0")) // simplified; real interface name retrieval is complex
+			ips = append(ips, fmt.Sprintf("%s", ipnet.IP.String()))
 		}
 	}
 	if len(ips) == 0 {
@@ -561,14 +564,6 @@ func updateQR() {
 	}
 	qrImage.Image = img
 	qrImage.Refresh()
-}
-
-func split(s string, sep string) []string {
-	var result []string
-	for _, part := range bytes.Split([]byte(s), []byte(sep)) {
-		result = append(result, string(part))
-	}
-	return result
 }
 
 func updatePerformance() {
