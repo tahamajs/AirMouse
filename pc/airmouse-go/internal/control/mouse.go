@@ -603,3 +603,80 @@ func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
 func (m *mouseController) SetSensitivity(s float64) {
 	m.sensitivity = s
 }
+// Add to mouseController struct
+type mouseController struct {
+    // ... existing fields ...
+    aiSmoother    *AISmoother
+    aiEnabled     bool
+    aiBlendFactor float64
+    lastCursorX   float64
+    lastCursorY   float64
+}
+
+// Add these methods
+func (m *mouseController) SetAISmoother(s *AISmoother) {
+    m.aiSmoother = s
+    m.aiEnabled = true
+}
+
+func (m *mouseController) EnableAISmoothing(enabled bool) {
+    m.aiEnabled = enabled
+    if m.aiSmoother != nil {
+        m.aiSmoother.SetEnabled(enabled)
+    }
+}
+
+// Modified Move method (replace existing)
+func (m *mouseController) Move(dx, dy float64) {
+    // Rate limiting
+    now := time.Now()
+    if now.Sub(m.lastMoveTime) > time.Second {
+        m.moveCount = 0
+        m.lastMoveTime = now
+    }
+    m.moveCount++
+    if m.moveCount > m.moveRateLimit {
+        return
+    }
+    
+    // Apply sensitivity
+    dx *= m.sensitivity
+    dy *= m.sensitivity
+    
+    // Apply AI smoothing if enabled
+    if m.aiEnabled && m.aiSmoother != nil {
+        // Update AI history with current cursor position
+        m.aiSmoother.AddPoint(m.lastCursorX, m.lastCursorY)
+        predDx, predDy, err := m.aiSmoother.PredictDelta()
+        if err == nil && (predDx != 0 || predDy != 0) {
+            // Blend raw and AI predictions
+            dx = (1-m.aiBlendFactor)*dx + m.aiBlendFactor*predDx
+            dy = (1-m.aiBlendFactor)*dy + m.aiBlendFactor*predDy
+        }
+    } else {
+        // Fall back to EMA smoothing
+        dx, dy = m.applySmoothing(dx, dy)
+    }
+    
+    // Apply acceleration
+    if m.acceleration {
+        speed := math.Sqrt(dx*dx + dy*dy)
+        if speed > 5 {
+            factor := 1.0 + m.accelFactor*(speed/50.0)
+            if factor > 3.0 {
+                factor = 3.0
+            }
+            dx *= factor
+            dy *= factor
+        }
+    }
+    
+    if math.Abs(dx) < minMoveDelta && math.Abs(dy) < minMoveDelta {
+        return
+    }
+    
+    m.executeMove(dx, dy)
+    // Update last cursor position (simplified)
+    m.lastCursorX += dx
+    m.lastCursorY += dy
+}

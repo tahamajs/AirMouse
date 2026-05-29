@@ -311,3 +311,42 @@ func executeGestureAction(gesture string) {
         logger.LogWarn("Unknown gesture", "gesture", gesture)
     }
 }
+
+
+// Add to your existing WebSocket server
+type ProximityUpdate struct {
+    IsNear   bool    `json:"is_near"`
+    Distance float32 `json:"distance"`
+}
+
+func (s *Server) handleProximity(update ProximityUpdate) {
+    log.Printf("Proximity update: near=%v, distance=%.2fm", update.IsNear, update.Distance)
+    
+    if update.IsNear {
+        s.unlockScreen()
+    } else {
+        s.lockScreen()
+    }
+}
+
+func (s *Server) lockScreen() {
+    var cmd *exec.Cmd
+    switch runtime.GOOS {
+    case "windows":
+        cmd = exec.Command("rundll32.exe", "user32.dll,LockWorkStation")
+    case "darwin":
+        cmd = exec.Command("/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession", "-suspend")
+    default: // linux
+        cmd = exec.Command("loginctl", "lock-session")
+    }
+    if err := cmd.Run(); err != nil {
+        log.Printf("Failed to lock screen: %v", err)
+    } else {
+        log.Println("Screen locked due to proximity")
+    }
+}
+
+func (s *Server) unlockScreen() {
+    // Note: Auto-unlock typically requires password or is disabled for security
+    log.Println("Proximity unlock requested - implement if desired")
+}
