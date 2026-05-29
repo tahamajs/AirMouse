@@ -34,7 +34,7 @@ var (
 	mouse     *control.MouseController
 	tcpServer *server.TCPServer
 	cfg       *config.Config
-	mouse MouseController   // was *control.MouseController
+	mouse     MouseController   // was *control.MouseController
 
 	// UI widgets (shared across tabs)
 	statusPill *widget.Label
