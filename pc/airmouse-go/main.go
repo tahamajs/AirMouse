@@ -17,12 +17,12 @@ func main() {
 	}
 
 	mouseCtrl := control.NewMouseController(cfg.Sensitivity)
-	app := ui.NewApp(cfg, mouseCtrl)
 
 	// Start background discovery services
 	go server.StartUDPDiscovery(cfg.DiscoveryPort, func() string { return cfg.SelectedIP }, ui.Log)
 	go server.StartMDNS(cfg.MDNSName, cfg.SelectedIP, cfg.Port, ui.Log)
 
-	// Run the GUI (blocking)
+	// Build and run the GUI (blocks)
+	app := ui.NewApp(cfg, mouseCtrl)
 	app.Run()
 }
