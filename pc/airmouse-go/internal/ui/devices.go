@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -33,6 +34,7 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 			}
 		},
 	)
+
 	// Auto-refresh every 2 seconds
 	go func() {
 		for {
@@ -41,14 +43,10 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 			tab.list.Refresh()
 		}
 	}()
+
 	return container.NewBorder(
 		widget.NewLabelWithStyle("Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		nil, nil, nil,
 		tab.list,
 	)
-}
-
-func (t *DevicesTab) Refresh() {
-	t.devices = t.deviceMgr.GetAllDevices()
-	t.list.Refresh()
 }

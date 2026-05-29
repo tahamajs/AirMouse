@@ -51,3 +51,63 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 }
+
+
+// MainActivity.kt - additions
+import com.airmouse.gesture.GestureInferenceService
+import com.airmouse.network.WebSocketManager
+
+class MainActivity : AppCompatActivity() {
+    private var inferenceService: GestureInferenceService? = null
+    private var isInferenceBound = false
+    private var serverWsUrl = "ws://192.168.1.10:8081"  // Set from config
+
+    private val inferenceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            inferenceService = (service as GestureInferenceService.LocalBinder).getService()
+            isInferenceBound = true
+            inferenceService?.onGestureDetected = { gesture, confidence ->
+                Log.d("Gesture", "Detected: $gesture ($confidence)")
+                WebSocketManager.sendGesture(gesture, confidence)
+                // Also optionally vibrate or show toast
+                if (confidence > 0.8f) {
+                    vibrate(50)
+                }
+            }
+        }
+        override fun onServiceDisconnected(name: ComponentName?) {
+            inferenceService = null
+            isInferenceBound = false
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // ... existing code ...
+        // Start WebSocket connection (to PC server)
+        val ip = preferences.getLastIp()
+        val port = preferences.getLastPort()
+        serverWsUrl = "ws://$ip:${port+1}"  // assuming WebSocket port = TCP port + 1
+        WebSocketManager.connect(serverWsUrl)
+        // Start gesture inference service
+        val inferenceIntent = Intent(this, GestureInferenceService::class.java)
+        startService(inferenceIntent)
+        bindService(inferenceIntent, inferenceConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    override fun onDestroy() {
+        if (isInferenceBound) unbindService(inferenceConnection)
+        WebSocketManager.disconnect()
+        super.onDestroy()
+    }
+
+    private fun vibrate(duration: Long) {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            vibrator.vibrate(android.os.VibrationEffect.createOneShot(duration, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
+        }
+    }
+}

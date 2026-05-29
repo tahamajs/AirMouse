@@ -236,3 +236,78 @@ func (s *Server) GetStats() map[string]interface{} {
 		"clients": len(s.clients),
 	}
 }
+
+
+// Add to your websocket message processing
+case "gesture":
+    var gestureMsg struct {
+        Gesture string  `json:"gesture"`
+        Confidence float64 `json:"confidence"`
+    }
+    if err := json.Unmarshal(msg.Payload, &gestureMsg); err == nil {
+        log.Printf("Gesture detected: %s (%.2f)", gestureMsg.Gesture, gestureMsg.Confidence)
+        // Map gesture to action
+        action := mapGestureToAction(gestureMsg.Gesture)
+        if action != "" {
+            executeSystemAction(action)
+        }
+    }
+
+func mapGestureToAction(gesture string) string {
+    switch gesture {
+    case "LeftSwipe": return "media_prev"
+    case "RightSwipe": return "media_next"
+    case "CircleCW": return "vol_up"
+    case "CircleCCW": return "vol_down"
+    case "ThumbsUp": return "play_pause"
+    default: return ""
+    }
+}
+
+func executeSystemAction(action string) {
+    // Use robotgo or system commands
+    switch action {
+    case "media_prev":
+        robotgo.KeyTap("media_prev")
+    case "media_next":
+        robotgo.KeyTap("media_next")
+    case "vol_up":
+        robotgo.KeyTap("audio_vol_up")
+    case "vol_down":
+        robotgo.KeyTap("audio_vol_down")
+    case "play_pause":
+        robotgo.KeyTap("media_play_pause")
+    }
+}
+
+
+// Add to the processMessage function
+case "gesture":
+    var gestureMsg struct {
+        Gesture    string  `json:"gesture"`
+        Confidence float64 `json:"confidence"`
+    }
+    if err := json.Unmarshal(msg.Payload, &gestureMsg); err == nil {
+        logger.LogInfo("Gesture detected", "gesture", gestureMsg.Gesture, "confidence", gestureMsg.Confidence)
+        executeGestureAction(gestureMsg.Gesture)
+    }
+
+// Helper function to map gesture to system action
+func executeGestureAction(gesture string) {
+    switch gesture {
+    case "LeftSwipe":
+        robotgo.KeyTap("media_prev")
+    case "RightSwipe":
+        robotgo.KeyTap("media_next")
+    case "CircleCW":
+        robotgo.KeyTap("audio_vol_up")
+    case "CircleCCW":
+        robotgo.KeyTap("audio_vol_down")
+    case "ThumbsUp":
+        robotgo.KeyTap("media_play_pause")
+    case "ThumbsDown":
+        robotgo.KeyTap("stop")
+    default:
+        logger.LogWarn("Unknown gesture", "gesture", gesture)
+    }
+}

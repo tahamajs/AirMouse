@@ -9,24 +9,24 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/protocol"
-	"airmouse-go/internal/utils"
 )
 
 type DashboardTab struct {
-	statsLabel     *widget.Label
-	connLabel      *widget.Label
-	endpointLabel  *widget.Label
-	uptimeLabel    *widget.Label
-	aiStatusLabel  *widget.Label
-	serverStatus   *widget.Label
-	startBtn       *widget.Button
-	stopBtn        *widget.Button
-	serverStart    time.Time
-	mu             sync.Mutex
-	mouse          control.MouseController
+	statsLabel    *widget.Label
+	connLabel     *widget.Label
+	endpointLabel *widget.Label
+	uptimeLabel   *widget.Label
+	aiStatusLabel *widget.Label
+	serverStatus  *widget.Label
+	startBtn      *widget.Button
+	stopBtn       *widget.Button
+	serverStart   time.Time
+	mu            sync.Mutex
+	mouse         control.MouseController
 }
 
 func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) fyne.CanvasObject {
@@ -50,8 +50,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 			cfg := config.Get()
 			ip := getLocalIP()
 			tab.endpointLabel.SetText(fmt.Sprintf("Endpoint: %s:%d (TCP) | ws://%s:%d", ip, cfg.Port, ip, cfg.WebSocketPort))
-			// Update AI status from config
-			if cfg.AIEnabled {
+			if cfg.EnableAISmoothing {
 				tab.aiStatusLabel.SetText("AI Smoothing: Enabled")
 			} else {
 				tab.aiStatusLabel.SetText("AI Smoothing: Disabled")

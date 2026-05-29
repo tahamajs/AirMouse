@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"runtime"
 	"time"
 
@@ -20,11 +21,9 @@ type Metrics struct {
 var metrics = &Metrics{startTime: time.Now()}
 
 func GetMetrics() *Metrics {
-	// CPU
 	if percent, err := cpu.Percent(0, false); err == nil && len(percent) > 0 {
 		metrics.CPUPercent = percent[0]
 	}
-	// Memory
 	if memStat, err := mem.VirtualMemory(); err == nil {
 		metrics.MemoryPercent = memStat.UsedPercent
 		metrics.MemoryUsed = memStat.Used
