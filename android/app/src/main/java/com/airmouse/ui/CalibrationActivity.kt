@@ -29,6 +29,8 @@ class CalibrationActivity : AppCompatActivity() {
     private var currentStep = 0
     private val totalSteps = CalibrationPagerAdapter.STEP_COUNT
     private var state: CalibrationState = CalibrationState.IDLE
+    // Compose-friendly state holders
+    private val overallProgressState = androidx.compose.runtime.mutableStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,12 +58,7 @@ class CalibrationActivity : AppCompatActivity() {
         // Compose integration: set header and bottom controls (gradual migration)
         val headerCompose = findViewById<androidx.compose.ui.platform.ComposeView>(R.id.headerCompose)
         headerCompose.setContent {
-            androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf(getString(R.string.calibration_welcome))
-            }
-            // read progress from hidden overallProgress for backward compatibility
-            val prog = overallProgress.progress
-            com.airmouse.ui.CalibrationHeader(status = getString(R.string.calibration_welcome), overallProgress = prog)
+            com.airmouse.ui.CalibrationHeader(status = getString(R.string.calibration_welcome), overallProgress = overallProgressState.value)
         }
 
         val bottomCompose = findViewById<androidx.compose.ui.platform.ComposeView>(R.id.bottomCompose)
@@ -186,6 +183,7 @@ class CalibrationActivity : AppCompatActivity() {
     private fun updateOverallProgress() {
         val progress = (currentStep + 1) * 100 / totalSteps
         overallProgress.progress = progress
+        overallProgressState.value = progress
     }
 
     private fun showSuccessDialog() {
