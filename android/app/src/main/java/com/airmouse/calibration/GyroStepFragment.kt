@@ -100,29 +100,6 @@ class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragmen
     override fun onDestroyView() { super.onDestroyView(); sensorManager.unregisterListener(this) }
 }
 
-
-
-private var breathAnimator: ValueAnimator? = null
-
-private fun startBreathing() {
-    breathAnimator = ValueAnimator.ofFloat(1f, 1.08f).apply {
-        duration = 800
-        repeatMode = ValueAnimator.REVERSE
-        repeatCount = ValueAnimator.INFINITE
-        addUpdateListener { animation ->
-            val scale = animation.animatedValue as Float
-            phoneImage.scaleX = scale
-            phoneImage.scaleY = scale
-        }
-        start()
-    }
-}
-
-private fun stopBreathing() {
-    breathAnimator?.cancel()
-    phoneImage.animate().scaleX(1f).scaleY(1f).duration = 200
-}
-
 package com.airmouse.calibration
 
 import android.animation.ValueAnimator
