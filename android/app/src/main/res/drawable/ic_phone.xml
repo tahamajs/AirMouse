@@ -10,12 +10,12 @@
         android:rotation="0">
         <path
             android:fillColor="#3F51B5"
-            android:pathData="M35,15h50v90h-50z"/>
+            android:pathData="M35,15h50v90h-50z" />
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M38,22h44v70h-44z"/>
+            android:pathData="M38,22h44v70h-44z" />
         <path
-            android:fillColor="#888"
-            android:pathData="M54,96h12v4h-12z"/>
+            android:fillColor="#888888"
+            android:pathData="M54,96h12v4h-12z" />
     </group>
 </vector>

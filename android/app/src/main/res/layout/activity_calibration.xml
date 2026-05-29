@@ -1,62 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
     android:background="#0f1115">
 
-    <ProgressBar
-        android:id="@+id/overallProgress"
-        style="?android:attr/progressBarStyleHorizontal"
+    <!-- Modern header with gradient background -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="6dp"
-        android:max="100"
-        android:progress="0"
-        android:progressTint="#007acc"
-        android:backgroundTint="#2b3341" />
-
-    <TextView
-        android:id="@+id/timerText"
-        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="00:00"
-        android:textColor="#e5e7eb"
-        android:textSize="18sp" />
+        android:background="@drawable/header_gradient"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/statusHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/calibration_welcome"
+            android:textColor="#ffffff"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center" />
+
+        <!-- Task progress row (large) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/taskProgressText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tasks_remaining"
+                android:textColor="#e0e0e0"
+                android:textSize="14sp"
+                android:drawablePadding="8dp"
+                android:drawableStart="@drawable/ic_checklist" />
+        </LinearLayout>
+
+        <!-- Big overall progress bar – FIXED STYLE -->
+        <ProgressBar
+            android:id="@+id/overallProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:max="100"
+            android:progress="0"
+            android:layout_marginTop="12dp"
+            android:progressTint="#007acc"
+            android:backgroundTint="#2b3341" />
+    </LinearLayout>
+
+    <!-- Task checklist (horizontal) -->
+    <LinearLayout
+        android:id="@+id/taskChecklist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="12dp"
+        android:background="#171b22">
+
+        <TextView
+            android:id="@+id/gyroCheck"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⬜ Gyroscope"
+            android:textColor="#96a0ae"
+            android:textSize="14sp"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/accelCheck"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⬜ Accelerometer"
+            android:textColor="#96a0ae"
+            android:textSize="14sp"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/magCheck"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⬜ Magnetometer"
+            android:textColor="#96a0ae"
+            android:textSize="14sp"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#171b22"
+        app:tabTextColor="#96a0ae"
+        app:tabSelectedTextColor="#ffffff"
+        app:tabIndicatorColor="#007acc"
+        app:tabIndicatorHeight="3dp"
+        app:tabRippleColor="#1d2430"
+        android:paddingVertical="8dp">
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gyroscope" />
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Accelerometer" />
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Magnetometer" />
+    </com.google.android.material.tabs.TabLayout>
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_weight="1" />
 
+    <!-- Modern bottom control bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_horizontal">
+        android:orientation="vertical"
+        android:background="@drawable/bottom_bar_gradient"
+        android:padding="16dp">
 
-        <Button
-            android:id="@+id/backBtn"
+        <TextView
+            android:id="@+id/timerText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Back" />
+            android:text="@string/time_placeholder"
+            android:textColor="#ffffff"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_gravity="center"
+            android:drawableStart="@drawable/ic_timer"
+            android:drawablePadding="8dp"
+            android:drawableTint="#007acc" />
 
-        <Button
-            android:id="@+id/nextBtn"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:text="Next" />
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:gravity="center">
 
-        <Button
-            android:id="@+id/stopBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:text="Stop" />
+            <Button
+                android:id="@+id/backBtn"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_back"
+                android:enabled="false"
+                android:textColor="#e5e7eb"
+                android:background="@drawable/btn_rounded_dark" />
+
+            <Button
+                android:id="@+id/nextBtn"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_next"
+                android:layout_marginStart="12dp"
+                android:enabled="false"
+                android:textColor="#ffffff"
+                android:background="@drawable/btn_rounded_accent" />
+
+            <Button
+                android:id="@+id/stopBtn"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_stop"
+                android:layout_marginStart="12dp"
+                android:textColor="#ffffff"
+                android:background="@drawable/btn_rounded_danger" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

@@ -327,7 +327,81 @@
     <string name="battery_temp_chart_label">Temperature (°C)</string>
     <string name="gesture_chart_label">Gestures</string>
     <string name="gesture_counts" formatted="false">Clicks: %d  |  Scrolls: %d  |  Right: %d  |  Double: %d</string>
+    <string name="time_placeholder">00:00</string>
+    <string name="btn_back">Back</string>
+    <string name="btn_next">Next</string>
+    <string name="btn_stop">Stop</string>
+    <string name="timer">Timer</string>
+    <string name="calibration_welcome">Select a tab and follow the instructions to calibrate each sensor.</string>
+    <string name="gyro_header">Gyroscope Calibration</string>
+    <string name="accel_header">Accelerometer Calibration</string>
+    <string name="mag_header">Magnetometer Calibration</string>
+    <string name="gyro_complete_header">✅ Gyroscope calibrated successfully!</string>
+    <string name="accel_complete_header">✅ Accelerometer calibrated successfully!</string>
+    <string name="mag_complete_header">✅ Magnetometer calibrated successfully!</string>
+    <string name="calibration_complete_title">Calibration Complete</string>
+    <string name="calibration_complete_message">All sensors have been calibrated. You can now start the Air Mouse.</string>
+    <string name="abort_calibration_title">Abort Calibration?</string>
+    <string name="abort_calibration_message">Progress will be lost. Are you sure?</string>
+    <string name="gyro_ready">Ready to calibrate</string>
+    <string name="gyro_collecting_header">Gyroscope: Keep the phone perfectly still…</string>
+    <string name="gyro_collecting">Collecting samples…</string>
+    <string name="gyro_progress">Collecting… %1$d / %2$d</string>
+    <string name="gyro_done">✅ Gyroscope calibration complete!</string>
+    <string name="btn_start_collection">Start Collection</string>
+    <string name="btn_recalibrate">Recalibrate</string>
+    <string name="phone_position">Phone position</string>
+    <string name="accel_instruction_flat_up">Flat on table, screen up</string>
+    <string name="accel_ready">Ready to record position</string>
+    <string name="btn_record_position">Record Position</string>
+    <string name="mag_ready">Move phone in figure‑8 pattern…</string>
+    <string name="mag_collecting_header">Magnetometer: Move in a large figure‑8</string>
+    <string name="mag_collecting">Collecting… %1$d / %2$d</string>
+    <string name="mag_done">✅ Magnetometer calibration complete!</string>
+    <string name="calibration_attempts_remaining">Calibration attempts remaining: %1$d</string>
+
+
+    <string name="tasks_remaining">0 of 3 tasks complete</string>
+    <string name="tasks_done">%1$d of %2$d tasks complete</string>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <!-- Calibration general -->
+    <string name="btn_retry">Retry</string>
+
+    <!-- Gyroscope calibration -->
+    <string name="gyro_phone_moving">Phone is moving! Keep it still and retry.</string>
+    <string name="gyro_failed">Calibration failed. Phone must be stationary.</string>
+    <string name="accel_collecting_header">Accelerometer: Position %1$d of 6</string>
+    <string name="accel_position_ready">Ready for: %1$s</string>
+    <string name="accel_wrong_orientation">Incorrect orientation. Please match the image.</string>
+    <string name="accel_retry_prompt">Tap Retry to try this position again.</string>
+    <string name="accel_done">✅ Accelerometer calibration complete!</string>
+
+
+
+
+
+
+
+    <string name="mag_not_enough_samples">Not enough samples collected. Move the phone more and retry.</string>
 </resources>
