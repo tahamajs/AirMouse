@@ -22,6 +22,7 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import com.airmouse.network.ConnectionStore
 
 class HomeFragment : Fragment() {
 
@@ -315,8 +316,9 @@ class HomeFragment : Fragment() {
         lastMoveDispatchMs = 0L
 
         try {
-            dataSender = DataSender.getInstance(ip, port, preferences) ?: return
-            autoReconnect = AutoReconnect(dataSender, preferences, onReconnect = { newSender ->
+                val store = ConnectionStore(ip, port, "AirMouse")
+                dataSender = DataSender.getInstance(ip, port, store) ?: return
+                autoReconnect = AutoReconnect(dataSender, store, onReconnect = { newSender ->
                 dataSender = newSender
                 attachSensorCallbacks()
             })
