@@ -74,7 +74,6 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		}, fyne.CurrentApp().Driver().AllWindows()[0])
 	})
 
-	// Auto‑update QR when IP/port changes
 	tab.ipEntry.OnChanged = func(string) { tab.updateQR() }
 	tab.portEntry.OnChanged = func(string) { tab.updateQR() }
 
