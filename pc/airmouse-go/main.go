@@ -18,11 +18,13 @@ func main() {
 
 	mouseCtrl := control.NewMouseController(cfg.Sensitivity)
 
-	// Start background discovery services
+	// Build the GUI first – this creates all widgets
+	app := ui.NewApp(cfg, mouseCtrl)
+
+	// Now start background services (they can safely call ui.Log)
 	go server.StartUDPDiscovery(cfg.DiscoveryPort, func() string { return cfg.SelectedIP }, ui.Log)
 	go server.StartMDNS(cfg.MDNSName, cfg.SelectedIP, cfg.Port, ui.Log)
 
-	// Build and run the GUI (blocks)
-	app := ui.NewApp(cfg, mouseCtrl)
+	// Run the application (blocks until quit)
 	app.Run()
 }

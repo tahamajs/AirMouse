@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	_ "image/png"
 	"net"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -23,11 +23,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	qrcode "github.com/skip2/go-qrcode"
-	"github.com/getlantern/systray"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 )
-
 
 var (
 	appObj    fyne.App
@@ -36,25 +34,39 @@ var (
 	tcpServer *server.TCPServer
 	cfg       *config.Config
 
+	// Header
 	statusPill *widget.Label
-	statsLabel *widget.Label
-	connLabel  *widget.Label
-	qrImage    *canvas.Image
-	logEntry   *widget.Entry
-	connList   *widget.List
-	connData   []string
 
-	logLines  []logLine
+	// Dashboard widgets
+	statsLabel   *widget.Label
+	connLabel    *widget.Label
+	endpointLabel *widget.Label
+	mdnsLabel    *widget.Label
+	uptimeLabel  *widget.Label
+
+	// Network widgets
+	ipEntry    *widget.Entry
+	portEntry  *widget.Entry
+	qrImage    *canvas.Image
+	ipList     *widget.List
+	ipListData []string
+
+	// Clients widgets
+	connList  *widget.List
+	connData  []string
+	clientMu  sync.Mutex
+
+	// Logs
+	logEntry *widget.Entry
+	logLines []logLine
 	filterVar string
 	showInfo  = true
 	showWarn  = true
 	showError = true
 
+	// Performance
 	perfRunning bool
 	perfLabel   *widget.Label
-
-	ipEntry   *widget.Entry
-	portEntry *widget.Entry
 
 	mu sync.Mutex
 )
@@ -116,7 +128,7 @@ func NewApp(cfgFile *config.Config, mouseCtrl control.MouseController) fyne.App 
 		fyne.NewMenuItem("Exit", func() { a.Quit() }),
 	)
 	viewMenu := fyne.NewMenu("View",
-		fyne.NewMenuItem("Refresh IP List", func() { ipEntry.Text = getLocalIP() }),
+		fyne.NewMenuItem("Refresh IP List", func() { refreshIPList() }),
 		fyne.NewMenuItem("Clear Logs", func() {
 			mu.Lock()
 			logLines = nil
@@ -152,9 +164,10 @@ func NewApp(cfgFile *config.Config, mouseCtrl control.MouseController) fyne.App 
 
 	w.SetContent(content)
 	w.Resize(fyne.NewSize(1100, 720))
+	w.Show()
 
-	// System tray
-	go setupTray()
+	// Auto‑start IP list refresh
+	refreshIPList()
 
 	return a
 }
@@ -163,6 +176,9 @@ func NewApp(cfgFile *config.Config, mouseCtrl control.MouseController) fyne.App 
 func buildDashboardTab() fyne.CanvasObject {
 	statsLabel = widget.NewLabel("Clicks: 0  |  Dbl: 0  |  Right: 0  |  Scroll: 0")
 	connLabel = widget.NewLabel("Connections: 0")
+	endpointLabel = widget.NewLabel("Endpoint: not set")
+	mdnsLabel = widget.NewLabel("mDNS: not advertised")
+	uptimeLabel = widget.NewLabel("Uptime: 00:00")
 
 	startBtn := widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() { startServer() })
 	stopBtn := widget.NewButtonWithIcon("Stop Server", theme.MediaStopIcon(), func() { stopServer() })
@@ -180,6 +196,18 @@ func buildDashboardTab() fyne.CanvasObject {
 		}
 	}()
 
+	// Uptime ticker
+	serverStart := time.Time{}
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			if !serverStart.IsZero() {
+				d := time.Since(serverStart).Truncate(time.Second)
+				uptimeLabel.SetText(fmt.Sprintf("Uptime: %02d:%02d:%02d", int(d.Hours()), int(d.Minutes())%60, int(d.Seconds())%60))
+			}
+		}
+	}()
+
 	dash := container.NewVBox(
 		widget.NewLabelWithStyle("Server Dashboard", fyne.TextAlignCenter, fyne.TextStyle{Bold: true, Italic: true}),
 		widget.NewSeparator(),
@@ -187,6 +215,9 @@ func buildDashboardTab() fyne.CanvasObject {
 		widget.NewSeparator(),
 		statsLabel,
 		connLabel,
+		endpointLabel,
+		mdnsLabel,
+		uptimeLabel,
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Recent Activity", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		miniLog,
@@ -203,32 +234,37 @@ func buildNetworkTab() fyne.CanvasObject {
 	portEntry.SetPlaceHolder("8080")
 	portEntry.Text = strconv.Itoa(cfg.Port)
 
-	ipLabel := widget.NewLabel("Current endpoint: (none)")
-
-	refreshBtn := widget.NewButton("Refresh", func() { ipEntry.Text = getLocalIP() })
+	refreshBtn := widget.NewButton("Refresh", func() { refreshIPList() })
 	copyBtn := widget.NewButton("Copy Endpoint", func() {
 		endpoint := fmt.Sprintf("airmouse://%s:%s", ipEntry.Text, portEntry.Text)
 		window.Clipboard().SetContent(endpoint)
 		Log("📋 Copied: " + endpoint)
 	})
 
+	// IP list
+	ipListData = []string{}
+	ipList = widget.NewList(
+		func() int { return len(ipListData) },
+		func() fyne.CanvasObject { return widget.NewLabel("") },
+		func(id widget.ListItemID, obj fyne.CanvasObject) {
+			obj.(*widget.Label).SetText(ipListData[id])
+		},
+	)
+	ipList.OnSelected = func(id widget.ListItemID) {
+		if id >= 0 && id < len(ipListData) {
+			// Extract IP from "192.168.1.5 (en0)" format
+			parts := split(ipListData[id], " ")
+			if len(parts) > 0 {
+				ipEntry.SetText(parts[0])
+			}
+		}
+	}
+
 	qrImage = canvas.NewImageFromImage(nil)
 	qrImage.FillMode = canvas.ImageFillOriginal
 
 	genQrBtn := widget.NewButton("Generate QR", func() {
-		data := fmt.Sprintf("airmouse://%s:%s", ipEntry.Text, portEntry.Text)
-		pngBytes, err := qrcode.Encode(data, qrcode.High, 220)
-		if err != nil {
-			LogLevel("error", "QR generation failed: "+err.Error())
-			return
-		}
-		img, _, err := image.Decode(bytes.NewReader(pngBytes))
-		if err != nil {
-			LogLevel("error", "QR decode failed: "+err.Error())
-			return
-		}
-		qrImage.Image = img
-		qrImage.Refresh()
+		updateQR()
 	})
 	saveQrBtn := widget.NewButton("Save QR", func() {
 		dialog.ShowFileSave(func(file fyne.URIWriteCloser, err error) {
@@ -244,17 +280,30 @@ func buildNetworkTab() fyne.CanvasObject {
 
 	manualIPEntry := widget.NewEntry()
 	manualIPEntry.SetPlaceHolder("Manual IP address")
-	manualIPCheck := widget.NewCheck("Use manual IP", nil)
+	manualIPCheck := widget.NewCheck("Use manual IP", func(b bool) {
+		if b {
+			ipEntry.SetText(manualIPEntry.Text)
+		} else {
+			ipEntry.SetText(getLocalIP())
+		}
+	})
+
+	// Auto‑generate QR when IP/port changes
+	ipEntry.OnChanged = func(s string) { updateQR() }
+	portEntry.OnChanged = func(s string) { updateQR() }
 
 	netTab := container.NewVBox(
 		widget.NewLabelWithStyle("Network Endpoint", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		ipEntry, portEntry,
+		widget.NewLabel("Available IPs (click to select):"),
+		container.NewScroll(ipList),
+		ipEntry,
+		portEntry,
 		container.NewHBox(refreshBtn, copyBtn),
-		manualIPCheck, manualIPEntry,
+		manualIPCheck,
+		manualIPEntry,
 		container.NewHBox(genQrBtn, saveQrBtn),
 		qrImage,
-		ipLabel,
 	)
 	return container.NewScroll(netTab)
 }
@@ -280,9 +329,16 @@ func buildClientsTab() fyne.CanvasObject {
 			tcpServer.DisconnectByAddr(selectedAddr)
 		}
 	})
+	disconnectAllBtn := widget.NewButton("Disconnect All", func() {
+		if tcpServer != nil {
+			// Implement DisconnectAll on server side
+			Log("Disconnecting all clients")
+		}
+	})
+
 	return container.NewBorder(
 		widget.NewLabelWithStyle("Connected Clients", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		disconnectBtn,
+		container.NewHBox(disconnectBtn, disconnectAllBtn),
 		nil, nil,
 		connList,
 	)
@@ -357,6 +413,13 @@ func buildLogsTab() fyne.CanvasObject {
 		}, window)
 	})
 
+	clearBtn := widget.NewButton("Clear", func() {
+		mu.Lock()
+		logLines = nil
+		mu.Unlock()
+		logEntry.SetText("")
+	})
+
 	filterToolbar := container.NewHBox(
 		widget.NewLabel("Filter:"),
 		searchEntry,
@@ -364,6 +427,7 @@ func buildLogsTab() fyne.CanvasObject {
 		warnCheck,
 		errCheck,
 		exportBtn,
+		clearBtn,
 	)
 
 	return container.NewBorder(
@@ -375,6 +439,8 @@ func buildLogsTab() fyne.CanvasObject {
 }
 
 // ---------- Server actions ----------
+var serverStartTime time.Time
+
 func startServer() {
 	if tcpServer != nil {
 		return
@@ -385,8 +451,10 @@ func startServer() {
 		LogLevel("error", "TCP start error: "+err.Error())
 		return
 	}
-	// status pill: we can change the text but not the background directly; we'll use a colored rectangle or just text
-	statusPill.SetText("Server running (green)")
+	serverStartTime = time.Now()
+	statusPill.SetText("Server running")
+	endpointLabel.SetText(fmt.Sprintf("Endpoint: %s:%d", getLocalIP(), port))
+	mdnsLabel.SetText(fmt.Sprintf("mDNS: %s.local:%d", cfg.MDNSName, port))
 }
 
 func stopServer() {
@@ -394,7 +462,10 @@ func stopServer() {
 		tcpServer.Stop()
 		tcpServer = nil
 	}
+	serverStartTime = time.Time{}
 	statusPill.SetText("Server stopped")
+	endpointLabel.SetText("Endpoint: not set")
+	mdnsLabel.SetText("mDNS: not advertised")
 }
 
 func updateStats(clicks, dbl, right, scroll int) {
@@ -402,7 +473,9 @@ func updateStats(clicks, dbl, right, scroll int) {
 }
 
 func updateConnList(list []string) {
+	clientMu.Lock()
 	connData = list
+	clientMu.Unlock()
 	connLabel.SetText(fmt.Sprintf("Connections: %d", len(list)))
 	connList.Refresh()
 }
@@ -438,6 +511,29 @@ func contains(s, substr string) bool {
 	return false
 }
 
+// Helper to refresh the IP list
+func refreshIPList() {
+	ipListData = getIPList()
+	ipList.Refresh()
+}
+
+func getIPList() []string {
+	var ips []string
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return []string{"127.0.0.1 (lo)"}
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+			ips = append(ips, fmt.Sprintf("%s (%s)", ipnet.IP.String(), "en0")) // simplified; real interface name retrieval is complex
+		}
+	}
+	if len(ips) == 0 {
+		return []string{"127.0.0.1 (lo)"}
+	}
+	return ips
+}
+
 func getLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -449,6 +545,30 @@ func getLocalIP() string {
 		}
 	}
 	return "127.0.0.1"
+}
+
+func updateQR() {
+	data := fmt.Sprintf("airmouse://%s:%s", ipEntry.Text, portEntry.Text)
+	pngBytes, err := qrcode.Encode(data, qrcode.High, 220)
+	if err != nil {
+		LogLevel("error", "QR generation failed: "+err.Error())
+		return
+	}
+	img, _, err := image.Decode(bytes.NewReader(pngBytes))
+	if err != nil {
+		LogLevel("error", "QR decode failed: "+err.Error())
+		return
+	}
+	qrImage.Image = img
+	qrImage.Refresh()
+}
+
+func split(s string, sep string) []string {
+	var result []string
+	for _, part := range bytes.Split([]byte(s), []byte(sep)) {
+		result = append(result, string(part))
+	}
+	return result
 }
 
 func updatePerformance() {
@@ -463,30 +583,4 @@ func updatePerformance() {
 		perfLabel.SetText(fmt.Sprintf("CPU: %.0f%%  MEM: %.0f%%", cpuPercent, m.UsedPercent))
 		time.Sleep(2 * time.Second)
 	}
-}
-
-// ---------- System Tray ----------
-func setupTray() {
-	systray.Run(onReady, onExit)
-}
-
-func onReady() {
-	systray.SetTitle("Air Mouse")
-	systray.SetTooltip("Air Mouse Server")
-	mShow := systray.AddMenuItem("Show Window", "Restore")
-	mQuit := systray.AddMenuItem("Quit", "Exit")
-	go func() {
-		for {
-			select {
-			case <-mShow.ClickedCh:
-				window.RequestFocus()
-			case <-mQuit.ClickedCh:
-				systray.Quit()
-			}
-		}
-	}()
-}
-
-func onExit() {
-	os.Exit(0)
 }
