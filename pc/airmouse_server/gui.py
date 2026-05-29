@@ -44,6 +44,8 @@ class AirMouseGUI:
         self.root.configure(bg=self.bg_color)
         self._set_window_icon()
         self._setup_styles()
+        # track frames and widgets that need theme updates
+        self._themed_frames = []
         self.setup_ui()
 
         # Backend services
@@ -67,6 +69,8 @@ class AirMouseGUI:
         self._update_performance_label()
         self._init_keyboard_shortcuts()
         self._load_connection_history()
+        # apply persisted or default theme
+        self.apply_theme(CONFIG.get('theme', 'dark'))
 
     def _set_window_icon(self):
         try:
@@ -126,15 +130,97 @@ class AirMouseGUI:
 
     def _card(self, parent, title, subtitle=None):
         frame = tk.Frame(parent, bg=self.card_bg, highlightthickness=1, highlightbackground=self.border_color)
+        # remember themed containers so we can update when theme changes
+        self._themed_frames.append(frame)
         frame.columnconfigure(0, weight=1)
         header = tk.Frame(frame, bg=self.card_bg)
+        self._themed_frames.append(header)
         header.grid(row=0, column=0, sticky="ew", padx=18, pady=(16,0))
         ttk.Label(header, text=title, style="Section.TLabel").pack(anchor="w")
         if subtitle:
             ttk.Label(header, text=subtitle, style="Hint.TLabel").pack(anchor="w", pady=(4,0))
         body = tk.Frame(frame, bg=self.card_bg)
+        self._themed_frames.append(body)
         body.grid(row=1, column=0, sticky="nsew", padx=18, pady=16)
         return frame, body
+
+    def apply_theme(self, theme_name: str):
+        """Apply one of: light, dark, pureblack, high_contrast"""
+        t = theme_name.lower()
+        CONFIG['theme'] = t
+        save_config(CONFIG)
+        if t == 'light':
+            self.bg_color = '#f5f7fa'
+            self.surface = '#ffffff'
+            self.surface_alt = '#f0f3f7'
+            self.card_bg = '#ffffff'
+            self.fg_color = '#1e293b'
+            self.muted_color = '#64748b'
+            self.border_color = '#e6eef6'
+            self.log_bg = '#ffffff'
+            self.accent = CONFIG.get('accent_color', '#007acc')
+            self.success = '#2ecc71'
+            self.warning = '#f59e0b'
+            self.danger = '#ef4444'
+        elif t == 'pureblack':
+            self.bg_color = '#000000'
+            self.surface = '#000000'
+            self.surface_alt = '#0b0b0b'
+            self.card_bg = '#050505'
+            self.fg_color = '#ffffff'
+            self.muted_color = '#9ca3af'
+            self.border_color = '#111111'
+            self.log_bg = '#000000'
+            self.accent = CONFIG.get('accent_color', '#7c3aed')
+            self.success = '#16a34a'
+            self.warning = '#f59e0b'
+            self.danger = '#ef4444'
+        elif t == 'high_contrast':
+            self.bg_color = '#ffffff'
+            self.surface = '#ffffff'
+            self.surface_alt = '#ffffff'
+            self.card_bg = '#ffffff'
+            self.fg_color = '#000000'
+            self.muted_color = '#333333'
+            self.border_color = '#000000'
+            self.log_bg = '#ffffff'
+            self.accent = '#000000'
+            self.success = '#008000'
+            self.warning = '#ff0000'
+            self.danger = '#ff0000'
+        else:  # dark
+            self.bg_color = '#0f1115'
+            self.surface = '#171b22'
+            self.surface_alt = '#1d2430'
+            self.card_bg = '#202734'
+            self.fg_color = '#e5e7eb'
+            self.muted_color = '#96a0ae'
+            self.border_color = '#2b3341'
+            self.log_bg = '#0c1016'
+            self.accent = CONFIG.get('accent_color', '#007acc')
+            self.success = '#2ecc71'
+            self.warning = '#f5a524'
+            self.danger = '#ef5b5b'
+
+        # reconfigure styles and backgrounds
+        self._set_window_icon()
+        self._setup_styles()
+        self.root.configure(bg=self.bg_color)
+        # update tracked frames
+        for w in self._themed_frames:
+            try:
+                w.configure(bg=self.card_bg)
+            except Exception:
+                pass
+        # update top-level areas that aren't tracked
+        try:
+            self.status_pill.configure(bg=self.danger if self.status_label.cget('text')!='Server running' else self.success)
+        except Exception:
+            pass
+        try:
+            self.log_area.configure(bg=self.log_bg, fg=self.fg_color, insertbackground=self.fg_color)
+        except Exception:
+            pass
 
     # ---------- UI Construction ----------
     def setup_ui(self):
@@ -162,6 +248,14 @@ class AirMouseGUI:
         helpmenu.add_command(label="About", command=self._show_about)
         menubar.add_cascade(label="Help", menu=helpmenu)
         self.root.config(menu=menubar)
+
+        # Theme submenu
+        thememenu = tk.Menu(menubar, tearoff=0)
+        thememenu.add_command(label="Dark", command=lambda: self.apply_theme('dark'))
+        thememenu.add_command(label="Light", command=lambda: self.apply_theme('light'))
+        thememenu.add_command(label="Pure Black", command=lambda: self.apply_theme('pureblack'))
+        thememenu.add_command(label="High Contrast", command=lambda: self.apply_theme('high_contrast'))
+        menubar.add_cascade(label="Theme", menu=thememenu)
 
         # Header
         header = tk.Frame(shell, bg=self.surface, highlightthickness=1, highlightbackground=self.border_color)
