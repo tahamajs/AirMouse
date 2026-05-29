@@ -764,3 +764,244 @@ func (m *mouseController) Move(dx, dy float64) {
 
     m.executeMove(dx, dy)
 }
+
+// internal/control/mouse.go
+package control
+
+import (
+    "math"
+    "sync/atomic"
+    "time"
+
+    "airmouse-go/internal/predictive"
+)
+
+type MouseController interface {
+    Move(dx, dy float64)
+    Click(button string)
+    DoubleClick()
+    Scroll(delta int)
+    Stats() (clicks, dbl, right, scroll int64)
+    SetSensitivity(s float64)
+    GetSensitivity() float64
+    SetSmoothing(enabled bool)
+    SetAcceleration(enabled bool, factor float64)
+    // Predictive
+    EnablePredictive(enabled bool)
+    SetPredictiveBlendFactor(factor float64)
+    // AI smoothing (optional)
+    EnableAISmoothing(enabled bool)
+    SetAISmoother(s *AISmoother)
+}
+
+type mouseController struct {
+    sensitivity    float64
+    clickCount     int64
+    doubleClickCnt int64
+    rightClickCnt  int64
+    scrollCount    int64
+
+    smoothing    bool
+    acceleration bool
+    accelFactor  float64
+
+    lastX, lastY   float64
+    lastMoveTime   time.Time
+    moveCount      int
+    moveRateLimit  int
+
+    lastClickTime   time.Time
+    clickCountWin   int
+
+    // Predictive filter
+    predictor     *predictive.MovementPredictor
+    predEnabled   bool
+
+    // AI smoother (optional)
+    aiSmoother    *AISmoother
+    aiEnabled     bool
+    aiBlendFactor float64
+
+    // Cursor tracking (for AI)
+    lastCursorX, lastCursorY float64
+}
+
+const (
+    minMoveDelta    = 0.01
+    rateLimitPerSec = 60
+)
+
+func NewMouseController(sensitivity float64) MouseController {
+    m := &mouseController{
+        sensitivity:    sensitivity,
+        smoothing:      true,
+        acceleration:   false,
+        accelFactor:    1.5,
+        moveRateLimit:  rateLimitPerSec,
+        predEnabled:    true,
+        aiEnabled:      false,
+        aiBlendFactor:  0.6,
+        // Create predictor with 20ms default dt and 0.6 blend
+        predictor:      predictive.NewMovementPredictor(0.02, 0.6),
+    }
+    return m
+}
+
+// Predictive controls
+func (m *mouseController) EnablePredictive(enabled bool) {
+    m.predEnabled = enabled
+    if m.predictor != nil {
+        m.predictor.SetEnabled(enabled)
+    }
+}
+
+func (m *mouseController) SetPredictiveBlendFactor(factor float64) {
+    if m.predictor != nil {
+        m.predictor.SetBlendFactor(factor)
+    }
+}
+
+// AI smoothing controls (for integration)
+func (m *mouseController) EnableAISmoothing(enabled bool) {
+    m.aiEnabled = enabled
+    if m.aiSmoother != nil {
+        m.aiSmoother.SetEnabled(enabled)
+    }
+}
+
+func (m *mouseController) SetAISmoother(s *AISmoother) {
+    m.aiSmoother = s
+    if s != nil {
+        m.aiEnabled = true
+    }
+}
+
+// Existing methods
+func (m *mouseController) SetSmoothing(enabled bool) {
+    m.smoothing = enabled
+}
+
+func (m *mouseController) SetAcceleration(enabled bool, factor float64) {
+    m.acceleration = enabled
+    m.accelFactor = factor
+}
+
+func (m *mouseController) GetSensitivity() float64 {
+    return m.sensitivity
+}
+
+func (m *mouseController) Move(dx, dy float64) {
+    // Rate limiting
+    now := time.Now()
+    if now.Sub(m.lastMoveTime) > time.Second {
+        m.moveCount = 0
+        m.lastMoveTime = now
+    }
+    m.moveCount++
+    if m.moveCount > m.moveRateLimit {
+        return
+    }
+
+    // Apply sensitivity
+    dx *= m.sensitivity
+    dy *= m.sensitivity
+
+    // ---- PREDICTIVE FILTERING (highest priority) ----
+    if m.predEnabled && m.predictor != nil {
+        dx, dy = m.predictor.AddMovement(dx, dy)
+    } else {
+        // Fallback to EMA smoothing
+        dx, dy = m.applySmoothing(dx, dy)
+    }
+
+    // ---- AI SMOOTHING (if enabled) ----
+    if m.aiEnabled && m.aiSmoother != nil {
+        // Update AI history (requires current cursor position)
+        // For now, we assume lastCursorX/Y are updated after move.
+        m.aiSmoother.AddPoint(m.lastCursorX, m.lastCursorY)
+        predDx, predDy, err := m.aiSmoother.PredictDelta()
+        if err == nil && (predDx != 0 || predDy != 0) {
+            // Blend raw (already predictive‑filtered) with AI prediction
+            dx = (1-m.aiBlendFactor)*dx + m.aiBlendFactor*predDx
+            dy = (1-m.aiBlendFactor)*dy + m.aiBlendFactor*predDy
+        }
+    }
+
+    // Apply acceleration
+    if m.acceleration {
+        speed := math.Sqrt(dx*dx + dy*dy)
+        if speed > 5 {
+            factor := 1.0 + m.accelFactor*(speed/50.0)
+            if factor > 3.0 {
+                factor = 3.0
+            }
+            dx *= factor
+            dy *= factor
+        }
+    }
+
+    if math.Abs(dx) < minMoveDelta && math.Abs(dy) < minMoveDelta {
+        return
+    }
+
+    m.executeMove(dx, dy)
+    // Update last cursor position (simplified)
+    m.lastCursorX += dx
+    m.lastCursorY += dy
+}
+
+func (m *mouseController) applySmoothing(dx, dy float64) (float64, float64) {
+    if !m.smoothing {
+        return dx, dy
+    }
+    const alpha = 0.3
+    m.lastX = alpha*dx + (1-alpha)*m.lastX
+    m.lastY = alpha*dy + (1-alpha)*m.lastY
+    return m.lastX, m.lastY
+}
+
+func (m *mouseController) Click(button string) {
+    // Double-click detection
+    if button == "left" {
+        now := time.Now()
+        if now.Sub(m.lastClickTime) < 300*time.Millisecond {
+            m.clickCountWin++
+            if m.clickCountWin >= 2 {
+                m.DoubleClick()
+                m.clickCountWin = 0
+                m.lastClickTime = time.Time{}
+                return
+            }
+        } else {
+            m.clickCountWin = 1
+            m.lastClickTime = now
+        }
+    }
+    m.executeClick(button)
+    if button == "left" {
+        atomic.AddInt64(&m.clickCount, 1)
+    } else if button == "right" {
+        atomic.AddInt64(&m.rightClickCnt, 1)
+    }
+}
+
+func (m *mouseController) DoubleClick() {
+    m.executeDoubleClick()
+    atomic.AddInt64(&m.doubleClickCnt, 1)
+}
+
+func (m *mouseController) Scroll(delta int) {
+    m.executeScroll(delta)
+    atomic.AddInt64(&m.scrollCount, 1)
+}
+
+func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
+    return atomic.LoadInt64(&m.clickCount),
+        atomic.LoadInt64(&m.doubleClickCnt),
+        atomic.LoadInt64(&m.rightClickCnt),
+        atomic.LoadInt64(&m.scrollCount)
+}
+
+func (m *mouseController) SetSensitivity(s float64) {
+    m.sensitivity = s
+}
