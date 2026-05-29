@@ -1,15 +1,10 @@
-<ProgressBar
-    android:id="@+id/overallProgress"
-    style="?android:attr/progressBarStyleHorizontal"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="6dp"
-    android:max="100"
-    android:progress="0"
-    android:progressTint="#007acc"
-    android:backgroundTint="#2b3341"/>
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#0f1115">
 
-
-    <LinearLayout ...>
     <ProgressBar
         android:id="@+id/overallProgress"
         style="?android:attr/progressBarStyleHorizontal"
@@ -18,9 +13,50 @@
         android:max="100"
         android:progress="0"
         android:progressTint="#007acc"
-        android:backgroundTint="#2b3341"/>
+        android:backgroundTint="#2b3341" />
 
-    <androidx.viewpager2.widget.ViewPager2 ... />
+    <TextView
+        android:id="@+id/timerText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="00:00"
+        android:textColor="#e5e7eb"
+        android:textSize="18sp" />
 
-    <!-- bottom control bar unchanged -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal">
+
+        <Button
+            android:id="@+id/backBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Back" />
+
+        <Button
+            android:id="@+id/nextBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Next" />
+
+        <Button
+            android:id="@+id/stopBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Stop" />
+    </LinearLayout>
+
 </LinearLayout>
