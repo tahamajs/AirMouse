@@ -15,7 +15,7 @@ import (
 type TCPServer struct {
 	host      string
 	port      int
-	mouse     *control.MouseController
+	mouse     control.MouseController
 	conns     map[string]*client
 	mu        sync.Mutex
 	logFunc   func(string)
@@ -38,7 +38,7 @@ type msg struct {
 	ID      *string        `json:"id,omitempty"`
 }
 
-func NewTCPServer(host string, port int, mouse *control.MouseController, logFn func(string), statsFn func(int, int, int, int), connCb func([]string)) *TCPServer {
+func NewTCPServer(host string, port int, mouse control.MouseController, logFn func(string), statsFn func(int, int, int, int), connCb func([]string)) *TCPServer {
 	return &TCPServer{
 		host:      host,
 		port:      port,

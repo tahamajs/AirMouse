@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"image/color"
 	"net"
 	"os"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 	"airmouse-go/server"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
@@ -28,15 +28,14 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
+
 var (
 	appObj    fyne.App
 	window    fyne.Window
-	mouse     *control.MouseController
+	mouse     control.MouseController
 	tcpServer *server.TCPServer
 	cfg       *config.Config
-	mouse     MouseController   // was *control.MouseController
 
-	// UI widgets (shared across tabs)
 	statusPill *widget.Label
 	statsLabel *widget.Label
 	connLabel  *widget.Label
@@ -45,18 +44,15 @@ var (
 	connList   *widget.List
 	connData   []string
 
-	// Log filter state
 	logLines  []logLine
 	filterVar string
 	showInfo  = true
 	showWarn  = true
 	showError = true
 
-	// Performance
 	perfRunning bool
 	perfLabel   *widget.Label
 
-	// Network fields (so we can read them from any tab)
 	ipEntry   *widget.Entry
 	portEntry *widget.Entry
 
@@ -68,7 +64,6 @@ type logLine struct {
 	Message string
 }
 
-// Log adds a message to the log (exported for server modules)
 func Log(msg string) { LogLevel("info", msg) }
 
 func LogLevel(level, msg string) {
@@ -79,19 +74,18 @@ func LogLevel(level, msg string) {
 	refreshFilteredLog()
 }
 
-// NewApp creates the Fyne application with a beautiful multi‑tab UI.
-func NewApp(cfgFile *config.Config, mouseCtrl *control.MouseController) fyne.App {
+func NewApp(cfgFile *config.Config, mouseCtrl control.MouseController) fyne.App {
 	cfg = cfgFile
 	mouse = mouseCtrl
 
-	a := fyne.NewApp()
+	a := app.New()
 	appObj = a
 	w := a.NewWindow("Air Mouse Pro Server")
 	window = w
 
-	// ---------- Header (shared) ----------
+	// ---------- Header ----------
 	statusPill = widget.NewLabelWithStyle("Server stopped", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	statusPill.BackgroundColor = color.NRGBA{R: 239, G: 91, B: 91, A: 255}
+
 	title := widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	header := container.NewVBox(
 		container.NewCenter(title),
@@ -173,7 +167,6 @@ func buildDashboardTab() fyne.CanvasObject {
 	startBtn := widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() { startServer() })
 	stopBtn := widget.NewButtonWithIcon("Stop Server", theme.MediaStopIcon(), func() { stopServer() })
 
-	// Recent activity preview (mini log)
 	miniLog := widget.NewLabel("No recent activity")
 	go func() {
 		for {
@@ -269,6 +262,7 @@ func buildNetworkTab() fyne.CanvasObject {
 // ---------- Clients Tab ----------
 func buildClientsTab() fyne.CanvasObject {
 	connData = []string{}
+	var selectedAddr string
 	connList = widget.NewList(
 		func() int { return len(connData) },
 		func() fyne.CanvasObject { return widget.NewLabel("") },
@@ -276,14 +270,14 @@ func buildClientsTab() fyne.CanvasObject {
 			obj.(*widget.Label).SetText(connData[id])
 		},
 	)
-	disconnectBtn := widget.NewButton("Disconnect Selected", func() {
-		idx := connList.Selected()
-		if idx < 0 || idx >= len(connData) {
-			return
+	connList.OnSelected = func(id widget.ListItemID) {
+		if id >= 0 && id < len(connData) {
+			selectedAddr = connData[id]
 		}
-		addr := connData[idx]
-		if tcpServer != nil {
-			tcpServer.DisconnectByAddr(addr)
+	}
+	disconnectBtn := widget.NewButton("Disconnect Selected", func() {
+		if selectedAddr != "" && tcpServer != nil {
+			tcpServer.DisconnectByAddr(selectedAddr)
 		}
 	})
 	return container.NewBorder(
@@ -300,7 +294,7 @@ func buildSettingsTab() fyne.CanvasObject {
 	sensSlider.Value = cfg.Sensitivity
 	sensLabel := widget.NewLabel(fmt.Sprintf("Sensitivity: %.2f", cfg.Sensitivity))
 	sensSlider.OnChanged = func(v float64) {
-		mouse.sensitivity = v
+		mouse.SetSensitivity(v)
 		cfg.Sensitivity = v
 		sensLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", v))
 		config.Save("config.json", cfg)
@@ -314,7 +308,6 @@ func buildSettingsTab() fyne.CanvasObject {
 
 	themeSelect := widget.NewSelect([]string{"Dark", "Light", "Pure Black", "High Contrast"}, func(s string) {
 		Log("Theme changed to " + s)
-		// In a real app, you would reconfigure the theme.
 	})
 
 	return container.NewVBox(
@@ -392,8 +385,8 @@ func startServer() {
 		LogLevel("error", "TCP start error: "+err.Error())
 		return
 	}
-	statusPill.BackgroundColor = color.NRGBA{G: 255, A: 255}
-	statusPill.SetText("Server running")
+	// status pill: we can change the text but not the background directly; we'll use a colored rectangle or just text
+	statusPill.SetText("Server running (green)")
 }
 
 func stopServer() {
@@ -401,7 +394,6 @@ func stopServer() {
 		tcpServer.Stop()
 		tcpServer = nil
 	}
-	statusPill.BackgroundColor = color.NRGBA{R: 255, A: 255}
 	statusPill.SetText("Server stopped")
 }
 
