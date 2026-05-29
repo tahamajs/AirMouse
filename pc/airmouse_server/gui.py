@@ -9,7 +9,7 @@ import json
 import time
 from typing import List, Dict, Optional
 import netifaces
-from PIL import Image
+from PIL import Image, ImageDraw, ImageTk
 
 from .config import CONFIG, save_config
 from .mouse_controller import MouseController
@@ -23,7 +23,7 @@ from .performance_monitor import PerformanceMonitor
 class AirMouseGUI:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Air Mouse Server")
+        self.root.title("Air Mouse Pro Server v1.0")
         self.root.geometry("1280x850")
         self.root.minsize(1020, 720)
 
@@ -42,6 +42,7 @@ class AirMouseGUI:
         self.danger = "#ef5b5b"
 
         self.root.configure(bg=self.bg_color)
+    self._set_window_icon()
         self._setup_styles()
         self.setup_ui()
 
@@ -66,6 +67,27 @@ class AirMouseGUI:
         self._update_performance_label()
         self._init_keyboard_shortcuts()
         self._load_connection_history()
+
+    def _set_window_icon(self):
+        try:
+            icon = Image.new("RGBA", (256, 256), (18, 19, 26, 255))
+            draw = ImageDraw.Draw(icon)
+
+            draw.ellipse((28, 28, 228, 228), outline="#5D9CEC", width=8)
+            draw.ellipse((40, 40, 216, 216), outline="#FFB74D", width=6)
+            draw.ellipse((56, 56, 200, 200), outline="#81C784", width=5)
+
+            cursor = [(96, 74), (154, 190), (128, 184), (110, 220), (92, 212), (112, 180), (78, 164)]
+            draw.polygon(cursor, fill="#FFFFFF")
+            draw.line(cursor + [cursor[0]], fill="#1B2430", width=4, joint="curve")
+
+            draw.arc((38, 62, 218, 194), start=220, end=330, fill="#FFB74D", width=8)
+            draw.arc((62, 38, 194, 218), start=110, end=250, fill="#81C784", width=8)
+
+            self._app_icon = ImageTk.PhotoImage(icon)
+            self.root.iconphoto(True, self._app_icon)
+        except Exception:
+            pass
 
     # ---------- Style & Helpers ----------
     def _setup_styles(self):

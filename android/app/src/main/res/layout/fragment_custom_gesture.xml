@@ -28,17 +28,19 @@
                     android:text="@string/custom_gesture"
                     android:textAppearance="?attr/textAppearanceTitleLarge" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="@string/select_action">
+                    android:text="Choose an action"
+                    android:textAppearance="?attr/textAppearanceLabelLarge" />
 
-                    <Spinner
-                        android:id="@+id/action_spinner"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-                </com.google.android.material.textfield.TextInputLayout>
+                <Spinner
+                    android:id="@+id/action_spinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_input" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/record_gesture_btn"
