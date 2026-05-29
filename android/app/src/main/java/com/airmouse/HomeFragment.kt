@@ -66,22 +66,6 @@ class HomeFragment : Fragment() {
     private var lastUiUpdateMs = 0L
     private var latestLogEntry = ""
 
-    private val liveLogListener = object : LogManager.LogListener {
-        override fun onNewLog(message: String) {
-            latestLogEntry = message
-            if (!isAdded) return
-            requireActivity().runOnUiThread {
-                if (!::liveLogText.isInitialized) return@runOnUiThread
-                val current = liveLogText.text?.toString().orEmpty()
-                val updated = when {
-                    current.isBlank() || current == getString(R.string.log_placeholder) -> message
-                    else -> "$message\n$current"
-                }
-                liveLogText.text = updated.take(8000)
-            }
-        }
-    }
-
     companion object {
         private const val PORT = 8080
         private const val OVERLAY_PERMISSION_REQUEST = 100
@@ -139,7 +123,6 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         stopAirMouseInternal()
         debugOverlay.hide()
-        LogManager.removeListener(liveLogListener)
     }
 
     private fun bindViews(view: View) {
@@ -167,8 +150,7 @@ class HomeFragment : Fragment() {
         preferences = PreferencesManager(requireContext())
         batterySaver = BatterySaver()
         debugOverlay = DebugOverlay(requireContext())
-        LogManager.setPersistenceCallback { preferences.addServerLog(it) }
-        LogManager.addListener(liveLogListener)
+        LogManager.init(requireContext())
 
         calibrationHelper = CalibrationHelper(requireContext(), preferences)
         gestureDetector = GestureDetector(preferences)
@@ -338,10 +320,10 @@ class HomeFragment : Fragment() {
 
         try {
             dataSender = DataSender.getInstance(ip, port, preferences) ?: return
-            autoReconnect = AutoReconnect(dataSender, preferences) { newSender ->
+            autoReconnect = AutoReconnect(dataSender, preferences, onReconnect = { newSender ->
                 dataSender = newSender
                 attachSensorCallbacks()
-            }
+            })
             dataSender.onConnected = {
                 requireActivity().runOnUiThread {
                     statusText.text = getString(R.string.status_active_format, "$ip:$port")
@@ -492,11 +474,3 @@ class HomeFragment : Fragment() {
         liveLogText.text = if (saved.isNotEmpty()) saved.joinToString("\n") else getString(R.string.log_placeholder)
     }
 }
-
-
-val deviceName = binding.deviceNameEdit.text.toString().ifEmpty { "AirMouse" }
-dataSender.sendHello(deviceName)
-
-
-val deviceName = binding.deviceNameEdit.text.toString().ifEmpty { "AirMouse" }
-dataSender.sendHello(deviceName)

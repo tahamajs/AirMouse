@@ -4,28 +4,19 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ProgressBar
+import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.viewpager2.widget.ViewPager2
 import com.airmouse.R
-import com.airmouse.sensors.CalibrationHelper
-import com.airmouse.utils.SensorUtils
-import com.airmouse.utils.PreferencesManager
-import com.google.android.material.button.MaterialButton
-import kotlinx.coroutines.launch
 
 class CalibrationFragment : Fragment() {
 
-    private lateinit var calibrationHelper: CalibrationHelper
-    private lateinit var prefsManager: PreferencesManager
-    private lateinit var statusText: TextView
-    private lateinit var instructionText: TextView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var startButton: MaterialButton
-    private lateinit var skipMagButton: MaterialButton
-    private lateinit var resetButton: MaterialButton
-    private lateinit var skipMagNote: TextView
+    private lateinit var viewPager: ViewPager2
+    private lateinit var timerText: TextView
+    private lateinit var backBtn: Button
+    private lateinit var nextBtn: Button
+    private lateinit var stopBtn: Button
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -38,89 +29,26 @@ class CalibrationFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        prefsManager = PreferencesManager(requireContext())
-        calibrationHelper = CalibrationHelper(requireContext(), prefsManager)
+        viewPager = view.findViewById(R.id.viewPager)
+        timerText = view.findViewById(R.id.timerText)
+        backBtn = view.findViewById(R.id.backBtn)
+        nextBtn = view.findViewById(R.id.nextBtn)
+        stopBtn = view.findViewById(R.id.stopBtn)
 
-        statusText = view.findViewById(R.id.calibration_status)
-        instructionText = view.findViewById(R.id.calibration_instruction)
-        progressBar = view.findViewById(R.id.calibration_progress)
-        startButton = view.findViewById(R.id.start_guided_btn)
-        skipMagButton = view.findViewById(R.id.skip_mag_btn)
-        skipMagNote = view.findViewById(R.id.skip_mag_note)
-        resetButton = view.findViewById(R.id.reset_btn)
+        timerText.text = "00:00"
 
-        resetUi()
-        val hasCoreSensors = SensorUtils.hasGyroscope(requireContext()) && SensorUtils.hasAccelerometer(requireContext())
-        if (!hasCoreSensors) {
-            statusText.setText(R.string.sensor_warning_missing)
-            startButtonsEnabled(false)
-        }
-        // hide skip note if magnetometer is present
-        val hasMag = SensorUtils.hasMagnetometer(requireContext())
-        skipMagNote.visibility = if (hasMag) android.view.View.GONE else android.view.View.VISIBLE
-
-        startButton.setOnClickListener {
-            runCalibration(includeMagnetometer = true)
-        }
-        skipMagButton.setOnClickListener {
-            runCalibration(includeMagnetometer = false)
-        }
-        resetButton.setOnClickListener {
-            resetUi()
-        }
-    }
-
-    private fun resetUi() {
-        progressBar.progress = 0
-        statusText.setText(R.string.calibration_status_idle)
-        instructionText.setText(R.string.calibration_ready_prompt)
-        startButtonsEnabled(true)
-    }
-
-    private fun startButtonsEnabled(enabled: Boolean) {
-        startButton.isEnabled = enabled
-        skipMagButton.isEnabled = enabled
-        resetButton.isEnabled = enabled
-    }
-
-    private fun runCalibration(includeMagnetometer: Boolean) {
-        lifecycleScope.launch {
-            startButtonsEnabled(false)
-            try {
-                statusText.setText(R.string.calibration_status_gyro)
-                instructionText.setText(R.string.calib_step1_detail)
-                progressBar.progress = 10
-                calibrationHelper.calibrateGyro { instruction ->
-                    requireActivity().runOnUiThread { instructionText.text = instruction }
-                }
-
-                if (includeMagnetometer) {
-                    statusText.setText(R.string.calibration_status_mag)
-                    instructionText.setText(R.string.calib_step2_detail)
-                    progressBar.progress = 50
-                    calibrationHelper.calibrateMagnetometer(15000L) { instruction ->
-                        requireActivity().runOnUiThread { instructionText.text = instruction }
-                    }
-                }
-
-                statusText.setText(R.string.calibration_status_accel)
-                instructionText.setText(R.string.calib_step3_detail)
-                progressBar.progress = if (includeMagnetometer) 80 else 60
-                calibrationHelper.calibrateAccelerometer { instruction ->
-                    requireActivity().runOnUiThread { instructionText.text = instruction }
-                }
-
-                progressBar.progress = 100
-                statusText.setText(R.string.calibration_status_done)
-                instructionText.setText(R.string.calibrated_ready)
-                prefsManager.setCalibrated(true)
-            } catch (e: Exception) {
-                progressBar.progress = 0
-                statusText.text = getString(R.string.calibration_status_error)
-                instructionText.text = getString(R.string.calib_failed, e.message ?: "Unknown")
-            } finally {
-                startButtonsEnabled(true)
+        backBtn.setOnClickListener {
+            if (viewPager.currentItem > 0) {
+                viewPager.currentItem -= 1
             }
+        }
+
+        nextBtn.setOnClickListener {
+            viewPager.currentItem += 1
+        }
+
+        stopBtn.setOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }
 }
