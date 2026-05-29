@@ -41,11 +41,16 @@
     <color name="background_primary">@color/white</color>
     <color name="background_secondary">@color/grey_100</color>
     <color name="surface">@color/white</color>
+    <color name="surface_dark">#121212</color>
     <color name="surface_variant">@color/grey_50</color>
+    <color name="primary_container">@color/deep_orange_100</color>
+    <color name="on_primary_container">@color/deep_orange_900</color>
+    <color name="surface_inverse">@color/grey_900</color>
 
     <!-- Text – Light theme -->
     <color name="text_primary">@color/grey_900</color>
     <color name="text_secondary">@color/grey_700</color>
     <color name="text_disabled">@color/grey_500</color>
     <color name="text_hint">@color/grey_400</color>
+    <color name="text_on_surface_inverse">@color/white</color>
 </resources>

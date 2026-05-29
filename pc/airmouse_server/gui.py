@@ -42,7 +42,7 @@ class AirMouseGUI:
         self.danger = "#ef5b5b"
 
         self.root.configure(bg=self.bg_color)
-    self._set_window_icon()
+        self._set_window_icon()
         self._setup_styles()
         self.setup_ui()
 
@@ -79,7 +79,7 @@ class AirMouseGUI:
 
             cursor = [(96, 74), (154, 190), (128, 184), (110, 220), (92, 212), (112, 180), (78, 164)]
             draw.polygon(cursor, fill="#FFFFFF")
-            draw.line(cursor + [cursor[0]], fill="#1B2430", width=4, joint="curve")
+            draw.line(cursor + [cursor[0]], fill="#1B2430", width=4)
 
             draw.arc((38, 62, 218, 194), start=220, end=330, fill="#FFB74D", width=8)
             draw.arc((62, 38, 194, 218), start=110, end=250, fill="#81C784", width=8)
