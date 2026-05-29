@@ -497,4 +497,3 @@ func onReady() {
 func onExit() {
 	os.Exit(0)
 }
-

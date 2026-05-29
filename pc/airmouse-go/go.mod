@@ -1,4 +1,4 @@
-module github.com/yourusername/airmouse-go
+module airmouse-go
 
 go 1.21
 

@@ -21,6 +21,7 @@ type Config struct {
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
+		// Default configuration
 		return &Config{
 			Host:          "0.0.0.0",
 			Port:          8080,

@@ -201,7 +201,6 @@ func (s *TCPServer) DisconnectByAddr(addr string) {
 }
 
 func (s *TCPServer) Stop() {
-	// Close all connections
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, c := range s.conns {
