@@ -79,6 +79,9 @@ func loadOrDefault() *Config {
 		EnableUDP:         true,
 		EnableBluetooth:   true,
 		EnableSerial:      true,
+		EnableAISmoothing: false,
+		AIModelPath:       "models/mouse_smoothing.onnx",
+		AIBlendFactor:     0.6,
 		BluetoothAdapter:  "default",
 		BLEEnabled:        true,
 		HIDProxyEnabled:   false,
@@ -138,3 +141,24 @@ func getConfigPath() string {
 	configDir, _ := os.UserConfigDir()
 	return filepath.Join(configDir, "airmouse", "config.json")
 }
+
+// AI smoothing
+EnableAISmoothing  bool    `json:"enable_ai_smoothing"`
+AIModelPath        string  `json:"ai_model_path"`
+AIBlendFactor      float64 `json:"ai_blend_factor"`
+
+
+
+type Config struct {
+    // ... existing fields ...
+    EnablePersonalization   bool    `json:"enable_personalization"`
+    PersonalizationBuffer   int     `json:"personalization_buffer"`
+    PersonalizationInterval int     `json:"personalization_interval"`
+    AutoSwapModel           bool    `json:"auto_swap_model"`
+}
+
+
+EnablePersonalization:   true,
+PersonalizationBuffer:   2000,
+PersonalizationInterval: 3600,
+AutoSwapModel:           true,

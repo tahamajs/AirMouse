@@ -109,3 +109,17 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20231030024858-cd489e473d85 // indirect
 )
+
+
+module airmouse-go
+
+go 1.23
+
+require (
+	fyne.io/fyne/v2 v2.6.2
+	github.com/gorilla/websocket v1.5.3
+	github.com/hashicorp/mdns v1.0.5
+	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	github.com/yalue/onnxruntime_go v1.11.0
+)
