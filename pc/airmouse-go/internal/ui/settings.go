@@ -76,3 +76,32 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
 		tab.accelCheck,
 	)
 }
+
+
+personalizationCheck := widget.NewCheck("Enable AI Personalization", func(b bool) {
+    cfg.EnablePersonalization = b
+    cfg.Save()
+})
+personalizationCheck.SetChecked(cfg.EnablePersonalization)
+
+bufferSlider := widget.NewSlider(500, 5000)
+bufferSlider.Value = float64(cfg.PersonalizationBuffer)
+bufferSlider.OnChanged = func(v float64) {
+    cfg.PersonalizationBuffer = int(v)
+    cfg.Save()
+}
+bufferSliderLabel := widget.NewLabel(fmt.Sprintf("Buffer Size: %d", cfg.PersonalizationBuffer))
+
+intervalSlider := widget.NewSlider(600, 86400) // 10 minutes to 24 hours
+intervalSlider.Value = float64(cfg.PersonalizationInterval)
+intervalSlider.OnChanged = func(v float64) {
+    cfg.PersonalizationInterval = int(v)
+    cfg.Save()
+}
+intervalLabel := widget.NewLabel(fmt.Sprintf("Retrain Interval: %d seconds", cfg.PersonalizationInterval))
+
+swapCheck := widget.NewCheck("Auto‑swap trained model", func(b bool) {
+    cfg.AutoSwapModel = b
+    cfg.Save()
+})
+swapCheck.SetChecked(cfg.AutoSwapModel)
