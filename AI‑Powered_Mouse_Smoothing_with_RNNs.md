@@ -1,583 +1,532 @@
-# AI‑Powered Mouse Smoothing with RNNs: A Complete Implementation Guide
+# Air Mouse Motion Smoothing and Android Sync Guide
 
-This comprehensive guide details how to implement an AI-powered smoothing system using a Recurrent Neural Network (RNN) to generate **ultra‑smooth, human‑like mouse cursor trajectories** for the Air Mouse Go server.
+This document replaces the earlier RNN-only draft with a **project-accurate implementation guide** for the current Air Mouse codebase.
 
-## Why AI‑Powered Smoothing?
+The real system is split into two cooperating parts:
 
-Traditional mouse smoothing methods (linear interpolation, moving averages, or simple EMA filters) can still produce movements that feel “mechanical” or “unnatural” under real‑world network conditions. An AI‑powered approach offers:
+- **Android app**: detects motion, gestures, and optional on-device gesture inference.
+- **Go desktop server**: receives commands, controls the mouse, and applies Kalman or ONNX-based smoothing.
 
-- **Human‑like velocity profiles** – acceleration followed by deceleration, mimicking biological motor control
-- **Curved, non‑linear paths** – avoiding the rigid straight lines of conventional interpolation
-- **Variable speed with natural noise** – subtle hesitations, micro‑corrections, and pauses
-- **Adaptability** – can be fine‑tuned to the user’s personal movement style via additional training data
-
-Modern research and open‑source projects have demonstrated that **RNNs (especially LSTM and GRU)** excel at learning and generating realistic mouse movement patterns.
-
-## Full Implementation Roadmap
-
-The implementation is divided into six phases:
-
-| Phase | Description | Time Estimate |
-|---|---|---|
-| 1 | Data Collection & Preparation | 1–2 days |
-| 2 | Model Architecture Design | 1 day |
-| 3 | Training | 2–4 hours |
-| 4 | Export to ONNX | 1 hour |
-| 5 | Integration into Go Server | 2–3 hours |
-| 6 | Evaluation & Fine‑Tuning | 1–2 days |
+The goal is to keep the Android and PC implementations aligned so the protocol, gestures, and smoothing behavior all match the code.
 
 ---
 
-## Phase 1: Data Collection & Preparation
+## 1. What the current project actually does
 
-### 1.1 Understanding Human Movement Characteristics
+The previous version of this document described a hypothetical end-to-end RNN training pipeline. That is **not** the current implementation.
 
-Human mouse movements are not linear or uniform. They exhibit:
-- **Smooth acceleration/deceleration** curves (velocity peaks at ~60–70% of the movement)
-- **Slight initial hesitation** (delays before starting)
-- **Micro‑corrections** (small directional adjustments along the path)
-- **Over‑shoot and correction** (especially for precise target acquisition)
-- **Natural noise and variability**
+The code in this workspace currently supports:
 
-### 1.2 Collecting Training Data
+- **Android gesture detection** from gyroscope, accelerometer, and roll values.
+- **Delayed single-click / double-click handling** so a single flick is not emitted too early.
+- **TFLite-based gesture inference** on Android using a sliding sensor window.
+- **Gesture recording** to CSV for future training/fine-tuning.
+- **Go-side predictive movement** using a Kalman filter.
+- **Optional Go-side AI smoothing** using an ONNX model loaded with ONNX Runtime.
+- **WebSocket message sending** from Android with `gesture`, `proximity`, and `control` payloads.
 
-You need several thousand real mouse movement trajectories to train a reliable model. Bumblebee, for instance, was trained on **over 25,000 real cursor movements**.
+So the synced version of the project is best described as:
 
-#### Option A: Record Your Own Data
+> **Android captures motion and gestures; the Go server smooths cursor motion and executes desktop actions.**
 
-Build a simple data collector that records movement data at ~60–100 samples per second:
+---
 
-```python
-import time
-import threading
-import csv
-import mouse
-from datetime import datetime
+## 2. End-to-end data flow
 
-class MouseDataCollector:
-    def __init__(self, sample_rate=60):
-        self.sample_rate = sample_rate
-        self.recording = False
-        self.data = []
-
-    def record_trajectory(self, duration=5):
-        """Record a single movement trajectory."""
-        start = time.time()
-        self.recording = True
-        while time.time() - start < duration:
-            pos = mouse.get_position()
-            self.data.append({
-                'timestamp': datetime.now(),
-                'x': pos[0], 'y': pos[1],
-                'button': 'left' if mouse.is_pressed('left') else None
-            })
-            time.sleep(1 / self.sample_rate)
-        self.recording = False
-
-    def save_to_csv(self, filename='mouse_trajectories.csv'):
-        with open(filename, 'w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=['timestamp', 'x', 'y', 'button'])
-            writer.writeheader()
-            writer.writerows(self.data)
+```mermaid
+flowchart LR
+    A[Android sensors] --> B[GestureDetector.kt]
+    A --> C[GestureInferenceService.kt]
+    C --> D[WebSocketManager.sendGesture()]
+    B --> D
+    D --> E[Go protocol server]
+    E --> F[MouseController]
+    F --> G[Kalman predictor]
+    F --> H[ONNX AI smoother]
+    E --> I[Desktop mouse / scroll / click]
 ```
 
-#### Option B: Use Existing Open Datasets
-
-The **SapiMouse** dataset is one of the largest publicly available collections of human mouse cursor trajectories. You can also find datasets of labeled human vs bot mouse movements on platforms like Bureau ID.
-
-### 1.3 Data Preprocessing
-
-Raw data must be converted into sequences suitable for RNN training:
-
-1. **Normalise coordinates** – scale raw pixel coordinates to [0,1] or [-1,1] based on screen resolution
-2. **Compute velocity and acceleration** – add derived features:
-   - `vx` = Δx / Δt
-   - `vy` = Δy / Δt
-   - `ax` = Δvx / Δt
-   - `ay` = Δvy / Δt
-3. **Create sliding windows** – use a sequence length of 16–32 points (300–500 ms of movement) to predict the next point
-4. **Segment movements** – split continuous recordings into individual movement strokes
-
-## Phase 2: Model Architecture Design
-
-### 2.1 Architecture Overview
-
-The recommended architecture for mouse movement generation uses a **sequence‑to‑sequence RNN with an LSTM layer**. This is the same approach used in the Bumblebee library, which has been proven effective for generating realistic cursor trajectories.
-
-### 2.2 Complete Training Script (Python with PyTorch)
-
-Below is the fully functional code for training the model:
-
-```python
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-import numpy as np
-import pandas as pd
-import os
-
-# -------------------------------
-# CONFIGURATION
-# -------------------------------
-SEQUENCE_LEN = 16          # Input sequence length (history points)
-PREDICTION_STEPS = 5       # Number of future points to predict
-BATCH_SIZE = 32
-EPOCHS = 50
-LEARNING_RATE = 0.001
-HIDDEN_SIZE = 64
-NUM_LAYERS = 2
-
-# -------------------------------
-# MODEL DEFINITION
-# -------------------------------
-class HumanCursorRNN(nn.Module):
-    """RNN with LSTM layers for human-like mouse trajectory generation."""
-    def __init__(self, input_size=4, hidden_size=64, num_layers=2, output_size=2):
-        super().__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        # Input features: x, y, velocity_x, velocity_y
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        self.dropout = nn.Dropout(0.2)
-        self.fc = nn.Linear(hidden_size, output_size)  # Output: dx, dy
-
-    def forward(self, x):
-        # x shape: (batch, seq_len, input_size)
-        lstm_out, _ = self.lstm(x)
-        out = self.dropout(lstm_out[:, -1, :])  # Take last timestep only
-        return self.fc(out)
-
-# -------------------------------
-# CUSTOM DATASET
-# -------------------------------
-class MouseTrajectoryDataset(Dataset):
-    def __init__(self, csv_path, seq_len=16):
-        self.seq_len = seq_len
-        self.data = self._load_and_preprocess(csv_path)
-
-    def _load_and_preprocess(self, path):
-        df = pd.read_csv(path)
-        # Normalise coordinates (assuming 1920×1080 screen)
-        df['x_norm'] = df['x'] / 1920.0
-        df['y_norm'] = df['y'] / 1080.0
-
-        # Compute velocities
-        df['vx'] = df['x_norm'].diff().fillna(0)
-        df['vy'] = df['y_norm'].diff().fillna(0)
-
-        # Extract feature matrix
-        features = df[['x_norm', 'y_norm', 'vx', 'vy']].values
-        return torch.FloatTensor(features)
-
-    def __len__(self):
-        return max(0, len(self.data) - self.seq_len)
-
-    def __getitem__(self, idx):
-        x = self.data[idx:idx + self.seq_len]          # Input sequence
-        y = self.data[idx + self.seq_len, :2]          # Target position
-        return x, y
-
-# -------------------------------
-# TRAINING LOOP
-# -------------------------------
-def train_model():
-    # Load dataset
-    dataset = MouseTrajectoryDataset('data/mouse_trajectories.csv', SEQUENCE_LEN)
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
-
-    # Initialize model, loss, optimizer
-    model = HumanCursorRNN(input_size=4, hidden_size=HIDDEN_SIZE,
-                           num_layers=NUM_LAYERS, output_size=2)
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-
-    print(f"Training on {len(dataset)} sequences, {len(dataloader)} batches")
-
-    for epoch in range(EPOCHS):
-        total_loss = 0
-        for batch_idx, (x_batch, y_batch) in enumerate(dataloader):
-            optimizer.zero_grad()
-            predictions = model(x_batch)
-            loss = criterion(predictions, y_batch)
-            loss.backward()
-            optimizer.step()
-            total_loss += loss.item()
-
-        avg_loss = total_loss / len(dataloader)
-        print(f"Epoch {epoch+1}/{EPOCHS}, Loss: {avg_loss:.6f}")
-
-        # Save checkpoint every 10 epochs
-        if (epoch + 1) % 10 == 0:
-            torch.save(model.state_dict(), f'checkpoints/model_epoch_{epoch+1}.pth')
-
-    # Save final model
-    torch.save(model.state_dict(), 'models/human_cursor_model.pth')
-    print("Training complete! Model saved to models/human_cursor_model.pth")
-
-if __name__ == "__main__":
-    os.makedirs('checkpoints', exist_ok=True)
-    os.makedirs('models', exist_ok=True)
-    train_model()
-```
-
-### 2.3 Alternative: LSTM for Iterative Prediction
-
-For real‑time use, you can implement an iterative prediction model like the **Mouse Tracking Predictor**, which uses 16 consecutive samples to predict the next coordinate:
-
-```python
-class IterativeCursorPredictor(nn.Module):
-    """Predicts the next cursor position from a sequence of past points."""
-    def __init__(self, input_size=2, hidden_size=64, num_layers=2):
-        super().__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_size, 2)  # Predict next (x,y)
-
-    def forward(self, x):
-        lstm_out, _ = self.lstm(x)
-        return self.fc(lstm_out[:, -1, :])
-```
-
-## Phase 3: Training Best Practices
-
-### 3.1 Recommended Training Configuration
-
-| Parameter | Recommended Value | Rationale |
-|---|---|---|
-| Sequence length | 16–32 timesteps | Covers 250–500 ms of movement |
-| Hidden size | 64–128 | Captures enough complexity without overfitting |
-| Batch size | 32–64 | Balances memory and convergence speed |
-| Learning rate | 0.0005–0.001 | Stable convergence |
-| Optimiser | Adam | Handles sparse gradients well |
-| Loss function | MSE or Smooth L1 | Encourages precise point predictions |
-
-### 3.2 Handling Class Imbalance
-
-Human movement data has inherent imbalances (more straight movements than curves). Use techniques like:
-- **Over‑sampling** rare trajectory types
-- **Weighted loss** – assign higher weights to underrepresented patterns
-- **Data augmentation** – add slight noise, rotation, or scaling to existing trajectories
-
-## Phase 4: Exporting to ONNX for Go Deployment
-
-To use the trained model in Go, export it to the ONNX format, which is widely supported by Go inference libraries.
-
-### 4.1 Export Script
-
-```python
-import torch
-import torch.onnx
-
-# Load the trained model
-model = HumanCursorRNN(input_size=4, hidden_size=64, num_layers=2, output_size=2)
-model.load_state_dict(torch.load('models/human_cursor_model.pth'))
-model.eval()
-
-# Create dummy input (batch=1, seq_len=16, features=4)
-dummy_input = torch.randn(1, 16, 4)
-
-# Export to ONNX
-torch.onnx.export(
-    model,
-    dummy_input,
-    "models/human_cursor_model.onnx",
-    input_names=['input_sequence'],
-    output_names=['movement_delta'],
-    dynamic_axes={'input_sequence': {0: 'batch_size', 1: 'sequence_len'}},
-    opset_version=14
-)
-
-print("Model exported to ONNX format")
-```
-
-### 4.2 ONNX Model Optimisation
-
-To ensure fast inference in Go:
-
-```bash
-# Reduce model size and optimise for CPU
-onnxruntime_tools.optimizer.optimize_model(
-    'models/human_cursor_model.onnx',
-    optimization_level=99,  # All optimisations
-    opt_level_str='basic'
-)
-```
-
-## Phase 5: Integration into Air Mouse Go Server
-
-### 5.1 Go Inference with ONNX Runtime
-
-First install the ONNX Runtime Go binding:
-
-```bash
-go get github.com/owulveryck/onnx-go
-go get github.com/owulveryck/onnx-go/backend/simple
-```
-
-### 5.2 Complete AI Smoothing Integration Code
-
-```go
-package control
-
-import (
-    "encoding/json"
-    "fmt"
-    "os"
-    "sync"
-    "time"
-
-    onnx "github.com/owulveryck/onnx-go"
-    "github.com/owulveryck/onnx-go/backend/simple"
-)
-
-// HumanCursorPredictor performs AI-based mouse movement smoothing
-type HumanCursorPredictor struct {
-    model      *onnx.Model
-    history    [][4]float64  // Last N points: x, y, vx, vy
-    maxHistory int           // Typically 16-32
-    mu         sync.Mutex
-}
-
-// NewHumanCursorPredictor loads the ONNX model and initialises the predictor
-func NewHumanCursorPredictor(modelPath string, maxHistory int) (*HumanCursorPredictor, error) {
-    // Load ONNX model file
-    data, err := os.ReadFile(modelPath)
-    if err != nil {
-        return nil, fmt.Errorf("failed to read model: %w", err)
-    }
-
-    // Create ONNX backend
-    backend := simple.NewSimpleBackend()
-
-    // Create model
-    model := onnx.NewModel(backend)
-    if err := model.Parse(data); err != nil {
-        return nil, fmt.Errorf("failed to parse ONNX model: %w", err)
-    }
-
-    // Set input/output
-    err = model.SetInput("input_sequence", [4]interface{}{int64(1), int64(maxHistory), int64(4)})
-    if err != nil {
-        return nil, err
-    }
-    err = model.SetOutput("movement_delta", []int64{1, 2})
-    if err != nil {
-        return nil, err
-    }
-
-    return &HumanCursorPredictor{
-        model:      model,
-        history:    make([][4]float64, 0, maxHistory),
-        maxHistory: maxHistory,
-    }, nil
-}
-
-// AddPoint adds a new raw mouse point to the history buffer
-func (p *HumanCursorPredictor) AddPoint(x, y float64) {
-    p.mu.Lock()
-    defer p.mu.Unlock()
-
-    // Calculate velocity
-    var vx, vy float64
-    if len(p.history) > 0 {
-        last := p.history[len(p.history)-1]
-        vx = x - last[0]
-        vy = y - last[1]
-    }
-
-    // Add new point with computed velocity
-    point := [4]float64{x, y, vx, vy}
-    p.history = append(p.history, point)
-
-    // Trim if necessary
-    if len(p.history) > p.maxHistory {
-        p.history = p.history[1:]
-    }
-}
-
-// PredictNextDelta predicts the next movement delta using the RNN model
-func (p *HumanCursorPredictor) PredictNextDelta() (float64, float64, error) {
-    p.mu.Lock()
-    defer p.mu.Unlock()
-
-    // Need at least 2 points to have velocity data
-    if len(p.history) < 2 {
-        return 0, 0, nil
-    }
-
-    // Prepare input tensor: shape [1, seq_len, 4]
-    // Pad with zeros if history is shorter than maxHistory
-    inputLen := len(p.history)
-    if inputLen < p.maxHistory {
-        // Pad by repeating the first element
-        padded := make([][4]float64, p.maxHistory)
-        for i := 0; i < p.maxHistory-inputLen; i++ {
-            padded[i] = p.history[0]
-        }
-        copy(padded[p.maxHistory-inputLen:], p.history)
-        p.history = padded
-    }
-
-    // Convert to float32 slice for ONNX
-    inputData := make([]float32, p.maxHistory*4)
-    for i, point := range p.history {
-        inputData[i*4] = float32(point[0])
-        inputData[i*4+1] = float32(point[1])
-        inputData[i*4+2] = float32(point[2])
-        inputData[i*4+3] = float32(point[3])
-    }
-
-    // Run inference
-    output, err := p.model.Exec(map[string]interface{}{
-        "input_sequence": inputData,
-    })
-    if err != nil {
-        return 0, 0, fmt.Errorf("inference failed: %w", err)
-    }
-
-    // Extract output (dx, dy)
-    result := output["movement_delta"].([]float32)
-    if len(result) < 2 {
-        return 0, 0, fmt.Errorf("unexpected output shape")
-    }
-
-    return float64(result[0]), float64(result[1]), nil
-}
-
-// AISmoothingMouseController wraps the existing mouse controller with AI smoothing
-type AISmoothingMouseController struct {
-    inner      MouseController
-    predictor  *HumanCursorPredictor
-    smoothing  bool
-    lastPoints [][]float64
-}
-
-// NewAISmoothingMouseController creates a new AI-enabled mouse controller
-func NewAISmoothingMouseController(inner MouseController, modelPath string) (*AISmoothingMouseController, error) {
-    predictor, err := NewHumanCursorPredictor(modelPath, 16)
-    if err != nil {
-        return nil, err
-    }
-    return &AISmoothingMouseController{
-        inner:      inner,
-        predictor:  predictor,
-        smoothing:  true,
-        lastPoints: make([][]float64, 0),
-    }, nil
-}
-
-// Move applies AI smoothing before moving the cursor
-func (c *AISmoothingMouseController) Move(dx, dy float64) {
-    if !c.smoothing {
-        c.inner.Move(dx, dy)
-        return
-    }
-
-    // Get current position (needs to be implemented in the underlying controller)
-    // For simplicity, we use a local position tracker
-    // In real implementation, query actual cursor position
-
-    // Add current point to predictor history
-    // c.predictor.AddPoint(currentX, currentY)
-
-    // Predict smoothed delta
-    predDx, predDy, err := c.predictor.PredictNextDelta()
-    if err == nil && (predDx != 0 || predDy != 0) {
-        // Blend raw and predicted for best results
-        blendedDx := 0.4*dx + 0.6*predDx
-        blendedDy := 0.4*dy + 0.6*predDy
-        c.inner.Move(blendedDx, blendedDy)
-    } else {
-        c.inner.Move(dx, dy)
-    }
+### Main flow
+
+1. **Android** reads gyroscope and accelerometer data.
+2. `GestureDetector` decides whether a motion is a click, double click, right click, or scroll.
+3. `GestureInferenceService` can classify gestures using a TFLite model when that service is active.
+4. `WebSocketManager` sends the gesture to the server as JSON.
+5. **Go** receives the command and routes it to the mouse controller.
+6. The mouse controller applies smoothing, predictive blending, and optional AI smoothing.
+7. The desktop pointer moves or clicks on the host computer.
+
+---
+
+## 3. Android side: what is implemented
+
+### 3.1 Threshold-based gesture detection
+
+The core runtime detector is `android/app/src/main/java/com/airmouse/domain/GestureDetector.kt`.
+
+It detects:
+
+- `CLICK`
+- `DOUBLE_CLICK`
+- `RIGHT_CLICK`
+- `SCROLL_UP`
+- `SCROLL_DOWN`
+
+#### Detection behavior
+
+- **Click / double click**: uses `gyroY` angular speed and a delayed single-click callback.
+- **Right click**: uses a long tilt (`roll`) held for a configured duration.
+- **Scroll**: uses `accelY` and a debounce threshold to avoid repeated scroll spam.
+
+This delayed callback pattern is important because it avoids emitting a single click before a double click can be confirmed.
+
+### 3.2 TFLite gesture inference service
+
+`android/app/src/main/java/com/airmouse/gesture/GestureInferenceService.kt` is the on-device classifier service.
+
+It:
+
+- loads `gesture_model.tflite`
+- loads `gesture_labels.json`
+- builds a sliding window of sensor samples
+- predicts a gesture when the window is full
+- reports the result through `onGestureDetected: ((String, Float) -> Unit)?`
+
+Important implementation details from the code:
+
+- window size: **30 samples**
+- sampling context: roughly **1.5 seconds at 20 Hz**
+- confidence threshold: **0.7f**
+- cooldown: **500 ms**
+
+This keeps the classifier from firing too frequently.
+
+### 3.3 Gesture recording service
+
+`android/app/src/main/java/com/airmouse/gesture/GestureRecorderService.kt` records raw motion sessions to CSV.
+
+It writes files under an app-specific folder such as:
+
+- `gesture_dataset/gestures_<timestamp>.csv`
+
+The recorder is useful for:
+
+- collecting user-specific gestures
+- creating training data for the TFLite model
+- debugging edge cases in gesture classification
+
+### 3.4 WebSocket bridge to the PC
+
+`android/app/src/main/java/com/airmouse/network/WebSocketManager.kt` is the network bridge.
+
+It sends structured JSON messages such as:
+
+- `gesture`
+- `proximity`
+- `control`
+
+The gesture payload currently looks like this:
+
+```json
+{
+  "type": "gesture",
+  "payload": {
+    "gesture": "CLICK",
+    "confidence": 0.91
+  }
 }
 ```
 
-### 5.3 Integration with Existing Mouse Controller
+The control payload is used for pause/resume behavior, and the proximity payload carries near/far state plus distance.
 
-Modify your `mouse.go` to optionally use AI smoothing:
+---
 
-```go
-// In your main server initialisation
-func initMouseController() {
-    cfg := config.Get()
-    baseMouse := NewMouseController(cfg.Sensitivity)
-    
-    // Enable AI smoothing if configured
-    if cfg.EnableAISmoothing {
-        aiMouse, err := NewAISmoothingMouseController(baseMouse, "models/human_cursor_model.onnx")
-        if err != nil {
-            utils.LogWarn("AI smoothing failed to load, falling back to standard", "error", err)
-            mouse = baseMouse
-        } else {
-            mouse = aiMouse
-            utils.LogInfo("AI-powered mouse smoothing enabled")
-        }
-    } else {
-        mouse = baseMouse
-    }
+## 4. Go side: what is implemented
+
+### 4.1 Server startup
+
+The canonical entrypoint is:
+
+- `pc/airmouse-go/cmd/airmouse-server/main.go`
+
+It initializes:
+
+- logging
+- config
+- device manager
+- mouse controller
+- protocol server
+- GUI
+
+The startup sequence in code is:
+
+1. create the mouse controller
+2. enable standard smoothing
+3. enable acceleration
+4. optionally enable predictive movement
+5. optionally load ONNX AI smoothing
+6. start the protocol server
+7. launch the UI
+
+### 4.2 Runtime config
+
+`pc/airmouse-go/internal/config/config.go` stores the relevant settings.
+
+The smoothing-related fields are:
+
+- `EnableAISmoothing`
+- `AIModelPath`
+- `AIBlendFactor`
+- `EnablePredictive`
+- `PredictiveBlendFactor`
+- `PredictiveDt`
+
+Default values from the code:
+
+- `EnableAISmoothing = false`
+- `AIModelPath = "models/mouse_smoothing.onnx"`
+- `AIBlendFactor = 0.6`
+- `EnablePredictive = true`
+- `PredictiveBlendFactor = 0.6`
+- `PredictiveDt = 0.02`
+
+### 4.3 Kalman-based predictive movement
+
+`pc/airmouse-go/internal/predictive/predictor.go` implements the prediction layer.
+
+It uses a `KalmanFilter2D` to:
+
+- ingest raw movement deltas
+- predict the next delta
+- blend raw and predicted values
+
+The blend factor controls how much prediction influences the final movement.
+
+This is the current lightweight smoothing path and is the safest default for most setups.
+
+### 4.4 ONNX AI smoothing
+
+`pc/airmouse-go/internal/control/ai_smoothing.go` loads a pre-trained ONNX model with ONNX Runtime.
+
+The smoother:
+
+- stores a fixed-size history buffer of `[x, y, vx, vy]`
+- feeds the history into the model as `input_sequence`
+- reads back `movement_delta`
+- returns the predicted cursor delta
+
+Current code details:
+
+- history length is passed in at construction time
+- the smoother expects a full history before it predicts
+- AI smoothing is optional and can be disabled at runtime
+
+### 4.5 What the Go server does with Android messages
+
+The protocol server receives Android messages and maps them to desktop actions.
+
+In practice, this means the Android side can send a gesture event and the Go server can decide whether it should:
+
+- click
+- double click
+- right click
+- scroll
+- ignore the event if it is low confidence or unsupported
+
+### 4.6 Desktop UI overview
+
+The Go project is not just a headless server. It launches a **Fyne desktop UI** from `internal/ui/app.go` with a window titled **Air Mouse Pro Server**.
+
+The UI is designed as a multi-tab control center with a top menu bar and a fixed-size primary window.
+
+#### Window behavior
+
+- Initial size: **1100 × 720**
+- The window is marked as the **master window**
+- If `AlwaysOnTop` is enabled in config, the window stays above other windows
+- The app applies the selected theme before the main window is shown
+
+#### Main menu
+
+The top menu bar has three menus:
+
+- **File**
+  - Start Server
+  - Stop Server
+  - Quit
+- **View**
+  - Refresh
+- **Help**
+  - About
+
+The About dialog shows the app name, version, university lab text, and a short protocol summary.
+
+#### Tabs in the main window
+
+The tab strip is created with `container.NewAppTabs(...)` and includes:
+
+- Dashboard
+- Devices
+- Network
+- Settings
+- Analytics
+- Logs
+
+Each tab is a live view backed by the current runtime state.
+
+### 4.7 Dashboard tab
+
+`internal/ui/dashboard.go` is the operational summary panel.
+
+It shows:
+
+- server status: Running / Stopped
+- click counts
+- double-click counts
+- right-click counts
+- scroll counts
+- connected device count
+- endpoint string
+- uptime timer
+- AI smoothing state
+
+#### Dashboard actions
+
+- **Start Server** starts the protocol server and updates endpoint/uptime labels
+- **Stop Server** stops the server and resets the status labels
+
+The endpoint label is populated with the local IP and configured ports so the Android client can connect manually if needed.
+
+### 4.8 Devices tab
+
+`internal/ui/devices.go` lists the registered devices from the device manager.
+
+Each row shows:
+
+- device name
+- device type
+- connection timestamp
+
+The list refreshes automatically every 2 seconds so the operator can watch devices appear and disappear in real time.
+
+### 4.9 Network tab
+
+`internal/ui/network.go` is the pairing and connection tab.
+
+It provides:
+
+- a selectable list of available local IPv4 addresses
+- an editable IP address field
+- an editable port field
+- a **Refresh IPs** button
+- a **Copy Endpoint** button
+- a **Generate QR** button
+- a **Save QR** button
+- a QR preview image
+
+#### Network workflow
+
+1. Choose a local IP from the list or type one manually.
+2. Set the TCP port.
+3. Copy the endpoint or generate the QR code.
+4. Scan that QR from Android or paste the endpoint manually.
+
+The tab encodes the endpoint as `airmouse://IP:PORT`.
+
+### 4.10 Settings tab
+
+`internal/ui/settings.go` contains the runtime controls for motion and prediction.
+
+#### Available controls
+
+- **Sensitivity slider**
+  - Range: 0.2 to 2.0
+  - Updates both config and mouse controller live
+- **Theme selector**
+  - dark
+  - light
+  - pure_black
+  - high_contrast
+  - ocean
+  - sunset
+  - forest
+  - purple
+  - cherry
+  - neon
+  - lavender
+  - mint
+  - peach
+  - sky
+- **Always on Top** checkbox
+- **Mouse Smoothing (EMA)** checkbox
+- **Mouse Acceleration** checkbox
+- **AI Smoothing** checkbox
+- **Predictive Movement** checkbox
+- **Prediction blend** slider
+- **Enable Personalization** checkbox
+- **Buffer size** slider for personalization samples
+- **Retrain interval** slider
+- **Auto-swap trained model** checkbox
+
+#### Why this tab matters
+
+This is where the live desktop behavior is tuned without restarting the app. It is the main UI bridge between config and runtime mouse behavior.
+
+### 4.11 Analytics tab
+
+`internal/ui/analytics.go` is the personalization dashboard.
+
+It shows:
+
+- the number of collected samples
+- a refresh button
+- a force fine-tune action
+
+This tab is the UI surface for the user data collector and future personalization flow.
+
+### 4.12 Logs tab
+
+`internal/ui/logs.go` provides live application logs inside the UI.
+
+It supports:
+
+- a scrolling multi-line log view
+- **Clear Logs**
+- **Export Logs**
+
+The log tab is fed by a log hook, so runtime messages appear as they are produced by the app.
+
+### 4.13 Theme and visual consistency
+
+`internal/ui/themes.go` applies a named theme from config.
+
+The UI currently supports a custom dark-style variant for `pure_black`, while other names fall back to the standard Fyne light/dark themes or default dark theme.
+
+This keeps the server UI consistent with the selected appearance preference.
+
+---
+
+## 5. Compatibility rules between Android and Go
+
+These are the rules that must stay synchronized across both codebases.
+
+### 5.1 Gesture names must match
+
+Android gesture names sent over the wire should stay aligned with server-side handlers.
+
+Expected names include:
+
+- `CLICK`
+- `DOUBLE_CLICK`
+- `RIGHT_CLICK`
+- `SCROLL_UP`
+- `SCROLL_DOWN`
+
+### 5.2 JSON contract must stay stable
+
+Gesture messages should keep the same shape:
+
+```json
+{
+  "type": "gesture",
+  "payload": {
+    "gesture": "CLICK",
+    "confidence": 0.91
+  }
 }
 ```
 
-### 5.4 Alternative: Using Hugot for Transformer Pipelines
+If you change the Android payload, the Go protocol parser must be updated too.
 
-For more advanced models, consider using **Hugot**, which provides ONNX transformer pipelines for Go:
+### 5.3 Double-click timing must stay delayed
 
-```go
-import "github.com/knights-analytics/hugot/pipelines"
+The Android detector deliberately delays a single click until the double-click window expires.
 
-func setupTransformerSmoothing() {
-    // Load a Hugging Face transformer model exported to ONNX
-    pipe, err := pipelines.LoadPipeline("cursor_smoothing", "models/transformer_model.onnx")
-    if err != nil {
-        panic(err)
-    }
-    // Run inference...
-}
-```
+That contract should not be broken, otherwise the user gets accidental single clicks followed by a late double click. Nobody likes surprise mouse drama.
 
-## Phase 6: Evaluation and Fine‑Tuning
+### 5.4 Smoothing should remain optional
 
-### 6.1 Quantitative Metrics
+The Go server currently supports:
 
-Measure smoothing quality using:
+- standard smoothing
+- predictive smoothing
+- AI smoothing
 
-1. **Smoothness metric** – standard deviation of instantaneous velocity
-2. **Path efficiency** – ratio of actual path length to straight‑line distance
-3. **Latency impact** – additional milliseconds introduced by the model
+If AI smoothing fails to load, the code should fall back to the standard controller instead of failing startup.
 
-### 6.2 A/B Testing Configuration
+---
 
-Implement configuration options to compare AI smoothing with traditional methods:
+## 6. Actual files involved in the sync
 
-```go
-type AIConfig struct {
-    Enabled        bool    `json:"ai_smoothing_enabled"`
-    ModelPath      string  `json:"ai_model_path"`
-    BlendFactor    float64 `json:"ai_blend_factor"`    // 0.0-1.0
-    PredictOnly    bool    `json:"ai_predict_only"`
-    ConfidenceThreshold float64 `json:"ai_confidence_threshold"`
-}
-```
+### Android files
 
-### 6.3 Performance Optimisation
+- `domain/GestureDetector.kt` – runtime gesture rules
+- `gesture/GestureInferenceService.kt` – TFLite classifier
+- `gesture/GestureRecorderService.kt` – data collection
+- `network/WebSocketManager.kt` – outbound messages
+- `sensors/SensorService.kt` – sensor feed into gesture detection
 
-| Optimisation | Technique |
-|---|---|
-| Reduce inference latency | Use smaller hidden size (32–64) |
-| Lower CPU usage | Use the `simple` backend instead of CUDA |
-| Batch predictions | Combine multiple movement predictions when possible |
-| Cache results | Use identical input patterns to avoid recomputation |
+### Go server files
 
-## Practical Deployment Considerations
+- `cmd/airmouse-server/main.go` – entrypoint
+- `internal/config/config.go` – config and defaults
+- `internal/predictive/predictor.go` – Kalman predictor
+- `internal/control/ai_smoothing.go` – ONNX smoother
+- `internal/control/mouse.go` – mouse controller integration
+- `internal/ui/app.go` – window, tabs, and menu bar
+- `internal/ui/dashboard.go` – live server status and counters
+- `internal/ui/devices.go` – connected devices list
+- `internal/ui/network.go` – endpoint and QR pairing tools
+- `internal/ui/settings.go` – runtime controls and theme selection
+- `internal/ui/analytics.go` – personalization overview
+- `internal/ui/logs.go` – log viewer and export
+- `internal/ui/themes.go` – named theme selection and custom dark variant
+- `internal/protocol/*` – message routing and protocol handling
 
-| Concern | Solution |
-|---|---|
-| **Latency** | A well‑optimised ONNX model can run in under 5ms on a modern CPU |
-| **Model size** | The exported ONNX model is ~1–5 MB |
-| **Cross‑platform** | ONNX Runtime supports Windows, macOS, and Linux |
-| **Fallback** | Always fall back to standard smoothing if the model fails |
+---
 
-## Summary
+## 7. Recommended implementation summary
 
-Implementing AI‑powered mouse smoothing transforms the Air Mouse experience from “functional” to “magical.” The technical stack is mature and well‑documented, and the performance overhead is minimal. By following this guide, you can integrate a production‑ready RNN model that generates ultra‑smooth, human‑like cursor movements, setting your application apart from traditional remote control solutions.
+If you want the document to reflect the current project faithfully, describe it this way:
+
+- **Android** handles motion capture, gesture detection, and gesture classification.
+- **Go** handles desktop control, smoothing, and optional AI-based prediction.
+- **WebSocket / protocol messages** keep both sides synchronized.
+- **ONNX AI smoothing** is an optional enhancement, not the core dependency.
+- **Kalman prediction** is the production-safe fallback and default smoothing strategy.
+
+---
+
+## 8. Build and test notes
+
+### Android
+
+Build the APK from the Android project using the included Gradle wrapper.
+
+### Go server
+
+From `pc/airmouse-go`, build or run the canonical entrypoint under `cmd/airmouse-server`.
+
+### Verification checklist
+
+- Android gesture names match server handlers
+- WebSocket payloads are unchanged
+- Go config keys match the UI/settings code
+- Predictive smoothing still falls back cleanly when AI loading fails
+- The document no longer claims an RNN training flow that is absent from the repo
+
+---
+
+## 9. Bottom line
+
+This project is **already more complete than the original RNN draft suggested** — it just needed the documentation to stop inventing a model pipeline that the code does not use.
+
+The current implementation is best understood as a synchronized Android + Go system with:
+
+- real gesture detection on Android
+- optional on-device gesture inference
+- Kalman-based desktop prediction
+- optional ONNX AI smoothing
+- a shared message contract that both sides must keep in sync
+
+That is the version of the project that now matches the code in this workspace.

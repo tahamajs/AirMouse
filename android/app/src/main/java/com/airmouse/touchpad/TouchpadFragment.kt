@@ -1,5 +1,7 @@
 package com.airmouse.touchpad
 
+import com.airmouse.ConnectionManager
+
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -15,8 +17,6 @@ import kotlin.math.abs
 import kotlin.math.pow
 
 class TouchpadFragment : Fragment() {
-
-    var tcpSender: ((String) -> Unit)? = null
 
     // ---------- Touch state ----------
     private var lastX = 0f
@@ -277,7 +277,7 @@ class TouchpadFragment : Fragment() {
     }
 
     private fun send(json: String) {
-        tcpSender?.invoke(json)
+        ConnectionManager.sendTcpMessage(json)
     }
 
     private fun genId() = UUID.randomUUID().toString()

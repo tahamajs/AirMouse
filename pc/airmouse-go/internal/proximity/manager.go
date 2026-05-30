@@ -100,30 +100,6 @@ func (m *Manager) applyProximityAction(isNear bool) {
 	}
 }
 
-func (m *Manager) lockScreen() {
-	if m.lockCmd == "" {
-		log.Println("Proximity: lock command not available")
-		return
-	}
-	if err := exec.Command("sh", "-c", m.lockCmd).Run(); err != nil {
-		log.Printf("Proximity: lock failed: %v", err)
-	} else {
-		log.Println("Proximity: screen locked")
-	}
-}
-
-func (m *Manager) unlockScreen() {
-	if m.unlockCmd == "" {
-		log.Println("Proximity: unlock not supported on this OS")
-		return
-	}
-	if err := exec.Command("sh", "-c", m.unlockCmd).Run(); err != nil {
-		log.Printf("Proximity: unlock failed: %v", err)
-	} else {
-		log.Println("Proximity: screen unlocked")
-	}
-}
-
 func (m *Manager) SetThresholds(deviceID string, near, far float32) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -21,6 +21,10 @@ class DebugOverlay(private val context: Context) {
         DebugOverlayService.updateData(roll, yaw, gyroY, accelY)
     }
 
+    fun updateConnectionState(state: String) {
+        DebugOverlayService.updateConnectionState(state)
+    }
+
     fun setSensorService(service: Any) {
         // Reserved for future overlay controls that need direct sensor-service access.
     }

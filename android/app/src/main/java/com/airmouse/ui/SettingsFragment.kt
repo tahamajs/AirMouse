@@ -16,6 +16,9 @@ import com.airmouse.ui.UiStyleUtils
 import android.widget.TextView
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
+import com.airmouse.ConnectionManager
+import android.view.Gravity
+import android.view.ViewGroup.LayoutParams
 
 class SettingsFragment : Fragment() {
 
@@ -51,6 +54,28 @@ class SettingsFragment : Fragment() {
             if (node is ViewGroup) for (i in 0 until node.childCount) styleNode(node.getChildAt(i))
         }
         styleNode(view)
+
+        // Add a small connection status line at the top of settings
+        val rootLayout = view as? ViewGroup
+        val connStatus = TextView(requireContext()).apply {
+            id = View.generateViewId()
+            textSize = 14f
+            setTextColor(ContextCompat.getColor(requireContext(), android.R.color.white))
+            setPadding(0, 0, 0, 12)
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+        }
+        rootLayout?.let { if (it is LinearLayout) it.addView(connStatus, 0) }
+
+        ConnectionManager.dataSenderState.observe(viewLifecycleOwner) { state ->
+            val txt = when (state) {
+                ConnectionManager.ConnectionState.CONNECTED -> getString(R.string.status_active)
+                ConnectionManager.ConnectionState.RECONNECTING -> getString(R.string.reconnecting)
+                ConnectionManager.ConnectionState.DISCONNECTED -> getString(R.string.status_not_connected)
+                else -> ""
+            }
+            connStatus.text = "Connection: $txt"
+        }
 
         autoPauseSwitch.setOnCheckedChangeListener { _, isChecked ->
             PreferencesHelper.setAutoPauseEnabled(isChecked)
