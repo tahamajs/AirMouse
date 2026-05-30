@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.lifecycleScope
 import com.airmouse.utils.PreferencesManager
+import com.airmouse.ui.UiStyleUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,6 +56,10 @@ class NetworkDiscoveryFragment : Fragment() {
         statusText = view.findViewById(R.id.network_status)
         serverList = view.findViewById(R.id.discovered_servers_list)
 
+        UiStyleUtils.animateIn(view.findViewById(R.id.scan_network_btn))
+        UiStyleUtils.animateIn(view.findViewById(R.id.network_status), 40L)
+        UiStyleUtils.animateIn(view.findViewById(R.id.discovered_servers_list), 80L)
+
         adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, servers)
         serverList.adapter = adapter
         serverList.setOnItemClickListener { _, _, position, _ ->
@@ -73,6 +78,7 @@ class NetworkDiscoveryFragment : Fragment() {
         scanButton.text = getString(R.string.scanning_network)
         scanProgress.visibility = android.view.View.VISIBLE
         statusText.text = getString(R.string.network_scan_in_progress)
+        UiStyleUtils.pulse(scanButton)
         lifecycleScope.launch {
             servers.clear()
             val found = withContext(Dispatchers.IO) { scanLocalNetwork() }

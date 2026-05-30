@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.airmouse.R
 import com.airmouse.utils.PreferencesManager
+import com.airmouse.ui.UiStyleUtils
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
@@ -17,6 +18,8 @@ import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 
 class StatisticsFragment : Fragment() {
 
@@ -26,6 +29,7 @@ class StatisticsFragment : Fragment() {
     private lateinit var barChart: BarChart
 
     private var sessionStartTime = 0L
+    private var timerJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -42,6 +46,10 @@ class StatisticsFragment : Fragment() {
         gestureCountText = view.findViewById(R.id.gesture_count_text)
         sessionTimeText = view.findViewById(R.id.session_time_text)
         barChart = view.findViewById(R.id.gesture_chart)
+
+        UiStyleUtils.animateIn(view.findViewById(R.id.gesture_chart))
+        UiStyleUtils.animateIn(view.findViewById(R.id.gesture_count_text), 35L)
+        UiStyleUtils.animateIn(view.findViewById(R.id.session_time_text), 70L)
 
         setupChart()
         updateUI()
@@ -64,6 +72,9 @@ class StatisticsFragment : Fragment() {
         barChart.axisLeft.setDrawGridLines(false)
         barChart.xAxis.setDrawGridLines(false)
         barChart.axisRight.isEnabled = false
+        barChart.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        barChart.setDrawGridBackground(false)
+        barChart.description.isEnabled = false
     }
 
     private fun updateChart(click: Int, scroll: Int, right: Int, double: Int) {
@@ -89,8 +100,9 @@ class StatisticsFragment : Fragment() {
 
     private fun startSessionTimer() {
         sessionStartTime = System.currentTimeMillis()
-        lifecycleScope.launch {
-            while (true) {
+        timerJob?.cancel()
+        timerJob = lifecycleScope.launch {
+            while (isActive) {
                 val elapsed = System.currentTimeMillis() - sessionStartTime
                 val seconds = (elapsed / 1000) % 60
                 val minutes = (elapsed / (1000 * 60)) % 60
@@ -99,5 +111,10 @@ class StatisticsFragment : Fragment() {
                 delay(1000)
             }
         }
+    }
+
+    override fun onDestroyView() {
+        timerJob?.cancel()
+        super.onDestroyView()
     }
 }

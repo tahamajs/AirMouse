@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import com.airmouse.R
 import com.airmouse.proximity.ProximityAwareService
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.airmouse.ui.UiStyleUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -73,6 +74,13 @@ class ProximitySettingsFragment : Fragment() {
 
         calibrateBtn.setOnClickListener { startCalibration() }
 
+        // Light polish so the screen matches the rest of the app.
+        UiStyleUtils.animateIn(proximitySwitch, 0)
+        UiStyleUtils.animateIn(nearSlider, 30)
+        UiStyleUtils.animateIn(farSlider, 60)
+        UiStyleUtils.animateIn(calibrateBtn, 90)
+        UiStyleUtils.animateIn(statusText, 120)
+
         // Check Bluetooth
         val btAdapter = BluetoothAdapter.getDefaultAdapter()
         if (btAdapter == null || !btAdapter.isEnabled) {
@@ -90,6 +98,7 @@ class ProximitySettingsFragment : Fragment() {
         requireContext().startForegroundService(serviceIntent)
         isServiceRunning = true
         statusText.text = "Proximity service running"
+        UiStyleUtils.pulse(calibrateBtn)
         startDistanceUpdates()
     }
 
