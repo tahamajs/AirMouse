@@ -7,6 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.airmouse.R
+import com.airmouse.ui.UiStyleUtils
 
 data class OnboardingItem(val imageRes: Int, val title: String, val description: String)
 
@@ -23,6 +24,10 @@ class OnboardingAdapter(private val items: List<OnboardingItem>) :
         holder.imageView.setImageResource(item.imageRes)
         holder.titleView.text = item.title
         holder.descriptionView.text = item.description
+        holder.itemView.alpha = 0f
+        holder.itemView.translationY = 20f
+        holder.itemView.animate().alpha(1f).translationY(0f).setDuration(220).start()
+        UiStyleUtils.pulse(holder.imageView)
     }
 
     override fun getItemCount(): Int = items.size

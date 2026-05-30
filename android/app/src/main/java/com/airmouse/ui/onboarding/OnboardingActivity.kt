@@ -9,6 +9,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.airmouse.R
 import com.airmouse.ui.MainActivity
 import com.airmouse.utils.PreferencesManager
+import com.airmouse.ui.UiStyleUtils
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -59,6 +60,12 @@ class OnboardingActivity : AppCompatActivity() {
         )
 
         viewPager.adapter = OnboardingAdapter(onboardingItems)
+        viewPager.setPageTransformer { page, position ->
+            val absPos = kotlin.math.abs(position)
+            page.alpha = 1f - absPos.coerceIn(0f, 1f)
+            page.scaleX = 0.96f + (1f - absPos.coerceIn(0f, 1f)) * 0.04f
+            page.scaleY = page.scaleX
+        }
 
         TabLayoutMediator(tabLayout, viewPager) { _, _ -> }.attach()
 
@@ -69,6 +76,7 @@ class OnboardingActivity : AppCompatActivity() {
                 btnNext.visibility = if (isLastPage) View.GONE else View.VISIBLE
                 btnSkip.visibility = if (isLastPage) View.GONE else View.VISIBLE
                 btnGetStarted.visibility = if (isLastPage) View.VISIBLE else View.GONE
+                UiStyleUtils.pulse(if (isLastPage) btnGetStarted else btnNext)
             }
         })
 
@@ -77,10 +85,12 @@ class OnboardingActivity : AppCompatActivity() {
         }
 
         btnSkip.setOnClickListener {
+            UiStyleUtils.pulse(btnSkip)
             finishOnboarding()
         }
 
         btnGetStarted.setOnClickListener {
+            UiStyleUtils.pulse(btnGetStarted)
             finishOnboarding()
         }
     }
