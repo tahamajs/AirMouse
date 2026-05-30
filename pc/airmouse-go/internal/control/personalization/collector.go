@@ -41,6 +41,38 @@ func (dc *DataCollector) AddSample(x, y, vx, vy float64) {
     }
 }
 
+func (dc *DataCollector) SampleCount() int {
+    dc.mu.Lock()
+    defer dc.mu.Unlock()
+    return len(dc.buffer)
+}
+
+func (dc *DataCollector) ForceFineTune() error {
+    dc.mu.Lock()
+    if len(dc.buffer) == 0 {
+        dc.mu.Unlock()
+        return nil
+    }
+    bufferCopy := make([]MovementSample, len(dc.buffer))
+    copy(bufferCopy, dc.buffer)
+    dc.mu.Unlock()
+    data := make([]map[string]interface{}, len(bufferCopy))
+    for i, sample := range bufferCopy {
+        data[i] = map[string]interface{}{
+            "x": sample.X,
+            "y": sample.Y,
+            "vx": sample.VX,
+            "vy": sample.VY,
+        }
+    }
+    req := &FineTuneRequest{
+        ModelPath:  "models/base_model.pth",
+        Buffer:     data,
+        OutputPath: "models/personalized_model.pth",
+    }
+    return dc.trainer.FineTune(req)
+}
+
 func (dc *DataCollector) triggerFineTune() {
     dc.mu.Lock()
     bufferCopy := make([]MovementSample, len(dc.buffer))

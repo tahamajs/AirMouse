@@ -20,6 +20,9 @@ class DebugOverlayService : Service() {
         fun updateData(roll: Float, yaw: Float, gyroY: Float, accelY: Float) {
             instance?.updateText(roll, yaw, gyroY, accelY)
         }
+        fun updateConnectionState(state: String) {
+            instance?.updateConnectionText(state)
+        }
     }
 
     override fun onCreate() {
@@ -42,8 +45,18 @@ class DebugOverlayService : Service() {
     }
 
     private fun updateText(roll: Float, yaw: Float, gyroY: Float, accelY: Float) {
-        textView.text = String.format("Roll: %.1f\nYaw: %.1f\nGyroY: %.2f\nAccelY: %.2f",
-            roll, yaw, gyroY, accelY)
+        // Show sensor values and current connection state (if any)
+        val conn = textView.getTag() as? String ?: ""
+        textView.text = String.format("%s\nRoll: %.1f\nYaw: %.1f\nGyroY: %.2f\nAccelY: %.2f",
+            if (conn.isNotBlank()) "Conn: $conn" else "", roll, yaw, gyroY, accelY)
+    }
+
+    private fun updateConnectionText(state: String) {
+        // store into a tag so updateText can include it
+        textView.setTag(state)
+        // refresh visible text leaving sensor placeholders intact
+        val current = textView.text.toString()
+        textView.text = if (current.isNotBlank()) "$state\n$current" else state
     }
 
     override fun onDestroy() {

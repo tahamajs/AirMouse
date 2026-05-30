@@ -10,6 +10,7 @@ import (
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
+	"airmouse-go/internal/control/personalization"
 	"airmouse-go/internal/protocol"
 )
 
@@ -26,6 +27,7 @@ type App struct {
 	devicesTab   fyne.CanvasObject
 	networkTab   fyne.CanvasObject
 	settingsTab  fyne.CanvasObject
+	analyticsTab fyne.CanvasObject
 	logsTab      fyne.CanvasObject
 
 	// System tray
@@ -66,6 +68,7 @@ func (a *App) Run() error {
 	a.devicesTab = NewDevicesTab(a.deviceMgr)
 	a.networkTab = NewNetworkTab(a.cfg)
 	a.settingsTab = NewSettingsTab(a.cfg, a.mouse)
+	a.analyticsTab = NewAnalyticsTab(personalization.NewDataCollector())
 	a.logsTab = NewLogsTab()
 
 	tabs := container.NewAppTabs(
@@ -73,6 +76,7 @@ func (a *App) Run() error {
 		container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
 		container.NewTabItemWithIcon("Network", theme.NetworkIcon(), a.networkTab),
 		container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), a.settingsTab),
+		container.NewTabItemWithIcon("Analytics", theme.ContentAddIcon(), a.analyticsTab),
 		container.NewTabItemWithIcon("Logs", theme.DocumentIcon(), a.logsTab),
 	)
 	tabs.SetTabLocation(container.TabLocationLeading)
@@ -86,11 +90,9 @@ func (a *App) Run() error {
 	)
 	viewMenu := fyne.NewMenu("View",
 		fyne.NewMenuItem("Refresh", func() {
-			a.devicesTab.Refresh()
-			a.dashboardTab.Refresh()
-		}),
-		fyne.NewMenuItem("Clear Logs", func() {
-			a.logsTab.Clear()
+			if a.window != nil && a.window.Content() != nil {
+				a.window.Content().Refresh()
+			}
 		}),
 	)
 	helpMenu := fyne.NewMenu("Help",

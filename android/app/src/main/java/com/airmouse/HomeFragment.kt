@@ -26,12 +26,11 @@ import androidx.lifecycle.lifecycleScope
 import com.airmouse.bluetooth.BluetoothMouseService
 import com.airmouse.bluetooth.BtHidHelper
 import com.airmouse.domain.GestureDetector
-import com.airmouse.network.AutoReconnect
-import com.airmouse.network.DataSender
+// networking handled via ConnectionManager
+import com.airmouse.ConnectionManager
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.SensorService
 import com.airmouse.touchpad.TouchpadFragment
-import com.airmouse.touchpad.TcpClient
 import com.airmouse.ui.CalibrationActivity
 import com.airmouse.ui.SettingsDialog
 import com.airmouse.utils.*
@@ -54,8 +53,7 @@ class HomeFragment : Fragment() {
     private lateinit var sensorService: SensorService
     private lateinit var calibrationHelper: CalibrationHelper
     private lateinit var gestureDetector: GestureDetector
-    private lateinit var dataSender: DataSender
-    private lateinit var autoReconnect: AutoReconnect
+    // dataSender and autoReconnect lifecycle is handled by ConnectionManager
     private lateinit var preferences: PreferencesManager
     private lateinit var batterySaver: BatterySaver
     private lateinit var debugOverlay: DebugOverlay
@@ -103,7 +101,7 @@ class HomeFragment : Fragment() {
     // ---------- Touchpad ----------
     private lateinit var touchpadContainer: FrameLayout
     private var isTouchpadMode = false
-    private var tcpClient: TcpClient? = null
+    // tcpClient for touchpad diagnostics is handled by ConnectionManager
     private lateinit var motionControlsContainer: ViewGroup
 
     // ---------- State ----------
@@ -161,6 +159,38 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
         initializeComponents()
+        ConnectionManager.init(requireContext())
+        // Observe connection manager live data to keep UI in sync
+        ConnectionManager.tcpStatus.observe(viewLifecycleOwner) { status ->
+            if (!isActive) connectionStatusText.text = status
+        }
+        ConnectionManager.tcpState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                ConnectionManager.ConnectionState.CONNECTED -> {
+                    connectBtn.text = "Disconnect"
+                    connectionQualityIcon.setImageResource(R.drawable.ic_signal_good)
+                }
+                ConnectionManager.ConnectionState.CONNECTING -> {
+                    connectBtn.text = "Connect"
+                    connectionQualityIcon.setImageResource(R.drawable.ic_signal_fair)
+                }
+                else -> {
+                    connectBtn.text = "Connect"
+                    connectionQualityIcon.setImageResource(R.drawable.ic_signal_none)
+                }
+            }
+        }
+        ConnectionManager.dataSenderState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                ConnectionManager.ConnectionState.CONNECTED -> connectionStatusText.text = getString(R.string.status_active)
+                ConnectionManager.ConnectionState.RECONNECTING -> connectionStatusText.text = getString(R.string.reconnecting)
+                ConnectionManager.ConnectionState.DISCONNECTED -> connectionStatusText.text = getString(R.string.status_not_connected)
+                else -> {}
+            }
+        }
+        ConnectionManager.bluetoothRunning.observe(viewLifecycleOwner) { running ->
+            btMouseBtn.text = if (running) getString(R.string.bt_mouse_stop) else getString(R.string.bt_mouse_start)
+        }
         setupTouchpadMode(view)
         setupSensitivitySlider()
         setupClickListeners()
@@ -178,6 +208,9 @@ class HomeFragment : Fragment() {
         if (requireActivity().getSystemService("bluetooth_hid_device") == null) {
             btMouseBtn.isEnabled = false
             btMouseBtn.text = getString(R.string.bt_hid_unsupported)
+        } else {
+            // Reflect current Bluetooth service state in UI
+            btMouseBtn.text = if (BluetoothMouseService.instance == null) getString(R.string.bt_mouse_start) else getString(R.string.bt_mouse_stop)
         }
     }
 
@@ -249,12 +282,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupTouchpadMode(view: View) {
-        tcpClient = TcpClient { status ->
-            activity?.runOnUiThread { connectionStatusText.text = status }
-        }
-
         val touchpadFragment = TouchpadFragment()
-        touchpadFragment.tcpSender = { json -> tcpClient?.send(json) }
         childFragmentManager.beginTransaction()
             .add(R.id.touchpadContainer, touchpadFragment, "touchpad")
             .commit()
@@ -325,16 +353,24 @@ class HomeFragment : Fragment() {
         }
         preferences.setLastIp(ip)
         preferences.setLastPort(port)
-        // In real app, set up DataSender and connect
         connectionStatusText.text = getString(R.string.connecting)
-        // Simulate success for demo
-        connectionStatusText.text = getString(R.string.status_active_format, "$ip:$port")
-        connectionQualityIcon.setImageResource(R.drawable.ic_signal_good)
+        // Attempt to connect touchpad TCP client (used by touchpad UI / diagnostics)
+            try {
+                ConnectionManager.connectTcp(ip, port)
+                connectBtn.text = "Disconnect"
+                connectionQualityIcon.setImageResource(R.drawable.ic_signal_fair)
+            } catch (e: Exception) {
+                connectionStatusText.text = getString(R.string.connection_error, e.message)
+                connectionQualityIcon.setImageResource(R.drawable.ic_signal_none)
+            }
     }
 
     private fun disconnect() {
-        connectionStatusText.text = getString(R.string.disconnected)
+        // Disconnect both diagnostic tcp client and (if not active) any wired sender
+        ConnectionManager.disconnectTcp()
+        connectionStatusText.text = getString(R.string.status_not_connected)
         connectionQualityIcon.setImageResource(R.drawable.ic_signal_none)
+        connectBtn.text = "Connect"
     }
 
     private fun startAirMouse() {
@@ -364,30 +400,26 @@ class HomeFragment : Fragment() {
         lastMoveDispatchMs = 0L
 
         try {
-            dataSender = DataSender.getInstance(ip, port) ?: return
-            autoReconnect = AutoReconnect(dataSender, ip, port) { newSender ->
-                dataSender = newSender
-                attachSensorCallbacks()
-            }
-            dataSender.onConnected = {
-                requireActivity().runOnUiThread {
-                    connectionStatusText.text = getString(R.string.status_active_format, "$ip:$port")
-                    connectionQualityIcon.setImageResource(R.drawable.ic_signal_good)
-                    Snackbar.make(requireView(), getString(R.string.connected_to, "$ip:$port"), Snackbar.LENGTH_SHORT).show()
-                    if (preferences.isHapticEnabled()) vibrate(50)
-                    LogManager.add("Connected to $ip:$port")
-                }
-            }
-            dataSender.onDisconnected = {
-                requireActivity().runOnUiThread {
-                    connectionStatusText.text = getString(R.string.reconnecting)
-                    connectionQualityIcon.setImageResource(R.drawable.ic_signal_fair)
-                    LogManager.add("Disconnected from $ip:$port, retrying...")
+            // Start DataSender via ConnectionManager and observe its state
+            ConnectionManager.startDataSender(ip, port)
+            ConnectionManager.dataSenderState.observe(viewLifecycleOwner) { state ->
+                when (state) {
+                    ConnectionManager.ConnectionState.CONNECTED -> {
+                        connectionStatusText.text = getString(R.string.status_active_format, "$ip:$port")
+                        connectionQualityIcon.setImageResource(R.drawable.ic_signal_good)
+                        Snackbar.make(requireView(), getString(R.string.connected_to, "$ip:$port"), Snackbar.LENGTH_SHORT).show()
+                        if (preferences.isHapticEnabled()) vibrate(50)
+                        LogManager.add("Connected to $ip:$port")
+                    }
+                    ConnectionManager.ConnectionState.RECONNECTING -> {
+                        connectionStatusText.text = getString(R.string.reconnecting)
+                        connectionQualityIcon.setImageResource(R.drawable.ic_signal_fair)
+                        LogManager.add("Disconnected from $ip:$port, retrying...")
+                    }
+                    else -> {}
                 }
             }
             attachSensorCallbacks()
-            dataSender.start()
-            autoReconnect.start()
         } catch (e: Exception) {
             Toast.makeText(requireContext(), getString(R.string.connection_error, e.message), Toast.LENGTH_LONG).show()
             return
@@ -400,7 +432,7 @@ class HomeFragment : Fragment() {
         calibrateBtn.isEnabled = false
         calibrateFab.hide()
         updateCalibrationStatusUi()
-        tcpClient?.connect(ip, port)
+        ConnectionManager.connectTcp(ip, port)
         animateCardPulse(controlsCard)
     }
 
@@ -416,9 +448,8 @@ class HomeFragment : Fragment() {
         isActive = false
         if (::sensorService.isInitialized) sensorService.stop()
         if (::batterySaver.isInitialized) batterySaver.stop()
-        if (::autoReconnect.isInitialized) autoReconnect.stop()
-        if (::dataSender.isInitialized) dataSender.stopSending()
-        tcpClient?.disconnect()
+        ConnectionManager.stopDataSender()
+        ConnectionManager.disconnectTcp()
     }
 
     private fun attachSensorCallbacks() {
@@ -437,7 +468,7 @@ class HomeFragment : Fragment() {
                 val sendX = if (abs(smoothedMoveX) >= MOVE_DEADBAND) smoothedMoveX else 0f
                 val sendY = if (abs(smoothedMoveY) >= MOVE_DEADBAND) smoothedMoveY else 0f
                 if (sendX != 0f || sendY != 0f) {
-                    dataSender.sendMove(sendX, sendY)
+                    ConnectionManager.sendMove(sendX, sendY)
                     BluetoothMouseService.instance?.sendMouseReport(dx = sendX.toInt(), dy = sendY.toInt())
                 }
             }
@@ -454,28 +485,28 @@ class HomeFragment : Fragment() {
         }
 
         sensorService.setOnGestureDetected { gesture ->
-            when (gesture) {
+                when (gesture) {
                 GestureDetector.Gesture.CLICK -> {
-                    dataSender.sendClick()
+                    ConnectionManager.sendClick()
                     BluetoothMouseService.instance?.sendMouseReport(buttons = 0x01)
                     if (preferences.isHapticEnabled()) vibrate(30)
                     preferences.incrementClick()
                 }
                 GestureDetector.Gesture.DOUBLE_CLICK -> {
-                    dataSender.sendDoubleClick()
+                    ConnectionManager.sendDoubleClick()
                     BluetoothMouseService.instance?.sendMouseReport(buttons = 0x01)
                     if (preferences.isHapticEnabled()) vibrate(60)
                     preferences.incrementDoubleClick()
                 }
                 GestureDetector.Gesture.RIGHT_CLICK -> {
-                    dataSender.sendRightClick()
+                    ConnectionManager.sendRightClick()
                     BluetoothMouseService.instance?.sendMouseReport(buttons = 0x02)
                     if (preferences.isHapticEnabled()) vibrate(80)
                     preferences.incrementRightClick()
                 }
                 GestureDetector.Gesture.SCROLL_UP, GestureDetector.Gesture.SCROLL_DOWN -> {
                     val delta = if (gesture == GestureDetector.Gesture.SCROLL_UP) -1 else 1
-                    dataSender.sendScroll(delta)
+                    ConnectionManager.sendScroll(delta)
                     BluetoothMouseService.instance?.sendMouseReport(wheel = delta)
                     if (preferences.isHapticEnabled()) vibrate(20)
                     preferences.incrementScroll()
