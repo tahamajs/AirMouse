@@ -49,8 +49,8 @@ object ConnectionManager {
     fun init(context: Context) {
         appContext = context.applicationContext
         // wire existing WebSocket callbacks
-        WebSocketManager.onConnected = { _wsState.postValue(ConnectionState.CONNECTED) }
-        WebSocketManager.onDisconnected = { _wsState.postValue(ConnectionState.DISCONNECTED) }
+//        WebSocketManager.onConnected = { _wsState.postValue(ConnectionState.CONNECTED) }
+//        WebSocketManager.onDisconnected = { _wsState.postValue(ConnectionState.DISCONNECTED) }
         WebSocketManager.onMessage = { msg -> Log.d(TAG, "WS msg: $msg") }
     }
 
