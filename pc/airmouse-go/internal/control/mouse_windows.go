@@ -45,4 +45,17 @@ func (m *mouseController) executeDoubleClick() {
 
 func (m *mouseController) executeScroll(delta int) {
 	procMouseEvent.Call(MOUSEEVENTF_WHEEL, 0, 0, uintptr(delta*120), 0)
+}func NewMouseController(sensitivity float64) MouseController {
+    m := &mouseController{
+        // ... existing fields ...
+        humanizerEnabled: true,
+    }
+    cfg := config.Get()
+    if cfg.EnableHumanizer {
+        humanizerCfg := adaptivesmoothing.DefaultHumanizerConfig()
+        humanizerCfg.TremorAmplitude = cfg.HumanizerTremorAmplitude
+        humanizerCfg.BSplineSegments = cfg.HumanizerBSplineSegments
+        m.humanizer = adaptivesmoothing.NewHumanizer(humanizerCfg)
+    }
+    return m
 }

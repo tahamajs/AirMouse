@@ -135,3 +135,9 @@ type mouseController struct {
     mlBlend     float64
     positionHistory []float32   // last known cursor position (x, y)
 }
+
+type mouseController struct {
+    // ... existing fields ...
+    humanizer   *adaptivesmoothing.Humanizer
+    humanizerEnabled bool
+}
