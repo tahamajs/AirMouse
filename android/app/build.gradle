@@ -1,10 +1,8 @@
 plugins {
-
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-
+    id 'org.jetbrains.kotlin.plugin.compose' // ← این خط را اضافه کنید
 }
-
 android {
     namespace 'com.airmouse'
     compileSdk 36
@@ -85,6 +83,10 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment-ktx:2.7.7'
     implementation 'androidx.navigation:navigation-ui-ktx:2.7.7'
     implementation 'androidx.datastore:datastore-preferences:1.0.0'
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    implementation 'org.tensorflow:tensorflow-lite:2.16.1'
+    implementation 'com.airbnb.android:lottie-compose:6.4.0'
+    implementation 'com.airbnb.android:lottie:6.4.0'
 
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'

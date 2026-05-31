@@ -21,6 +21,7 @@ import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 
 class GestureInferenceService : Service(), SensorEventListener {
+    override fun onBind(intent: Intent?): IBinder? = null
 
     private val binder = LocalBinder()
     private lateinit var sensorManager: SensorManager
