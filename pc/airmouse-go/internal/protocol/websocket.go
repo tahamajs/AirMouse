@@ -198,6 +198,11 @@ func (s *Server) writePump(client *WSClient) {
 
 func (s *Server) processMessage(client *WSClient, msg *WMessage) {
 	switch msg.Type {
+	case "proximity":
+		var update ProximityUpdate
+		if err := json.Unmarshal(msg.Payload, &update); err == nil {
+			proximityMgr.ProcessUpdate(update)
+		}
 	case "move":
 		var p MovePayload
 		if err := json.Unmarshal(msg.Payload, &p); err == nil {

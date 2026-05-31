@@ -3,6 +3,7 @@
 package proximity
 
 import (
+	"log"
 	"syscall"
 )
 

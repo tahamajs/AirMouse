@@ -44,22 +44,33 @@ func NewManager() *Manager {
 	return m
 }
 
+// detectDesktopEnvironment sets the appropriate lock/unlock commands for the OS.
 func (m *Manager) detectDesktopEnvironment() {
-	// Linux methods
+	// Try GNOME / Unity / Cinnamon
 	if _, err := exec.LookPath("gnome-screensaver-command"); err == nil {
 		m.lockCmd = "gnome-screensaver-command --lock"
 		m.unlockCmd = "gnome-screensaver-command -d"
 		return
 	}
+	// Try KDE (qdbus)
+	if _, err := exec.LookPath("qdbus"); err == nil {
+		m.lockCmd = `qdbus org.freedesktop.ScreenSaver /ScreenSaver Lock`
+		return
+	}
+	// Try XScreenSaver
+	if _, err := exec.LookPath("xscreensaver-command"); err == nil {
+		m.lockCmd = "xscreensaver-command -lock"
+		return
+	}
+	// Fallback: loginctl (works on most systemd distros)
 	if _, err := exec.LookPath("loginctl"); err == nil {
 		m.lockCmd = "loginctl lock-session"
 		return
 	}
-	// Windows will be handled by OS-specific file
-	// macOS will be handled by OS-specific file
 	log.Println("Proximity: No lock command found for this OS")
 }
 
+// ProcessUpdate handles an incoming proximity update from the client.
 func (m *Manager) ProcessUpdate(update ProximityUpdate) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -88,6 +99,7 @@ func (m *Manager) ProcessUpdate(update ProximityUpdate) {
 	}
 }
 
+// applyProximityAction triggers screen lock/unlock based on state.
 func (m *Manager) applyProximityAction(isNear bool) {
 	if isNear && m.autoUnlockEnabled && !m.unlockInProgress {
 		m.unlockInProgress = true
@@ -100,6 +112,7 @@ func (m *Manager) applyProximityAction(isNear bool) {
 	}
 }
 
+// SetThresholds updates near/far thresholds for a device.
 func (m *Manager) SetThresholds(deviceID string, near, far float32) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -109,16 +122,23 @@ func (m *Manager) SetThresholds(deviceID string, near, far float32) {
 	}
 }
 
+// EnableAutoLock toggles automatic locking when device goes far.
 func (m *Manager) EnableAutoLock(enable bool) {
 	m.autoLockEnabled = enable
 }
 
+// EnableAutoUnlock toggles automatic unlocking when device returns near.
 func (m *Manager) EnableAutoUnlock(enable bool) {
 	m.autoUnlockEnabled = enable
 }
 
+// GetProximityState returns the current state for a device.
 func (m *Manager) GetProximityState(deviceID string) *DeviceProximity {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.devices[deviceID]
 }
+
+// The following methods are implemented in OS‑specific files.
+func (m *Manager) lockScreen()   {}
+func (m *Manager) unlockScreen() {}
