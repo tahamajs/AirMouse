@@ -211,3 +211,15 @@ func getConfigPath() string {
 	}
 	return filepath.Join(configDir, "airmouse", "config.json")
 }
+
+{
+    "enable_particle_filter": true,
+    "particle_filter_num_particles": 500,
+    "gesture_confidence_threshold": 0.7
+}type Config struct {
+    // ...
+    EnableParticleFilter      bool    `json:"enable_particle_filter"`
+    ParticleFilterNumParticles int     `json:"particle_filter_num_particles"`
+    GestureConfidenceThreshold float64 `json:"gesture_confidence_threshold"`
+    // ...
+}
