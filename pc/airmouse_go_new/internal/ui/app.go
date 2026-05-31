@@ -6,7 +6,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/getlantern/systray"
 
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
@@ -39,11 +38,12 @@ func NewApp(cfg *config.Config) *App {
 	if selectedTheme != nil {
 		fyneApp.Settings().SetTheme(selectedTheme)
 	}
+
 	// Create services
 	mouseRepo := repository.NewMouseRepository()
 	mouseSvc := service.NewMouseService(mouseRepo, cfg.Sensitivity)
 	gestureRepo := repository.NewGestureRepository()
-	gestureSvc, _ := service.NewGestureService(gestureRepo)
+	_, _ = service.NewGestureService(gestureRepo) // not directly used
 	clientRepo := repository.NewClientRepository()
 	connSvc := service.NewConnectionService(clientRepo, cfg.MaxClients)
 	mouseCtrl := mouse.New()
@@ -54,7 +54,7 @@ func NewApp(cfg *config.Config) *App {
 		mouseCtrl: mouseCtrl,
 		mouseSvc:  mouseSvc,
 		connSvc:   connSvc,
-		deviceMgr: device.NewManager(), // adjust as needed
+		deviceMgr: device.NewManager(),
 	}
 }
 
@@ -62,11 +62,12 @@ func (a *App) Run() error {
 	a.window = a.fyneApp.NewWindow("Air Mouse Pro Server")
 	a.window.Resize(fyne.NewSize(1200, 800))
 
+	// Create tabs
 	a.dashboardTab = NewDashboardTab(a.cfg, a.mouseSvc, a.deviceMgr)
 	a.devicesTab = NewDevicesTab(a.deviceMgr)
 	a.networkTab = NewNetworkTab(a.cfg)
 	a.settingsTab = NewSettingsTab(a.cfg, a.mouseSvc)
-	a.analyticsTab = NewAnalyticsTab(nil) // collector can be added later
+	a.analyticsTab = NewAnalyticsTab(nil) // you can pass a collector if available
 	a.logsTab = NewLogsTab()
 
 	tabs := container.NewAppTabs(
@@ -79,12 +80,12 @@ func (a *App) Run() error {
 	)
 	tabs.SetTabLocation(container.TabLocationLeading)
 
-	// Menu
+	// Menu bar
 	fileMenu := fyne.NewMenu("File",
 		fyne.NewMenuItem("Quit", func() { a.fyneApp.Quit() }),
 	)
 	helpMenu := fyne.NewMenu("Help",
-		fyne.NewMenuItem("About", func() { showAboutDialog(a.window) }),
+		fyne.NewMenuItem("About", func() { ShowAboutDialog(a.window) }),
 	)
 	a.window.SetMainMenu(fyne.NewMainMenu(fileMenu, helpMenu))
 
@@ -97,4 +98,6 @@ func (a *App) Run() error {
 	return nil
 }
 
-func (a *App) Stop() { a.fyneApp.Quit() }
+func (a *App) Stop() {
+	a.fyneApp.Quit()
+}
