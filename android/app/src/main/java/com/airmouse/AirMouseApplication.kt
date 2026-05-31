@@ -1,11 +1,13 @@
+// AirMouseApplication.kt
 package com.airmouse
 
 import android.app.Application
-import com.airmouse.utils.LogManager
+import dagger.hilt.android.HiltAndroidApp
 
+@HiltAndroidApp
 class AirMouseApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        LogManager.init(this)
+        // Any global initialisation
     }
 }
