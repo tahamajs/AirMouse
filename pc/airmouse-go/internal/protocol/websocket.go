@@ -194,7 +194,14 @@ func (s *Server) writePump(client *WSClient) {
 			}
 		}
 	}
-}
+}case "rssi":
+    var payload struct {
+        RSSI   float64 `json:"rssi"`
+        Device string  `json:"device,omitempty"`
+    }
+    if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+        proximityMgr.ProcessRSSIUpdate(payload.RSSI)
+    }
 
 func (s *Server) processMessage(client *WSClient, msg *WMessage) {
 	switch msg.Type {
