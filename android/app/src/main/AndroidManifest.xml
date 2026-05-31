@@ -32,7 +32,12 @@
 
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
+<service android:name=".voice.VoiceCommandService"
+    android:foregroundServiceType="microphone"
+    android:exported="false" />
 <service android:name=".voice.VoiceCommandService"
     android:foregroundServiceType="microphone"
     android:exported="false" />

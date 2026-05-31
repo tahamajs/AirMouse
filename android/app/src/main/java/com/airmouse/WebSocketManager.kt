@@ -95,3 +95,26 @@ class VoiceCommandsFragment : Fragment() {
         }
         send(json.toString())
     }
+
+
+    // WebSocketManager.kt – add these functions
+fun sendCommand(command: String, delta: Int = 0) {
+    val json = when (command) {
+        "click" -> JSONObject().apply {
+            put("type", "click")
+            put("payload", JSONObject().put("button", "left"))
+        }
+        "doubleclick" -> JSONObject().apply {
+            put("type", "doubleclick")
+        }
+        "rightclick" -> JSONObject().apply {
+            put("type", "rightclick")
+        }
+        "scroll" -> JSONObject().apply {
+            put("type", "scroll")
+            put("payload", JSONObject().put("delta", delta))
+        }
+        else -> return
+    }
+    send(json.toString())
+}
