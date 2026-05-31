@@ -104,7 +104,11 @@ func (m *mouseController) SetAcceleration(enabled bool, factor float64) {
 func (m *mouseController) GetSensitivity() float64 { return m.sensitivity }
 func (m *mouseController) SetSensitivity(s float64) { m.sensitivity = s }
 func (m *mouseController) EnablePredictive(enabled bool) { m.predEnabled = enabled }
-func (m *mouseController) SetPredictiveBlendFactor(factor float64) { m.predictor.SetBlendFactor(factor) }
+func (m *mouseController) SetPredictiveBlendFactor(factor float64) {
+	if m.predictor != nil {
+		m.predictor.SetBlendFactor(factor)
+	}
+}
 func (m *mouseController) EnableAISmoothing(enabled bool) {
 	m.aiEnabled = enabled
 	if m.aiSmoother != nil {
