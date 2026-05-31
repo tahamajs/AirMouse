@@ -4,23 +4,29 @@ import (
 	"airmouse-go/internal/domain/entity"
 )
 
-// GestureRepository defines the interface for gesture management.
+// GestureRepository manages gesture templates.
 type GestureRepository interface {
-	// SaveCustomGesture stores a custom gesture template.
-	SaveCustomGesture(name string, template []float64) error
+	// SaveTemplate stores a new or updates an existing gesture template.
+	SaveTemplate(template *entity.GestureTemplate) error
 
-	// LoadCustomGesture retrieves a gesture template by name.
-	LoadCustomGesture(name string) ([]float64, error)
+	// GetTemplate retrieves a template by its unique ID or name.
+	GetTemplate(idOrName string) (*entity.GestureTemplate, error)
 
-	// ListCustomGestures returns all custom gesture names.
-	ListCustomGestures() ([]string, error)
+	// ListTemplates returns all stored gesture templates, optionally filtered by type.
+	ListTemplates(filterType entity.GestureType) ([]*entity.GestureTemplate, error)
 
-	// DeleteCustomGesture removes a custom gesture.
-	DeleteCustomGesture(name string) error
+	// DeleteTemplate removes a template by ID.
+	DeleteTemplate(id string) error
 
-	// GetGestureThresholds returns the current thresholds for click, scroll, etc.
-	GetGestureThresholds() (clickThreshold, scrollThreshold, tiltThreshold float64, err error)
+	// DeleteAllByType removes all templates of a given type.
+	DeleteAllByType(gestureType entity.GestureType) (int, error)
 
-	// SetGestureThresholds updates the gesture thresholds.
-	SetGestureThresholds(click, scroll, tilt float64) error
+	// TemplateExists checks whether a template with the given name exists.
+	TemplateExists(name string) (bool, error)
+
+	// Count returns the total number of templates.
+	Count() (int, error)
+
+	// UpdateMetadata merges key‑value pairs into the template’s metadata.
+	UpdateMetadata(id string, metadata map[string]interface{}) error
 }

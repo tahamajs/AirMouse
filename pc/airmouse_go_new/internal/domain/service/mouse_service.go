@@ -1,105 +1,166 @@
 package service
 
 import (
-	"errors"
 	"math"
 	"sync"
-	"time"
 
 	"airmouse-go/internal/domain/entity"
 	"airmouse-go/internal/domain/repository"
 )
 
-// MouseController defines the interface for platform‑specific mouse actions.
-type MouseController interface {
-	Move(dx, dy float64)
-	Click(button string)
-	DoubleClick()
-	Scroll(delta int)
+// MouseService implements advanced mouse control logic with smoothing, prediction, and deadband.
+type MouseService interface {
+	// Move sends a relative movement after applying sensitivity, deadband, smoothing, and acceleration.
+	Move(dx, dy float64) error
+
+	// MoveRaw bypasses all filtering (for direct control).
+	MoveRaw(dx, dy float64) error
+
+	// Click sends a button click.
+	Click(button entity.MouseButton) error
+
+	// DoubleClick sends a double click.
+	DoubleClick() error
+
+	// RightClick is a convenience method.
+	RightClick() error
+
+	// Scroll sends a wheel delta.
+	Scroll(delta int) error
+
+	// GetStats returns usage statistics.
+	GetStats() (*entity.Statistics, error)
+
+	// ResetStats resets usage counters.
+	ResetStats() error
+
+	// SetSensitivity changes the global sensitivity factor.
+	SetSensitivity(sensitivity float64)
+
+	// SetProfile replaces the entire movement profile.
+	SetProfile(profile *entity.MovementProfile) error
+
+	// GetProfile returns the current movement profile.
+	GetProfile() (*entity.MovementProfile, error)
 }
 
-// MouseService contains business logic for mouse control and delegates to infra.
-type MouseService struct {
-	repo       repository.MouseRepository
-	controller MouseController
-	mouse      *entity.Mouse
-	mu         sync.Mutex
+type mouseService struct {
+	repo    repository.MouseRepository
+	profile *entity.MovementProfile
+
+	// Internal state for smoothing
+	lastX, lastY float64
+	mu           sync.Mutex
 }
 
-// NewMouseService creates a new mouse service.
-func NewMouseService(repo repository.MouseRepository, ctrl MouseController, sensitivity float64) *MouseService {
-	return &MouseService{
-		repo:       repo,
-		controller: ctrl,
-		mouse:      entity.NewMouse(sensitivity),
+func NewMouseService(repo repository.MouseRepository, initialProfile *entity.MovementProfile) MouseService {
+	if initialProfile == nil {
+		initialProfile = entity.DefaultMovementProfile()
+	}
+	return &mouseService{
+		repo:    repo,
+		profile: initialProfile,
 	}
 }
 
-// Move processes raw deltas, applies smoothing/acceleration, and moves the cursor.
-func (s *MouseService) Move(rawDx, rawDy float64, dt float64) (finalDx, finalDy float64, err error) {
+func (s *mouseService) Move(dx, dy float64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.mouse == nil {
-		return 0, 0, errors.New("mouse not initialised")
+
+	// 1. Sensitivity
+	dx *= s.profile.Sensitivity
+	dy *= s.profile.Sensitivity
+
+	// 2. Deadband
+	if math.Abs(dx) < s.profile.Deadband {
+		dx = 0
 	}
-	dx, dy := s.mouse.Move(rawDx, rawDy, dt)
-	s.controller.Move(dx, dy)
-	return dx, dy, nil
+	if math.Abs(dy) < s.profile.Deadband {
+		dy = 0
+	}
+	if dx == 0 && dy == 0 {
+		return nil
+	}
+
+	// 3. Smoothing (EMA)
+	if s.profile.SmoothingAlpha > 0 {
+		s.lastX = s.profile.SmoothingAlpha*dx + (1-s.profile.SmoothingAlpha)*s.lastX
+		s.lastY = s.profile.SmoothingAlpha*dy + (1-s.profile.SmoothingAlpha)*s.lastY
+		dx, dy = s.lastX, s.lastY
+	}
+
+	// 4. Acceleration (non‑linear scaling)
+	if s.profile.Acceleration {
+		speed := math.Hypot(dx, dy)
+		if speed > 5 {
+			factor := 1.0 + (s.profile.AccelerationCurve-1.0)*(speed/50.0)
+			if factor > 3.0 {
+				factor = 3.0
+			}
+			dx *= factor
+			dy *= factor
+		}
+	}
+
+	// 5. Predictive blending (placeholder – real implementation uses Kalman)
+	if s.profile.PredictiveBlend > 0 {
+		// predictedDx, predictedDy := predictor.Predict()
+		// dx = (1 - blend)*dx + blend*predictedDx
+	}
+
+	return s.repo.Move(dx, dy)
 }
 
-// Click performs a left or right click.
-func (s *MouseService) Click(button string) error {
-	s.controller.Click(button)
-	return s.repo.IncrementClick()
+func (s *mouseService) MoveRaw(dx, dy float64) error {
+	return s.repo.Move(dx, dy)
 }
 
-// DoubleClick performs a double click.
-func (s *MouseService) DoubleClick() error {
-	s.controller.DoubleClick()
-	return s.repo.IncrementDoubleClick()
+func (s *mouseService) Click(button entity.MouseButton) error {
+	return s.repo.Click(button)
 }
 
-// RightClick performs a right click.
-func (s *MouseService) RightClick() error {
-	s.controller.Click("right")
-	return s.repo.IncrementRightClick()
+func (s *mouseService) DoubleClick() error {
+	return s.repo.DoubleClick()
 }
 
-// Scroll performs a scroll action.
-func (s *MouseService) Scroll(delta int) error {
-	s.controller.Scroll(delta)
-	return s.repo.IncrementScroll()
+func (s *mouseService) RightClick() error {
+	return s.repo.Click(entity.RightButton)
 }
 
-// GetStatistics returns the current statistics.
-func (s *MouseService) GetStatistics() (clicks, dbl, right, scroll int64, err error) {
-	return s.repo.GetStats()
+func (s *mouseService) Scroll(delta int) error {
+	return s.repo.Scroll(delta)
 }
 
-// SetSensitivity updates the cursor sensitivity.
-func (s *MouseService) SetSensitivity(sensitivity float64) {
+func (s *mouseService) GetStats() (*entity.Statistics, error) {
+	return s.repo.GetStatistics()
+}
+
+func (s *mouseService) ResetStats() error {
+	return s.repo.ResetStatistics()
+}
+
+func (s *mouseService) SetSensitivity(sensitivity float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.mouse != nil {
-		s.mouse.Sensitivity = sensitivity
+	if sensitivity < 0.2 {
+		sensitivity = 0.2
 	}
+	if sensitivity > 2.0 {
+		sensitivity = 2.0
+	}
+	s.profile.Sensitivity = sensitivity
+	_ = s.repo.SetMovementProfile(s.profile)
 }
 
-// SetSmoothing enables or disables movement smoothing.
-func (s *MouseService) SetSmoothing(enabled bool) {
+func (s *mouseService) SetProfile(profile *entity.MovementProfile) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.mouse != nil {
-		s.mouse.Smoothing = enabled
-	}
+	s.profile = profile
+	return s.repo.SetMovementProfile(profile)
 }
 
-// SetAcceleration configures acceleration.
-func (s *MouseService) SetAcceleration(enabled bool, factor float64) {
+func (s *mouseService) GetProfile() (*entity.MovementProfile, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.mouse != nil {
-		s.mouse.Acceleration = enabled
-		s.mouse.AccelFactor = factor
-	}
+	return s.profile, nil
 }

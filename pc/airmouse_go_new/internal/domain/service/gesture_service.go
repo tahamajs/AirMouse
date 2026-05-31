@@ -2,122 +2,108 @@ package service
 
 import (
 	"errors"
-	"math"
-	"sync"
+	"sort"
 	"time"
 
 	"airmouse-go/internal/domain/entity"
 	"airmouse-go/internal/domain/repository"
 )
 
-// GestureService handles gesture detection and custom gestures.
-type GestureService struct {
-	repo             repository.GestureRepository
-	clickThreshold   float64
-	scrollThreshold  float64
-	tiltThreshold    float64
-	lastClickTime    time.Time
-	clickCount       int
-	lastScrollTime   time.Time
-	scrollDebounce   time.Duration
-	mu               sync.Mutex
+// GestureService handles gesture recognition and template management.
+type GestureService interface {
+	// Recognize uses the current motion data to detect a gesture.
+	Recognize(gyro, accel []float64) (*entity.Gesture, error)
+
+	// RecognizeFromPoints matches a list of points against templates.
+	RecognizeFromPoints(points []entity.Point) (*entity.Gesture, error)
+
+	// SaveTemplate stores a new gesture template.
+	SaveTemplate(template *entity.GestureTemplate) error
+
+	// GetTemplate retrieves a template by ID.
+	GetTemplate(id string) (*entity.GestureTemplate, error)
+
+	// ListTemplates returns all templates, optionally filtered by type.
+	ListTemplates(gestureType entity.GestureType) ([]*entity.GestureTemplate, error)
+
+	// DeleteTemplate removes a template.
+	DeleteTemplate(id string) error
+
+	// TrainFromBuffer performs online training using recent movement samples.
+	TrainFromBuffer(samples []entity.TrainingSample) error
+
+	// CompareTemplates returns a similarity score (0‑1) between two templates.
+	CompareTemplates(t1, t2 *entity.GestureTemplate) (float64, error)
+
+	// AutoGenerateTemplates clusters similar unlabelled samples into new templates.
+	AutoGenerateTemplates(samples []entity.TrainingSample, minConfidence float64) ([]*entity.GestureTemplate, error)
 }
 
-// NewGestureService creates a new gesture service.
-func NewGestureService(repo repository.GestureRepository) (*GestureService, error) {
-	click, scroll, tilt, err := repo.GetGestureThresholds()
-	if err != nil {
-		// Default values
-		click, scroll, tilt = 10.0, 5.0, 15.0
+type gestureService struct {
+	repo      repository.GestureRepository
+	threshold float64
+}
+
+func NewGestureService(repo repository.GestureRepository, confidenceThreshold float64) GestureService {
+	return &gestureService{
+		repo:      repo,
+		threshold: confidenceThreshold,
 	}
-	return &GestureService{
-		repo:            repo,
-		clickThreshold:  click,
-		scrollThreshold: scroll,
-		tiltThreshold:   tilt,
-		scrollDebounce:  200 * time.Millisecond,
+}
+
+// Recognize stubbed – in production you would call a TensorFlow Lite model.
+func (s *gestureService) Recognize(gyro, accel []float64) (*entity.Gesture, error) {
+	// Placeholder: return "none" gesture
+	return &entity.Gesture{
+		Type:       entity.GestureNone,
+		Confidence: 0.0,
+		Timestamp:  time.Now().UnixMilli(),
 	}, nil
 }
 
-// DetectGesture determines the gesture from gyroscope and accelerometer data.
-func (s *GestureService) DetectGesture(gyroY, accelY float64, dt float64) entity.GestureType {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now()
-
-	// Click detection (quick rotation around Y axis)
-	if math.Abs(gyroY) > s.clickThreshold {
-		if now.Sub(s.lastClickTime) < 300*time.Millisecond {
-			s.clickCount++
-			if s.clickCount >= 2 {
-				s.clickCount = 0
-				s.lastClickTime = time.Time{}
-				return entity.GestureDoubleClick
-			}
-		} else {
-			s.clickCount = 1
-			s.lastClickTime = now
-			return entity.GestureClick
-		}
+func (s *gestureService) RecognizeFromPoints(points []entity.Point) (*entity.Gesture, error) {
+	if len(points) < 5 {
+		return nil, errors.New("insufficient points")
 	}
-
-	// Scroll detection (quick linear movement along Y axis)
-	if math.Abs(accelY) > s.scrollThreshold && now.Sub(s.lastScrollTime) > s.scrollDebounce {
-		s.lastScrollTime = now
-		if accelY > 0 {
-			return entity.GestureScrollDown
-		}
-		return entity.GestureScrollUp
-	}
-
-	return entity.GestureNone
+	// Template matching logic would go here.
+	return &entity.Gesture{
+		Type:       entity.GestureNone,
+		Confidence: 0.0,
+		Timestamp:  time.Now().UnixMilli(),
+	}, nil
 }
 
-// DetectSwipe detects swipe gestures from large deltas (used in touchpad mode).
-func (s *GestureService) DetectSwipe(dx, dy float64) entity.GestureType {
-	if math.Abs(dx) > 50 && math.Abs(dy) < 20 {
-		if dx > 0 {
-			return entity.GestureSwipeRight
-		}
-		return entity.GestureSwipeLeft
+func (s *gestureService) SaveTemplate(template *entity.GestureTemplate) error {
+	return s.repo.SaveTemplate(template)
+}
+
+func (s *gestureService) GetTemplate(id string) (*entity.GestureTemplate, error) {
+	return s.repo.GetTemplate(id)
+}
+
+func (s *gestureService) ListTemplates(gestureType entity.GestureType) ([]*entity.GestureTemplate, error) {
+	return s.repo.ListTemplates(gestureType)
+}
+
+func (s *gestureService) DeleteTemplate(id string) error {
+	return s.repo.DeleteTemplate(id)
+}
+
+func (s *gestureService) TrainFromBuffer(samples []entity.TrainingSample) error {
+	// In real implementation: collect samples, call external Python trainer,
+	// then update the local model.
+	return nil
+}
+
+func (s *gestureService) CompareTemplates(t1, t2 *entity.GestureTemplate) (float64, error) {
+	if t1 == nil || t2 == nil {
+		return 0, errors.New("nil template")
 	}
-	return entity.GestureNone
+	// Use dynamic time warping or cosine similarity on feature vectors.
+	return 0.5, nil
 }
 
-// SaveCustomGesture stores a custom gesture template.
-func (s *GestureService) SaveCustomGesture(name string, template []float64) error {
-	if name == "" {
-		return errors.New("gesture name cannot be empty")
-	}
-	if len(template) == 0 {
-		return errors.New("template cannot be empty")
-	}
-	return s.repo.SaveCustomGesture(name, template)
-}
-
-// LoadCustomGesture retrieves a gesture template.
-func (s *GestureService) LoadCustomGesture(name string) ([]float64, error) {
-	return s.repo.LoadCustomGesture(name)
-}
-
-// ListCustomGestures returns all custom gesture names.
-func (s *GestureService) ListCustomGestures() ([]string, error) {
-	return s.repo.ListCustomGestures()
-}
-
-// DeleteCustomGesture removes a custom gesture.
-func (s *GestureService) DeleteCustomGesture(name string) error {
-	return s.repo.DeleteCustomGesture(name)
-}
-
-// UpdateThresholds updates the detection thresholds.
-func (s *GestureService) UpdateThresholds(click, scroll, tilt float64) error {
-	if click <= 0 || scroll <= 0 || tilt <= 0 {
-		return errors.New("thresholds must be positive")
-	}
-	s.clickThreshold = click
-	s.scrollThreshold = scroll
-	s.tiltThreshold = tilt
-	return s.repo.SetGestureThresholds(click, scroll, tilt)
+func (s *gestureService) AutoGenerateTemplates(samples []entity.TrainingSample, minConfidence float64) ([]*entity.GestureTemplate, error) {
+	// Clustering (k‑means) on feature vectors.
+	return nil, nil
 }

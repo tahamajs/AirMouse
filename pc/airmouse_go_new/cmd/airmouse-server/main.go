@@ -1,70 +1,67 @@
 package main
 
 import (
-	"log"
+	"context"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"airmouse-go/internal/domain/service"
 	"airmouse-go/internal/handler/http"
 	"airmouse-go/internal/handler/websocket"
-	"airmouse-go/internal/infra/config"
 	"airmouse-go/internal/infra/logger"
-	mouseInfra "airmouse-go/internal/infra/mouse"
+	"airmouse-go/internal/infra/mouse"
+	"airmouse-go/internal/pkg/config"
 	"airmouse-go/internal/repository"
 )
 
 func main() {
-	cfg := config.Get()
-	logger.Init(cfg.LogLevel, cfg.LogFile)
-	defer logger.Close()
+	cfg := config.Load()
+	logger.Init(cfg.LogLevel)
 
-	// Repositories
-	mouseRepo := repository.NewMouseRepository()
+	mouseCtrl, err := mouse.NewMouseController(cfg.Sensitivity)
+	if err != nil {
+		logger.Fatal("Failed to create mouse controller", "error", err)
+	}
+
+	mouseRepo := repository.NewMouseRepository(mouseCtrl)
 	gestureRepo := repository.NewGestureRepository()
 	clientRepo := repository.NewClientRepository()
 
-	// Infrastructure mouse controller
-	mouseCtrl := mouseInfra.New()
+	mouseService := service.NewMouseService(mouseRepo, cfg.Sensitivity, cfg.PredictiveBlendFactor)
+	gestureService := service.NewGestureService(gestureRepo, cfg.GestureConfidenceThreshold)
+	connectionService := service.NewConnectionService(clientRepo)
 
-	// Domain services (with infrastructure dependency)
-	mouseSvc := service.NewMouseService(mouseRepo, mouseCtrl, cfg.Sensitivity)
-	gestureSvc, _ := service.NewGestureService(gestureRepo)
-	connSvc := service.NewConnectionService(clientRepo, cfg.MaxClients)
-
-	// WebSocket hub
-	hub := websocket.NewHub()
+	hub := websocket.NewHub(mouseService, gestureService, connectionService)
 	go hub.Run()
 
-	// WebSocket handler
-	wsHandler := websocket.NewHandler(hub, mouseSvc, gestureSvc, connSvc)
+	router := http.NewRouter(hub, cfg)
 
-	// HTTP router and middleware
-	router := http.NewRouter(wsHandler)
-	handler := http.RecoverMiddleware(http.LoggingMiddleware(router.Handler()))
-
-	// Start server
-	addr := cfg.Host + ":" + string(rune(cfg.Port))
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: handler,
+		Addr:         ":" + cfg.Port,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	go func() {
-		logger.Info("Air Mouse server listening on %s", addr)
+		logger.Info("Starting server", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("Server failed: %v", err)
+			logger.Fatal("Server failed", "error", err)
 		}
 	}()
 
-	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	logger.Info("Shutting down server...")
 
-	logger.Info("Shutting down...")
-	srv.Close()
-	logger.Info("Shutdown complete")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("Server shutdown error", "error", err)
+	}
+	logger.Info("Server stopped")
 }

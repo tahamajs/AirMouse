@@ -4,26 +4,41 @@ import (
 	"airmouse-go/internal/domain/entity"
 )
 
-// MouseRepository defines the interface for accessing mouse state.
+// MouseRepository abstracts the actual mouse control hardware.
 type MouseRepository interface {
-	// Save persists the current mouse state.
-	Save(mouse *entity.Mouse) error
+	// Move moves the cursor by delta pixels.
+	Move(dx, dy float64) error
 
-	// Load retrieves the last saved mouse state.
-	Load() (*entity.Mouse, error)
+	// MoveSmooth moves the cursor along a bezier curve (for human‑like motion).
+	MoveSmooth(points []entity.Point, durationMs int) error
 
-	// GetStats returns the current statistics (clicks, scrolls, etc.).
-	GetStats() (clicks, double, right, scroll int64, err error)
+	// Click simulates a mouse button click.
+	Click(button entity.MouseButton) error
 
-	// IncrementClick increments the click counter.
-	IncrementClick() error
+	// DoubleClick simulates a double click on the left button.
+	DoubleClick() error
 
-	// IncrementDoubleClick increments the double click counter.
-	IncrementDoubleClick() error
+	// ClickAt moves to a position and clicks.
+	ClickAt(x, y int, button entity.MouseButton) error
 
-	// IncrementRightClick increments the right click counter.
-	IncrementRightClick() error
+	// Scroll simulates wheel movement.
+	Scroll(delta int) error
 
-	// IncrementScroll increments the scroll counter.
-	IncrementScroll() error
+	// GetPosition returns the current cursor coordinates.
+	GetPosition() (x, y int, err error)
+
+	// SetPosition moves the cursor to absolute screen coordinates.
+	SetPosition(x, y int) error
+
+	// GetMovementProfile returns the current advanced settings.
+	GetMovementProfile() (*entity.MovementProfile, error)
+
+	// SetMovementProfile updates all advanced settings at once.
+	SetMovementProfile(profile *entity.MovementProfile) error
+
+	// GetStatistics returns usage counters.
+	GetStatistics() (*entity.Statistics, error)
+
+	// ResetStatistics zeroes all counters.
+	ResetStatistics() error
 }
