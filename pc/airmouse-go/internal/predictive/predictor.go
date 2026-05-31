@@ -1,4 +1,3 @@
-// internal/predictive/predictor.go
 package predictive
 
 import (
@@ -8,11 +7,10 @@ import (
 
 // MovementPredictor applies Kalman filtering to incoming movement deltas.
 type MovementPredictor struct {
-    kf        *KalmanFilter2D
-    lastTime  time.Time
-    mu        sync.Mutex
-    enabled   bool
-    // Smoothing factor for blending raw and predicted (0 = raw, 1 = predicted)
+    kf          *KalmanFilter2D
+    lastTime    time.Time
+    mu          sync.Mutex
+    enabled     bool
     blendFactor float64
 }
 
@@ -27,7 +25,6 @@ func NewMovementPredictor(dtSeconds float64, blendFactor float64) *MovementPredi
 }
 
 // AddMovement feeds a raw movement delta (dx, dy) into the predictor.
-// It predicts the next movement and returns a smoothed delta.
 func (p *MovementPredictor) AddMovement(dx, dy float64) (smoothedDx, smoothedDy float64) {
     p.mu.Lock()
     defer p.mu.Unlock()
@@ -41,19 +38,12 @@ func (p *MovementPredictor) AddMovement(dx, dy float64) (smoothedDx, smoothedDy 
     if dt < 0.001 {
         dt = 0.001
     }
-    // Update filter time step (dynamic dt)
     p.kf.dt = dt
 
-    // Prediction step
     p.kf.Predict()
-
-    // Update with measurement (the raw movement)
     p.kf.Update(dx, dy)
 
-    // Get predicted movement for next step
     predDx, predDy := p.kf.GetPredictedMovement()
-
-    // Blend raw and predicted
     smoothedDx = (1-p.blendFactor)*dx + p.blendFactor*predDx
     smoothedDy = (1-p.blendFactor)*dy + p.blendFactor*predDy
 
