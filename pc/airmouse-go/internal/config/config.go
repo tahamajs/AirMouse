@@ -113,6 +113,12 @@ MLModelPath:         "models/lstm_predictor.onnx",
 MLSequenceLength:    16,
 MLBlendFactor:       0.6,
 MLInferenceInterval: 20,
+// Humanizer (human‑like movement injection)
+EnableHumanizer              bool    `json:"enable_humanizer"`
+HumanizerTremorAmplitude    float64 `json:"humanizer_tremor_amplitude"`
+HumanizerBSplineSegments    int     `json:"humanizer_bspline_segments"`
+HumanizerNoiseAmplitude     float64 `json:"humanizer_noise_amplitude"`
+HumanizerVelocityPeakRatio  float64 `json:"humanizer_velocity_peak_ratio"`
 		Sensitivity:            0.5,
 		MoveRateLimit:          60,
 		BufferSize:             1024,
