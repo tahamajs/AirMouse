@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	user32         = syscall.NewLazyDLL("user32.dll")
-	procMouseEvent = user32.NewProc("mouse_event")
+	user32     = syscall.NewLazyDLL("user32.dll")
+	mouseEvent = user32.NewProc("mouse_event")
 )
 
 const (
@@ -20,31 +20,31 @@ const (
 	MOUSEEVENTF_WHEEL     = 0x0800
 )
 
-type WindowsMouse struct{}
+type windowsMouse struct{}
 
-func New() MouseController {
-	return &WindowsMouse{}
+func NewMouseController(sensitivity float64) (MouseController, error) {
+	return &windowsMouse{}, nil
 }
 
-func (m *WindowsMouse) Move(dx, dy float64) {
-	procMouseEvent.Call(MOUSEEVENTF_MOVE, uintptr(int32(dx)), uintptr(int32(dy)), 0, 0)
+func (m *windowsMouse) Move(dx, dy float64) {
+	mouseEvent.Call(MOUSEEVENTF_MOVE, uintptr(int32(dx)), uintptr(int32(dy)), 0, 0)
 }
 
-func (m *WindowsMouse) Click(button string) {
+func (m *windowsMouse) Click(button string) {
 	if button == "left" {
-		procMouseEvent.Call(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
-		procMouseEvent.Call(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+		mouseEvent.Call(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+		mouseEvent.Call(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
 	} else if button == "right" {
-		procMouseEvent.Call(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
-		procMouseEvent.Call(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
+		mouseEvent.Call(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
+		mouseEvent.Call(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
 	}
 }
 
-func (m *WindowsMouse) DoubleClick() {
+func (m *windowsMouse) DoubleClick() {
 	m.Click("left")
 	m.Click("left")
 }
 
-func (m *WindowsMouse) Scroll(delta int) {
-	procMouseEvent.Call(MOUSEEVENTF_WHEEL, 0, 0, uintptr(delta*120), 0)
+func (m *windowsMouse) Scroll(delta int) {
+	mouseEvent.Call(MOUSEEVENTF_WHEEL, 0, 0, uintptr(delta*120), 0)
 }
