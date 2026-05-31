@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -25,20 +26,22 @@ func main() {
 	gestureRepo := repository.NewGestureRepository()
 	clientRepo := repository.NewClientRepository()
 
-	// Domain services
-	mouseSvc := service.NewMouseService(mouseRepo, cfg.Sensitivity)
-	gestureSvc, _ := service.NewGestureService(gestureRepo)
-	connSvc := service.NewConnectionService(clientRepo, cfg.MaxClients)
-
 	// Infrastructure mouse controller
 	mouseCtrl := mouseInfra.New()
 
-	// WebSocket hub and handler
+	// Domain services (with infrastructure dependency)
+	mouseSvc := service.NewMouseService(mouseRepo, mouseCtrl, cfg.Sensitivity)
+	gestureSvc, _ := service.NewGestureService(gestureRepo)
+	connSvc := service.NewConnectionService(clientRepo, cfg.MaxClients)
+
+	// WebSocket hub
 	hub := websocket.NewHub()
 	go hub.Run()
+
+	// WebSocket handler
 	wsHandler := websocket.NewHandler(hub, mouseSvc, gestureSvc, connSvc)
 
-	// HTTP router
+	// HTTP router and middleware
 	router := http.NewRouter(wsHandler)
 	handler := http.RecoverMiddleware(http.LoggingMiddleware(router.Handler()))
 
@@ -50,7 +53,7 @@ func main() {
 	}
 
 	go func() {
-		logger.Info("Starting Air Mouse server on %s", addr)
+		logger.Info("Air Mouse server listening on %s", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("Server failed: %v", err)
 		}
@@ -60,6 +63,8 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+
 	logger.Info("Shutting down...")
 	srv.Close()
+	logger.Info("Shutdown complete")
 }

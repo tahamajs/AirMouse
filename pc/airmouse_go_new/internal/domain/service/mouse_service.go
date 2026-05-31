@@ -3,65 +3,83 @@ package service
 import (
 	"errors"
 	"math"
+	"sync"
 	"time"
 
 	"airmouse-go/internal/domain/entity"
 	"airmouse-go/internal/domain/repository"
 )
 
-// MouseService contains the business logic for mouse control.
+// MouseController defines the interface for platform‑specific mouse actions.
+type MouseController interface {
+	Move(dx, dy float64)
+	Click(button string)
+	DoubleClick()
+	Scroll(delta int)
+}
+
+// MouseService contains business logic for mouse control and delegates to infra.
 type MouseService struct {
-	repo      repository.MouseRepository
-	mouse     *entity.Mouse
+	repo       repository.MouseRepository
+	controller MouseController
+	mouse      *entity.Mouse
+	mu         sync.Mutex
 }
 
 // NewMouseService creates a new mouse service.
-func NewMouseService(repo repository.MouseRepository, sensitivity float64) *MouseService {
+func NewMouseService(repo repository.MouseRepository, ctrl MouseController, sensitivity float64) *MouseService {
 	return &MouseService{
-		repo:  repo,
-		mouse: entity.NewMouse(sensitivity),
+		repo:       repo,
+		controller: ctrl,
+		mouse:      entity.NewMouse(sensitivity),
 	}
 }
 
-// Move processes raw movement deltas and returns the final movement to apply.
-func (s *MouseService) Move(dx, dy float64, dt float64) (finalDx, finalDy float64, err error) {
+// Move processes raw deltas, applies smoothing/acceleration, and moves the cursor.
+func (s *MouseService) Move(rawDx, rawDy float64, dt float64) (finalDx, finalDy float64, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.mouse == nil {
 		return 0, 0, errors.New("mouse not initialised")
 	}
-	return s.mouse.Move(dx, dy, dt), nil
+	dx, dy := s.mouse.Move(rawDx, rawDy, dt)
+	s.controller.Move(dx, dy)
+	return dx, dy, nil
 }
 
-// Click registers a click action.
+// Click performs a left or right click.
 func (s *MouseService) Click(button string) error {
-	if err := s.repo.IncrementClick(); err != nil {
-		return err
-	}
-	// Additional business logic (e.g., log click)
-	return nil
+	s.controller.Click(button)
+	return s.repo.IncrementClick()
 }
 
-// DoubleClick registers a double click action.
+// DoubleClick performs a double click.
 func (s *MouseService) DoubleClick() error {
+	s.controller.DoubleClick()
 	return s.repo.IncrementDoubleClick()
 }
 
-// RightClick registers a right click action.
+// RightClick performs a right click.
 func (s *MouseService) RightClick() error {
+	s.controller.Click("right")
 	return s.repo.IncrementRightClick()
 }
 
-// Scroll registers a scroll action.
+// Scroll performs a scroll action.
 func (s *MouseService) Scroll(delta int) error {
+	s.controller.Scroll(delta)
 	return s.repo.IncrementScroll()
 }
 
 // GetStatistics returns the current statistics.
-func (s *MouseService) GetStatistics() (clicks, double, right, scroll int64, err error) {
+func (s *MouseService) GetStatistics() (clicks, dbl, right, scroll int64, err error) {
 	return s.repo.GetStats()
 }
 
 // SetSensitivity updates the cursor sensitivity.
 func (s *MouseService) SetSensitivity(sensitivity float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.mouse != nil {
 		s.mouse.Sensitivity = sensitivity
 	}
@@ -69,6 +87,8 @@ func (s *MouseService) SetSensitivity(sensitivity float64) {
 
 // SetSmoothing enables or disables movement smoothing.
 func (s *MouseService) SetSmoothing(enabled bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.mouse != nil {
 		s.mouse.Smoothing = enabled
 	}
@@ -76,15 +96,10 @@ func (s *MouseService) SetSmoothing(enabled bool) {
 
 // SetAcceleration configures acceleration.
 func (s *MouseService) SetAcceleration(enabled bool, factor float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.mouse != nil {
 		s.mouse.Acceleration = enabled
 		s.mouse.AccelFactor = factor
-	}
-}
-
-// Reset resets the mouse state.
-func (s *MouseService) Reset() {
-	if s.mouse != nil {
-		s.mouse.Reset()
 	}
 }
