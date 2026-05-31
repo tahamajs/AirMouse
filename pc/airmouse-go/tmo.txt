@@ -1,0 +1,6347 @@
+package main
+
+import (
+    "os"
+    "os/signal"
+    "syscall"
+
+    "airmouse-go/internal/auth"
+    "airmouse-go/internal/config"
+    "airmouse-go/internal/control"
+    "airmouse-go/internal/device"
+    "airmouse-go/internal/protocol"
+    "airmouse-go/internal/utils"
+)
+
+func main() {
+    utils.InitLogger()
+    cfg := config.Get()
+    utils.LogInfo("Air Mouse Pro Server starting", "version", "3.0.0")
+
+    // 1. Device manager (stores paired devices)
+    deviceMgr := device.NewManager()
+
+    // 2. Auth manager (generates pairing tokens, validates clients)
+    authMgr := auth.NewManager(cfg.AuthSecret)
+
+    // 3. Mouse controller
+    mouseCtrl := control.NewMouseController(cfg.Sensitivity)
+    mouseCtrl.SetSmoothing(true)
+    mouseCtrl.SetAcceleration(true, 1.5)
+
+    // 4. Protocol server (handles TCP, WebSocket, etc.)
+    server := protocol.NewProtocolServer(mouseCtrl, deviceMgr, authMgr)
+    if err := server.Start(); err != nil {
+        utils.LogFatal("Failed to start server", "error", err)
+    }
+
+    // 5. Start pairing UI (if needed)
+    if cfg.EnablePairingUI {
+        startPairingUI(authMgr, cfg)
+    }
+
+    // 6. Wait for shutdown signal
+    sigChan := make(chan os.Signal, 1)
+    signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+    <-sigChan
+
+    utils.LogInfo("Shutting down...")
+    server.Stop()
+    utils.LogInfo("Shutdown complete")
+}
+proximityMgr := proximity.NewManager()
+// Pass it to your WebSocket server
+wsServer := websocket.NewServer(cfg.WebSocketPort, mouseCtrl, deviceMgr, authMgr, proximityMgr)
+
+
+import "airmouse-go/internal/sysaction"
+
+// Inside your WebSocket or TCP message handler
+case "gesture":
+    var payload struct {
+        Gesture string `json:"gesture"`
+        Confidence float64 `json:"confidence"`
+    }
+    json.Unmarshal(msg.Payload, &payload)
+    // Map gesture to action
+    var action sysaction.Action
+    switch payload.Gesture {
+    case "ThumbsUp":
+        action = sysaction.ActionPlayPause
+    case "LeftSwipe":
+        action = sysaction.ActionNextTrack
+    case "RightSwipe":
+        action = sysaction.ActionPrevTrack
+    case "CircleCW":
+        action = sysaction.ActionVolumeUp
+    case "CircleCCW":
+        action = sysaction.ActionVolumeDown
+    }
+    sysaction.Execute(action)
+
+
+	func main() {
+    cfg := config.Get()
+    // ... existing initialisation ...
+
+    // Create mouse controller (which internally loads ML predictor if configured)
+    mouseCtrl := control.NewMouseController(cfg.Sensitivity)
+    mouseCtrl.SetSmoothing(true)
+    mouseCtrl.SetAcceleration(true, 1.5)
+
+    // Enable ML prediction if configured
+    if cfg.EnableMLPrediction {
+        mouseCtrl.EnableMLPrediction(true)
+        mouseCtrl.SetMLBlendFactor(cfg.MLBlendFactor)
+        log.Println("ML‑powered trajectory prediction enabled")
+    }
+
+    // ... rest of server setup ...
+}const (
+    TypeTCP       DeviceType = "tcp"
+    TypeWebSocket DeviceType = "websocket"
+    TypeUDP       DeviceType = "udp"
+    TypeBluetooth DeviceType = "bluetooth"
+    TypeUSB       DeviceType = "usb"      // Add this
+)package adaptivesmoothing
+
+import (
+    "math"
+)
+
+// BSpline3 generates a 3rd‑order B‑spline curve (degree 3) for smooth transitions.
+type BSpline3 struct {
+    points     [][2]float64 // control points
+    knots      []float64
+    degree     int
+    segments   int
+}
+
+// NewBSpline3 creates a 3rd‑order B‑spline from a slice of (x, y) points.
+func NewBSpline3(points [][2]float64, segments int) *BSpline3 {
+    n := len(points)
+    degree := 3
+    knots := make([]float64, n+degree+1)
+    
+    // Uniform knot vector
+    for i := 0; i < len(knots); i++ {
+        knots[i] = float64(i)
+    }
+    
+    return &BSpline3{
+        points:   points,
+        knots:    knots,
+        degree:   degree,
+        segments: segments,
+    }
+}
+
+// basisFunction evaluates the B‑spline basis function N(i, k) at parameter t.
+func (b *BSpline3) basisFunction(i, k int, t float64) float64 {
+    if k == 0 {
+        if b.knots[i] <= t && t < b.knots[i+1] {
+            return 1.0
+        }
+        return 0.0
+    }
+    
+    denom1 := b.knots[i+k] - b.knots[i]
+    denom2 := b.knots[i+k+1] - b.knots[i+1]
+    
+    var term1, term2 float64
+    if denom1 != 0 {
+        term1 = (t - b.knots[i]) / denom1 * b.basisFunction(i, k-1, t)
+    }
+    if denom2 != 0 {
+        term2 = (b.knots[i+k+1] - t) / denom2 * b.basisFunction(i+1, k-1, t)
+    }
+    return term1 + term2
+}
+
+// InterpolateAt returns the (x, y) position at parameter t (0 ≤ t ≤ 1).
+func (b *BSpline3) InterpolateAt(t float64) (x, y float64) {
+    // Map t to knot span
+    tScaled := t * float64(b.knots[len(b.knots)-1]-b.knots[0]) + b.knots[0]
+    n := len(b.points)
+    
+    for i := 0; i < n; i++ {
+        basis := b.basisFunction(i, b.degree, tScaled)
+        x += b.points[i][0] * basis
+        y += b.points[i][1] * basis
+    }
+    return
+}
+
+// SmoothPath generates a smooth path by interpolating between control points.
+func (b *BSpline3) SmoothPath() [][2]float64 {
+    path := make([][2]float64, b.segments+1)
+    for i := 0; i <= b.segments; i++ {
+        t := float64(i) / float64(b.segments)
+        x, y := b.InterpolateAt(t)
+        path[i] = [2]float64{x, y}
+    }
+    return path
+}package adaptivesmoothing
+
+import (
+    "math"
+    "math/rand"
+    "time"
+)
+
+// HumanizerConfig holds all parameters for human‑like movement injection.
+type HumanizerConfig struct {
+    EnableTremor        bool    `json:"enable_tremor"`
+    TremorAmplitude     float64 `json:"tremor_amplitude"`      // pixels (3‑5)
+    EnableBSpline       bool    `json:"enable_bspline"`
+    BSplineSegments     int     `json:"bspline_segments"`      // 10‑30
+    EnableVelocityProfile bool  `json:"enable_velocity_profile"`
+    VelocityPeakRatio   float64 `json:"velocity_peak_ratio"`   // 0.4‑0.6
+    NoiseAmplitude      float64 `json:"noise_amplitude"`       // 1‑3 pixels
+}
+
+// DefaultHumanizerConfig returns biologically realistic defaults.
+func DefaultHumanizerConfig() HumanizerConfig {
+    return HumanizerConfig{
+        EnableTremor:          true,
+        TremorAmplitude:       3.5,
+        EnableBSpline:         true,
+        BSplineSegments:       15,
+        EnableVelocityProfile: true,
+        VelocityPeakRatio:     0.55,
+        NoiseAmplitude:        2.0,
+    }
+}
+
+// Humanizer processes movement deltas to make them feel human‑like.
+type Humanizer struct {
+    config      HumanizerConfig
+    tremor      *TremorSimulator
+    lastX, lastY float64
+    velocityProg float64
+    splineBuffer [][2]float64
+    mu          sync.Mutex
+}
+
+// NewHumanizer creates a new humanizer with the given configuration.
+func NewHumanizer(config HumanizerConfig) *Humanizer {
+    h := &Humanizer{
+        config:      config,
+        velocityProg: 0,
+        splineBuffer: make([][2]float64, 0),
+    }
+    if config.EnableTremor {
+        h.tremor = NewTremorSimulator()
+        h.tremor.SetAmplitude(config.TremorAmplitude)
+    }
+    return h
+}
+
+// Process takes a raw movement delta (dx, dy) and returns a humanised delta.
+func (h *Humanizer) Process(dx, dy float64, currentX, currentY float64) (outDx, outDy float64) {
+    h.mu.Lock()
+    defer h.mu.Unlock()
+    
+    // 1. Apply B‑spline smoothing (if enabled)
+    if h.config.EnableBSpline && len(h.splineBuffer) > 0 {
+        dx, dy = h.applyBSpline(dx, dy, currentX, currentY)
+    }
+    
+    // 2. Apply log‑normal velocity profile (if enabled)
+    if h.config.EnableVelocityProfile {
+        distance := math.Hypot(dx, dy)
+        if distance > 5 {
+            h.velocityProg += 0.02
+            if h.velocityProg > 1 {
+                h.velocityProg = 1
+            }
+            v := NewLogNormalVelocity(distance, h.config.VelocityPeakRatio)
+            factor := v.VelocityAt(h.velocityProg)
+            if factor > 0 {
+                dx *= factor
+                dy *= factor
+            }
+        } else {
+            h.velocityProg = 0
+        }
+    }
+    
+    // 3. Add physiological tremor (if enabled)
+    if h.config.EnableTremor && h.tremor != nil {
+        tremorX, tremorY := h.tremor.Update()
+        dx += tremorX
+        dy += tremorY
+    }
+    
+    // 4. Add micro‑correction noise (always present for natural feel)
+    noiseX := (rand.Float64() - 0.5) * h.config.NoiseAmplitude
+    noiseY := (rand.Float64() - 0.5) * h.config.NoiseAmplitude
+    dx += noiseX
+    dy += noiseY
+    
+    return dx, dy
+}
+
+// UpdatePosition updates the humanizer’s internal position for spline calculation.
+func (h *Humanizer) UpdatePosition(x, y float64) {
+    h.mu.Lock()
+    defer h.mu.Unlock()
+    if len(h.splineBuffer) == 0 || (h.lastX != x && h.lastY != y) {
+        h.splineBuffer = append(h.splineBuffer, [2]float64{x, y})
+        if len(h.splineBuffer) > 10 {
+            h.splineBuffer = h.splineBuffer[1:]
+        }
+    }
+    h.lastX = x
+    h.lastY = y
+}
+
+func (h *Humanizer) applyBSpline(dx, dy float64, currentX, currentY float64) (newDx, newDy float64) {
+    if len(h.splineBuffer) < 4 {
+        return dx, dy
+    }
+    
+    // Create a B‑spline through the last few points
+    spline := NewBSpline3(h.splineBuffer, h.config.BSplineSegments)
+    path := spline.SmoothPath()
+    
+    if len(path) < 2 {
+        return dx, dy
+    }
+    
+    // Follow the smooth path
+    targetIdx := len(path) - 1
+    target := path[targetIdx]
+    newDx = target[0] - currentX
+    newDy = target[1] - currentY
+    
+    // Clamp to reasonable movement
+    if math.Abs(newDx) > math.Abs(dx)*1.5 {
+        newDx = dx
+    }
+    if math.Abs(newDy) > math.Abs(dy)*1.5 {
+        newDy = dy
+    }
+    return
+}
+
+// Reset clears internal state for a new movement (e.g., after click).
+func (h *Humanizer) Reset() {
+    h.mu.Lock()
+    defer h.mu.Unlock()
+    h.velocityProg = 0
+    h.splineBuffer = nil
+}package adaptivesmoothing
+
+import (
+    "testing"
+    "math"
+)
+
+func TestHumanizerProcess(t *testing.T) {
+    h := NewHumanizer(DefaultHumanizerConfig())
+    
+    // Simulate a movement
+    for i := 0; i < 50; i++ {
+        dx, dy := h.Process(5.0, 3.0, float64(i), float64(i))
+        if math.IsNaN(dx) || math.IsNaN(dy) {
+            t.Errorf("NaN output at step %d: (%f, %f)", i, dx, dy)
+        }
+        // Tremor should add some variation
+        if i > 10 && dx == 5.0 && dy == 3.0 {
+            t.Error("Tremor not applied – movement unchanged")
+        }
+    }
+}
+
+func TestTremorSimulator(t *testing.T) {
+    tRem := NewTremorSimulator()
+    for i := 0; i < 100; i++ {
+        dx, dy := tRem.Update()
+        if math.Abs(dx) > 10 || math.Abs(dy) > 10 {
+            t.Errorf("Tremor amplitude too high: %f, %f", dx, dy)
+        }
+    }
+}package adaptivesmoothing
+
+import (
+    "math"
+    "math/rand"
+    "sync"
+    "time"
+)
+
+// TremorSimulator generates band‑limited physiological tremor.
+type TremorSimulator struct {
+    mu          sync.Mutex
+    amplitude   float64   // pixels (typical 2‑5)
+    frequency   float64   // Hz (8‑12 Hz for hands)
+    phaseX      float64
+    phaseY      float64
+    lastUpdate  time.Time
+    dt          float64
+}
+
+// NewTremorSimulator creates a tremor simulator with realistic parameters.
+func NewTremorSimulator() *TremorSimulator {
+    return &TremorSimulator{
+        amplitude:  3.0 + rand.Float64()*2.0, // 3‑5 pixels
+        frequency:  10.0 + (rand.Float64()-0.5)*2.0, // 9‑11 Hz
+        phaseX:     rand.Float64() * 2 * math.Pi,
+        phaseY:     rand.Float64() * 2 * math.Pi,
+        lastUpdate: time.Now(),
+        dt:         0.02, // 50 Hz update rate
+    }
+}
+
+// Update generates tremor noise for the current time step.
+func (t *TremorSimulator) Update() (dx, dy float64) {
+    t.mu.Lock()
+    defer t.mu.Unlock()
+    
+    now := time.Now()
+    dt := now.Sub(t.lastUpdate).Seconds()
+    if dt < 0.001 {
+        dt = t.dt
+    }
+    t.lastUpdate = now
+    
+    // Simple sinusoidal oscillation (band‑limited noise)
+    t.phaseX += 2 * math.Pi * t.frequency * dt
+    t.phaseY += 2 * math.Pi * t.frequency * dt
+    
+    dx = t.amplitude * math.Sin(t.phaseX) * (rand.Float64()*0.5 + 0.5)
+    dy = t.amplitude * math.Sin(t.phaseY) * (rand.Float64()*0.5 + 0.5)
+    
+    // Add small random jitter (micro‑corrections)
+    dx += (rand.Float64() - 0.5) * 2.0
+    dy += (rand.Float64() - 0.5) * 2.0
+    
+    return
+}
+
+// SetAmplitude adjusts tremor intensity (caller can make it user‑configurable).
+func (t *TremorSimulator) SetAmplitude(amp float64) {
+    t.mu.Lock()
+    defer t.mu.Unlock()
+    t.amplitude = amp
+}package adaptivesmoothing
+
+import (
+    "math"
+)
+
+// LogNormalVelocity implements the Sigma‑Lognormal model for velocity profiles.
+type LogNormalVelocity struct {
+    mu      float64   // time delay (peak velocity moment)
+    sigma   float64   // response time spread
+    D       float64   // distance amplitude
+    t0      float64   // movement onset
+}
+
+// NewLogNormalVelocity creates a velocity profile from kinematic theory.
+func NewLogNormalVelocity(distance float64, peakTimeRatio float64) *LogNormalVelocity {
+    // peakTimeRatio is the fraction of total time at which peak velocity occurs
+    // Typical human movements peak at ≈ 40‑60% of total movement time
+    mu := peakTimeRatio
+    sigma := 0.2 + (rand.Float64()*0.1) // spread factor 0.2‑0.3
+    D := distance
+    return &LogNormalVelocity{
+        mu:    mu,
+        sigma: sigma,
+        D:     D,
+        t0:    0,
+    }
+}
+
+// VelocityAt returns the instantaneous velocity at relative time t (0–1).
+func (v *LogNormalVelocity) VelocityAt(t float64) float64 {
+    if t < 0 {
+        t = 0
+    }
+    if t > 1 {
+        t = 1
+    }
+    // Normalised log‑normal curve
+    // Λ(t) = 1 / (σ * √(2π) * t) * exp( - (ln(t) - μ)² / (2σ²) )
+    if t <= 0.001 {
+        return 0
+    }
+    lnTerm := math.Log(t) - v.mu
+    numerator := math.Exp(-(lnTerm * lnTerm) / (2 * v.sigma * v.sigma))
+    denominator := v.sigma * math.Sqrt(2*math.Pi) * t
+    if denominator == 0 {
+        return 0
+    }
+    return v.D * (numerator / denominator)
+}
+
+// ScaleMovement applies velocity‑based scaling to a movement delta.
+func ScaleMovement(dx, dy float64, distanceRatio float64) (scaledDx, scaledDy float64) {
+    // distanceRatio is the fraction of total movement completed (0–1)
+    v := NewLogNormalVelocity(math.Hypot(dx, dy), 0.55)
+    factor := v.VelocityAt(distanceRatio)
+    if factor < 0.1 {
+        factor = 0.1
+    }
+    if factor > 1.5 {
+        factor = 1.5
+    }
+    return dx * factor, dy * factor
+}package auth
+
+import (
+    "crypto/rand"
+    "encoding/base64"
+    "fmt"
+    "sync"
+    "time"
+
+    "github.com/golang-jwt/jwt/v5"
+)
+
+type Manager struct {
+    secret       []byte
+    pendingPairs map[string]time.Time // token -> expiry
+    mu           sync.RWMutex
+}
+
+func NewManager(secret string) *Manager {
+    // Secret should be at least 32 bytes
+    secretBytes := []byte(secret)
+    if len(secretBytes) < 32 {
+        // Pad or generate fallback
+        secretBytes = append(secretBytes, []byte("airmouse-fallback-secret-key-2025")...)
+        if len(secretBytes) > 32 {
+            secretBytes = secretBytes[:32]
+        }
+    }
+    return &Manager{
+        secret:       secretBytes,
+        pendingPairs: make(map[string]time.Time),
+    }
+}
+
+// GeneratePairingToken creates a new one-time token (expires in 5 minutes)
+func (m *Manager) GeneratePairingToken() (string, error) {
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+        "exp": time.Now().Add(5 * time.Minute).Unix(),
+        "iat": time.Now().Unix(),
+        "type": "pairing",
+    })
+    tokenString, err := token.SignedString(m.secret)
+    if err != nil {
+        return "", err
+    }
+    m.mu.Lock()
+    m.pendingPairs[tokenString] = time.Now().Add(5 * time.Minute)
+    m.mu.Unlock()
+    return tokenString, nil
+}
+
+// ValidatePairingToken checks if a token is valid and not used
+func (m *Manager) ValidatePairingToken(tokenString string) bool {
+    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+        return m.secret, nil
+    })
+    if err != nil || !token.Valid {
+        return false
+    }
+    m.mu.Lock()
+    expiry, exists := m.pendingPairs[tokenString]
+    if exists && expiry.After(time.Now()) {
+        delete(m.pendingPairs, tokenString)
+        m.mu.Unlock()
+        return true
+    }
+    m.mu.Unlock()
+    return false
+}
+
+// GetPairingQRData returns a string formatted for QR code (e.g., "airmouse://pair?token=...&ws=...")
+func (m *Manager) GetPairingQRData(wsURL string) (string, error) {
+    token, err := m.GeneratePairingToken()
+    if err != nil {
+        return "", err
+    }
+    return fmt.Sprintf("airmouse://pair?token=%s&ws=%s", token, wsURL), nil
+}package config
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"sync"
+)
+
+type Config struct {
+	// Server
+	Host           string `json:"host"`
+	Port           int    `json:"port"`
+	WebSocketPort  int    `json:"websocket_port"`
+	UDPPort        int    `json:"udp_port"`
+	EnableTCP      bool   `json:"enable_tcp"`
+	EnableWebSocket bool  `json:"enable_websocket"`
+	EnableUDP      bool   `json:"enable_udp"`
+	EnableBluetooth bool  `json:"enable_bluetooth"`
+	EnableSerial   bool   `json:"enable_serial"`
+
+	// Bluetooth
+	BluetoothAdapter string `json:"bluetooth_adapter"`
+	BLEEnabled       bool   `json:"ble_enabled"`
+	HIDProxyEnabled  bool   `json:"hid_proxy_enabled"`
+
+	// Security & Pairing
+	AuthEnabled     bool     `json:"auth_enabled"`
+	AuthSecret      string   `json:"auth_secret"`      // Used for JWT token signing
+	AuthTokens      []string `json:"auth_tokens"`      // Legacy static tokens
+	EncryptionKey   string   `json:"encryption_key"`
+	EnablePairingUI bool     `json:"enable_pairing_ui"` // Show QR code / pairing UI
+
+	// Performance
+	Sensitivity       float64 `json:"sensitivity"`
+	MoveRateLimit     int     `json:"move_rate_limit"`
+	BufferSize        int     `json:"buffer_size"`
+	HeartbeatInterval int     `json:"heartbeat_interval"`
+	ConnectionTimeout int     `json:"connection_timeout"`
+
+	// Device
+	MaxClients     int  `json:"max_clients"`
+	ClientNames    bool `json:"client_names"`
+	DeviceRegistry bool `json:"device_registry"`
+
+	// Discovery
+	DiscoveryPort int    `json:"discovery_port"`
+	MDNSName      string `json:"mdns_name"`
+
+	// UI
+	AccentColor  string `json:"accent_color"`
+	Theme        string `json:"theme"`
+	AlwaysOnTop  bool   `json:"always_on_top"`
+	ShowTrayIcon bool   `json:"show_tray_icon"`
+
+	// Logging
+	LogLevel string `json:"log_level"`
+	LogFile  string `json:"log_file"`
+
+	// AI / prediction
+	EnableAISmoothing         bool    `json:"enable_ai_smoothing"`
+	AIModelPath               string  `json:"ai_model_path"`
+	AIBlendFactor             float64 `json:"ai_blend_factor"`
+	EnablePersonalization     bool    `json:"enable_personalization"`
+	PersonalizationBuffer     int     `json:"personalization_buffer"`
+	PersonalizationInterval   int     `json:"personalization_interval"`
+	AutoSwapModel             bool    `json:"auto_swap_model"`
+	EnablePredictive          bool    `json:"enable_predictive"`
+	PredictiveBlendFactor     float64 `json:"predictive_blend_factor"`
+	PredictiveDt              float64 `json:"predictive_dt"`
+
+	mu sync.RWMutex `json:"-"`
+}
+
+var instance *Config
+var once sync.Once
+
+// Get returns the singleton configuration instance.
+func Get() *Config {
+	once.Do(func() {
+		instance = loadOrDefault()
+	})
+	return instance
+}
+
+// loadOrDefault loads the config from disk or returns default values.
+func loadOrDefault() *Config {
+	cfg := &Config{
+		Host:                   "0.0.0.0",
+		Port:                   8080,
+		WebSocketPort:          8081,
+		UDPPort:                8082,
+		EnableTCP:              true,
+		EnableWebSocket:        true,
+		EnableUDP:              true,
+		EnableBluetooth:        true,
+		EnableSerial:           true,
+		BluetoothAdapter:       "default",
+		BLEEnabled:             true,
+		HIDProxyEnabled:        false,
+		AuthEnabled:            false,
+		AuthSecret:             "", // generate on first run? optional
+		AuthTokens:             []string{},
+		EncryptionKey:          "",
+		EnablePairingUI:        true,
+		EnableMLPrediction    bool    `json:"enable_ml_prediction"`
+MLModelPath           string  `json:"ml_model_path"`
+MLSequenceLength      int     `json:"ml_sequence_length"`      // default 16
+MLBlendFactor         float64 `json:"ml_blend_factor"`         // default 0.6
+MLInferenceInterval   int     `json:"ml_inference_interval_ms"`// default 20
+EnableMLPrediction:  false,
+MLModelPath:         "models/lstm_predictor.onnx",
+MLSequenceLength:    16,
+MLBlendFactor:       0.6,
+MLInferenceInterval: 20,
+// Humanizer (human‑like movement injection)
+EnableHumanizer              bool    `json:"enable_humanizer"`
+HumanizerTremorAmplitude    float64 `json:"humanizer_tremor_amplitude"`
+HumanizerBSplineSegments    int     `json:"humanizer_bspline_segments"`
+HumanizerNoiseAmplitude     float64 `json:"humanizer_noise_amplitude"`
+HumanizerVelocityPeakRatio  float64 `json:"humanizer_velocity_peak_ratio"`
+		Sensitivity:            0.5,
+		MoveRateLimit:          60,
+		BufferSize:             1024,
+		HeartbeatInterval:      10,
+		ConnectionTimeout:      30,
+		MaxClients:             10,
+		ClientNames:            true,
+		DeviceRegistry:         true,
+		DiscoveryPort:          8083,
+		MDNSName:               "airmouse",
+		AccentColor:            "#007acc",
+		Theme:                  "dark",
+		AlwaysOnTop:            false,
+		ShowTrayIcon:           true,
+		LogLevel:               "info",
+		LogFile:                "airmouse.log",
+		EnableAISmoothing:      false,
+		AIModelPath:            "models/mouse_smoothing.onnx",
+		AIBlendFactor:          0.6,
+		EnablePersonalization:  false,
+		PersonalizationBuffer:  2000,
+		PersonalizationInterval: 3600,
+		AutoSwapModel:          false,
+		EnablePredictive:       true,
+		PredictiveBlendFactor:   0.6,
+		PredictiveDt:            0.02,
+	}
+
+	data, err := os.ReadFile(getConfigPath())
+	if err == nil {
+		_ = json.Unmarshal(data, cfg)
+	}
+	return cfg
+}
+
+// Save writes the current configuration to disk.
+func (c *Config) Save() error {
+	c.mu.RLock()
+	snapshot := *c
+	c.mu.RUnlock()
+
+	data, err := json.MarshalIndent(&snapshot, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := getConfigPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
+// SetSensitivity updates the cursor sensitivity and persists.
+func (c *Config) SetSensitivity(s float64) {
+	c.mu.Lock()
+	c.Sensitivity = s
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+// SetTheme updates the UI theme and persists.
+func (c *Config) SetTheme(theme string) {
+	c.mu.Lock()
+	c.Theme = theme
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+// SetPredictiveEnabled toggles the Kalman predictor and persists.
+func (c *Config) SetPredictiveEnabled(enabled bool) {
+	c.mu.Lock()
+	c.EnablePredictive = enabled
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+// SetPredictiveBlendFactor updates the blend factor and persists.
+func (c *Config) SetPredictiveBlendFactor(factor float64) {
+	c.mu.Lock()
+	c.PredictiveBlendFactor = factor
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+// getConfigPath returns the absolute path for the configuration file.
+func getConfigPath() string {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return filepath.Join(".", "airmouse", "config.json")
+	}
+	return filepath.Join(configDir, "airmouse", "config.json")
+}
+
+{
+    "enable_particle_filter": true,
+    "particle_filter_num_particles": 500,
+    "gesture_confidence_threshold": 0.7
+}type Config struct {
+    // ...
+    EnableParticleFilter      bool    `json:"enable_particle_filter"`
+    ParticleFilterNumParticles int     `json:"particle_filter_num_particles"`
+    GestureConfidenceThreshold float64 `json:"gesture_confidence_threshold"`
+    // ...
+}
+
+
+// Jitter compensation
+EnableJitterCompensation bool          `json:"enable_jitter_compensation"`
+JitterMaxLatency         time.Duration `json:"jitter_max_latency"`
+JitterPredictionWindow   time.Duration `json:"jitter_prediction_window"`
+JitterBlendFactor        float64       `json:"jitter_blend_factor"`
+JitterUseKalman          bool          `json:"jitter_use_kalman"`
+JitterUseAcceleration    bool          `json:"jitter_use_acceleration"`
+
+
+EnableJitterCompensation: true,
+JitterMaxLatency:         100 * time.Millisecond,
+JitterPredictionWindow:   20 * time.Millisecond,
+JitterBlendFactor:        0.7,
+JitterUseKalman:          true,
+JitterUseAcceleration:    false,//go:build ai
+
+package control
+
+import (
+    "fmt"
+    "sync"
+
+    ort "github.com/yalue/onnxruntime_go"
+)
+
+// AISmoother is an optional AI-based smoother that uses ONNX runtime.
+type AISmoother struct {
+    mu sync.Mutex
+    // session and tensors kept private – initialized only when build tag 'ai' is used
+    session *ort.AdvancedSession
+}
+
+func NewAISmoother(modelPath string, historySize int) (*AISmoother, error) {
+    // Placeholder: real implementation requires ONNX libs and build tag.
+    fmt.Println("AISmoother stub created; compile with -tags ai for real implementation")
+    return &AISmoother{}, nil
+}
+
+func (a *AISmoother) AddPoint(x, y float64) { /* noop */ }
+func (a *AISmoother) PredictDelta() (float64, float64, error) { return 0, 0, nil }
+func (a *AISmoother) SetEnabled(enabled bool) {}
+func (a *AISmoother) Close() error { return nil }
+package control
+
+import "fmt"
+
+// Default stub for AISmoother when AI build tag is not used.
+type AISmoother struct{}
+
+func NewAISmoother(modelPath string, historySize int) (*AISmoother, error) {
+    // Return a harmless stub so callers can optionally use AI smoothing.
+    fmt.Println("AI smoothing not enabled in this build (use -tags ai to enable real implementation)")
+    return &AISmoother{}, nil
+}
+
+func (a *AISmoother) AddPoint(x, y float64) {}
+func (a *AISmoother) PredictDelta() (float64, float64, error) { return 0, 0, nil }
+func (a *AISmoother) SetEnabled(enabled bool) {}
+func (a *AISmoother) Close() error { return nil }
+package control
+
+import "math"
+
+type GestureType int
+
+const (
+	GestureNone GestureType = iota
+	GestureSwipeLeft
+	GestureSwipeRight
+	GestureSwipeUp
+	GestureSwipeDown
+)
+
+type gestureDetector struct {
+	history []point
+}
+
+type point struct {
+	X, Y float64
+}
+
+func (g *gestureDetector) Detect(dx, dy float64) GestureType {
+	// Simple swipe detection
+	if math.Abs(dx) > 50 && math.Abs(dy) < 20 {
+		if dx > 0 {
+			return GestureSwipeRight
+		}
+		return GestureSwipeLeft
+	}
+	if math.Abs(dy) > 50 && math.Abs(dx) < 20 {
+		if dy > 0 {
+			return GestureSwipeDown
+		}
+		return GestureSwipeUp
+	}
+	return GestureNone
+}package control
+
+import (
+    "math"
+    "sync/atomic"
+    "time"
+)
+
+// MouseController is a platform-agnostic controller for mouse actions.
+type MouseController interface {
+    Move(dx, dy float64)
+    Click(button string)
+    DoubleClick()
+    Scroll(delta int)
+    Stats() (clicks, dbl, right, scroll int64)
+    SetSensitivity(s float64)
+    GetSensitivity() float64
+    SetSmoothing(enabled bool)
+    SetAcceleration(enabled bool, factor float64)
+}
+
+type mouseController struct {
+    sensitivity   float64
+    clickCount    int64
+    doubleClickCnt int64
+    rightClickCnt int64
+    scrollCount   int64
+
+    smoothing     bool
+    acceleration  bool
+    accelFactor   float64
+
+    lastX         float64
+    lastY         float64
+    lastMoveTime  time.Time
+    moveCount     int
+    moveRateLimit int
+
+    lastClickTime time.Time
+    clickWindow   int
+}
+
+const (
+    minMoveDelta   = 0.01
+    rateLimitPerSec = 60
+)
+
+func NewMouseController(sensitivity float64) MouseController {
+    return &mouseController{
+        sensitivity:   sensitivity,
+        smoothing:     true,
+        acceleration:  false,
+        accelFactor:   1.5,
+        moveRateLimit: rateLimitPerSec,
+    }
+}
+
+func (m *mouseController) SetSmoothing(enabled bool) { m.smoothing = enabled }
+func (m *mouseController) SetAcceleration(enabled bool, factor float64) { m.acceleration = enabled; m.accelFactor = factor }
+func (m *mouseController) GetSensitivity() float64 { return m.sensitivity }
+func (m *mouseController) SetSensitivity(s float64) { m.sensitivity = s }
+
+func (m *mouseController) applySmoothing(dx, dy float64) (float64, float64) {
+    if !m.smoothing { return dx, dy }
+    const alpha = 0.3
+    m.lastX = alpha*dx + (1-alpha)*m.lastX
+    m.lastY = alpha*dy + (1-alpha)*m.lastY
+    return m.lastX, m.lastY
+}
+
+func (m *mouseController) Move(dx, dy float64) {
+    // rate limiting
+    now := time.Now()
+    if now.Sub(m.lastMoveTime) > time.Second {
+        m.moveCount = 0
+        m.lastMoveTime = now
+    }
+    m.moveCount++
+    if m.moveCount > m.moveRateLimit { return }
+
+    dx *= m.sensitivity
+    dy *= m.sensitivity
+
+    dx, dy = m.applySmoothing(dx, dy)
+
+    if m.acceleration {
+        speed := math.Sqrt(dx*dx + dy*dy)
+        if speed > 5 {
+            factor := 1.0 + m.accelFactor*(speed/50.0)
+            if factor > 3.0 { factor = 3.0 }
+            dx *= factor; dy *= factor
+        }
+    }
+
+    if math.Abs(dx) < minMoveDelta && math.Abs(dy) < minMoveDelta { return }
+    m.executeMove(dx, dy)
+}
+
+func (m *mouseController) Click(button string) {
+    now := time.Now()
+    if button == "left" {
+        if now.Sub(m.lastClickTime) < 300*time.Millisecond {
+            m.clickWindow++
+            if m.clickWindow >= 2 {
+                m.DoubleClick()
+                m.clickWindow = 0
+                m.lastClickTime = time.Time{}
+                return
+            }
+        } else {
+            m.clickWindow = 1
+            m.lastClickTime = now
+        }
+    }
+    m.executeClick(button)
+    if button == "left" { atomic.AddInt64(&m.clickCount, 1) } else { atomic.AddInt64(&m.rightClickCnt, 1) }
+}
+
+func (m *mouseController) DoubleClick() { m.executeDoubleClick(); atomic.AddInt64(&m.doubleClickCnt, 1) }
+func (m *mouseController) Scroll(delta int) { m.executeScroll(delta); atomic.AddInt64(&m.scrollCount, 1) }
+
+func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
+    return atomic.LoadInt64(&m.clickCount), atomic.LoadInt64(&m.doubleClickCnt), atomic.LoadInt64(&m.rightClickCnt), atomic.LoadInt64(&m.scrollCount)
+}
+
+// Platform-specific methods (implemented in mouse_*.go)
+
+
+
+
+type mouseController struct {
+    // ... existing fields ...
+    mlPredictor *predictiveml.Predictor
+    mlEnabled   bool
+    mlBlend     float64
+    positionHistory []float32   // last known cursor position (x, y)
+}
+
+type mouseController struct {
+    // ... existing fields ...
+    humanizer   *adaptivesmoothing.Humanizer
+    humanizerEnabled bool
+}//go:build darwin && robotgo
+
+package control
+
+import "github.com/go-vgo/robotgo"
+
+func (m *mouseController) executeMove(dx, dy float64) {
+	robotgo.MoveRelative(int(dx), int(dy))
+}
+
+func (m *mouseController) executeClick(button string) {
+	switch button {
+	case "right":
+		robotgo.Click("right", false)
+	default:
+		robotgo.Click("left", false)
+	}
+}
+
+func (m *mouseController) executeDoubleClick() {
+	robotgo.Click("left", true)
+}
+
+func (m *mouseController) executeScroll(delta int) {
+	robotgo.Scroll(0, delta)
+}
+//go:build darwin
+
+package control
+
+import (
+    "fmt"
+)
+
+// Lightweight stub implementation for macOS when robotgo is not available.
+// This avoids requiring the robotgo native dependency during build.
+func (m *mouseController) executeMove(dx, dy float64) {
+    // In stub mode we simply log the requested movement.
+    fmt.Printf("[stub] move dx=%.2f dy=%.2f\n", dx, dy)
+}
+
+func (m *mouseController) executeClick(button string) {
+    fmt.Printf("[stub] click button=%s\n", button)
+}
+
+func (m *mouseController) executeDoubleClick() {
+    fmt.Printf("[stub] doubleclick\n")
+}
+
+func (m *mouseController) executeScroll(delta int) {
+    fmt.Printf("[stub] scroll delta=%d\n", delta)
+}
+//go:build linux
+
+package control
+
+import (
+	"os"
+	"syscall"
+	"unsafe"
+)
+
+var uinputFd int
+
+func init() {
+	fd, err := os.OpenFile("/dev/uinput", os.O_RDWR, 0)
+	if err == nil {
+		uinputFd = int(fd.Fd())
+	}
+}
+
+type inputEvent struct {
+	Time  syscall.Timeval
+	Type  uint16
+	Code  uint16
+	Value int32
+}
+
+const (
+	EV_REL   = 0x02
+	EV_KEY   = 0x01
+	EV_SYN   = 0x00
+	REL_X    = 0x00
+	REL_Y    = 0x01
+	REL_WHEEL = 0x08
+	BTN_LEFT = 0x110
+	BTN_RIGHT = 0x111
+)
+
+func (m *mouseController) executeMove(dx, dy float64) {
+	if uinputFd != 0 {
+		events := []inputEvent{
+			{Type: EV_REL, Code: REL_X, Value: int32(dx)},
+			{Type: EV_REL, Code: REL_Y, Value: int32(dy)},
+			{Type: EV_SYN, Code: 0, Value: 0},
+		}
+		for _, ev := range events {
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+		}
+	} else {
+		// Fallback to robotgo (assumed available)
+		// robotgo.MoveRelative(int(dx), int(dy))
+	}
+}
+
+func (m *mouseController) executeClick(button string) {
+	btn := BTN_LEFT
+	if button == "right" {
+		btn = BTN_RIGHT
+	}
+	if uinputFd != 0 {
+		events := []inputEvent{
+			{Type: EV_KEY, Code: uint16(btn), Value: 1},
+			{Type: EV_SYN, Code: 0, Value: 0},
+			{Type: EV_KEY, Code: uint16(btn), Value: 0},
+			{Type: EV_SYN, Code: 0, Value: 0},
+		}
+		for _, ev := range events {
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+		}
+	}
+}
+
+func (m *mouseController) executeDoubleClick() {
+	m.executeClick("left")
+	m.executeClick("left")
+}
+
+func (m *mouseController) executeScroll(delta int) {
+	if uinputFd != 0 {
+		events := []inputEvent{
+			{Type: EV_REL, Code: REL_WHEEL, Value: int32(delta)},
+			{Type: EV_SYN, Code: 0, Value: 0},
+		}
+		for _, ev := range events {
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+		}
+	}
+}//go:build windows
+
+package control
+
+import (
+	"syscall"
+	"unsafe"
+)
+
+var (
+	user32          = syscall.NewLazyDLL("user32.dll")
+	procMouseEvent  = user32.NewProc("mouse_event")
+	procSetCursorPos = user32.NewProc("SetCursorPos")
+)
+
+const (
+	MOUSEEVENTF_MOVE      = 0x0001
+	MOUSEEVENTF_LEFTDOWN  = 0x0002
+	MOUSEEVENTF_LEFTUP    = 0x0004
+	MOUSEEVENTF_RIGHTDOWN = 0x0008
+	MOUSEEVENTF_RIGHTUP   = 0x0010
+	MOUSEEVENTF_WHEEL     = 0x0800
+)
+
+func (m *mouseController) executeMove(dx, dy float64) {
+	x := int32(dx)
+	y := int32(dy)
+	procMouseEvent.Call(MOUSEEVENTF_MOVE, uintptr(x), uintptr(y), 0, 0)
+}
+
+func (m *mouseController) executeClick(button string) {
+	if button == "left" {
+		procMouseEvent.Call(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+		procMouseEvent.Call(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+	} else if button == "right" {
+		procMouseEvent.Call(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
+		procMouseEvent.Call(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
+	}
+}
+
+func (m *mouseController) executeDoubleClick() {
+	m.executeClick("left")
+	m.executeClick("left")
+}
+
+func (m *mouseController) executeScroll(delta int) {
+	procMouseEvent.Call(MOUSEEVENTF_WHEEL, 0, 0, uintptr(delta*120), 0)
+}func NewMouseController(sensitivity float64) MouseController {
+    m := &mouseController{
+        // ... existing fields ...
+        humanizerEnabled: true,
+    }
+    cfg := config.Get()
+    if cfg.EnableHumanizer {
+        humanizerCfg := adaptivesmoothing.DefaultHumanizerConfig()
+        humanizerCfg.TremorAmplitude = cfg.HumanizerTremorAmplitude
+        humanizerCfg.BSplineSegments = cfg.HumanizerBSplineSegments
+        m.humanizer = adaptivesmoothing.NewHumanizer(humanizerCfg)
+    }
+    return m
+}package control
+
+import "sync"
+
+var (
+    movementPaused   bool
+    movementPausedMu sync.RWMutex
+)
+
+func SetMovementPaused(paused bool) {
+    movementPausedMu.Lock()
+    defer movementPausedMu.Unlock()
+    movementPaused = paused
+}
+
+func IsMovementPaused() bool {
+    movementPausedMu.RLock()
+    defer movementPausedMu.RUnlock()
+    return movementPaused
+}package personalization
+
+import (
+    "sync"
+    "time"
+    "airmouse-go/internal/config"
+)
+
+type MovementSample struct {
+    X, Y, VX, VY float64
+    Timestamp    time.Time
+}
+
+type DataCollector struct {
+    buffer      []MovementSample
+    maxSize     int
+    mu          sync.Mutex
+    trainer     *TrainerClient
+    lastFineTune time.Time
+}
+
+func NewDataCollector() *DataCollector {
+    return &DataCollector{
+        buffer:  make([]MovementSample, 0, config.Get().PersonalizationBuffer),
+        maxSize: config.Get().PersonalizationBuffer,
+        trainer: NewTrainerClient("http://localhost:5001"),
+    }
+}
+
+func (dc *DataCollector) AddSample(x, y, vx, vy float64) {
+    dc.mu.Lock()
+    defer dc.mu.Unlock()
+    if len(dc.buffer) >= dc.maxSize {
+        dc.buffer = dc.buffer[1:]
+    }
+    dc.buffer = append(dc.buffer, MovementSample{X: x, Y: y, VX: vx, VY: vy, Timestamp: time.Now()})
+
+    cfg := config.Get()
+    if cfg.EnablePersonalization && time.Since(dc.lastFineTune) > time.Duration(cfg.PersonalizationInterval)*time.Second && len(dc.buffer) >= cfg.PersonalizationBuffer {
+        go dc.triggerFineTune()
+    }
+}
+
+func (dc *DataCollector) SampleCount() int {
+    dc.mu.Lock()
+    defer dc.mu.Unlock()
+    return len(dc.buffer)
+}
+
+func (dc *DataCollector) ForceFineTune() error {
+    dc.mu.Lock()
+    if len(dc.buffer) == 0 {
+        dc.mu.Unlock()
+        return nil
+    }
+    bufferCopy := make([]MovementSample, len(dc.buffer))
+    copy(bufferCopy, dc.buffer)
+    dc.mu.Unlock()
+    data := make([]map[string]interface{}, len(bufferCopy))
+    for i, sample := range bufferCopy {
+        data[i] = map[string]interface{}{
+            "x": sample.X,
+            "y": sample.Y,
+            "vx": sample.VX,
+            "vy": sample.VY,
+        }
+    }
+    req := &FineTuneRequest{
+        ModelPath:  "models/base_model.pth",
+        Buffer:     data,
+        OutputPath: "models/personalized_model.pth",
+    }
+    return dc.trainer.FineTune(req)
+}
+
+func (dc *DataCollector) triggerFineTune() {
+    dc.mu.Lock()
+    bufferCopy := make([]MovementSample, len(dc.buffer))
+    copy(bufferCopy, dc.buffer)
+    dc.mu.Unlock()
+    // Convert to JSON-serializable map
+    data := make([]map[string]interface{}, len(bufferCopy))
+    for i, sample := range bufferCopy {
+        data[i] = map[string]interface{}{
+            "x": sample.X, "y": sample.Y, "vx": sample.VX, "vy": sample.VY,
+        }
+    }
+    req := &FineTuneRequest{
+        ModelPath:  "models/base_model.pth",
+        Buffer:     data,
+        OutputPath: "models/personalized_model.pth",
+    }
+    if err := dc.trainer.FineTune(req); err == nil && config.Get().AutoSwapModel {
+        // Signal the main application to reload the new model
+    }
+}package personalization
+
+import (
+    "bytes"
+    "encoding/json"
+    "net/http"
+    "time"
+)
+
+type TrainerClient struct {
+    client   *http.Client
+    endpoint string
+}
+
+func NewTrainerClient(endpoint string) *TrainerClient {
+    return &TrainerClient{
+        client:   &http.Client{Timeout: 10 * time.Minute},
+        endpoint: endpoint,
+    }
+}
+
+func (t *TrainerClient) Health() error {
+    resp, err := t.client.Get(t.endpoint + "/health")
+    if err != nil { return err }
+    defer resp.Body.Close()
+    return nil
+}
+
+type FineTuneRequest struct {
+    ModelPath  string                   `json:"model_path"`
+    Buffer     []map[string]interface{} `json:"buffer"`
+    OutputPath string                   `json:"output_path"`
+}
+
+func (t *TrainerClient) FineTune(req *FineTuneRequest) error {
+    data, err := json.Marshal(req)
+    if err != nil { return err }
+    resp, err := t.client.Post(t.endpoint+"/fine_tune", "application/json", bytes.NewBuffer(data))
+    if err != nil { return err }
+    defer resp.Body.Close()
+    return nil
+}package device
+
+import "crypto/subtle"
+
+// Authenticator provides simple token‑based authentication.
+type Authenticator struct {
+	tokens map[string]bool
+}
+
+// NewAuthenticator creates an authenticator with the given list of tokens.
+func NewAuthenticator(tokens []string) *Authenticator {
+	tokenMap := make(map[string]bool, len(tokens))
+	for _, t := range tokens {
+		tokenMap[t] = true
+	}
+	return &Authenticator{tokens: tokenMap}
+}
+
+// Authenticate checks whether the provided token is valid.
+// It uses constant‑time comparison to prevent timing attacks.
+func (a *Authenticator) Authenticate(token string) bool {
+	for valid := range a.tokens {
+		if subtle.ConstantTimeCompare([]byte(token), []byte(valid)) == 1 {
+			return true
+		}
+	}
+	return false
+}package device
+
+import (
+	"sync"
+	"time"
+)
+
+// DeviceType enumerates the possible connection types.
+type DeviceType string
+
+const (
+	TypeTCP       DeviceType = "tcp"
+	TypeWebSocket DeviceType = "websocket"
+	TypeUDP       DeviceType = "udp"
+	TypeBluetooth DeviceType = "bluetooth"
+)
+
+// DeviceInfo holds information about a connected device.
+type DeviceInfo struct {
+	ID          string                 `json:"id"`
+	Name        string                 `json:"name"`
+	Type        DeviceType             `json:"type"`
+	ConnectedAt time.Time              `json:"connected_at"`
+	LastActive  time.Time              `json:"last_active"`
+	BytesSent   int64                  `json:"bytes_sent"`
+	BytesRecv   int64                  `json:"bytes_recv"`
+	Status      string                 `json:"status"` // "connected", "disconnected", etc.
+	Metadata    map[string]interface{} `json:"metadata"`
+}
+
+// BLEDevice represents a discovered Bluetooth Low Energy device.
+type BLEDevice struct {
+	Addr      string `json:"addr"`
+	Name      string `json:"name"`
+	RSSI      int    `json:"rssi"`
+	Connected bool   `json:"connected"`
+}
+
+// Manager maintains the registry of all connected devices and discovered BLE devices.
+type Manager struct {
+	devices    map[string]*DeviceInfo
+	bleDevices map[string]*BLEDevice
+	mu         sync.RWMutex
+	callbacks  []func(*DeviceInfo)
+}
+
+// NewManager creates a new device manager.
+func NewManager() *Manager {
+	return &Manager{
+		devices:    make(map[string]*DeviceInfo),
+		bleDevices: make(map[string]*BLEDevice),
+	}
+}
+
+// RegisterDevice adds a new device to the registry.
+func (m *Manager) RegisterDevice(id string, devType DeviceType, name string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.devices[id] = &DeviceInfo{
+		ID:          id,
+		Name:        name,
+		Type:        devType,
+		ConnectedAt: time.Now(),
+		LastActive:  time.Now(),
+		Status:      "connected",
+		Metadata:    make(map[string]interface{}),
+	}
+	m.notifyCallbacks(m.devices[id])
+}
+
+// UnregisterDevice removes a device from the registry.
+func (m *Manager) UnregisterDevice(id string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if dev, ok := m.devices[id]; ok {
+		dev.Status = "disconnected"
+		m.notifyCallbacks(dev)
+		delete(m.devices, id)
+	}
+}
+
+// UpdateDeviceName changes the display name of a registered device.
+func (m *Manager) UpdateDeviceName(id, name string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if dev, ok := m.devices[id]; ok {
+		dev.Name = name
+		m.notifyCallbacks(dev)
+	}
+}
+
+// UpdateBLEDevice adds or updates a discovered BLE device.
+func (m *Manager) UpdateBLEDevice(addr, name string, rssi int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if d, ok := m.bleDevices[addr]; ok {
+		d.RSSI = rssi
+	} else {
+		m.bleDevices[addr] = &BLEDevice{
+			Addr:      addr,
+			Name:      name,
+			RSSI:      rssi,
+			Connected: false,
+		}
+	}
+}
+
+// GetAllDevices returns a snapshot of all registered devices.
+func (m *Manager) GetAllDevices() []*DeviceInfo {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	devs := make([]*DeviceInfo, 0, len(m.devices))
+	for _, d := range m.devices {
+		devs = append(devs, d)
+	}
+	return devs
+}
+
+// GetBLEDevices returns a snapshot of all discovered BLE devices.
+func (m *Manager) GetBLEDevices() []*BLEDevice {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	devs := make([]*BLEDevice, 0, len(m.bleDevices))
+	for _, d := range m.bleDevices {
+		devs = append(devs, d)
+	}
+	return devs
+}
+
+// OnDeviceChange registers a callback that is invoked whenever a device changes state.
+func (m *Manager) OnDeviceChange(cb func(*DeviceInfo)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.callbacks = append(m.callbacks, cb)
+}
+
+// notifyCallbacks calls all registered callbacks with the given device.
+func (m *Manager) notifyCallbacks(dev *DeviceInfo) {
+	for _, cb := range m.callbacks {
+		go cb(dev)
+	}
+}package jitter
+
+import (
+    "sync"
+    "time"
+)
+
+// JitterBufferConfig holds configuration for the jitter compensation.
+type JitterBufferConfig struct {
+    MaxLatency            time.Duration // maximum expected latency (ms)
+    PredictionWindow      time.Duration // how far to predict (ms)
+    BlendFactor           float64       // blend between predicted and actual (0=pred, 1=actual)
+    UseKalmanVelocity     bool
+    UseAcceleration       bool
+}
+
+// DefaultJitterBufferConfig returns sensible defaults.
+func DefaultJitterBufferConfig() JitterBufferConfig {
+    return JitterBufferConfig{
+        MaxLatency:       100 * time.Millisecond,
+        PredictionWindow: 20 * time.Millisecond,
+        BlendFactor:      0.7,
+        UseKalmanVelocity: true,
+        UseAcceleration:   false,
+    }
+}
+
+// JitterBuffer compensates for network jitter using dead reckoning.
+type JitterBuffer struct {
+    cfg        JitterBufferConfig
+    predictor  *DeadReckoningPredictor
+    mu         sync.Mutex
+    lastTime   time.Time
+    lastDx, lastDy float64
+    history    []MovementSample
+    maxHistory int
+}
+
+// MovementSample stores a movement delta with timestamp.
+type MovementSample struct {
+    Timestamp time.Time
+    Dx, Dy    float64
+}
+
+// NewJitterBuffer creates a jitter buffer with the given configuration.
+func NewJitterBuffer(cfg JitterBufferConfig) *JitterBuffer {
+    return &JitterBuffer{
+        cfg:        cfg,
+        predictor:  NewDeadReckoningPredictor(cfg.UseAcceleration),
+        history:    make([]MovementSample, 0, 50),
+        maxHistory: 50,
+        lastTime:   time.Now(),
+    }
+}
+
+// AddMovement adds a new movement delta received from the network.
+// It returns the movement that should be sent to the mouse controller,
+// which may be a blend of the actual movement and a predicted movement
+// to compensate for jitter.
+func (jb *JitterBuffer) AddMovement(dx, dy float64, receivedAt time.Time) (smoothedDx, smoothedDy float64) {
+    jb.mu.Lock()
+    defer jb.mu.Unlock()
+
+    now := time.Now()
+    dt := now.Sub(jb.lastTime).Seconds()
+    if dt < 0.001 {
+        dt = 0.02
+    }
+
+    // Update predictor with the actual movement (velocity)
+    if jb.cfg.UseKalmanVelocity {
+        jb.predictor.UpdateVelocity(dx, dy, dt)
+    } else {
+        // Simple velocity estimation
+        jb.predictor.velocityX.Update(dx / dt)
+        jb.predictor.velocityY.Update(dy / dt)
+    }
+
+    // Calculate predicted movement for the expected next packet time
+    predDx, predDy := jb.predictor.Predict(jb.cfg.PredictionWindow.Seconds())
+
+    // Blend actual and predicted based on the network latency
+    // Higher latency → more weight on prediction
+    latency := now.Sub(receivedAt)
+    blend := jb.cfg.BlendFactor
+    if latency > jb.cfg.MaxLatency {
+        blend = 0.9 // trust prediction more
+    } else if latency < 20*time.Millisecond {
+        blend = 0.5 // low latency: balanced blend
+    }
+    smoothedDx = (1-blend)*dx + blend*predDx
+    smoothedDy = (1-blend)*dy + blend*predDy
+
+    // Store history for debugging / analysis (optional)
+    jb.history = append(jb.history, MovementSample{Timestamp: now, Dx: dx, Dy: dy})
+    if len(jb.history) > jb.maxHistory {
+        jb.history = jb.history[1:]
+    }
+
+    jb.lastTime = now
+    jb.lastDx, jb.lastDy = dx, dy
+    return
+}
+
+// PredictNow returns the predicted movement for the current time (if no packet arrives).
+// This can be called by a timer to keep the cursor moving during packet loss.
+func (jb *JitterBuffer) PredictNow() (dx, dy float64) {
+    jb.mu.Lock()
+    defer jb.mu.Unlock()
+    now := time.Now()
+    dt := now.Sub(jb.lastTime).Seconds()
+    if dt > 0.1 {
+        dt = 0.1 // limit extrapolation
+    }
+    return jb.predictor.Predict(dt)
+}
+
+// Reset clears the buffer state.
+func (jb *JitterBuffer) Reset() {
+    jb.mu.Lock()
+    defer jb.mu.Unlock()
+    jb.predictor.Reset()
+    jb.history = jb.history[:0]
+    jb.lastTime = time.Now()
+}
+
+// GetStats returns diagnostic information.
+func (jb *JitterBuffer) GetStats() map[string]interface{} {
+    jb.mu.RLock()
+    defer jb.mu.RUnlock()
+    return map[string]interface{}{
+        "history_length": len(jb.history),
+        "last_dx":        jb.lastDx,
+        "last_dy":        jb.lastDy,
+        "velocity_x":     jb.predictor.velocityX.GetState(),
+        "velocity_y":     jb.predictor.velocityY.GetState(),
+    }
+}package jitter
+
+import (
+    "testing"
+    "time"
+    "math"
+)
+
+func TestJitterBuffer(t *testing.T) {
+    cfg := DefaultJitterBufferConfig()
+    jb := NewJitterBuffer(cfg)
+
+    // Simulate a series of movements with constant velocity
+    start := time.Now()
+    for i := 0; i < 10; i++ {
+        now := start.Add(time.Duration(i*20) * time.Millisecond)
+        dx, dy := 10.0, 5.0
+        smoothedDx, smoothedDy := jb.AddMovement(dx, dy, now)
+        if math.Abs(smoothedDx-dx) > 2 || math.Abs(smoothedDy-dy) > 2 {
+            t.Errorf("Smoothed movement too far from actual: got (%.2f, %.2f), expected (%.2f, %.2f)",
+                smoothedDx, smoothedDy, dx, dy)
+        }
+    }
+
+    // Predict when no packet arrives
+    predDx, predDy := jb.PredictNow()
+    if predDx == 0 && predDy == 0 {
+        t.Error("Prediction returned zero movement")
+    }
+    t.Logf("Predicted movement: (%.2f, %.2f)", predDx, predDy)
+}
+
+func TestKalmanFilter(t *testing.T) {
+    kf := NewKalman1D(0.5, 1.0)
+    measurements := []float64{10, 12, 11, 13, 10, 14}
+    for _, m := range measurements {
+        filtered := kf.Update(m)
+        t.Logf("raw %.2f → filtered %.2f", m, filtered)
+    }
+    if kf.GetState() == 0 {
+        t.Error("Kalman filter not converging")
+    }
+}package jitter
+
+// Kalman1D is a simple 1D Kalman filter for velocity estimation.
+type Kalman1D struct {
+    x      float64 // estimated state (velocity)
+    P      float64 // error covariance
+    Q      float64 // process noise (how fast velocity can change)
+    R      float64 // measurement noise (RSSI or movement delta noise)
+    K      float64 // Kalman gain (recomputed each step)
+}
+
+// NewKalman1D creates a Kalman filter with default parameters.
+func NewKalman1D(processNoise, measurementNoise float64) *Kalman1D {
+    return &Kalman1D{
+        x: 0,
+        P: 1,
+        Q: processNoise,
+        R: measurementNoise,
+    }
+}
+
+// Update processes a new measurement and returns the filtered value.
+func (k *Kalman1D) Update(measurement float64) float64 {
+    // Prediction
+    k.P = k.P + k.Q
+
+    // Update
+    k.K = k.P / (k.P + k.R)
+    k.x = k.x + k.K*(measurement - k.x)
+    k.P = (1 - k.K) * k.P
+    return k.x
+}
+
+// GetState returns the current velocity estimate.
+func (k *Kalman1D) GetState() float64 {
+    return k.x
+}
+
+// Reset resets the filter.
+func (k *Kalman1D) Reset() {
+    k.x = 0
+    k.P = 1
+}package jitter
+
+import "time"
+
+// DeadReckoningPredictor predicts movement using velocity and acceleration.
+type DeadReckoningPredictor struct {
+    lastTime     time.Time
+    lastDx, lastDy float64
+    velocityX    *Kalman1D
+    velocityY    *Kalman1D
+    accelX       *Kalman1D // optional acceleration estimation (if needed)
+    accelY       *Kalman1D
+    useAcceleration bool
+}
+
+// NewDeadReckoningPredictor creates a predictor with default parameters.
+func NewDeadReckoningPredictor(useAcceleration bool) *DeadReckoningPredictor {
+    return &DeadReckoningPredictor{
+        velocityX:    NewKalman1D(0.5, 1.0),
+        velocityY:    NewKalman1D(0.5, 1.0),
+        accelX:       NewKalman1D(0.1, 1.0),
+        accelY:       NewKalman1D(0.1, 1.0),
+        useAcceleration: useAcceleration,
+        lastTime:     time.Now(),
+    }
+}
+
+// UpdateVelocity updates the velocity estimates with a new movement delta.
+func (p *DeadReckoningPredictor) UpdateVelocity(dx, dy float64, dt float64) {
+    if dt < 0.001 {
+        dt = 0.02
+    }
+    vx := dx / dt
+    vy := dy / dt
+    p.velocityX.Update(vx)
+    p.velocityY.Update(vy)
+
+    if p.useAcceleration {
+        // Estimate acceleration as change in velocity
+        ax := (vx - p.velocityX.GetState()) / dt
+        ay := (vy - p.velocityY.GetState()) / dt
+        p.accelX.Update(ax)
+        p.accelY.Update(ay)
+    }
+}
+
+// Predict returns the predicted movement delta over a given time interval.
+func (p *DeadReckoningPredictor) Predict(dt float64) (dx, dy float64) {
+    vx := p.velocityX.GetState()
+    vy := p.velocityY.GetState()
+    dx = vx * dt
+    dy = vy * dt
+    if p.useAcceleration {
+        ax := p.accelX.GetState()
+        ay := p.accelY.GetState()
+        dx += 0.5 * ax * dt * dt
+        dy += 0.5 * ay * dt * dt
+    }
+    return
+}
+
+// Reset clears the predictor state.
+func (p *DeadReckoningPredictor) Reset() {
+    p.velocityX.Reset()
+    p.velocityY.Reset()
+    p.accelX.Reset()
+    p.accelY.Reset()
+    p.lastTime = time.Now()
+}package particlefilter
+
+import (
+    "math"
+    "math/rand"
+    "sync"
+    "time"
+
+    "github.com/milosgajdos/go-estimate/particle/bf"
+    "gonum.org/v1/gonum/mat"
+)
+
+// GestureState defines the hidden state of the particle filter.
+type GestureState struct {
+    X, Y, Vx, Vy   float64 // position and velocity (for tracking)
+    Gesture        string  // discrete gesture type
+    Confidence     float64 // probability of this gesture
+}
+
+// Filter is a particle filter for gesture recognition.
+type Filter struct {
+    pf           *bf.ParticleFilter
+    particles    []*bf.Particle
+    mu           sync.RWMutex
+    numParticles int
+    lastTime     time.Time
+}
+
+// NewFilter creates a particle filter with N particles.
+func NewFilter(numParticles int) *Filter {
+    f := &Filter{
+        numParticles: numParticles,
+        lastTime:     time.Now(),
+    }
+    // Initialize particles
+    particles := make([]*bf.Particle, numParticles)
+    for i := 0; i < numParticles; i++ {
+        // Initial state: random position, zero velocity, uniform gesture probabilities
+        state := mat.NewVecDense(4, []float64{
+            rand.Float64() * 100,          // x
+            rand.Float64() * 100,          // y
+            (rand.Float64() - 0.5) * 10,   // vx
+            (rand.Float64() - 0.5) * 10,   // vy
+        })
+        weight := 1.0 / float64(numParticles)
+        particles[i] = bf.NewParticle(state, weight)
+    }
+    // Create particle filter with Bootstrap filter (SIR)
+    f.pf = bf.NewPF(particles, bf.WithProcessNoise(processNoise), bf.WithResamplingThreshold(0.5))
+    return f
+}
+
+// predict updates the filter using a simple motion model (constant velocity with noise).
+func (f *Filter) predict(dt float64) {
+    for _, p := range f.pf.Particles() {
+        state := p.State()
+        x, y, vx, vy := state.AtVec(0), state.AtVec(1), state.AtVec(2), state.AtVec(3)
+        // Predict new state
+        xNew := x + vx*dt
+        yNew := y + vy*dt
+        vxNew := vx + (rand.NormFloat64() * 5)   // acceleration noise
+        vyNew := vy + (rand.NormFloat64() * 5)
+        newState := mat.NewVecDense(4, []float64{xNew, yNew, vxNew, vyNew})
+        p.SetState(newState)
+    }
+    f.pf.Predict()
+}
+
+// Update uses the new measurement (dx, dy) to update particle weights.
+func (f *Filter) Update(dx, dy float64) {
+    for _, p := range f.pf.Particles() {
+        state := p.State()
+        x, y, vx, vy := state.AtVec(0), state.AtVec(1), state.AtVec(2), state.AtVec(3)
+        // Measurement prediction: the particle would move (vx*dt, vy*dt)
+        dt := 0.02 // typical time step
+        predDx := vx * dt
+        predDy := vy * dt
+        // Likelihood: Gaussian error between actual and predicted movement
+        errX := dx - predDx
+        errY := dy - predDy
+        variance := 10.0 // measurement noise
+        likelihood := math.Exp(-(errX*errX+errY*errY)/(2*variance)) / (2 * math.Pi * variance)
+        p.SetWeight(p.Weight() * likelihood)
+    }
+    f.pf.Update()
+    f.resampleIfNeeded()
+}
+
+// resampleIfNeeded performs resampling when the effective particle count is too low.
+func (f *Filter) resampleIfNeeded() {
+    eff := 1.0 / f.pf.EffectiveParticleCount()
+    if eff < 0.5 { // threshold
+        f.pf.Resample(bf.WithResampleCriterion(bf.Systematic))
+    }
+}
+
+// GetBestGesture returns the most likely gesture and its confidence.
+func (f *Filter) GetBestGesture() (gesture string, confidence float64) {
+    // This is a placeholder; you would implement a gesture classifier here.
+    // For now, return a dummy gesture.
+    return "unknown", 0.0
+}package particlefilter
+
+import (
+    "math"
+    "sync"
+)
+
+// GestureModel defines a template for a gesture (e.g., left swipe).
+type GestureModel struct {
+    Name       string
+    Templates  [][]float64 // [dx, dy] sequence
+    Tolerance  float64
+}
+
+// Recognizer uses a particle filter to recognise gestures from motion streams.
+type Recognizer struct {
+    filter      *Filter
+    gestures    []GestureModel
+    history     [][2]float64 // last few (dx, dy)
+    maxHistory  int
+    mu          sync.Mutex
+}
+
+// NewRecognizer creates a recogniser with predefined gestures.
+func NewRecognizer() *Recognizer {
+    return &Recognizer{
+        filter:     NewFilter(500),
+        gestures:   predefinedGestures(),
+        maxHistory: 30,
+    }
+}
+
+// predefinedGestures returns a list of gesture templates.
+func predefinedGestures() []GestureModel {
+    return []GestureModel{
+        {
+            Name: "swipe_left",
+            Templates: [][]float64{
+                {-10, 0}, {-10, 0}, {-10, 0}, // simplified template
+            },
+            Tolerance: 5.0,
+        },
+        {
+            Name: "swipe_right",
+            Templates: [][]float64{
+                {10, 0}, {10, 0}, {10, 0},
+            },
+            Tolerance: 5.0,
+        },
+        {
+            Name: "circle_cw",
+            Templates: [][]float64{
+                {5, 5}, {0, 10}, {-5, 5}, {-10, 0}, {-5, -5}, {0, -10}, {5, -5}, {10, 0},
+            },
+            Tolerance: 3.0,
+        },
+    }
+}
+
+// AddMotion adds a new motion delta to the recogniser and updates the filter.
+func (r *Recognizer) AddMotion(dx, dy float64) {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    r.history = append(r.history, [2]float64{dx, dy})
+    if len(r.history) > r.maxHistory {
+        r.history = r.history[1:]
+    }
+    r.filter.Update(dx, dy)
+}
+
+// GetGesture returns the current recognised gesture (if any) and its confidence.
+func (r *Recognizer) GetGesture() (gesture string, confidence float64) {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    if len(r.history) < 10 {
+        return "none", 0.0
+    }
+    // Template matching using normalised cross‑correlation
+    bestScore := -1.0
+    bestGesture := "none"
+    for _, g := range r.gestures {
+        score := r.matchTemplate(g)
+        if score > bestScore && score > 0.6 {
+            bestScore = score
+            bestGesture = g.Name
+        }
+    }
+    return bestGesture, bestScore
+}
+
+// matchTemplate correlates the recent motion history with a gesture template.
+func (r *Recognizer) matchTemplate(gesture GestureModel) float64 {
+    if len(r.history) < len(gesture.Templates) {
+        return 0.0
+    }
+    // Simplified: sum of squared errors
+    var totalErr float64
+    for i, t := range gesture.Templates {
+        hist := r.history[i]
+        errX := hist[0] - t[0]
+        errY := hist[1] - t[1]
+        totalErr += errX*errX + errY*errY
+    }
+    return math.Max(0, 1.0-totalErr/float64(len(gesture.Templates))/gesture.Tolerance)
+}package particlefilter
+
+import (
+    "testing"
+    "time"
+)
+
+func TestParticleFilter(t *testing.T) {
+    filter := NewFilter(100)
+    // Simulate a swipe right motion
+    for i := 0; i < 20; i++ {
+        filter.Update(5.0, 0.0)
+        time.Sleep(10 * time.Millisecond)
+    }
+    // After many updates, the filter should converge
+    // (In a real test, you would check particle distribution)
+    t.Log("Filter test passed (no panic)")
+}
+
+func TestGestureRecognizer(t *testing.T) {
+    rec := NewRecognizer()
+    // Simulate a left swipe
+    for i := 0; i < 10; i++ {
+        rec.AddMotion(-8.0, 0.0)
+    }
+    gesture, conf := rec.GetGesture()
+    if gesture != "swipe_left" {
+        t.Errorf("Expected swipe_left, got %s", gesture)
+    }
+    t.Logf("Recognised %s with confidence %.2f", gesture, conf)
+}package predictive
+
+import "math"
+
+// KalmanFilter2D implements a linear Kalman filter for 2D motion.
+// State: [x, y, vx, vy]^T
+type KalmanFilter2D struct {
+    // State vector (4x1)
+    x [4]float64
+
+    // Covariance matrix (4x4)
+    P [4][4]float64
+
+    // State transition matrix F (4x4)
+    F [4][4]float64
+
+    // Measurement matrix H (4x4) – we observe both position and velocity now
+    H [4][4]float64
+
+    // Process noise covariance Q (4x4)
+    Q [4][4]float64
+
+    // Measurement noise covariance R (4x4)
+    R [4][4]float64
+
+    dt float64 // time step (seconds)
+}
+
+// NewKalmanFilter2D creates a filter with given time step and initial uncertainty.
+func NewKalmanFilter2D(dt float64) *KalmanFilter2D {
+    kf := &KalmanFilter2D{dt: dt}
+
+    // Initialize state to zero
+    kf.x = [4]float64{0, 0, 0, 0}
+
+    // Initial covariance (high uncertainty in position and velocity)
+    kf.P = [4][4]float64{
+        {100, 0, 0, 0},
+        {0, 100, 0, 0},
+        {0, 0, 100, 0},
+        {0, 0, 0, 100},
+    }
+
+    // State transition matrix: constant velocity model
+    kf.F = [4][4]float64{
+        {1, 0, dt, 0},
+        {0, 1, 0, dt},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+    }
+
+    // Measurement matrix: we observe both position and velocity now
+    kf.H = [4][4]float64{
+        {1, 0, 0, 0},
+        {0, 1, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+    }
+
+    // Process noise: small acceleration noise (tuned for mouse movement)
+    qPos := 0.1
+    qVel := 0.5
+    kf.Q = [4][4]float64{
+        {qPos, 0, 0, 0},
+        {0, qPos, 0, 0},
+        {0, 0, qVel, 0},
+        {0, 0, 0, qVel},
+    }
+
+    // Measurement noise: sensor (network) noise (tuned for mouse movement)
+    rPos := 5.0
+    rVel := 1.0
+    kf.R = [4][4]float64{
+        {rPos, 0, 0, 0},
+        {0, rPos, 0, 0},
+        {0, 0, rVel, 0},
+        {0, 0, 0, rVel},
+    }
+
+    return kf
+}
+
+// Predict runs the prediction step.
+func (kf *KalmanFilter2D) Predict() {
+    // x = F * x
+    var newX [4]float64
+    for i := 0; i < 4; i++ {
+        sum := 0.0
+        for j := 0; j < 4; j++ {
+            sum += kf.F[i][j] * kf.x[j]
+        }
+        newX[i] = sum
+    }
+    kf.x = newX
+
+    // P = F * P * F^T + Q
+    var FP [4][4]float64
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            sum := 0.0
+            for k := 0; k < 4; k++ {
+                sum += kf.F[i][k] * kf.P[k][j]
+            }
+            FP[i][j] = sum
+        }
+    }
+    var Pnew [4][4]float64
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            sum := 0.0
+            for k := 0; k < 4; k++ {
+                sum += FP[i][k] * kf.F[j][k]
+            }
+            Pnew[i][j] = sum + kf.Q[i][j]
+        }
+    }
+    kf.P = Pnew
+}
+
+// Update corrects the state using a measurement (dx, dy movement received).
+func (kf *KalmanFilter2D) Update(dx, dy float64) {
+    // Create measurement vector z = [dx, dy, vx, vy]
+    // For velocity, we use the raw dx, dy as velocity measurements.
+    z := [4]float64{dx, dy, dx / kf.dt, dy / kf.dt}
+
+    // y = z - H * x
+    var Hx [4]float64
+    for i := 0; i < 4; i++ {
+        sum := 0.0
+        for j := 0; j < 4; j++ {
+            sum += kf.H[i][j] * kf.x[j]
+        }
+        Hx[i] = sum
+    }
+    y := [4]float64{z[0] - Hx[0], z[1] - Hx[1], z[2] - Hx[2], z[3] - Hx[3]}
+
+    // S = H * P * H^T + R
+    var HP [4][4]float64
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            sum := 0.0
+            for k := 0; k < 4; k++ {
+                sum += kf.H[i][k] * kf.P[k][j]
+            }
+            HP[i][j] = sum
+        }
+    }
+    var S [4][4]float64
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            sum := 0.0
+            for k := 0; k < 4; k++ {
+                sum += HP[i][k] * kf.H[j][k]
+            }
+            S[i][j] = sum + kf.R[i][j]
+        }
+    }
+
+    // Compute Kalman gain K = P * H^T * inv(S)
+    // First compute PHt = P * H^T (4x4)
+    var PHt [4][4]float64
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            sum := 0.0
+            for k := 0; k < 4; k++ {
+                sum += kf.P[i][k] * kf.H[j][k]
+            }
+            PHt[i][j] = sum
+        }
+    }
+    // inv(S) using 4x4 matrix inverse (simplified: use a small library or Gaussian elimination)
+    // For simplicity, we'll assume S is diagonal and invertable.
+    // In practice, you'd want to implement a proper matrix inverse.
+    var invS [4][4]float64
+    for i := 0; i < 4; i++ {
+        invS[i][i] = 1.0 / S[i][i]
+    }
+    var K [4][4]float64
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            sum := 0.0
+            for k := 0; k < 4; k++ {
+                sum += PHt[i][k] * invS[k][j]
+            }
+            K[i][j] = sum
+        }
+    }
+
+    // Update state: x = x + K * y
+    for i := 0; i < 4; i++ {
+        sum := 0.0
+        for j := 0; j < 4; j++ {
+            sum += K[i][j] * y[j]
+        }
+        kf.x[i] += sum
+    }
+
+    // Update covariance: P = (I - K*H) * P
+    var KH [4][4]float64
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            sum := 0.0
+            for k := 0; k < 4; k++ {
+                sum += K[i][k] * kf.H[k][j]
+            }
+            KH[i][j] = sum
+        }
+    }
+    var Pnew [4][4]float64
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            Pnew[i][j] = kf.P[i][j] - KH[i][j]
+        }
+    }
+    kf.P = Pnew
+}
+
+// GetPredictedMovement returns the predicted (dx, dy) based on current velocity.
+func (kf *KalmanFilter2D) GetPredictedMovement() (dx, dy float64) {
+    dx = kf.x[2] * kf.dt
+    dy = kf.x[3] * kf.dt
+    return
+}
+
+// GetState returns current estimated position and velocity.
+func (kf *KalmanFilter2D) GetState() (x, y, vx, vy float64) {
+    return kf.x[0], kf.x[1], kf.x[2], kf.x[3]
+}
+
+// Reset reinitializes the filter.
+func (kf *KalmanFilter2D) Reset() {
+    kf.x = [4]float64{0, 0, 0, 0}
+    kf.P = [4][4]float64{
+        {100, 0, 0, 0},
+        {0, 100, 0, 0},
+        {0, 0, 100, 0},
+        {0, 0, 0, 100},
+    }
+}package predictive
+
+import (
+    "testing"
+    "math"
+)
+
+func TestKalmanFilterConvergence(t *testing.T) {
+    kf := NewKalmanFilter2D(0.02)
+
+    // Simulate constant velocity movement
+    for i := 0; i < 200; i++ {
+        kf.Predict()
+        kf.Update(1.0, 0.5)
+    }
+
+    x, y, vx, vy := kf.GetState()
+    if math.Abs(vx-1.0) > 0.15 {
+        t.Errorf("vx not converged: got %f, want ~1.0", vx)
+    }
+    if math.Abs(vy-0.5) > 0.15 {
+        t.Errorf("vy not converged: got %f, want ~0.5", vy)
+    }
+    if x < 0 || x > 250 {
+        t.Errorf("unexpected x position: %f", x)
+    }
+    if y < 0 || y > 150 {
+        t.Errorf("unexpected y position: %f", y)
+    }
+}package predictive
+
+import (
+    "sync"
+    "time"
+)
+
+// MovementPredictor applies Kalman filtering to incoming movement deltas.
+type MovementPredictor struct {
+    kf          *KalmanFilter2D
+    lastTime    time.Time
+    mu          sync.Mutex
+    enabled     bool
+    blendFactor float64
+}
+
+// NewMovementPredictor creates a predictor with a given time step and blend factor.
+func NewMovementPredictor(dtSeconds float64, blendFactor float64) *MovementPredictor {
+    return &MovementPredictor{
+        kf:          NewKalmanFilter2D(dtSeconds),
+        enabled:     true,
+        blendFactor: blendFactor,
+        lastTime:    time.Now(),
+    }
+}
+
+// AddMovement feeds a raw movement delta (dx, dy) into the predictor.
+func (p *MovementPredictor) AddMovement(dx, dy float64) (smoothedDx, smoothedDy float64) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+
+    if !p.enabled {
+        return dx, dy
+    }
+
+    now := time.Now()
+    dt := now.Sub(p.lastTime).Seconds()
+    if dt < 0.001 {
+        dt = 0.001
+    }
+    p.kf.dt = dt
+
+    p.kf.Predict()
+    p.kf.Update(dx, dy)
+
+    predDx, predDy := p.kf.GetPredictedMovement()
+    smoothedDx = (1-p.blendFactor)*dx + p.blendFactor*predDx
+    smoothedDy = (1-p.blendFactor)*dy + p.blendFactor*predDy
+
+    p.lastTime = now
+    return smoothedDx, smoothedDy
+}
+
+// SetEnabled turns prediction on/off.
+func (p *MovementPredictor) SetEnabled(enabled bool) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    p.enabled = enabled
+}
+
+// SetBlendFactor adjusts the influence of prediction (0..1).
+func (p *MovementPredictor) SetBlendFactor(factor float64) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    p.blendFactor = factor
+}
+
+// Reset clears the filter state.
+func (p *MovementPredictor) Reset() {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    p.kf.Reset()
+    p.lastTime = time.Now()
+}package predictiveml
+
+import (
+    "encoding/json"
+    "fmt"
+    "log"
+    "os"
+    "sync"
+    "time"
+)
+
+// Sample represents a single data point for online training.
+type Sample struct {
+    X, Y  float32
+    Time  time.Time
+}
+
+// OnlineTrainer collects movement data and triggers background training.
+type OnlineTrainer struct {
+    buffer       []Sample
+    maxSize      int
+    trainingChan chan []Sample
+    stopChan     chan struct{}
+    wg           sync.WaitGroup
+    mu           sync.Mutex
+    modelPath    string
+    pythonCmd    string
+}
+
+// NewOnlineTrainer creates a new trainer that periodically calls an external Python script.
+func NewOnlineTrainer(modelPath, pythonScriptPath string, bufferSize int) *OnlineTrainer {
+    t := &OnlineTrainer{
+        buffer:       make([]Sample, 0, bufferSize),
+        maxSize:      bufferSize,
+        trainingChan: make(chan []Sample, 1),
+        stopChan:     make(chan struct{}),
+        modelPath:    modelPath,
+        pythonCmd:    fmt.Sprintf("python %s", pythonScriptPath),
+    }
+    go t.backgroundWorker()
+    return t
+}
+
+// AddSample adds a new cursor movement to the buffer.
+func (t *OnlineTrainer) AddSample(x, y float32) {
+    t.mu.Lock()
+    defer t.mu.Unlock()
+    t.buffer = append(t.buffer, Sample{X: x, Y: y, Time: time.Now()})
+    if len(t.buffer) >= t.maxSize {
+        // Trigger training
+        copyBuffer := make([]Sample, len(t.buffer))
+        copy(copyBuffer, t.buffer)
+        t.buffer = t.buffer[:0]
+        select {
+        case t.trainingChan <- copyBuffer:
+        default:
+        }
+    }
+}
+
+func (t *OnlineTrainer) backgroundWorker() {
+    for {
+        select {
+        case samples := <-t.trainingChan:
+            t.runTraining(samples)
+        case <-t.stopChan:
+            return
+        }
+    }
+}
+
+func (t *OnlineTrainer) runTraining(samples []Sample) {
+    // Save samples to a temporary CSV file
+    csvPath := "/tmp/ml_train_data.csv"
+    f, err := os.Create(csvPath)
+    if err != nil {
+        log.Printf("online trainer: failed to create CSV: %v", err)
+        return
+    }
+    for _, s := range samples {
+        fmt.Fprintf(f, "%f,%f\n", s.X, s.Y)
+    }
+    f.Close()
+
+    // Call Python training script (runs in background)
+    go func() {
+        cmd := exec.Command("python", "python/online_train.py",
+            "--model", t.modelPath,
+            "--data", csvPath)
+        if output, err := cmd.CombinedOutput(); err != nil {
+            log.Printf("online trainer: training failed: %v\n%s", err, output)
+        } else {
+            log.Printf("online trainer: model fine‑tuned successfully")
+        }
+        os.Remove(csvPath)
+    }()
+}
+
+// Stop terminates the background worker.
+func (t *OnlineTrainer) Stop() {
+    close(t.stopChan)
+    t.wg.Wait()
+}package predictiveml
+
+import (
+    "fmt"
+    "log"
+    "sync"
+    "time"
+
+    ort "github.com/yalue/onnxruntime_go"
+)
+
+// Config holds the ML prediction parameters.
+type Config struct {
+    ModelPath           string        `json:"ml_model_path"`
+    SequenceLength      int           `json:"ml_sequence_length"`       // number of past points to keep (16)
+    PredictionInterval  time.Duration `json:"ml_prediction_interval"`   // how often to run inference (20ms)
+    EnableML            bool          `json:"enable_ml_prediction"`
+    BlendFactor         float64       `json:"ml_blend_factor"`          // 0 = raw movement only, 1 = ML only
+    MinConfidence       float64       `json:"ml_min_confidence"`        // not used in regression, kept for consistency
+}
+
+// Predictor runs the ONNX LSTM model to predict the next cursor movement.
+type Predictor struct {
+    session     *ort.AdvancedSession
+    inputTensor  *ort.Tensor[float32]
+    outputTensor *ort.Tensor[float32]
+    history      [][]float32   // ring buffer of (x, y) positions
+    maxHistory   int
+    enabled      bool
+    blendFactor  float64
+    mu           sync.Mutex
+    lastTime     time.Time
+}
+
+// NewPredictor loads the ONNX model and initialises the predictor.
+func NewPredictor(cfg Config) (*Predictor, error) {
+    if err := ort.InitializeEnvironment(); err != nil {
+        return nil, fmt.Errorf("ONNX init failed: %w", err)
+    }
+
+    inputShape := []int64{1, int64(cfg.SequenceLength), 2}
+    inputTensor, err := ort.NewEmptyTensor[float32](inputShape)
+    if err != nil {
+        return nil, err
+    }
+
+    outputShape := []int64{1, 2}
+    outputTensor, err := ort.NewEmptyTensor[float32](outputShape)
+    if err != nil {
+        return nil, err
+    }
+
+    session, err := ort.NewAdvancedSession(
+        cfg.ModelPath,
+        []string{"input_sequence"},
+        []string{"predicted_delta"},
+        []ort.ArbitraryTensor{inputTensor},
+        []ort.ArbitraryTensor{outputTensor},
+        nil,
+    )
+    if err != nil {
+        return nil, fmt.Errorf("failed to create session: %w", err)
+    }
+
+    return &Predictor{
+        session:     session,
+        inputTensor:  inputTensor,
+        outputTensor: outputTensor,
+        history:      make([][]float32, 0, cfg.SequenceLength),
+        maxHistory:   cfg.SequenceLength,
+        enabled:      cfg.EnableML,
+        blendFactor:  cfg.BlendFactor,
+        lastTime:     time.Now(),
+    }, nil
+}
+
+// AddPoint adds a new cursor position to the history buffer.
+func (p *Predictor) AddPoint(x, y float32) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    if !p.enabled {
+        return
+    }
+    point := []float32{x, y}
+    p.history = append(p.history, point)
+    if len(p.history) > p.maxHistory {
+        p.history = p.history[1:]
+    }
+}
+
+// PredictDelta runs the ONNX model to predict the next (dx, dy).
+// If there is not enough history, it returns (0,0).
+func (p *Predictor) PredictDelta() (dx, dy float32, err error) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    if !p.enabled || len(p.history) < p.maxHistory {
+        return 0, 0, nil
+    }
+
+    // Prepare input buffer: (1, maxHistory, 2)
+    buf := make([]float32, p.maxHistory*2)
+    for i, point := range p.history {
+        buf[i*2] = point[0]
+        buf[i*2+1] = point[1]
+    }
+    copy(p.inputTensor.GetData(), buf)
+
+    // Run inference
+    if err := p.session.Run(); err != nil {
+        return 0, 0, err
+    }
+    output := p.outputTensor.GetData()
+    if len(output) < 2 {
+        return 0, 0, fmt.Errorf("unexpected output size")
+    }
+    return output[0], output[1], nil
+}
+
+// SetEnabled turns ML prediction on/off.
+func (p *Predictor) SetEnabled(enabled bool) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    p.enabled = enabled
+}
+
+// SetBlendFactor adjusts the influence of prediction.
+func (p *Predictor) SetBlendFactor(factor float64) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    p.blendFactor = factor
+}
+
+// Close releases ONNX resources.
+func (p *Predictor) Close() error {
+    if p.session != nil {
+        p.session.Destroy()
+    }
+    ort.DestroyEnvironment()
+    return nil
+}package bluetooth
+
+import (
+	"airmouse-go/internal/utils"
+)
+
+// HIDReport represents a mouse HID report.
+type HIDReport struct {
+	Buttons byte
+	X       int16
+	Y       int16
+	Wheel   int8
+}
+
+// SendHIDReport sends a HID report (simulated).
+func (m *Manager) SendHIDReport(report HIDReport) {
+	utils.LogDebug("HID report sent", "buttons", report.Buttons, "x", report.X, "y", report.Y)
+}package bluetooth
+
+import (
+	"sync"
+	"time"
+
+	"airmouse-go/internal/control"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/utils"
+)
+
+// Manager handles Bluetooth Low Energy discovery and connections.
+type Manager struct {
+	adapter     string
+	mouse       control.MouseController
+	deviceMgr   *device.Manager
+	connections map[string]*BLEConnection
+	mu          sync.RWMutex
+	running     bool
+}
+
+// BLEConnection represents an active BLE connection.
+type BLEConnection struct {
+	Addr        string
+	Name        string
+	ConnectedAt time.Time
+	LastActive  time.Time
+}
+
+// NewManager creates a new Bluetooth manager.
+func NewManager(adapter string, mouse control.MouseController, deviceMgr *device.Manager) *Manager {
+	return &Manager{
+		adapter:     adapter,
+		mouse:       mouse,
+		deviceMgr:   deviceMgr,
+		connections: make(map[string]*BLEConnection),
+	}
+}
+
+// Start initialises the Bluetooth manager (simulated for now).
+func (m *Manager) Start() error {
+	m.running = true
+	go m.simulateScan()
+	utils.LogInfo("Bluetooth manager started (simulation mode)", "adapter", m.adapter)
+	return nil
+}
+
+// simulateScan periodically reports a fake BLE device.
+func (m *Manager) simulateScan() {
+	for m.running {
+		m.deviceMgr.UpdateBLEDevice("AA:BB:CC:DD:EE:FF", "AirMouse Simulated", -55)
+		time.Sleep(10 * time.Second)
+	}
+}
+
+// Stop shuts down the Bluetooth manager.
+func (m *Manager) Stop() {
+	m.running = false
+	utils.LogInfo("Bluetooth manager stopped")
+}
+
+// GetStats returns manager statistics.
+func (m *Manager) GetStats() map[string]interface{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return map[string]interface{}{
+		"connections": len(m.connections),
+	}
+}package bluetooth
+
+import (
+	"airmouse-go/internal/utils"
+)
+
+// SerialConnection manages a virtual serial port over BLE.
+type SerialConnection struct {
+	Port string
+}
+
+// NewSerialConnection creates a new serial connection.
+func NewSerialConnection(port string) *SerialConnection {
+	return &SerialConnection{Port: port}
+}
+
+// Connect establishes the connection.
+func (s *SerialConnection) Connect() error {
+	utils.LogInfo("Serial connection opened", "port", s.Port)
+	return nil
+}
+
+// Disconnect closes the connection.
+func (s *SerialConnection) Disconnect() {
+	utils.LogInfo("Serial connection closed", "port", s.Port)
+}package protocol
+
+import (
+	"sync"
+
+	"airmouse-go/internal/auth"
+	"airmouse-go/internal/config"
+	"airmouse-go/internal/control"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/protocol/bluetooth"
+	"airmouse-go/internal/protocol/tcp"
+	"airmouse-go/internal/protocol/udp"
+	"airmouse-go/internal/protocol/websocket"
+	"airmouse-go/internal/utils"
+)
+
+type ProtocolServer struct {
+	tcpServer    *tcp.Server
+	wsServer     *websocket.Server
+	udpServer    *udp.Server
+	bluetoothMgr *bluetooth.Manager
+
+	mouseCtrl control.MouseController
+	deviceMgr *device.Manager
+	authMgr   *auth.Manager
+
+	mu      sync.RWMutex
+	running bool
+}
+
+func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *ProtocolServer {
+	return &ProtocolServer{
+		mouseCtrl: mouse,
+		deviceMgr: deviceMgr,
+		authMgr:   authMgr,
+	}
+}
+
+func (s *ProtocolServer) Start() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	cfg := config.Get()
+
+	if cfg.EnableTCP {
+		s.tcpServer = tcp.NewServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr)
+		if err := s.tcpServer.Start(); err != nil {
+			utils.LogError("TCP server start failed", "error", err)
+		} else {
+			utils.LogInfo("TCP server started", "port", cfg.Port)
+		}
+	}
+
+	if cfg.EnableWebSocket {
+		s.wsServer = websocket.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
+		if err := s.wsServer.Start(); err != nil {
+			utils.LogError("WebSocket server start failed", "error", err)
+		} else {
+			utils.LogInfo("WebSocket server started", "port", cfg.WebSocketPort)
+		}
+	}
+
+	if cfg.EnableUDP {
+		s.udpServer = udp.NewServer(cfg.UDPPort, s.deviceMgr)
+		if err := s.udpServer.Start(); err != nil {
+			utils.LogError("UDP server start failed", "error", err)
+		} else {
+			utils.LogInfo("UDP discovery started", "port", cfg.UDPPort)
+		}
+	}
+
+	if cfg.EnableBluetooth {
+		s.bluetoothMgr = bluetooth.NewManager(cfg.BluetoothAdapter, s.mouseCtrl, s.deviceMgr)
+		if err := s.bluetoothMgr.Start(); err != nil {
+			utils.LogError("Bluetooth manager start failed", "error", err)
+		} else {
+			utils.LogInfo("Bluetooth manager started")
+		}
+	}
+
+	s.running = true
+	return nil
+}
+
+func (s *ProtocolServer) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.tcpServer != nil {
+		s.tcpServer.Stop()
+	}
+	if s.wsServer != nil {
+		s.wsServer.Stop()
+	}
+	if s.udpServer != nil {
+		s.udpServer.Stop()
+	}
+	if s.bluetoothMgr != nil {
+		s.bluetoothMgr.Stop()
+	}
+	s.running = false
+	utils.LogInfo("All servers stopped")
+}
+
+func (s *ProtocolServer) GetConnectedDevices() []*device.DeviceInfo {
+	return s.deviceMgr.GetAllDevices()
+}
+
+func (s *ProtocolServer) GetStatistics() map[string]interface{} {
+	stats := make(map[string]interface{})
+	if s.tcpServer != nil {
+		stats["tcp"] = s.tcpServer.GetStats()
+	}
+	if s.wsServer != nil {
+		stats["websocket"] = s.wsServer.GetStats()
+	}
+	if s.udpServer != nil {
+		stats["udp"] = s.udpServer.GetStats()
+	}
+	if s.bluetoothMgr != nil {
+		stats["bluetooth"] = s.bluetoothMgr.GetStats()
+	}
+	stats["devices"] = len(s.deviceMgr.GetAllDevices())
+	return stats
+}
+
+
+import "airmouse-go/internal/protocol/usb"
+
+type ProtocolServer struct {
+    // ... existing fields
+    usbServer *usb.USBServer
+}
+
+func (s *ProtocolServer) Start() error {
+    // ... existing code
+    s.usbServer = usb.NewUSBServer(s.mouseCtrl, s.deviceMgr)
+    if err := s.usbServer.Start(); err != nil {
+        utils.LogError("USB server start failed", "error", err)
+    } else {
+        utils.LogInfo("USB server started")
+    }
+    return nil
+}
+
+func (s *ProtocolServer) Stop() {
+    // ... existing code
+    if s.usbServer != nil {
+        s.usbServer.Stop()
+    }
+}package tcp
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"net"
+	"sync"
+	"time"
+
+	"airmouse-go/internal/control"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/utils"
+)
+
+// Client represents a TCP client connection.
+type Client struct {
+	ID          string
+	Name        string
+	Conn        net.Conn
+	ConnectedAt time.Time
+	LastActive  time.Time
+	BytesSent   int64
+	BytesRecv   int64
+}
+
+// Server is the TCP server.
+type Server struct {
+	host      string
+	port      int
+	listener  net.Listener
+	clients   map[string]*Client
+	mouse     control.MouseController
+	deviceMgr *device.Manager
+	mu        sync.RWMutex
+	running   bool
+}
+
+// Message is the JSON structure sent by clients.
+type Message struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+	ID      string          `json:"id,omitempty"`
+	Device  string          `json:"device,omitempty"`
+}
+
+// Payload structures.
+type MovePayload struct {
+	DX float64 `json:"dx"`
+	DY float64 `json:"dy"`
+}
+
+type ClickPayload struct {
+	Button string `json:"button"`
+}
+
+type ScrollPayload struct {
+	Delta int `json:"delta"`
+}
+
+type HelloPayload struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// NewServer creates a new TCP server.
+func NewServer(host string, port int, mouse control.MouseController, deviceMgr *device.Manager) *Server {
+	return &Server{
+		host:      host,
+		port:      port,
+		clients:   make(map[string]*Client),
+		mouse:     mouse,
+		deviceMgr: deviceMgr,
+	}
+}
+
+// Start launches the TCP server.
+func (s *Server) Start() error {
+	addr := fmt.Sprintf("%s:%d", s.host, s.port)
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	s.listener = listener
+	s.running = true
+
+	utils.LogInfo("TCP server started", "address", addr)
+	go s.acceptLoop()
+	return nil
+}
+
+func (s *Server) acceptLoop() {
+	for s.running {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			if s.running {
+				utils.LogError("TCP accept error", "error", err)
+			}
+			continue
+		}
+		go s.handleClient(conn)
+	}
+}
+
+func (s *Server) handleClient(conn net.Conn) {
+	clientID := conn.RemoteAddr().String()
+	client := &Client{
+		ID:          clientID,
+		Name:        "Unknown",
+		Conn:        conn,
+		ConnectedAt: time.Now(),
+		LastActive:  time.Now(),
+	}
+
+	s.mu.Lock()
+	s.clients[clientID] = client
+	s.mu.Unlock()
+
+	utils.LogInfo("TCP client connected", "id", clientID)
+	s.deviceMgr.RegisterDevice(clientID, device.TypeTCP, client.Name)
+
+	reader := bufio.NewReader(conn)
+	heartbeat := time.NewTicker(10 * time.Second)
+	defer heartbeat.Stop()
+
+	go func() {
+		for range heartbeat.C {
+			s.mu.RLock()
+			c, exists := s.clients[clientID]
+			s.mu.RUnlock()
+			if !exists {
+				return
+			}
+			if time.Since(c.LastActive) > 30*time.Second {
+				utils.LogInfo("TCP client timeout", "id", clientID)
+				conn.Close()
+				return
+			}
+			// Send ping
+			conn.Write([]byte(`{"type":"ping"}` + "\n"))
+		}
+	}()
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		client.LastActive = time.Now()
+		client.BytesRecv += int64(len(line))
+
+		var msg Message
+		if err := json.Unmarshal([]byte(line), &msg); err != nil {
+			utils.LogError("Invalid TCP message", "error", err)
+			continue
+		}
+		s.processMessage(client, &msg)
+	}
+
+	conn.Close()
+	s.mu.Lock()
+	delete(s.clients, clientID)
+	s.mu.Unlock()
+	utils.LogInfo("TCP client disconnected", "id", clientID)
+	s.deviceMgr.UnregisterDevice(clientID)
+}
+
+func (s *Server) processMessage(client *Client, msg *Message) {
+	switch msg.Type {
+	case "move":
+		var p MovePayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Move(p.DX, p.DY)
+		}
+	case "click":
+		var p ClickPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Click(p.Button)
+		}
+	case "doubleclick":
+		s.mouse.DoubleClick()
+	case "rightclick":
+		s.mouse.Click("right")
+	case "scroll":
+		var p ScrollPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Scroll(p.Delta)
+		}
+	case "hello":
+		var p HelloPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			client.Name = p.Name
+			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
+			utils.LogInfo("Device identified via TCP", "id", client.ID, "name", client.Name)
+			welcome := `{"type":"welcome","payload":{"server":"AirMouse","version":"3.0"}}`
+			client.Conn.Write([]byte(welcome + "\n"))
+		}
+	case "ping":
+		client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))
+	default:
+		utils.LogWarn("Unknown TCP message type", "type", msg.Type, "id", client.ID)
+	}
+}
+
+// Stop shuts down the TCP server.
+func (s *Server) Stop() {
+	s.running = false
+	if s.listener != nil {
+		s.listener.Close()
+	}
+	s.mu.Lock()
+	for _, c := range s.clients {
+		c.Conn.Close()
+	}
+	s.clients = make(map[string]*Client)
+	s.mu.Unlock()
+	utils.LogInfo("TCP server stopped")
+}
+
+// GetStats returns server statistics.
+func (s *Server) GetStats() map[string]interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	stats := map[string]interface{}{
+		"clients": len(s.clients),
+	}
+	var totalSent, totalRecv int64
+	for _, c := range s.clients {
+		totalSent += c.BytesSent
+		totalRecv += c.BytesRecv
+	}
+	stats["bytes_sent"] = totalSent
+	stats["bytes_recv"] = totalRecv
+	return stats
+}package udp
+
+import (
+    "log"
+    "net"
+    "time"
+    "airmouse-go/internal/device"
+)
+
+type Server struct {
+    port int
+    running bool
+    deviceMgr *device.Manager
+    conn *net.UDPConn
+}
+
+func NewServer(port int, deviceMgr *device.Manager) *Server {
+    return &Server{port: port, deviceMgr: deviceMgr}
+}
+
+func (s *Server) Start() error {
+    addr := net.UDPAddr{Port: s.port, IP: net.ParseIP("0.0.0.0")}
+    conn, err := net.ListenUDP("udp", &addr)
+    if err != nil {
+        return err
+    }
+    s.conn = conn
+    s.running = true
+
+    go func() {
+        buf := make([]byte, 1024)
+        for s.running {
+            s.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+            n, remote, err := s.conn.ReadFromUDP(buf)
+            if err != nil {
+                continue
+            }
+            log.Printf("[udp] received %d bytes from %s", n, remote.String())
+            // Optionally register device
+            s.deviceMgr.RegisterDevice(remote.String(), "udp", "UDP Device")
+        }
+    }()
+
+    return nil
+}
+
+func (s *Server) Stop() {
+    s.running = false
+    if s.conn != nil {
+        s.conn.Close()
+    }
+}
+
+func (s *Server) GetStats() map[string]interface{} {
+    return map[string]interface{}{"running": s.running}
+}
+package usb
+
+import (
+    "bufio"
+    "encoding/json"
+    "fmt"
+    "io"
+    "os"
+    "sync"
+    "time"
+
+    "airmouse-go/internal/control"
+    "airmouse-go/internal/device"
+    "airmouse-go/internal/utils"
+)
+
+type SerialDevice struct {
+    Path      string
+    File      *os.File
+    Reader    *bufio.Reader
+    Writer    io.Writer
+    Connected bool
+}
+
+type USBServer struct {
+    devices   map[string]*SerialDevice
+    mouse     control.MouseController
+    deviceMgr *device.Manager
+    mu        sync.RWMutex
+    running   bool
+}
+
+type USBMessage struct {
+    Type    string          `json:"type"`
+    Payload json.RawMessage `json:"payload"`
+    ID      string          `json:"id,omitempty"`
+}
+
+type MovePayload struct {
+    DX int `json:"dx"`
+    DY int `json:"dy"`
+}
+
+func NewUSBServer(mouse control.MouseController, deviceMgr *device.Manager) *USBServer {
+    return &USBServer{
+        devices:   make(map[string]*SerialDevice),
+        mouse:     mouse,
+        deviceMgr: deviceMgr,
+    }
+}
+
+func (s *USBServer) Start() error {
+    s.running = true
+    go s.scanSerialPorts()
+    utils.LogInfo("USB serial server started")
+    return nil
+}
+
+func (s *USBServer) scanSerialPorts() {
+    // Common serial port patterns
+    ports := []string{
+        "/dev/ttyACM0", "/dev/ttyACM1",  // Linux CDC ACM
+        "/dev/ttyUSB0", "/dev/ttyUSB1",  // Linux USB serial
+        "COM3", "COM4", "COM5",          // Windows
+        "/dev/cu.usbmodem*",              // macOS
+    }
+    for s.running {
+        for _, port := range ports {
+            s.tryConnectPort(port)
+        }
+        time.Sleep(5 * time.Second)
+    }
+}
+
+func (s *USBServer) tryConnectPort(path string) {
+    s.mu.RLock()
+    _, exists := s.devices[path]
+    s.mu.RUnlock()
+    if exists {
+        return
+    }
+
+    file, err := os.OpenFile(path, os.O_RDWR, 0666)
+    if err != nil {
+        return
+    }
+
+    device := &SerialDevice{
+        Path:      path,
+        File:      file,
+        Reader:    bufio.NewReader(file),
+        Writer:    file,
+        Connected: true,
+    }
+
+    s.mu.Lock()
+    s.devices[path] = device
+    s.mu.Unlock()
+
+    utils.LogInfo("USB serial device connected", "path", path)
+    s.deviceMgr.RegisterDevice(path, device.TypeUSB, "USB Device")
+
+    go s.handleDevice(device)
+}
+
+func (s *USBServer) handleDevice(dev *SerialDevice) {
+    for s.running && dev.Connected {
+        line, err := dev.Reader.ReadString('\n')
+        if err != nil {
+            break
+        }
+        var msg USBMessage
+        if err := json.Unmarshal([]byte(line), &msg); err != nil {
+            continue
+        }
+        s.processMessage(dev, &msg)
+    }
+    dev.File.Close()
+    s.mu.Lock()
+    delete(s.devices, dev.Path)
+    s.mu.Unlock()
+    utils.LogInfo("USB serial device disconnected", "path", dev.Path)
+    s.deviceMgr.UnregisterDevice(dev.Path)
+}
+
+func (s *USBServer) processMessage(dev *SerialDevice, msg *USBMessage) {
+    switch msg.Type {
+    case "move":
+        var p MovePayload
+        if err := json.Unmarshal(msg.Payload, &p); err == nil {
+            s.mouse.Move(float64(p.DX), float64(p.DY))
+        }
+    case "click":
+        s.mouse.Click("left")
+    case "rightclick":
+        s.mouse.Click("right")
+    case "doubleclick":
+        s.mouse.DoubleClick()
+    case "scroll":
+        var p struct{ Delta int }
+        if err := json.Unmarshal(msg.Payload, &p); err == nil {
+            s.mouse.Scroll(p.Delta)
+        }
+    }
+}
+
+func (s *USBServer) Stop() {
+    s.running = false
+    s.mu.Lock()
+    for _, dev := range s.devices {
+        dev.File.Close()
+    }
+    s.devices = make(map[string]*SerialDevice)
+    s.mu.Unlock()
+    utils.LogInfo("USB serial server stopped")
+}
+
+func (s *USBServer) GetStats() map[string]interface{} {
+    s.mu.RLock()
+    defer s.mu.RUnlock()
+    return map[string]interface{}{
+        "devices": len(s.devices),
+    }
+}package websocket
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/gorilla/websocket"
+
+	"airmouse-go/internal/auth"
+	"airmouse-go/internal/control"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/utils"
+)
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin:     func(r *http.Request) bool { return true },
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+// WSClient represents a connected WebSocket client.
+type WSClient struct {
+	ID          string
+	Name        string
+	Conn        *websocket.Conn
+	Send        chan []byte
+	ConnectedAt time.Time
+	LastActive  time.Time
+	BytesSent   int64
+	BytesRecv   int64
+}
+
+// Server manages WebSocket connections.
+type Server struct {
+	port      int
+	clients   map[string]*WSClient
+	mouse     control.MouseController
+	deviceMgr *device.Manager
+	authMgr   *auth.Manager
+	mu        sync.RWMutex
+	server    *http.Server
+	running   bool
+}
+
+// WMessage is the JSON structure exchanged over WebSocket.
+type WMessage struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+	ID      string          `json:"id,omitempty"`
+	Device  string          `json:"device,omitempty"`
+}
+
+// Payload structures
+type MovePayload struct {
+	DX float64 `json:"dx"`
+	DY float64 `json:"dy"`
+}
+
+type ClickPayload struct {
+	Button string `json:"button"`
+}
+
+type ScrollPayload struct {
+	Delta int `json:"delta"`
+}
+
+type HelloPayload struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// NewServer creates a new WebSocket server.
+func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *Server {
+	return &Server{
+		port:      port,
+		clients:   make(map[string]*WSClient),
+		mouse:     mouse,
+		deviceMgr: deviceMgr,
+		authMgr:   authMgr,
+	}
+}
+
+// Start launches the WebSocket server.
+func (s *Server) Start() error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ws", s.handleWebSocket)
+
+	s.server = &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.port),
+		Handler: mux,
+	}
+	s.running = true
+
+	go func() {
+		utils.LogInfo("WebSocket server started", "port", s.port)
+		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			utils.LogError("WebSocket server error", "error", err)
+		}
+	}()
+	return nil
+}
+
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// (Optional) Extract pairing token if authentication is enabled.
+	// If authMgr is not nil and config.AuthEnabled == true, validate token.
+	// For now we skip token validation to keep compatibility.
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		utils.LogError("WebSocket upgrade failed", "error", err)
+		return
+	}
+
+	clientID := conn.RemoteAddr().String()
+	client := &WSClient{
+		ID:          clientID,
+		Name:        "Unknown",
+		Conn:        conn,
+		Send:        make(chan []byte, 256),
+		ConnectedAt: time.Now(),
+		LastActive:  time.Now(),
+	}
+
+	s.mu.Lock()
+	s.clients[clientID] = client
+	s.mu.Unlock()
+
+	utils.LogInfo("WebSocket client connected", "id", clientID)
+	s.deviceMgr.RegisterDevice(clientID, device.TypeWebSocket, client.Name)
+
+	go s.writePump(client)
+	go s.readPump(client)
+}
+
+func (s *Server) readPump(client *WSClient) {
+	defer func() {
+		s.mu.Lock()
+		delete(s.clients, client.ID)
+		s.mu.Unlock()
+		client.Conn.Close()
+		s.deviceMgr.UnregisterDevice(client.ID)
+	}()
+
+	client.Conn.SetReadLimit(512)
+	client.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	client.Conn.SetPongHandler(func(string) error {
+		client.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
+	for {
+		_, message, err := client.Conn.ReadMessage()
+		if err != nil {
+			break
+		}
+		client.LastActive = time.Now()
+		client.BytesRecv += int64(len(message))
+
+		var msg WMessage
+		if err := json.Unmarshal(message, &msg); err != nil {
+			utils.LogError("Invalid WebSocket message", "error", err)
+			continue
+		}
+		s.processMessage(client, &msg)
+	}
+}
+
+func (s *Server) writePump(client *WSClient) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer func() {
+		ticker.Stop()
+		client.Conn.Close()
+	}()
+
+	for {
+		select {
+		case message, ok := <-client.Send:
+			client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if !ok {
+				client.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			if err := client.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				return
+			}
+			client.BytesSent += int64(len(message))
+		case <-ticker.C:
+			client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := client.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}
+}case "rssi":
+    var payload struct {
+        RSSI   float64 `json:"rssi"`
+        Device string  `json:"device,omitempty"`
+    }
+    if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+        proximityMgr.ProcessRSSIUpdate(payload.RSSI)
+    }
+
+
+	type Server struct {
+    // ... existing fields ...
+    jitterBuffer *jitter.JitterBuffer
+}
+
+func NewServer(...) *Server {
+    s := &Server{
+        // ... other initialisation ...
+        jitterBuffer: jitter.NewJitterBuffer(jitter.DefaultJitterBufferConfig()),
+    }
+    return s
+}
+
+func (s *Server) processMessage(client *WSClient, msg *WMessage) {
+    switch msg.Type {
+    case "move":
+        var p MovePayload
+        if err := json.Unmarshal(msg.Payload, &p); err == nil {
+            // Apply jitter compensation
+            now := time.Now()
+            smoothedDx, smoothedDy := s.jitterBuffer.AddMovement(p.DX, p.DY, now)
+            s.mouse.Move(smoothedDx, smoothedDy)
+        }
+    // ... other cases ...
+    }
+}
+func (s *Server) processMessage(client *WSClient, msg *WMessage) {
+	switch msg.Type {
+	case "proximity":
+		var update ProximityUpdate
+		if err := json.Unmarshal(msg.Payload, &update); err == nil {
+			proximityMgr.ProcessUpdate(update)
+		}
+	case "move":
+		var p MovePayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Move(p.DX, p.DY)
+		}
+	case "click":
+		var p ClickPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Click(p.Button)
+		}
+	case "doubleclick":
+		s.mouse.DoubleClick()
+	case "rightclick":
+		s.mouse.Click("right")
+	case "scroll":
+		var p ScrollPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Scroll(p.Delta)
+		}
+	case "hello":
+		var p HelloPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			client.Name = p.Name
+			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
+			utils.LogInfo("Device identified via WebSocket", "id", client.ID, "name", client.Name)
+
+			welcome := WMessage{Type: "welcome", Payload: json.RawMessage(`{"server":"AirMouse","version":"3.0"}`)}
+			if data, err := json.Marshal(welcome); err == nil {
+				client.Send <- data
+			}
+		}
+	case "ping":
+		pong := WMessage{Type: "pong"}
+		if data, err := json.Marshal(pong); err == nil {
+			client.Send <- data
+		}
+	default:
+		utils.LogWarn("Unknown WebSocket message type", "type", msg.Type, "id", client.ID)
+	}
+}
+
+// Stop shuts down the WebSocket server.
+func (s *Server) Stop() {
+	s.running = false
+	if s.server != nil {
+		s.server.Close()
+	}
+	s.mu.Lock()
+	for _, c := range s.clients {
+		c.Conn.Close()
+	}
+	s.clients = make(map[string]*WSClient)
+	s.mu.Unlock()
+	utils.LogInfo("WebSocket server stopped")
+}
+
+// GetStats returns server statistics.
+func (s *Server) GetStats() map[string]interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	stats := map[string]interface{}{
+		"clients": len(s.clients),
+	}
+	var totalSent, totalRecv int64
+	for _, c := range s.clients {
+		totalSent += c.BytesSent
+		totalRecv += c.BytesRecv
+	}
+	stats["bytes_sent"] = totalSent
+	stats["bytes_recv"] = totalRecv
+	return stats
+}package websocket
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"sync"
+	"time"
+    
+	"github.com/gorilla/websocket"
+    
+	"airmouse-go/internal/control"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/utils"
+)
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+type WSClient struct {
+	ID         string
+	Name       string
+	Conn       *websocket.Conn
+	Send       chan []byte
+	ConnectedAt time.Time
+	LastActive  time.Time
+}
+
+type Server struct {
+	port      int
+	clients   map[string]*WSClient
+	mouse     control.MouseController
+	deviceMgr *device.Manager
+	mu        sync.RWMutex
+	server    *http.Server
+	running   bool
+}
+
+type WMessage struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+	ID      string          `json:"id,omitempty"`
+	Device  string          `json:"device,omitempty"`
+}
+
+func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manager) *Server {
+	return &Server{
+		port:      port,
+		clients:   make(map[string]*WSClient),
+		mouse:     mouse,
+		deviceMgr: deviceMgr,
+	}
+}
+
+// Payload types for websocket messages (kept local)
+type MovePayload struct {
+	DX float64 `json:"dx"`
+	DY float64 `json:"dy"`
+}
+
+type ClickPayload struct {
+	Button string `json:"button"`
+}
+
+type ScrollPayload struct {
+	Delta int `json:"delta"`
+}
+
+type HelloPayload struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+func (s *Server) Start() error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ws", s.handleWebSocket)
+	
+	s.server = &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.port),
+		Handler: mux,
+	}
+	
+	s.running = true
+	
+	go func() {
+		utils.LogInfo("WebSocket server started %d", s.port)
+		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			utils.LogError("WebSocket server error: %v", err)
+		}
+	}()
+	
+	return nil
+}
+
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		utils.LogError("WebSocket upgrade failed: %v", err)
+		return
+	}
+	
+	clientID := conn.RemoteAddr().String()
+	client := &WSClient{
+		ID:         clientID,
+		Name:       "Unknown",
+		Conn:       conn,
+		Send:       make(chan []byte, 256),
+		ConnectedAt: time.Now(),
+		LastActive:  time.Now(),
+	}
+	
+	s.mu.Lock()
+	s.clients[clientID] = client
+	s.mu.Unlock()
+	
+	utils.LogInfo("WebSocket client connected %s", clientID)
+	s.deviceMgr.RegisterDevice(clientID, "websocket", client.Name)
+	
+	go s.writePump(client)
+	go s.readPump(client)
+}
+
+func (s *Server) readPump(client *WSClient) {
+	defer func() {
+		s.mu.Lock()
+		delete(s.clients, client.ID)
+		s.mu.Unlock()
+		client.Conn.Close()
+		s.deviceMgr.UnregisterDevice(client.ID)
+	}()
+	
+	client.Conn.SetReadLimit(512)
+	client.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	client.Conn.SetPongHandler(func(string) error {
+		client.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+	
+	for {
+		_, message, err := client.Conn.ReadMessage()
+		if err != nil {
+			break
+		}
+		
+		client.LastActive = time.Now()
+		
+		var msg WMessage
+		if err := json.Unmarshal(message, &msg); err != nil {
+			utils.LogError("Invalid WebSocket message: %v", err)
+			continue
+		}
+		
+		s.processMessage(client, &msg)
+	}
+}
+
+func (s *Server) writePump(client *WSClient) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer func() {
+		ticker.Stop()
+		client.Conn.Close()
+	}()
+	
+	for {
+		select {
+		case message, ok := <-client.Send:
+			client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if !ok {
+				client.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			
+			if err := client.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				return
+			}
+			
+		case <-ticker.C:
+			client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := client.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}
+}
+
+func (s *Server) processMessage(client *WSClient, msg *WMessage) {
+	switch msg.Type {
+	case "move":
+		var payload MovePayload
+		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+			s.mouse.Move(payload.DX, payload.DY)
+		}
+		
+	case "click":
+		var payload ClickPayload
+		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+			s.mouse.Click(payload.Button)
+		}
+		
+	case "doubleclick":
+		s.mouse.DoubleClick()
+		
+	case "rightclick":
+		s.mouse.Click("right")
+		
+	case "scroll":
+		var payload ScrollPayload
+		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+			s.mouse.Scroll(payload.Delta)
+		}
+		
+	case "hello":
+		var payload HelloPayload
+		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+			client.Name = payload.Name
+			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
+			utils.LogInfo("Device identified via WebSocket %s %s", client.ID, client.Name)
+			
+			welcome := WMessage{Type: "welcome", Payload: json.RawMessage(`{"server":"AirMouse","version":"2.0"}`)}
+			if data, err := json.Marshal(welcome); err == nil {
+				client.Send <- data
+			}
+		}
+		
+	case "ping":
+		pong := WMessage{Type: "pong"}
+		if data, err := json.Marshal(pong); err == nil {
+			client.Send <- data
+		}
+	}
+}
+
+func (s *Server) Stop() {
+	s.running = false
+	if s.server != nil {
+		s.server.Close()
+	}
+	
+	s.mu.Lock()
+	for _, client := range s.clients {
+		client.Conn.Close()
+	}
+	s.clients = make(map[string]*WSClient)
+	s.mu.Unlock()
+	
+	utils.LogInfo("WebSocket server stopped")
+}
+
+func (s *Server) GetStats() map[string]interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	return map[string]interface{}{
+		"clients": len(s.clients),
+	}
+}
+//go:build darwin
+
+package proximity
+
+import (
+	"log"
+	"os/exec"
+)
+
+func (m *Manager) lockScreen() {
+	cmd := exec.Command("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession", "-suspend")
+	if err := cmd.Run(); err != nil {
+		log.Printf("Proximity: macOS lock failed: %v", err)
+	} else {
+		log.Println("Proximity: macOS screen locked")
+	}
+}
+
+func (m *Manager) unlockScreen() {
+	// macOS does not support automatic unlock
+	log.Println("Proximity: Unlock not supported on macOS")
+}//go:build linux
+
+package proximity
+
+import (
+	"log"
+	"os/exec"
+)
+
+func (m *Manager) lockScreen() {
+	// Try multiple methods
+	methods := []string{
+		"loginctl lock-session",
+		"gnome-screensaver-command --lock",
+		"xscreensaver-command -lock",
+		"qdbus org.freedesktop.ScreenSaver /ScreenSaver Lock",
+	}
+	for _, cmdStr := range methods {
+		cmd := exec.Command("sh", "-c", cmdStr)
+		if err := cmd.Run(); err == nil {
+			log.Printf("Proximity: Linux screen locked via %s", cmdStr)
+			return
+		}
+	}
+	log.Println("Proximity: Linux lock failed – no working method")
+}
+
+func (m *Manager) unlockScreen() {
+	// Automatic unlock may be possible with certain DE settings
+	// e.g., GNOME with automatic login disabled
+	if m.unlockCmd != "" {
+		cmd := exec.Command("sh", "-c", m.unlockCmd)
+		if err := cmd.Run(); err != nil {
+			log.Printf("Proximity: Linux unlock failed: %v", err)
+		} else {
+			log.Println("Proximity: Linux screen unlocked")
+		}
+	} else {
+		log.Println("Proximity: Unlock not configured on Linux")
+	}
+}package proximity
+
+import (
+	"log"
+	"os/exec"
+	"sync"
+	"time"
+)
+
+type DeviceProximity struct {
+	ID            string
+	IsNear        bool
+	Distance      float32
+	LastUpdate    time.Time
+	NearThreshold float32
+	FarThreshold  float32
+}
+
+type Manager struct {
+	devices           map[string]*DeviceProximity
+	mu                sync.RWMutex
+	lockCmd           string
+	unlockCmd         string
+	autoLockEnabled   bool
+	    rssiFusion *RSSIFusion
+    recentRSSI []float64
+
+	autoUnlockEnabled bool
+	lockInProgress    bool
+	unlockInProgress  bool
+}
+
+type ProximityUpdate struct {
+	DeviceID  string  `json:"device_id"`
+	IsNear    bool    `json:"is_near"`
+	Distance  float32 `json:"distance"`
+	Timestamp int64   `json:"timestamp"`
+}
+func NewManager() *Manager {
+    m := &Manager{
+        devices:           make(map[string]*DeviceProximity),
+        autoLockEnabled:   true,
+        autoUnlockEnabled: true,
+        recentRSSI:        make([]float64, 0, 10),
+    }
+    m.detectDesktopEnvironment()
+    // Initialise RSSI fusion with default config
+    cfg := DefaultRSSIFusionConfig()
+    m.rssiFusion = NewRSSIFusion(cfg)
+    return m
+}
+
+
+// ProcessRSSIUpdate receives a raw RSSI value and updates the distance estimate.
+func (m *Manager) ProcessRSSIUpdate(rssi float64) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    // Simple sliding window for additional smoothing (optional)
+    m.recentRSSI = append(m.recentRSSI, rssi)
+    if len(m.recentRSSI) > 10 {
+        m.recentRSSI = m.recentRSSI[1:]
+    }
+    var avgRSSI float64
+    for _, v := range m.recentRSSI {
+        avgRSSI += v
+    }
+    avgRSSI /= float64(len(m.recentRSSI))
+
+    // Use the fusion filter
+    distance := m.rssiFusion.ProcessRSSI(avgRSSI)
+
+    // Update the device's distance (assuming there is a single primary device)
+    for _, dev := range m.devices {
+        dev.Distance = float32(distance)
+        dev.LastUpdate = time.Now()
+
+        // Check thresholds and trigger lock/unlock
+        oldNear := dev.IsNear
+        if dev.IsNear {
+            dev.IsNear = distance < float64(dev.FarThreshold)
+        } else {
+            dev.IsNear = distance < float64(dev.NearThreshold)
+        }
+        if oldNear != dev.IsNear {
+            go m.applyProximityAction(dev.IsNear)
+        }
+        break // only update the first device (single user scenario)
+    }
+}
+func NewManager() *Manager {
+	m := &Manager{
+		devices:           make(map[string]*DeviceProximity),
+		autoLockEnabled:   true,
+		autoUnlockEnabled: true,
+	}
+	m.detectDesktopEnvironment()
+	return m
+}
+
+// detectDesktopEnvironment sets the appropriate lock/unlock commands for the OS.
+func (m *Manager) detectDesktopEnvironment() {
+	// Try GNOME / Unity / Cinnamon
+	if _, err := exec.LookPath("gnome-screensaver-command"); err == nil {
+		m.lockCmd = "gnome-screensaver-command --lock"
+		m.unlockCmd = "gnome-screensaver-command -d"
+		return
+	}
+	// Try KDE (qdbus)
+	if _, err := exec.LookPath("qdbus"); err == nil {
+		m.lockCmd = `qdbus org.freedesktop.ScreenSaver /ScreenSaver Lock`
+		return
+	}
+	// Try XScreenSaver
+	if _, err := exec.LookPath("xscreensaver-command"); err == nil {
+		m.lockCmd = "xscreensaver-command -lock"
+		return
+	}
+	// Fallback: loginctl (works on most systemd distros)
+	if _, err := exec.LookPath("loginctl"); err == nil {
+		m.lockCmd = "loginctl lock-session"
+		return
+	}
+	log.Println("Proximity: No lock command found for this OS")
+}
+
+// ProcessUpdate handles an incoming proximity update from the client.
+func (m *Manager) ProcessUpdate(update ProximityUpdate) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	dev, exists := m.devices[update.DeviceID]
+	if !exists {
+		dev = &DeviceProximity{
+			ID:            update.DeviceID,
+			NearThreshold: 2.0,
+			FarThreshold:  4.0,
+		}
+		m.devices[update.DeviceID] = dev
+	}
+	dev.Distance = update.Distance
+	dev.LastUpdate = time.Now()
+
+	oldNear := dev.IsNear
+	if dev.IsNear {
+		dev.IsNear = update.Distance < dev.FarThreshold
+	} else {
+		dev.IsNear = update.Distance < dev.NearThreshold
+	}
+	if oldNear != dev.IsNear {
+		log.Printf("Proximity: device %s changed to near=%v (distance=%.2fm)", update.DeviceID, dev.IsNear, update.Distance)
+		go m.applyProximityAction(dev.IsNear)
+	}
+}
+
+// applyProximityAction triggers screen lock/unlock based on state.
+func (m *Manager) applyProximityAction(isNear bool) {
+	if isNear && m.autoUnlockEnabled && !m.unlockInProgress {
+		m.unlockInProgress = true
+		defer func() { m.unlockInProgress = false }()
+		m.unlockScreen()
+	} else if !isNear && m.autoLockEnabled && !m.lockInProgress {
+		m.lockInProgress = true
+		defer func() { m.lockInProgress = false }()
+		m.lockScreen()
+	}
+}
+
+// SetThresholds updates near/far thresholds for a device.
+func (m *Manager) SetThresholds(deviceID string, near, far float32) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if dev, ok := m.devices[deviceID]; ok {
+		dev.NearThreshold = near
+		dev.FarThreshold = far
+	}
+}
+
+// EnableAutoLock toggles automatic locking when device goes far.
+func (m *Manager) EnableAutoLock(enable bool) {
+	m.autoLockEnabled = enable
+}
+
+// EnableAutoUnlock toggles automatic unlocking when device returns near.
+func (m *Manager) EnableAutoUnlock(enable bool) {
+	m.autoUnlockEnabled = enable
+}
+
+// GetProximityState returns the current state for a device.
+func (m *Manager) GetProximityState(deviceID string) *DeviceProximity {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.devices[deviceID]
+}
+
+// The following methods are implemented in OS‑specific files.
+func (m *Manager) lockScreen()   {}
+func (m *Manager) unlockScreen() {}package proximity
+
+import (
+    "math"
+    "math/rand"
+    "sync"
+    "time"
+
+    "github.com/milosgajdos/go-estimate/particle/bf"
+    "gonum.org/v1/gonum/mat"
+)
+
+// RSSIFusionConfig holds parameters for the Bayesian proximity estimator.
+type RSSIFusionConfig struct {
+    TxPower        float64 // RSSI at 1m (e.g., -59 for smartphones)
+    EnvFactor      float64 // environmental factor (2.0 free space, 2.5‑4 indoor)
+    UseKalman      bool
+    UseParticle    bool
+    NumParticles   int
+    ProcessNoise   float64
+    MeasurementNoise float64
+    MinDistance    float64
+    MaxDistance    float64
+}
+
+// DefaultRSSIFusionConfig returns sensible defaults for BLE proximity.
+func DefaultRSSIFusionConfig() RSSIFusionConfig {
+    return RSSIFusionConfig{
+        TxPower:          -59.0,   // typical for smartphones
+        EnvFactor:        2.5,     // indoor office environment
+        UseKalman:        true,
+        UseParticle:      true,
+        NumParticles:     200,
+        ProcessNoise:     0.5,
+        MeasurementNoise: 5.0,
+        MinDistance:      0.5,     // 0.5m minimum
+        MaxDistance:      10.0,    // 10m maximum
+    }
+}
+
+// RSSIFusion fuses multiple Bayesian filters for accurate distance estimation.
+type RSSIFusion struct {
+    config         RSSIFusionConfig
+    kalman         *KalmanFilter1D
+    particleFilter *bf.ParticleFilter
+    mu             sync.RWMutex
+    lastTime       time.Time
+    lastRawRSSI    float64
+    lastFiltered   float64
+}
+
+// KalmanFilter1D is a simple 1D Kalman filter for RSSI smoothing.
+type KalmanFilter1D struct {
+    x      float64 // state (filtered RSSI)
+    P      float64 // error covariance
+    Q      float64 // process noise
+    R      float64 // measurement noise
+    K      float64 // Kalman gain
+}
+
+// NewKalmanFilter1D initialises a 1D Kalman filter.
+func NewKalmanFilter1D(q, r float64) *KalmanFilter1D {
+    return &KalmanFilter1D{
+        x: 0,
+        P: 1,
+        Q: q,
+        R: r,
+    }
+}
+
+// Update processes a new RSSI measurement and returns the filtered value.
+func (kf *KalmanFilter1D) Update(z float64) float64 {
+    // Prediction
+    kf.P = kf.P + kf.Q
+
+    // Update
+    kf.K = kf.P / (kf.P + kf.R)
+    kf.x = kf.x + kf.K*(z-kf.x)
+    kf.P = (1 - kf.K) * kf.P
+    return kf.x
+}
+
+// NewRSSIFusion creates a new proximity estimator.
+func NewRSSIFusion(cfg RSSIFusionConfig) *RSSIFusion {
+    fusion := &RSSIFusion{
+        config:   cfg,
+        lastTime: time.Now(),
+    }
+    if cfg.UseKalman {
+        fusion.kalman = NewKalmanFilter1D(cfg.ProcessNoise, cfg.MeasurementNoise)
+    }
+    if cfg.UseParticle && cfg.NumParticles > 0 {
+        fusion.initParticleFilter()
+    }
+    return fusion
+}
+
+// initParticleFilter creates the particle filter and its particles.
+func (f *RSSIFusion) initParticleFilter() {
+    particles := make([]*bf.Particle, f.config.NumParticles)
+    for i := 0; i < f.config.NumParticles; i++ {
+        // State is distance (single float64)
+        state := mat.NewVecDense(1, []float64{
+            f.config.MinDistance + rand.Float64()*(f.config.MaxDistance-f.config.MinDistance),
+        })
+        weight := 1.0 / float64(f.config.NumParticles)
+        particles[i] = bf.NewParticle(state, weight)
+    }
+    f.particleFilter = bf.NewPF(particles, bf.WithProcessNoise(f.config.ProcessNoise))
+}
+
+// rssiToDistance converts raw RSSI to a distance estimate.
+func (f *RSSIFusion) rssiToDistance(rssi float64) float64 {
+    // Log‑distance path loss model: distance = 10^((txPower - rssi) / (10 * n))
+    ratio := (f.config.TxPower - rssi) / (10.0 * f.config.EnvFactor)
+    dist := math.Pow(10.0, ratio)
+    // Clamp to realistic bounds
+    if dist < f.config.MinDistance {
+        dist = f.config.MinDistance
+    }
+    if dist > f.config.MaxDistance {
+        dist = f.config.MaxDistance
+    }
+    return dist
+}
+
+// ProcessRSSI takes a raw RSSI value (dBm) and returns the filtered distance (m).
+func (f *RSSIFusion) ProcessRSSI(rssi float64) (distance float64) {
+    f.mu.Lock()
+    defer f.mu.Unlock()
+
+    now := time.Now()
+    dt := now.Sub(f.lastTime).Seconds()
+    if dt < 0.001 {
+        dt = 0.02
+    }
+    f.lastTime = now
+
+    // 1. Convert RSSI to distance using path loss model
+    rawDist := f.rssiToDistance(rssi)
+
+    // 2. Apply Kalman filter on RSSI (if enabled)
+    var filteredRSSI float64
+    if f.config.UseKalman && f.kalman != nil {
+        filteredRSSI = f.kalman.Update(rssi)
+    } else {
+        filteredRSSI = rssi
+    }
+    filteredDist := f.rssiToDistance(filteredRSSI)
+
+    // 3. Particle filter update (if enabled)
+    if f.config.UseParticle && f.particleFilter != nil {
+        // Predict
+        for _, p := range f.particleFilter.Particles() {
+            state := p.State()
+            dist := state.AtVec(0)
+            // Simple Brownian motion prediction
+            newDist := dist + (rand.NormFloat64() * math.Sqrt(dt))
+            if newDist < f.config.MinDistance {
+                newDist = f.config.MinDistance
+            }
+            if newDist > f.config.MaxDistance {
+                newDist = f.config.MaxDistance
+            }
+            p.SetState(mat.NewVecDense(1, []float64{newDist}))
+        }
+        f.particleFilter.Predict()
+
+        // Update weights using measurement likelihood
+        for _, p := range f.particleFilter.Particles() {
+            dist := p.State().AtVec(0)
+            // Likelihood: Gaussian error between predicted distance and measured rawDist
+            err := dist - rawDist
+            variance := f.config.MeasurementNoise
+            likelihood := math.Exp(-(err*err)/(2*variance)) / math.Sqrt(2*math.Pi*variance)
+            p.SetWeight(p.Weight() * likelihood)
+        }
+        f.particleFilter.Update()
+        f.resampleParticlesIfNeeded()
+
+        // Extract maximum likelihood distance from particle filter
+        bestDist := f.getParticleMaxLikelihood()
+        if bestDist > 0 {
+            // Blend Kalman and particle results
+            distance = (filteredDist + bestDist) / 2.0
+        } else {
+            distance = filteredDist
+        }
+    } else {
+        distance = filteredDist
+    }
+
+    f.lastRawRSSI = rssi
+    f.lastFiltered = distance
+    return distance
+}
+
+// resampleParticlesIfNeeded performs systematic resampling when particle weights decay.
+func (f *RSSIFusion) resampleParticlesIfNeeded() {
+    if f.particleFilter == nil {
+        return
+    }
+    eff := 1.0 / f.particleFilter.EffectiveParticleCount()
+    if eff < 0.5 {
+        f.particleFilter.Resample(bf.WithResampleCriterion(bf.Systematic))
+    }
+}
+
+// getParticleMaxLikelihood returns the distance of the highest‑weight particle.
+func (f *RSSIFusion) getParticleMaxLikelihood() float64 {
+    if f.particleFilter == nil {
+        return 0
+    }
+    bestDist := 0.0
+    maxWeight := -1.0
+    for _, p := range f.particleFilter.Particles() {
+        if p.Weight() > maxWeight {
+            maxWeight = p.Weight()
+            bestDist = p.State().AtVec(0)
+        }
+    }
+    return bestDist
+}
+
+// GetCurrentDistance returns the latest filtered distance.
+func (f *RSSIFusion) GetCurrentDistance() float64 {
+    f.mu.RLock()
+    defer f.mu.RUnlock()
+    return f.lastFiltered
+}package proximity
+
+import (
+    "testing"
+    "math"
+)
+
+func TestRSSIToDistance(t *testing.T) {
+    cfg := DefaultRSSIFusionConfig()
+    f := NewRSSIFusion(cfg)
+    // At 1 meter, RSSI should be close to txPower
+    dist := f.rssiToDistance(cfg.TxPower)
+    if math.Abs(dist-1.0) > 0.3 {
+        t.Errorf("Expected distance ~1.0m, got %.2fm", dist)
+    }
+}
+
+func TestKalmanFilter(t *testing.T) {
+    kf := NewKalmanFilter1D(0.5, 5.0)
+    // Simulate a noisy RSSI sequence
+    measurements := []float64{-59, -58, -61, -57, -60, -56, -62}
+    for _, z := range measurements {
+        filtered := kf.Update(z)
+        t.Logf("raw %.1f → filtered %.1f", z, filtered)
+    }
+}
+
+func TestParticleFilterConvergence(t *testing.T) {
+    cfg := DefaultRSSIFusionConfig()
+    cfg.UseKalman = false
+    cfg.UseParticle = true
+    cfg.NumParticles = 500
+    f := NewRSSIFusion(cfg)
+
+    // Simulate moving from 0.5m to 4m
+    distances := []float64{0.5, 1.0, 2.0, 3.0, 4.0}
+    for _, trueDist := range distances {
+        // Convert true distance to RSSI (inverse of log‑distance)
+        rssi := cfg.TxPower - 10*cfg.EnvFactor*math.Log10(trueDist)
+        estDist := f.ProcessRSSI(rssi)
+        if math.Abs(estDist-trueDist) > 1.0 {
+            t.Errorf("At true distance %.1fm, estimated %.2fm", trueDist, estDist)
+        }
+    }
+}//go:build windows
+
+package proximity
+
+import (
+	"log"
+	"syscall"
+)
+
+var (
+	user32          = syscall.NewLazyDLL("user32.dll")
+	lockWorkStation = user32.NewProc("LockWorkStation")
+)
+
+func (m *Manager) lockScreen() {
+	lockWorkStation.Call()
+	log.Println("Proximity: Windows screen locked")
+}
+
+func (m *Manager) unlockScreen() {
+	// Windows does not support programmatic unlock
+	log.Println("Proximity: Unlock not supported on Windows")
+}package sensorfusion
+
+// EulerAngles represents the orientation in degrees (roll, pitch, yaw).
+type EulerAngles struct {
+    Roll  float64 // rotation around X axis (-180..180)
+    Pitch float64 // rotation around Y axis (-90..90)
+    Yaw   float64 // rotation around Z axis (0..360)
+}
+
+// Quaternion represents a rotation in 3D space.
+type Quaternion struct {
+    W, X, Y, Z float64
+}
+
+// Normalize ensures the quaternion has unit length.
+func (q *Quaternion) Normalize() {
+    norm := q.W*q.W + q.X*q.X + q.Y*q.Y + q.Z*q.Z
+    if norm == 0 {
+        q.W = 1
+        return
+    }
+    invNorm := 1.0 / norm
+    q.W *= invNorm
+    q.X *= invNorm
+    q.Y *= invNorm
+    q.Z *= invNorm
+}
+
+// ToEuler converts a quaternion to Euler angles (degrees).
+func (q *Quaternion) ToEuler() EulerAngles {
+    // Roll (x-axis rotation)
+    sinr := 2.0 * (q.W*q.X + q.Y*q.Z)
+    cosr := 1.0 - 2.0*(q.X*q.X+q.Y*q.Y)
+    roll := atan2(sinr, cosr)
+
+    // Pitch (y-axis rotation)
+    sinp := 2.0 * (q.W*q.Y - q.Z*q.X)
+    var pitch float64
+    if abs(sinp) >= 1 {
+        pitch = copysign(math.Pi/2, sinp)
+    } else {
+        pitch = asin(sinp)
+    }
+
+    // Yaw (z-axis rotation)
+    siny := 2.0 * (q.W*q.Z + q.X*q.Y)
+    cosy := 1.0 - 2.0*(q.Y*q.Y+q.Z*q.Z)
+    yaw := atan2(siny, cosy)
+
+    return EulerAngles{
+        Roll:  roll * 180 / math.Pi,
+        Pitch: pitch * 180 / math.Pi,
+        Yaw:   yaw * 180 / math.Pi,
+    }
+}package sensorfusion
+
+import "math"
+
+// MadgwickFilter implements the Madgwick AHRS algorithm for orientation estimation
+// from gyroscope, accelerometer, and magnetometer data.
+// Based on: https://x-io.co.uk/open-source-imu-and-ahrs-algorithms/
+type MadgwickFilter struct {
+    q          Quaternion // estimated quaternion
+    beta       float64    // algorithm gain (default 0.1)
+    sampleFreq float64    // sampling frequency in Hz
+}
+
+// NewMadgwickFilter creates a new Madgwick filter with default parameters.
+func NewMadgwickFilter(sampleFreq float64) *MadgwickFilter {
+    return &MadgwickFilter{
+        q:          Quaternion{W: 1, X: 0, Y: 0, Z: 0},
+        beta:       0.1,
+        sampleFreq: sampleFreq,
+    }
+}
+
+// SetBeta sets the algorithm gain (default 0.1). Higher = faster convergence.
+func (f *MadgwickFilter) SetBeta(beta float64) {
+    f.beta = beta
+}
+
+// Update performs a single filter step using gyroscope, accelerometer, and magnetometer data.
+// gyro: angular velocity in rad/s (gx, gy, gz)
+// accel: linear acceleration in m/s² (ax, ay, az)
+// mag: magnetic field in µT (mx, my, mz) – optional, pass nil if not used.
+func (f *MadgwickFilter) Update(gyro, accel, mag []float64) {
+    if len(gyro) < 3 || len(accel) < 3 {
+        return
+    }
+    dt := 1.0 / f.sampleFreq
+
+    var q = f.q
+
+    // Normalise accelerometer and magnetometer readings
+    normAcc := math.Hypot(math.Hypot(accel[0], accel[1]), accel[2])
+    if normAcc == 0 {
+        return
+    }
+    ax := accel[0] / normAcc
+    ay := accel[1] / normAcc
+    az := accel[2] / normAcc
+
+    var mx, my, mz float64
+    if mag != nil && len(mag) >= 3 {
+        normMag := math.Hypot(math.Hypot(mag[0], mag[1]), mag[2])
+        if normMag != 0 {
+            mx = mag[0] / normMag
+            my = mag[1] / normMag
+            mz = mag[2] / normMag
+        }
+    }
+
+    // Auxiliary variables to avoid repeated calculations
+    q0, q1, q2, q3 := q.W, q.X, q.Y, q.Z
+
+    // Gradient descent algorithm (Madgwick)
+    var f1, f2, f3, f4, f5, f6 float64
+    var J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33 float64
+
+    // Compute objective function for accelerometer
+    f1 = 2*(q1*q3 - q0*q2) - ax
+    f2 = 2*(q0*q1 + q2*q3) - ay
+    f3 = 2*(0.5 - q1*q1 - q2*q2) - az
+
+    // Compute Jacobian matrix for accelerometer
+    J_11or24 = 2 * q2
+    J_12or23 = 2 * q3
+    J_13or22 = 2 * q1
+    J_14or21 = 2 * q0
+    J_32 = 2 * q2
+    J_33 = 2 * q1
+
+    // Compute gradient for accelerometer
+    g0 := J_14or21*f2 - J_11or24*f1
+    g1 := J_12or23*f2 + J_13or22*f3 - J_14or21*f1
+    g2 := J_12or23*f1 - J_13or22*f2 + J_32*f3
+    g3 := J_11or24*f1 - J_14or21*f2 - J_33*f3
+
+    if mag != nil {
+        // Magnetometer part
+        hx := 2 * (mx*(0.5-q2*q2-q3*q3) + my*(q1*q2-q0*q3) + mz*(q1*q3+q0*q2))
+        hy := 2 * (mx*(q1*q2+q0*q3) + my*(0.5-q1*q1-q3*q3) + mz*(q2*q3-q0*q1))
+        hz := 2 * (mx*(q1*q3-q0*q2) + my*(q2*q3+q0*q1) + mz*(0.5-q1*q1-q2*q2))
+
+        // Normalise magnetic field
+        normMag := math.Hypot(math.Hypot(hx, hy), hz)
+        if normMag > 0 {
+            hx /= normMag
+            hy /= normMag
+            hz /= normMag
+        }
+
+        // Reference direction of Earth's magnetic field
+        bx := math.Sqrt(hx*hx + hy*hy)
+        bz := hz
+
+        // Magnetometer objective function
+        f4 := 2 * (bx*(0.5-q2*q2-q3*q3) + bz*(q1*q3-q0*q2)) - mx
+        f5 := 2 * (bx*(q1*q2-q0*q3) + bz*(q0*q1+q2*q3)) - my
+        f6 := 2 * (bx*(q0*q2+q1*q3) + bz*(0.5-q1*q1-q2*q2)) - mz
+
+        // Jacobian for magnetometer
+        J_11 := 2 * (bz*q2 - bx*q3)
+        J_12 := 2 * (bx*q2 + bz*q3)
+        J_13 := 2 * (-bx*q1 + bz*q0)
+        J_14 := 2 * (bx*q0 + bz*q1)
+        J_21 := 2 * (bx*q3 - bz*q1)
+        J_22 := 2 * (bx*q2 + bz*q0)
+        J_23 := 2 * (bx*q1 - bz*q3)
+        J_24 := 2 * (-bx*q0 + bz*q2)
+        J_31 := 2 * (bx*q2 - bz*q0)
+        J_32 := 2 * (bx*q3 + bz*q1)
+        J_33 := 2 * (bx*q0 + bz*q2)
+        J_34 := 2 * (bx*q1 - bz*q3)
+
+        // Combine gradients
+        g0 += J_11*f4 + J_21*f5 + J_31*f6
+        g1 += J_12*f4 + J_22*f5 + J_32*f6
+        g2 += J_13*f4 + J_23*f5 + J_33*f6
+        g3 += J_14*f4 + J_24*f5 + J_34*f6
+    }
+
+    // Normalise gradient
+    normG := math.Hypot(math.Hypot(g0, g1), math.Hypot(g2, g3))
+    if normG > 0 {
+        g0 /= normG
+        g1 /= normG
+        g2 /= normG
+        g3 /= normG
+    }
+
+    // Compute estimated quaternion derivative from gyroscope
+    qDot1 := 0.5 * (-q1*gyro[0] - q2*gyro[1] - q3*gyro[2])
+    qDot2 := 0.5 * (q0*gyro[0] + q2*gyro[2] - q3*gyro[1])
+    qDot3 := 0.5 * (q0*gyro[1] - q1*gyro[2] + q3*gyro[0])
+    qDot4 := 0.5 * (q0*gyro[2] + q1*gyro[1] - q2*gyro[0])
+
+    // Apply feedback step (Madgwick's fusion)
+    qDot1 -= f.beta * g0
+    qDot2 -= f.beta * g1
+    qDot3 -= f.beta * g2
+    qDot4 -= f.beta * g3
+
+    // Integrate rate of change of quaternion
+    q.W += qDot1 * dt
+    q.X += qDot2 * dt
+    q.Y += qDot3 * dt
+    q.Z += qDot4 * dt
+
+    // Normalise quaternion
+    q.Normalize()
+    f.q = q
+}
+
+// GetQuaternion returns the current estimated orientation as a quaternion.
+func (f *MadgwickFilter) GetQuaternion() Quaternion {
+    return f.q
+}
+
+// GetEuler returns the current orientation as Euler angles (degrees).
+func (f *MadgwickFilter) GetEuler() EulerAngles {
+    return f.q.ToEuler()
+}
+
+// Reset resets the filter to identity orientation.
+func (f *MadgwickFilter) Reset() {
+    f.q = Quaternion{W: 1, X: 0, Y: 0, Z: 0}
+}package sensorfusion
+
+import "math"
+
+// MahonyFilter implements the Mahony AHRS algorithm using a proportional‑integral (PI) controller.
+// It is computationally lighter than Madgwick and Kalman filters.
+type MahonyFilter struct {
+    q          Quaternion
+    integralFB [3]float64 // integral error term for PI controller
+    kp         float64     // proportional gain (default 0.5)
+    ki         float64     // integral gain (default 0.0)
+    sampleFreq float64
+}
+
+// NewMahonyFilter creates a new Mahony filter with default gains.
+func NewMahonyFilter(sampleFreq float64) *MahonyFilter {
+    return &MahonyFilter{
+        q:          Quaternion{W: 1, X: 0, Y: 0, Z: 0},
+        kp:         0.5,
+        ki:         0.0,
+        sampleFreq: sampleFreq,
+    }
+}
+
+// SetGains sets the proportional (kp) and integral (ki) gains.
+// kp controls convergence speed; ki reduces steady-state error (recommended = 0.0 for most cases).
+func (f *MahonyFilter) SetGains(kp, ki float64) {
+    f.kp = kp
+    f.ki = ki
+}
+
+// Update performs a single filter step using gyroscope, accelerometer, and magnetometer.
+func (f *MahonyFilter) Update(gyro, accel, mag []float64) {
+    if len(gyro) < 3 || len(accel) < 3 {
+        return
+    }
+    dt := 1.0 / f.sampleFreq
+
+    q0, q1, q2, q3 := f.q.W, f.q.X, f.q.Y, f.q.Z
+
+    // Normalise accelerometer reading
+    normAcc := math.Hypot(math.Hypot(accel[0], accel[1]), accel[2])
+    if normAcc == 0 {
+        return
+    }
+    ax := accel[0] / normAcc
+    ay := accel[1] / normAcc
+    az := accel[2] / normAcc
+
+    // Compute estimated gravity direction from quaternion
+    vx := 2 * (q1*q3 - q0*q2)
+    vy := 2 * (q0*q1 + q2*q3)
+    vz := q0*q0 - q1*q1 - q2*q2 + q3*q3
+
+    // Compute error between measured and estimated gravity
+    ex := ay*vz - az*vy
+    ey := az*vx - ax*vz
+    ez := ax*vy - ay*vx
+
+    if mag != nil && len(mag) >= 3 {
+        // Normalise magnetometer reading
+        normMag := math.Hypot(math.Hypot(mag[0], mag[1]), mag[2])
+        if normMag > 0 {
+            mx := mag[0] / normMag
+            my := mag[1] / normMag
+            mz := mag[2] / normMag
+
+            // Compute reference direction of Earth's magnetic field
+            hx := 2 * (mx*(0.5-q2*q2-q3*q3) + my*(q1*q2-q0*q3) + mz*(q1*q3+q0*q2))
+            hy := 2 * (mx*(q1*q2+q0*q3) + my*(0.5-q1*q1-q3*q3) + mz*(q2*q3-q0*q1))
+            hz := 2 * (mx*(q1*q3-q0*q2) + my*(q2*q3+q0*q1) + mz*(0.5-q1*q1-q2*q2))
+
+            bx := math.Sqrt(hx*hx + hy*hy)
+            bz := hz
+
+            // Compute magnetometer error
+            wx := 2 * (bx*(0.5-q2*q2-q3*q3) + bz*(q1*q3-q0*q2))
+            wy := 2 * (bx*(q1*q2-q0*q3) + bz*(q0*q1+q2*q3))
+            wz := 2 * (bx*(q0*q2+q1*q3) + bz*(0.5-q1*q1-q2*q2))
+
+            // Combine with accelerometer error
+            ex += (my*wz - mz*wy)
+            ey += (mz*wx - mx*wz)
+            ez += (mx*wy - my*wx)
+        }
+    }
+
+    // Apply proportional feedback
+    if f.kp > 0 {
+        ex *= f.kp
+        ey *= f.kp
+        ez *= f.kp
+    }
+
+    // Apply integral feedback
+    if f.ki > 0 {
+        f.integralFB[0] += ex * f.ki * dt
+        f.integralFB[1] += ey * f.ki * dt
+        f.integralFB[2] += ez * f.ki * dt
+        ex += f.integralFB[0]
+        ey += f.integralFB[1]
+        ez += f.integralFB[2]
+    }
+
+    // Apply feedback to gyro measurements
+    gx := gyro[0] + ex
+    gy := gyro[1] + ey
+    gz := gyro[2] + ez
+
+    // Integrate quaternion
+    qDot1 := 0.5 * (-q1*gx - q2*gy - q3*gz)
+    qDot2 := 0.5 * (q0*gx + q2*gz - q3*gy)
+    qDot3 := 0.5 * (q0*gy - q1*gz + q3*gx)
+    qDot4 := 0.5 * (q0*gz + q1*gy - q2*gx)
+
+    q0 += qDot1 * dt
+    q1 += qDot2 * dt
+    q2 += qDot3 * dt
+    q3 += qDot4 * dt
+
+    // Normalise
+    f.q = Quaternion{W: q0, X: q1, Y: q2, Z: q3}
+    f.q.Normalize()
+}
+
+// GetQuaternion returns the current estimated quaternion.
+func (f *MahonyFilter) GetQuaternion() Quaternion {
+    return f.q
+}
+
+// GetEuler returns the current Euler angles (degrees).
+func (f *MahonyFilter) GetEuler() EulerAngles {
+    return f.q.ToEuler()
+}
+
+// Reset resets the filter to identity orientation.
+func (f *MahonyFilter) Reset() {
+    f.q = Quaternion{W: 1, X: 0, Y: 0, Z: 0}
+    f.integralFB = [3]float64{0, 0, 0}
+}package sensorfusion
+
+import (
+    "testing"
+    "math"
+)
+
+func TestMadgwickFilter(t *testing.T) {
+    f := NewMadgwickFilter(100) // 100 Hz
+    // Simulate gyro only (should drift over time)
+    gyro := []float64{0.1, 0, 0} // 0.1 rad/s roll
+    accel := []float64{0, 0, 9.81}
+    for i := 0; i < 1000; i++ {
+        f.Update(gyro, accel, nil)
+    }
+    euler := f.GetEuler()
+    if math.Abs(euler.Roll) < 0.1 {
+        t.Errorf("Roll should have changed significantly: got %.2f", euler.Roll)
+    }
+}
+
+func TestMahonyFilter(t *testing.T) {
+    f := NewMahonyFilter(100)
+    f.SetGains(0.5, 0.0)
+    gyro := []float64{0, 0.1, 0}
+    accel := []float64{0, 0, 9.81}
+    for i := 0; i < 1000; i++ {
+        f.Update(gyro, accel, nil)
+    }
+    euler := f.GetEuler()
+    if math.Abs(euler.Pitch) < 0.1 {
+        t.Errorf("Pitch should have changed: got %.2f", euler.Pitch)
+    }
+}
+
+func TestQuaternionToEuler(t *testing.T) {
+    q := Quaternion{W: 1, X: 0, Y: 0, Z: 0}
+    e := q.ToEuler()
+    if e.Roll != 0 || e.Pitch != 0 || e.Yaw != 0 {
+        t.Errorf("Identity quaternion gave non-zero Euler: %+v", e)
+    }
+}package sysaction
+
+import (
+	"log"
+	"strings"
+)
+
+// Action represents a system action that can be executed.
+type Action string
+
+const (
+	ActionPlayPause     Action = "play_pause"
+	ActionNextTrack     Action = "next_track"
+	ActionPrevTrack     Action = "prev_track"
+	ActionVolumeUp      Action = "volume_up"
+	ActionVolumeDown    Action = "volume_down"
+	ActionMute          Action = "mute"
+	ActionStop          Action = "stop"
+	ActionLeftClick     Action = "left_click"
+	ActionRightClick    Action = "right_click"
+	ActionDoubleClick   Action = "double_click"
+	ActionScrollUp      Action = "scroll_up"
+	ActionScrollDown    Action = "scroll_down"
+	ActionLockScreen    Action = "lock_screen"
+	ActionShowDesktop   Action = "show_desktop"
+	ActionTaskView      Action = "task_view"
+	ActionBrowserBack   Action = "browser_back"
+	ActionBrowserForward Action = "browser_forward"
+	ActionZoomIn        Action = "zoom_in"
+	ActionZoomOut       Action = "zoom_out"
+)
+
+var actionMap = map[string]Action{
+	"play_pause":   ActionPlayPause,
+	"next_track":   ActionNextTrack,
+	"prev_track":   ActionPrevTrack,
+	"volume_up":    ActionVolumeUp,
+	"volume_down":  ActionVolumeDown,
+	"mute":         ActionMute,
+	"stop":         ActionStop,
+	"left_click":   ActionLeftClick,
+	"right_click":  ActionRightClick,
+	"double_click": ActionDoubleClick,
+	"scroll_up":    ActionScrollUp,
+	"scroll_down":  ActionScrollDown,
+	"lock_screen":  ActionLockScreen,
+	"show_desktop": ActionShowDesktop,
+	"task_view":    ActionTaskView,
+	"browser_back": ActionBrowserBack,
+	"browser_forward": ActionBrowserForward,
+	"zoom_in":      ActionZoomIn,
+	"zoom_out":     ActionZoomOut,
+}
+
+// ParseAction converts a string to an Action.
+func ParseAction(s string) (Action, bool) {
+	a, ok := actionMap[strings.ToLower(s)]
+	return a, ok
+}
+
+// Execute runs the given system action.
+func Execute(a Action) {
+	switch a {
+	case ActionPlayPause:
+		keyTap("media_play_pause")
+	case ActionNextTrack:
+		keyTap("media_next")
+	case ActionPrevTrack:
+		keyTap("media_prev")
+	case ActionVolumeUp:
+		keyTap("audio_vol_up")
+	case ActionVolumeDown:
+		keyTap("audio_vol_down")
+	case ActionMute:
+		keyTap("audio_mute")
+	case ActionStop:
+		keyTap("media_stop")
+	case ActionLeftClick:
+		mouseClick("left")
+	case ActionRightClick:
+		mouseClick("right")
+	case ActionDoubleClick:
+		mouseDoubleClick()
+	case ActionScrollUp:
+		mouseScroll(1)
+	case ActionScrollDown:
+		mouseScroll(-1)
+	case ActionLockScreen:
+		lockScreen()
+	case ActionShowDesktop:
+		keyTap("show_desktop")
+	case ActionTaskView:
+		keyTap("task_view")
+	case ActionBrowserBack:
+		keyTap("browser_back")
+	case ActionBrowserForward:
+		keyTap("browser_forward")
+	case ActionZoomIn:
+		keyTap("zoom_in")
+	case ActionZoomOut:
+		keyTap("zoom_out")
+	default:
+		log.Printf("Unknown action: %s", a)
+	}
+}
+
+// These functions are implemented in platform‑specific files.
+func keyTap(key string)    {}
+func mouseClick(btn string) {}
+func mouseDoubleClick()    {}
+func mouseScroll(delta int) {}
+func lockScreen()          {}//go:build darwin
+
+package sysaction
+
+import (
+	"log"
+	"os/exec"
+)
+
+var keyMap = map[string]string{
+	"media_play_pause": "play",
+	"media_next":       "next",
+	"media_prev":       "previous",
+	"audio_vol_up":     "volume up",
+	"audio_vol_down":   "volume down",
+	"audio_mute":       "mute",
+	"media_stop":       "stop",
+}
+
+func keyTap(key string) {
+	script, ok := keyMap[key]
+	if !ok {
+		log.Printf("Unknown macOS key: %s", key)
+		return
+	}
+	cmd := exec.Command("osascript", "-e", `tell application "System Events" to key code 100 using command down`)
+	// For simplicity, use AppleScript for media keys
+	// A full implementation would use CGEventPost (Core Graphics)
+	log.Printf("Key tap not fully implemented on macOS: %s", key)
+}
+
+func mouseClick(btn string) {
+	// Use CGEventPost via CGO (simplified)
+	log.Printf("Mouse click not fully implemented on macOS: %s", btn)
+}
+
+func mouseDoubleClick() {
+	mouseClick("left")
+	mouseClick("left")
+}
+
+func mouseScroll(delta int) {
+	// Use CGEventCreateScrollWheelEvent
+	log.Printf("Scroll not fully implemented on macOS")
+}
+
+func lockScreen() {
+	cmd := exec.Command("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession", "-suspend")
+	cmd.Run()
+}//go:build !robotgo
+
+package sysaction
+
+import (
+	"log"
+	"os/exec"
+	"runtime"
+)
+
+func lockScreenFallback() {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32.exe", "user32.dll,LockWorkStation")
+	case "darwin":
+		cmd = exec.Command("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession", "-suspend")
+	case "linux":
+		cmd = exec.Command("loginctl", "lock-session")
+	default:
+		log.Println("Lock screen not supported on this OS")
+		return
+	}
+	if err := cmd.Run(); err != nil {
+		log.Printf("Lock screen failed: %v", err)
+	}
+}//go:build linux
+
+package sysaction
+
+import (
+	"log"
+	"os/exec"
+)
+
+var keyMap = map[string]string{
+	"media_play_pause": "XF86AudioPlay",
+	"media_next":       "XF86AudioNext",
+	"media_prev":       "XF86AudioPrev",
+	"audio_vol_up":     "XF86AudioRaiseVolume",
+	"audio_vol_down":   "XF86AudioLowerVolume",
+	"audio_mute":       "XF86AudioMute",
+	"media_stop":       "XF86AudioStop",
+	"browser_back":     "Alt+Left",
+	"browser_forward":  "Alt+Right",
+}
+
+func keyTap(key string) {
+	xkey, ok := keyMap[key]
+	if !ok {
+		log.Printf("Unknown Linux key: %s", key)
+		return
+	}
+	// Use xdotool if available, fallback to nothing
+	cmd := exec.Command("xdotool", "key", xkey)
+	if err := cmd.Run(); err != nil {
+		log.Printf("xdotool failed: %v", err)
+	}
+}
+
+func mouseClick(btn string) {
+	cmd := exec.Command("xdotool", "click", btn)
+	cmd.Run()
+}
+
+func mouseDoubleClick() {
+	cmd := exec.Command("xdotool", "click", "--repeat", "2", "1")
+	cmd.Run()
+}
+
+func mouseScroll(delta int) {
+	dir := "up"
+	if delta < 0 {
+		dir = "down"
+	}
+	cmd := exec.Command("xdotool", "click", "--repeat", "1", dir)
+	cmd.Run()
+}
+
+func lockScreen() {
+	cmd := exec.Command("loginctl", "lock-session")
+	if err := cmd.Run(); err != nil {
+		log.Printf("Lock screen failed: %v", err)
+	}
+}//go:build robotgo
+
+package sysaction
+
+import (
+	"github.com/go-vgo/robotgo"
+)
+
+func keyTap(key string) {
+	robotgo.KeyTap(key)
+}
+
+func mouseClick(btn string) {
+	robotgo.Click(btn)
+}
+
+func mouseDoubleClick() {
+	robotgo.Click("left", true)
+}
+
+func mouseScroll(delta int) {
+	robotgo.Scroll(0, delta)
+}
+
+func lockScreen() {
+	// robotgo doesn't have lock; use fallback to OS command
+	lockScreenFallback()
+}//go:build robotgo
+
+package sysaction
+
+import "github.com/go-vgo/robotgo"
+
+// robotgo-backed implementation (enabled when built with -tags robotgo)
+func KeyTap(action string) {
+    robotgo.KeyTap(action)
+}
+package sysaction
+
+import "log"
+
+// Default stub for system actions when robotgo isn't enabled.
+func KeyTap(action string) {
+    log.Printf("[sysaction stub] KeyTap: %s", action)
+}
+//go:build windows
+
+package sysaction
+
+import (
+	"log"
+	"syscall"
+	"unsafe"
+)
+
+var (
+	user32               = syscall.NewLazyDLL("user32.dll")
+	procKeybdEvent       = user32.NewProc("keybd_event")
+	procMouseEvent       = user32.NewProc("mouse_event")
+	procLockWorkStation  = user32.NewProc("LockWorkStation")
+)
+
+const (
+	KEYEVENTF_KEYDOWN = 0x0000
+	KEYEVENTF_KEYUP   = 0x0002
+)
+
+var keyMap = map[string]byte{
+	"media_play_pause": 0xB3, // VK_MEDIA_PLAY_PAUSE
+	"media_next":       0xB0, // VK_MEDIA_NEXT_TRACK
+	"media_prev":       0xB1, // VK_MEDIA_PREV_TRACK
+	"audio_vol_up":     0xAF, // VK_VOLUME_UP
+	"audio_vol_down":   0xAE, // VK_VOLUME_DOWN
+	"audio_mute":       0xAD, // VK_VOLUME_MUTE
+	"media_stop":       0xB2, // VK_MEDIA_STOP
+	"browser_back":     0xA6, // VK_BROWSER_BACK
+	"browser_forward":  0xA7, // VK_BROWSER_FORWARD
+}
+
+func keyTap(key string) {
+	vk, ok := keyMap[key]
+	if !ok {
+		log.Printf("Unknown Windows key: %s", key)
+		return
+	}
+	procKeybdEvent.Call(uintptr(vk), 0, KEYEVENTF_KEYDOWN, 0)
+	procKeybdEvent.Call(uintptr(vk), 0, KEYEVENTF_KEYUP, 0)
+}
+
+const (
+	MOUSEEVENTF_LEFTDOWN   = 0x0002
+	MOUSEEVENTF_LEFTUP     = 0x0004
+	MOUSEEVENTF_RIGHTDOWN  = 0x0008
+	MOUSEEVENTF_RIGHTUP    = 0x0010
+	MOUSEEVENTF_WHEEL      = 0x0800
+)
+
+func mouseClick(btn string) {
+	if btn == "left" {
+		procMouseEvent.Call(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+		procMouseEvent.Call(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+	} else if btn == "right" {
+		procMouseEvent.Call(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
+		procMouseEvent.Call(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
+	}
+}
+
+func mouseDoubleClick() {
+	mouseClick("left")
+	mouseClick("left")
+}
+
+func mouseScroll(delta int) {
+	procMouseEvent.Call(MOUSEEVENTF_WHEEL, 0, 0, uintptr(delta*120), 0)
+}
+
+func lockScreen() {
+	procLockWorkStation.Call()
+}package ui
+
+import (
+	"fmt"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+
+	"airmouse-go/internal/control/personalization"
+)
+
+type AnalyticsTab struct {
+	root      fyne.CanvasObject
+	stats     *widget.Label
+	collector *personalization.DataCollector
+}
+
+func NewAnalyticsTab(collector *personalization.DataCollector) fyne.CanvasObject {
+	tab := &AnalyticsTab{collector: collector}
+	tab.stats = widget.NewLabel("Training data: 0 samples collected")
+
+	refresh := func() {
+		if tab.collector == nil {
+			tab.stats.SetText("Training data: unavailable")
+			return
+		}
+		tab.stats.SetText(fmt.Sprintf("Training data: %d samples collected", tab.collector.SampleCount()))
+	}
+	refresh()
+
+	tab.root = container.NewVBox(
+		widget.NewLabelWithStyle("Personalization Analytics", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		tab.stats,
+		widget.NewButton("Refresh", refresh),
+		widget.NewButton("Force Retrain Now", func() {
+			if tab.collector != nil {
+				go func() { _ = tab.collector.ForceFineTune() }()
+			}
+		}),
+	)
+	return tab.root
+}
+package ui
+
+import (
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
+
+	"airmouse-go/internal/config"
+	"airmouse-go/internal/control"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/control/personalization"
+	"airmouse-go/internal/protocol"
+)
+
+type App struct {
+	fyneApp    fyne.App
+	window     fyne.Window
+	cfg        *config.Config
+	server     *protocol.ProtocolServer
+	mouse      control.MouseController
+	deviceMgr  *device.Manager
+
+	// Tabs
+	dashboardTab fyne.CanvasObject
+	devicesTab   fyne.CanvasObject
+	networkTab   fyne.CanvasObject
+	settingsTab  fyne.CanvasObject
+	analyticsTab fyne.CanvasObject
+	logsTab      fyne.CanvasObject
+
+	// System tray
+	trayIcon *widget.Icon
+}
+
+func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) *App {
+	// Apply theme based on config
+	selectedTheme := getThemeByName(cfg.Theme)
+	if selectedTheme != nil {
+		app := app.NewWithID("airmouse.pro")
+		app.Settings().SetTheme(selectedTheme)
+		return &App{
+			fyneApp:   app,
+			cfg:       cfg,
+			server:    server,
+			mouse:     mouse,
+			deviceMgr: deviceMgr,
+		}
+	}
+	// Fallback
+	return &App{
+		fyneApp:   app.New(),
+		cfg:       cfg,
+		server:    server,
+		mouse:     mouse,
+		deviceMgr: deviceMgr,
+	}
+}
+
+func (a *App) Run() error {
+	a.window = a.fyneApp.NewWindow("Air Mouse Pro Server")
+	a.window.SetMaster()
+	a.window.Resize(fyne.NewSize(1100, 720))
+
+	// Create tabs
+	a.dashboardTab = NewDashboardTab(a.server, a.mouse, a.deviceMgr)
+	a.devicesTab = NewDevicesTab(a.deviceMgr)
+	a.networkTab = NewNetworkTab(a.cfg)
+	a.settingsTab = NewSettingsTab(a.cfg, a.mouse)
+	a.analyticsTab = NewAnalyticsTab(personalization.NewDataCollector())
+	a.logsTab = NewLogsTab()
+
+	tabs := container.NewAppTabs(
+		container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
+		container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
+		container.NewTabItemWithIcon("Network", theme.NetworkIcon(), a.networkTab),
+		container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), a.settingsTab),
+		container.NewTabItemWithIcon("Analytics", theme.ContentAddIcon(), a.analyticsTab),
+		container.NewTabItemWithIcon("Logs", theme.DocumentIcon(), a.logsTab),
+	)
+	tabs.SetTabLocation(container.TabLocationLeading)
+
+	// Menu bar
+	fileMenu := fyne.NewMenu("File",
+		fyne.NewMenuItem("Start Server", func() { a.server.Start() }),
+		fyne.NewMenuItem("Stop Server", func() { a.server.Stop() }),
+		fyne.NewMenuItemSeparator(),
+		fyne.NewMenuItem("Quit", func() { a.fyneApp.Quit() }),
+	)
+	viewMenu := fyne.NewMenu("View",
+		fyne.NewMenuItem("Refresh", func() {
+			if a.window != nil && a.window.Content() != nil {
+				a.window.Content().Refresh()
+			}
+		}),
+	)
+	helpMenu := fyne.NewMenu("Help",
+		fyne.NewMenuItem("About", func() { showAboutDialog(a.window) }),
+	)
+
+	mainMenu := fyne.NewMainMenu(fileMenu, viewMenu, helpMenu)
+	a.window.SetMainMenu(mainMenu)
+
+	// Set always on top if configured
+	if a.cfg.AlwaysOnTop {
+		a.window.SetAlwaysOnTop(true)
+	}
+
+	a.window.SetContent(tabs)
+	a.window.ShowAndRun()
+	return nil
+}
+
+func (a *App) Stop() {
+	a.fyneApp.Quit()
+}
+
+func showAboutDialog(w fyne.Window) {
+	dialog := widget.NewModalPopUp(
+		container.NewVBox(
+			widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			widget.NewLabel("Version 2.0.0"),
+			widget.NewLabel("University of Tehran – Embedded Systems Lab"),
+			widget.NewSeparator(),
+			widget.NewLabel("Multi-protocol mouse server\nTCP | WebSocket | UDP | Bluetooth"),
+			widget.NewButton("OK", func() { dialog.Hide() }),
+		),
+		w.Canvas(),
+	)
+	dialog.Resize(fyne.NewSize(400, 300))
+	dialog.Show()
+}package ui
+
+import (
+	"fmt"
+	"sync"
+	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+
+	"airmouse-go/internal/config"
+	"airmouse-go/internal/control"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/protocol"
+)
+
+type DashboardTab struct {
+	statsLabel    *widget.Label
+	connLabel     *widget.Label
+	endpointLabel *widget.Label
+	uptimeLabel   *widget.Label
+	aiStatusLabel *widget.Label
+	serverStatus  *widget.Label
+	startBtn      *widget.Button
+	stopBtn       *widget.Button
+	serverStart   time.Time
+	mu            sync.Mutex
+	mouse         control.MouseController
+}
+
+func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) fyne.CanvasObject {
+	tab := &DashboardTab{mouse: mouse}
+
+	tab.statsLabel = widget.NewLabel("Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
+	tab.connLabel = widget.NewLabel("Connected devices: 0")
+	tab.endpointLabel = widget.NewLabel("Endpoint: not started")
+	tab.uptimeLabel = widget.NewLabel("Uptime: --:--:--")
+	tab.aiStatusLabel = widget.NewLabel("AI Smoothing: Disabled")
+	tab.serverStatus = widget.NewLabelWithStyle("Server Status: Stopped", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+
+	tab.startBtn = widget.NewButtonWithIcon("Start Server", nil, func() {
+		if err := server.Start(); err == nil {
+			tab.mu.Lock()
+			tab.serverStart = time.Now()
+			tab.mu.Unlock()
+			tab.serverStatus.SetText("Server Status: Running")
+			tab.startBtn.Disable()
+			tab.stopBtn.Enable()
+			cfg := config.Get()
+			ip := getLocalIP()
+			tab.endpointLabel.SetText(fmt.Sprintf("Endpoint: %s:%d (TCP) | ws://%s:%d", ip, cfg.Port, ip, cfg.WebSocketPort))
+			if cfg.EnableAISmoothing {
+				tab.aiStatusLabel.SetText("AI Smoothing: Enabled")
+			} else {
+				tab.aiStatusLabel.SetText("AI Smoothing: Disabled")
+			}
+		}
+	})
+	tab.stopBtn = widget.NewButtonWithIcon("Stop Server", nil, func() {
+		server.Stop()
+		tab.serverStatus.SetText("Server Status: Stopped")
+		tab.startBtn.Enable()
+		tab.stopBtn.Disable()
+		tab.endpointLabel.SetText("Endpoint: not started")
+		tab.uptimeLabel.SetText("Uptime: --:--:--")
+	})
+	tab.stopBtn.Disable()
+
+	// Stats updater
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			clicks, dbl, right, scroll := mouse.Stats()
+			tab.statsLabel.SetText(fmt.Sprintf("Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d", clicks, dbl, right, scroll))
+			devices := deviceMgr.GetAllDevices()
+			tab.connLabel.SetText(fmt.Sprintf("Connected devices: %d", len(devices)))
+			tab.mu.Lock()
+			if !tab.serverStart.IsZero() {
+				uptime := time.Since(tab.serverStart)
+				tab.uptimeLabel.SetText(fmt.Sprintf("Uptime: %02d:%02d:%02d", int(uptime.Hours()), int(uptime.Minutes())%60, int(uptime.Seconds())%60))
+			}
+			tab.mu.Unlock()
+		}
+	}()
+
+	return container.NewVBox(
+		widget.NewLabelWithStyle("Server Dashboard", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		tab.serverStatus,
+		container.NewHBox(tab.startBtn, tab.stopBtn),
+		tab.statsLabel,
+		tab.connLabel,
+		tab.endpointLabel,
+		tab.uptimeLabel,
+		widget.NewSeparator(),
+		widget.NewLabelWithStyle("Advanced Features", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		tab.aiStatusLabel,
+	)
+}package ui
+
+import (
+	"fmt"
+	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+
+	"airmouse-go/internal/device"
+)
+
+type DevicesTab struct {
+	list      *widget.List
+	devices   []*device.DeviceInfo
+	deviceMgr *device.Manager
+}
+
+func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
+	tab := &DevicesTab{
+		deviceMgr: deviceMgr,
+		devices:   deviceMgr.GetAllDevices(),
+	}
+	tab.list = widget.NewList(
+		func() int { return len(tab.devices) },
+		func() fyne.CanvasObject {
+			return widget.NewLabel("template")
+		},
+		func(id int, obj fyne.CanvasObject) {
+			if id < len(tab.devices) {
+				d := tab.devices[id]
+				obj.(*widget.Label).SetText(fmt.Sprintf("%s | %s | Connected: %s", d.Name, d.Type, d.ConnectedAt.Format("15:04:05")))
+			}
+		},
+	)
+
+	// Auto-refresh every 2 seconds
+	go func() {
+		for {
+			time.Sleep(2 * time.Second)
+			tab.devices = deviceMgr.GetAllDevices()
+			tab.list.Refresh()
+		}
+	}()
+
+	return container.NewBorder(
+		widget.NewLabelWithStyle("Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		nil, nil, nil,
+		tab.list,
+	)
+}package ui
+
+import (
+	"bytes"
+	"sync"
+	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
+
+	"airmouse-go/internal/utils"
+)
+
+type LogEntry struct {
+	Time    time.Time
+	Level   string
+	Message string
+}
+
+var (
+	logMu      sync.RWMutex
+	logEntries []LogEntry
+	logWidget  *widget.Entry
+)
+
+func init() {
+	utils.SetLogHook(func(level, msg string) {
+		logMu.Lock()
+		defer logMu.Unlock()
+		logEntries = append(logEntries, LogEntry{Time: time.Now(), Level: level, Message: msg})
+		if len(logEntries) > 500 {
+			logEntries = logEntries[len(logEntries)-500:]
+		}
+		refreshLogWidget()
+	})
+}
+
+func refreshLogWidget() {
+	if logWidget == nil {
+		return
+	}
+	logMu.RLock()
+	defer logMu.RUnlock()
+	var buf bytes.Buffer
+	for _, e := range logEntries {
+		buf.WriteString(e.Time.Format("15:04:05"))
+		buf.WriteString(" [")
+		buf.WriteString(e.Level)
+		buf.WriteString("] ")
+		buf.WriteString(e.Message)
+		buf.WriteString("\n")
+	}
+	logWidget.SetText(buf.String())
+}
+
+type LogsTab struct {
+	root fyne.CanvasObject
+}
+
+func NewLogsTab() fyne.CanvasObject {
+	logWidget = widget.NewMultiLineEntry()
+	logWidget.Disable()
+	logWidget.SetMinRowsVisible(20)
+
+	clearBtn := widget.NewButton("Clear Logs", func() {
+		logMu.Lock()
+		logEntries = nil
+		logMu.Unlock()
+		logWidget.SetText("")
+	})
+	exportBtn := widget.NewButton("Export Logs", func() {
+		if app := fyne.CurrentApp(); app != nil && len(app.Driver().AllWindows()) > 0 {
+			dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
+				if err == nil && writer != nil {
+					defer writer.Close()
+					logMu.RLock()
+					defer logMu.RUnlock()
+					for _, e := range logEntries {
+						line := e.Time.Format("2006-01-02 15:04:05") + " [" + e.Level + "] " + e.Message + "\n"
+						_, _ = writer.Write([]byte(line))
+					}
+				}
+			}, app.Driver().AllWindows()[0])
+		}
+	})
+
+	return container.NewBorder(
+		container.NewHBox(clearBtn, exportBtn),
+		nil, nil, nil,
+		container.NewScroll(logWidget),
+	)
+}
+
+func (l *LogsTab) Clear() {
+	logMu.Lock()
+	logEntries = nil
+	logMu.Unlock()
+	if logWidget != nil {
+		logWidget.SetText("")
+	}
+}
+package ui
+
+import (
+	"bytes"
+	"fmt"
+	"image/png"
+	"net"
+	"strconv"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
+	qrcode "github.com/skip2/go-qrcode"
+
+	"airmouse-go/internal/config"
+)
+
+type NetworkTab struct {
+	ipEntry   *widget.Entry
+	portEntry *widget.Entry
+	qrImage   *canvas.Image
+	ipList    *widget.List
+	ipData    []string
+}
+
+func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
+	tab := &NetworkTab{
+		ipData: getIPList(),
+	}
+	tab.ipEntry = widget.NewEntry()
+	tab.ipEntry.SetPlaceHolder("IP Address")
+	tab.ipEntry.Text = getLocalIP()
+	tab.portEntry = widget.NewEntry()
+	tab.portEntry.SetPlaceHolder("Port")
+	tab.portEntry.Text = strconv.Itoa(cfg.Port)
+
+	tab.ipList = widget.NewList(
+		func() int { return len(tab.ipData) },
+		func() fyne.CanvasObject { return widget.NewLabel("") },
+		func(id int, obj fyne.CanvasObject) {
+			obj.(*widget.Label).SetText(tab.ipData[id])
+		},
+	)
+	tab.ipList.OnSelected = func(id int) {
+		if id >= 0 && id < len(tab.ipData) {
+			tab.ipEntry.SetText(tab.ipData[id])
+			tab.updateQR()
+		}
+	}
+
+	refreshBtn := widget.NewButton("Refresh IPs", func() {
+		tab.ipData = getIPList()
+		tab.ipList.Refresh()
+	})
+	copyBtn := widget.NewButton("Copy Endpoint", func() {
+		endpoint := fmt.Sprintf("airmouse://%s:%s", tab.ipEntry.Text, tab.portEntry.Text)
+		fyne.CurrentApp().Driver().AllWindows()[0].Clipboard().SetContent(endpoint)
+		dialog.ShowInformation("Copied", "Endpoint copied to clipboard", fyne.CurrentApp().Driver().AllWindows()[0])
+	})
+
+	tab.qrImage = canvas.NewImageFromResource(nil)
+	tab.qrImage.FillMode = canvas.ImageFillOriginal
+	genQrBtn := widget.NewButton("Generate QR", tab.updateQR)
+	saveQrBtn := widget.NewButton("Save QR", func() {
+		dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
+			if err == nil && writer != nil {
+				defer writer.Close()
+				data := fmt.Sprintf("airmouse://%s:%s", tab.ipEntry.Text, tab.portEntry.Text)
+				pngBytes, _ := qrcode.Encode(data, qrcode.High, 220)
+				writer.Write(pngBytes)
+			}
+		}, fyne.CurrentApp().Driver().AllWindows()[0])
+	})
+
+	tab.ipEntry.OnChanged = func(string) { tab.updateQR() }
+	tab.portEntry.OnChanged = func(string) { tab.updateQR() }
+
+	return container.NewVBox(
+		widget.NewLabelWithStyle("Network Configuration", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel("Available IP addresses:"),
+		container.NewScroll(tab.ipList),
+		tab.ipEntry,
+		tab.portEntry,
+		container.NewHBox(refreshBtn, copyBtn),
+		container.NewHBox(genQrBtn, saveQrBtn),
+		tab.qrImage,
+	)
+}
+
+func (t *NetworkTab) updateQR() {
+	data := fmt.Sprintf("airmouse://%s:%s", t.ipEntry.Text, t.portEntry.Text)
+	pngBytes, err := qrcode.Encode(data, qrcode.High, 200)
+	if err != nil {
+		return
+	}
+	img, err := png.Decode(bytes.NewReader(pngBytes))
+	if err != nil {
+		return
+	}
+	t.qrImage.Image = img
+	t.qrImage.Refresh()
+}
+
+func getIPList() []string {
+	var ips []string
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return []string{"127.0.0.1"}
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+			ips = append(ips, ipnet.IP.String())
+		}
+	}
+	if len(ips) == 0 {
+		ips = append(ips, "127.0.0.1")
+	}
+	return ips
+}
+
+func getLocalIP() string {
+	ips := getIPList()
+	for _, ip := range ips {
+		if ip != "127.0.0.1" {
+			return ip
+		}
+	}
+	return "127.0.0.1"
+}package ui
+
+import (
+	"fmt"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+
+	"airmouse-go/internal/config"
+	"airmouse-go/internal/control"
+)
+
+type SettingsTab struct {
+	root                 fyne.CanvasObject
+	sensitivitySlider    *widget.Slider
+	sensitivityLabel     *widget.Label
+	themeSelect          *widget.Select
+	alwaysOnTopCheck     *widget.Check
+	smoothingCheck       *widget.Check
+	accelCheck           *widget.Check
+	aiCheck              *widget.Check
+	predictiveCheck      *widget.Check
+	predictiveBlendSlider *widget.Slider
+	predictiveBlendLabel *widget.Label
+	personalizationCheck *widget.Check
+	personalizationBuf   *widget.Slider
+	personalizationLbl   *widget.Label
+	intervalSlider       *widget.Slider
+	intervalLbl          *widget.Label
+	autoSwapCheck        *widget.Check
+}
+
+func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.CanvasObject {
+	tab := &SettingsTab{}
+
+	tab.sensitivitySlider = widget.NewSlider(0.2, 2.0)
+	tab.sensitivitySlider.Step = 0.01
+	tab.sensitivitySlider.SetValue(cfg.Sensitivity)
+	tab.sensitivityLabel = widget.NewLabel(fmt.Sprintf("Sensitivity: %.2f", cfg.Sensitivity))
+	tab.sensitivitySlider.OnChanged = func(v float64) {
+		cfg.SetSensitivity(v)
+		mouse.SetSensitivity(v)
+		tab.sensitivityLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", v))
+	}
+
+	tab.themeSelect = widget.NewSelect([]string{"dark", "light", "pure_black", "high_contrast", "ocean", "sunset", "forest", "purple", "cherry", "neon", "lavender", "mint", "peach", "sky"}, func(theme string) {
+		cfg.SetTheme(theme)
+		if app := fyne.CurrentApp(); app != nil {
+			app.Settings().SetTheme(getThemeByName(theme))
+		}
+	})
+	tab.themeSelect.SetSelected(cfg.Theme)
+
+	tab.alwaysOnTopCheck = widget.NewCheck("Always on Top", func(b bool) {
+		cfg.AlwaysOnTop = b
+		_ = cfg.Save()
+		if app := fyne.CurrentApp(); app != nil && len(app.Driver().AllWindows()) > 0 {
+			app.Driver().AllWindows()[0].SetAlwaysOnTop(b)
+		}
+	})
+	tab.alwaysOnTopCheck.SetChecked(cfg.AlwaysOnTop)
+
+	tab.smoothingCheck = widget.NewCheck("Mouse Smoothing (EMA)", func(b bool) { mouse.SetSmoothing(b) })
+	tab.smoothingCheck.SetChecked(true)
+
+	tab.accelCheck = widget.NewCheck("Mouse Acceleration", func(b bool) { mouse.SetAcceleration(b, 1.5) })
+	tab.accelCheck.SetChecked(true)
+
+	tab.aiCheck = widget.NewCheck("AI Smoothing", func(b bool) {
+		mouse.EnableAISmoothing(b)
+		cfg.EnableAISmoothing = b
+		_ = cfg.Save()
+	})
+	tab.aiCheck.SetChecked(cfg.EnableAISmoothing)
+
+	tab.predictiveCheck = widget.NewCheck("Predictive Movement", func(b bool) {
+		cfg.SetPredictiveEnabled(b)
+		mouse.EnablePredictive(b)
+	})
+	tab.predictiveCheck.SetChecked(cfg.EnablePredictive)
+
+	tab.predictiveBlendLabel = widget.NewLabel(fmt.Sprintf("Prediction blend: %.2f", cfg.PredictiveBlendFactor))
+	tab.predictiveBlendSlider = widget.NewSlider(0, 1)
+	tab.predictiveBlendSlider.Step = 0.05
+	tab.predictiveBlendSlider.SetValue(cfg.PredictiveBlendFactor)
+	tab.predictiveBlendSlider.OnChanged = func(v float64) {
+		cfg.SetPredictiveBlendFactor(v)
+		mouse.SetPredictiveBlendFactor(v)
+		tab.predictiveBlendLabel.SetText(fmt.Sprintf("Prediction blend: %.2f", v))
+	}
+
+	tab.personalizationCheck = widget.NewCheck("Enable Personalization", func(b bool) {
+		cfg.EnablePersonalization = b
+		_ = cfg.Save()
+	})
+	tab.personalizationCheck.SetChecked(cfg.EnablePersonalization)
+
+	tab.personalizationLbl = widget.NewLabel(fmt.Sprintf("Buffer size: %d samples", cfg.PersonalizationBuffer))
+	tab.personalizationBuf = widget.NewSlider(500, 5000)
+	tab.personalizationBuf.Step = 100
+	tab.personalizationBuf.SetValue(float64(cfg.PersonalizationBuffer))
+	tab.personalizationBuf.OnChanged = func(v float64) {
+		cfg.PersonalizationBuffer = int(v)
+		tab.personalizationLbl.SetText(fmt.Sprintf("Buffer size: %d samples", cfg.PersonalizationBuffer))
+		_ = cfg.Save()
+	}
+
+	tab.intervalLbl = widget.NewLabel(fmt.Sprintf("Retrain interval: %d seconds", cfg.PersonalizationInterval))
+	tab.intervalSlider = widget.NewSlider(600, 86400)
+	tab.intervalSlider.Step = 300
+	tab.intervalSlider.SetValue(float64(cfg.PersonalizationInterval))
+	tab.intervalSlider.OnChanged = func(v float64) {
+		cfg.PersonalizationInterval = int(v)
+		tab.intervalLbl.SetText(fmt.Sprintf("Retrain interval: %d seconds", cfg.PersonalizationInterval))
+		_ = cfg.Save()
+	}
+
+	tab.autoSwapCheck = widget.NewCheck("Auto-swap trained model", func(b bool) {
+		cfg.AutoSwapModel = b
+		_ = cfg.Save()
+	})
+	tab.autoSwapCheck.SetChecked(cfg.AutoSwapModel)
+
+	tab.root = container.NewVBox(
+		widget.NewLabelWithStyle("Settings", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel("Cursor Sensitivity"),
+		tab.sensitivitySlider,
+		tab.sensitivityLabel,
+		widget.NewSeparator(),
+		widget.NewLabel("Appearance"),
+		tab.themeSelect,
+		tab.alwaysOnTopCheck,
+		widget.NewSeparator(),
+		widget.NewLabel("Mouse Behaviour"),
+		tab.smoothingCheck,
+		tab.accelCheck,
+		widget.NewSeparator(),
+		widget.NewLabel("Prediction & AI"),
+		tab.aiCheck,
+		tab.predictiveCheck,
+		tab.predictiveBlendSlider,
+		tab.predictiveBlendLabel,
+		widget.NewSeparator(),
+		widget.NewLabel("Personalization"),
+		tab.personalizationCheck,
+		tab.personalizationBuf,
+		tab.personalizationLbl,
+		tab.intervalSlider,
+		tab.intervalLbl,
+		tab.autoSwapCheck,
+	)
+	return tab.root
+}
+package ui
+
+import (
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/theme"
+)
+
+var (
+	_ fyne.Theme = (*CustomTheme)(nil)
+)
+
+type CustomTheme struct {
+	name       string
+	primary    fyne.ThemeColorName
+	background fyne.ThemeColorName
+	text       fyne.ThemeColorName
+}
+
+func (t *CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) fyne.Color {
+	switch name {
+	case theme.ColorNamePrimary:
+		return theme.PrimaryColorNamed("blue")
+	case theme.ColorNameBackground:
+		return theme.DefaultTheme().Color(theme.ColorNameBackground, theme.VariantDark)
+	default:
+		return theme.DefaultTheme().Color(name, variant)
+	}
+}
+
+func (t *CustomTheme) Font(style fyne.TextStyle) fyne.Resource {
+	return theme.DefaultTheme().Font(style)
+}
+
+func (t *CustomTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
+	return theme.DefaultTheme().Icon(name)
+}
+
+func (t *CustomTheme) Size(name fyne.ThemeSizeName) float32 {
+	return theme.DefaultTheme().Size(name)
+}
+
+func getThemeByName(name string) fyne.Theme {
+	switch name {
+	case "light":
+		return theme.LightTheme()
+	case "dark":
+		return theme.DarkTheme()
+	case "pure_black":
+		return &CustomTheme{name: "pure_black"}
+	default:
+		return theme.DarkTheme()
+	}
+}package utils
+
+import (
+	"strconv"
+)
+
+// AtoiSafe converts a string to int, returning a default value on error.
+func AtoiSafe(s string, defaultValue int) int {
+	val, err := strconv.Atoi(s)
+	if err != nil {
+		return defaultValue
+	}
+	return val
+}
+
+// Itoa is a wrapper for strconv.Itoa.
+func Itoa(i int) string {
+	return strconv.Itoa(i)
+}package utils
+
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
+	"io"
+)
+
+func Encrypt(key, plaintext []byte) (string, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func Decrypt(key []byte, ciphertextB64 string) ([]byte, error) {
+	ciphertext, err := base64.StdEncoding.DecodeString(ciphertextB64)
+	if err != nil {
+		return nil, err
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonceSize := gcm.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, errors.New("ciphertext too short")
+	}
+	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	return gcm.Open(nil, nonce, ciphertext, nil)
+}package utils
+
+import (
+	"io"
+	"os"
+	"path/filepath"
+)
+
+// EnsureDir creates a directory if it does not exist.
+func EnsureDir(path string) error {
+	return os.MkdirAll(path, 0755)
+}
+
+// FileExists checks whether a file exists and is not a directory.
+func FileExists(path string) bool {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+// CopyFile copies a file from src to dst.
+func CopyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+	_, err = io.Copy(destination, source)
+	return err
+}package utils
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"sync"
+)
+
+type LogHook func(level, message string)
+
+var (
+	mu     sync.RWMutex
+	hooks  []LogHook
+	logger *log.Logger
+)
+
+func InitLogger() {
+	logger = log.New(os.Stdout, "", log.LstdFlags)
+}
+
+func AddLogHook(hook LogHook) {
+	mu.Lock()
+	defer mu.Unlock()
+	hooks = append(hooks, hook)
+}
+
+func SetLogHook(hook LogHook) {
+	mu.Lock()
+	defer mu.Unlock()
+	hooks = []LogHook{hook}
+}
+
+func logMessage(level, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	if logger != nil {
+		logger.Printf("[%s] %s", level, msg)
+	}
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, hook := range hooks {
+		go hook(level, msg)
+	}
+}
+
+func LogInfo(format string, args ...interface{}) {
+	logMessage("INFO", format, args...)
+}
+
+func LogError(format string, args ...interface{}) {
+	logMessage("ERROR", format, args...)
+}
+
+func LogDebug(format string, args ...interface{}) {
+	logMessage("DEBUG", format, args...)
+}
+
+func LogWarn(format string, args ...interface{}) {
+	logMessage("WARN", format, args...)
+}
+
+func LogFatal(format string, args ...interface{}) {
+	logMessage("FATAL", format, args...)
+	os.Exit(1)
+}package utils
+
+import (
+	"fmt"
+	"runtime"
+	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+)
+
+type Metrics struct {
+	CPUPercent    float64
+	MemoryPercent float64
+	MemoryUsed    uint64
+	GoRoutines    int
+	Uptime        time.Duration
+	startTime     time.Time
+}
+
+var metrics = &Metrics{startTime: time.Now()}
+
+func GetMetrics() *Metrics {
+	if percent, err := cpu.Percent(0, false); err == nil && len(percent) > 0 {
+		metrics.CPUPercent = percent[0]
+	}
+	if memStat, err := mem.VirtualMemory(); err == nil {
+		metrics.MemoryPercent = memStat.UsedPercent
+		metrics.MemoryUsed = memStat.Used
+	}
+	metrics.GoRoutines = runtime.NumGoroutine()
+	metrics.Uptime = time.Since(metrics.startTime)
+	return metrics
+}
+
+func (m *Metrics) String() string {
+	return fmt.Sprintf("CPU: %.1f%% | MEM: %.1f%% (%d MB) | Goroutines: %d | Uptime: %v",
+		m.CPUPercent, m.MemoryPercent, m.MemoryUsed/1024/1024, m.GoRoutines, m.Uptime.Round(time.Second))
+}package utils
+
+import (
+	"net"
+)
+
+// GetLocalIP returns the first non‑loopback IPv4 address.
+func GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "127.0.0.1"
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+			return ipnet.IP.String()
+		}
+	}
+	return "127.0.0.1"
+}
+
+// GetAllLocalIPs returns all non‑loopback IPv4 addresses.
+func GetAllLocalIPs() []string {
+	var ips []string
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return []string{"127.0.0.1"}
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+			ips = append(ips, ipnet.IP.String())
+		}
+	}
+	if len(ips) == 0 {
+		ips = append(ips, "127.0.0.1")
+	}
+	return ips
+}
+
+// IsValidIP checks if a string is a valid IPv4 address.
+func IsValidIP(ip string) bool {
+	return net.ParseIP(ip) != nil && net.ParseIP(ip).To4() != nil
+}
+
+// IsPortValid checks if a port number is within the valid range (1‑65535).
+func IsPortValid(port int) bool {
+	return port > 0 && port < 65536
+}package utils
+
+import (
+	"crypto/rand"
+	"encoding/base64"
+	"math/big"
+)
+
+const alphanumeric = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+// RandomString generates a cryptographically secure random string of given length.
+func RandomString(n int) (string, error) {
+	b := make([]byte, n)
+	for i := range b {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphanumeric))))
+		if err != nil {
+			return "", err
+		}
+		b[i] = alphanumeric[num.Int64()]
+	}
+	return string(b), nil
+}
+
+// RandomToken generates a random base64 token (32 bytes).
+func RandomToken() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}package utils
+
+import (
+	"time"
+)
+
+// FormatDuration returns a human‑readable duration string (e.g., "2h3m4s").
+func FormatDuration(d time.Duration) string {
+	return d.String()
+}
+
+// ParseDuration safely parses a duration string, returning default if error.
+func ParseDuration(s string, defaultDuration time.Duration) time.Duration {
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return defaultDuration
+	}
+	return d
+}package utils
+
+import (
+	"regexp"
+)
+
+var (
+	ipRegex   = regexp.MustCompile(`^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`)
+	nameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\- ]+$`)
+)
+
+// IsValidIPv4 checks if a string is a valid IPv4 address.
+func IsValidIPv4(ip string) bool {
+	return ipRegex.MatchString(ip)
+}
+
+// IsValidDeviceName checks if a device name contains only allowed characters.
+func IsValidDeviceName(name string) bool {
+	return nameRegex.MatchString(name) && len(name) > 0 && len(name) <= 64
+}
