@@ -1,6 +1,8 @@
 plugins {
-    id 'org.jetbrains.kotlin.android'
+
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+
 }
 
 android {
@@ -21,17 +23,15 @@ android {
         compose true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
-    }
 
     compileOptions {
+
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = '11'           // FIXED: now matches Java 11
+        jvmTarget = '11'
     }
 
     signingConfigs {
