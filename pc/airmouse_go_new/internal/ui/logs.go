@@ -10,7 +10,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
-	"airmouse-go/internal/infra/logger"
+	"airmouse-go/internal/utils"
 )
 
 type LogEntry struct {
@@ -26,7 +26,7 @@ var (
 )
 
 func init() {
-	logger.SetHook(func(level, msg string) {
+	utils.SetLogHook(func(level, msg string) {
 		logMu.Lock()
 		defer logMu.Unlock()
 		logEntries = append(logEntries, LogEntry{Time: time.Now(), Level: level, Message: msg})
@@ -55,24 +55,14 @@ func refreshLogWidget() {
 	logWidget.SetText(buf.String())
 }
 
-type LogsTab struct{}
+type LogsTab struct {
+	root fyne.CanvasObject
+}
 
 func NewLogsTab() fyne.CanvasObject {
 	logWidget = widget.NewMultiLineEntry()
 	logWidget.Disable()
 	logWidget.SetMinRowsVisible(20)
-
-	searchEntry := widget.NewEntry()
-	searchEntry.SetPlaceHolder("Filter...")
-
-	levelSelect := widget.NewSelect([]string{"All", "INFO", "WARN", "ERROR"}, func(selected string) {
-		filterLogs(selected, searchEntry.Text)
-	})
-	levelSelect.SetSelected("All")
-
-	searchEntry.OnChanged = func(text string) {
-		filterLogs(levelSelect.Selected, text)
-	}
 
 	clearBtn := widget.NewButton("Clear Logs", func() {
 		logMu.Lock()
@@ -81,40 +71,33 @@ func NewLogsTab() fyne.CanvasObject {
 		logWidget.SetText("")
 	})
 	exportBtn := widget.NewButton("Export Logs", func() {
-		dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
-			if err == nil && writer != nil {
-				defer writer.Close()
-				logMu.RLock()
-				defer logMu.RUnlock()
-				for _, e := range logEntries {
-					line := e.Time.Format("2006-01-02 15:04:05") + " [" + e.Level + "] " + e.Message + "\n"
-					writer.Write([]byte(line))
+		if app := fyne.CurrentApp(); app != nil && len(app.Driver().AllWindows()) > 0 {
+			dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
+				if err == nil && writer != nil {
+					defer writer.Close()
+					logMu.RLock()
+					defer logMu.RUnlock()
+					for _, e := range logEntries {
+						line := e.Time.Format("2006-01-02 15:04:05") + " [" + e.Level + "] " + e.Message + "\n"
+						_, _ = writer.Write([]byte(line))
+					}
 				}
-			}
-		}, fyne.CurrentApp().Driver().AllWindows()[0])
+			}, app.Driver().AllWindows()[0])
+		}
 	})
 
-	filterLogs := func(level, search string) {
-		logMu.RLock()
-		defer logMu.RUnlock()
-		var buf bytes.Buffer
-		for _, e := range logEntries {
-			if level != "All" && e.Level != level {
-				continue
-			}
-			if search != "" && !bytes.Contains([]byte(e.Message), []byte(search)) {
-				continue
-			}
-			buf.WriteString(e.Time.Format("15:04:05"))
-			buf.WriteString(" [")
-			buf.WriteString(e.Level)
-			buf.WriteString("] ")
-			buf.WriteString(e.Message)
-			buf.WriteString("\n")
-		}
-		logWidget.SetText(buf.String())
-	}
+	return container.NewBorder(
+		container.NewHBox(clearBtn, exportBtn),
+		nil, nil, nil,
+		container.NewScroll(logWidget),
+	)
+}
 
-	toolbar := container.NewHBox(searchEntry, levelSelect, clearBtn, exportBtn)
-	return container.NewBorder(toolbar, nil, nil, nil, container.NewScroll(logWidget))
+func (l *LogsTab) Clear() {
+	logMu.Lock()
+	logEntries = nil
+	logMu.Unlock()
+	if logWidget != nil {
+		logWidget.SetText("")
+	}
 }

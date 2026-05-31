@@ -8,170 +8,148 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"airmouse-go/internal/config"
-	"airmouse-go/internal/domain/service"
+	"airmouse-go/internal/control"
 )
 
 type SettingsTab struct {
-	sensitivitySlider *widget.Slider
-	sensitivityLabel  *widget.Label
-	clickSlider       *widget.Slider
-	clickLabel        *widget.Label
-	doubleSlider      *widget.Slider
-	doubleLabel       *widget.Label
-	scrollSlider      *widget.Slider
-	scrollLabel       *widget.Label
-	tiltSlider        *widget.Slider
-	tiltLabel         *widget.Label
-	themeSelect       *widget.Select
-	alwaysOnTopCheck  *widget.Check
-	smoothingCheck    *widget.Check
-	accelCheck        *widget.Check
-	aiCheck           *widget.Check
-	predictiveCheck   *widget.Check
-	blendSlider       *widget.Slider
-	blendLabel        *widget.Label
-	hapticCheck       *widget.Check
+	root                 fyne.CanvasObject
+	sensitivitySlider    *widget.Slider
+	sensitivityLabel     *widget.Label
+	themeSelect          *widget.Select
+	alwaysOnTopCheck     *widget.Check
+	smoothingCheck       *widget.Check
+	accelCheck           *widget.Check
+	aiCheck              *widget.Check
+	predictiveCheck      *widget.Check
+	predictiveBlendSlider *widget.Slider
+	predictiveBlendLabel *widget.Label
+	personalizationCheck *widget.Check
+	personalizationBuf   *widget.Slider
+	personalizationLbl   *widget.Label
+	intervalSlider       *widget.Slider
+	intervalLbl          *widget.Label
+	autoSwapCheck        *widget.Check
 }
 
-func NewSettingsTab(cfg *config.Config, mouseSvc *service.MouseService) fyne.CanvasObject {
+func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.CanvasObject {
 	tab := &SettingsTab{}
 
-	// Sensitivity
 	tab.sensitivitySlider = widget.NewSlider(0.2, 2.0)
 	tab.sensitivitySlider.Step = 0.01
-	tab.sensitivitySlider.Value = cfg.Sensitivity
+	tab.sensitivitySlider.SetValue(cfg.Sensitivity)
 	tab.sensitivityLabel = widget.NewLabel(fmt.Sprintf("Sensitivity: %.2f", cfg.Sensitivity))
 	tab.sensitivitySlider.OnChanged = func(v float64) {
 		cfg.SetSensitivity(v)
-		mouseSvc.SetSensitivity(v)
+		mouse.SetSensitivity(v)
 		tab.sensitivityLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", v))
 	}
 
-	// Click threshold
-	tab.clickSlider = widget.NewSlider(0, 20)
-	tab.clickSlider.Step = 0.5
-	tab.clickSlider.Value = cfg.ClickThreshold
-	tab.clickLabel = widget.NewLabel(fmt.Sprintf("Click threshold: %.1f rad/s", cfg.ClickThreshold))
-	tab.clickSlider.OnChanged = func(v float64) {
-		cfg.ClickThreshold = v
-		cfg.Save()
-		tab.clickLabel.SetText(fmt.Sprintf("Click threshold: %.1f rad/s", v))
-	}
-
-	// Double click interval
-	tab.doubleSlider = widget.NewSlider(200, 1000)
-	tab.doubleSlider.Step = 10
-	tab.doubleSlider.Value = float64(cfg.DoubleClickInterval)
-	tab.doubleLabel = widget.NewLabel(fmt.Sprintf("Double click interval: %d ms", cfg.DoubleClickInterval))
-	tab.doubleSlider.OnChanged = func(v float64) {
-		cfg.DoubleClickInterval = int64(v)
-		cfg.Save()
-		tab.doubleLabel.SetText(fmt.Sprintf("Double click interval: %d ms", int(v)))
-	}
-
-	// Scroll threshold
-	tab.scrollSlider = widget.NewSlider(0, 15)
-	tab.scrollSlider.Step = 0.2
-	tab.scrollSlider.Value = cfg.ScrollThreshold
-	tab.scrollLabel = widget.NewLabel(fmt.Sprintf("Scroll threshold: %.1f m/s²", cfg.ScrollThreshold))
-	tab.scrollSlider.OnChanged = func(v float64) {
-		cfg.ScrollThreshold = v
-		cfg.Save()
-		tab.scrollLabel.SetText(fmt.Sprintf("Scroll threshold: %.1f m/s²", v))
-	}
-
-	// Right click tilt
-	tab.tiltSlider = widget.NewSlider(0, 90)
-	tab.tiltSlider.Step = 1
-	tab.tiltSlider.Value = cfg.RightClickTilt
-	tab.tiltLabel = widget.NewLabel(fmt.Sprintf("Right click tilt: %.0f°", cfg.RightClickTilt))
-	tab.tiltSlider.OnChanged = func(v float64) {
-		cfg.RightClickTilt = v
-		cfg.Save()
-		tab.tiltLabel.SetText(fmt.Sprintf("Right click tilt: %.0f°", v))
-	}
-
-	// Theme
-	tab.themeSelect = widget.NewSelect(
-		[]string{"dark", "light", "pure_black"},
-		func(theme string) {
-			cfg.SetTheme(theme)
-			fyne.CurrentApp().Settings().SetTheme(getThemeByName(theme))
-		},
-	)
+	tab.themeSelect = widget.NewSelect([]string{"dark", "light", "pure_black", "high_contrast", "ocean", "sunset", "forest", "purple", "cherry", "neon", "lavender", "mint", "peach", "sky"}, func(theme string) {
+		cfg.SetTheme(theme)
+		if app := fyne.CurrentApp(); app != nil {
+			app.Settings().SetTheme(getThemeByName(theme))
+		}
+	})
 	tab.themeSelect.SetSelected(cfg.Theme)
 
-	// Always on top
 	tab.alwaysOnTopCheck = widget.NewCheck("Always on Top", func(b bool) {
 		cfg.AlwaysOnTop = b
-		cfg.Save()
-		win := fyne.CurrentApp().Driver().AllWindows()[0]
-		win.SetAlwaysOnTop(b)
+		_ = cfg.Save()
+		if app := fyne.CurrentApp(); app != nil && len(app.Driver().AllWindows()) > 0 {
+			app.Driver().AllWindows()[0].SetAlwaysOnTop(b)
+		}
 	})
 	tab.alwaysOnTopCheck.SetChecked(cfg.AlwaysOnTop)
 
-	// Smoothing
-	tab.smoothingCheck = widget.NewCheck("Mouse Smoothing (EMA)", func(b bool) {
-		mouseSvc.SetSmoothing(b)
-	})
+	tab.smoothingCheck = widget.NewCheck("Mouse Smoothing (EMA)", func(b bool) { mouse.SetSmoothing(b) })
 	tab.smoothingCheck.SetChecked(true)
 
-	// Acceleration
-	tab.accelCheck = widget.NewCheck("Mouse Acceleration", func(b bool) {
-		mouseSvc.SetAcceleration(b, 1.5)
-	})
+	tab.accelCheck = widget.NewCheck("Mouse Acceleration", func(b bool) { mouse.SetAcceleration(b, 1.5) })
 	tab.accelCheck.SetChecked(true)
 
-	// AI smoothing
-	tab.aiCheck = widget.NewCheck("AI Smoothing (RNN)", func(b bool) {
+	tab.aiCheck = widget.NewCheck("AI Smoothing", func(b bool) {
+		mouse.EnableAISmoothing(b)
 		cfg.EnableAISmoothing = b
-		cfg.Save()
+		_ = cfg.Save()
 	})
 	tab.aiCheck.SetChecked(cfg.EnableAISmoothing)
 
-	// Predictive movement
-	tab.predictiveCheck = widget.NewCheck("Predictive Movement (Kalman)", func(b bool) {
-		cfg.EnablePredictive = b
-		cfg.Save()
+	tab.predictiveCheck = widget.NewCheck("Predictive Movement", func(b bool) {
+		cfg.SetPredictiveEnabled(b)
+		mouse.EnablePredictive(b)
 	})
 	tab.predictiveCheck.SetChecked(cfg.EnablePredictive)
 
-	tab.blendSlider = widget.NewSlider(0, 1)
-	tab.blendSlider.Step = 0.05
-	tab.blendSlider.Value = cfg.PredictiveBlendFactor
-	tab.blendLabel = widget.NewLabel(fmt.Sprintf("Prediction blend: %.2f", cfg.PredictiveBlendFactor))
-	tab.blendSlider.OnChanged = func(v float64) {
+	tab.predictiveBlendLabel = widget.NewLabel(fmt.Sprintf("Prediction blend: %.2f", cfg.PredictiveBlendFactor))
+	tab.predictiveBlendSlider = widget.NewSlider(0, 1)
+	tab.predictiveBlendSlider.Step = 0.05
+	tab.predictiveBlendSlider.SetValue(cfg.PredictiveBlendFactor)
+	tab.predictiveBlendSlider.OnChanged = func(v float64) {
 		cfg.SetPredictiveBlendFactor(v)
-		tab.blendLabel.SetText(fmt.Sprintf("Prediction blend: %.2f", v))
+		mouse.SetPredictiveBlendFactor(v)
+		tab.predictiveBlendLabel.SetText(fmt.Sprintf("Prediction blend: %.2f", v))
 	}
 
-	// Haptic feedback
-	tab.hapticCheck = widget.NewCheck("Haptic Feedback", func(b bool) {
-		cfg.HapticEnabled = b
-		cfg.Save()
+	tab.personalizationCheck = widget.NewCheck("Enable Personalization", func(b bool) {
+		cfg.EnablePersonalization = b
+		_ = cfg.Save()
 	})
-	tab.hapticCheck.SetChecked(cfg.HapticEnabled)
+	tab.personalizationCheck.SetChecked(cfg.EnablePersonalization)
 
-	return container.NewVBox(
+	tab.personalizationLbl = widget.NewLabel(fmt.Sprintf("Buffer size: %d samples", cfg.PersonalizationBuffer))
+	tab.personalizationBuf = widget.NewSlider(500, 5000)
+	tab.personalizationBuf.Step = 100
+	tab.personalizationBuf.SetValue(float64(cfg.PersonalizationBuffer))
+	tab.personalizationBuf.OnChanged = func(v float64) {
+		cfg.PersonalizationBuffer = int(v)
+		tab.personalizationLbl.SetText(fmt.Sprintf("Buffer size: %d samples", cfg.PersonalizationBuffer))
+		_ = cfg.Save()
+	}
+
+	tab.intervalLbl = widget.NewLabel(fmt.Sprintf("Retrain interval: %d seconds", cfg.PersonalizationInterval))
+	tab.intervalSlider = widget.NewSlider(600, 86400)
+	tab.intervalSlider.Step = 300
+	tab.intervalSlider.SetValue(float64(cfg.PersonalizationInterval))
+	tab.intervalSlider.OnChanged = func(v float64) {
+		cfg.PersonalizationInterval = int(v)
+		tab.intervalLbl.SetText(fmt.Sprintf("Retrain interval: %d seconds", cfg.PersonalizationInterval))
+		_ = cfg.Save()
+	}
+
+	tab.autoSwapCheck = widget.NewCheck("Auto‑swap trained model", func(b bool) {
+		cfg.AutoSwapModel = b
+		_ = cfg.Save()
+	})
+	tab.autoSwapCheck.SetChecked(cfg.AutoSwapModel)
+
+	tab.root = container.NewVBox(
 		widget.NewLabelWithStyle("Settings", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		widget.NewLabel("Cursor Sensitivity"),
-		tab.sensitivitySlider, tab.sensitivityLabel,
-		widget.NewSeparator(),
-		widget.NewLabel("Gestures"),
-		tab.clickSlider, tab.clickLabel,
-		tab.doubleSlider, tab.doubleLabel,
-		tab.scrollSlider, tab.scrollLabel,
-		tab.tiltSlider, tab.tiltLabel,
-		tab.hapticCheck,
+		tab.sensitivitySlider,
+		tab.sensitivityLabel,
 		widget.NewSeparator(),
 		widget.NewLabel("Appearance"),
-		tab.themeSelect, tab.alwaysOnTopCheck,
+		tab.themeSelect,
+		tab.alwaysOnTopCheck,
 		widget.NewSeparator(),
-		widget.NewLabel("Mouse Processing"),
-		tab.smoothingCheck, tab.accelCheck, tab.aiCheck,
+		widget.NewLabel("Mouse Behaviour"),
+		tab.smoothingCheck,
+		tab.accelCheck,
 		widget.NewSeparator(),
-		widget.NewLabel("Latency Compensation"),
-		tab.predictiveCheck, tab.blendSlider, tab.blendLabel,
+		widget.NewLabel("Prediction & AI"),
+		tab.aiCheck,
+		tab.predictiveCheck,
+		tab.predictiveBlendSlider,
+		tab.predictiveBlendLabel,
+		widget.NewSeparator(),
+		widget.NewLabel("Personalization"),
+		tab.personalizationCheck,
+		tab.personalizationBuf,
+		tab.personalizationLbl,
+		tab.intervalSlider,
+		tab.intervalLbl,
+		tab.autoSwapCheck,
 	)
+	return tab.root
 }

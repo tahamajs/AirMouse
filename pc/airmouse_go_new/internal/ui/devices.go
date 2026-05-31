@@ -28,12 +28,12 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 		func(id int, obj fyne.CanvasObject) {
 			if id < len(tab.devices) {
 				d := tab.devices[id]
-				obj.(*widget.Label).SetText(fmt.Sprintf("%s | %s | Connected: %s",
-					d.Name, d.Type, d.ConnectedAt.Format("15:04:05")))
+				obj.(*widget.Label).SetText(fmt.Sprintf("%s | %s | Connected: %s", d.Name, d.Type, d.ConnectedAt.Format("15:04:05")))
 			}
 		},
 	)
 
+	// Auto‑refresh every 2 seconds
 	go func() {
 		for {
 			time.Sleep(2 * time.Second)
