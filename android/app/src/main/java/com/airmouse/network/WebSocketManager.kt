@@ -100,43 +100,6 @@ object WebSocketManager {
         send(json.toString())
     }
 
-    fun sendMove(dx: Float, dy: Float) {
-        val json = JSONObject().apply {
-            put("type", "move")
-            put("payload", JSONObject().apply {
-                put("dx", dx)
-                put("dy", dy)
-            })
-        }
-        send(json.toString())
-    }
-
-    fun sendClick(button: String = "left") {
-        val json = JSONObject().apply {
-            put("type", "click")
-            put("payload", JSONObject().apply { put("button", button) })
-        }
-        send(json.toString())
-    }
-
-    fun sendDoubleClick() {
-        val json = JSONObject().apply { put("type", "doubleclick") }
-        send(json.toString())
-    }
-
-    fun sendRightClick() { sendClick("right") }
-
-    fun sendHello(name: String, version: String = "android-1.0") {
-        val json = JSONObject().apply {
-            put("type", "hello")
-            put("payload", JSONObject().apply {
-                put("name", name)
-                put("version", version)
-            })
-        }
-        send(json.toString())
-    }
-
     fun sendProximity(isNear: Boolean, distance: Float) {
         val json = JSONObject().apply {
             put("type", "proximity")
