@@ -1,49 +1,56 @@
 package repository
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"sync"
+	"time"
 
 	"airmouse-go/internal/domain/entity"
+	"airmouse-go/internal/domain/repository"
 )
 
-type ClientRepositoryImpl struct {
-	filePath string
-	clients  map[string]*entity.Client
-	mu       sync.RWMutex
+type clientRepositoryImpl struct {
+	mu      sync.RWMutex
+	clients map[string]*entity.Client
 }
 
-func NewClientRepository() *ClientRepositoryImpl {
-	configDir, _ := os.UserConfigDir()
-	path := filepath.Join(configDir, "airmouse", "clients.json")
-	repo := &ClientRepositoryImpl{
-		filePath: path,
-		clients:  make(map[string]*entity.Client),
+func NewClientRepository() repository.ClientRepository {
+	return &clientRepositoryImpl{
+		clients: make(map[string]*entity.Client),
 	}
-	repo.load()
-	return repo
 }
 
-func (r *ClientRepositoryImpl) Save(client *entity.Client) error {
+func (r *clientRepositoryImpl) Add(client *entity.Client) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.clients[client.ID] = client
-	return r.save()
+	return nil
 }
 
-func (r *ClientRepositoryImpl) FindByID(id string) (*entity.Client, error) {
+func (r *clientRepositoryImpl) Remove(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.clients, id)
+	return nil
+}
+
+func (r *clientRepositoryImpl) Get(id string) (*entity.Client, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	client, ok := r.clients[id]
-	if !ok {
-		return nil, nil
-	}
-	return client, nil
+	return r.clients[id], nil
 }
 
-func (r *ClientRepositoryImpl) FindAll() ([]*entity.Client, error) {
+func (r *clientRepositoryImpl) GetByName(name string) (*entity.Client, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, c := range r.clients {
+		if c.Name == name {
+			return c, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *clientRepositoryImpl) List() ([]*entity.Client, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	list := make([]*entity.Client, 0, len(r.clients))
@@ -53,34 +60,76 @@ func (r *ClientRepositoryImpl) FindAll() ([]*entity.Client, error) {
 	return list, nil
 }
 
-func (r *ClientRepositoryImpl) Remove(id string) error {
+func (r *clientRepositoryImpl) ListByStatus(status entity.ClientStatus) ([]*entity.Client, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]*entity.Client, 0)
+	for _, c := range r.clients {
+		if c.Status == status {
+			list = append(list, c)
+		}
+	}
+	return list, nil
+}
+
+func (r *clientRepositoryImpl) Count() (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.clients), nil
+}
+
+func (r *clientRepositoryImpl) UpdateLastActive(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.clients, id)
-	return r.save()
+	if c, ok := r.clients[id]; ok {
+		c.UpdateActivity()
+	}
+	return nil
 }
 
-func (r *ClientRepositoryImpl) UpdateLastActive(id string) error {
-	client, err := r.FindByID(id)
-	if err != nil || client == nil {
-		return err
+func (r *clientRepositoryImpl) UpdateHeartbeat(id string, latencyMs int) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if c, ok := r.clients[id]; ok {
+		c.UpdateHeartbeat(time.Duration(latencyMs) * time.Millisecond)
 	}
-	client.UpdateActivity()
-	return r.Save(client)
+	return nil
 }
 
-func (r *ClientRepositoryImpl) load() {
-	data, err := os.ReadFile(r.filePath)
-	if err != nil {
-		return
+func (r *clientRepositoryImpl) UpdateBytes(id string, sent, recv int64) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if c, ok := r.clients[id]; ok {
+		c.AddTraffic(sent, recv)
 	}
-	_ = json.Unmarshal(data, &r.clients)
+	return nil
 }
 
-func (r *ClientRepositoryImpl) save() error {
-	data, err := json.MarshalIndent(r.clients, "", "  ")
-	if err != nil {
-		return err
+func (r *clientRepositoryImpl) UpdateStatus(id string, status entity.ClientStatus) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if c, ok := r.clients[id]; ok {
+		c.SetStatus(status)
 	}
-	return os.WriteFile(r.filePath, data, 0644)
+	return nil
+}
+
+func (r *clientRepositoryImpl) PruneInactive(maxIdle time.Duration) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	removed := 0
+	for id, c := range r.clients {
+		if time.Since(c.LastActive) > maxIdle {
+			delete(r.clients, id)
+			removed++
+		}
+	}
+	return removed, nil
+}
+
+func (r *clientRepositoryImpl) Exists(id string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.clients[id]
+	return ok, nil
 }

@@ -33,17 +33,17 @@ void scrollWheel(int delta) {
 */
 import "C"
 
-type DarwinMouse struct{}
+type darwinMouse struct{}
 
-func New() MouseController {
-	return &DarwinMouse{}
+func NewMouseController(sensitivity float64) (MouseController, error) {
+	return &darwinMouse{}, nil
 }
 
-func (m *DarwinMouse) Move(dx, dy float64) {
+func (m *darwinMouse) Move(dx, dy float64) {
 	C.moveMouse(C.float(dx), C.float(dy))
 }
 
-func (m *DarwinMouse) Click(button string) {
+func (m *darwinMouse) Click(button string) {
 	if button == "left" {
 		C.clickMouse(0, 1)
 		C.clickMouse(0, 0)
@@ -53,11 +53,11 @@ func (m *DarwinMouse) Click(button string) {
 	}
 }
 
-func (m *DarwinMouse) DoubleClick() {
+func (m *darwinMouse) DoubleClick() {
 	m.Click("left")
 	m.Click("left")
 }
 
-func (m *DarwinMouse) Scroll(delta int) {
+func (m *darwinMouse) Scroll(delta int) {
 	C.scrollWheel(C.int(delta))
 }

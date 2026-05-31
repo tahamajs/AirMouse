@@ -2,103 +2,109 @@ package repository
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
+	"errors"
 	"sync"
+
+	"airmouse-go/internal/domain/entity"
+	"airmouse-go/internal/domain/repository"
 )
 
-type gestureData struct {
-	Templates map[string][]float64 `json:"templates"`
-	Thresholds struct {
-		Click  float64 `json:"click"`
-		Scroll float64 `json:"scroll"`
-		Tilt   float64 `json:"tilt"`
-	} `json:"thresholds"`
+type gestureRepositoryImpl struct {
+	mu        sync.RWMutex
+	templates map[string]*entity.GestureTemplate
 }
 
-type GestureRepositoryImpl struct {
-	filePath string
-	data     gestureData
-	mu       sync.RWMutex
+func NewGestureRepository() repository.GestureRepository {
+	return &gestureRepositoryImpl{
+		templates: make(map[string]*entity.GestureTemplate),
+	}
 }
 
-func NewGestureRepository() *GestureRepositoryImpl {
-	configDir, _ := os.UserConfigDir()
-	path := filepath.Join(configDir, "airmouse", "gestures.json")
-	repo := &GestureRepositoryImpl{filePath: path}
-	repo.load()
-	return repo
-}
-
-func (r *GestureRepositoryImpl) SaveCustomGesture(name string, template []float64) error {
+func (r *gestureRepositoryImpl) SaveTemplate(template *entity.GestureTemplate) error {
+	if template == nil || template.ID == "" {
+		return errors.New("invalid template")
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.data.Templates == nil {
-		r.data.Templates = make(map[string][]float64)
-	}
-	r.data.Templates[name] = template
-	return r.save()
+	r.templates[template.ID] = template
+	return nil
 }
 
-func (r *GestureRepositoryImpl) LoadCustomGesture(name string) ([]float64, error) {
+func (r *gestureRepositoryImpl) GetTemplate(idOrName string) (*entity.GestureTemplate, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	tmpl, ok := r.data.Templates[name]
+	if t, ok := r.templates[idOrName]; ok {
+		return t, nil
+	}
+	for _, t := range r.templates {
+		if t.Name == idOrName {
+			return t, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *gestureRepositoryImpl) ListTemplates(filterType entity.GestureType) ([]*entity.GestureTemplate, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]*entity.GestureTemplate, 0)
+	for _, t := range r.templates {
+		if filterType == "" || t.Type == filterType {
+			list = append(list, t)
+		}
+	}
+	return list, nil
+}
+
+func (r *gestureRepositoryImpl) DeleteTemplate(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.templates, id)
+	return nil
+}
+
+func (r *gestureRepositoryImpl) DeleteAllByType(gestureType entity.GestureType) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	deleted := 0
+	for id, t := range r.templates {
+		if t.Type == gestureType {
+			delete(r.templates, id)
+			deleted++
+		}
+	}
+	return deleted, nil
+}
+
+func (r *gestureRepositoryImpl) TemplateExists(name string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, t := range r.templates {
+		if t.Name == name {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (r *gestureRepositoryImpl) Count() (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.templates), nil
+}
+
+func (r *gestureRepositoryImpl) UpdateMetadata(id string, metadata map[string]interface{}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	t, ok := r.templates[id]
 	if !ok {
-		return nil, nil
+		return errors.New("template not found")
 	}
-	return tmpl, nil
-}
-
-func (r *GestureRepositoryImpl) ListCustomGestures() ([]string, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	names := make([]string, 0, len(r.data.Templates))
-	for n := range r.data.Templates {
-		names = append(names, n)
+	if t.Metadata == nil {
+		t.Metadata = make(map[string]interface{})
 	}
-	return names, nil
-}
-
-func (r *GestureRepositoryImpl) DeleteCustomGesture(name string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.data.Templates, name)
-	return r.save()
-}
-
-func (r *GestureRepositoryImpl) GetGestureThresholds() (click, scroll, tilt float64, err error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.data.Thresholds.Click, r.data.Thresholds.Scroll, r.data.Thresholds.Tilt, nil
-}
-
-func (r *GestureRepositoryImpl) SetGestureThresholds(click, scroll, tilt float64) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.data.Thresholds.Click = click
-	r.data.Thresholds.Scroll = scroll
-	r.data.Thresholds.Tilt = tilt
-	return r.save()
-}
-
-func (r *GestureRepositoryImpl) load() {
-	data, err := os.ReadFile(r.filePath)
-	if err != nil {
-		// Default values
-		r.data.Thresholds.Click = 10.0
-		r.data.Thresholds.Scroll = 5.0
-		r.data.Thresholds.Tilt = 15.0
-		r.data.Templates = make(map[string][]float64)
-		return
+	for k, v := range metadata {
+		t.Metadata[k] = v
 	}
-	_ = json.Unmarshal(data, &r.data)
-}
-
-func (r *GestureRepositoryImpl) save() error {
-	data, err := json.MarshalIndent(r.data, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(r.filePath, data, 0644)
+	return nil
 }

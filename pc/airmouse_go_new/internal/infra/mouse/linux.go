@@ -35,59 +35,56 @@ const (
 	BTN_RIGHT = 0x111
 )
 
-type LinuxMouse struct{}
+type linuxMouse struct{}
 
-func New() MouseController {
-	return &LinuxMouse{}
+func NewMouseController(sensitivity float64) (MouseController, error) {
+	return &linuxMouse{}, nil
 }
 
-func (m *LinuxMouse) Move(dx, dy float64) {
-	if uinputFd == 0 {
-		return
-	}
-	events := []inputEvent{
-		{Type: EV_REL, Code: REL_X, Value: int32(dx)},
-		{Type: EV_REL, Code: REL_Y, Value: int32(dy)},
-		{Type: EV_SYN, Code: 0, Value: 0},
-	}
-	for _, ev := range events {
-		syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+func (m *linuxMouse) Move(dx, dy float64) {
+	if uinputFd != 0 {
+		events := []inputEvent{
+			{Type: EV_REL, Code: REL_X, Value: int32(dx)},
+			{Type: EV_REL, Code: REL_Y, Value: int32(dy)},
+			{Type: EV_SYN, Code: 0, Value: 0},
+		}
+		for _, ev := range events {
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+		}
 	}
 }
 
-func (m *LinuxMouse) Click(button string) {
+func (m *linuxMouse) Click(button string) {
 	btn := BTN_LEFT
 	if button == "right" {
 		btn = BTN_RIGHT
 	}
-	if uinputFd == 0 {
-		return
-	}
-	events := []inputEvent{
-		{Type: EV_KEY, Code: uint16(btn), Value: 1},
-		{Type: EV_SYN, Code: 0, Value: 0},
-		{Type: EV_KEY, Code: uint16(btn), Value: 0},
-		{Type: EV_SYN, Code: 0, Value: 0},
-	}
-	for _, ev := range events {
-		syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+	if uinputFd != 0 {
+		events := []inputEvent{
+			{Type: EV_KEY, Code: uint16(btn), Value: 1},
+			{Type: EV_SYN, Code: 0, Value: 0},
+			{Type: EV_KEY, Code: uint16(btn), Value: 0},
+			{Type: EV_SYN, Code: 0, Value: 0},
+		}
+		for _, ev := range events {
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+		}
 	}
 }
 
-func (m *LinuxMouse) DoubleClick() {
+func (m *linuxMouse) DoubleClick() {
 	m.Click("left")
 	m.Click("left")
 }
 
-func (m *LinuxMouse) Scroll(delta int) {
-	if uinputFd == 0 {
-		return
-	}
-	events := []inputEvent{
-		{Type: EV_REL, Code: REL_WHEEL, Value: int32(delta)},
-		{Type: EV_SYN, Code: 0, Value: 0},
-	}
-	for _, ev := range events {
-		syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+func (m *linuxMouse) Scroll(delta int) {
+	if uinputFd != 0 {
+		events := []inputEvent{
+			{Type: EV_REL, Code: REL_WHEEL, Value: int32(delta)},
+			{Type: EV_SYN, Code: 0, Value: 0},
+		}
+		for _, ev := range events {
+			syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+		}
 	}
 }
