@@ -203,6 +203,33 @@ func (s *Server) writePump(client *WSClient) {
         proximityMgr.ProcessRSSIUpdate(payload.RSSI)
     }
 
+
+	type Server struct {
+    // ... existing fields ...
+    jitterBuffer *jitter.JitterBuffer
+}
+
+func NewServer(...) *Server {
+    s := &Server{
+        // ... other initialisation ...
+        jitterBuffer: jitter.NewJitterBuffer(jitter.DefaultJitterBufferConfig()),
+    }
+    return s
+}
+
+func (s *Server) processMessage(client *WSClient, msg *WMessage) {
+    switch msg.Type {
+    case "move":
+        var p MovePayload
+        if err := json.Unmarshal(msg.Payload, &p); err == nil {
+            // Apply jitter compensation
+            now := time.Now()
+            smoothedDx, smoothedDy := s.jitterBuffer.AddMovement(p.DX, p.DY, now)
+            s.mouse.Move(smoothedDx, smoothedDy)
+        }
+    // ... other cases ...
+    }
+}
 func (s *Server) processMessage(client *WSClient, msg *WMessage) {
 	switch msg.Type {
 	case "proximity":

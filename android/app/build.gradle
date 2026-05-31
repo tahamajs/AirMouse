@@ -112,6 +112,8 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'com.opencsv:opencsv:5.9'
     implementation 'androidx.core:core-splashscreen:1.0.1'
+    implementation 'edu.cmu.pocketsphinx:pocketsphinx-android:5prealpha@aar'
+    implementation 'com.linkedin.dexmaker:dexmaker:2.28.3' // required for some versions
 
     // Testing
     testImplementation 'junit:junit:4.13.2'
