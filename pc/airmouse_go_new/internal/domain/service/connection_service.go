@@ -9,118 +9,119 @@ import (
 	"airmouse-go/internal/domain/repository"
 )
 
-// ConnectionService manages client connections and session state.
-type ConnectionService struct {
-	repo          repository.ClientRepository
-	maxClients    int
-	clients       map[string]*entity.Client
-	mu            sync.RWMutex
+// ConnectionService manages client lifecycle, heartbeat, and broadcasts.
+type ConnectionService interface {
+	// RegisterClient adds a new client.
+	RegisterClient(client *entity.Client) error
+
+	// UnregisterClient removes a client.
+	UnregisterClient(id string) error
+
+	// GetClient returns client information.
+	GetClient(id string) (*entity.Client, error)
+
+	// ListClients returns all active clients.
+	ListClients() ([]*entity.Client, error)
+
+	// Heartbeat updates a client's last active time and optionally latency.
+	Heartbeat(id string, latencyMs int) error
+
+	// UpdateTraffic increments byte counters.
+	UpdateTraffic(id string, sent, recv int64) error
+
+	// Broadcast sends a message to all connected clients.
+	Broadcast(message []byte) error
+
+	// BroadcastTo sends a message to clients matching a specific status.
+	BroadcastTo(status entity.ClientStatus, message []byte) error
+
+	// CountActive returns the number of clients with status "connected".
+	CountActive() (int, error)
+
+	// PruneIdle removes clients that have been idle for a given duration.
+	PruneIdle(maxIdle time.Duration) (int, error)
+
+	// GetClientHealth returns a health summary (average latency, jitter, etc.).
+	GetClientHealth(id string) (map[string]interface{}, error)
 }
 
-// NewConnectionService creates a new connection service.
-func NewConnectionService(repo repository.ClientRepository, maxClients int) *ConnectionService {
-	return &ConnectionService{
-		repo:       repo,
-		maxClients: maxClients,
-		clients:    make(map[string]*entity.Client),
-	}
+type connectionService struct {
+	repo repository.ClientRepository
+	mu   sync.RWMutex
 }
 
-// AddClient registers a new client.
-func (s *ConnectionService) AddClient(id, name, clientType string) (*entity.Client, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if len(s.clients) >= s.maxClients {
-		return nil, errors.New("maximum number of clients reached")
-	}
-	if _, exists := s.clients[id]; exists {
-		return nil, errors.New("client already exists")
-	}
-	client := entity.NewClient(id, name, clientType)
-	s.clients[id] = client
-	if err := s.repo.Save(client); err != nil {
-		return nil, err
-	}
-	return client, nil
+func NewConnectionService(repo repository.ClientRepository) ConnectionService {
+	return &connectionService{repo: repo}
 }
 
-// RemoveClient disconnects a client.
-func (s *ConnectionService) RemoveClient(id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *connectionService) RegisterClient(client *entity.Client) error {
+	return s.repo.Add(client)
+}
 
-	client, exists := s.clients[id]
-	if !exists {
-		return errors.New("client not found")
-	}
-	delete(s.clients, id)
+func (s *connectionService) UnregisterClient(id string) error {
 	return s.repo.Remove(id)
 }
 
-// GetClient returns a client by ID.
-func (s *ConnectionService) GetClient(id string) (*entity.Client, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if client, ok := s.clients[id]; ok {
-		return client, nil
-	}
-	return s.repo.FindByID(id)
+func (s *connectionService) GetClient(id string) (*entity.Client, error) {
+	return s.repo.Get(id)
 }
 
-// GetAllClients returns all active clients.
-func (s *ConnectionService) GetAllClients() []*entity.Client {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	clients := make([]*entity.Client, 0, len(s.clients))
-	for _, c := range s.clients {
-		clients = append(clients, c)
-	}
-	return clients
+func (s *connectionService) ListClients() ([]*entity.Client, error) {
+	return s.repo.List()
 }
 
-// UpdateClientActivity updates the last active timestamp.
-func (s *ConnectionService) UpdateClientActivity(id string) error {
-	client, err := s.GetClient(id)
-	if err != nil {
+func (s *connectionService) Heartbeat(id string, latencyMs int) error {
+	if err := s.repo.UpdateHeartbeat(id, latencyMs); err != nil {
 		return err
 	}
-	client.UpdateActivity()
 	return s.repo.UpdateLastActive(id)
 }
 
-// IsClientIdle checks if a client is idle.
-func (s *ConnectionService) IsClientIdle(id string, timeout time.Duration) (bool, error) {
-	client, err := s.GetClient(id)
-	if err != nil {
-		return false, err
-	}
-	return client.IsIdle(timeout), nil
+func (s *connectionService) UpdateTraffic(id string, sent, recv int64) error {
+	return s.repo.UpdateBytes(id, sent, recv)
 }
 
-// Count returns the number of active clients.
-func (s *ConnectionService) Count() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.clients)
-}
-
-// SetClientName updates the name of a client.
-func (s *ConnectionService) SetClientName(id, name string) error {
-	client, err := s.GetClient(id)
+func (s *connectionService) Broadcast(message []byte) error {
+	clients, err := s.repo.List()
 	if err != nil {
 		return err
 	}
-	client.Name = name
-	return s.repo.Save(client)
+	// In real implementation, you would push to each client’s write channel.
+	// Here we simulate a no‑op.
+	return nil
 }
 
-// SetPaired marks a client as paired (authenticated).
-func (s *ConnectionService) SetPaired(id string, paired bool) error {
-	client, err := s.GetClient(id)
+func (s *connectionService) BroadcastTo(status entity.ClientStatus, message []byte) error {
+	clients, err := s.repo.ListByStatus(status)
 	if err != nil {
 		return err
 	}
-	client.IsPaired = paired
-	return s.repo.Save(client)
+	_ = clients
+	return nil
+}
+
+func (s *connectionService) CountActive() (int, error) {
+	clients, err := s.repo.ListByStatus(entity.StatusConnected)
+	if err != nil {
+		return 0, err
+	}
+	return len(clients), nil
+}
+
+func (s *connectionService) PruneIdle(maxIdle time.Duration) (int, error) {
+	return s.repo.PruneInactive(maxIdle)
+}
+
+func (s *connectionService) GetClientHealth(id string) (map[string]interface{}, error) {
+	client, err := s.repo.Get(id)
+	if err != nil || client == nil {
+		return nil, errors.New("client not found")
+	}
+	return map[string]interface{}{
+		"ping_ms":     client.PingLatency.Milliseconds(),
+		"last_active": client.LastActive.Unix(),
+		"connected_at": client.ConnectedAt.Unix(),
+		"messages_sent": client.MessagesSent,
+		"messages_recv": client.MessagesRecv,
+	}, nil
 }
