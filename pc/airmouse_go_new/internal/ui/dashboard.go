@@ -24,10 +24,15 @@ type DashboardTab struct {
 	stopBtn       *widget.Button
 	serverStart   time.Time
 	mu            sync.Mutex
+	mouseSvc      *service.MouseService
+	deviceMgr     *device.Manager
 }
 
 func NewDashboardTab(cfg *config.Config, mouseSvc *service.MouseService, deviceMgr *device.Manager) fyne.CanvasObject {
-	tab := &DashboardTab{}
+	tab := &DashboardTab{
+		mouseSvc:  mouseSvc,
+		deviceMgr: deviceMgr,
+	}
 
 	tab.statsLabel = widget.NewLabel("Clicks: 0 | Double: 0 | Right: 0 | Scroll: 0")
 	tab.connLabel = widget.NewLabel("Connected devices: 0")
