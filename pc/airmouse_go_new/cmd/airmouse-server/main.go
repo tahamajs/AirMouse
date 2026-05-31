@@ -1,67 +1,63 @@
 package main
 
 import (
-	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"airmouse-go/internal/domain/service"
-	"airmouse-go/internal/handler/http"
-	"airmouse-go/internal/handler/websocket"
-	"airmouse-go/internal/infra/logger"
-	"airmouse-go/internal/infra/mouse"
-	"airmouse-go/internal/pkg/config"
-	"airmouse-go/internal/repository"
+	"airmouse-go/internal/auth"
+	"airmouse-go/internal/config"
+	"airmouse-go/internal/control"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/protocol"
+	"airmouse-go/internal/ui"
+	"airmouse-go/internal/utils"
 )
 
 func main() {
-	cfg := config.Load()
-	logger.Init(cfg.LogLevel)
+	utils.InitLogger()
+	cfg := config.Get()
+	utils.LogInfo("Air Mouse Pro Server starting", "version", "3.0.0")
 
-	mouseCtrl, err := mouse.NewMouseController(cfg.Sensitivity)
-	if err != nil {
-		logger.Fatal("Failed to create mouse controller", "error", err)
+	// Device manager
+	deviceMgr := device.NewManager()
+
+	// Auth manager
+	authMgr := auth.NewManager(cfg.AuthSecret)
+
+	// Mouse controller
+	mouseCtrl := control.NewMouseController(cfg.Sensitivity)
+	mouseCtrl.SetSmoothing(true)
+	mouseCtrl.SetAcceleration(true, 1.5)
+
+	// Enable ML prediction if configured
+	if cfg.EnableMLPrediction {
+		mouseCtrl.EnableMLPrediction(true)
+		mouseCtrl.SetMLBlendFactor(cfg.MLBlendFactor)
+		utils.LogInfo("ML‑powered trajectory prediction enabled")
 	}
 
-	mouseRepo := repository.NewMouseRepository(mouseCtrl)
-	gestureRepo := repository.NewGestureRepository()
-	clientRepo := repository.NewClientRepository()
-
-	mouseService := service.NewMouseService(mouseRepo, cfg.Sensitivity, cfg.PredictiveBlendFactor)
-	gestureService := service.NewGestureService(gestureRepo, cfg.GestureConfidenceThreshold)
-	connectionService := service.NewConnectionService(clientRepo)
-
-	hub := websocket.NewHub(mouseService, gestureService, connectionService)
-	go hub.Run()
-
-	router := http.NewRouter(hub, cfg)
-
-	srv := &http.Server{
-		Addr:         ":" + cfg.Port,
-		Handler:      router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	// Protocol server
+	server := protocol.NewProtocolServer(mouseCtrl, deviceMgr, authMgr)
+	if err := server.Start(); err != nil {
+		utils.LogFatal("Failed to start server", "error", err)
 	}
 
+	// UI (optional, can be disabled for headless)
+	app := ui.NewApp(cfg, server, mouseCtrl, deviceMgr)
 	go func() {
-		logger.Info("Starting server", "port", cfg.Port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Server failed", "error", err)
+		if err := app.Run(); err != nil {
+			utils.LogError("UI error", "error", err)
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	logger.Info("Shutting down server...")
+	// Wait for shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("Server shutdown error", "error", err)
-	}
-	logger.Info("Server stopped")
+	utils.LogInfo("Shutting down...")
+	server.Stop()
+	app.Stop()
+	utils.LogInfo("Shutdown complete")
 }
