@@ -223,3 +223,20 @@ func getConfigPath() string {
     GestureConfidenceThreshold float64 `json:"gesture_confidence_threshold"`
     // ...
 }
+
+
+// Jitter compensation
+EnableJitterCompensation bool          `json:"enable_jitter_compensation"`
+JitterMaxLatency         time.Duration `json:"jitter_max_latency"`
+JitterPredictionWindow   time.Duration `json:"jitter_prediction_window"`
+JitterBlendFactor        float64       `json:"jitter_blend_factor"`
+JitterUseKalman          bool          `json:"jitter_use_kalman"`
+JitterUseAcceleration    bool          `json:"jitter_use_acceleration"`
+
+
+EnableJitterCompensation: true,
+JitterMaxLatency:         100 * time.Millisecond,
+JitterPredictionWindow:   20 * time.Millisecond,
+JitterBlendFactor:        0.7,
+JitterUseKalman:          true,
+JitterUseAcceleration:    false,

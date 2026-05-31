@@ -29,6 +29,9 @@
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
 <uses-feature android:name="android.hardware.usb.host" android:required="true" />
 <uses-permission android:name="android.permission.USB_PERMISSION" />
+
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <application
         android:name=".AirMouseApplication"
         android:allowBackup="true"
