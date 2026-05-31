@@ -33,6 +33,13 @@ startService(usbIntent)
 val serialIntent = Intent(this, UsbSerialService::class.java)
 serialIntent.action = "CONNECT_USB"
 startService(serialIntent)
+
+
+// In MainActivity.onCreate
+if (preferences.isVoiceCommandsEnabled()) {
+    val intent = Intent(this, VoiceCommandService::class.java)
+    startService(intent)
+}
 class GyroStepFragment : Fragment(), SensorEventListener, CalibrationStepFragment {
 
     private lateinit var sensorManager: SensorManager
