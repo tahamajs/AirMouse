@@ -10,64 +10,47 @@ import (
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
-	"airmouse-go/internal/domain/service"
-	"airmouse-go/internal/infra/mouse"
-	"airmouse-go/internal/repository"
+	"airmouse-go/internal/protocol"
 )
 
 type App struct {
 	fyneApp    fyne.App
 	window     fyne.Window
 	cfg        *config.Config
-	mouseCtrl  mouse.MouseController
+	server     *protocol.ProtocolServer
+	mouse      control.MouseController
 	deviceMgr  *device.Manager
-	mouseSvc   *service.MouseService
-	connSvc    *service.ConnectionService
 
 	dashboardTab fyne.CanvasObject
 	devicesTab   fyne.CanvasObject
 	networkTab   fyne.CanvasObject
 	settingsTab  fyne.CanvasObject
-	analyticsTab fyne.CanvasObject
 	logsTab      fyne.CanvasObject
 }
 
-func NewApp(cfg *config.Config) *App {
+func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) *App {
 	selectedTheme := getThemeByName(cfg.Theme)
-	fyneApp := app.NewWithID("airmouse.pro")
+	a := app.New()
 	if selectedTheme != nil {
-		fyneApp.Settings().SetTheme(selectedTheme)
+		a.Settings().SetTheme(selectedTheme)
 	}
-
-	// Create services
-	mouseRepo := repository.NewMouseRepository()
-	mouseSvc := service.NewMouseService(mouseRepo, cfg.Sensitivity)
-	gestureRepo := repository.NewGestureRepository()
-	_, _ = service.NewGestureService(gestureRepo) // not directly used
-	clientRepo := repository.NewClientRepository()
-	connSvc := service.NewConnectionService(clientRepo, cfg.MaxClients)
-	mouseCtrl := mouse.New()
-
 	return &App{
-		fyneApp:   fyneApp,
+		fyneApp:   a,
 		cfg:       cfg,
-		mouseCtrl: mouseCtrl,
-		mouseSvc:  mouseSvc,
-		connSvc:   connSvc,
-		deviceMgr: device.NewManager(),
+		server:    server,
+		mouse:     mouse,
+		deviceMgr: deviceMgr,
 	}
 }
 
 func (a *App) Run() error {
 	a.window = a.fyneApp.NewWindow("Air Mouse Pro Server")
-	a.window.Resize(fyne.NewSize(1200, 800))
+	a.window.Resize(fyne.NewSize(1100, 720))
 
-	// Create tabs
-	a.dashboardTab = NewDashboardTab(a.cfg, a.mouseSvc, a.deviceMgr)
+	a.dashboardTab = NewDashboardTab(a.server, a.mouse, a.deviceMgr)
 	a.devicesTab = NewDevicesTab(a.deviceMgr)
 	a.networkTab = NewNetworkTab(a.cfg)
-	a.settingsTab = NewSettingsTab(a.cfg, a.mouseSvc)
-	a.analyticsTab = NewAnalyticsTab(nil) // you can pass a collector if available
+	a.settingsTab = NewSettingsTab(a.cfg, a.mouse)
 	a.logsTab = NewLogsTab()
 
 	tabs := container.NewAppTabs(
@@ -75,29 +58,47 @@ func (a *App) Run() error {
 		container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
 		container.NewTabItemWithIcon("Network", theme.NetworkIcon(), a.networkTab),
 		container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), a.settingsTab),
-		container.NewTabItemWithIcon("Analytics", theme.ContentAddIcon(), a.analyticsTab),
 		container.NewTabItemWithIcon("Logs", theme.DocumentIcon(), a.logsTab),
 	)
 	tabs.SetTabLocation(container.TabLocationLeading)
 
-	// Menu bar
 	fileMenu := fyne.NewMenu("File",
+		fyne.NewMenuItem("Start Server", func() { a.server.Start() }),
+		fyne.NewMenuItem("Stop Server", func() { a.server.Stop() }),
+		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem("Quit", func() { a.fyneApp.Quit() }),
 	)
-	helpMenu := fyne.NewMenu("Help",
-		fyne.NewMenuItem("About", func() { ShowAboutDialog(a.window) }),
+	viewMenu := fyne.NewMenu("View",
+		fyne.NewMenuItem("Refresh", func() { a.window.Content().Refresh() }),
 	)
-	a.window.SetMainMenu(fyne.NewMainMenu(fileMenu, helpMenu))
+	helpMenu := fyne.NewMenu("Help",
+		fyne.NewMenuItem("About", func() { showAboutDialog(a.window) }),
+	)
+	mainMenu := fyne.NewMainMenu(fileMenu, viewMenu, helpMenu)
+	a.window.SetMainMenu(mainMenu)
 
 	if a.cfg.AlwaysOnTop {
 		a.window.SetAlwaysOnTop(true)
 	}
-
 	a.window.SetContent(tabs)
 	a.window.ShowAndRun()
 	return nil
 }
 
-func (a *App) Stop() {
-	a.fyneApp.Quit()
+func (a *App) Stop() { a.fyneApp.Quit() }
+
+func showAboutDialog(w fyne.Window) {
+	dialog := widget.NewModalPopUp(
+		container.NewVBox(
+			widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			widget.NewLabel("Version 3.0.0"),
+			widget.NewLabel("University of Tehran – Embedded Systems Lab"),
+			widget.NewSeparator(),
+			widget.NewLabel("Multi-protocol | AI Smoothing | Proximity Lock"),
+			widget.NewButton("OK", func() { dialog.Hide() }),
+		),
+		w.Canvas(),
+	)
+	dialog.Resize(fyne.NewSize(400, 300))
+	dialog.Show()
 }

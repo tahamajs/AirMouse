@@ -1,0 +1,234 @@
+package config
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+)
+
+type Config struct {
+	// Server
+	Host           string `json:"host"`
+	Port           int    `json:"port"`
+	WebSocketPort  int    `json:"websocket_port"`
+	UDPPort        int    `json:"udp_port"`
+	EnableTCP      bool   `json:"enable_tcp"`
+	EnableWebSocket bool  `json:"enable_websocket"`
+	EnableUDP      bool   `json:"enable_udp"`
+	EnableBluetooth bool  `json:"enable_bluetooth"`
+	EnableSerial   bool   `json:"enable_serial"`
+
+	// Bluetooth
+	BluetoothAdapter string `json:"bluetooth_adapter"`
+	BLEEnabled       bool   `json:"ble_enabled"`
+	HIDProxyEnabled  bool   `json:"hid_proxy_enabled"`
+
+	// Security & Pairing
+	AuthEnabled     bool     `json:"auth_enabled"`
+	AuthSecret      string   `json:"auth_secret"`
+	AuthTokens      []string `json:"auth_tokens"`
+	EncryptionKey   string   `json:"encryption_key"`
+	EnablePairingUI bool     `json:"enable_pairing_ui"`
+
+	// Performance
+	Sensitivity       float64 `json:"sensitivity"`
+	MoveRateLimit     int     `json:"move_rate_limit"`
+	BufferSize        int     `json:"buffer_size"`
+	HeartbeatInterval int     `json:"heartbeat_interval"`
+	ConnectionTimeout int     `json:"connection_timeout"`
+
+	// Device
+	MaxClients     int  `json:"max_clients"`
+	ClientNames    bool `json:"client_names"`
+	DeviceRegistry bool `json:"device_registry"`
+
+	// Discovery
+	DiscoveryPort int    `json:"discovery_port"`
+	MDNSName      string `json:"mdns_name"`
+
+	// UI
+	AccentColor  string `json:"accent_color"`
+	Theme        string `json:"theme"`
+	AlwaysOnTop  bool   `json:"always_on_top"`
+	ShowTrayIcon bool   `json:"show_tray_icon"`
+
+	// Logging
+	LogLevel string `json:"log_level"`
+	LogFile  string `json:"log_file"`
+
+	// AI / Prediction
+	EnableAISmoothing         bool    `json:"enable_ai_smoothing"`
+	AIModelPath               string  `json:"ai_model_path"`
+	AIBlendFactor             float64 `json:"ai_blend_factor"`
+	EnablePersonalization     bool    `json:"enable_personalization"`
+	PersonalizationBuffer     int     `json:"personalization_buffer"`
+	PersonalizationInterval   int     `json:"personalization_interval"`
+	AutoSwapModel             bool    `json:"auto_swap_model"`
+	EnablePredictive          bool    `json:"enable_predictive"`
+	PredictiveBlendFactor     float64 `json:"predictive_blend_factor"`
+	PredictiveDt              float64 `json:"predictive_dt"`
+
+	// ML Prediction
+	EnableMLPrediction    bool    `json:"enable_ml_prediction"`
+	MLModelPath           string  `json:"ml_model_path"`
+	MLSequenceLength      int     `json:"ml_sequence_length"`
+	MLBlendFactor         float64 `json:"ml_blend_factor"`
+	MLInferenceInterval   int     `json:"ml_inference_interval_ms"`
+
+	// Humanizer
+	EnableHumanizer              bool    `json:"enable_humanizer"`
+	HumanizerTremorAmplitude    float64 `json:"humanizer_tremor_amplitude"`
+	HumanizerBSplineSegments    int     `json:"humanizer_bspline_segments"`
+	HumanizerNoiseAmplitude     float64 `json:"humanizer_noise_amplitude"`
+	HumanizerVelocityPeakRatio  float64 `json:"humanizer_velocity_peak_ratio"`
+
+	// Particle filter / Gesture
+	EnableParticleFilter         bool    `json:"enable_particle_filter"`
+	ParticleFilterNumParticles   int     `json:"particle_filter_num_particles"`
+	GestureConfidenceThreshold   float64 `json:"gesture_confidence_threshold"`
+
+	// Jitter compensation
+	EnableJitterCompensation   bool          `json:"enable_jitter_compensation"`
+	JitterMaxLatency           time.Duration `json:"jitter_max_latency"`
+	JitterPredictionWindow     time.Duration `json:"jitter_prediction_window"`
+	JitterBlendFactor          float64       `json:"jitter_blend_factor"`
+	JitterUseKalman            bool          `json:"jitter_use_kalman"`
+	JitterUseAcceleration      bool          `json:"jitter_use_acceleration"`
+
+	mu sync.RWMutex
+}
+
+var instance *Config
+var once sync.Once
+
+func Get() *Config {
+	once.Do(func() {
+		instance = loadOrDefault()
+	})
+	return instance
+}
+
+func loadOrDefault() *Config {
+	cfg := &Config{
+		Host:                   "0.0.0.0",
+		Port:                   8080,
+		WebSocketPort:          8081,
+		UDPPort:                8082,
+		EnableTCP:              true,
+		EnableWebSocket:        true,
+		EnableUDP:              true,
+		EnableBluetooth:        true,
+		EnableSerial:           true,
+		BluetoothAdapter:       "default",
+		BLEEnabled:             true,
+		HIDProxyEnabled:        false,
+		AuthEnabled:            false,
+		AuthSecret:             "",
+		AuthTokens:             []string{},
+		EncryptionKey:          "",
+		EnablePairingUI:        true,
+		Sensitivity:            0.5,
+		MoveRateLimit:          60,
+		BufferSize:             1024,
+		HeartbeatInterval:      10,
+		ConnectionTimeout:      30,
+		MaxClients:             10,
+		ClientNames:            true,
+		DeviceRegistry:         true,
+		DiscoveryPort:          8083,
+		MDNSName:               "airmouse",
+		AccentColor:            "#007acc",
+		Theme:                  "dark",
+		AlwaysOnTop:            false,
+		ShowTrayIcon:           true,
+		LogLevel:               "info",
+		LogFile:                "airmouse.log",
+		EnableAISmoothing:      false,
+		AIModelPath:            "models/mouse_smoothing.onnx",
+		AIBlendFactor:          0.6,
+		EnablePersonalization:  false,
+		PersonalizationBuffer:  2000,
+		PersonalizationInterval: 3600,
+		AutoSwapModel:          false,
+		EnablePredictive:       true,
+		PredictiveBlendFactor:  0.6,
+		PredictiveDt:           0.02,
+		EnableMLPrediction:     false,
+		MLModelPath:            "models/lstm_predictor.onnx",
+		MLSequenceLength:       16,
+		MLBlendFactor:          0.6,
+		MLInferenceInterval:    20,
+		EnableHumanizer:        false,
+		HumanizerTremorAmplitude: 3.5,
+		HumanizerBSplineSegments: 15,
+		HumanizerNoiseAmplitude: 2.0,
+		HumanizerVelocityPeakRatio: 0.55,
+		EnableParticleFilter:   false,
+		ParticleFilterNumParticles: 500,
+		GestureConfidenceThreshold: 0.7,
+		EnableJitterCompensation: true,
+		JitterMaxLatency:        100 * time.Millisecond,
+		JitterPredictionWindow:  20 * time.Millisecond,
+		JitterBlendFactor:       0.7,
+		JitterUseKalman:         true,
+		JitterUseAcceleration:   false,
+	}
+	data, err := os.ReadFile(getConfigPath())
+	if err == nil {
+		_ = json.Unmarshal(data, cfg)
+	}
+	return cfg
+}
+
+func (c *Config) Save() error {
+	c.mu.RLock()
+	snapshot := *c
+	c.mu.RUnlock()
+	data, err := json.MarshalIndent(&snapshot, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := getConfigPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+func (c *Config) SetSensitivity(s float64) {
+	c.mu.Lock()
+	c.Sensitivity = s
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+func (c *Config) SetTheme(theme string) {
+	c.mu.Lock()
+	c.Theme = theme
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+func (c *Config) SetPredictiveEnabled(enabled bool) {
+	c.mu.Lock()
+	c.EnablePredictive = enabled
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+func (c *Config) SetPredictiveBlendFactor(factor float64) {
+	c.mu.Lock()
+	c.PredictiveBlendFactor = factor
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+func getConfigPath() string {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return filepath.Join(".", "airmouse", "config.json")
+	}
+	return filepath.Join(configDir, "airmouse", "config.json")
+}
