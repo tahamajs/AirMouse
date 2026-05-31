@@ -54,9 +54,7 @@
     <color name="text_hint">@color/grey_400</color>
     <color name="text_on_surface_inverse">@color/white</color>
         <color name="background_dark">#0f1115</color>
-    <color name="surface_dark">#1d2430</color>
-    <color name="text_primary">#e5e7eb</color>
-    <color name="text_secondary">#96a0ae</color>
+
 
     <!-- Accents -->
     <color name="accent_blue">#007acc</color>

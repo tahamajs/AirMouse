@@ -1,8 +1,6 @@
 package com.airmouse
 
 import android.Manifest
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
@@ -43,6 +41,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -57,7 +56,9 @@ class HomeFragment : Fragment() {
     private lateinit var preferences: PreferencesManager
     private lateinit var batterySaver: BatterySaver
     private lateinit var debugOverlay: DebugOverlay
-    private lateinit var vibrator: android.os.Vibrator
+    private var vibrator: android.os.Vibrator? = null
+    private var wifiJob: Job? = null
+    private var sensorUpdateJob: Job? = null
 
     // ---------- Modern UI components ----------
     private lateinit var connectionCard: MaterialCardView
@@ -265,7 +266,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun initializeComponents() {
-        vibrator = requireActivity().getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+        vibrator = requireActivity().getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
         preferences = PreferencesManager(requireContext())
         batterySaver = BatterySaver()
         debugOverlay = DebugOverlay(requireContext())
@@ -582,11 +583,13 @@ class HomeFragment : Fragment() {
     }
 
     private fun vibrate(durationMs: Long) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(android.os.VibrationEffect.createOneShot(durationMs, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(durationMs)
+        vibrator?.let { v ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                v.vibrate(android.os.VibrationEffect.createOneShot(durationMs, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                v.vibrate(durationMs)
+            }
         }
     }
 
@@ -641,7 +644,8 @@ class HomeFragment : Fragment() {
     }
 
     private fun startWifiMonitoring() {
-        lifecycleScope.launch {
+        // Launch a cancellable job for wifi updates; will be cancelled in onPause/onDestroyView
+        wifiJob = lifecycleScope.launch {
             while (true) {
                 updateWifiQuality()
                 delay(3000)
@@ -677,7 +681,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun startSensorDataUpdates() {
-        lifecycleScope.launch {
+        sensorUpdateJob = lifecycleScope.launch {
             while (true) {
                 gyroValue.text = String.format("Yaw: %.1f°", currentGyroY)
                 accelValue.text = String.format("Pitch: %.1f°", currentAccelY)
@@ -736,16 +740,21 @@ class HomeFragment : Fragment() {
             sensorService.stop()
             batterySaver.stop()
         }
+        wifiJob?.cancel()
+        sensorUpdateJob?.cancel()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         stopAirMouseInternal()
         debugOverlay.hide()
+        wifiJob?.cancel()
+        sensorUpdateJob?.cancel()
     }
 
     // Public method called from MainActivity to set server address for touchpad
     fun setServerAddress(ip: String, port: Int) {
-        tcpClient?.connect(ip, port)
+        // Use ConnectionManager to initiate tcp connection for touchpad diagnostics
+        ConnectionManager.connectTcp(ip, port)
     }
 }
