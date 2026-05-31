@@ -10,6 +10,7 @@ import (
 	
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
+	"airmouse-go/internal/utils"
 )
 
 type Client struct {
@@ -78,7 +79,7 @@ func (s *Server) Start() error {
 	s.listener = listener
 	s.running = true
 	
-	logger.Info("TCP server started", "address", addr)
+	utils.LogInfo("TCP server started %s", addr)
 	
 	go s.acceptLoop()
 	return nil
@@ -89,7 +90,7 @@ func (s *Server) acceptLoop() {
 		conn, err := s.listener.Accept()
 		if err != nil {
 			if s.running {
-				logger.Error("Accept error", "error", err)
+				utils.LogError("Accept error: %v", err)
 			}
 			continue
 		}
@@ -112,7 +113,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	s.clients[clientID] = client
 	s.mu.Unlock()
 	
-	logger.Info("Client connected", "id", clientID)
+	utils.LogInfo("Client connected %s", clientID)
 	s.deviceMgr.RegisterDevice(clientID, "tcp", client.Name)
 	
 	reader := bufio.NewReader(conn)
@@ -129,7 +130,7 @@ func (s *Server) handleClient(conn net.Conn) {
 			}
 			
 			if time.Since(c.LastActive) > 30*time.Second {
-				logger.Info("Client timeout", "id", clientID)
+				utils.LogInfo("Client timeout %s", clientID)
 				conn.Close()
 				return
 			}
@@ -151,7 +152,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		
 		var msg Message
 		if err := json.Unmarshal([]byte(line), &msg); err != nil {
-			logger.Error("Invalid message", "error", err)
+			utils.LogError("Invalid message: %v", err)
 			continue
 		}
 		
@@ -165,7 +166,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	delete(s.clients, clientID)
 	s.mu.Unlock()
 	
-	logger.Info("Client disconnected", "id", clientID)
+	utils.LogInfo("Client disconnected %s", clientID)
 	s.deviceMgr.UnregisterDevice(clientID)
 }
 
@@ -200,7 +201,7 @@ func (s *Server) processMessage(client *Client, msg *Message) {
 		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
 			client.Name = payload.Name
 			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
-			logger.Info("Device identified", "id", client.ID, "name", client.Name)
+			utils.LogInfo("Device identified %s %s", client.ID, client.Name)
 			
 			// Send welcome message
 			welcome := fmt.Sprintf(`{"type":"welcome","payload":{"server":"AirMouse","version":"2.0"}}`)
@@ -212,7 +213,7 @@ func (s *Server) processMessage(client *Client, msg *Message) {
 		client.Conn.Write([]byte(pong + "\n"))
 		
 	case "gesture":
-		logger.Debug("Gesture received", "type", string(msg.Payload), "device", client.Name)
+		utils.LogDebug("Gesture received %s %s", string(msg.Payload), client.Name)
 	}
 }
 
@@ -229,7 +230,7 @@ func (s *Server) Stop() {
 	s.clients = make(map[string]*Client)
 	s.mu.Unlock()
 	
-	logger.Info("TCP server stopped")
+	utils.LogInfo("TCP server stopped")
 }
 
 func (s *Server) GetClients() []*Client {

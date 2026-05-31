@@ -11,7 +11,7 @@ import (
     
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
-	"airmouse-go/internal/sysaction"
+	"airmouse-go/internal/utils"
 )
 
 var upgrader = websocket.Upgrader{
@@ -55,6 +55,25 @@ func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manage
 	}
 }
 
+// Payload types for websocket messages (kept local)
+type MovePayload struct {
+	DX float64 `json:"dx"`
+	DY float64 `json:"dy"`
+}
+
+type ClickPayload struct {
+	Button string `json:"button"`
+}
+
+type ScrollPayload struct {
+	Delta int `json:"delta"`
+}
+
+type HelloPayload struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", s.handleWebSocket)
@@ -67,9 +86,9 @@ func (s *Server) Start() error {
 	s.running = true
 	
 	go func() {
-		logger.Info("WebSocket server started", "port", s.port)
+		utils.LogInfo("WebSocket server started %d", s.port)
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("WebSocket server error", "error", err)
+			utils.LogError("WebSocket server error: %v", err)
 		}
 	}()
 	
@@ -79,7 +98,7 @@ func (s *Server) Start() error {
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logger.Error("WebSocket upgrade failed", "error", err)
+		utils.LogError("WebSocket upgrade failed: %v", err)
 		return
 	}
 	
@@ -97,7 +116,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	s.clients[clientID] = client
 	s.mu.Unlock()
 	
-	logger.Info("WebSocket client connected", "id", clientID)
+	utils.LogInfo("WebSocket client connected %s", clientID)
 	s.deviceMgr.RegisterDevice(clientID, "websocket", client.Name)
 	
 	go s.writePump(client)
@@ -130,7 +149,7 @@ func (s *Server) readPump(client *WSClient) {
 		
 		var msg WMessage
 		if err := json.Unmarshal(message, &msg); err != nil {
-			logger.Error("Invalid WebSocket message", "error", err)
+			utils.LogError("Invalid WebSocket message: %v", err)
 			continue
 		}
 		
@@ -198,7 +217,7 @@ func (s *Server) processMessage(client *WSClient, msg *WMessage) {
 		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
 			client.Name = payload.Name
 			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
-			logger.Info("Device identified via WebSocket", "id", client.ID, "name", client.Name)
+			utils.LogInfo("Device identified via WebSocket %s %s", client.ID, client.Name)
 			
 			welcome := WMessage{Type: "welcome", Payload: json.RawMessage(`{"server":"AirMouse","version":"2.0"}`)}
 			if data, err := json.Marshal(welcome); err == nil {
@@ -227,7 +246,7 @@ func (s *Server) Stop() {
 	s.clients = make(map[string]*WSClient)
 	s.mu.Unlock()
 	
-	logger.Info("WebSocket server stopped")
+	utils.LogInfo("WebSocket server stopped")
 }
 
 func (s *Server) GetStats() map[string]interface{} {
@@ -238,159 +257,3 @@ func (s *Server) GetStats() map[string]interface{} {
 		"clients": len(s.clients),
 	}
 }
-
-
-// Add to your websocket message processing
-case "gesture":
-    var gestureMsg struct {
-        Gesture string  `json:"gesture"`
-        Confidence float64 `json:"confidence"`
-    }
-    if err := json.Unmarshal(msg.Payload, &gestureMsg); err == nil {
-        log.Printf("Gesture detected: %s (%.2f)", gestureMsg.Gesture, gestureMsg.Confidence)
-        // Map gesture to action
-        action := mapGestureToAction(gestureMsg.Gesture)
-        if action != "" {
-            executeSystemAction(action)
-        }
-    }
-
-func mapGestureToAction(gesture string) string {
-    switch gesture {
-    case "LeftSwipe": return "media_prev"
-    case "RightSwipe": return "media_next"
-    case "CircleCW": return "vol_up"
-    case "CircleCCW": return "vol_down"
-    case "ThumbsUp": return "play_pause"
-    default: return ""
-    }
-}
-
-func executeSystemAction(action string) {
-    // Use robotgo or system commands
-    switch action {
-    case "media_prev":
-		sysaction.KeyTap("media_prev")
-    case "media_next":
-		sysaction.KeyTap("media_next")
-    case "vol_up":
-		sysaction.KeyTap("audio_vol_up")
-    case "vol_down":
-		sysaction.KeyTap("audio_vol_down")
-    case "play_pause":
-		sysaction.KeyTap("media_play_pause")
-    }
-}
-
-
-// Add to the processMessage function
-case "gesture":
-    var gestureMsg struct {
-        Gesture    string  `json:"gesture"`
-        Confidence float64 `json:"confidence"`
-    }
-    if err := json.Unmarshal(msg.Payload, &gestureMsg); err == nil {
-        logger.LogInfo("Gesture detected", "gesture", gestureMsg.Gesture, "confidence", gestureMsg.Confidence)
-        executeGestureAction(gestureMsg.Gesture)
-    }
-
-// Helper function to map gesture to system action
-func executeGestureAction(gesture string) {
-    switch gesture {
-    case "LeftSwipe":
-		sysaction.KeyTap("media_prev")
-    case "RightSwipe":
-		sysaction.KeyTap("media_next")
-    case "CircleCW":
-		sysaction.KeyTap("audio_vol_up")
-    case "CircleCCW":
-		sysaction.KeyTap("audio_vol_down")
-    case "ThumbsUp":
-		sysaction.KeyTap("media_play_pause")
-    case "ThumbsDown":
-		sysaction.KeyTap("stop")
-    default:
-        logger.LogWarn("Unknown gesture", "gesture", gesture)
-    }
-}
-
-
-// Add to your existing WebSocket server
-type ProximityUpdate struct {
-    IsNear   bool    `json:"is_near"`
-    Distance float32 `json:"distance"`
-}
-
-func (s *Server) handleProximity(update ProximityUpdate) {
-    log.Printf("Proximity update: near=%v, distance=%.2fm", update.IsNear, update.Distance)
-    
-    if update.IsNear {
-        s.unlockScreen()
-    } else {
-        s.lockScreen()
-    }
-}
-
-func (s *Server) lockScreen() {
-    var cmd *exec.Cmd
-    switch runtime.GOOS {
-    case "windows":
-        cmd = exec.Command("rundll32.exe", "user32.dll,LockWorkStation")
-    case "darwin":
-        cmd = exec.Command("/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession", "-suspend")
-    default: // linux
-        cmd = exec.Command("loginctl", "lock-session")
-    }
-    if err := cmd.Run(); err != nil {
-        log.Printf("Failed to lock screen: %v", err)
-    } else {
-        log.Println("Screen locked due to proximity")
-    }
-}
-
-func (s *Server) unlockScreen() {
-    // Note: Auto-unlock typically requires password or is disabled for security
-    log.Println("Proximity unlock requested - implement if desired")
-}
-
-
-// Inside websocket message switch:
-case "gesture":
-    var payload struct {
-        Gesture    string  `json:"gesture"`
-        Confidence float64 `json:"confidence"`
-    }
-    if err := json.Unmarshal(msg.Payload, &payload); err == nil {
-        log.Printf("Gesture: %s (%.2f)", payload.Gesture, payload.Confidence)
-        // Execute system action
-        switch payload.Gesture {
-        case "LeftSwipe":
-			sysaction.KeyTap("media_prev")
-        case "RightSwipe":
-			sysaction.KeyTap("media_next")
-        case "CircleCW":
-			sysaction.KeyTap("audio_vol_up")
-        case "CircleCCW":
-			sysaction.KeyTap("audio_vol_down")
-        case "ThumbsUp":
-			sysaction.KeyTap("media_play_pause")
-        }
-    }
-
-
-	// Add to your WebSocket message processing (e.g., in websocket.go)
-case "control":
-    var payload struct {
-        Command string `json:"command"`
-    }
-    if err := json.Unmarshal(msg.Payload, &payload); err == nil {
-        switch payload.Command {
-        case "pause_movement":
-            // Set a flag to ignore incoming movement events
-            globalMovementPaused = true
-            log.Println("Movement paused by orientation service")
-        case "resume_movement":
-            globalMovementPaused = false
-            log.Println("Movement resumed by orientation service")
-        }
-    }
