@@ -1,4 +1,3 @@
-// VoiceCommandsFragment.kt
 package com.airmouse.ui
 
 import android.content.ComponentName
@@ -17,6 +16,7 @@ import com.airmouse.voice.VoiceCommandService
 import com.google.android.material.button.MaterialButton
 
 class VoiceCommandsFragment : Fragment() {
+
     private lateinit var startBtn: MaterialButton
     private lateinit var stopBtn: MaterialButton
     private lateinit var statusText: TextView
@@ -25,10 +25,9 @@ class VoiceCommandsFragment : Fragment() {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            voiceService = (service as? VoiceCommandService.LocalBinder)?.getService()
+            voiceService = (service as VoiceCommandService.LocalBinder).getService()
             isBound = true
         }
-
         override fun onServiceDisconnected(name: ComponentName?) {
             voiceService = null
             isBound = false
@@ -46,31 +45,22 @@ class VoiceCommandsFragment : Fragment() {
         statusText = view.findViewById(R.id.voice_result_text)
 
         startBtn.setOnClickListener {
-            val intent = Intent(requireContext(), VoiceCommandService::class.java).apply {
-                action = "START_LISTENING"
-            }
+            val intent = Intent(requireContext(), VoiceCommandService::class.java).apply { action = "START_LISTENING" }
             requireContext().startService(intent)
             statusText.text = "Listening... Speak a command"
         }
 
         stopBtn.setOnClickListener {
-            val intent = Intent(requireContext(), VoiceCommandService::class.java).apply {
-                action = "STOP_LISTENING"
-            }
+            val intent = Intent(requireContext(), VoiceCommandService::class.java).apply { action = "STOP_LISTENING" }
             requireContext().startService(intent)
             statusText.text = "Stopped listening"
         }
 
-        // Bind to service to potentially get recognition events (optional)
-        val serviceIntent = Intent(requireContext(), VoiceCommandService::class.java)
-        requireContext().bindService(serviceIntent, connection, Context.BIND_AUTO_CREATE)
+        requireContext().bindService(Intent(requireContext(), VoiceCommandService::class.java), connection, Context.BIND_AUTO_CREATE)
     }
 
     override fun onDestroyView() {
-        if (isBound) {
-            requireContext().unbindService(connection)
-            isBound = false
-        }
+        if (isBound) requireContext().unbindService(connection)
         super.onDestroyView()
     }
 }
