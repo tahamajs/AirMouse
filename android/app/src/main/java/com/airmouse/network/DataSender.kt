@@ -103,22 +103,29 @@ class DataSender(
     }
 
     fun sendMove(dx: Float, dy: Float) {
+        // Match server expected format: {"type":"move","payload":{"dx":..,"dy":..}}
         sendRaw(JSONObject().apply {
             put("type", "move")
-            put("dx", dx)
-            put("dy", dy)
+            put("payload", JSONObject().apply {
+                put("dx", dx)
+                put("dy", dy)
+            })
         }.toString())
     }
 
-    fun sendClick() = sendCritical("click")
+    fun sendClick() = sendCritical("click", "button" to "left")
     fun sendDoubleClick() = sendCritical("doubleclick")
-    fun sendRightClick() = sendCritical("rightclick")
+    fun sendRightClick() = sendCritical("click", "button" to "right")
     fun sendScroll(delta: Int) = sendCritical("scroll", "delta" to delta)
 
     fun sendHello(deviceName: String) {
+        // Include version and use payload wrapper to match server HelloPayload
         sendRaw(JSONObject().apply {
             put("type", "hello")
-            put("name", deviceName)
+            put("payload", JSONObject().apply {
+                put("name", deviceName)
+                put("version", "android-1.0")
+            })
         }.toString())
     }
 
@@ -138,7 +145,7 @@ class DataSender(
         val payload = JSONObject().apply {
             put("type", type)
             put("id", id)
-            if (extra != null) put(extra.first, extra.second)
+            if (extra != null) put("payload", JSONObject().apply { put(extra.first, extra.second) })
         }.toString()
         pendingAcks[id] = PendingCommand(payload)
         sendRaw(payload)
