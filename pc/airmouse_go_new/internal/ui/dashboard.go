@@ -10,8 +10,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"airmouse-go/internal/config"
+	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
-	"airmouse-go/internal/domain/service"
+	"airmouse-go/internal/protocol"
 )
 
 type DashboardTab struct {
@@ -19,39 +20,67 @@ type DashboardTab struct {
 	connLabel     *widget.Label
 	endpointLabel *widget.Label
 	uptimeLabel   *widget.Label
+	aiStatusLabel *widget.Label
 	serverStatus  *widget.Label
 	startBtn      *widget.Button
 	stopBtn       *widget.Button
 	serverStart   time.Time
 	mu            sync.Mutex
-	mouseSvc      *service.MouseService
-	deviceMgr     *device.Manager
+	mouse         control.MouseController
 }
 
-func NewDashboardTab(cfg *config.Config, mouseSvc *service.MouseService, deviceMgr *device.Manager) fyne.CanvasObject {
-	tab := &DashboardTab{
-		mouseSvc:  mouseSvc,
-		deviceMgr: deviceMgr,
-	}
+func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) fyne.CanvasObject {
+	tab := &DashboardTab{mouse: mouse}
 
-	tab.statsLabel = widget.NewLabel("Clicks: 0 | Double: 0 | Right: 0 | Scroll: 0")
+	tab.statsLabel = widget.NewLabel("Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
 	tab.connLabel = widget.NewLabel("Connected devices: 0")
-	tab.endpointLabel = widget.NewLabel(fmt.Sprintf("Endpoint: %s:%d", getLocalIP(), cfg.Port))
+	tab.endpointLabel = widget.NewLabel("Endpoint: not started")
 	tab.uptimeLabel = widget.NewLabel("Uptime: --:--:--")
-	tab.serverStatus = widget.NewLabelWithStyle("Server Status: Running", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+	tab.aiStatusLabel = widget.NewLabel("AI Smoothing: Disabled")
+	tab.serverStatus = widget.NewLabelWithStyle("Server Status: Stopped", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
-	tab.startBtn = widget.NewButtonWithIcon("Start Server", nil, func() {})
-	tab.startBtn.Disable()
-	tab.stopBtn = widget.NewButtonWithIcon("Stop Server", nil, func() {})
+	tab.startBtn = widget.NewButtonWithIcon("Start Server", nil, func() {
+		if err := server.Start(); err == nil {
+			tab.mu.Lock()
+			tab.serverStart = time.Now()
+			tab.mu.Unlock()
+			tab.serverStatus.SetText("Server Status: Running")
+			tab.startBtn.Disable()
+			tab.stopBtn.Enable()
+			cfg := config.Get()
+			ip := getLocalIP()
+			tab.endpointLabel.SetText(fmt.Sprintf("Endpoint: %s:%d (TCP) | ws://%s:%d", ip, cfg.Port, ip, cfg.WebSocketPort))
+			if cfg.EnableAISmoothing {
+				tab.aiStatusLabel.SetText("AI Smoothing: Enabled")
+			} else {
+				tab.aiStatusLabel.SetText("AI Smoothing: Disabled")
+			}
+		}
+	})
+	tab.stopBtn = widget.NewButtonWithIcon("Stop Server", nil, func() {
+		server.Stop()
+		tab.serverStatus.SetText("Server Status: Stopped")
+		tab.startBtn.Enable()
+		tab.stopBtn.Disable()
+		tab.endpointLabel.SetText("Endpoint: not started")
+		tab.uptimeLabel.SetText("Uptime: --:--:--")
+	})
 	tab.stopBtn.Disable()
 
+	// Stats updater
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
-			clicks, dbl, right, scroll, _ := mouseSvc.GetStatistics()
-			tab.statsLabel.SetText(fmt.Sprintf("Clicks: %d | Double: %d | Right: %d | Scroll: %d", clicks, dbl, right, scroll))
+			clicks, dbl, right, scroll := mouse.Stats()
+			tab.statsLabel.SetText(fmt.Sprintf("Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d", clicks, dbl, right, scroll))
 			devices := deviceMgr.GetAllDevices()
 			tab.connLabel.SetText(fmt.Sprintf("Connected devices: %d", len(devices)))
+			tab.mu.Lock()
+			if !tab.serverStart.IsZero() {
+				uptime := time.Since(tab.serverStart)
+				tab.uptimeLabel.SetText(fmt.Sprintf("Uptime: %02d:%02d:%02d", int(uptime.Hours()), int(uptime.Minutes())%60, int(uptime.Seconds())%60))
+			}
+			tab.mu.Unlock()
 		}
 	}()
 
@@ -64,5 +93,8 @@ func NewDashboardTab(cfg *config.Config, mouseSvc *service.MouseService, deviceM
 		tab.connLabel,
 		tab.endpointLabel,
 		tab.uptimeLabel,
+		widget.NewSeparator(),
+		widget.NewLabelWithStyle("Advanced Features", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		tab.aiStatusLabel,
 	)
 }

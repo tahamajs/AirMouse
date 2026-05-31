@@ -94,7 +94,7 @@ func showAboutDialog(w fyne.Window) {
 			widget.NewLabel("Version 3.0.0"),
 			widget.NewLabel("University of Tehran – Embedded Systems Lab"),
 			widget.NewSeparator(),
-			widget.NewLabel("Multi-protocol | AI Smoothing | Proximity Lock"),
+			widget.NewLabel("Multi‑protocol | AI Smoothing | Proximity Lock"),
 			widget.NewButton("OK", func() { dialog.Hide() }),
 		),
 		w.Canvas(),

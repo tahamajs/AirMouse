@@ -10,17 +10,10 @@ type CustomTheme struct {
 }
 
 func (t *CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) fyne.Color {
-	switch name {
-	case theme.ColorNamePrimary:
+	if name == theme.ColorNamePrimary {
 		return theme.PrimaryColorNamed("blue")
-	case theme.ColorNameBackground:
-		if t.name == "pure_black" {
-			return theme.PrimaryColorNamed("black")
-		}
-		return theme.DefaultTheme().Color(theme.ColorNameBackground, theme.VariantDark)
-	default:
-		return theme.DefaultTheme().Color(name, variant)
 	}
+	return theme.DefaultTheme().Color(name, variant)
 }
 
 func (t *CustomTheme) Font(style fyne.TextStyle) fyne.Resource {
@@ -44,6 +37,7 @@ func getThemeByName(name string) fyne.Theme {
 	case "pure_black":
 		return &CustomTheme{name: "pure_black"}
 	default:
+		// fallback to dark
 		return theme.DarkTheme()
 	}
 }
