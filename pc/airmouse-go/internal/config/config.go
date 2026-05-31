@@ -24,10 +24,12 @@ type Config struct {
 	BLEEnabled       bool   `json:"ble_enabled"`
 	HIDProxyEnabled  bool   `json:"hid_proxy_enabled"`
 
-	// Security
-	AuthEnabled   bool     `json:"auth_enabled"`
-	AuthTokens    []string `json:"auth_tokens"`
-	EncryptionKey string   `json:"encryption_key"`
+	// Security & Pairing
+	AuthEnabled     bool     `json:"auth_enabled"`
+	AuthSecret      string   `json:"auth_secret"`      // Used for JWT token signing
+	AuthTokens      []string `json:"auth_tokens"`      // Legacy static tokens
+	EncryptionKey   string   `json:"encryption_key"`
+	EnablePairingUI bool     `json:"enable_pairing_ui"` // Show QR code / pairing UI
 
 	// Performance
 	Sensitivity       float64 `json:"sensitivity"`
@@ -56,25 +58,24 @@ type Config struct {
 	LogFile  string `json:"log_file"`
 
 	// AI / prediction
-	EnableAISmoothing     bool    `json:"enable_ai_smoothing"`
-	AIModelPath           string  `json:"ai_model_path"`
-	AIBlendFactor         float64 `json:"ai_blend_factor"`
-	EnablePersonalization  bool    `json:"enable_personalization"`
-	PersonalizationBuffer  int     `json:"personalization_buffer"`
-	PersonalizationInterval int    `json:"personalization_interval"`
-	AutoSwapModel         bool    `json:"auto_swap_model"`
-	EnablePredictive      bool    `json:"enable_predictive"`
-	PredictiveBlendFactor  float64 `json:"predictive_blend_factor"`
-	PredictiveDt           float64 `json:"predictive_dt"`
+	EnableAISmoothing         bool    `json:"enable_ai_smoothing"`
+	AIModelPath               string  `json:"ai_model_path"`
+	AIBlendFactor             float64 `json:"ai_blend_factor"`
+	EnablePersonalization     bool    `json:"enable_personalization"`
+	PersonalizationBuffer     int     `json:"personalization_buffer"`
+	PersonalizationInterval   int     `json:"personalization_interval"`
+	AutoSwapModel             bool    `json:"auto_swap_model"`
+	EnablePredictive          bool    `json:"enable_predictive"`
+	PredictiveBlendFactor     float64 `json:"predictive_blend_factor"`
+	PredictiveDt              float64 `json:"predictive_dt"`
 
 	mu sync.RWMutex `json:"-"`
 }
 
-var (
-	instance *Config
-	once     sync.Once
-)
+var instance *Config
+var once sync.Once
 
+// Get returns the singleton configuration instance.
 func Get() *Config {
 	once.Do(func() {
 		instance = loadOrDefault()
@@ -82,6 +83,7 @@ func Get() *Config {
 	return instance
 }
 
+// loadOrDefault loads the config from disk or returns default values.
 func loadOrDefault() *Config {
 	cfg := &Config{
 		Host:                   "0.0.0.0",
@@ -97,8 +99,10 @@ func loadOrDefault() *Config {
 		BLEEnabled:             true,
 		HIDProxyEnabled:        false,
 		AuthEnabled:            false,
+		AuthSecret:             "", // generate on first run? optional
 		AuthTokens:             []string{},
 		EncryptionKey:          "",
+		EnablePairingUI:        true,
 		Sensitivity:            0.5,
 		MoveRateLimit:          60,
 		BufferSize:             1024,
@@ -119,7 +123,7 @@ func loadOrDefault() *Config {
 		AIModelPath:            "models/mouse_smoothing.onnx",
 		AIBlendFactor:          0.6,
 		EnablePersonalization:  false,
-		PersonalizationBuffer:   2000,
+		PersonalizationBuffer:  2000,
 		PersonalizationInterval: 3600,
 		AutoSwapModel:          false,
 		EnablePredictive:       true,
@@ -127,12 +131,14 @@ func loadOrDefault() *Config {
 		PredictiveDt:            0.02,
 	}
 
-	if data, err := os.ReadFile(getConfigPath()); err == nil {
+	data, err := os.ReadFile(getConfigPath())
+	if err == nil {
 		_ = json.Unmarshal(data, cfg)
 	}
 	return cfg
 }
 
+// Save writes the current configuration to disk.
 func (c *Config) Save() error {
 	c.mu.RLock()
 	snapshot := *c
@@ -142,7 +148,6 @@ func (c *Config) Save() error {
 	if err != nil {
 		return err
 	}
-
 	path := getConfigPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
@@ -150,6 +155,7 @@ func (c *Config) Save() error {
 	return os.WriteFile(path, data, 0o644)
 }
 
+// SetSensitivity updates the cursor sensitivity and persists.
 func (c *Config) SetSensitivity(s float64) {
 	c.mu.Lock()
 	c.Sensitivity = s
@@ -157,6 +163,7 @@ func (c *Config) SetSensitivity(s float64) {
 	_ = c.Save()
 }
 
+// SetTheme updates the UI theme and persists.
 func (c *Config) SetTheme(theme string) {
 	c.mu.Lock()
 	c.Theme = theme
@@ -164,6 +171,7 @@ func (c *Config) SetTheme(theme string) {
 	_ = c.Save()
 }
 
+// SetPredictiveEnabled toggles the Kalman predictor and persists.
 func (c *Config) SetPredictiveEnabled(enabled bool) {
 	c.mu.Lock()
 	c.EnablePredictive = enabled
@@ -171,6 +179,7 @@ func (c *Config) SetPredictiveEnabled(enabled bool) {
 	_ = c.Save()
 }
 
+// SetPredictiveBlendFactor updates the blend factor and persists.
 func (c *Config) SetPredictiveBlendFactor(factor float64) {
 	c.mu.Lock()
 	c.PredictiveBlendFactor = factor
@@ -178,6 +187,7 @@ func (c *Config) SetPredictiveBlendFactor(factor float64) {
 	_ = c.Save()
 }
 
+// getConfigPath returns the absolute path for the configuration file.
 func getConfigPath() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {

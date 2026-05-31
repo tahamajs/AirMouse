@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary">
+    android:background="@color/background_dark">
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/view_pager"
@@ -20,47 +20,85 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:background="@color/surface_dark"
+        android:elevation="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- Dot indicator (modern replacement for TabLayout) -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             app:tabGravity="center"
-            app:tabIndicatorColor="@color/deep_orange_500"
-            app:tabIndicatorHeight="4dp" />
+            app:tabIndicatorHeight="0dp"
+            app:tabBackground="@drawable/dot_selector"
+            app:tabPaddingStart="8dp"
+            app:tabPaddingEnd="8dp"
+            app:tabPaddingTop="0dp"
+            app:tabPaddingBottom="0dp"
+            app:tabMaxWidth="40dp"
+            app:tabMinWidth="40dp" />
 
+        <!-- Action buttons row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="24dp">
+            android:layout_marginTop="24dp"
+            android:gravity="center">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_skip"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="@string/onboarding_skip" />
+                android:text="Skip"
+                android:textColor="@color/text_secondary"
+                android:layout_marginEnd="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_next"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="@string/onboarding_next" />
+                android:text="Next"
+                app:icon="@drawable/ic_arrow_forward"
+                app:iconGravity="textEnd"
+                app:backgroundTint="@color/accent_blue"
+                android:textColor="@android:color/white"
+                android:layout_marginStart="8dp"
+                android:visibility="visible" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_get_started"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="@string/onboarding_get_started"
+                android:text="Get Started"
+                app:icon="@drawable/ic_check"
+                app:iconGravity="textStart"
+                app:backgroundTint="@color/success_green"
+                android:textColor="@android:color/white"
+                android:layout_marginStart="8dp"
                 android:visibility="gone" />
 
         </LinearLayout>
+
+        <!-- Optional hint -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Swipe left to continue"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:layout_marginTop="12dp"
+            android:alpha="0.6" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

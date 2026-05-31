@@ -14,6 +14,34 @@
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="settings">Settings</string>
+    <!-- Menu titles -->
+    <string name="menu_home">Home</string>
+    <string name="menu_sensor_visualizer">Sensor Visualizer</string>
+
+    <string name="menu_statistics">Statistics</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_help">Help</string>
+    <string name="menu_about">About</string>
+    <string name="menu_advanced">Advanced</string>
+    <string name="menu_network_discovery">Network Discovery</string>
+    <string name="menu_profiles">Profiles</string>
+    <string name="menu_gesture_studio">Gesture Studio</string>
+    <string name="menu_edge_gestures">Edge Gestures</string>
+    <string name="menu_voice_commands">Voice Commands</string>
+    <string name="menu_themes">Themes</string>
+    <string name="menu_server_logs">Server Logs</string>
+    <string name="menu_battery">Battery</string>
+    <string name="menu_accessibility">Accessibility</string>
+    <string name="menu_proximity">Proximity Lock</string>
+
+    <!-- Action strings -->
+    <string name="action_search">Search</string>
+    <string name="action_notifications">Notifications</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_help">Help</string>
+
+
     <string name="debug">Debug</string>
     <string name="hide_debug">Hide Debug</string>
     <string name="done">Done</string>
@@ -170,6 +198,32 @@
         <string name="mag_instruction">Move device in a figure-8 pattern</string>
         <string name="mag_ready_desc">Magnetometer calibrated. Ready to proceed.</string>
         <string name="touchpad_hint">Use two fingers to scroll, one finger to tap</string>
+    <string name="calibration_done">Calibration completed successfully!</string>
+    <string name="calibration_aborted">Calibration aborted.</string>
+    <string name="bt_mouse_stop">Stop Bluetooth Mouse</string>
+    <string name="bt_mouse_start">Start Bluetooth Mouse</string>
+    <string name="bluetooth_permission_required">Bluetooth permission required for HID mouse</string>
+    <string name="bluetooth_must_be_enabled">Bluetooth must be enabled</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="connect">Connect</string>
+    <string name="motion_mode">Motion Mode</string>
+    <string name="touchpad_mode">Touchpad Mode</string>
+    <string name="connecting">Connecting...</string>
+    <string name="calibration_attempts_exhausted">No calibration attempts left. Restart the app.</string>
+    <string name="calibration_attempts_left">You have %d attempt(s) remaining.</string>
+    <string name="attempts_remaining">Attempts remaining: %d</string>
+    <string name="calibration_locked">Calibration locked – restart app</string>
+    <string name="calibration_exhausted">Calibration attempts exhausted. Restart app to try again.</string>
+    <string name="calibrate_sensors">Calibrate Sensors</string>
+    <string name="bluetooth_not_supported">Bluetooth not supported</string>
+    <string name="bluetooth_permission_title">Bluetooth Permission</string>
+    <string name="bluetooth_permission_message">To act as a Bluetooth mouse, the app needs Bluetooth permission.</string>
+    <string name="grant">Grant</string>
+    <string name="clicks">Clicks: %d</string>
+    <string name="scrolls">Scrolls: %d</string>
+    <string name="right_clicks">Right clicks: %d</string>
+    <string name="double_clicks">Double clicks: %d</string>
+    <string name="calibrated_count">%d / 3 sensors calibrated</string>
     <string name="license_title">License</string>
 ...    <string name="help_content">
         <![CDATA[

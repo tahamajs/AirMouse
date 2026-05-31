@@ -7,22 +7,24 @@ import (
 	"net"
 	"sync"
 	"time"
-	
+
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/utils"
 )
 
+// Client represents a TCP client connection.
 type Client struct {
-	ID         string
-	Name       string
-	Conn       net.Conn
+	ID          string
+	Name        string
+	Conn        net.Conn
 	ConnectedAt time.Time
 	LastActive  time.Time
 	BytesSent   int64
 	BytesRecv   int64
 }
 
+// Server is the TCP server.
 type Server struct {
 	host      string
 	port      int
@@ -34,6 +36,7 @@ type Server struct {
 	running   bool
 }
 
+// Message is the JSON structure sent by clients.
 type Message struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
@@ -41,6 +44,7 @@ type Message struct {
 	Device  string          `json:"device,omitempty"`
 }
 
+// Payload structures.
 type MovePayload struct {
 	DX float64 `json:"dx"`
 	DY float64 `json:"dy"`
@@ -59,6 +63,7 @@ type HelloPayload struct {
 	Version string `json:"version"`
 }
 
+// NewServer creates a new TCP server.
 func NewServer(host string, port int, mouse control.MouseController, deviceMgr *device.Manager) *Server {
 	return &Server{
 		host:      host,
@@ -69,18 +74,17 @@ func NewServer(host string, port int, mouse control.MouseController, deviceMgr *
 	}
 }
 
+// Start launches the TCP server.
 func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
-	
 	s.listener = listener
 	s.running = true
-	
-	utils.LogInfo("TCP server started %s", addr)
-	
+
+	utils.LogInfo("TCP server started", "address", addr)
 	go s.acceptLoop()
 	return nil
 }
@@ -90,11 +94,10 @@ func (s *Server) acceptLoop() {
 		conn, err := s.listener.Accept()
 		if err != nil {
 			if s.running {
-				utils.LogError("Accept error: %v", err)
+				utils.LogError("TCP accept error", "error", err)
 			}
 			continue
 		}
-		
 		go s.handleClient(conn)
 	}
 }
@@ -102,162 +105,131 @@ func (s *Server) acceptLoop() {
 func (s *Server) handleClient(conn net.Conn) {
 	clientID := conn.RemoteAddr().String()
 	client := &Client{
-		ID:         clientID,
-		Name:       "Unknown",
-		Conn:       conn,
+		ID:          clientID,
+		Name:        "Unknown",
+		Conn:        conn,
 		ConnectedAt: time.Now(),
 		LastActive:  time.Now(),
 	}
-	
+
 	s.mu.Lock()
 	s.clients[clientID] = client
 	s.mu.Unlock()
-	
-	utils.LogInfo("Client connected %s", clientID)
-	s.deviceMgr.RegisterDevice(clientID, "tcp", client.Name)
-	
+
+	utils.LogInfo("TCP client connected", "id", clientID)
+	s.deviceMgr.RegisterDevice(clientID, device.TypeTCP, client.Name)
+
 	reader := bufio.NewReader(conn)
 	heartbeat := time.NewTicker(10 * time.Second)
-	
+	defer heartbeat.Stop()
+
 	go func() {
 		for range heartbeat.C {
 			s.mu.RLock()
 			c, exists := s.clients[clientID]
 			s.mu.RUnlock()
-			
 			if !exists {
 				return
 			}
-			
 			if time.Since(c.LastActive) > 30*time.Second {
-				utils.LogInfo("Client timeout %s", clientID)
+				utils.LogInfo("TCP client timeout", "id", clientID)
 				conn.Close()
 				return
 			}
-			
-			// Send heartbeat ping
-			ping := `{"type":"ping"}`
-			conn.Write([]byte(ping + "\n"))
+			// Send ping
+			conn.Write([]byte(`{"type":"ping"}` + "\n"))
 		}
 	}()
-	
+
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			break
 		}
-		
 		client.LastActive = time.Now()
 		client.BytesRecv += int64(len(line))
-		
+
 		var msg Message
 		if err := json.Unmarshal([]byte(line), &msg); err != nil {
-			utils.LogError("Invalid message: %v", err)
+			utils.LogError("Invalid TCP message", "error", err)
 			continue
 		}
-		
 		s.processMessage(client, &msg)
 	}
-	
-	heartbeat.Stop()
+
 	conn.Close()
-	
 	s.mu.Lock()
 	delete(s.clients, clientID)
 	s.mu.Unlock()
-	
-	utils.LogInfo("Client disconnected %s", clientID)
+	utils.LogInfo("TCP client disconnected", "id", clientID)
 	s.deviceMgr.UnregisterDevice(clientID)
 }
 
 func (s *Server) processMessage(client *Client, msg *Message) {
 	switch msg.Type {
 	case "move":
-		var payload MovePayload
-		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
-			s.mouse.Move(payload.DX, payload.DY)
+		var p MovePayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Move(p.DX, p.DY)
 		}
-		
 	case "click":
-		var payload ClickPayload
-		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
-			s.mouse.Click(payload.Button)
+		var p ClickPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Click(p.Button)
 		}
-		
 	case "doubleclick":
 		s.mouse.DoubleClick()
-		
 	case "rightclick":
 		s.mouse.Click("right")
-		
 	case "scroll":
-		var payload ScrollPayload
-		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
-			s.mouse.Scroll(payload.Delta)
+		var p ScrollPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			s.mouse.Scroll(p.Delta)
 		}
-		
 	case "hello":
-		var payload HelloPayload
-		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
-			client.Name = payload.Name
+		var p HelloPayload
+		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+			client.Name = p.Name
 			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
-			utils.LogInfo("Device identified %s %s", client.ID, client.Name)
-			
-			// Send welcome message
-			welcome := fmt.Sprintf(`{"type":"welcome","payload":{"server":"AirMouse","version":"2.0"}}`)
+			utils.LogInfo("Device identified via TCP", "id", client.ID, "name", client.Name)
+			welcome := `{"type":"welcome","payload":{"server":"AirMouse","version":"3.0"}}`
 			client.Conn.Write([]byte(welcome + "\n"))
 		}
-		
 	case "ping":
-		pong := `{"type":"pong"}`
-		client.Conn.Write([]byte(pong + "\n"))
-		
-	case "gesture":
-		utils.LogDebug("Gesture received %s %s", string(msg.Payload), client.Name)
+		client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))
+	default:
+		utils.LogWarn("Unknown TCP message type", "type", msg.Type, "id", client.ID)
 	}
 }
 
+// Stop shuts down the TCP server.
 func (s *Server) Stop() {
 	s.running = false
 	if s.listener != nil {
 		s.listener.Close()
 	}
-	
 	s.mu.Lock()
-	for _, client := range s.clients {
-		client.Conn.Close()
+	for _, c := range s.clients {
+		c.Conn.Close()
 	}
 	s.clients = make(map[string]*Client)
 	s.mu.Unlock()
-	
 	utils.LogInfo("TCP server stopped")
 }
 
-func (s *Server) GetClients() []*Client {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	
-	clients := make([]*Client, 0, len(s.clients))
-	for _, client := range s.clients {
-		clients = append(clients, client)
-	}
-	return clients
-}
-
+// GetStats returns server statistics.
 func (s *Server) GetStats() map[string]interface{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
-	stats := make(map[string]interface{})
-	stats["clients"] = len(s.clients)
-	
-	var totalBytesSent, totalBytesRecv int64
-	for _, client := range s.clients {
-		totalBytesSent += client.BytesSent
-		totalBytesRecv += client.BytesRecv
+	stats := map[string]interface{}{
+		"clients": len(s.clients),
 	}
-	stats["bytes_sent"] = totalBytesSent
-	stats["bytes_recv"] = totalBytesRecv
-	
+	var totalSent, totalRecv int64
+	for _, c := range s.clients {
+		totalSent += c.BytesSent
+		totalRecv += c.BytesRecv
+	}
+	stats["bytes_sent"] = totalSent
+	stats["bytes_recv"] = totalRecv
 	return stats
 }

@@ -1,67 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
     app:startDestination="@id/homeFragment">
 
+    <!-- Main Destinations -->
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.airmouse.HomeFragment"
-        android:label="@string/home" />
+        android:label="Home"
+        tools:layout="@layout/fragment_home" />
+
     <fragment
         android:id="@+id/statisticsFragment"
         android:name="com.airmouse.ui.statistics.StatisticsFragment"
-        android:label="@string/statistics" />
+        android:label="Statistics"
+        tools:layout="@layout/fragment_statistics" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.airmouse.ui.SettingsFragment"
+        android:label="Settings"
+        tools:layout="@layout/fragment_settings" />
+
     <fragment
         android:id="@+id/helpFragment"
         android:name="com.airmouse.HelpFragment"
-        android:label="@string/help" />
+        android:label="Help"
+        tools:layout="@layout/fragment_help" />
+
     <fragment
-        android:id="@+id/calibrationFragment"
-        android:name="com.airmouse.ui.CalibrationFragment"
-        android:label="@string/calibration_title" />
+        android:id="@+id/aboutFragment"
+        android:name="com.airmouse.AboutFragment"
+        android:label="About"
+        tools:layout="@layout/fragment_about" />
+
+    <!-- Advanced Features -->
+    <fragment
+        android:id="@+id/networkDiscoveryFragment"
+        android:name="com.airmouse.NetworkDiscoveryFragment"
+        android:label="Network Discovery"
+        tools:layout="@layout/fragment_network_discovery" />
+
+    <fragment
+        android:id="@+id/profilesFragment"
+        android:name="com.airmouse.ProfilesFragment"
+        android:label="Profiles"
+        tools:layout="@layout/fragment_profiles" />
+
+    <fragment
+        android:id="@+id/gestureStudioFragment"
+        android:name="com.airmouse.GestureStudioActivity"
+        android:label="Gesture Studio"
+        tools:layout="@layout/activity_gesture_studio" />
+
+    <fragment
+        android:id="@+id/edgeGesturesFragment"
+        android:name="com.airmouse.EdgeGesturesFragment"
+        android:label="Edge Gestures"
+        tools:layout="@layout/fragment_edge_gestures" />
+
+    <fragment
+        android:id="@+id/voiceCommandsFragment"
+        android:name="com.airmouse.VoiceCommandsFragment"
+        android:label="Voice Commands"
+        tools:layout="@layout/fragment_voice_commands" />
+
+    <fragment
+        android:id="@+id/themesFragment"
+        android:name="com.airmouse.ThemesFragment"
+        android:label="Themes"
+        tools:layout="@layout/fragment_themes" />
+
     <fragment
         android:id="@+id/serverLogFragment"
-        android:name="com.airmouse.ServerLogFragment"
-        android:label="@string/server_log" />
-        <fragment
-            android:id="@+id/profilesFragment"
-            android:name="com.airmouse.ProfilesFragment"
-            android:label="@string/profiles_title" />
-        <fragment
-            android:id="@+id/themesFragment"
-            android:name="com.airmouse.ThemesFragment"
-            android:label="@string/theme_title" />
-        <fragment
-            android:id="@+id/gestureTrainingFragment"
-            android:name="com.airmouse.GestureTrainingFragment"
-            android:label="@string/gesture_training_title" />
-        <fragment
-            android:id="@+id/customGestureFragment"
-            android:name="com.airmouse.CustomGestureRecorderFragment"
-            android:label="@string/custom_gesture" />
-        <fragment
-            android:id="@+id/batteryFragment"
-            android:name="com.airmouse.ui.battery.BatteryGraphFragment"
-            android:label="@string/battery_graph_title" />
-        <fragment
-            android:id="@+id/accessibilityFragment"
-            android:name="com.airmouse.AccessibilityFragment"
-            android:label="@string/accessibility_title" />
-        <fragment
-            android:id="@+id/networkDiscoveryFragment"
-            android:name="com.airmouse.NetworkDiscoveryFragment"
-            android:label="@string/discover_servers" />
-        <fragment
-            android:id="@+id/voiceCommandFragment"
-            android:name="com.airmouse.VoiceCommandFragment"
-            android:label="@string/voice_commands" />
-        <fragment
-            android:id="@+id/edgeGesturesFragment"
-            android:name="com.airmouse.EdgeGesturesFragment"
-            android:label="@string/edge_gestures" />
-        <fragment
-            android:id="@+id/aboutFragment"
-            android:name="com.airmouse.AboutFragment"
-            android:label="@string/about_title" />
+        android:name="com.airmouse.ui.ServerLogFragment"
+        android:label="Server Logs"
+        tools:layout="@layout/fragment_server_log" />
+
+    <fragment
+        android:id="@+id/batteryGraphFragment"
+        android:name="com.airmouse.ui.battery.BatteryGraphFragment"
+        android:label="Battery Monitor"
+        tools:layout="@layout/fragment_battery" />
+
+    <fragment
+        android:id="@+id/accessibilityFragment"
+        android:name="com.airmouse.AccessibilityFragment"
+        android:label="Accessibility"
+        tools:layout="@layout/fragment_accessibility" />
+
+    <fragment
+        android:id="@+id/proximitySettingsFragment"
+        android:name="com.airmouse.ui.ProximitySettingsFragment"
+        android:label="Proximity Lock"
+        tools:layout="@layout/fragment_proximity" />
+
+    <!-- Calibration Flow (not directly in nav drawer, but accessible via action) -->
+    <activity
+        android:id="@+id/calibrationActivity"
+        android:name="com.airmouse.ui.CalibrationActivity"
+        android:label="Calibration Wizard" />
+
+    <!-- Onboarding Flow -->
+    <activity
+        android:id="@+id/onboardingActivity"
+        android:name="com.airmouse.ui.onboarding.OnboardingActivity"
+        android:label="Onboarding" />
+
+    <!-- Actions -->
+    <action
+        android:id="@+id/action_global_calibration"
+        app:destination="@id/calibrationActivity" />
+
+
+    <fragment
+        android:id="@+id/sensorVisualizerFragment"
+        android:name="com.airmouse.ui.SensorVisualizerFragment"
+        android:label="Sensor Visualizer"
+        tools:layout="@layout/fragment_sensor_visualizer" />
+
 </navigation>

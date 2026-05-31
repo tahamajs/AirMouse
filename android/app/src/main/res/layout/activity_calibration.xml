@@ -6,52 +6,36 @@
     android:orientation="vertical"
     android:background="#0f1115">
 
-    <!-- Compose header (migrated) -->
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/headerCompose"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
-    <!-- Backward-compatible hidden header elements (kept for activity state) -->
-    <TextView
-        android:id="@+id/statusHeader"
+    <!-- Modern header with gradient background -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:text="@string/calibration_welcome" />
+        android:background="@drawable/header_gradient"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <ProgressBar
-        android:id="@+id/overallProgress"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="8dp"
-        android:visibility="gone"
-        android:max="100"
-        android:progress="0" />
+        <TextView
+            android:id="@+id/statusHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Calibration Wizard"
+            android:textColor="#ffffff"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center" />
 
-    <!-- Hidden legacy controls for gradual migration (kept to avoid changing activity logic) -->
-    <TextView
-        android:id="@+id/timerText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:text="00:00" />
-
-    <Button
-        android:id="@+id/backBtn"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:visibility="gone" />
-    <Button
-        android:id="@+id/nextBtn"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:visibility="gone" />
-    <Button
-        android:id="@+id/stopBtn"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:visibility="gone" />
+        <!-- Big overall progress bar -->
+        <ProgressBar
+            android:id="@+id/overallProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:max="100"
+            android:progress="0"
+            android:layout_marginTop="12dp"
+            android:progressTint="#007acc"
+            android:backgroundTint="#2b3341" />
+    </LinearLayout>
 
     <!-- Task checklist (horizontal) -->
     <LinearLayout
@@ -68,7 +52,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="⬜ Gyroscope"
+            android:text="⚪ Gyroscope"
             android:textColor="#96a0ae"
             android:textSize="14sp"
             android:gravity="center" />
@@ -78,7 +62,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="⬜ Accelerometer"
+            android:text="⚪ Accelerometer"
             android:textColor="#96a0ae"
             android:textSize="14sp"
             android:gravity="center" />
@@ -88,7 +72,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="⬜ Magnetometer"
+            android:text="⚪ Magnetometer"
             android:textColor="#96a0ae"
             android:textSize="14sp"
             android:gravity="center" />
@@ -102,9 +86,7 @@
         app:tabTextColor="#96a0ae"
         app:tabSelectedTextColor="#ffffff"
         app:tabIndicatorColor="#007acc"
-        app:tabIndicatorHeight="3dp"
-        app:tabRippleColor="#1d2430"
-        android:paddingVertical="8dp">
+        app:tabIndicatorHeight="3dp">
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -124,10 +106,67 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
-    <!-- Compose bottom controls (migrated) -->
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/bottomCompose"
+
+    <!-- Modern bottom control bar -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bottom_bar_gradient"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/timerText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="#ffffff"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_gravity="center"
+            android:drawableStart="@drawable/ic_timer"
+            android:drawablePadding="8dp"
+            android:drawableTint="#007acc" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:gravity="center">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/backBtn"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="Back"
+                android:enabled="false"
+                android:textColor="#e5e7eb"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_marginEnd="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nextBtn"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="Next"
+                android:enabled="false"
+                android:textColor="#ffffff"
+                app:backgroundTint="@color/accent_blue"
+                android:layout_marginStart="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/stopBtn"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="Stop"
+                android:textColor="#ffffff"
+                app:backgroundTint="@color/error_red"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+    </LinearLayout>
 
 </LinearLayout>

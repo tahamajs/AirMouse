@@ -1,6 +1,8 @@
 package bluetooth
 
-import "airmouse-go/internal/utils"
+import (
+	"airmouse-go/internal/utils"
+)
 
 // SerialConnection manages a virtual serial port over BLE.
 type SerialConnection struct {

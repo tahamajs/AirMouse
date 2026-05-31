@@ -3,6 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:fillViewport="true"
     android:padding="16dp">
 
     <LinearLayout
@@ -10,10 +12,13 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Card 1: Enable Service & Status -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface_dark"
             android:layout_marginBottom="16dp">
 
             <LinearLayout
@@ -25,20 +30,36 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Proximity Lock/Unlock"
-                    android:textAppearance="?attr/textAppearanceTitleLarge" />
+                    android:text="Proximity Lock / Unlock"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Automatically lock your computer when you walk away and unlock when you return."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="16dp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginTop="16dp">
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_instruction"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Enable Service" />
+                        android:text="Enable proximity service"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/proximitySwitch"
@@ -50,27 +71,35 @@
                     android:id="@+id/statusText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
                     android:text="Service stopped"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:gravity="center" />
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_coach"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp" />
 
                 <TextView
                     android:id="@+id/currentDistance"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
                     android:text="Distance: --- m"
-                    android:textAppearance="?attr/textAppearanceHeadline2"
-                    android:gravity="center" />
+                    android:textColor="@color/accent_blue"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Card 2: Threshold Settings -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface_dark"
             android:layout_marginBottom="16dp">
 
             <LinearLayout
@@ -82,61 +111,90 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Thresholds"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                    android:text="Distance Thresholds"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
 
+                <!-- Near threshold -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Near threshold (unlock distance)" />
+                    android:text="Near threshold (unlock distance)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="8dp" />
 
-                <SeekBar
+                <com.google.android.material.slider.Slider
                     android:id="@+id/nearThresholdSlider"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:max="50"
-                    android:progress="20" />
+                    android:valueFrom="0.5"
+                    android:valueTo="5.0"
+                    android:stepSize="0.1"
+                    android:value="2.0"
+                    android:layout_marginBottom="4dp" />
 
                 <TextView
                     android:id="@+id/nearThresholdValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="2.0 m" />
+                    android:text="2.0 m"
+                    android:textColor="@color/accent_blue"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="16dp" />
 
+                <!-- Far threshold -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Far threshold (lock distance)" />
+                    android:text="Far threshold (lock distance)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="8dp" />
 
-                <SeekBar
+                <com.google.android.material.slider.Slider
                     android:id="@+id/farThresholdSlider"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:max="100"
-                    android:progress="40" />
+                    android:valueFrom="1.0"
+                    android:valueTo="10.0"
+                    android:stepSize="0.1"
+                    android:value="4.0"
+                    android:layout_marginBottom="4dp" />
 
                 <TextView
                     android:id="@+id/farThresholdValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="4.0 m" />
+                    android:text="4.0 m"
+                    android:textColor="@color/accent_blue"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="16dp" />
 
-                <Button
+                <!-- Calibrate button -->
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/calibrateBtn"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="Calibrate" />
+                    android:layout_height="52dp"
+                    android:text="Calibrate Distance"
+                    app:icon="@drawable/ic_calibrate"
+                    app:iconGravity="textStart"
+                    app:backgroundTint="@color/accent_blue"
+                    android:textColor="@android:color/white" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Card 3: How It Works & Requirements -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="24dp">
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -147,15 +205,70 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="How it works"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                    android:text="📘 How It Works"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="When your phone moves beyond the far threshold, the computer screen locks automatically. When you come back within the near threshold, it unlocks (on supported systems).\n\nRequires Bluetooth 6.0 (Android 16+) for best accuracy, otherwise RSSI-based fallback."
-                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:text="When your phone moves beyond the far threshold, the computer screen locks automatically. When you come back within the near threshold, it unlocks (on supported systems)."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="4dp"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚠️ Requirements"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="• Bluetooth 6.0 (Android 16+) for best accuracy\n• Otherwise RSSI‑based fallback (less accurate)\n• Desktop server must be running\n• Phone and PC paired via Bluetooth (recommended)"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="4dp" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Card 4: Tips -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface_dark">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💡 Tips"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="• Keep the phone in your pocket for best results.\n• Calibrate the distance for accurate measurements.\n• Enable auto‑lock only – auto‑unlock may require password.\n• Use with a smartwatch for multi‑device presence."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
                     android:lineSpacingExtra="4dp" />
 
             </LinearLayout>

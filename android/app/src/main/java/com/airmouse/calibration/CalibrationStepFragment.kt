@@ -1,4 +1,4 @@
-// file: calibration/CalibrationStepFragment.kt
+// CalibrationStepFragment.kt
 package com.airmouse.calibration
 
 interface CalibrationStepFragment {
@@ -7,5 +7,5 @@ interface CalibrationStepFragment {
     fun saveCalibrationData()
     fun getProgress(): Int
     fun isDataValid(): Boolean
-    fun onOrientationChanged(roll: Float, pitch: Float, yaw: Float) {} // optional
+    fun onOrientationChanged(roll: Float, pitch: Float, yaw: Float) {}
 }

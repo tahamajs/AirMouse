@@ -59,16 +59,18 @@ class CustomGestureRecorderFragment : Fragment(), SensorEventListener {
     }
 
     private fun startRecording() {
-        val gyro = gyroscope
-        if (gyro == null) {
-            statusText.text = getString(R.string.no_gyroscope)
+        if (gyroscope == null) {
+            statusText.text = "Gyroscope not available"
             return
         }
         recordedValues.clear()
         isRecording = true
-        statusText.text = getString(R.string.recording_gesture)
-        sensorManager.registerListener(this, gyro, SensorManager.SENSOR_DELAY_GAME)
-        recordingJob = viewLifecycleOwner.lifecycleScope.launch {
+        statusText.text = "Recording gesture... Move your phone"
+        recordButton.isEnabled = false
+        recordButton.text = "Recording..."
+        sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME)
+
+        recordingJob = lifecycleScope.launch {
             delay(3000)
             stopRecording()
         }
@@ -78,16 +80,19 @@ class CustomGestureRecorderFragment : Fragment(), SensorEventListener {
         sensorManager.unregisterListener(this)
         isRecording = false
         recordingJob?.cancel()
+
         if (recordedValues.isNotEmpty()) {
             val avg = recordedValues.average().toFloat()
             val action = actions[actionSpinner.selectedItemPosition]
             preferences.saveCustomGesture(action, avg)
-            statusText.text = getString(R.string.gesture_saved, action, avg)
-            Snackbar.make(requireView(), getString(R.string.gesture_saved_toast, action), Snackbar.LENGTH_SHORT).show()
+            statusText.text = "Saved '$action' with value: %.2f".format(avg)
+            Snackbar.make(requireView(), "Gesture saved for $action", Snackbar.LENGTH_SHORT).show()
             updateSavedGesturesDisplay()
         } else {
-            statusText.text = getString(R.string.gesture_no_data)
+            statusText.text = "No data recorded. Please try again."
         }
+        recordButton.isEnabled = true
+        recordButton.text = "Start Recording"
     }
 
     private fun updateSavedGesturesDisplay() {
@@ -98,18 +103,20 @@ class CustomGestureRecorderFragment : Fragment(), SensorEventListener {
                 sb.append("• $action: ${String.format("%.2f", value)}\n")
             }
         }
-        if (sb.isEmpty()) {
-            savedGesturesText.text = getString(R.string.no_saved_gestures)
-        } else {
-            savedGesturesText.text = sb.toString()
-        }
+        savedGesturesText.text = if (sb.isEmpty()) "No custom gestures saved yet." else sb.toString()
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (isRecording && event?.sensor?.type == Sensor.TYPE_GYROSCOPE) {
-            recordedValues.add(event.values[1]) // Y-axis rotation
+            // Use Y‑axis rotation as gesture value
+            recordedValues.add(event.values[1])
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    override fun onPause() {
+        super.onPause()
+        if (isRecording) stopRecording()
+    }
 }

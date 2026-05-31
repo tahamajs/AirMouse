@@ -20,12 +20,14 @@
         android:layout_gravity="center"
         android:orientation="vertical"
         android:gravity="center"
-        android:alpha="0.5"
-        android:padding="32dp">
+        android:alpha="0.9"
+        android:background="@drawable/bg_hint_overlay"
+        android:padding="24dp"
+        android:visibility="visible">
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:src="@drawable/ic_touchpad_gesture"
             android:tint="#80FFFFFF"
             android:contentDescription="@string/touchpad_hint" />
@@ -33,22 +35,52 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Swipe to move\nTap to click\nTwo‑finger scroll"
+            android:text="Touchpad Active"
             android:textColor="#FFFFFF"
-            android:textSize="15sp"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="• One finger: move cursor\n• Tap: left click\n• Double tap: double click\n• Two‑finger tap: right click\n• Two‑finger scroll: vertical scroll\n• Two‑finger swipe: back/forward\n• Three‑finger swipe: (custom)"
+            android:textColor="#E0E0E0"
+            android:textSize="13sp"
             android:textAlignment="center"
-            android:lineSpacingExtra="4dp"
+            android:lineSpacingExtra="6dp"
+            android:layout_marginTop="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/hintDismissBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
             android:layout_marginTop="16dp"
-            android:fontFamily="sans-serif-light" />
+            android:text="Got it"
+            app:cornerRadius="20dp"
+            app:backgroundTint="@color/accent_blue"
+            android:textColor="@android:color/white"
+            android:textSize="12sp" />
     </LinearLayout>
 
     <!-- Visual feedback for clicks (subtle ripple) – hidden by default -->
     <View
         android:id="@+id/clickFeedback"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:background="@drawable/circle_ripple"
         android:visibility="gone"
         android:layout_gravity="center"
+        android:alpha="0.8" />
+
+    <!-- Optional small status indicator -->
+    <View
+        android:id="@+id/activeIndicator"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:background="@drawable/circle_green"
         android:alpha="0.7" />
+
 </FrameLayout>

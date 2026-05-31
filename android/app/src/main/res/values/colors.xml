@@ -7,7 +7,8 @@
     <color name="deep_orange_800">#D84315</color>
     <color name="deep_orange_900">#BF360C</color>
     <color name="deep_orange_100">#FFE0B2</color>
-
+    <color name="card_stroke">#2B3341</color>
+    <color name="accent_blue_light">#33007ACC</color>
     <!-- Secondary brand colors -->
     <color name="amber_100">#FFECB3</color>
     <color name="amber_200">#FFE082</color>
