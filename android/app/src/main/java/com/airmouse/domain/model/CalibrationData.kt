@@ -82,3 +82,5 @@ data class CustomGestureTemplate(
     val samples: String, // store as JSON string
     val threshold: Float = 0.7f
 )
+
+
