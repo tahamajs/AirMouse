@@ -160,6 +160,16 @@
     <string name="sensor_info_title">Sensor Info</string>
     <string name="connection_guide_title">Connection Guide</string>
     <string name="about_title">About</string>
+        <string name="accel_flat_up_title">Flat Up Title</string>
+        <string name="accel_flat_up_desc">Place device on a flat surface facing up</string>
+        <string name="collection_progress">Collection Progress: %d%%</string>
+        <string name="stability_meter">Stability: %.2f</string>
+        <string name="gyro_instruction">Rotate device slowly along each axis</string>
+        <string name="variance_meter">Variance: %.4f</string>
+        <string name="gyro_ready_desc">Gyroscope ready. Click start to continue.</string>
+        <string name="mag_instruction">Move device in a figure-8 pattern</string>
+        <string name="mag_ready_desc">Magnetometer calibrated. Ready to proceed.</string>
+        <string name="touchpad_hint">Use two fingers to scroll, one finger to tap</string>
     <string name="license_title">License</string>
 ...    <string name="help_content">
         <![CDATA[
