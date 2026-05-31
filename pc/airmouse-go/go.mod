@@ -5,7 +5,6 @@ go 1.23
 require (
 	fyne.io/fyne/v2 v2.6.2
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
-	github.com/go-vgo/robotgo v0.110.5
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/mdns v1.0.5
 	github.com/shirou/gopsutil/v3 v3.24.5

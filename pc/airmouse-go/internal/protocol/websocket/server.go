@@ -2,14 +2,16 @@ package websocket
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
-	
+    
 	"github.com/gorilla/websocket"
-	
+    
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
+	"airmouse-go/internal/sysaction"
 )
 
 var upgrader = websocket.Upgrader{
@@ -268,15 +270,15 @@ func executeSystemAction(action string) {
     // Use robotgo or system commands
     switch action {
     case "media_prev":
-        robotgo.KeyTap("media_prev")
+		sysaction.KeyTap("media_prev")
     case "media_next":
-        robotgo.KeyTap("media_next")
+		sysaction.KeyTap("media_next")
     case "vol_up":
-        robotgo.KeyTap("audio_vol_up")
+		sysaction.KeyTap("audio_vol_up")
     case "vol_down":
-        robotgo.KeyTap("audio_vol_down")
+		sysaction.KeyTap("audio_vol_down")
     case "play_pause":
-        robotgo.KeyTap("media_play_pause")
+		sysaction.KeyTap("media_play_pause")
     }
 }
 
@@ -296,17 +298,17 @@ case "gesture":
 func executeGestureAction(gesture string) {
     switch gesture {
     case "LeftSwipe":
-        robotgo.KeyTap("media_prev")
+		sysaction.KeyTap("media_prev")
     case "RightSwipe":
-        robotgo.KeyTap("media_next")
+		sysaction.KeyTap("media_next")
     case "CircleCW":
-        robotgo.KeyTap("audio_vol_up")
+		sysaction.KeyTap("audio_vol_up")
     case "CircleCCW":
-        robotgo.KeyTap("audio_vol_down")
+		sysaction.KeyTap("audio_vol_down")
     case "ThumbsUp":
-        robotgo.KeyTap("media_play_pause")
+		sysaction.KeyTap("media_play_pause")
     case "ThumbsDown":
-        robotgo.KeyTap("stop")
+		sysaction.KeyTap("stop")
     default:
         logger.LogWarn("Unknown gesture", "gesture", gesture)
     }
@@ -363,15 +365,15 @@ case "gesture":
         // Execute system action
         switch payload.Gesture {
         case "LeftSwipe":
-            robotgo.KeyTap("media_prev")
+			sysaction.KeyTap("media_prev")
         case "RightSwipe":
-            robotgo.KeyTap("media_next")
+			sysaction.KeyTap("media_next")
         case "CircleCW":
-            robotgo.KeyTap("audio_vol_up")
+			sysaction.KeyTap("audio_vol_up")
         case "CircleCCW":
-            robotgo.KeyTap("audio_vol_down")
+			sysaction.KeyTap("audio_vol_down")
         case "ThumbsUp":
-            robotgo.KeyTap("media_play_pause")
+			sysaction.KeyTap("media_play_pause")
         }
     }
 
