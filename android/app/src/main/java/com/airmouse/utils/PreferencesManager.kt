@@ -2,52 +2,49 @@ package com.airmouse.utils
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.airmouse.network.ConnectionStore
 import org.json.JSONObject
 
-/**
- * Central preferences manager for the Air Mouse app.
- * Stores user settings, calibration data, gesture counts, profiles, themes, and more.
- * All methods are synchronous and work with SharedPreferences.
- */
-class PreferencesManager(context: Context) : ConnectionStore {
+@Suppress("unused", "SpellCheckingInspection")
+class PreferencesManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("airmouse", Context.MODE_PRIVATE)
 
-    fun saveAccelerometerParams(offset: FloatArray, scale: FloatArray) {
-        saveAccelParams(offset, scale)
-    }
     // ----------------------------------------------------------------------
     // Basic settings
     // ----------------------------------------------------------------------
-    fun getSensitivity(): Float = prefs.getFloat("sensitivity", Constants.DEFAULT_SENSITIVITY)
+    fun getSensitivity(): Float = prefs.getFloat("sensitivity", 0.5f)
     fun setSensitivity(value: Float) = prefs.edit().putFloat("sensitivity", value).apply()
 
-    fun getClickThreshold(): Float = prefs.getFloat("click_threshold", Constants.CLICK_SPEED_THRESHOLD)
+    fun getClickThreshold(): Float = prefs.getFloat("click_threshold", 10f)
     fun setClickThreshold(value: Float) = prefs.edit().putFloat("click_threshold", value).apply()
-
-    fun getDoubleClickInterval(): Long = prefs.getLong("double_click_interval", Constants.DOUBLE_CLICK_INTERVAL_MS)
+    fun setEdgeGestureAction(key: String, action: String) {
+        prefs.edit().putString("edge_gesture_$key", action).apply()
+    }
+    fun getEdgeGestureAction(key: String): String {
+        return prefs.getString("edge_gesture_$key", "Click") ?: "Click"
+    }
+    fun getDoubleClickInterval(): Long = prefs.getLong("double_click_interval", 300L)
     fun setDoubleClickInterval(value: Long) = prefs.edit().putLong("double_click_interval", value).apply()
 
-    fun getScrollThreshold(): Float = prefs.getFloat("scroll_threshold", Constants.SCROLL_SPEED_THRESHOLD)
+    fun getScrollThreshold(): Float = prefs.getFloat("scroll_threshold", 5f)
     fun setScrollThreshold(value: Float) = prefs.edit().putFloat("scroll_threshold", value).apply()
 
-    fun getScrollDebounce(): Float = prefs.getFloat("scroll_debounce", Constants.SCROLL_DEBOUNCE)
+    fun getScrollDebounce(): Float = prefs.getFloat("scroll_debounce", 0.1f)
     fun setScrollDebounce(value: Float) = prefs.edit().putFloat("scroll_debounce", value).apply()
 
-    fun getRightClickTilt(): Float = prefs.getFloat("rightclick_tilt", Constants.RIGHT_CLICK_TILT_DEG)
+    fun getRightClickTilt(): Float = prefs.getFloat("rightclick_tilt", 15f)
     fun setRightClickTilt(value: Float) = prefs.edit().putFloat("rightclick_tilt", value).apply()
 
-    fun getRightClickDuration(): Long = prefs.getLong("rightclick_duration", Constants.RIGHT_CLICK_DURATION_MS)
+    fun getRightClickDuration(): Long = prefs.getLong("rightclick_duration", 200L)
     fun setRightClickDuration(value: Long) = prefs.edit().putLong("rightclick_duration", value).apply()
 
     fun isHapticEnabled(): Boolean = prefs.getBoolean("haptic_enabled", true)
     fun setHapticEnabled(enabled: Boolean) = prefs.edit().putBoolean("haptic_enabled", enabled).apply()
 
-    override fun getLastIp(): String = prefs.getString("last_ip", "") ?: ""
-    override fun setLastIp(ip: String) = prefs.edit().putString("last_ip", ip).apply()
+    fun getLastIp(): String = prefs.getString("last_ip", "") ?: ""
+    fun setLastIp(ip: String) = prefs.edit().putString("last_ip", ip).apply()
 
-    override fun getLastPort(): Int = prefs.getInt("last_port", 8080)
-    override fun setLastPort(port: Int) = prefs.edit().putInt("last_port", port.coerceIn(1, 65535)).apply()
+    fun getLastPort(): Int = prefs.getInt("last_port", 8080)
+    fun setLastPort(port: Int) = prefs.edit().putInt("last_port", port.coerceIn(1, 65535)).apply()
 
     // ----------------------------------------------------------------------
     // Calibration data
@@ -75,6 +72,8 @@ class PreferencesManager(context: Context) : ConnectionStore {
             .putFloat("accel_scale_z", scale[2])
             .apply()
     }
+    fun saveAccelerometerParams(offset: FloatArray, scale: FloatArray) = saveAccelParams(offset, scale)
+
     fun getAccelOffset(): FloatArray = floatArrayOf(
         prefs.getFloat("accel_off_x", 0f),
         prefs.getFloat("accel_off_y", 0f),
@@ -86,7 +85,7 @@ class PreferencesManager(context: Context) : ConnectionStore {
         prefs.getFloat("accel_scale_z", 1f)
     )
 
-    fun saveMagnetometerParams(offset: FloatArray, scale: FloatArray) {
+    fun saveMagCalibration(offset: FloatArray, scale: FloatArray) {
         prefs.edit()
             .putFloat("mag_off_x", offset[0])
             .putFloat("mag_off_y", offset[1])
@@ -111,7 +110,7 @@ class PreferencesManager(context: Context) : ConnectionStore {
     fun setCalibrated(calibrated: Boolean) = prefs.edit().putBoolean("is_calibrated", calibrated).apply()
 
     // ----------------------------------------------------------------------
-    // Gesture counters (used by StatisticsFragment)
+    // Gesture counters
     // ----------------------------------------------------------------------
     fun getClickCount(): Int = prefs.getInt("click_count", 0)
     fun incrementClick() = prefs.edit().putInt("click_count", getClickCount() + 1).apply()
@@ -126,7 +125,14 @@ class PreferencesManager(context: Context) : ConnectionStore {
     fun incrementDoubleClick() = prefs.edit().putInt("double_click_count", getDoubleClickCount() + 1).apply()
 
     // ----------------------------------------------------------------------
-    // User profiles (store as JSON strings)
+    // Calibration attempts
+    // ----------------------------------------------------------------------
+    fun getCalibrationAttempts(): Int = prefs.getInt("calibration_attempts", 0)
+    fun incrementCalibrationAttempts() = prefs.edit().putInt("calibration_attempts", getCalibrationAttempts() + 1).apply()
+    fun resetCalibrationAttempts() = prefs.edit().putInt("calibration_attempts", 0).apply()
+
+    // ----------------------------------------------------------------------
+    // Profiles (stored as JSON strings)
     // ----------------------------------------------------------------------
     fun saveProfile(name: String, sensitivity: Float, clickThreshold: Float) {
         val json = JSONObject().apply {
@@ -151,12 +157,7 @@ class PreferencesManager(context: Context) : ConnectionStore {
     }
 
     fun deleteProfile(name: String) = prefs.edit().remove("profile_$name").apply()
-
-    fun getAllProfileNames(): List<String> {
-        return prefs.all.keys.filter { it.startsWith("profile_") }
-            .map { it.removePrefix("profile_") }
-            .toList()
-    }
+    fun getAllProfileNames(): List<String> = prefs.all.keys.filter { it.startsWith("profile_") }.map { it.removePrefix("profile_") }.toList()
 
     // ----------------------------------------------------------------------
     // Themes
@@ -180,7 +181,7 @@ class PreferencesManager(context: Context) : ConnectionStore {
     fun setEdgeGesturesEnabled(enabled: Boolean) = prefs.edit().putBoolean("edge_gestures", enabled).apply()
 
     // ----------------------------------------------------------------------
-    // Server communication logs (store as newline‑separated string, max 200 entries)
+    // Server communication logs
     // ----------------------------------------------------------------------
     fun addServerLog(entry: String) {
         val logs = getServerLogs().toMutableList()

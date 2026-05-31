@@ -14,7 +14,6 @@
         android:gravity="center_horizontal">
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/instructionCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="24dp"
@@ -27,37 +26,110 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
-                <!-- Breathing phone -->
+                <!-- Title -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Gyroscope Calibration"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Subtitle -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Remove gyro bias for accurate motion sensing"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="24dp" />
+
+                <!-- Phone animation (breathing) -->
                 <ImageView
                     android:id="@+id/phoneImage"
                     android:layout_width="160dp"
                     android:layout_height="160dp"
                     android:src="@drawable/ic_phone"
                     android:layout_gravity="center"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginBottom="16dp" />
 
-                <!-- Instruction -->
+                <!-- Step-by-step instructions -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_instruction"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📋 How to calibrate:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1. Place your phone on a flat, stationary surface."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2. Do not touch the phone during calibration."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="3. Press 'Start Collection' and wait."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="4. The phone must remain perfectly still."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+                <!-- Dynamic instruction text -->
                 <TextView
                     android:id="@+id/instructionText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/gyro_instruction"
+                    android:text="Place phone on a flat, still surface"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textAlignment="center"
                     android:layout_gravity="center"
                     android:layout_marginBottom="8dp" />
 
-                <!-- Data progress -->
+                <!-- Progress bar label -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/collection_progress"
+                    android:text="Data collection"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="4dp" />
 
+                <!-- Progress bar -->
                 <ProgressBar
                     android:id="@+id/progressBar"
                     style="?android:attr/progressBarStyleHorizontal"
@@ -73,7 +145,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/variance_meter"
+                    android:text="Stationarity"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginTop="12dp"
@@ -90,36 +162,40 @@
                     android:progressTint="@color/success_green"
                     android:backgroundTint="@color/progress_bg" />
 
-                <!-- Coach message -->
+                <!-- Coach message (real-time feedback) -->
                 <TextView
                     android:id="@+id/coachMessage"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/gyro_ready_desc"
+                    android:text="Ready to calibrate gyroscope"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textAlignment="center"
                     android:layout_gravity="center"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="24dp"
+                    android:background="@drawable/bg_coach"
+                    android:padding="12dp" />
 
-                <!-- Buttons -->
+                <!-- Start button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/startBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="56dp"
-                    android:text="@string/btn_start_collection"
+                    android:text="Start Collection"
                     android:layout_gravity="center"
                     android:textColor="@android:color/white"
                     app:cornerRadius="28dp"
                     app:backgroundTint="@color/accent_blue"
-                    android:minWidth="200dp" />
+                    android:minWidth="200dp"
+                    android:elevation="4dp" />
 
+                <!-- Retry button (initially hidden) -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/retryBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="56dp"
-                    android:text="@string/btn_retry"
+                    android:text="Retry"
                     android:visibility="gone"
                     android:textColor="@android:color/white"
                     app:cornerRadius="28dp"

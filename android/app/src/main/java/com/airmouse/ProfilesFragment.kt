@@ -19,7 +19,19 @@ class ProfilesFragment : Fragment() {
     private lateinit var saveProfileBtn: Button
     private lateinit var deleteProfileBtn: Button
     private lateinit var profileNameInput: EditText
-
+    private fun loadSelectedProfile() {
+        val selected = profileSpinner.selectedItem?.toString() ?: return
+        currentProfile = selected
+        lifecycleScope.launch {
+            val sensitivity = preferences.getProfileSensitivity(selected)
+            val clickThreshold = preferences.getProfileClickThreshold(selected)
+            preferences.setSensitivity(sensitivity)
+            preferences.setClickThreshold(clickThreshold)
+            // Update the current profile indicator
+            currentProfileName.text = selected
+            Toast.makeText(requireContext(), "Loaded profile: $selected", Toast.LENGTH_SHORT).show()
+        }
+    }
     private val profiles = mutableListOf<String>()
     private var currentProfile = "Default"
 
@@ -28,6 +40,9 @@ class ProfilesFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val currentProfileName = view.findViewById<TextView>(R.id.current_profile_name)
+        currentProfileName.text = preferences.getLastUsedProfile() ?: "Default"
+
         super.onViewCreated(view, savedInstanceState)
         preferences = PreferencesManager(requireContext())
 

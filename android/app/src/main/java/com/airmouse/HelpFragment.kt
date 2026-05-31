@@ -4,14 +4,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
+import android.widget.ImageView
 import android.widget.TextView
-import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
+import androidx.cardview.widget.CardView
+import com.airmouse.R
 import com.airmouse.utils.PreferencesManager
-import com.airmouse.ui.UiStyleUtils
-import androidx.core.content.ContextCompat
-import android.graphics.Typeface
 
 class HelpFragment : Fragment() {
 
@@ -26,71 +24,59 @@ class HelpFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         preferences = PreferencesManager(requireContext())
 
-        // Populate help cards with content
-        val hint = view.findViewById<TextView>(R.id.help_hint_text)
-        hint?.text = getString(R.string.help_cards_hint)
-        hint?.setTextColor(ContextCompat.getColor(requireContext(), R.color.deep_orange_100))
+        setupExpandableCard(
+            view.findViewById(R.id.help_card_getting_started),
+            view.findViewById(R.id.content_start),
+            view.findViewById(R.id.chevron_start)
+        )
+        setupExpandableCard(
+            view.findViewById(R.id.help_card_connection),
+            view.findViewById(R.id.content_connection),
+            view.findViewById(R.id.chevron_connection)
+        )
+        setupExpandableCard(
+            view.findViewById(R.id.help_card_calibration),
+            view.findViewById(R.id.content_calibration),
+            view.findViewById(R.id.chevron_calibration)
+        )
+        setupExpandableCard(
+            view.findViewById(R.id.help_card_gestures),
+            view.findViewById(R.id.content_gestures),
+            view.findViewById(R.id.chevron_gestures)
+        )
+        setupExpandableCard(
+            view.findViewById(R.id.help_card_advanced),
+            view.findViewById(R.id.content_advanced),
+            view.findViewById(R.id.chevron_advanced)
+        )
+        setupExpandableCard(
+            view.findViewById(R.id.help_card_troubleshooting),
+            view.findViewById(R.id.content_troubleshooting),
+            view.findViewById(R.id.chevron_troubleshooting)
+        )
 
-        setupHelpCard(view.findViewById(R.id.help_card_controls),
-            getString(R.string.help_title), getString(R.string.help_content))
-        setupHelpCard(view.findViewById(R.id.help_card_calibration),
-            getString(R.string.calibration_guide_title), getString(R.string.calibration_guide_content))
-        setupHelpCard(view.findViewById(R.id.help_card_sensors),
-            getString(R.string.sensor_info_title), getString(R.string.sensor_info_content))
-        setupHelpCard(view.findViewById(R.id.help_card_connection),
-            getString(R.string.connection_guide_title), getString(R.string.connection_guide_content))
+        // Set version text
+        val versionText = view.findViewById<TextView>(R.id.version_text)
+        val version = try {
+            requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName
+        } catch (e: Exception) { "3.0" }
+        versionText.text = "Air Mouse Pro v$version"
     }
 
-    private fun setupHelpCard(cardView: CardView, title: String, content: String) {
-        UiStyleUtils.styleCard(cardView)
+    private fun setupExpandableCard(card: CardView, content: TextView, chevron: ImageView) {
+        var isExpanded = false
+        content.visibility = View.GONE
+        chevron.setImageResource(R.drawable.ic_chevron_down)
 
-        // Inflate simple layout inside card
-        val linearLayout = LinearLayout(cardView.context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(40, 28, 40, 28)
+        card.setOnClickListener {
+            isExpanded = !isExpanded
+            content.visibility = if (isExpanded) View.VISIBLE else View.GONE
+            chevron.setImageResource(
+                if (isExpanded) R.drawable.ic_chevron_up
+                else R.drawable.ic_chevron_down
+            )
         }
-        val titleView = TextView(cardView.context).apply {
-            text = title
-            textSize = 17f
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(ContextCompat.getColor(cardView.context, R.color.deep_orange_100))
-        }
-        val contentView = TextView(cardView.context).apply {
-            text = android.text.Html.fromHtml(content, android.text.Html.FROM_HTML_MODE_LEGACY)
-            textSize = 14f
-            setPadding(0, 16, 0, 0)
-            setTextColor(ContextCompat.getColor(cardView.context, android.R.color.white))
-            alpha = 0.88f
-        }
-        // Add chevron to title to indicate expandability
-        val chevron = TextView(cardView.context).apply {
-            text = "⌄"
-            textSize = 20f
-            setPadding(8, 0, 0, 0)
-            setTextColor(ContextCompat.getColor(cardView.context, R.color.deep_orange_100))
-        }
-        val titleContainer = LinearLayout(cardView.context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            isClickable = false
-            addView(titleView)
-            addView(chevron)
-        }
-        linearLayout.addView(titleContainer)
-        linearLayout.addView(contentView)
-        cardView.removeAllViews()
-        cardView.addView(linearLayout)
-
-        cardView.setOnClickListener {
-            // Toggle visibility of content and rotate chevron
-            val isVisible = contentView.visibility == View.VISIBLE
-            contentView.visibility = if (isVisible) View.GONE else View.VISIBLE
-            chevron.animate().rotation(if (isVisible) 0f else 180f).setDuration(180).start()
-        }
-        // start collapsed
-        contentView.visibility = View.GONE
-        UiStyleUtils.animateIn(cardView)
     }
 }

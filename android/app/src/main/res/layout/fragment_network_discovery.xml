@@ -5,18 +5,21 @@
     android:layout_height="match_parent"
     android:fillViewport="true"
     android:padding="16dp"
-    android:background="@color/background_primary">
+    android:background="@color/background_dark">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Header Card: Instructions and Scan Button -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="24dp"
-            app:cardElevation="2dp">
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -27,40 +30,71 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Network discovery"
-                    android:textAppearance="?attr/textAppearanceTitleLarge" />
+                    android:text="Find Your Computer"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Automatically scan your local network for available PC hosts."
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:text="Automatically discover Air Mouse servers on your local network. Make sure the desktop server is running."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="4dp"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Step-by-step mini guide -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_instruction"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="1. Start server on PC\n2. Tap 'Scan network'\n3. Select a discovered server"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="2dp" />
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_network_scan"
+                        android:tint="@color/accent_blue" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginTop="16dp"
                     android:gravity="center_vertical">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/scan_network_btn"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="56dp"
                         android:layout_weight="1"
-                        android:text="Scan network"
-                        app:icon="@drawable/ic_wifi"
-                        app:iconGravity="textStart" />
+                        android:text="Scan Now"
+                        app:icon="@drawable/ic_wifi_scan"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="@color/accent_blue"
+                        android:textColor="@android:color/white"
+                        android:layout_marginEnd="8dp" />
 
                     <ProgressBar
                         android:id="@+id/scan_progress"
                         style="?android:attr/progressBarStyleSmall"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
                         android:visibility="gone" />
-
                 </LinearLayout>
 
                 <TextView
@@ -71,24 +105,140 @@
                     android:background="@drawable/bg_card_outline"
                     android:gravity="center"
                     android:padding="12dp"
-                    android:text="No scan yet"
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:text="Tap Scan to discover servers"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Results Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="16dp"
+            android:layout_height="wrap_content"
             app:cardCornerRadius="24dp"
-            app:cardElevation="2dp">
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            android:layout_marginBottom="16dp">
 
-            <ListView
-                android:id="@+id/discovered_servers_list"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:dividerHeight="0dp" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Discovered Servers"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/result_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 found"
+                        android:textColor="@color/accent_blue"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <ListView
+                    android:id="@+id/discovered_servers_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="150dp"
+                    android:background="@drawable/bg_card_outline"
+                    android:divider="@null"
+                    android:dividerHeight="0dp"
+                    android:listSelector="@drawable/list_selector"
+                    android:padding="8dp" />
+
+                <!-- Empty state message (shown when list is empty) -->
+                <TextView
+                    android:id="@+id/empty_state"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No servers found.\nMake sure the desktop server is running and both devices are on the same network."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:gravity="center"
+                    android:padding="24dp"
+                    android:background="@drawable/bg_card_outline"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Manual Entry Help Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface_dark">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Can't find your server?"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Enter the IP address and port manually on the main screen, or use the QR code scanner."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="4dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/manual_entry_btn"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Go to Home"
+                        app:icon="@drawable/ic_home"
+                        app:iconGravity="textStart"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_marginEnd="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/qr_help_btn"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Use QR Code"
+                        app:icon="@drawable/ic_qr_scanner"
+                        app:iconGravity="textStart"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
+
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>

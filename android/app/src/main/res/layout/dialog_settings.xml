@@ -3,77 +3,96 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="16dp">
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/gesture_sensitivity"
+        android:text="Click Threshold"
         android:textAppearance="?attr/textAppearanceTitleSmall" />
 
     <SeekBar
-        android:id="@+id/gesture_sensitivity_seek"
+        android:id="@+id/clickThresholdSeek"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:max="100" />
 
     <TextView
-        android:layout_width="match_parent"
+        android:id="@+id/clickThresholdValue"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/click_speed_threshold"
-        android:layout_marginTop="16dp"
-        android:textAppearance="?attr/textAppearanceTitleSmall" />
-
-    <SeekBar
-        android:id="@+id/click_threshold_seek"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:max="100" />
+        android:layout_marginBottom="16dp" />
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/double_click_interval"
-        android:layout_marginTop="16dp"
+        android:text="Double Click Interval"
         android:textAppearance="?attr/textAppearanceTitleSmall" />
 
     <SeekBar
-        android:id="@+id/double_click_interval_seek"
+        android:id="@+id/doubleClickSeek"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:max="500" />
+        android:max="80" />
 
     <TextView
-        android:layout_width="match_parent"
+        android:id="@+id/doubleClickValue"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/scroll_sensitivity"
-        android:layout_marginTop="16dp"
-        android:textAppearance="?attr/textAppearanceTitleSmall" />
-
-    <SeekBar
-        android:id="@+id/scroll_threshold_seek"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:max="100" />
+        android:layout_marginBottom="16dp" />
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/right_click_tilt"
-        android:layout_marginTop="16dp"
+        android:text="Scroll Threshold"
         android:textAppearance="?attr/textAppearanceTitleSmall" />
 
     <SeekBar
-        android:id="@+id/right_click_tilt_seek"
+        android:id="@+id/scrollThresholdSeek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="75" />
+
+    <TextView
+        android:id="@+id/scrollThresholdValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Right‑Click Tilt Angle"
+        android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+    <SeekBar
+        android:id="@+id/tiltThresholdSeek"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:max="90" />
 
-    <CheckBox
-        android:id="@+id/haptic_feedback_check"
+    <TextView
+        android:id="@+id/tiltThresholdValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/haptic_feedback"
-        android:layout_marginTop="16dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Haptic Feedback"
+            android:textAppearance="?attr/textAppearanceBody1" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/hapticSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
 </LinearLayout>

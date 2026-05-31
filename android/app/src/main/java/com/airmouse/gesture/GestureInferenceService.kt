@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/gesture/GestureInferenceService.kt
 package com.airmouse.gesture
 
 import android.app.*
@@ -21,7 +20,6 @@ import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 
 class GestureInferenceService : Service(), SensorEventListener {
-    override fun onBind(intent: Intent?): IBinder? = null
 
     private val binder = LocalBinder()
     private lateinit var sensorManager: SensorManager
@@ -30,7 +28,7 @@ class GestureInferenceService : Service(), SensorEventListener {
     private var tflite: Interpreter? = null
     private var gestureLabels: List<String> = emptyList()
     private val sensorBuffer = mutableListOf<FloatArray>()
-    private val windowSize = 30   // ~1.5 seconds at 20Hz
+    private val windowSize = 30
     private var predictionRunning = false
     private var lastPredictionTime = 0L
     private val confidenceThreshold = 0.7f
@@ -63,10 +61,8 @@ class GestureInferenceService : Service(), SensorEventListener {
 
     private fun loadModel() {
         try {
-            // Load TFLite model from assets
             val modelBuffer = loadModelFile("gesture_model.tflite")
             tflite = Interpreter(modelBuffer)
-            // Load labels
             val labelsJson = assets.open("gesture_labels.json").bufferedReader().use { it.readText() }
             gestureLabels = Gson().fromJson(labelsJson, Array<String>::class.java).toList()
             Log.i(TAG, "Model loaded. Labels: $gestureLabels")
@@ -153,7 +149,6 @@ class GestureInferenceService : Service(), SensorEventListener {
 
         predictionRunning = true
         try {
-            // Prepare input: [1, windowSize, 6]
             val input = Array(1) { sensorBuffer.map { it.clone() }.toTypedArray() }
             val output = Array(1) { FloatArray(gestureLabels.size) }
             tflite?.run(input, output)

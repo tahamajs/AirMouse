@@ -26,36 +26,117 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
-                <!-- Figure‑8 coverage view -->
-                <com.airmouse.calibration.MagStepFragment.CoverageView
+                <!-- Title -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Magnetometer Calibration"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Subtitle -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hard‑iron offset compensation"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="24dp" />
+
+                <!-- Figure‑8 coverage view (animated) -->
+                <com.airmouse.calibration.CoverageView
                     android:id="@+id/coverageView"
                     android:layout_width="220dp"
                     android:layout_height="220dp"
                     android:layout_gravity="center"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginBottom="16dp" />
 
-                <!-- Instruction -->
+                <!-- Step-by-step instructions -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_instruction"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📋 How to calibrate:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1. Hold your phone firmly in your hand."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2. Press 'Start Collection' below."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="3. Move the phone in a smooth figure‑8 pattern."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="4. Keep moving until the progress bar reaches 100%."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="5. The calibration will finish automatically."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+                <!-- Dynamic instruction text -->
                 <TextView
                     android:id="@+id/instructionText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/mag_instruction"
+                    android:text="Move the phone in a figure‑8 pattern"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textAlignment="center"
                     android:layout_gravity="center"
                     android:layout_marginBottom="8dp" />
 
-                <!-- Progress bar -->
+                <!-- Progress bar label -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/collection_progress"
+                    android:text="Calibration progress"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="4dp" />
 
+                <!-- Progress bar -->
                 <ProgressBar
                     android:id="@+id/progressBar"
                     style="?android:attr/progressBarStyleHorizontal"
@@ -67,36 +148,40 @@
                     android:progressTint="@color/progress_accent"
                     android:backgroundTint="@color/progress_bg" />
 
-                <!-- Coach message -->
+                <!-- Coach message (real-time feedback) -->
                 <TextView
                     android:id="@+id/coachMessage"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/mag_ready_desc"
+                    android:text="Press Start and follow the moving dot"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textAlignment="center"
                     android:layout_gravity="center"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="24dp"
+                    android:background="@drawable/bg_coach"
+                    android:padding="12dp" />
 
-                <!-- Buttons -->
+                <!-- Start button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/startBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="56dp"
-                    android:text="@string/btn_start_collection"
+                    android:text="Start Collection"
                     android:layout_gravity="center"
                     android:textColor="@android:color/white"
                     app:cornerRadius="28dp"
                     app:backgroundTint="@color/accent_blue"
-                    android:minWidth="200dp" />
+                    android:minWidth="200dp"
+                    android:elevation="4dp" />
 
+                <!-- Retry button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/retryBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="56dp"
-                    android:text="@string/btn_retry"
+                    android:text="Retry"
                     android:visibility="gone"
                     android:textColor="@android:color/white"
                     app:cornerRadius="28dp"

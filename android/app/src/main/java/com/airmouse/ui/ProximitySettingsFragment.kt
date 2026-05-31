@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/ui/ProximitySettingsFragment.kt
 package com.airmouse.ui
 
 import android.bluetooth.BluetoothAdapter
@@ -16,7 +15,6 @@ import androidx.lifecycle.lifecycleScope
 import com.airmouse.R
 import com.airmouse.proximity.ProximityAwareService
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.airmouse.ui.UiStyleUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -27,6 +25,7 @@ class ProximitySettingsFragment : Fragment() {
     private lateinit var farSlider: SeekBar
     private lateinit var nearValue: TextView
     private lateinit var farValue: TextView
+
     private lateinit var calibrateBtn: Button
     private lateinit var currentDistanceText: TextView
     private lateinit var statusText: TextView
@@ -40,6 +39,7 @@ class ProximitySettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         proximitySwitch = view.findViewById(R.id.proximitySwitch)
         nearSlider = view.findViewById(R.id.nearThresholdSlider)
         farSlider = view.findViewById(R.id.farThresholdSlider)
@@ -53,35 +53,31 @@ class ProximitySettingsFragment : Fragment() {
             if (isChecked) startProximityService() else stopProximityService()
         }
 
-        nearSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val meters = progress / 10f
+// For near threshold
+        nearSlider.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                val meters = value.toFloat()
                 nearValue.text = String.format("%.1f m", meters)
-                if (fromUser) updateThresholds()
+                updateThresholds()
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        farSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val meters = progress / 10f
+        }
+        val near = prefs.getFloat(ProximityAwareService.KEY_NEAR_THRESHOLD, 2.0f)
+        val far = prefs.getFloat(ProximityAwareService.KEY_FAR_THRESHOLD, 4.0f)
+        nearSlider.value = near
+        farSlider.value = far
+        nearValue.text = String.format("%.1f m", near)
+        farValue.text = String.format("%.1f m", far)
+// For far threshold
+        farSlider.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                val meters = value.toFloat()
                 farValue.text = String.format("%.1f m", meters)
-                if (fromUser) updateThresholds()
+                updateThresholds()
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
+        }
         calibrateBtn.setOnClickListener { startCalibration() }
 
-        // Light polish so the screen matches the rest of the app.
-        UiStyleUtils.animateIn(proximitySwitch, 0)
-        UiStyleUtils.animateIn(nearSlider, 30)
-        UiStyleUtils.animateIn(farSlider, 60)
-        UiStyleUtils.animateIn(calibrateBtn, 90)
-        UiStyleUtils.animateIn(statusText, 120)
-
-        // Check Bluetooth
+        // Check Bluetooth availability
         val btAdapter = BluetoothAdapter.getDefaultAdapter()
         if (btAdapter == null || !btAdapter.isEnabled) {
             statusText.text = "Bluetooth is disabled. Please enable Bluetooth."
@@ -98,7 +94,6 @@ class ProximitySettingsFragment : Fragment() {
         requireContext().startForegroundService(serviceIntent)
         isServiceRunning = true
         statusText.text = "Proximity service running"
-        UiStyleUtils.pulse(calibrateBtn)
         startDistanceUpdates()
     }
 
@@ -114,8 +109,8 @@ class ProximitySettingsFragment : Fragment() {
     private fun startDistanceUpdates() {
         lifecycleScope.launch {
             while (isServiceRunning) {
-                // In real code you would bind to service or use LiveData
-                // For demo, we simulate
+                // TODO: Replace with actual distance from service
+                // For demo, simulate distance reading
                 currentDistanceText.text = "Distance: 2.34 m"
                 delay(1000)
             }

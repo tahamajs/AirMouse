@@ -49,7 +49,23 @@ class LogAdapter : RecyclerView.Adapter<LogAdapter.ViewHolder>() {
         holder.text1.text = "${entry.timestamp} [${entry.level}]"
         holder.text2.text = entry.message
     }
-
+    // Inside ServerLogFragment
+    private fun setupFilters() {
+        chipInfo.setOnCheckedChangeListener { _, isChecked ->
+            adapter.filterByLevel("info", isChecked)
+        }
+        chipWarning.setOnCheckedChangeListener { _, isChecked ->
+            adapter.filterByLevel("warning", isChecked)
+        }
+        chipError.setOnCheckedChangeListener { _, isChecked ->
+            adapter.filterByLevel("error", isChecked)
+        }
+        searchInput.addTextChangedListener { text ->
+            adapter.filterByText(text.toString())
+        }
+        btnExportLogs.setOnClickListener { exportLogs() }
+        btnClearLogs.setOnClickListener { clearLogs() }
+    }
     override fun getItemCount() = entries.size
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

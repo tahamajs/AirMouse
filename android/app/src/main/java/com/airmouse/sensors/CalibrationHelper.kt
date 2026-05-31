@@ -217,7 +217,7 @@ class CalibrationHelper(
                 }
             }
 
-            prefs.saveMagnetometerParams(magOffset, magScale)
+            prefs.saveMagCalibration(magOffset, magScale)
             onInstruction("Magnetometer optimized!")
         } finally {
             sensorManager.unregisterListener(listener)

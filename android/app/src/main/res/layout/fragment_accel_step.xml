@@ -14,19 +14,38 @@
         android:gravity="center_horizontal">
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/instructionCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="24dp"
             app:cardElevation="8dp"
-            app:cardBackgroundColor="@color/surface_dark"
-            android:layout_marginBottom="16dp">
+            app:cardBackgroundColor="@color/surface_dark">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="24dp">
+
+                <!-- Title -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Accelerometer Calibration"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Subtitle -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="6‑position gravity alignment"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="24dp" />
 
                 <!-- Animated phone -->
                 <ImageView
@@ -35,31 +54,83 @@
                     android:layout_height="160dp"
                     android:src="@drawable/ic_phone"
                     android:layout_gravity="center"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginBottom="16dp" />
 
-                <!-- Title & description -->
+                <!-- Step-by-step instructions -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_instruction"
+                    android:padding="12dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📋 How to calibrate:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1. Hold the phone in the position shown above."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2. Tap 'Record Position' when ready."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="3. Keep the phone perfectly still while recording."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="4. Repeat for all 6 positions."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+                <!-- Dynamic title (changes per position) -->
                 <TextView
                     android:id="@+id/instructionTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/accel_flat_up_title"
+                    android:text="Screen Up"
                     android:textColor="@color/text_primary"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:textAlignment="center"
                     android:layout_gravity="center"
                     android:layout_marginBottom="4dp" />
 
+                <!-- Dynamic description -->
                 <TextView
                     android:id="@+id/instructionDesc"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/accel_flat_up_desc"
+                    android:text="Place phone flat on table, screen facing UP"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:textAlignment="center"
                     android:layout_gravity="center"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginBottom="16dp" />
 
                 <!-- Real-time vector display -->
                 <TextView
@@ -77,7 +148,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/collection_progress"
+                    android:text="Data collection"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="4dp" />
@@ -97,7 +168,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/stability_meter"
+                    android:text="Stability"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginTop="12dp"
@@ -119,31 +190,35 @@
                     android:id="@+id/coachMessage"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/accel_ready"
+                    android:text="Ready to record position"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textAlignment="center"
                     android:layout_gravity="center"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="24dp"
+                    android:background="@drawable/bg_coach"
+                    android:padding="12dp" />
 
-                <!-- Buttons -->
+                <!-- Start/Record button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/startBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="56dp"
-                    android:text="@string/btn_start_collection"
+                    android:text="Record Position"
                     android:layout_gravity="center"
                     android:textColor="@android:color/white"
                     app:cornerRadius="28dp"
                     app:backgroundTint="@color/accent_blue"
-                    android:minWidth="200dp" />
+                    android:minWidth="200dp"
+                    android:elevation="4dp" />
 
+                <!-- Retry button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/retryBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="56dp"
-                    android:text="@string/btn_retry"
+                    android:text="Retry"
                     android:visibility="gone"
                     android:textColor="@android:color/white"
                     app:cornerRadius="28dp"

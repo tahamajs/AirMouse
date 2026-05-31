@@ -4,86 +4,114 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary">
+    android:background="@color/background_dark">
 
+    <!-- Step indicator (optional) -->
+    <TextView
+        android:id="@+id/step_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Step 1 / 3"
+        android:textColor="@color/accent_blue"
+        android:textSize="14sp"
+        android:layout_gravity="center"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone" />
+
+    <!-- ViewPager for calibration steps -->
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- Bottom control bar -->
+    <!-- Bottom control bar (modern card with back/next/stop) -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_margin="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp">
+        android:layout_margin="16dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@color/surface_dark">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="16dp">
 
+            <!-- Timer row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
 
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_timer"
-                    android:contentDescription="Timer"
-                    android:tint="?attr/colorOnSurface" />
+                    android:tint="@color/accent_blue"
+                    android:contentDescription="Timer" />
 
                 <TextView
                     android:id="@+id/timerText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="00:00"
-                    android:textAppearance="?attr/textAppearanceBody1"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
+            <!-- Action buttons row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="12dp">
+                android:gravity="center">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/backBtn"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="52dp"
                     android:layout_weight="1"
                     android:text="Back"
-                    android:enabled="false" />
+                    android:enabled="false"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginEnd="8dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/nextBtn"
-                    style="@style/Widget.MaterialComponents.Button"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="52dp"
                     android:layout_weight="1"
-                    android:layout_marginStart="8dp"
                     android:text="Next"
-                    android:enabled="false" />
+                    app:icon="@drawable/ic_arrow_forward"
+                    app:iconGravity="textEnd"
+                    android:enabled="false"
+                    app:backgroundTint="@color/accent_blue"
+                    android:textColor="@android:color/white"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/stopBtn"
-                    style="@style/Widget.MaterialComponents.Button"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="52dp"
                     android:layout_weight="1"
-                    android:layout_marginStart="8dp"
                     android:text="Stop"
-                    android:textColor="?attr/colorOnPrimary" />
+                    app:icon="@drawable/ic_stop"
+                    app:iconGravity="textStart"
+                    app:backgroundTint="@color/error_red"
+                    android:textColor="@android:color/white"
+                    android:layout_marginStart="8dp" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
+
 </LinearLayout>

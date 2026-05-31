@@ -1,6 +1,8 @@
 package bluetooth
 
-import "airmouse-go/internal/utils"
+import (
+	"airmouse-go/internal/utils"
+)
 
 // HIDReport represents a mouse HID report.
 type HIDReport struct {
@@ -10,8 +12,7 @@ type HIDReport struct {
 	Wheel   int8
 }
 
-// SendHIDReport sends a HID report to the connected device.
+// SendHIDReport sends a HID report (simulated).
 func (m *Manager) SendHIDReport(report HIDReport) {
-	// In a real implementation, you would send over BLE HID GATT.
-	utils.LogDebug("HID report sent %d %d %d", report.Buttons, report.X, report.Y)
+	utils.LogDebug("HID report sent", "buttons", report.Buttons, "x", report.X, "y", report.Y)
 }

@@ -3,6 +3,7 @@ package protocol
 import (
 	"sync"
 
+	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
@@ -21,15 +22,17 @@ type ProtocolServer struct {
 
 	mouseCtrl control.MouseController
 	deviceMgr *device.Manager
+	authMgr   *auth.Manager
 
 	mu      sync.RWMutex
 	running bool
 }
 
-func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager) *ProtocolServer {
+func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *ProtocolServer {
 	return &ProtocolServer{
 		mouseCtrl: mouse,
 		deviceMgr: deviceMgr,
+		authMgr:   authMgr,
 	}
 }
 
@@ -49,7 +52,7 @@ func (s *ProtocolServer) Start() error {
 	}
 
 	if cfg.EnableWebSocket {
-		s.wsServer = websocket.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr)
+		s.wsServer = websocket.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
 		if err := s.wsServer.Start(); err != nil {
 			utils.LogError("WebSocket server start failed", "error", err)
 		} else {
@@ -119,4 +122,30 @@ func (s *ProtocolServer) GetStatistics() map[string]interface{} {
 	}
 	stats["devices"] = len(s.deviceMgr.GetAllDevices())
 	return stats
+}
+
+
+import "airmouse-go/internal/protocol/usb"
+
+type ProtocolServer struct {
+    // ... existing fields
+    usbServer *usb.USBServer
+}
+
+func (s *ProtocolServer) Start() error {
+    // ... existing code
+    s.usbServer = usb.NewUSBServer(s.mouseCtrl, s.deviceMgr)
+    if err := s.usbServer.Start(); err != nil {
+        utils.LogError("USB server start failed", "error", err)
+    } else {
+        utils.LogInfo("USB server started")
+    }
+    return nil
+}
+
+func (s *ProtocolServer) Stop() {
+    // ... existing code
+    if s.usbServer != nil {
+        s.usbServer.Stop()
+    }
 }

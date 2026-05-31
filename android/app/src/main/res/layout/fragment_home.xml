@@ -3,30 +3,85 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/background_dark"
     android:fillViewport="true"
-    android:background="#0f1115">
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:animateLayoutChanges="true">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/mode_toggle"
+        <!-- Header Greeting Area (Optional – you can add dynamic greeting later) -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Touchpad Mode"
-            android:textColor="#ffffff"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            app:cornerRadius="28dp"
-            app:backgroundTint="#1d2430"
-            app:icon="@drawable/ic_touchpad"
-            app:iconGravity="textStart"
-            app:iconPadding="10dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
 
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Air Mouse Pro"
+                android:textColor="@color/text_primary"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/connection_quality_icon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_signal_none"
+                android:contentDescription="Connection Quality" />
+        </LinearLayout>
+
+        <!-- ============================================================ -->
+        <!-- MODE TOGGLE – Segmented button style (touchpad / motion)       -->
+        <!-- ============================================================ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="32dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            android:layout_marginBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="4dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/modeToggle"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Motion Mode"
+                    android:textColor="@android:color/white"
+                    app:cornerRadius="28dp"
+                    app:backgroundTint="@color/accent_blue"
+                    android:layout_marginEnd="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/modeToggleTouchpad"  <!-- Optional: if you want separate button, but we reuse modeToggle -->
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Touchpad Mode"
+                android:textColor="@color/text_secondary"
+                app:cornerRadius="28dp"
+                app:backgroundTint="@android:color/transparent"
+                android:stateListAnimator="@null"
+                android:elevation="0dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Motion Controls Container (shown by default, hidden in touchpad mode) -->
         <LinearLayout
             android:id="@+id/motionControlsContainer"
             android:layout_width="match_parent"
@@ -34,312 +89,304 @@
             android:orientation="vertical"
             android:visibility="visible">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/calibrationCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#1d2430"
-                app:strokeColor="#2b3341"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:id="@+id/status_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/calibration_needed_prompt"
-                        android:textColor="#ffffff"
-                        android:textSize="17sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/sensor_status_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Sensors ready"
-                        android:textColor="#96a0ae"
-                        android:textSize="13sp" />
-
-                    <ProgressBar
-                        android:id="@+id/calibration_progress_bar"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="6dp"
-                        android:layout_marginTop="14dp"
-                        android:max="100"
-                        android:progress="0"
-                        android:progressTint="#007acc"
-                        android:backgroundTint="#2b3341" />
-
-                    <TextView
-                        android:id="@+id/calibration_progress_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="0 / 3 sensors calibrated"
-                        android:textColor="#96a0ae"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/attempts_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Calibration attempts remaining: 5"
-                        android:textColor="#4CAF50"
-                        android:textSize="12sp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:id="@+id/connection_quality_icon"
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
-                            android:src="@drawable/ic_wifi"
-                            android:tint="#96a0ae" />
-
-                        <TextView
-                            android:id="@+id/connection_quality_text"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="@string/status_not_connected"
-                            android:textColor="#96a0ae"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="12dp"
-                        android:background="@drawable/bg_mini_indicator">
-
-                        <View
-                            android:id="@+id/orientation_view"
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
-                            android:layout_gravity="center"
-                            android:background="@drawable/ic_green_dot" />
-                    </FrameLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
+            <!-- 1. CONNECTION CARD – with live status and quick actions -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/connectionCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#1d2430"
-                app:strokeColor="#2b3341"
-                app:strokeWidth="1dp">
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/surface_dark"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Connect to Server"
-                        android:textColor="#ffffff"
-                        android:textSize="17sp"
-                        android:textStyle="bold" />
+                    android:padding="20dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
 
-                        <EditText
-                            android:id="@+id/ip_edit_text"
+                        <TextView
                             android:layout_width="0dp"
-                            android:layout_height="52dp"
+                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:background="@drawable/input_background"
-                            android:hint="Server IP"
-                            android:inputType="textNoSuggestions"
-                            android:paddingHorizontal="12dp"
-                            android:textColor="#e5e7eb"
-                            android:textColorHint="#6b7280" />
+                            android:text="Server Connection"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
 
-                        <EditText
-                            android:id="@+id/port_edit_text"
-                            android:layout_width="92dp"
-                            android:layout_height="52dp"
-                            android:layout_marginStart="8dp"
-                            android:background="@drawable/input_background"
-                            android:hint="Port"
-                            android:inputType="number"
-                            android:paddingHorizontal="12dp"
-                            android:textColor="#e5e7eb"
-                            android:textColorHint="#6b7280" />
+                        <TextView
+                            android:id="@+id/status_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Disconnected"
+                            android:textColor="@color/error_red"
+                            android:textSize="13sp"
+                            android:background="@drawable/status_badge"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="4dp" />
                     </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
 
-                        <Button
+                        <EditText
+                            android:id="@+id/ip_edit_text"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/input_background"
+                            android:hint="IP Address"
+                            android:inputType="phone"
+                            android:textColor="@color/text_primary"
+                            android:textColorHint="@color/text_secondary"
+                            android:paddingHorizontal="16dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <EditText
+                            android:id="@+id/port_edit_text"
+                            android:layout_width="90dp"
+                            android:layout_height="56dp"
+                            android:background="@drawable/input_background"
+                            android:hint="Port"
+                            android:inputType="number"
+                            android:textColor="@color/text_primary"
+                            android:textColorHint="@color/text_secondary"
+                            android:paddingHorizontal="12dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/connect_btn"
                             android:layout_width="0dp"
                             android:layout_height="52dp"
                             android:layout_weight="1"
                             android:text="Connect"
-                            android:textColor="#ffffff"
-                            android:background="@drawable/btn_rounded_accent" />
+                            app:icon="@drawable/ic_connect"
+                            app:iconGravity="textStart"
+                            app:backgroundTint="@color/accent_blue"
+                            android:textColor="@android:color/white"
+                            android:layout_marginEnd="8dp" />
 
-                        <ImageButton
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/scan_qr_btn"
                             android:layout_width="52dp"
                             android:layout_height="52dp"
-                            android:layout_marginStart="8dp"
-                            android:background="@drawable/btn_rounded_dark"
-                            android:src="@drawable/ic_qr_scanner"
-                            android:tint="#ffffff" />
+                            android:text=""
+                            app:icon="@drawable/ic_qr_scanner"
+                            app:iconTint="@android:color/white"
+                            app:backgroundTint="@color/surface_light"
+                            android:layout_marginStart="8dp" />
                     </LinearLayout>
 
-                    <Button
-                        android:id="@+id/start_stop_btn"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:layout_marginTop="10dp"
-                        android:background="@drawable/btn_rounded_accent"
-                        android:text="Start Air Mouse"
-                        android:textColor="#ffffff" />
-
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/bt_mouse_btn"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/btn_rounded_dark"
-                        android:text="Start Bluetooth Mouse"
-                        android:textColor="#ffffff" />
+                        android:text="Bluetooth Mouse"
+                        app:icon="@drawable/ic_bluetooth"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="@color/accent_blue"
+                        android:textColor="@android:color/white"
+                        android:layout_marginBottom="12dp" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/calibrate_btn"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/btn_rounded_dark"
                         android:text="Calibrate Sensors"
-                        android:textColor="#ffffff" />
+                        app:icon="@drawable/ic_calibrate"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="@color/success_green"
+                        android:textColor="@android:color/white" />
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 2. CALIBRATION STATUS CARD – Progress and attempts -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/sensorDataCard"
+                android:id="@+id/calibrationCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#1d2430"
-                app:strokeColor="#2b3341"
-                app:strokeWidth="1dp">
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/surface_dark"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Live Motion"
-                        android:textColor="#ffffff"
-                        android:textSize="17sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/sensor_data_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="Gyro Y: 0.0  |  Accel Y: 0.0"
-                        android:textColor="#96a0ae"
-                        android:textSize="13sp" />
+                    android:padding="20dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
 
                         <TextView
-                            android:id="@+id/gyro_value"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Yaw: 0.0°"
-                            android:textColor="#e5e7eb"
-                            android:textSize="13sp" />
+                            android:text="Calibration"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/accel_value"
-                            android:layout_width="0dp"
+                            android:id="@+id/calibration_progress_text"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Pitch: 0.0°"
-                            android:textColor="#e5e7eb"
-                            android:textSize="13sp" />
+                            android:text="0/3"
+                            android:textColor="@color/accent_blue"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/calibration_progress_bar"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressTint="@color/accent_blue"
+                        android:backgroundTint="@color/progress_bg"
+                        android:layout_marginBottom="12dp" />
+
+                    <TextView
+                        android:id="@+id/attempts_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Attempts remaining: 5"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 3. SENSOR DATA CARD – Live orientation and values -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/gestureStatsCard"
+                android:id="@+id/sensorDataCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#1d2430"
-                app:strokeColor="#2b3341"
-                app:strokeWidth="1dp">
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/surface_dark"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Gesture Stats"
-                        android:textColor="#ffffff"
-                        android:textSize="17sp"
-                        android:textStyle="bold" />
+                        android:text="Live Orientation"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="16dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:background="@drawable/circle_bg">
+
+                            <View
+                                android:id="@+id/orientation_view"
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"
+                                android:background="@drawable/ic_green_dot"
+                                android:layout_gravity="center" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="16dp">
+
+                            <TextView
+                                android:id="@+id/gyro_value"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Yaw: 0.0°"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:layout_marginBottom="4dp" />
+
+                            <TextView
+                                android:id="@+id/accel_value"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Pitch: 0.0°"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 4. GESTURE STATS CARD – quick summary -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/gestureStatsCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/surface_dark"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Gesture Activity"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp" />
 
                     <GridLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:columnCount="2">
+                        android:columnCount="2"
+                        android:rowCount="2"
+                        android:useDefaultMargins="true">
 
                         <TextView
                             android:id="@+id/click_count"
@@ -347,26 +394,10 @@
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:text="Clicks: 0"
-                            android:textColor="#e5e7eb"
-                            android:textSize="13sp" />
-
-                        <TextView
-                            android:id="@+id/double_click_count"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:text="Double clicks: 0"
-                            android:textColor="#e5e7eb"
-                            android:textSize="13sp" />
-
-                        <TextView
-                            android:id="@+id/right_click_count"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:text="Right clicks: 0"
-                            android:textColor="#e5e7eb"
-                            android:textSize="13sp" />
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:drawableStart="@drawable/ic_click"
+                            android:drawablePadding="8dp" />
 
                         <TextView
                             android:id="@+id/scroll_count"
@@ -374,45 +405,61 @@
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:text="Scrolls: 0"
-                            android:textColor="#e5e7eb"
-                            android:textSize="13sp" />
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:drawableStart="@drawable/ic_scroll"
+                            android:drawablePadding="8dp" />
+
+                        <TextView
+                            android:id="@+id/right_click_count"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Right clicks: 0"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:drawableStart="@drawable/ic_right_click"
+                            android:drawablePadding="8dp" />
+
+                        <TextView
+                            android:id="@+id/double_click_count"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Double clicks: 0"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:drawableStart="@drawable/ic_double_click"
+                            android:drawablePadding="8dp" />
                     </GridLayout>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 5. CONTROLS CARD – Sensitivity, Start/Stop, Settings, Debug -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/controlsCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#1d2430"
-                app:strokeColor="#2b3341"
-                app:strokeWidth="1dp">
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/surface_dark"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Controls"
-                        android:textColor="#ffffff"
-                        android:textSize="17sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/sensitivity_value"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="1.0x"
-                        android:textColor="#96a0ae"
-                        android:textSize="12sp" />
+                        android:text="Cursor Sensitivity"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
 
                     <com.google.android.material.slider.Slider
                         android:id="@+id/sensitivity_slider"
@@ -421,54 +468,83 @@
                         android:valueFrom="0"
                         android:valueTo="100"
                         android:value="50"
-                        android:layout_marginTop="4dp" />
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/sensitivity_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1.0x"
+                        android:textColor="@color/accent_blue"
+                        android:textSize="14sp"
+                        android:layout_gravity="end"
+                        android:layout_marginBottom="20dp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="center">
 
-                        <Button
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/start_stop_btn"
+                            android:layout_width="0dp"
+                            android:layout_height="52dp"
+                            android:layout_weight="1"
+                            android:text="Start"
+                            app:icon="@drawable/ic_play"
+                            app:iconGravity="textStart"
+                            app:backgroundTint="@color/success_green"
+                            android:textColor="@android:color/white"
+                            android:layout_marginEnd="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/settings_btn"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="52dp"
                             android:layout_weight="1"
                             android:text="Settings"
-                            android:textColor="#ffffff"
-                            android:background="@drawable/btn_small_dark" />
+                            app:icon="@drawable/ic_settings"
+                            app:iconGravity="textStart"
+                            app:backgroundTint="@color/surface_light"
+                            android:textColor="@android:color/white"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp" />
 
-                        <Button
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/debug_toggle_btn"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="52dp"
                             android:layout_weight="1"
-                            android:layout_marginStart="8dp"
                             android:text="Debug"
-                            android:textColor="#ffffff"
-                            android:background="@drawable/btn_small_dark" />
+                            app:icon="@drawable/ic_debug"
+                            app:iconGravity="textStart"
+                            app:backgroundTint="@color/surface_light"
+                            android:textColor="@android:color/white"
+                            android:layout_marginStart="8dp" />
                     </LinearLayout>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
         </LinearLayout>
 
+        <!-- Touchpad Container (shown only in touchpad mode) -->
         <FrameLayout
             android:id="@+id/touchpadContainer"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:visibility="gone"
-            android:background="#0c1016" />
+            android:visibility="gone" />
 
-        <androidx.cardview.widget.CardView
+        <!-- Live Log Card (always visible, but can be hidden if needed) -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="#1d2430"
-            app:strokeColor="#2b3341"
-            app:strokeWidth="1dp">
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            android:layout_marginTop="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -480,55 +556,57 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Live Log"
-                        android:textColor="#ffffff"
+                        android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/clear_logs_btn"
                         android:layout_width="wrap_content"
-                        android:layout_height="36dp"
+                        android:layout_height="32dp"
                         android:text="Clear"
-                        android:textColor="#ffffff"
-                        android:background="@drawable/btn_small_dark"
-                        android:textSize="12sp" />
+                        app:icon="@drawable/ic_clear"
+                        app:iconGravity="textStart"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:textColor="@color/text_secondary" />
                 </LinearLayout>
 
                 <ScrollView
                     android:layout_width="match_parent"
                     android:layout_height="100dp"
-                    android:layout_marginTop="8dp"
                     android:background="@drawable/log_background">
 
                     <TextView
                         android:id="@+id/live_log_text"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/log_placeholder"
-                        android:textColor="#96a0ae"
-                        android:textSize="12sp"
-                        android:padding="8dp"
-                        android:fontFamily="monospace" />
+                        android:text="No logs"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:fontFamily="monospace"
+                        android:padding="8dp" />
                 </ScrollView>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
+        <!-- Floating Action Button for quick calibration access -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/calibrate_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end|bottom"
             android:layout_margin="16dp"
-            android:src="@drawable/ic_phone"
-            android:backgroundTint="#007acc"
-            android:tint="#ffffff" />
+            android:src="@drawable/ic_calibrate"
+            app:backgroundTint="@color/accent_blue"
+            app:tint="@android:color/white" />
 
     </LinearLayout>
 </ScrollView>
