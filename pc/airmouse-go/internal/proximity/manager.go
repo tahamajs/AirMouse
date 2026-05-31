@@ -22,6 +22,9 @@ type Manager struct {
 	lockCmd           string
 	unlockCmd         string
 	autoLockEnabled   bool
+	    rssiFusion *RSSIFusion
+    recentRSSI []float64
+
 	autoUnlockEnabled bool
 	lockInProgress    bool
 	unlockInProgress  bool
@@ -33,7 +36,58 @@ type ProximityUpdate struct {
 	Distance  float32 `json:"distance"`
 	Timestamp int64   `json:"timestamp"`
 }
+func NewManager() *Manager {
+    m := &Manager{
+        devices:           make(map[string]*DeviceProximity),
+        autoLockEnabled:   true,
+        autoUnlockEnabled: true,
+        recentRSSI:        make([]float64, 0, 10),
+    }
+    m.detectDesktopEnvironment()
+    // Initialise RSSI fusion with default config
+    cfg := DefaultRSSIFusionConfig()
+    m.rssiFusion = NewRSSIFusion(cfg)
+    return m
+}
 
+
+// ProcessRSSIUpdate receives a raw RSSI value and updates the distance estimate.
+func (m *Manager) ProcessRSSIUpdate(rssi float64) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    // Simple sliding window for additional smoothing (optional)
+    m.recentRSSI = append(m.recentRSSI, rssi)
+    if len(m.recentRSSI) > 10 {
+        m.recentRSSI = m.recentRSSI[1:]
+    }
+    var avgRSSI float64
+    for _, v := range m.recentRSSI {
+        avgRSSI += v
+    }
+    avgRSSI /= float64(len(m.recentRSSI))
+
+    // Use the fusion filter
+    distance := m.rssiFusion.ProcessRSSI(avgRSSI)
+
+    // Update the device's distance (assuming there is a single primary device)
+    for _, dev := range m.devices {
+        dev.Distance = float32(distance)
+        dev.LastUpdate = time.Now()
+
+        // Check thresholds and trigger lock/unlock
+        oldNear := dev.IsNear
+        if dev.IsNear {
+            dev.IsNear = distance < float64(dev.FarThreshold)
+        } else {
+            dev.IsNear = distance < float64(dev.NearThreshold)
+        }
+        if oldNear != dev.IsNear {
+            go m.applyProximityAction(dev.IsNear)
+        }
+        break // only update the first device (single user scenario)
+    }
+}
 func NewManager() *Manager {
 	m := &Manager{
 		devices:           make(map[string]*DeviceProximity),
