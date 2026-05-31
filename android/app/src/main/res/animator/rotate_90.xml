@@ -4,4 +4,4 @@
     android:valueTo="90"
     android:duration="600"
     android:valueType="floatType"
-    android:fillAfter="true"/>
+    android:fillAfter="true"/>x
