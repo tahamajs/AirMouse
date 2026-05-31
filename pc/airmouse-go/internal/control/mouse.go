@@ -124,3 +124,14 @@ func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
 }
 
 // Platform-specific methods (implemented in mouse_*.go)
+
+
+
+
+type mouseController struct {
+    // ... existing fields ...
+    mlPredictor *predictiveml.Predictor
+    mlEnabled   bool
+    mlBlend     float64
+    positionHistory []float32   // last known cursor position (x, y)
+}

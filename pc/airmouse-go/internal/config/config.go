@@ -103,6 +103,16 @@ func loadOrDefault() *Config {
 		AuthTokens:             []string{},
 		EncryptionKey:          "",
 		EnablePairingUI:        true,
+		EnableMLPrediction    bool    `json:"enable_ml_prediction"`
+MLModelPath           string  `json:"ml_model_path"`
+MLSequenceLength      int     `json:"ml_sequence_length"`      // default 16
+MLBlendFactor         float64 `json:"ml_blend_factor"`         // default 0.6
+MLInferenceInterval   int     `json:"ml_inference_interval_ms"`// default 20
+EnableMLPrediction:  false,
+MLModelPath:         "models/lstm_predictor.onnx",
+MLSequenceLength:    16,
+MLBlendFactor:       0.6,
+MLInferenceInterval: 20,
 		Sensitivity:            0.5,
 		MoveRateLimit:          60,
 		BufferSize:             1024,
