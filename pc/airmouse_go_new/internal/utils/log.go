@@ -2,65 +2,64 @@ package utils
 
 import (
     "fmt"
+    "log"
     "os"
-
-    "airmouse-go/internal/infra/logger"
-    pkgutils "airmouse-go/internal/pkg/utils"
+    "sync"
 )
 
-// InitLogger initializes the shared logger using environment defaults.
+type LogHook func(level, message string)
+
+var (
+    mu     sync.RWMutex
+    hooks  []LogHook
+    logger *log.Logger
+)
+
 func InitLogger() {
-    level := os.Getenv("AIRMOUSE_LOG_LEVEL")
-    if level == "" {
-        level = "info"
-    }
-    logger.Init(level, os.Getenv("AIRMOUSE_LOG_FILE"))
+    logger = log.New(os.Stdout, "", log.LstdFlags)
 }
 
-// LogInfo accepts a message and optional key/value pairs and forwards to infra logger.
-func LogInfo(msg string, kv ...interface{}) {
-    if len(kv) > 0 {
-        // format key/value pairs
-        for i := 0; i+1 < len(kv); i += 2 {
-            msg = fmt.Sprintf("%s %v=%v", msg, kv[i], kv[i+1])
-        }
-        if len(kv)%2 == 1 {
-            msg = fmt.Sprintf("%s %v", msg, kv[len(kv)-1])
-        }
-    }
-    logger.Info("%s", msg)
+func AddLogHook(hook LogHook) {
+    mu.Lock()
+    defer mu.Unlock()
+    hooks = append(hooks, hook)
 }
 
-func LogDebug(msg string, kv ...interface{}) {
-    if len(kv) > 0 {
-        for i := 0; i+1 < len(kv); i += 2 {
-            msg = fmt.Sprintf("%s %v=%v", msg, kv[i], kv[i+1])
-        }
-        if len(kv)%2 == 1 {
-            msg = fmt.Sprintf("%s %v", msg, kv[len(kv)-1])
-        }
-    }
-    logger.Debug("%s", msg)
+func SetLogHook(hook LogHook) {
+    mu.Lock()
+    defer mu.Unlock()
+    hooks = []LogHook{hook}
 }
 
-func LogError(msg string, kv ...interface{}) {
-    if len(kv) > 0 {
-        for i := 0; i+1 < len(kv); i += 2 {
-            msg = fmt.Sprintf("%s %v=%v", msg, kv[i], kv[i+1])
-        }
-        if len(kv)%2 == 1 {
-            msg = fmt.Sprintf("%s %v", msg, kv[len(kv)-1])
-        }
+func logMessage(level, format string, args ...interface{}) {
+    msg := fmt.Sprintf(format, args...)
+    if logger != nil {
+        logger.Printf("[%s] %s", level, msg)
     }
-    logger.Error("%s", msg)
+    mu.RLock()
+    defer mu.RUnlock()
+    for _, hook := range hooks {
+        go hook(level, msg)
+    }
 }
 
-func LogFatal(msg string, kv ...interface{}) {
-    LogError(msg, kv...)
+func LogInfo(format string, args ...interface{}) {
+    logMessage("INFO", format, args...)
+}
+
+func LogError(format string, args ...interface{}) {
+    logMessage("ERROR", format, args...)
+}
+
+func LogDebug(format string, args ...interface{}) {
+    logMessage("DEBUG", format, args...)
+}
+
+func LogWarn(format string, args ...interface{}) {
+    logMessage("WARN", format, args...)
+}
+
+func LogFatal(format string, args ...interface{}) {
+    logMessage("FATAL", format, args...)
     os.Exit(1)
-}
-
-// GenerateID proxies to pkg/utils.GenerateID for backward compatibility.
-func GenerateID() string {
-    return pkgutils.GenerateID()
 }
