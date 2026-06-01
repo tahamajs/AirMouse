@@ -30,6 +30,8 @@ class ConnectionRepositoryImpl @Inject constructor(
     override suspend fun connect(config: ConnectionConfig) {
         _status.value = ConnectionStatus.CONNECTING
         try {
+            webSocketManager.disconnect()
+            tcpClient.disconnect()
             activeProtocol = config.protocol
             when (config.protocol) {
                 ConnectionProtocol.WEBSOCKET -> {
@@ -51,6 +53,7 @@ class ConnectionRepositoryImpl @Inject constructor(
     override suspend fun disconnect() {
         webSocketManager.disconnect()
         tcpClient.disconnect()
+        activeProtocol = ConnectionProtocol.TCP
         _status.value = ConnectionStatus.DISCONNECTED
     }
 

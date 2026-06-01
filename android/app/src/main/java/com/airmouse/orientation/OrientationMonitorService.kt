@@ -14,7 +14,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.airmouse.R
-import com.airmouse.network.WebSocketManager
+import com.airmouse.ConnectionManager
 import kotlinx.coroutines.*
 
 class OrientationMonitorService : Service(), SensorEventListener {
@@ -82,7 +82,7 @@ class OrientationMonitorService : Service(), SensorEventListener {
 
         if (isFlat != isRestingFlat) {
             isRestingFlat = isFlat
-            WebSocketManager.sendPauseMovement(isFlat)
+            ConnectionManager.sendPauseMovement(isFlat)
             Log.i(TAG, if (isFlat) "Pausing movement (phone flat)" else "Resuming movement (phone picked up)")
         }
     }

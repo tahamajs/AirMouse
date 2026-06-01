@@ -10,7 +10,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.airmouse.R
-import com.airmouse.network.WebSocketManager
+import com.airmouse.ConnectionManager
 import edu.cmu.pocketsphinx.Assets
 import edu.cmu.pocketsphinx.SpeechRecognizer
 import edu.cmu.pocketsphinx.SpeechRecognizerSetup
@@ -96,11 +96,11 @@ class VoiceCommandService : Service() {
 
     private fun processCommand(command: String) {
         when {
-            command.equals("click", ignoreCase = true) -> WebSocketManager.sendCommand("click")
-            command.equals("double click", ignoreCase = true) -> WebSocketManager.sendCommand("doubleclick")
-            command.equals("right click", ignoreCase = true) -> WebSocketManager.sendCommand("rightclick")
-            command.equals("scroll up", ignoreCase = true) -> WebSocketManager.sendCommand("scroll", 1)
-            command.equals("scroll down", ignoreCase = true) -> WebSocketManager.sendCommand("scroll", -1)
+            command.equals("click", ignoreCase = true) -> ConnectionManager.sendCommand("click")
+            command.equals("double click", ignoreCase = true) -> ConnectionManager.sendCommand("doubleclick")
+            command.equals("right click", ignoreCase = true) -> ConnectionManager.sendCommand("rightclick")
+            command.equals("scroll up", ignoreCase = true) -> ConnectionManager.sendCommand("scroll", 1)
+            command.equals("scroll down", ignoreCase = true) -> ConnectionManager.sendCommand("scroll", -1)
             command.equals("stop listening", ignoreCase = true) -> stopListening()
         }
     }
