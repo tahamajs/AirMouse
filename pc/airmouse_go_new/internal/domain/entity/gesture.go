@@ -56,8 +56,12 @@ type GestureTemplate struct {
 // TrainingSample represents a single data point for online learning.
 type TrainingSample struct {
 	Timestamp              int64   `json:"timestamp"`
-	GyroX, GyroY, GyroZ    float64 `json:"gyro"`
-	AccelX, AccelY, AccelZ float64 `json:"accel"`
+	GyroX                  float64 `json:"gyro_x"`
+	GyroY                  float64 `json:"gyro_y"`
+	GyroZ                  float64 `json:"gyro_z"`
+	AccelX                 float64 `json:"accel_x"`
+	AccelY                 float64 `json:"accel_y"`
+	AccelZ                 float64 `json:"accel_z"`
 	GestureLabel           string  `json:"gesture_label"`
 }
 

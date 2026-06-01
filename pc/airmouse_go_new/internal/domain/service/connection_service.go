@@ -82,7 +82,7 @@ func (s *connectionService) UpdateTraffic(id string, sent, recv int64) error {
 }
 
 func (s *connectionService) Broadcast(message []byte) error {
-	clients, err := s.repo.List()
+	_, err := s.repo.List()
 	if err != nil {
 		return err
 	}

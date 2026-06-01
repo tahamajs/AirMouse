@@ -185,6 +185,8 @@ func loadOrDefault() *Config {
 func (c *Config) Save() error {
 	c.mu.RLock()
 	snapshot := *c
+	// zero the mutex in the snapshot to avoid copying sync primitives
+	snapshot.mu = sync.RWMutex{}
 	c.mu.RUnlock()
 	data, err := json.MarshalIndent(&snapshot, "", "  ")
 	if err != nil {

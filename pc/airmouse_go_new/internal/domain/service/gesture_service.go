@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"sort"
 	"time"
 
 	"airmouse-go/internal/domain/entity"
