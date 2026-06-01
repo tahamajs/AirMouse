@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -28,10 +27,10 @@ var levelNames = map[Level]string{
 }
 
 type Logger struct {
-	level  Level
-	out    io.Writer
-	mu     sync.Mutex
-	file   *os.File
+	level Level
+	out   io.Writer
+	mu    sync.Mutex
+	file  *os.File
 }
 
 var defaultLogger *Logger

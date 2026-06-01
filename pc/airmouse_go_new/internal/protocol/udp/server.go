@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"airmouse-go/internal/device"
-	"airmouse-go/internal/utils"
+	"airmouse-go/internal/infra/logger"
 )
 
 type Server struct {
@@ -30,7 +30,7 @@ func (s *Server) Start() error {
 	s.conn = conn
 	s.running = true
 	go s.listenLoop()
-	utils.LogInfo("UDP discovery server started", "port", s.port)
+	logger.Info("UDP discovery server started: port=%v", s.port)
 	return nil
 }
 
@@ -51,7 +51,7 @@ func (s *Server) listenLoop() {
 			}
 			data, _ := json.Marshal(response)
 			s.conn.WriteToUDP(data, clientAddr)
-			utils.LogDebug("UDP discovery response sent", "to", clientAddr.IP)
+			logger.Debug("UDP discovery response sent: to=%v", clientAddr.IP)
 		}
 	}
 }

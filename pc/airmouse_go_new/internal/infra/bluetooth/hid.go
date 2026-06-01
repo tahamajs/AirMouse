@@ -10,5 +10,5 @@ type HIDReport struct {
 }
 
 func SendHIDReport(report HIDReport) {
-	logger.Debug("HID report sent", "buttons", report.Buttons, "x", report.X, "y", report.Y)
+	logger.Debug("HID report sent: buttons=%v x=%v y=%v", report.Buttons, report.X, report.Y)
 }

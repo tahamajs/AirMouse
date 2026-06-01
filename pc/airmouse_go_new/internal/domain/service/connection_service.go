@@ -118,9 +118,9 @@ func (s *connectionService) GetClientHealth(id string) (map[string]interface{}, 
 		return nil, errors.New("client not found")
 	}
 	return map[string]interface{}{
-		"ping_ms":     client.PingLatency.Milliseconds(),
-		"last_active": client.LastActive.Unix(),
-		"connected_at": client.ConnectedAt.Unix(),
+		"ping_ms":       client.PingLatency.Milliseconds(),
+		"last_active":   client.LastActive.Unix(),
+		"connected_at":  client.ConnectedAt.Unix(),
 		"messages_sent": client.MessagesSent,
 		"messages_recv": client.MessagesRecv,
 	}, nil

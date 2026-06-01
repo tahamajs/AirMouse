@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"math"
-	"net"
 	"time"
 )
 
@@ -31,19 +30,7 @@ func MapRange(value, fromLow, fromHigh, toLow, toHigh float64) float64 {
 	return toLow + (value-fromLow)*(toHigh-toLow)/(fromHigh-fromLow)
 }
 
-// GetLocalIP returns the first non‑loopback IPv4 address.
-func GetLocalIP() string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return "127.0.0.1"
-	}
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
-			return ipnet.IP.String()
-		}
-	}
-	return "127.0.0.1"
-}
+// (GetLocalIP moved to internal/pkg/utils/net.go)
 
 // TimeNowMs returns the current time in milliseconds.
 func TimeNowMs() int64 {

@@ -38,16 +38,16 @@ type mouseController struct {
 	acceleration bool
 	accelFactor  float64
 
-	lastX, lastY   float64
-	lastMoveTime   time.Time
-	moveCount      int
-	moveRateLimit  int
+	lastX, lastY  float64
+	lastMoveTime  time.Time
+	moveCount     int
+	moveRateLimit int
 
-	lastClickTime   time.Time
-	clickWindow     int
+	lastClickTime time.Time
+	clickWindow   int
 
 	// Predictive (Kalman)
-	predictor  *MovementPredictor
+	predictor   *MovementPredictor
 	predEnabled bool
 
 	// AI smoother (ONNX)
@@ -56,12 +56,12 @@ type mouseController struct {
 	aiBlendFactor float64
 
 	// ML prediction (LSTM)
-	mlPredictor   *MLPredictor
-	mlEnabled     bool
-	mlBlend       float64
+	mlPredictor *MLPredictor
+	mlEnabled   bool
+	mlBlend     float64
 
 	// Humanizer
-	humanizer   *adaptivesmoothing.Humanizer
+	humanizer        *adaptivesmoothing.Humanizer
 	humanizerEnabled bool
 
 	lastCursorX, lastCursorY float64
@@ -74,16 +74,16 @@ const (
 
 func NewMouseController(sensitivity float64) MouseController {
 	m := &mouseController{
-		sensitivity:    sensitivity,
-		smoothing:      true,
-		acceleration:   false,
-		accelFactor:    1.5,
-		moveRateLimit:  rateLimitPerSec,
-		predEnabled:    true,
-		aiEnabled:      false,
-		aiBlendFactor:  0.6,
-		mlEnabled:      false,
-		mlBlend:        0.6,
+		sensitivity:   sensitivity,
+		smoothing:     true,
+		acceleration:  false,
+		accelFactor:   1.5,
+		moveRateLimit: rateLimitPerSec,
+		predEnabled:   true,
+		aiEnabled:     false,
+		aiBlendFactor: 0.6,
+		mlEnabled:     false,
+		mlBlend:       0.6,
 	}
 	cfg := config.Get()
 	if cfg.EnableHumanizer {
@@ -101,8 +101,8 @@ func (m *mouseController) SetAcceleration(enabled bool, factor float64) {
 	m.acceleration = enabled
 	m.accelFactor = factor
 }
-func (m *mouseController) GetSensitivity() float64 { return m.sensitivity }
-func (m *mouseController) SetSensitivity(s float64) { m.sensitivity = s }
+func (m *mouseController) GetSensitivity() float64       { return m.sensitivity }
+func (m *mouseController) SetSensitivity(s float64)      { m.sensitivity = s }
 func (m *mouseController) EnablePredictive(enabled bool) { m.predEnabled = enabled }
 func (m *mouseController) SetPredictiveBlendFactor(factor float64) {
 	if m.predictor != nil {
@@ -115,7 +115,7 @@ func (m *mouseController) EnableAISmoothing(enabled bool) {
 		m.aiSmoother.SetEnabled(enabled)
 	}
 }
-func (m *mouseController) SetAISmoother(s *AISmoother) { m.aiSmoother = s; m.aiEnabled = true }
+func (m *mouseController) SetAISmoother(s *AISmoother)     { m.aiSmoother = s; m.aiEnabled = true }
 func (m *mouseController) EnableMLPrediction(enabled bool) { m.mlEnabled = enabled }
 func (m *mouseController) SetMLBlendFactor(factor float64) { m.mlBlend = factor }
 
@@ -240,5 +240,5 @@ func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
 		atomic.LoadInt64(&m.scrollCount)
 }
 
-func (m *mouseController) GetPredictor() *MovementPredictor { return m.predictor }
+func (m *mouseController) GetPredictor() *MovementPredictor  { return m.predictor }
 func (m *mouseController) SetPredictor(p *MovementPredictor) { m.predictor = p; m.predEnabled = true }

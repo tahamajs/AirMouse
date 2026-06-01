@@ -7,14 +7,14 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
-	"airmouse-go/internal/control/personalization"
+	"airmouse-go/internal/personalization"
 )
 
 type AnalyticsTab struct {
-	statsLabel    *widget.Label
+	statsLabel     *widget.Label
 	lastTrainLabel *widget.Label
-	forceBtn      *widget.Button
-	collector     *personalization.DataCollector
+	forceBtn       *widget.Button
+	collector      *personalization.DataCollector
 }
 
 func NewAnalyticsTab(collector *personalization.DataCollector) fyne.CanvasObject {

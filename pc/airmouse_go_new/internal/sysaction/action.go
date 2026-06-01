@@ -3,25 +3,25 @@ package sysaction
 type Action string
 
 const (
-	ActionPlayPause     Action = "play_pause"
-	ActionNextTrack     Action = "next_track"
-	ActionPrevTrack     Action = "prev_track"
-	ActionVolumeUp      Action = "volume_up"
-	ActionVolumeDown    Action = "volume_down"
-	ActionMute          Action = "mute"
-	ActionStop          Action = "stop"
-	ActionLeftClick     Action = "left_click"
-	ActionRightClick    Action = "right_click"
-	ActionDoubleClick   Action = "double_click"
-	ActionScrollUp      Action = "scroll_up"
-	ActionScrollDown    Action = "scroll_down"
-	ActionLockScreen    Action = "lock_screen"
-	ActionShowDesktop   Action = "show_desktop"
-	ActionTaskView      Action = "task_view"
-	ActionBrowserBack   Action = "browser_back"
+	ActionPlayPause      Action = "play_pause"
+	ActionNextTrack      Action = "next_track"
+	ActionPrevTrack      Action = "prev_track"
+	ActionVolumeUp       Action = "volume_up"
+	ActionVolumeDown     Action = "volume_down"
+	ActionMute           Action = "mute"
+	ActionStop           Action = "stop"
+	ActionLeftClick      Action = "left_click"
+	ActionRightClick     Action = "right_click"
+	ActionDoubleClick    Action = "double_click"
+	ActionScrollUp       Action = "scroll_up"
+	ActionScrollDown     Action = "scroll_down"
+	ActionLockScreen     Action = "lock_screen"
+	ActionShowDesktop    Action = "show_desktop"
+	ActionTaskView       Action = "task_view"
+	ActionBrowserBack    Action = "browser_back"
 	ActionBrowserForward Action = "browser_forward"
-	ActionZoomIn        Action = "zoom_in"
-	ActionZoomOut       Action = "zoom_out"
+	ActionZoomIn         Action = "zoom_in"
+	ActionZoomOut        Action = "zoom_out"
 )
 
 func Execute(a Action) {
@@ -58,8 +58,8 @@ func Execute(a Action) {
 }
 
 // platform‑specific functions implemented in _darwin.go, _linux.go, _windows.go
-func keyTap(key string)    {}
+func keyTap(key string)     {}
 func mouseClick(btn string) {}
-func mouseDoubleClick()    {}
+func mouseDoubleClick()     {}
 func mouseScroll(delta int) {}
-func lockScreen()          {}
+func lockScreen()           {}

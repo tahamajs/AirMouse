@@ -7,20 +7,20 @@ import (
 )
 
 var (
-	user32           = syscall.NewLazyDLL("user32.dll")
-	procKeybdEvent   = user32.NewProc("keybd_event")
-	procMouseEvent   = user32.NewProc("mouse_event")
+	user32              = syscall.NewLazyDLL("user32.dll")
+	procKeybdEvent      = user32.NewProc("keybd_event")
+	procMouseEvent      = user32.NewProc("mouse_event")
 	procLockWorkStation = user32.NewProc("LockWorkStation")
 )
 
 const (
-	KEYEVENTF_KEYDOWN = 0x0000
-	KEYEVENTF_KEYUP   = 0x0002
-	MOUSEEVENTF_LEFTDOWN   = 0x0002
-	MOUSEEVENTF_LEFTUP     = 0x0004
-	MOUSEEVENTF_RIGHTDOWN  = 0x0008
-	MOUSEEVENTF_RIGHTUP    = 0x0010
-	MOUSEEVENTF_WHEEL      = 0x0800
+	KEYEVENTF_KEYDOWN     = 0x0000
+	KEYEVENTF_KEYUP       = 0x0002
+	MOUSEEVENTF_LEFTDOWN  = 0x0002
+	MOUSEEVENTF_LEFTUP    = 0x0004
+	MOUSEEVENTF_RIGHTDOWN = 0x0008
+	MOUSEEVENTF_RIGHTUP   = 0x0010
+	MOUSEEVENTF_WHEEL     = 0x0800
 )
 
 var keyMap = map[string]byte{

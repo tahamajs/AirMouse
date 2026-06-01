@@ -1,7 +1,5 @@
 package adaptivesmoothing
 
-import "math"
-
 type BSpline3 struct {
 	points   [][2]float64
 	knots    []float64

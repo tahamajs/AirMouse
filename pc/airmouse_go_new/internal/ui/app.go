@@ -14,12 +14,12 @@ import (
 )
 
 type App struct {
-	fyneApp    fyne.App
-	window     fyne.Window
-	cfg        *config.Config
-	server     *protocol.ProtocolServer
-	mouse      control.MouseController
-	deviceMgr  *device.Manager
+	fyneApp   fyne.App
+	window    fyne.Window
+	cfg       *config.Config
+	server    *protocol.ProtocolServer
+	mouse     control.MouseController
+	deviceMgr *device.Manager
 
 	dashboardTab fyne.CanvasObject
 	devicesTab   fyne.CanvasObject

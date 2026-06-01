@@ -9,10 +9,10 @@ import (
 type MouseButton string
 
 const (
-	LeftButton   MouseButton = "left"
-	RightButton  MouseButton = "right"
-	MiddleButton MouseButton = "middle"
-	BackButton   MouseButton = "back"
+	LeftButton    MouseButton = "left"
+	RightButton   MouseButton = "right"
+	MiddleButton  MouseButton = "middle"
+	BackButton    MouseButton = "back"
 	ForwardButton MouseButton = "forward"
 )
 
@@ -32,9 +32,9 @@ type Movement struct {
 
 // ClickEvent represents a single click with optional repeat.
 type ClickEvent struct {
-	Button     MouseButton
-	Repeat     int // number of clicks (1 = single, 2 = double)
-	Timestamp  int64
+	Button    MouseButton
+	Repeat    int // number of clicks (1 = single, 2 = double)
+	Timestamp int64
 }
 
 // ScrollEvent represents a wheel scroll.
@@ -45,36 +45,36 @@ type ScrollEvent struct {
 
 // MovementProfile contains advanced motion parameters.
 type MovementProfile struct {
-	Sensitivity      float64   `json:"sensitivity"`         // 0.2 – 2.0
-	Acceleration     bool      `json:"acceleration"`
-	AccelerationCurve float64  `json:"acceleration_curve"`  // 1.0 = linear, >1 = aggressive
-	Deadband         float64   `json:"deadband"`            // minimum movement to ignore (pixels)
-	SmoothingAlpha   float64   `json:"smoothing_alpha"`     // EMA factor (0..1)
-	PredictiveBlend  float64   `json:"predictive_blend"`    // 0 = raw, 1 = full prediction
+	Sensitivity       float64 `json:"sensitivity"` // 0.2 – 2.0
+	Acceleration      bool    `json:"acceleration"`
+	AccelerationCurve float64 `json:"acceleration_curve"` // 1.0 = linear, >1 = aggressive
+	Deadband          float64 `json:"deadband"`           // minimum movement to ignore (pixels)
+	SmoothingAlpha    float64 `json:"smoothing_alpha"`    // EMA factor (0..1)
+	PredictiveBlend   float64 `json:"predictive_blend"`   // 0 = raw, 1 = full prediction
 }
 
 // DefaultMovementProfile returns a sane default profile.
 func DefaultMovementProfile() MovementProfile {
 	return MovementProfile{
-		Sensitivity:      0.5,
-		Acceleration:     true,
+		Sensitivity:       0.5,
+		Acceleration:      true,
 		AccelerationCurve: 1.5,
-		Deadband:         0.8,
-		SmoothingAlpha:   0.3,
-		PredictiveBlend:  0.6,
+		Deadband:          0.8,
+		SmoothingAlpha:    0.3,
+		PredictiveBlend:   0.6,
 	}
 }
 
 // Statistics holds aggregated mouse usage.
 type Statistics struct {
-	TotalMovement  float64   `json:"total_movement"`  // total Euclidean distance (pixels)
-	MovementCount  int64     `json:"movement_count"`  // number of move commands
-	ClickCount     int64     `json:"click_count"`
-	DoubleClickCount int64   `json:"double_click_count"`
-	RightClickCount int64    `json:"right_click_count"`
-	ScrollCount    int64     `json:"scroll_count"`
-	TotalScrollDelta int64   `json:"total_scroll_delta"` // sum of all scroll deltas
-	LastReset      time.Time `json:"last_reset"`
+	TotalMovement    float64   `json:"total_movement"` // total Euclidean distance (pixels)
+	MovementCount    int64     `json:"movement_count"` // number of move commands
+	ClickCount       int64     `json:"click_count"`
+	DoubleClickCount int64     `json:"double_click_count"`
+	RightClickCount  int64     `json:"right_click_count"`
+	ScrollCount      int64     `json:"scroll_count"`
+	TotalScrollDelta int64     `json:"total_scroll_delta"` // sum of all scroll deltas
+	LastReset        time.Time `json:"last_reset"`
 }
 
 // NewStatistics creates a fresh stats record.

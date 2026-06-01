@@ -62,14 +62,5 @@ func main() {
 	utils.LogInfo("Shutdown complete")
 }
 
-
-tabs := container.NewAppTabs(
-	container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
-	container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
-	container.NewTabItemWithIcon("Network", theme.NetworkIcon(), a.networkTab),
-	container.NewTabItemWithIcon("Gestures", theme.ContentAddIcon(), NewGesturesTab()),
-	container.NewTabItemWithIcon("Proximity", theme.VisibilityIcon(), NewProximityTab()),
-	container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), a.settingsTab),
-	container.NewTabItemWithIcon("Logs", theme.DocumentIcon(), a.logsTab),
-)
-tabs.SetTabLocation(container.TabLocationLeading)
+// main.go should only contain the program entrypoint. UI setup lines accidentally
+// appended here were removed to keep the file focused and buildable.

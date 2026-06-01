@@ -30,7 +30,7 @@ func NewManager(adapter string) *Manager {
 func (m *Manager) Start() error {
 	m.running = true
 	go m.simulateScan()
-	logger.Info("Bluetooth manager started (simulation mode)", "adapter", m.adapter)
+	logger.Info("Bluetooth manager started (simulation mode): adapter=%v", m.adapter)
 	return nil
 }
 
@@ -44,7 +44,7 @@ func (m *Manager) simulateScan() {
 			ConnectedAt: time.Now(),
 		}
 		m.mu.Unlock()
-		logger.Debug("Discovered BLE device", "addr", "AA:BB:CC:DD:EE:FF")
+		logger.Debug("Discovered BLE device: addr=%v", "AA:BB:CC:DD:EE:FF")
 		time.Sleep(10 * time.Second)
 	}
 }

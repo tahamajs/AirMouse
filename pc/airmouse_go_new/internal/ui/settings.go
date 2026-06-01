@@ -12,23 +12,23 @@ import (
 )
 
 type SettingsTab struct {
-	root                 fyne.CanvasObject
-	sensitivitySlider    *widget.Slider
-	sensitivityLabel     *widget.Label
-	themeSelect          *widget.Select
-	alwaysOnTopCheck     *widget.Check
-	smoothingCheck       *widget.Check
-	accelCheck           *widget.Check
-	aiCheck              *widget.Check
-	predictiveCheck      *widget.Check
+	root                  fyne.CanvasObject
+	sensitivitySlider     *widget.Slider
+	sensitivityLabel      *widget.Label
+	themeSelect           *widget.Select
+	alwaysOnTopCheck      *widget.Check
+	smoothingCheck        *widget.Check
+	accelCheck            *widget.Check
+	aiCheck               *widget.Check
+	predictiveCheck       *widget.Check
 	predictiveBlendSlider *widget.Slider
-	predictiveBlendLabel *widget.Label
-	personalizationCheck *widget.Check
-	personalizationBuf   *widget.Slider
-	personalizationLbl   *widget.Label
-	intervalSlider       *widget.Slider
-	intervalLbl          *widget.Label
-	autoSwapCheck        *widget.Check
+	predictiveBlendLabel  *widget.Label
+	personalizationCheck  *widget.Check
+	personalizationBuf    *widget.Slider
+	personalizationLbl    *widget.Label
+	intervalSlider        *widget.Slider
+	intervalLbl           *widget.Label
+	autoSwapCheck         *widget.Check
 }
 
 func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.CanvasObject {
