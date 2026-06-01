@@ -3,18 +3,19 @@
 package sysaction
 
 import (
-	"os/exec"
+    "os/exec"
 )
 
 func keyTap(key string) {
-	// Use AppleScript for media keys
-	// Simplified; a full implementation would use CGEventPost
-	cmd := exec.Command("osascript", "-e", `tell application "System Events" to key code 100 using command down`)
-	_ = cmd.Run()
+    // For simplicity, use AppleScript for media keys.
+    // A full implementation would use CGEventPost.
+    script := `tell application "System Events" to key code 100 using command down` // placeholder
+    cmd := exec.Command("osascript", "-e", script)
+    _ = cmd.Run()
 }
 
 func mouseClick(btn string) {
-	// Not implemented in stub – full version uses CGO
+    // Not implemented in stub – use CGO for real implementation.
 }
 
 func mouseDoubleClick() {}
@@ -22,6 +23,6 @@ func mouseDoubleClick() {}
 func mouseScroll(delta int) {}
 
 func lockScreen() {
-	cmd := exec.Command("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession", "-suspend")
-	_ = cmd.Run()
+    cmd := exec.Command("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession", "-suspend")
+    _ = cmd.Run()
 }
