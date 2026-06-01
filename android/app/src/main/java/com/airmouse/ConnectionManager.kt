@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.airmouse.bluetooth.BtHidHelper
-import com.airmouse.data.model.NetworkMessage
 import com.airmouse.network.DataSender
 import com.airmouse.network.WebSocketManager
 import com.airmouse.touchpad.TcpClient

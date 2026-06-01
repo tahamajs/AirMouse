@@ -19,7 +19,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.airmouse.network.WebSocketManager
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.snackbar.Snackbar
 import com.airmouse.R
@@ -137,8 +136,4 @@ class EdgeGesturesFragment : Fragment() {
             .show()
     }
 
-    private fun sendCommand(command: String, delta: Int = 0) {
-        // This method is no longer needed as commands are routed through ConnectionManager
-        // WebSocketManager.sendCommand(command, delta)
-    }
 }
