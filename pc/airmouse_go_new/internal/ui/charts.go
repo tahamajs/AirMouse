@@ -1,5 +1,3 @@
-//go:build gui
-
 package ui
 
 import (
@@ -10,7 +8,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
 )
 
 // SpeedChart displays a simple real‑time movement speed graph.
@@ -18,7 +15,6 @@ type SpeedChart struct {
 	container *fyne.Container
 	history   []float64
 	maxPoints int
-	line      *canvas.Line
 }
 
 // NewSpeedChart creates a chart that plots cursor speed over time.
@@ -35,7 +31,8 @@ func NewSpeedChart() fyne.CanvasObject {
 func (c *SpeedChart) updater() {
 	for {
 		time.Sleep(500 * time.Millisecond)
-		// In real code, fetch current speed from mouse controller
+		// TODO: In production, fetch current speed from mouse controller.
+		// Example: speed := mouse.GetCurrentSpeed()
 		speed := math.Abs(math.Sin(float64(time.Now().UnixNano()))) * 50 // dummy
 		c.addPoint(speed)
 		c.redraw()

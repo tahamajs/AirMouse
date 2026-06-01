@@ -15,12 +15,14 @@ type DevicesTab struct {
     list      *widget.List
     devices   []*device.DeviceInfo
     deviceMgr *device.Manager
+    details   *widget.Label
 }
 
 func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
     tab := &DevicesTab{
         deviceMgr: deviceMgr,
         devices:   deviceMgr.GetAllDevices(),
+        details:   widget.NewLabel("Select a device to see details"),
     }
     tab.list = widget.NewList(
         func() int { return len(tab.devices) },
@@ -32,7 +34,18 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
             }
         },
     )
+    tab.list.OnSelected = func(id int) {
+        if id >= 0 && id < len(tab.devices) {
+            d := tab.devices[id]
+            tab.details.SetText(fmt.Sprintf(
+                "ID: %s\nName: %s\nType: %s\nConnected: %s\nLast active: %s\nBytes sent: %d\nBytes recv: %d",
+                d.ID, d.Name, d.Type, d.ConnectedAt.Format("2006-01-02 15:04:05"),
+                d.LastActive.Format("2006-01-02 15:04:05"), d.BytesSent, d.BytesRecv,
+            ))
+        }
+    }
 
+    // Auto‑refresh list every 2 seconds
     go func() {
         for {
             time.Sleep(2 * time.Second)
@@ -44,9 +57,14 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
         }
     }()
 
+    split := container.NewHSplit(
+        container.NewBorder(nil, nil, nil, nil, tab.list),
+        container.NewBorder(nil, nil, nil, nil, tab.details),
+    )
+    split.SetOffset(0.6)
     return container.NewBorder(
         widget.NewLabelWithStyle("Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
         nil, nil, nil,
-        tab.list,
+        split,
     )
 }

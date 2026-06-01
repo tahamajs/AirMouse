@@ -45,8 +45,10 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.M
 
 func (a *App) Run() error {
     a.window = a.fyneApp.NewWindow("Air Mouse Pro Server")
-    a.window.Resize(fyne.NewSize(1100, 720))
+    a.window.Resize(fyne.NewSize(1200, 800))
+    a.window.CenterOnScreen()
 
+    // Create tabs
     a.dashboardTab = NewDashboardTab(a.server, a.mouse, a.deviceMgr)
     a.devicesTab = NewDevicesTab(a.deviceMgr)
     a.networkTab = NewNetworkTab(a.cfg)
@@ -56,12 +58,13 @@ func (a *App) Run() error {
     tabs := container.NewAppTabs(
         container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
         container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
-        container.NewTabItemWithIcon("Network", theme.ComputerIcon(), a.networkTab),
+        container.NewTabItemWithIcon("Network", theme.NetworkIcon(), a.networkTab),
         container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), a.settingsTab),
         container.NewTabItemWithIcon("Logs", theme.DocumentIcon(), a.logsTab),
     )
-    tabs.SetTabLocation(container.TabLocationLeading)
+    tabs.SetTabLocation(container.TabLocationTop)
 
+    // Menu bar
     fileMenu := fyne.NewMenu("File",
         fyne.NewMenuItem("Start Server", func() { a.server.Start() }),
         fyne.NewMenuItem("Stop Server", func() { a.server.Stop() }),
@@ -73,6 +76,7 @@ func (a *App) Run() error {
     )
     helpMenu := fyne.NewMenu("Help",
         fyne.NewMenuItem("About", func() { showAboutDialog(a.window) }),
+        fyne.NewMenuItem("Shortcuts", func() { showShortcutsDialog(a.window) }),
     )
     mainMenu := fyne.NewMainMenu(fileMenu, viewMenu, helpMenu)
     a.window.SetMainMenu(mainMenu)
@@ -84,10 +88,8 @@ func (a *App) Run() error {
 
 func (a *App) Stop() { a.fyneApp.Quit() }
 
-// showAboutDialog displays the About window.
 func showAboutDialog(w fyne.Window) {
-    var popUp *widget.PopUp
-    popUp = widget.NewModalPopUp(
+    popUp := widget.NewModalPopUp(
         container.NewVBox(
             widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
             widget.NewLabel("Version 3.0.0"),
@@ -100,4 +102,18 @@ func showAboutDialog(w fyne.Window) {
     )
     popUp.Resize(fyne.NewSize(400, 300))
     popUp.Show()
+}
+
+func showShortcutsDialog(w fyne.Window) {
+    content := widget.NewLabel(
+        "Ctrl+S – Start Server\n" +
+            "Ctrl+Shift+S – Stop Server\n" +
+            "Ctrl+Q – Quit\n" +
+            "Ctrl+R – Refresh\n" +
+            "Ctrl+Shift+L – Clear Logs\n" +
+            "Ctrl+Shift+P – Open Pairing Wizard",
+    )
+    dialog := widget.NewModalPopUp(container.NewVBox(content, widget.NewButton("Close", func() { dialog.Hide() })), w.Canvas())
+    dialog.Resize(fyne.NewSize(400, 300))
+    dialog.Show()
 }

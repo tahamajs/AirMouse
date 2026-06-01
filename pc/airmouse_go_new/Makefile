@@ -1,4 +1,4 @@
-.PHONY: build run test clean deps lint build-windows build-linux build-mac
+.PHONY: build run test clean deps lint build-windows build-linux build-mac build-all
 
 BINARY_NAME=airmouse-server
 GO_FILES=$(shell find . -name '*.go' -type f -not -path "./vendor/*")
@@ -10,7 +10,7 @@ deps:
 
 # Build for current OS
 build: deps
-	go build -o $(BINARY_NAME) 
+	go build -o $(BINARY_NAME) ./cmd/airmouse-server
 
 # Run the server
 run: build

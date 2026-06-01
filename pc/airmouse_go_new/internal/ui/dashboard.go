@@ -39,6 +39,7 @@ type DashboardTab struct {
 func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) fyne.CanvasObject {
     tab := &DashboardTab{mouse: mouse}
 
+    // Status display
     tab.statsLabel = widget.NewLabel("Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
     tab.connLabel = widget.NewLabel("Connected devices: 0")
     tab.endpointLabel = widget.NewLabel("Endpoint: not started")
@@ -46,6 +47,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
     tab.aiStatusLabel = widget.NewLabel("AI Smoothing: Disabled")
     tab.serverStatus = widget.NewLabelWithStyle("Server Status: Stopped", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
+    // Buttons
     tab.startBtn = widget.NewButtonWithIcon("Start Server", nil, func() {
         if err := server.Start(); err == nil {
             tab.mu.Lock()
@@ -74,11 +76,12 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
     })
     tab.stopBtn.Disable()
 
+    // QR button
     tab.qrBtn = widget.NewButtonWithIcon("Show QR Code", nil, func() {
         showQuickQRDialog(fyne.CurrentApp().Driver().AllWindows()[0])
     })
 
-    // Stats updater
+    // Stats updater (runs in background, uses fyne.Do for UI updates)
     go func() {
         for {
             time.Sleep(1 * time.Second)
@@ -128,13 +131,13 @@ func showQuickQRDialog(parent fyne.Window) {
     }
     qrImage := canvas.NewImageFromImage(img)
     qrImage.FillMode = canvas.ImageFillOriginal
-    var popUp *widget.PopUp
     content := container.NewVBox(
         widget.NewLabelWithStyle("Scan with Air Mouse Android App", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
         qrImage,
         widget.NewLabel(data),
         widget.NewButton("Close", func() { popUp.Hide() }),
     )
+    var popUp *widget.PopUp
     popUp = widget.NewModalPopUp(content, parent.Canvas())
     popUp.Resize(fyne.NewSize(300, 350))
     popUp.Show()
