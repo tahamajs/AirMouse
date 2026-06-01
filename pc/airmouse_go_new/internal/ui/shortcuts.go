@@ -1,4 +1,3 @@
-//go:build gui
 
 package ui
 

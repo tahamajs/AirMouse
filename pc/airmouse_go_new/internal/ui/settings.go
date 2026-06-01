@@ -2,6 +2,7 @@ package ui
 
 import (
     "fmt"
+    "strconv"
 
     "fyne.io/fyne/v2"
     "fyne.io/fyne/v2/container"
@@ -12,35 +13,43 @@ import (
 )
 
 type SettingsTab struct {
-    sensitivitySlider    *widget.Slider
-    sensitivityLabel     *widget.Label
-    themeSelect          *widget.Select
-    alwaysOnTopCheck     *widget.Check
-    smoothingCheck       *widget.Check
-    accelCheck           *widget.Check
-    aiCheck              *widget.Check
-    predictiveCheck      *widget.Check
+    sensitivitySlider     *widget.Slider
+    sensitivityLabel      *widget.Label
+    themeSelect           *widget.Select
+    smoothingCheck        *widget.Check
+    accelCheck            *widget.Check
+    aiCheck               *widget.Check
+    predictiveCheck       *widget.Check
     predictiveBlendSlider *widget.Slider
-    predictiveBlendLabel *widget.Label
-    personalizationCheck *widget.Check
-    personalizationBuf   *widget.Slider
-    personalizationLbl   *widget.Label
-    intervalSlider       *widget.Slider
-    intervalLbl          *widget.Label
-    autoSwapCheck        *widget.Check
-    proximityNearSlider  *widget.Slider
-    proximityNearLabel   *widget.Label
-    proximityFarSlider   *widget.Slider
-    proximityFarLabel    *widget.Label
-    jitterEnableCheck    *widget.Check
-    jitterBlendSlider    *widget.Slider
-    jitterBlendLabel     *widget.Label
+    predictiveBlendLabel  *widget.Label
+    personalizationCheck  *widget.Check
+    personalizationBuf    *widget.Slider
+    personalizationLbl    *widget.Label
+    intervalSlider        *widget.Slider
+    intervalLbl           *widget.Label
+    autoSwapCheck         *widget.Check
+    clickThresholdSlider  *widget.Slider
+    clickThresholdLabel   *widget.Label
+    scrollThresholdSlider *widget.Slider
+    scrollThresholdLabel  *widget.Label
+    doubleClickSlider     *widget.Slider
+    doubleClickLabel      *widget.Label
+    rightClickTiltSlider  *widget.Slider
+    rightClickTiltLabel   *widget.Label
+    hapticCheck           *widget.Check
+    jitterCheck           *widget.Check
+    jitterBlendSlider     *widget.Slider
+    jitterBlendLabel      *widget.Label
+    proximityNearSlider   *widget.Slider
+    proximityNearLabel    *widget.Label
+    proximityFarSlider    *widget.Slider
+    proximityFarLabel     *widget.Label
 }
 
 func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.CanvasObject {
     tab := &SettingsTab{}
 
-    // Sensitivity
+    // Cursor Sensitivity
     tab.sensitivitySlider = widget.NewSlider(0.2, 2.0)
     tab.sensitivitySlider.Step = 0.01
     tab.sensitivitySlider.Value = cfg.Sensitivity
@@ -61,23 +70,12 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
     })
     tab.themeSelect.SetSelected(cfg.Theme)
 
-    // Always on Top (Fyne ندارد، فقط ذخیره می‌کنیم)
-    tab.alwaysOnTopCheck = widget.NewCheck("Always on Top", func(b bool) {
-        cfg.AlwaysOnTop = b
-        _ = cfg.Save()
-    })
-    tab.alwaysOnTopCheck.SetChecked(cfg.AlwaysOnTop)
-
-    // Smoothing (EMA)
-    tab.smoothingCheck = widget.NewCheck("Mouse Smoothing (EMA)", func(b bool) {
-        mouse.SetSmoothing(b)
-    })
+    // Mouse Smoothing
+    tab.smoothingCheck = widget.NewCheck("Mouse Smoothing (EMA)", func(b bool) { mouse.SetSmoothing(b) })
     tab.smoothingCheck.SetChecked(true)
 
-    // Acceleration
-    tab.accelCheck = widget.NewCheck("Mouse Acceleration", func(b bool) {
-        mouse.SetAcceleration(b, 1.5)
-    })
+    // Mouse Acceleration
+    tab.accelCheck = widget.NewCheck("Mouse Acceleration", func(b bool) { mouse.SetAcceleration(b, 1.5) })
     tab.accelCheck.SetChecked(true)
 
     // AI Smoothing
@@ -88,7 +86,7 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
     })
     tab.aiCheck.SetChecked(cfg.EnableAISmoothing)
 
-    // Predictive Movement (Kalman)
+    // Predictive Movement
     tab.predictiveCheck = widget.NewCheck("Predictive Movement (Kalman)", func(b bool) {
         cfg.SetPredictiveEnabled(b)
         mouse.EnablePredictive(b)
@@ -105,7 +103,7 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
         tab.predictiveBlendLabel.SetText(fmt.Sprintf("Prediction blend: %.2f", v))
     }
 
-    // Personalization (Data collector)
+    // Personalization
     tab.personalizationCheck = widget.NewCheck("Enable Personalization", func(b bool) {
         cfg.EnablePersonalization = b
         _ = cfg.Save()
@@ -138,53 +136,112 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
     })
     tab.autoSwapCheck.SetChecked(cfg.AutoSwapModel)
 
-    // Proximity thresholds (near/far)
-    tab.proximityNearLabel = widget.NewLabel(fmt.Sprintf("Near threshold (unlock): %.1f m", cfg.ProximityNearThreshold))
-    tab.proximityNearSlider = widget.NewSlider(0.5, 5.0)
-    tab.proximityNearSlider.Step = 0.1
-    tab.proximityNearSlider.Value = cfg.ProximityNearThreshold
-    tab.proximityNearSlider.OnChanged = func(v float64) {
-        cfg.ProximityNearThreshold = v
+    // Click Threshold
+    tab.clickThresholdSlider = widget.NewSlider(0, 20)
+    tab.clickThresholdSlider.Step = 0.5
+    tab.clickThresholdSlider.Value = cfg.ClickThreshold
+    tab.clickThresholdLabel = widget.NewLabel(fmt.Sprintf("Click speed: %.1f rad/s", cfg.ClickThreshold))
+    tab.clickThresholdSlider.OnChanged = func(v float64) {
+        cfg.ClickThreshold = v
         _ = cfg.Save()
-        tab.proximityNearLabel.SetText(fmt.Sprintf("Near threshold (unlock): %.1f m", v))
+        tab.clickThresholdLabel.SetText(fmt.Sprintf("Click speed: %.1f rad/s", v))
     }
 
-    tab.proximityFarLabel = widget.NewLabel(fmt.Sprintf("Far threshold (lock): %.1f m", cfg.ProximityFarThreshold))
-    tab.proximityFarSlider = widget.NewSlider(1.0, 10.0)
-    tab.proximityFarSlider.Step = 0.2
-    tab.proximityFarSlider.Value = cfg.ProximityFarThreshold
-    tab.proximityFarSlider.OnChanged = func(v float64) {
-        cfg.ProximityFarThreshold = v
+    // Scroll Threshold
+    tab.scrollThresholdSlider = widget.NewSlider(0, 20)
+    tab.scrollThresholdSlider.Step = 0.5
+    tab.scrollThresholdSlider.Value = cfg.ScrollThreshold
+    tab.scrollThresholdLabel = widget.NewLabel(fmt.Sprintf("Scroll speed: %.1f m/s²", cfg.ScrollThreshold))
+    tab.scrollThresholdSlider.OnChanged = func(v float64) {
+        cfg.ScrollThreshold = v
         _ = cfg.Save()
-        tab.proximityFarLabel.SetText(fmt.Sprintf("Far threshold (lock): %.1f m", v))
+        tab.scrollThresholdLabel.SetText(fmt.Sprintf("Scroll speed: %.1f m/s²", v))
     }
 
-    // Jitter compensation
-    tab.jitterEnableCheck = widget.NewCheck("Enable Jitter Compensation", func(b bool) {
+    // Double Click Interval
+    tab.doubleClickSlider = widget.NewSlider(200, 1000)
+    tab.doubleClickSlider.Step = 10
+    tab.doubleClickSlider.Value = float64(cfg.DoubleClickInterval)
+    tab.doubleClickLabel = widget.NewLabel(fmt.Sprintf("Double click interval: %d ms", cfg.DoubleClickInterval))
+    tab.doubleClickSlider.OnChanged = func(v float64) {
+        cfg.DoubleClickInterval = int64(v)
+        _ = cfg.Save()
+        tab.doubleClickLabel.SetText(fmt.Sprintf("Double click interval: %d ms", int(v)))
+    }
+
+    // Right Click Tilt
+    tab.rightClickTiltSlider = widget.NewSlider(0, 90)
+    tab.rightClickTiltSlider.Step = 1
+    tab.rightClickTiltSlider.Value = cfg.RightClickTilt
+    tab.rightClickTiltLabel = widget.NewLabel(fmt.Sprintf("Right click tilt: %.0f°", cfg.RightClickTilt))
+    tab.rightClickTiltSlider.OnChanged = func(v float64) {
+        cfg.RightClickTilt = v
+        _ = cfg.Save()
+        tab.rightClickTiltLabel.SetText(fmt.Sprintf("Right click tilt: %.0f°", v))
+    }
+
+    // Haptic Feedback
+    tab.hapticCheck = widget.NewCheck("Haptic Feedback", func(b bool) {
+        cfg.HapticEnabled = b
+        _ = cfg.Save()
+    })
+    tab.hapticCheck.SetChecked(cfg.HapticEnabled)
+
+    // Jitter Compensation
+    tab.jitterCheck = widget.NewCheck("Enable Jitter Compensation", func(b bool) {
         cfg.EnableJitterCompensation = b
         _ = cfg.Save()
     })
-    tab.jitterEnableCheck.SetChecked(cfg.EnableJitterCompensation)
+    tab.jitterCheck.SetChecked(cfg.EnableJitterCompensation)
 
-    tab.jitterBlendLabel = widget.NewLabel(fmt.Sprintf("Jitter blend factor: %.2f", cfg.JitterBlendFactor))
+    tab.jitterBlendLabel = widget.NewLabel(fmt.Sprintf("Jitter blend: %.2f", cfg.JitterBlendFactor))
     tab.jitterBlendSlider = widget.NewSlider(0, 1)
     tab.jitterBlendSlider.Step = 0.05
     tab.jitterBlendSlider.Value = cfg.JitterBlendFactor
     tab.jitterBlendSlider.OnChanged = func(v float64) {
         cfg.JitterBlendFactor = v
         _ = cfg.Save()
-        tab.jitterBlendLabel.SetText(fmt.Sprintf("Jitter blend factor: %.2f", v))
+        tab.jitterBlendLabel.SetText(fmt.Sprintf("Jitter blend: %.2f", v))
     }
 
-    // جمع‌آوری همه در یک VBox
+    // Proximity thresholds
+    tab.proximityNearLabel = widget.NewLabel(fmt.Sprintf("Near threshold: %.1f m", cfg.ProximityNearThreshold))
+    tab.proximityNearSlider = widget.NewSlider(0.5, 5.0)
+    tab.proximityNearSlider.Step = 0.1
+    tab.proximityNearSlider.Value = cfg.ProximityNearThreshold
+    tab.proximityNearSlider.OnChanged = func(v float64) {
+        cfg.ProximityNearThreshold = v
+        _ = cfg.Save()
+        tab.proximityNearLabel.SetText(fmt.Sprintf("Near threshold: %.1f m", v))
+    }
+
+    tab.proximityFarLabel = widget.NewLabel(fmt.Sprintf("Far threshold: %.1f m", cfg.ProximityFarThreshold))
+    tab.proximityFarSlider = widget.NewSlider(1.0, 10.0)
+    tab.proximityFarSlider.Step = 0.2
+    tab.proximityFarSlider.Value = cfg.ProximityFarThreshold
+    tab.proximityFarSlider.OnChanged = func(v float64) {
+        cfg.ProximityFarThreshold = v
+        _ = cfg.Save()
+        tab.proximityFarLabel.SetText(fmt.Sprintf("Far threshold: %.1f m", v))
+    }
+
+    // Assemble UI
     content := container.NewVBox(
         widget.NewLabelWithStyle("Settings", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
         widget.NewSeparator(),
         widget.NewLabel("Cursor Sensitivity"), tab.sensitivitySlider, tab.sensitivityLabel,
         widget.NewSeparator(),
-        widget.NewLabel("Appearance"), tab.themeSelect, tab.alwaysOnTopCheck,
+        widget.NewLabel("Appearance"), tab.themeSelect,
         widget.NewSeparator(),
         widget.NewLabel("Mouse Behaviour"), tab.smoothingCheck, tab.accelCheck,
+        widget.NewSeparator(),
+        widget.NewLabel("Click Detection"),
+        tab.clickThresholdSlider, tab.clickThresholdLabel,
+        tab.doubleClickSlider, tab.doubleClickLabel,
+        tab.rightClickTiltSlider, tab.rightClickTiltLabel,
+        widget.NewSeparator(),
+        widget.NewLabel("Scroll Detection"),
+        tab.scrollThresholdSlider, tab.scrollThresholdLabel,
         widget.NewSeparator(),
         widget.NewLabel("Prediction & AI"), tab.aiCheck, tab.predictiveCheck, tab.predictiveBlendSlider, tab.predictiveBlendLabel,
         widget.NewSeparator(),
@@ -192,7 +249,9 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
         widget.NewSeparator(),
         widget.NewLabel("Proximity"), tab.proximityNearSlider, tab.proximityNearLabel, tab.proximityFarSlider, tab.proximityFarLabel,
         widget.NewSeparator(),
-        widget.NewLabel("Network Jitter"), tab.jitterEnableCheck, tab.jitterBlendSlider, tab.jitterBlendLabel,
+        widget.NewLabel("Network Jitter"), tab.jitterCheck, tab.jitterBlendSlider, tab.jitterBlendLabel,
+        widget.NewSeparator(),
+        widget.NewLabel("Haptics"), tab.hapticCheck,
     )
     return container.NewScroll(content)
 }

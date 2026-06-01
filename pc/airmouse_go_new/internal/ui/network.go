@@ -19,23 +19,54 @@ import (
 )
 
 type NetworkTab struct {
-    ipEntry   *widget.Entry
-    portEntry *widget.Entry
-    qrImage   *canvas.Image
-    ipList    *widget.List
-    ipData    []string
+    ipEntry      *widget.Entry
+    portEntry    *widget.Entry
+    wsPortEntry  *widget.Entry
+    qrImage      *canvas.Image
+    ipList       *widget.List
+    ipData       []string
+    refreshBtn   *widget.Button
+    copyBtn      *widget.Button
+    genQrBtn     *widget.Button
+    saveQrBtn    *widget.Button
 }
 
 func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
     tab := &NetworkTab{
-        ipData: getAllLocalIPs(),
+        ipData: getIPList(),
     }
+
     tab.ipEntry = widget.NewEntry()
     tab.ipEntry.SetPlaceHolder("IP Address")
     tab.ipEntry.Text = utils.GetLocalIP()
+    tab.ipEntry.Validator = func(s string) error {
+        if net.ParseIP(s) == nil {
+            return fmt.Errorf("invalid IP address")
+        }
+        return nil
+    }
+
     tab.portEntry = widget.NewEntry()
-    tab.portEntry.SetPlaceHolder("Port")
+    tab.portEntry.SetPlaceHolder("TCP Port")
     tab.portEntry.Text = strconv.Itoa(cfg.Port)
+    tab.portEntry.Validator = func(s string) error {
+        p, err := strconv.Atoi(s)
+        if err != nil || p < 1 || p > 65535 {
+            return fmt.Errorf("port must be between 1 and 65535")
+        }
+        return nil
+    }
+
+    tab.wsPortEntry = widget.NewEntry()
+    tab.wsPortEntry.SetPlaceHolder("WebSocket Port")
+    tab.wsPortEntry.Text = strconv.Itoa(cfg.WebSocketPort)
+    tab.wsPortEntry.Validator = func(s string) error {
+        p, err := strconv.Atoi(s)
+        if err != nil || p < 1 || p > 65535 {
+            return fmt.Errorf("port must be between 1 and 65535")
+        }
+        return nil
+    }
 
     tab.ipList = widget.NewList(
         func() int { return len(tab.ipData) },
@@ -51,20 +82,17 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
         }
     }
 
-    refreshBtn := widget.NewButton("Refresh IPs", func() {
-        tab.ipData = getAllLocalIPs()
+    tab.refreshBtn = widget.NewButton("Refresh IPs", func() {
+        tab.ipData = getIPList()
         tab.ipList.Refresh()
     })
-    copyBtn := widget.NewButton("Copy Endpoint", func() {
+    tab.copyBtn = widget.NewButton("Copy Endpoint", func() {
         endpoint := fmt.Sprintf("airmouse://%s:%s", tab.ipEntry.Text, tab.portEntry.Text)
         fyne.CurrentApp().Driver().AllWindows()[0].Clipboard().SetContent(endpoint)
         dialog.ShowInformation("Copied", "Endpoint copied to clipboard", fyne.CurrentApp().Driver().AllWindows()[0])
     })
-
-    tab.qrImage = canvas.NewImageFromResource(nil)
-    tab.qrImage.FillMode = canvas.ImageFillOriginal
-    genQrBtn := widget.NewButton("Generate QR", tab.updateQR)
-    saveQrBtn := widget.NewButton("Save QR", func() {
+    tab.genQrBtn = widget.NewButton("Generate QR", tab.updateQR)
+    tab.saveQrBtn = widget.NewButton("Save QR", func() {
         dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
             if err == nil && writer != nil {
                 defer writer.Close()
@@ -75,8 +103,31 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
         }, fyne.CurrentApp().Driver().AllWindows()[0])
     })
 
-    tab.ipEntry.OnChanged = func(string) { tab.updateQR() }
-    tab.portEntry.OnChanged = func(string) { tab.updateQR() }
+    tab.qrImage = canvas.NewImageFromResource(nil)
+    tab.qrImage.FillMode = canvas.ImageFillOriginal
+    tab.updateQR()
+
+    // Auto‑save when fields change
+    tab.ipEntry.OnChanged = func(s string) {
+        if tab.ipEntry.Validate() == nil {
+            cfg.Host = s
+            _ = cfg.Save()
+            tab.updateQR()
+        }
+    }
+    tab.portEntry.OnChanged = func(s string) {
+        if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
+            cfg.Port = p
+            _ = cfg.Save()
+            tab.updateQR()
+        }
+    }
+    tab.wsPortEntry.OnChanged = func(s string) {
+        if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
+            cfg.WebSocketPort = p
+            _ = cfg.Save()
+        }
+    }
 
     return container.NewVBox(
         widget.NewLabelWithStyle("Network Configuration", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
@@ -84,9 +135,9 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
         widget.NewLabel("Available IP addresses:"),
         container.NewScroll(tab.ipList),
         tab.ipEntry,
-        tab.portEntry,
-        container.NewHBox(refreshBtn, copyBtn),
-        container.NewHBox(genQrBtn, saveQrBtn),
+        container.NewHBox(tab.portEntry, tab.wsPortEntry),
+        container.NewHBox(tab.refreshBtn, tab.copyBtn),
+        container.NewHBox(tab.genQrBtn, tab.saveQrBtn),
         tab.qrImage,
     )
 }
@@ -105,7 +156,7 @@ func (t *NetworkTab) updateQR() {
     t.qrImage.Refresh()
 }
 
-func getAllLocalIPs() []string {
+func getIPList() []string {
     var ips []string
     addrs, err := net.InterfaceAddrs()
     if err != nil {
