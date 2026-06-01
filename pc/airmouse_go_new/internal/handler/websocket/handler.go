@@ -43,6 +43,11 @@ type Handler struct {
 	hub *Hub
 }
 
+func WebSocketHandler(hub *Hub) http.HandlerFunc {
+	h := NewHandler(hub)
+	return h.ServeHTTP
+}
+
 // The handler uses the services present in Hub via h.hub (mouseService, gestureService, connService).
 
 func NewHandler(hub *Hub) *Handler {
