@@ -14,7 +14,6 @@ import (
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/jitter"
 	"airmouse-go/internal/proximity"
-	"airmouse-go/internal/sysaction"
 	"airmouse-go/internal/utils"
 )
 
@@ -82,6 +81,57 @@ func (s *Server) Start() error {
 		}
 	}()
 	return nil
+}
+
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	id := utils.GenerateID()
+	client := &WSClient{ID: id, Conn: conn, Send: make(chan []byte, 256), ConnectedAt: time.Now(), LastActive: time.Now()}
+
+	s.mu.Lock()
+	s.clients[id] = client
+	s.mu.Unlock()
+
+	// simple read loop to keep connection alive; real implementation will spawn pumps
+	go func() {
+		defer func() {
+			conn.Close()
+			s.mu.Lock()
+			delete(s.clients, id)
+			s.mu.Unlock()
+		}()
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				break
+			}
+		}
+	}()
+}
+
+func (s *Server) Stop() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.running {
+		return nil
+	}
+	s.running = false
+	if s.server != nil {
+		_ = s.server.Close()
+	}
+	for _, c := range s.clients {
+		c.Conn.Close()
+	}
+	s.clients = make(map[string]*WSClient)
+	return nil
+}
+
+func (s *Server) GetStats() map[string]interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return map[string]interface{}{"clients": len(s.clients)}
 }
 
 // Remaining methods (handleWebSocket, readPump, writePump, processMessage, Stop, GetStats)
