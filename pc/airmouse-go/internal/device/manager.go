@@ -13,6 +13,7 @@ const (
 	TypeWebSocket DeviceType = "websocket"
 	TypeUDP       DeviceType = "udp"
 	TypeBluetooth DeviceType = "bluetooth"
+	TypeUSB       DeviceType = "usb"
 )
 
 // DeviceInfo holds information about a connected device.

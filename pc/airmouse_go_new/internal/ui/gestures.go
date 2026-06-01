@@ -1,3 +1,5 @@
+//go:build gui
+
 package ui
 
 import (
@@ -12,6 +14,7 @@ import (
 type GesturesTab struct {
 	list      *widget.List
 	templates []string
+	selected  int
 }
 
 // NewGesturesTab creates a tab for gesture management.
@@ -27,12 +30,14 @@ func NewGesturesTab() fyne.CanvasObject {
 		},
 	)
 	tab.list.OnSelected = func(id int) {
+		tab.selected = id
 		// Show details or delete option
 	}
 
 	deleteBtn := widget.NewButton("Delete Selected", func() {
-		if id := tab.list.Selected(); id >= 0 && id < len(tab.templates) {
+		if id := tab.selected; id >= 0 && id < len(tab.templates) {
 			tab.templates = append(tab.templates[:id], tab.templates[id+1:]...)
+			tab.selected = -1
 			tab.list.Refresh()
 		}
 	})
