@@ -57,6 +57,7 @@ object WebSocketManager {
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 isConnected = false
                 Log.e("WebSocket", "Connection failure: ${t.message}")
+                mainHandler.post { onDisconnected?.invoke() }
                 scheduleReconnect()
             }
 
