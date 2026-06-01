@@ -6,6 +6,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"airmouse-go/internal/domain/entity"
+	"airmouse-go/internal/pkg/utils"
 )
 
 var upgrader = websocket.Upgrader{
@@ -38,36 +41,13 @@ type HelloPayload struct {
 }
 
 type Handler struct {
-	hub            *Hub
-	mouseService   MouseService
-	gestureService GestureService
-	connService    ConnectionService
+	hub *Hub
 }
 
-type MouseService interface {
-	Move(dx, dy float64, dt float64) (float64, float64, error)
-	Click(button string) error
-	DoubleClick() error
-	RightClick() error
-	Scroll(delta int) error
-}
-
-type GestureService interface {
-	DetectGesture(gyroY, accelY float64, dt float64) interface{}
-}
-
-type ConnectionService interface {
-	AddClient(id, name, clientType string) (interface{}, error)
-	UpdateClientActivity(id string) error
-}
+// The handler uses the services present in Hub via h.hub (mouseService, gestureService, connService).
 
 func NewHandler(hub *Hub, mouseSvc MouseService, gestureSvc GestureService, connSvc ConnectionService) *Handler {
-	return &Handler{
-		hub:            hub,
-		mouseService:   mouseSvc,
-		gestureService: gestureSvc,
-		connService:    connSvc,
-	}
+	return &Handler{hub: hub}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -75,18 +55,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	client := NewClient(h.hub, conn)
+	id := utils.GenerateID()
+	client := NewClient(id, conn, h.hub)
 	h.hub.register <- client
 
-	go h.writePump(client)
-	go h.readPump(client)
+	go client.writePump()
+	go client.readPump()
 }
 
 func (h *Handler) readPump(client *Client) {
 	defer func() {
 		h.hub.unregister <- client
 		client.conn.Close()
-		h.connService.UpdateClientActivity(client.id) // will fail if not registered; safe
+		// update heartbeat for connection record
+		_ = h.hub.connService.Heartbeat(client.id, 0)
 	}()
 
 	client.conn.SetReadLimit(512)
@@ -101,7 +83,8 @@ func (h *Handler) readPump(client *Client) {
 		if err != nil {
 			break
 		}
-		client.UpdateActivity()
+		// update activity on the embedded entity
+		client.entity.UpdateActivity()
 		h.processMessage(client, message)
 	}
 }
@@ -142,8 +125,8 @@ func (h *Handler) processMessage(client *Client, data []byte) {
 	case "move":
 		var p MovePayload
 		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			// dt is not available; use fixed 0.02s assumption
-			dx, dy, _ := h.mouseService.Move(p.DX, p.DY, 0.02)
+			// call hub mouse service
+			_ = h.hub.mouseService.Move(p.DX, p.DY)
 			// Actually move the mouse (platform‑specific) – not part of domain service.
 			// We'll leave the actual mouse movement to the outer layer.
 			// For simplicity, we just call the service (which should contain the actual movement logic).
@@ -166,8 +149,8 @@ func (h *Handler) processMessage(client *Client, data []byte) {
 	case "hello":
 		var p HelloPayload
 		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			client.SetName(p.Name)
-			_, _ = h.connService.AddClient(client.ID(), p.Name, "websocket")
+			client.entity.Name = p.Name
+			_ = h.hub.connService.RegisterClient(client.entity)
 		}
 	}
 }

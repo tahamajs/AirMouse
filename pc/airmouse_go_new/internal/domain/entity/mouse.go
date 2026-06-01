@@ -54,8 +54,8 @@ type MovementProfile struct {
 }
 
 // DefaultMovementProfile returns a sane default profile.
-func DefaultMovementProfile() MovementProfile {
-	return MovementProfile{
+func DefaultMovementProfile() *MovementProfile {
+	return &MovementProfile{
 		Sensitivity:       0.5,
 		Acceleration:      true,
 		AccelerationCurve: 1.5,

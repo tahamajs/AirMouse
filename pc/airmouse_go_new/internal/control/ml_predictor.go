@@ -1,7 +1,6 @@
 package control
 
 import (
-	"fmt"
 	"sync"
 
 	"airmouse-go/internal/predictiveml"
