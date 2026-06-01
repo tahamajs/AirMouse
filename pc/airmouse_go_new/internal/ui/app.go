@@ -83,8 +83,11 @@ func (a *App) Run() error {
 }
 
 func (a *App) Stop() { a.fyneApp.Quit() }
+
+// showAboutDialog creates and displays the About dialog.
 func showAboutDialog(w fyne.Window) {
-    popUp := widget.NewModalPopUp(
+    var popUp *widget.PopUp // declare first so the closure can reference it
+    popUp = widget.NewModalPopUp(
         container.NewVBox(
             widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
             widget.NewLabel("Version 3.0.0"),
