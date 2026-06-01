@@ -14,19 +14,15 @@ class AccessibilityViewModel @Inject constructor() : ViewModel() {
     private val _uiState = MutableStateFlow(AccessibilityUiState())
     val uiState: StateFlow<AccessibilityUiState> = _uiState.asStateFlow()
 
-    fun toggleAnnounceMovement(enabled: Boolean) {
-        _uiState.update { it.copy(announceMovement = enabled) }
-    }
-
-    fun toggleAnnounceClicks(enabled: Boolean) {
-        _uiState.update { it.copy(announceClicks = enabled) }
-    }
-
-    fun toggleHighContrast(enabled: Boolean) {
-        _uiState.update { it.copy(highContrast = enabled) }
-    }
-
-    fun toggleLargeText(enabled: Boolean) {
-        _uiState.update { it.copy(largeText = enabled) }
-    }
+    fun setAnnounceMovement(enabled: Boolean) = _uiState.update { it.copy(announceMovement = enabled) }
+    fun setAnnounceClicks(enabled: Boolean) = _uiState.update { it.copy(announceClicks = enabled) }
+    fun setHighContrast(enabled: Boolean) = _uiState.update { it.copy(highContrast = enabled) }
+    fun setLargeText(enabled: Boolean) = _uiState.update { it.copy(largeText = enabled) }
 }
+
+data class AccessibilityUiState(
+    val announceMovement: Boolean = false,
+    val announceClicks: Boolean = false,
+    val highContrast: Boolean = false,
+    val largeText: Boolean = false
+)

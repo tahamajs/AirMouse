@@ -13,3 +13,5 @@ class AboutViewModel @Inject constructor() : ViewModel() {
     private val _uiState = MutableStateFlow(AboutUiState())
     val uiState: StateFlow<AboutUiState> = _uiState.asStateFlow()
 }
+
+data class AboutUiState(val version: String = BuildConfig.VERSION_NAME)
