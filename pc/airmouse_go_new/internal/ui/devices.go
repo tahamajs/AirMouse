@@ -36,8 +36,11 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
     go func() {
         for {
             time.Sleep(2 * time.Second)
-            tab.devices = deviceMgr.GetAllDevices()
-            tab.list.Refresh()
+            devs := deviceMgr.GetAllDevices()
+            fyne.Do(func() {
+                tab.devices = devs
+                tab.list.Refresh()
+            })
         }
     }()
 

@@ -15,6 +15,7 @@ import (
     qrcode "github.com/skip2/go-qrcode"
 
     "airmouse-go/internal/config"
+    "airmouse-go/internal/utils"
 )
 
 type NetworkTab struct {
@@ -27,11 +28,11 @@ type NetworkTab struct {
 
 func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
     tab := &NetworkTab{
-        ipData: getIPList(),
+        ipData: getAllLocalIPs(),
     }
     tab.ipEntry = widget.NewEntry()
     tab.ipEntry.SetPlaceHolder("IP Address")
-    tab.ipEntry.Text = getLocalIP()
+    tab.ipEntry.Text = utils.GetLocalIP()
     tab.portEntry = widget.NewEntry()
     tab.portEntry.SetPlaceHolder("Port")
     tab.portEntry.Text = strconv.Itoa(cfg.Port)
@@ -51,7 +52,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
     }
 
     refreshBtn := widget.NewButton("Refresh IPs", func() {
-        tab.ipData = getIPList()
+        tab.ipData = getAllLocalIPs()
         tab.ipList.Refresh()
     })
     copyBtn := widget.NewButton("Copy Endpoint", func() {
@@ -104,7 +105,7 @@ func (t *NetworkTab) updateQR() {
     t.qrImage.Refresh()
 }
 
-func getIPList() []string {
+func getAllLocalIPs() []string {
     var ips []string
     addrs, err := net.InterfaceAddrs()
     if err != nil {
