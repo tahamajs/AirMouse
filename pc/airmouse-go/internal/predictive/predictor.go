@@ -5,7 +5,15 @@ import (
     "time"
 )
 
-// MovementPredictor applies Kalman filtering to incoming movement deltas.
+package predictiveml
+
+type Predictor struct{}
+
+func (p *Predictor) AddPoint(x, y float32) {}
+func (p *Predictor) PredictDelta() (float32, float32, error) { return 0, 0, nil }
+
+
+
 type MovementPredictor struct {
     kf          *KalmanFilter2D
     lastTime    time.Time

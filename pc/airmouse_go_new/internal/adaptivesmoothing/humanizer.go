@@ -1,5 +1,15 @@
 package adaptivesmoothing
 
+type Humanizer struct{}
+type HumanizerConfig struct{}
+
+func DefaultHumanizerConfig() HumanizerConfig { return HumanizerConfig{} }
+func NewHumanizer(cfg HumanizerConfig) *Humanizer { return &Humanizer{} }
+func (h *Humanizer) Process(dx, dy, curX, curY float64) (float64, float64) { return dx, dy }
+func (h *Humanizer) UpdatePosition(x, y float64) {}
+
+
+
 import (
 	"math"
 	"math/rand"
