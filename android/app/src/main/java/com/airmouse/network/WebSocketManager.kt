@@ -6,6 +6,7 @@ import android.os.Looper
 import android.util.Log
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
+import com.airmouse.data.model.NetworkMessage
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -89,35 +90,52 @@ object WebSocketManager {
         }
     }
 
-    fun sendGesture(gesture: String, confidence: Float) {
-        val json = JSONObject().apply {
-            put("type", "gesture")
-            put("payload", JSONObject().apply {
-                put("gesture", gesture)
-                put("confidence", confidence)
-            })
+    fun sendMove(dx: Float, dy: Float) {
+        send(NetworkMessage.toJson(NetworkMessage.Move(dx, dy)))
+    }
+
+    fun sendClick(button: String = "left") {
+        send(NetworkMessage.toJson(NetworkMessage.Click(button)))
+    }
+
+    fun sendDoubleClick() {
+        send(NetworkMessage.toJson(NetworkMessage.DoubleClick))
+    }
+
+    fun sendRightClick() {
+        send(NetworkMessage.toJson(NetworkMessage.RightClick))
+    }
+
+    fun sendScroll(delta: Int) {
+        send(NetworkMessage.toJson(NetworkMessage.Scroll(delta)))
+    }
+
+    fun sendHello(deviceName: String, version: String = "3.0") {
+        send(NetworkMessage.toJson(NetworkMessage.Hello(deviceName, version)))
+    }
+
+    fun sendCommand(command: String, delta: Int = 0) {
+        when (command.lowercase()) {
+            "click" -> sendClick()
+            "doubleclick" -> sendDoubleClick()
+            "rightclick" -> sendRightClick()
+            "scroll" -> sendScroll(delta)
+            else -> Log.w("WebSocket", "Unknown command: $command")
         }
-        send(json.toString())
+    }
+
+    fun sendGesture(gesture: String, confidence: Float) {
+        send(NetworkMessage.toJson(NetworkMessage.Gesture(gesture, confidence)))
     }
 
     fun sendProximity(isNear: Boolean, distance: Float) {
-        val json = JSONObject().apply {
-            put("type", "proximity")
-            put("payload", JSONObject().apply {
-                put("is_near", isNear)
-                put("distance", distance)
-            })
-        }
-        send(json.toString())
+        send(NetworkMessage.toJson(NetworkMessage.Proximity(isNear, distance)))
     }
 
-    // NEW: Send pause/resume command
     fun sendPauseMovement(pause: Boolean) {
         val json = JSONObject().apply {
             put("type", "control")
-            put("payload", JSONObject().apply {
-                put("command", if (pause) "pause_movement" else "resume_movement")
-            })
+            put("command", if (pause) "pause_movement" else "resume_movement")
         }
         send(json.toString())
     }
