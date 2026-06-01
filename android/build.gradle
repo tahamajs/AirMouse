@@ -11,14 +11,6 @@ buildscript {
         classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.2.10"
     }
 }
-// allprojects {
-//     repositories {
-//         google()
-//         mavenCentral()
-//         maven { url 'https://jitpack.io' }
-//         maven { url 'https://maven.myket.ir' }
-//     }
-// }
 plugins {
     id 'com.android.application' version '8.7.2' apply false
     id 'com.android.library' version '8.7.2' apply false
