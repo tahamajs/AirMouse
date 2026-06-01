@@ -9,6 +9,7 @@ import com.airmouse.domain.model.ConnectionProtocol
 import com.airmouse.domain.model.ConnectionStatus
 import com.airmouse.domain.model.MouseEvent
 import com.airmouse.domain.repository.IConnectionRepository
+import com.airmouse.data.model.NetworkMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,10 +25,12 @@ class ConnectionRepositoryImpl @Inject constructor(
 
     private val _status = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     override fun connectionStatus(): Flow<ConnectionStatus> = _status.asStateFlow()
+    private var activeProtocol: ConnectionProtocol = ConnectionProtocol.TCP
 
     override suspend fun connect(config: ConnectionConfig) {
         _status.value = ConnectionStatus.CONNECTING
         try {
+            activeProtocol = config.protocol
             when (config.protocol) {
                 ConnectionProtocol.WEBSOCKET -> {
                     webSocketManager.connect("ws://${config.serverIp}:${config.serverPort}")
@@ -53,14 +56,17 @@ class ConnectionRepositoryImpl @Inject constructor(
 
     override suspend fun sendEvent(event: MouseEvent) {
         val message = when (event) {
-            is MouseEvent.Move -> "{\"type\":\"move\",\"dx\":${event.dx},\"dy\":${event.dy}}"
-            MouseEvent.Click -> "{\"type\":\"click\"}"
-            MouseEvent.DoubleClick -> "{\"type\":\"doubleclick\"}"
-            MouseEvent.RightClick -> "{\"type\":\"rightclick\"}"
-            is MouseEvent.Scroll -> "{\"type\":\"scroll\",\"delta\":${event.delta}}"
+            is MouseEvent.Move -> NetworkMessage.toJson(NetworkMessage.Move(event.dx, event.dy))
+            MouseEvent.Click -> NetworkMessage.toJson(NetworkMessage.Click())
+            MouseEvent.DoubleClick -> NetworkMessage.toJson(NetworkMessage.DoubleClick)
+            MouseEvent.RightClick -> NetworkMessage.toJson(NetworkMessage.RightClick)
+            is MouseEvent.Scroll -> NetworkMessage.toJson(NetworkMessage.Scroll(event.delta))
         }
-        webSocketManager.send(message)
-        tcpClient.send(message)
+        when (activeProtocol) {
+            ConnectionProtocol.WEBSOCKET -> webSocketManager.send(message)
+            ConnectionProtocol.TCP -> tcpClient.send(message)
+            else -> webSocketManager.send(message)
+        }
     }
 
     override suspend fun getLastConfig(): ConnectionConfig? {
