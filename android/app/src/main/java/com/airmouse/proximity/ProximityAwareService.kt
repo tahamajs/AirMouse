@@ -12,7 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.airmouse.network.WebSocketManager
+import com.airmouse.ConnectionManager
 import kotlinx.coroutines.*
 
 class ProximityAwareService : Service() {
@@ -122,7 +122,7 @@ class ProximityAwareService : Service() {
     }
 
     private fun sendProximityUpdate(distance: Float) {
-        WebSocketManager.sendProximity(isNearState, distance)
+        ConnectionManager.sendProximity(isNearState, distance)
     }
 
     private fun stopProximity() {

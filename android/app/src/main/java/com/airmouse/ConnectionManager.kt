@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.airmouse.bluetooth.BtHidHelper
+import com.airmouse.data.model.NetworkMessage
 import com.airmouse.network.DataSender
 import com.airmouse.network.WebSocketManager
 import com.airmouse.touchpad.TcpClient
@@ -48,9 +49,8 @@ object ConnectionManager {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        // wire existing WebSocket callbacks
-//        WebSocketManager.onConnected = { _wsState.postValue(ConnectionState.CONNECTED) }
-//        WebSocketManager.onDisconnected = { _wsState.postValue(ConnectionState.DISCONNECTED) }
+        WebSocketManager.onConnected = { _wsState.postValue(ConnectionState.CONNECTED) }
+        WebSocketManager.onDisconnected = { _wsState.postValue(ConnectionState.DISCONNECTED) }
         WebSocketManager.onMessage = { msg -> Log.d(TAG, "WS msg: $msg") }
     }
 
@@ -130,12 +130,87 @@ object ConnectionManager {
         }
     }
 
-    fun sendMove(dx: Float, dy: Float) { scope.launch { dataSender?.sendMove(dx, dy) } }
-    fun sendClick() { scope.launch { dataSender?.sendClick() } }
-    fun sendDoubleClick() { scope.launch { dataSender?.sendDoubleClick() } }
-    fun sendRightClick() { scope.launch { dataSender?.sendRightClick() } }
-    fun sendScroll(delta: Int) { scope.launch { dataSender?.sendScroll(delta) } }
-    fun sendHello(name: String) { scope.launch { dataSender?.sendHello(name) } }
+    fun sendMove(dx: Float, dy: Float) {
+        scope.launch {
+            when {
+                dataSender?.isConnected == true -> dataSender?.sendMove(dx, dy)
+                WebSocketManager.isConnected() -> WebSocketManager.sendMove(dx, dy)
+                else -> Log.w(TAG, "No active transport for move command")
+            }
+        }
+    }
+
+    fun sendClick() = sendCommand("click")
+    fun sendDoubleClick() = sendCommand("doubleclick")
+    fun sendRightClick() = sendCommand("rightclick")
+    fun sendScroll(delta: Int) = sendCommand("scroll", delta)
+    fun sendHello(name: String) {
+        scope.launch {
+            when {
+                dataSender?.isConnected == true -> dataSender?.sendHello(name)
+                WebSocketManager.isConnected() -> WebSocketManager.sendHello(name)
+                else -> Log.w(TAG, "No active transport for hello command")
+            }
+        }
+    }
+
+    fun sendCommand(command: String, delta: Int = 0) {
+        scope.launch {
+            when (command.lowercase()) {
+                "click" -> when {
+                    dataSender?.isConnected == true -> dataSender?.sendClick()
+                    WebSocketManager.isConnected() -> WebSocketManager.sendClick()
+                    else -> Log.w(TAG, "No active transport for click command")
+                }
+                "doubleclick" -> when {
+                    dataSender?.isConnected == true -> dataSender?.sendDoubleClick()
+                    WebSocketManager.isConnected() -> WebSocketManager.sendDoubleClick()
+                    else -> Log.w(TAG, "No active transport for double click command")
+                }
+                "rightclick" -> when {
+                    dataSender?.isConnected == true -> dataSender?.sendRightClick()
+                    WebSocketManager.isConnected() -> WebSocketManager.sendRightClick()
+                    else -> Log.w(TAG, "No active transport for right click command")
+                }
+                "scroll" -> when {
+                    dataSender?.isConnected == true -> dataSender?.sendScroll(delta)
+                    WebSocketManager.isConnected() -> WebSocketManager.sendScroll(delta)
+                    else -> Log.w(TAG, "No active transport for scroll command")
+                }
+                else -> Log.w(TAG, "Unsupported command: $command")
+            }
+        }
+    }
+
+    fun sendGesture(gesture: String, confidence: Float) {
+        scope.launch {
+            if (WebSocketManager.isConnected()) {
+                WebSocketManager.sendGesture(gesture, confidence)
+            } else {
+                Log.w(TAG, "Gesture updates require an active WebSocket connection")
+            }
+        }
+    }
+
+    fun sendProximity(isNear: Boolean, distance: Float) {
+        scope.launch {
+            if (WebSocketManager.isConnected()) {
+                WebSocketManager.sendProximity(isNear, distance)
+            } else {
+                Log.w(TAG, "Proximity updates require an active WebSocket connection")
+            }
+        }
+    }
+
+    fun sendPauseMovement(pause: Boolean) {
+        scope.launch {
+            if (WebSocketManager.isConnected()) {
+                WebSocketManager.sendPauseMovement(pause)
+            } else {
+                Log.w(TAG, "Pause/resume requires an active WebSocket connection")
+            }
+        }
+    }
 
     // ----- WebSocket wrapper -----
     fun connectWebSocket(url: String) {

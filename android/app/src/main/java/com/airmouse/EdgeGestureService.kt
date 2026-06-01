@@ -117,15 +117,15 @@ class EdgeGesturesFragment : Fragment() {
     private fun executeAction(volumeKey: String) {
         val action = preferences.getEdgeGestureAction(volumeKey)
         when (action) {
-            "Click" -> sendCommand("click")
-            "Double Click" -> sendCommand("doubleclick")
-            "Right Click" -> sendCommand("rightclick")
-            "Scroll Up" -> sendCommand("scroll", 1)
-            "Scroll Down" -> sendCommand("scroll", -1)
-            "Next Track" -> sendCommand("media_next")
-            "Previous Track" -> sendCommand("media_prev")
-            "Volume Up" -> sendCommand("volume_up")
-            "Volume Down" -> sendCommand("volume_down")
+            "Click" -> ConnectionManager.sendCommand("click")
+            "Double Click" -> ConnectionManager.sendCommand("doubleclick")
+            "Right Click" -> ConnectionManager.sendCommand("rightclick")
+            "Scroll Up" -> ConnectionManager.sendCommand("scroll", 1)
+            "Scroll Down" -> ConnectionManager.sendCommand("scroll", -1)
+            "Next Track" -> ConnectionManager.sendCommand("media_next")
+            "Previous Track" -> ConnectionManager.sendCommand("media_prev")
+            "Volume Up" -> ConnectionManager.sendCommand("volume_up")
+            "Volume Down" -> ConnectionManager.sendCommand("volume_down")
         }
     }
     private fun requestAccessibilityPermission() {
@@ -138,6 +138,7 @@ class EdgeGesturesFragment : Fragment() {
     }
 
     private fun sendCommand(command: String, delta: Int = 0) {
-        WebSocketManager.sendCommand(command, delta)
+        // This method is no longer needed as commands are routed through ConnectionManager
+        // WebSocketManager.sendCommand(command, delta)
     }
 }
