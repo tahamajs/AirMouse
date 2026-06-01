@@ -2,10 +2,20 @@ package utils
 
 import (
     "fmt"
+    "os"
 
     "airmouse-go/internal/infra/logger"
     pkgutils "airmouse-go/internal/pkg/utils"
 )
+
+// InitLogger initializes the shared logger using environment defaults.
+func InitLogger() {
+    level := os.Getenv("AIRMOUSE_LOG_LEVEL")
+    if level == "" {
+        level = "info"
+    }
+    logger.Init(level, os.Getenv("AIRMOUSE_LOG_FILE"))
+}
 
 // LogInfo accepts a message and optional key/value pairs and forwards to infra logger.
 func LogInfo(msg string, kv ...interface{}) {
@@ -43,6 +53,11 @@ func LogError(msg string, kv ...interface{}) {
         }
     }
     logger.Error("%s", msg)
+}
+
+func LogFatal(msg string, kv ...interface{}) {
+    LogError(msg, kv...)
+    os.Exit(1)
 }
 
 // GenerateID proxies to pkg/utils.GenerateID for backward compatibility.
