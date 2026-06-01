@@ -9,7 +9,7 @@ import (
 )
 
 type Gadget struct {
-	enabled bool
+	enabled   bool
 	gadgetDir string
 }
 

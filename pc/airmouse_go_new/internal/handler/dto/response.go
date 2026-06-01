@@ -2,8 +2,8 @@ package dto
 
 // WelcomeMessage is sent after a successful hello.
 type WelcomeMessage struct {
-	Type    string          `json:"type"`
-	Payload WelcomePayload  `json:"payload"`
+	Type    string         `json:"type"`
+	Payload WelcomePayload `json:"payload"`
 }
 
 type WelcomePayload struct {
@@ -24,7 +24,7 @@ func NewWelcome() *WelcomeMessage {
 
 // ErrorResponse is sent when an error occurs.
 type ErrorResponse struct {
-	Type    string      `json:"type"`
+	Type    string       `json:"type"`
 	Payload ErrorPayload `json:"payload"`
 }
 

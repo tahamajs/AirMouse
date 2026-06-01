@@ -11,10 +11,10 @@ func NewSerialConnection(port string) *SerialConnection {
 }
 
 func (s *SerialConnection) Connect() error {
-	logger.Info("Serial connection opened", "port", s.Port)
+	logger.Info("Serial connection opened: port=%v", s.Port)
 	return nil
 }
 
 func (s *SerialConnection) Disconnect() {
-	logger.Info("Serial connection closed", "port", s.Port)
+	logger.Info("Serial connection closed: port=%v", s.Port)
 }

@@ -9,16 +9,16 @@ import (
 )
 
 type mouseRepositoryImpl struct {
-	ctrl           mouse.MouseController
-	stats          *entity.Statistics
-	profile        *entity.MovementProfile
-	clicks         int64
-	doubleClicks   int64
-	rightClicks    int64
-	scrolls        int64
-	totalMovement  int64
-	movementCount  int64
-	totalScroll    int64
+	ctrl          mouse.MouseController
+	stats         *entity.Statistics
+	profile       *entity.MovementProfile
+	clicks        int64
+	doubleClicks  int64
+	rightClicks   int64
+	scrolls       int64
+	totalMovement int64
+	movementCount int64
+	totalScroll   int64
 }
 
 func NewMouseRepository(ctrl mouse.MouseController) repository.MouseRepository {

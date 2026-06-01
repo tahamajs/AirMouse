@@ -8,27 +8,27 @@ import (
 )
 
 type Config struct {
-	Port                      string  `json:"port"`
-	WebSocketPort             int     `json:"websocket_port"`
-	Sensitivity               float64 `json:"sensitivity"`
-	PredictiveBlendFactor     float64 `json:"predictive_blend_factor"`
+	Port                       string  `json:"port"`
+	WebSocketPort              int     `json:"websocket_port"`
+	Sensitivity                float64 `json:"sensitivity"`
+	PredictiveBlendFactor      float64 `json:"predictive_blend_factor"`
 	GestureConfidenceThreshold float64 `json:"gesture_confidence_threshold"`
-	LogLevel                  string  `json:"log_level"`
-	EnableAI                  bool    `json:"enable_ai"`
-	ModelPath                 string  `json:"model_path"`
-	EnablePredictive          bool    `json:"enable_predictive"`
-	EnablePersonalization     bool    `json:"enable_personalization"`
-	PersonalizationBuffer     int     `json:"personalization_buffer"`
-	PersonalizationInterval   int     `json:"personalization_interval"`
-	AutoSwapModel             bool    `json:"auto_swap_model"`
-	EnableMLPrediction        bool    `json:"enable_ml_prediction"`
-	MLModelPath               string  `json:"ml_model_path"`
-	MLSequenceLength          int     `json:"ml_sequence_length"`
-	MLBlendFactor             float64 `json:"ml_blend_factor"`
-	MLInferenceInterval       int     `json:"ml_inference_interval_ms"`
-	AuthEnabled               bool    `json:"auth_enabled"`
-	AuthSecret                string  `json:"auth_secret"`
-	mu                        sync.RWMutex
+	LogLevel                   string  `json:"log_level"`
+	EnableAI                   bool    `json:"enable_ai"`
+	ModelPath                  string  `json:"model_path"`
+	EnablePredictive           bool    `json:"enable_predictive"`
+	EnablePersonalization      bool    `json:"enable_personalization"`
+	PersonalizationBuffer      int     `json:"personalization_buffer"`
+	PersonalizationInterval    int     `json:"personalization_interval"`
+	AutoSwapModel              bool    `json:"auto_swap_model"`
+	EnableMLPrediction         bool    `json:"enable_ml_prediction"`
+	MLModelPath                string  `json:"ml_model_path"`
+	MLSequenceLength           int     `json:"ml_sequence_length"`
+	MLBlendFactor              float64 `json:"ml_blend_factor"`
+	MLInferenceInterval        int     `json:"ml_inference_interval_ms"`
+	AuthEnabled                bool    `json:"auth_enabled"`
+	AuthSecret                 string  `json:"auth_secret"`
+	mu                         sync.RWMutex
 }
 
 var instance *Config
@@ -43,26 +43,26 @@ func Load() *Config {
 
 func loadOrDefault() *Config {
 	cfg := &Config{
-		Port:                      "8080",
-		WebSocketPort:             8081,
-		Sensitivity:               0.5,
-		PredictiveBlendFactor:     0.6,
+		Port:                       "8080",
+		WebSocketPort:              8081,
+		Sensitivity:                0.5,
+		PredictiveBlendFactor:      0.6,
 		GestureConfidenceThreshold: 0.7,
-		LogLevel:                  "info",
-		EnableAI:                  false,
-		ModelPath:                 "models/mouse_smoothing.onnx",
-		EnablePredictive:          true,
-		EnablePersonalization:     false,
-		PersonalizationBuffer:     2000,
-		PersonalizationInterval:   3600,
-		AutoSwapModel:             false,
-		EnableMLPrediction:        false,
-		MLModelPath:               "models/lstm_predictor.onnx",
-		MLSequenceLength:          16,
-		MLBlendFactor:             0.6,
-		MLInferenceInterval:       20,
-		AuthEnabled:               false,
-		AuthSecret:                "",
+		LogLevel:                   "info",
+		EnableAI:                   false,
+		ModelPath:                  "models/mouse_smoothing.onnx",
+		EnablePredictive:           true,
+		EnablePersonalization:      false,
+		PersonalizationBuffer:      2000,
+		PersonalizationInterval:    3600,
+		AutoSwapModel:              false,
+		EnableMLPrediction:         false,
+		MLModelPath:                "models/lstm_predictor.onnx",
+		MLSequenceLength:           16,
+		MLBlendFactor:              0.6,
+		MLInferenceInterval:        20,
+		AuthEnabled:                false,
+		AuthSecret:                 "",
 	}
 	path := getConfigPath()
 	if data, err := os.ReadFile(path); err == nil {

@@ -29,19 +29,19 @@ func DefaultHumanizerConfig() HumanizerConfig {
 }
 
 type Humanizer struct {
-	config        HumanizerConfig
-	tremor        *TremorSimulator
-	lastX, lastY  float64
-	velocityProg  float64
-	splineBuffer  [][2]float64
-	mu            sync.Mutex
+	config       HumanizerConfig
+	tremor       *TremorSimulator
+	lastX, lastY float64
+	velocityProg float64
+	splineBuffer [][2]float64
+	mu           sync.Mutex
 }
 
 func NewHumanizer(config HumanizerConfig) *Humanizer {
 	h := &Humanizer{
-		config:        config,
-		velocityProg:  0,
-		splineBuffer:  make([][2]float64, 0),
+		config:       config,
+		velocityProg: 0,
+		splineBuffer: make([][2]float64, 0),
 	}
 	if config.EnableTremor {
 		h.tremor = NewTremorSimulator()

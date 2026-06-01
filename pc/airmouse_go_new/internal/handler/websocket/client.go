@@ -12,12 +12,12 @@ import (
 )
 
 type Client struct {
-	id         string
-	conn       *websocket.Conn
-	send       chan []byte
-	hub        *Hub
-	lastPing   int64
-	entity     *entity.Client
+	id       string
+	conn     *websocket.Conn
+	send     chan []byte
+	hub      *Hub
+	lastPing int64
+	entity   *entity.Client
 }
 
 func NewClient(id string, conn *websocket.Conn, hub *Hub) *Client {

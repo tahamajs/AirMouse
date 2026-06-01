@@ -25,26 +25,26 @@ type ClientCapabilities struct {
 
 // Client represents a connected device (phone, tablet, etc.).
 type Client struct {
-	ID          string              `json:"id"`           // Unique identifier
-	Name        string              `json:"name"`         // Friendly name
-	Status      ClientStatus        `json:"status"`
+	ID           string             `json:"id"`   // Unique identifier
+	Name         string             `json:"name"` // Friendly name
+	Status       ClientStatus       `json:"status"`
 	Capabilities ClientCapabilities `json:"capabilities"`
 
 	// Connection details
-	Transport   string    `json:"transport"`    // "websocket", "tcp", "udp", "bluetooth", "usb"
-	RemoteAddr  string    `json:"remote_addr"`  // IP:port or MAC
+	Transport   string    `json:"transport"`   // "websocket", "tcp", "udp", "bluetooth", "usb"
+	RemoteAddr  string    `json:"remote_addr"` // IP:port or MAC
 	ConnectedAt time.Time `json:"connected_at"`
 	LastActive  time.Time `json:"last_active"`
 
 	// Statistics
-	BytesSent   int64 `json:"bytes_sent"`
-	BytesRecv   int64 `json:"bytes_recv"`
+	BytesSent    int64 `json:"bytes_sent"`
+	BytesRecv    int64 `json:"bytes_recv"`
 	MessagesSent int64 `json:"messages_sent"`
 	MessagesRecv int64 `json:"messages_recv"`
 
 	// Runtime
-	PingLatency   time.Duration `json:"ping_latency"`    // current round‑trip
-	Jitter        float64       `json:"jitter"`         // network jitter in ms
+	PingLatency   time.Duration `json:"ping_latency"` // current round‑trip
+	Jitter        float64       `json:"jitter"`       // network jitter in ms
 	LastHeartbeat time.Time     `json:"last_heartbeat"`
 }
 
@@ -52,13 +52,13 @@ type Client struct {
 func NewClient(id, transport, remoteAddr string) *Client {
 	now := time.Now()
 	return &Client{
-		ID:          id,
-		Name:        id[:min(8, len(id))],
-		Status:      StatusConnected,
-		Transport:   transport,
-		RemoteAddr:  remoteAddr,
-		ConnectedAt: now,
-		LastActive:  now,
+		ID:            id,
+		Name:          id[:min(8, len(id))],
+		Status:        StatusConnected,
+		Transport:     transport,
+		RemoteAddr:    remoteAddr,
+		ConnectedAt:   now,
+		LastActive:    now,
 		LastHeartbeat: now,
 	}
 }

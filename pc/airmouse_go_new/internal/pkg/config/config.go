@@ -13,7 +13,7 @@ type SharedConfig struct {
 		Port int    `json:"port"`
 	} `json:"server"`
 	Features struct {
-		EnableAI      bool `json:"enable_ai"`
+		EnableAI        bool `json:"enable_ai"`
 		EnableBluetooth bool `json:"enable_bluetooth"`
 	} `json:"features"`
 }

@@ -25,13 +25,13 @@ type inputEvent struct {
 }
 
 const (
-	EV_REL   = 0x02
-	EV_KEY   = 0x01
-	EV_SYN   = 0x00
-	REL_X    = 0x00
-	REL_Y    = 0x01
+	EV_REL    = 0x02
+	EV_KEY    = 0x01
+	EV_SYN    = 0x00
+	REL_X     = 0x00
+	REL_Y     = 0x01
 	REL_WHEEL = 0x08
-	BTN_LEFT = 0x110
+	BTN_LEFT  = 0x110
 	BTN_RIGHT = 0x111
 )
 
