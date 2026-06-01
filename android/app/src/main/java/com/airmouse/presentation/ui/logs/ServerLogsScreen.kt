@@ -9,52 +9,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.airmouse.presentation.navigation.NavigationActions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ServerLogsScreen(
-    viewModel: ServerLogsViewModel = hiltViewModel()
+fun ServerLogScreen(
+    navigationActions: NavigationActions,
+    viewModel: ServerLogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Server Logs") }) }
+        topBar = { TopAppBar(title = { Text("Server Logs") }, navigationIcon = { BackButton(navigationActions) }) }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = uiState.filter,
-                    onValueChange = viewModel::setFilter,
-                    label = { Text("Filter") },
-                    modifier = Modifier.weight(1f)
-                )
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(value = uiState.filter, onValueChange = viewModel::setFilter, label = { Text("Filter") }, modifier = Modifier.weight(1f))
                 Button(onClick = viewModel::clearLogs) { Text("Clear") }
                 Button(onClick = viewModel::exportLogs) { Text("Export") }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                listOf("All", "Info", "Warn", "Error").forEach { level ->
-                    FilterChip(
-                        selected = uiState.level == level,
-                        onClick = { viewModel.setLevel(level) },
-                        label = { Text(level) },
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = uiState.level == "All", onClick = { viewModel.setLevel("All") }, label = { Text("All") })
+                FilterChip(selected = uiState.level == "Info", onClick = { viewModel.setLevel("Info") }, label = { Text("Info") })
+                FilterChip(selected = uiState.level == "Warn", onClick = { viewModel.setLevel("Warn") }, label = { Text("Warn") })
+                FilterChip(selected = uiState.level == "Error", onClick = { viewModel.setLevel("Error") }, label = { Text("Error") })
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             LazyColumn {
-                items(uiState.logs) { log ->
-                    Text(log, modifier = Modifier.padding(vertical = 4.dp), fontSize = 12.sp)
-                }
+                items(uiState.logs) { log -> Text(log, modifier = Modifier.padding(vertical = 4.dp), fontSize = 12.sp) }
             }
         }
     }

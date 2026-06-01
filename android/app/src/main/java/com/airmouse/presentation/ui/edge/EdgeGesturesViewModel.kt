@@ -14,17 +14,13 @@ class EdgeGesturesViewModel @Inject constructor() : ViewModel() {
     private val _uiState = MutableStateFlow(EdgeGesturesUiState())
     val uiState: StateFlow<EdgeGesturesUiState> = _uiState.asStateFlow()
 
-    fun toggleService(enabled: Boolean) {
-        _uiState.update { it.copy(isEnabled = enabled) }
-        // Start/stop EdgeGestureService
-    }
-
-    fun updateVolumeUpAction(action: String) {
-        _uiState.update { it.copy(volumeUpAction = action) }
-        // Save to prefs
-    }
-
-    fun updateVolumeDownAction(action: String) {
-        _uiState.update { it.copy(volumeDownAction = action) }
-    }
+    fun setEnabled(enabled: Boolean) = _uiState.update { it.copy(isEnabled = enabled) }
+    fun setVolumeUpAction(action: String) = _uiState.update { it.copy(volumeUpAction = action) }
+    fun setVolumeDownAction(action: String) = _uiState.update { it.copy(volumeDownAction = action) }
 }
+
+data class EdgeGesturesUiState(
+    val isEnabled: Boolean = false,
+    val volumeUpAction: String = "Click",
+    val volumeDownAction: String = "Scroll Up"
+)
