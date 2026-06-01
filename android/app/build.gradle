@@ -69,6 +69,23 @@ android {
 }
 
 dependencies {
+
+
+        testImplementation 'junit:junit:4.13.2'
+    testImplementation 'io.mockk:mockk:1.13.10'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
+    testImplementation 'androidx.arch.core:core-testing:2.2.0'
+    testImplementation 'org.robolectric:robolectric:4.11.1'
+
+    // Instrumentation testing (UI)
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4:1.6.0'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.52'
+    kaptAndroidTest 'com.google.dagger:hilt-compiler:2.52'
+
     // Core AndroidX
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'

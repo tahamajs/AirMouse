@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/data/datasource/remote/IBluetoothDataSource.kt
 package com.airmouse.data.datasource.remote
 
 import android.bluetooth.BluetoothDevice
