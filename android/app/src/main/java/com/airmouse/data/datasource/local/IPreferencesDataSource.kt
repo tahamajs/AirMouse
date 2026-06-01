@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/data/datasource/local/IPreferencesDataSource.kt
 package com.airmouse.data.datasource.local
 
 import kotlinx.coroutines.flow.Flow
