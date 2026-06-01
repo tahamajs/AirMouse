@@ -2,13 +2,11 @@ package http
 
 import (
 	"net/http"
-	"time"
 
 	"airmouse-go/internal/handler/websocket"
-	"airmouse-go/internal/pkg/config"
 )
 
-func NewRouter(hub *websocket.Hub, cfg *config.Config) *http.ServeMux {
+func NewRouter(hub *websocket.Hub) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", websocket.WebSocketHandler(hub))
 	mux.HandleFunc("/health", healthHandler)
