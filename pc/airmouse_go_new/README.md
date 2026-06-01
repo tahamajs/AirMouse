@@ -3,150 +3,151 @@
 > **Cross‑platform, AI‑powered remote control server** for the Air Mouse Android app.  
 > Written in Go, supports multiple protocols, AI smoothing, gesture recognition, proximity lock/unlock, and a modern desktop GUI.
 
+[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go)](https://go.dev/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 ---
 
 ## Table of Contents
 
 - [Air Mouse Pro Server – Complete Documentation](#air-mouse-pro-server--complete-documentation)
   - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Features](#features)
-    - [Connectivity](#connectivity)
-    - [Mouse Control](#mouse-control)
-    - [Gesture Recognition](#gesture-recognition)
-    - [Proximity Lock/Unlock](#proximity-lockunlock)
-    - [Personalisation](#personalisation)
-    - [GUI (Fyne)](#gui-fyne)
-  - [Architecture](#architecture)
-  - [Installation](#installation)
+  - [🎯 Overview](#-overview)
+  - [✨ Features](#-features)
+    - [📡 Connectivity](#-connectivity)
+    - [🧠 AI \& Prediction](#-ai--prediction)
+    - [🔐 Proximity‑Aware Security](#-proximityaware-security)
+    - [📊 Management \& Monitoring](#-management--monitoring)
+    - [🎨 User Interface (Fyne)](#-user-interface-fyne)
+  - [🏗️ Architecture](#️-architecture)
+  - [📦 Installation](#-installation)
     - [Prerequisites](#prerequisites)
     - [Build from source](#build-from-source)
     - [Run](#run)
+    - [Docker (optional)](#docker-optional)
     - [Cross‑compile](#crosscompile)
-  - [Configuration](#configuration)
-  - [Protocol Specification](#protocol-specification)
+  - [⚙️ Configuration](#️-configuration)
+  - [📡 Protocol Specification](#-protocol-specification)
     - [Transport](#transport)
     - [Client → Server Messages](#client--server-messages)
     - [Server → Client Messages](#server--client-messages)
-  - [Command‑Line Flags](#commandline-flags)
-  - [GUI Tabs](#gui-tabs)
-  - [AI \& Predictive Features](#ai--predictive-features)
+    - [Proximity (Optional Extension)](#proximity-optional-extension)
+  - [🔌 Command‑Line Flags](#-commandline-flags)
+  - [🖥️ GUI Tabs](#️-gui-tabs)
+  - [🧠 AI \& Predictive Features](#-ai--predictive-features)
     - [Kalman Predictor](#kalman-predictor)
     - [AI Smoother (ONNX)](#ai-smoother-onnx)
-    - [Gesture Recognition](#gesture-recognition-1)
-  - [Proximity Security](#proximity-security)
-  - [Personalization \& Training](#personalization--training)
-  - [System Actions](#system-actions)
-  - [Cross‑Platform Builds](#crossplatform-builds)
-  - [Troubleshooting](#troubleshooting)
+    - [Gesture Recognition](#gesture-recognition)
+  - [🔐 Proximity Security](#-proximity-security)
+  - [🤖 Personalization \& Training](#-personalization--training)
+  - [⌨️ System Actions](#️-system-actions)
+  - [🚀 Cross‑Platform Builds](#-crossplatform-builds)
+  - [🐛 Troubleshooting](#-troubleshooting)
     - [Server won’t start](#server-wont-start)
     - [WebSocket connection refused](#websocket-connection-refused)
     - [Mouse movement is jerky](#mouse-movement-is-jerky)
     - [Gesture not recognised](#gesture-not-recognised)
     - [Proximity lock doesn’t work](#proximity-lock-doesnt-work)
     - [AI smoother not loading](#ai-smoother-not-loading)
-  - [License](#license)
+  - [🧪 Development](#-development)
+    - [Project Structure](#project-structure)
+    - [Adding a New Gesture Type](#adding-a-new-gesture-type)
+    - [Running Tests](#running-tests)
+    - [Building Without AI Features](#building-without-ai-features)
+  - [🤝 Contributing](#-contributing)
+  - [📄 License](#-license)
 
 ---
 
-## Overview
+## 🎯 Overview
 
-Air Mouse Pro Server turns your Android phone into a **smart remote control** for your computer.  
-It receives movement, click, and gesture commands over WebSocket/TCP/UDP/Bluetooth/USB, translates them into native mouse/keyboard actions, and provides a rich desktop interface for monitoring and configuration.
+**Air Mouse Pro Server** is the desktop counterpart of the Air Mouse Android app. It receives movement, click, and gesture commands from one or more mobile devices over WebSocket (or TCP/UDP) and translates them into native mouse and keyboard actions on the host computer. The server is built with **Clean Architecture**, making it modular, testable, and easy to extend.
 
-Key highlights:
-- **Zero‑configuration pairing** via QR code
-- **Real‑time cursor control** with low latency (Kalman prediction + jitter buffer)
-- **AI‑powered smoothing** (ONNX runtime) for natural‑looking movement
-- **Gesture recognition** (swipes, circles, thumbs‑up) with custom templates
-- **Proximity‑aware lock/unlock** using Bluetooth RSSI (or Channel Sounding)
-- **User personalisation** – collect movement data and fine‑tune models
-- **Cross‑platform** – Windows, macOS, Linux
-- **Beautiful GUI** – 15+ themes, live stats, device list, log viewer
+Key capabilities include:
+
+- **Multi‑protocol** – WebSocket (primary), TCP (fallback), UDP discovery, Bluetooth (HID), USB serial.
+- **Low latency** – Predictive Kalman filtering and jitter buffer hide network lag.
+- **AI gestures** – Recognise custom gestures (swipes, circles, thumbs‑up) with on‑device TensorFlow Lite or server‑side ONNX models.
+- **Proximity lock/unlock** – Uses Bluetooth RSSI (or Channel Sounding) to lock the screen when you walk away.
+- **Client registry** – Track connected devices, their names, capabilities, and statistics.
+- **Modern GUI** – Fyne‑based dashboard with real‑time stats, device list, QR pairing, and log viewer.
 
 ---
 
-## Features
+## ✨ Features
 
-### Connectivity
+### 📡 Connectivity
 | Protocol | Port | Use |
 |----------|------|-----|
-| WebSocket | 8080 (default) | Primary, low‑overhead |
-| TCP | 8080 | Fallback for plain TCP clients |
-| UDP discovery | 8082 | Auto‑detect server on LAN |
-| Bluetooth LE | – | HID proxy (stub, ready for extension) |
-| USB serial | – | Wired connection (Linux/macOS) |
+| **WebSocket** | 8080 | Primary, low‑overhead, real‑time |
+| **TCP** | 8080 | Plain TCP (fallback) |
+| **UDP discovery** | 8082 | Auto‑detect server on LAN |
+| **Bluetooth HID** | – | Emulate a Bluetooth mouse (Linux/macOS) |
+| **USB serial** | – | Wired connection via USB‑CDC |
 
-### Mouse Control
-- Sensitivity (0.2 – 2.0)
-- Exponential moving average smoothing
-- Acceleration curve (configurable)
-- Deadband (ignores very small movements)
-- **Kalman filter** for predictive movement (hides network jitter)
-- **AI smoother** (ONNX LSTM model) – human‑like trajectory
+### 🧠 AI & Prediction
+- **Kalman filter** for movement prediction – reduces perceived lag.
+- **ONNX runtime** integration for AI‑based trajectory smoothing (LSTM model).
+- **Gesture recognition** – classify pre‑recorded or custom gestures (DTW + particle filter).
+- **Online personalisation** – collect user movement and fine‑tune models via external Python service.
 
-### Gesture Recognition
-- Pre‑defined: `LeftSwipe`, `RightSwipe`, `CircleCW`, `CircleCCW`, `ThumbsUp`
-- Custom gestures via template matching (DTW + particle filter)
-- On‑device classification (Android) or server‑side (ONNX)
-- Configurable confidence threshold
+### 🔐 Proximity‑Aware Security
+- **RSSI‑based distance estimation** – approximate distance from phone to PC.
+- **Auto lock** – lock screen when phone moves beyond a threshold (e.g., 4 m).
+- **Auto unlock** – optional (requires OS support).
+- **Bluetooth MAC whitelist** – restrict to authorised devices.
 
-### Proximity Lock/Unlock
-- Estimates distance using BLE RSSI (path loss model)
-- Auto‑locks screen when phone moves beyond `far_threshold` (default 4 m)
-- Auto‑unlocks when returns within `near_threshold` (default 2 m)
-- Works on Windows, Linux, macOS (requires `loginctl`, `gnome-screensaver`, etc.)
+### 📊 Management & Monitoring
+- **Client dashboard** – list all connected devices with uptime, idle time, bytes transferred.
+- **Statistics** – total clicks, double clicks, scrolls, movement distance.
+- **Health metrics** – per‑client ping latency, jitter, message counts.
+- **Structured logging** – JSON logs, levels (info/warn/error), hookable.
 
-### Personalisation
-- **Data collector** – records user movement (position + velocity)
-- **Online training** – triggers Python fine‑tuning service (optional)
-- **Auto‑swap model** – loads improved model without restart
-
-### GUI (Fyne)
-- **Dashboard** – start/stop server, live click stats, uptime, AI status
-- **Devices** – list of connected clients (name, type, connection time)
-- **Network** – IP selection, QR code for pairing, port configuration
-- **Gestures** – manage gesture templates, train new ones
-- **Proximity** – enable/disable lock/unlock, set thresholds, calibrate
-- **Settings** – sensitivity, theme, smoothing, acceleration, AI, personalisation
-- **Logs** – real‑time log viewer with filter (info/warn/error) and export
-- **Status bar** – CPU, memory, goroutines, uptime
+### 🎨 User Interface (Fyne)
+- **Tabs**: Dashboard, Devices, Network, Settings, Logs.
+- **QR code generation** – one‑click pairing for the Android app.
+- **Theme support** – 15+ built‑in themes (dark, light, pure black, ocean, etc.).
+- **Real‑time updates** – stats and device list refresh automatically.
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
-The server follows **Clean Architecture** (onion) with four layers:
+The project follows **Clean Architecture** (Onion) with four concentric layers:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Delivery Layer (WebSocket/HTTP handlers, DTOs)        │
-├─────────────────────────────────────────────────────────┤
-│  Use Case Layer (domain services – mouse, gesture, etc.)│
-├─────────────────────────────────────────────────────────┤
-│  Repository Layer (interfaces for data access)         │
-├─────────────────────────────────────────────────────────┤
-│  Infrastructure Layer (mouse control, Bluetooth, USB)  │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     Delivery Layer                          │
+│  (WebSocket/HTTP handlers, DTOs, middleware)               │
+├─────────────────────────────────────────────────────────────┤
+│                      Use Case Layer                         │
+│  (domain services – mouse, gesture, connection)            │
+├─────────────────────────────────────────────────────────────┤
+│                     Repository Layer                        │
+│  (interfaces for data access – client, gesture, mouse)     │
+├─────────────────────────────────────────────────────────────┤
+│                   Infrastructure Layer                      │
+│  (mouse controller, Bluetooth, USB, logger, etc.)          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 - **Domain** (`internal/domain`) – pure business logic, no external dependencies.
-- **Repository** (`internal/repository`) – implementations of repository interfaces (in‑memory).
-- **Handler** (`internal/handler`) – WebSocket hub, HTTP routes, DTOs.
-- **Infra** (`internal/infra`) – platform‑specific mouse control, Bluetooth stubs, logger.
-- **UI** (`internal/ui`) – Fyne desktop interface.
+- **Repository** (`internal/repository`) – concrete implementations of repository interfaces.
+- **Handler** (`internal/handler`) – WebSocket and HTTP endpoints, DTOs, message routing.
+- **Infra** (`internal/infra`) – platform‑specific mouse control, Bluetooth, USB, logging.
 
-All dependencies are injected in `cmd/airmouse-server/main.go`.
+All dependencies point inward. The `cmd/airmouse-server/main.go` wires everything together using **constructor injection**.
 
 ---
 
-## Installation
+## 📦 Installation
 
 ### Prerequisites
 - Go 1.23+
-- For AI smoothing: ONNX Runtime shared library (auto‑fetched by go module)
-- For Linux mouse control: `/dev/uinput` writable or `xdotool`
-- For Bluetooth: BlueZ (Linux), CoreBluetooth (macOS), Windows Bluetooth stack
+- For AI smoothing: ONNX Runtime shared library (optional, auto‑fetched by go module)
+- For Linux mouse input: `/dev/uinput` writable (or install `xdotool`)
+- For Bluetooth: BlueZ (Linux), CoreBluetooth (macOS)
 - For building the GUI: `gcc` (required by Fyne)
 
 ### Build from source
@@ -164,7 +165,18 @@ make build
 ./airmouse-server
 ```
 
-The GUI will appear. Use the **Network** tab to generate a QR code and pair your Android app.
+The GUI will open. You can then:
+
+1. **Connect the Android app** – scan the QR code from the **Network** tab.
+2. **Start the server** – click “Start Server” in the **Dashboard** tab.
+3. **Control** – move your phone; the cursor follows.
+
+### Docker (optional)
+
+```bash
+docker build -t airmouse-server .
+docker run -p 8080:8080 -p 8081:8081 airmouse-server
+```
 
 ### Cross‑compile
 
@@ -176,10 +188,9 @@ make build-mac       # airmouse-server-mac
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
-Settings are stored in `~/.config/airmouse/config.json` (Linux/macOS) or `%APPDATA%\airmouse\config.json` (Windows).
-
+The server reads `~/.config/airmouse/config.json` (Linux/macOS) or `%APPDATA%\airmouse\config.json` (Windows).  
 Example:
 
 ```json
@@ -202,49 +213,65 @@ Example:
 }
 ```
 
-All options can be changed via the **Settings** tab; changes are saved automatically.
+All settings can also be changed via the **Settings** tab in the GUI.  
+The server applies changes immediately and saves them to disk.
 
 ---
 
-## Protocol Specification
+## 📡 Protocol Specification
 
 ### Transport
-- **WebSocket** endpoint: `ws://<server-ip>:8080/ws`
-- **Message format**: JSON line (`\n` terminated)
+- **Primary**: WebSocket over TCP (port 8080).  
+- **Alternative**: Raw TCP (same port) – for simple clients.
+- **Message format**: JSON‑line, each message terminated by `\n`.
 
 ### Client → Server Messages
 
 | Type | Payload Example | Description |
 |------|----------------|-------------|
-| `move` | `{"dx":1.5,"dy":2.0}` | Relative movement |
-| `click` | `{"button":"left"}` | Left/right click |
+| `move` | `{"dx": 1.5, "dy": 2.0}` | Relative cursor movement |
+| `click` | `{"button": "left"}` | Left, right, or middle click |
 | `doubleclick` | `{}` | Double left click |
 | `rightclick` | `{}` | Right click |
-| `scroll` | `{"delta":1}` | Wheel scroll (+ = up) |
-| `hello` | `{"name":"MyPhone","version":"3.0"}` | Identify device |
-| `ping` | `{}` | Keep‑alive |
-| `gesture` | `{"gesture":"ThumbsUp","confidence":0.92}` | Recognised gesture |
-| `proximity` | `{"device_id":"...","is_near":true,"distance":1.23}` | Distance update |
-| `control` | `{"command":"pause_movement"}` | Pause/resume cursor |
+| `scroll` | `{"delta": 1}` | Scroll up (positive) or down (negative) |
+| `hello` | `{"name": "MyPhone", "version": "3.0"}` | Identify device (name appears in dashboard) |
+| `ping` | `{}` | Keep‑alive (server responds with `pong`) |
+| `gesture` | `{"gesture": "ThumbsUp", "confidence": 0.92}` | Recognised gesture (sent by Android app) |
+| `proximity` | `{"device_id": "abc123", "is_near": true, "distance": 1.23}` | Distance update (for auto lock/unlock) |
+| `control` | `{"command": "pause_movement"}` | Temporarily stop/resume mouse movement |
 
 ### Server → Client Messages
 
 | Type | Payload | Description |
 |------|---------|-------------|
-| `welcome` | `{"server":"AirMouse","version":"3.0"}` | After `hello` |
-| `ping` | `{}` | Heartbeat |
-| `pong` | `{}` | Response to ping |
-| `ack` | `{"id":"..."}` | Acknowledgment (if request included ID) |
+| `welcome` | `{"server":"AirMouse","version":"3.0"}` | Sent after `hello` |
+| `ping` | `{}` | Heartbeat request |
+| `pong` | `{}` | Heartbeat response |
+| `ack` | `{"id": "..."}` | Acknowledgement of a command (optional) |
+
+### Proximity (Optional Extension)
+When the Android app’s proximity service is active, it sends:
+
+```json
+{
+  "type": "proximity",
+  "payload": {
+    "is_near": true,
+    "distance": 1.23
+  }
+}
+```
+The server evaluates thresholds and locks/unlocks the screen accordingly.
 
 ---
 
-## Command‑Line Flags
+## 🔌 Command‑Line Flags
 
 Not yet implemented; all configuration is via `config.json` or GUI.
 
 ---
 
-## GUI Tabs
+## 🖥️ GUI Tabs
 
 1. **Dashboard**  
    - Start/stop server  
@@ -292,7 +319,7 @@ Not yet implemented; all configuration is via `config.json` or GUI.
 
 ---
 
-## AI & Predictive Features
+## 🧠 AI & Predictive Features
 
 ### Kalman Predictor
 - Filters incoming movement deltas to reduce jitter.
@@ -311,7 +338,7 @@ Not yet implemented; all configuration is via `config.json` or GUI.
 
 ---
 
-## Proximity Security
+## 🔐 Proximity Security
 
 - The Android app periodically reports RSSI (or distance if Channel Sounding is available).
 - Server converts RSSI to distance using a path‑loss model (`TxPower` and `EnvFactor`).
@@ -326,7 +353,7 @@ Not yet implemented; all configuration is via `config.json` or GUI.
 
 ---
 
-## Personalization & Training
+## 🤖 Personalization & Training
 
 - **DataCollector** stores movement samples (position, velocity, timestamp) in a circular buffer.
 - When buffer reaches `personalization_buffer` (default 2000), it triggers a fine‑tune request to an external Python service (default `http://localhost:5001`).
@@ -335,7 +362,7 @@ Not yet implemented; all configuration is via `config.json` or GUI.
 
 ---
 
-## System Actions
+## ⌨️ System Actions
 
 The server maps recognised gestures and commands to system actions via the `sysaction` package.
 
@@ -359,7 +386,7 @@ Platform‑specific implementations use:
 
 ---
 
-## Cross‑Platform Builds
+## 🚀 Cross‑Platform Builds
 
 Use the provided `Makefile` targets:
 
@@ -371,7 +398,7 @@ make build-mac       # 64‑bit macOS executable
 
 ---
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Server won’t start
 - Check that the port is not already in use (`lsof -i :8080`).
@@ -403,11 +430,65 @@ make build-mac       # 64‑bit macOS executable
 
 ---
 
-## License
+## 🧪 Development
+
+### Project Structure
+
+```
+airmouse-go/
+├── cmd/airmouse-server/          # Entry point
+├── internal/
+│   ├── domain/                   # Entities, repository interfaces, services
+│   ├── repository/               # Repository implementations
+│   ├── handler/                  # WebSocket, HTTP, DTOs
+│   ├── infra/                    # Mouse, Bluetooth, USB, logger
+│   └── pkg/                      # Utilities (crypto, net, random)
+├── go.mod
+└── go.sum
+```
+
+### Adding a New Gesture Type
+
+1. Extend `internal/domain/entity/gesture.go` – add new `GestureType` constant.
+2. Update the gesture service `Recognize()` logic (or add a template in `gesture_repository_impl.go`).
+3. Modify the WebSocket handler to map the incoming gesture to an action (optional).
+4. (Optional) Add a system action in `internal/infra/sysaction/`.
+
+### Running Tests
+
+```bash
+go test -v ./...
+```
+
+### Building Without AI Features
+
+If you don’t have ONNX runtime, use the stub build:
+
+```bash
+go build -tags noai -o airmouse-server ./cmd/airmouse-server
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/amazing-feature`).
+3. Commit your changes (`git commit -m 'Add amazing feature'`).
+4. Push to the branch (`git push origin feature/amazing-feature`).
+5. Open a Pull Request.
+
+Please ensure your code follows the existing style and passes all tests.
+
+---
+
+## 📄 License
 
 MIT License – Copyright (c) 2025 University of Tehran, Embedded Systems Laboratory.  
 See [LICENSE](LICENSE) for full text.
 
 ---
 
-**Built with Go, Fyne, and ONNX Runtime** – ready for production.
+**Built with Go, Fyne, and ONNX Runtime – ready for production.**
