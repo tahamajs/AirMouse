@@ -38,6 +38,8 @@ func getThemeByName(name string) fyne.Theme {
         return theme.DarkTheme()
     case "pure_black":
         return &CustomTheme{name: "pure_black"}
+    case "high_contrast":
+        return &CustomTheme{name: "high_contrast"}
     default:
         return theme.DarkTheme()
     }

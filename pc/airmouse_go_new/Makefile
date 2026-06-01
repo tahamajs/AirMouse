@@ -10,7 +10,7 @@ deps:
 
 # Build for current OS
 build: deps
-	go build -o $(BINARY_NAME) ./cmd/airmouse-server
+	go build -o $(BINARY_NAME) 
 
 # Run the server
 run: build

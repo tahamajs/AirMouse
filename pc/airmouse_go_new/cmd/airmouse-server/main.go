@@ -19,34 +19,27 @@ func main() {
     cfg := config.Get()
     utils.LogInfo("Air Mouse Pro Server starting", "version", "3.0.0")
 
-    // Device manager
     deviceMgr := device.NewManager()
-
-    // Auth manager
     authMgr := auth.NewManager(cfg.AuthSecret)
-
-    // Mouse controller
     mouseCtrl := control.NewMouseController(cfg.Sensitivity)
     mouseCtrl.SetSmoothing(true)
     mouseCtrl.SetAcceleration(true, 1.5)
 
-    // Enable ML prediction if configured
     if cfg.EnableMLPrediction {
         mouseCtrl.EnableMLPrediction(true)
         mouseCtrl.SetMLBlendFactor(cfg.MLBlendFactor)
         utils.LogInfo("ML‑powered trajectory prediction enabled")
     }
 
-    // Protocol server
     server := protocol.NewProtocolServer(mouseCtrl, deviceMgr, authMgr)
     if err := server.Start(); err != nil {
         utils.LogFatal("Failed to start server", "error", err)
     }
 
-    // Start the UI on the main goroutine (this blocks until the window is closed)
+    // UI must run on the main goroutine
     app := ui.NewApp(cfg, server, mouseCtrl, deviceMgr)
 
-    // Handle shutdown in a separate goroutine
+    // Handle shutdown in background
     go func() {
         sigChan := make(chan os.Signal, 1)
         signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -58,8 +51,9 @@ func main() {
         os.Exit(0)
     }()
 
-    // Run the GUI (this blocks)
+    // This blocks until the window is closed
     if err := app.Run(); err != nil {
         utils.LogError("UI error", "error", err)
+        os.Exit(1)
     }
 }

@@ -42,7 +42,6 @@ func refreshLogWidget() {
         return
     }
     logMu.RLock()
-    defer logMu.RUnlock()
     var buf bytes.Buffer
     for _, e := range logEntries {
         buf.WriteString(e.Time.Format("15:04:05"))
@@ -52,7 +51,12 @@ func refreshLogWidget() {
         buf.WriteString(e.Message)
         buf.WriteString("\n")
     }
-    logWidget.SetText(buf.String())
+    text := buf.String()
+    logMu.RUnlock()
+    // UI update must be on main thread
+    fyne.Do(func() {
+        logWidget.SetText(text)
+    })
 }
 
 type LogsTab struct{}
@@ -66,7 +70,7 @@ func NewLogsTab() fyne.CanvasObject {
         logMu.Lock()
         logEntries = nil
         logMu.Unlock()
-        logWidget.SetText("")
+        fyne.Do(func() { logWidget.SetText("") })
     })
     exportBtn := widget.NewButton("Export Logs", func() {
         if app := fyne.CurrentApp(); app != nil && len(app.Driver().AllWindows()) > 0 {
