@@ -4,6 +4,7 @@ import (
     "fmt"
 
     "airmouse-go/internal/infra/logger"
+    pkgutils "airmouse-go/internal/pkg/utils"
 )
 
 // LogInfo accepts a message and optional key/value pairs and forwards to infra logger.
@@ -42,4 +43,9 @@ func LogError(msg string, kv ...interface{}) {
         }
     }
     logger.Error("%s", msg)
+}
+
+// GenerateID proxies to pkg/utils.GenerateID for backward compatibility.
+func GenerateID() string {
+    return pkgutils.GenerateID()
 }

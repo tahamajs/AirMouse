@@ -73,9 +73,50 @@ func loadOrDefault() *Config {
 
 func (c *Config) Save() error {
 	c.mu.RLock()
-	snapshot := *c
-	// avoid copying mutex into snapshot
-	snapshot.mu = sync.RWMutex{}
+	// build a snapshot without the mutex to avoid copying sync primitives
+	snapshot := struct {
+		Port                       string  `json:"port"`
+		WebSocketPort              int     `json:"websocket_port"`
+		Sensitivity                float64 `json:"sensitivity"`
+		PredictiveBlendFactor      float64 `json:"predictive_blend_factor"`
+		GestureConfidenceThreshold float64 `json:"gesture_confidence_threshold"`
+		LogLevel                   string  `json:"log_level"`
+		EnableAI                   bool    `json:"enable_ai"`
+		ModelPath                  string  `json:"model_path"`
+		EnablePredictive           bool    `json:"enable_predictive"`
+		EnablePersonalization      bool    `json:"enable_personalization"`
+		PersonalizationBuffer      int     `json:"personalization_buffer"`
+		PersonalizationInterval    int     `json:"personalization_interval"`
+		AutoSwapModel              bool    `json:"auto_swap_model"`
+		EnableMLPrediction         bool    `json:"enable_ml_prediction"`
+		MLModelPath                string  `json:"ml_model_path"`
+		MLSequenceLength           int     `json:"ml_sequence_length"`
+		MLBlendFactor              float64 `json:"ml_blend_factor"`
+		MLInferenceInterval        int     `json:"ml_inference_interval_ms"`
+		AuthEnabled                bool    `json:"auth_enabled"`
+		AuthSecret                 string  `json:"auth_secret"`
+	}{
+		Port:                       c.Port,
+		WebSocketPort:              c.WebSocketPort,
+		Sensitivity:                c.Sensitivity,
+		PredictiveBlendFactor:      c.PredictiveBlendFactor,
+		GestureConfidenceThreshold: c.GestureConfidenceThreshold,
+		LogLevel:                   c.LogLevel,
+		EnableAI:                   c.EnableAI,
+		ModelPath:                  c.ModelPath,
+		EnablePredictive:           c.EnablePredictive,
+		EnablePersonalization:      c.EnablePersonalization,
+		PersonalizationBuffer:      c.PersonalizationBuffer,
+		PersonalizationInterval:    c.PersonalizationInterval,
+		AutoSwapModel:              c.AutoSwapModel,
+		EnableMLPrediction:         c.EnableMLPrediction,
+		MLModelPath:                c.MLModelPath,
+		MLSequenceLength:           c.MLSequenceLength,
+		MLBlendFactor:              c.MLBlendFactor,
+		MLInferenceInterval:        c.MLInferenceInterval,
+		AuthEnabled:                c.AuthEnabled,
+		AuthSecret:                 c.AuthSecret,
+	}
 	c.mu.RUnlock()
 	data, err := json.MarshalIndent(&snapshot, "", "  ")
 	if err != nil {
