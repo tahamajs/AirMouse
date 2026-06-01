@@ -83,7 +83,6 @@ func (a *App) Run() error {
 }
 
 func (a *App) Stop() { a.fyneApp.Quit() }
-
 func showAboutDialog(w fyne.Window) {
     popUp := widget.NewModalPopUp(
         container.NewVBox(

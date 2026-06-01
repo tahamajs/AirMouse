@@ -1,0 +1,2 @@
+# airmouse-go/internal/protocol/websocket
+internal/protocol/websocket/server.go:91:14: undefined: utils.GenerateID
