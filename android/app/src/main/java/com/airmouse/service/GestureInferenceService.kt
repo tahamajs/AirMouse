@@ -12,10 +12,13 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.airmouse.R
-import com.airmouse.domain.model.GestureResult
+import com.airmouse.data.model.GestureResult
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream
 import java.nio.MappedByteBuffer
@@ -152,7 +155,7 @@ class GestureInferenceService : Service(), SensorEventListener {
         predictionRunning = true
         serviceScope.launch(Dispatchers.Default) {
             try {
-                val input = Array(1) { sensorBuffer.map { it.clone() }.toTypedArray() }
+                val input = arrayOf(sensorBuffer.toTypedArray())
                 val output = Array(1) { FloatArray(gestureLabels.size) }
                 tflite?.run(input, output)
 

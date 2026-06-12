@@ -1,14 +1,13 @@
 package com.airmouse.presentation.ui.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import com.airmouse.R
 
-data class BottomNavItem(val title: String, val icon: ImageVector, val destination: Destinations)
+data class BottomNavItem(val title: String, @DrawableRes val iconRes: Int, val destination: Destinations)
 
 val bottomNavItems = listOf(
-    BottomNavItem("Home", Icons.Default.Home, Destinations.Home),
-    BottomNavItem("Statistics", Icons.Default.BarChart, Destinations.Statistics),
-    BottomNavItem("Settings", Icons.Default.Settings, Destinations.Settings),
-    BottomNavItem("Help", Icons.Default.Info, Destinations.Help)
+    BottomNavItem("Home", R.drawable.ic_refresh, Destinations.Home),
+    BottomNavItem("Statistics", R.drawable.ic_logs, Destinations.Statistics),
+    BottomNavItem("Settings", R.drawable.ic_settings, Destinations.Settings),
+    BottomNavItem("Help", R.drawable.ic_help_start, Destinations.Help)
 )

@@ -27,6 +27,8 @@ class UsbHidService : Service() {
     private var isConnected = false
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var moveJob: Job? = null
+    private var pendingDx: Int = 0
+    private var pendingDy: Int = 0
 
     // HID Report Descriptor for mouse (standard 3-button mouse)
     private val HID_REPORT_DESCRIPTOR = byteArrayOf(
@@ -113,9 +115,14 @@ class UsbHidService : Service() {
             while (isConnected) {
                 // Wait for movement data from the main app
                 delay(16) // ~60 FPS
-                sendMovement(dx, dy)
+                sendMovement(pendingDx, pendingDy)
             }
         }
+    }
+
+    fun updateMovement(dx: Int, dy: Int) {
+        pendingDx = dx
+        pendingDy = dy
     }
 
     private fun sendMovement(dx: Int, dy: Int) {

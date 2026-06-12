@@ -46,6 +46,15 @@ class PreferencesManager(context: Context) {
     fun getLastPort(): Int = prefs.getInt("last_port", 8080)
     fun setLastPort(port: Int) = prefs.edit().putInt("last_port", port.coerceIn(1, 65535)).apply()
 
+    fun getServerMac(): String = prefs.getString("server_mac", "") ?: ""
+    fun setServerMac(mac: String) = prefs.edit().putString("server_mac", mac).apply()
+
+    fun getNearThreshold(): Float = prefs.getFloat("proximity_near_threshold", 2.0f)
+    fun setNearThreshold(value: Float) = prefs.edit().putFloat("proximity_near_threshold", value).apply()
+
+    fun getFarThreshold(): Float = prefs.getFloat("proximity_far_threshold", 3.5f)
+    fun setFarThreshold(value: Float) = prefs.edit().putFloat("proximity_far_threshold", value).apply()
+
     // ----------------------------------------------------------------------
     // Calibration data
     // ----------------------------------------------------------------------
@@ -158,6 +167,8 @@ class PreferencesManager(context: Context) {
 
     fun deleteProfile(name: String) = prefs.edit().remove("profile_$name").apply()
     fun getAllProfileNames(): List<String> = prefs.all.keys.filter { it.startsWith("profile_") }.map { it.removePrefix("profile_") }.toList()
+    fun getLastUsedProfile(): String? = prefs.getString("last_used_profile", null)
+    fun setLastUsedProfile(name: String) = prefs.edit().putString("last_used_profile", name).apply()
 
     // ----------------------------------------------------------------------
     // Themes

@@ -15,7 +15,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.airmouse.R
-import com.airmouse.domain.model.OrientationData
+import com.airmouse.domain.model.Orientation
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.GestureDetector
 import com.airmouse.utils.BatterySaver
@@ -39,11 +39,11 @@ class SensorService : Service(), SensorEventListener {
     private var gyroscope: Sensor? = null
     private var accelerometer: Sensor? = null
 
-    private val _orientation = MutableLiveData<OrientationData>()
-    val orientation: LiveData<OrientationData> = _orientation
+    private val _orientation = MutableLiveData<Orientation>()
+    val orientation: LiveData<Orientation> = _orientation
 
-    private val _gesture = MutableLiveData<GestureDetector.Gesture>()
-    val gesture: LiveData<GestureDetector.Gesture> = _gesture
+    private val _gesture = MutableLiveData<GestureDetector.MotionResult>()
+    val gesture: LiveData<GestureDetector.MotionResult> = _gesture
 
     private val _gyroY = MutableLiveData<Float>()
     val gyroY: LiveData<Float> = _gyroY
@@ -137,15 +137,13 @@ class SensorService : Service(), SensorEventListener {
                 val roll = Math.toDegrees(orientation[2].toDouble()).toFloat()
                 val pitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
                 val yaw = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                _orientation.postValue(OrientationData(roll, pitch, yaw))
+                _orientation.postValue(Orientation(roll, pitch, yaw))
             }
             Sensor.TYPE_GYROSCOPE -> {
                 val gyroY = event.values[1]
                 _gyroY.postValue(gyroY)
-                val gesture = gestureDetector.detect(event.values, dt)
-                if (gesture != GestureDetector.Gesture.NONE) {
-                    _gesture.postValue(gesture)
-                }
+                val result = gestureDetector.process(pitch = event.values[1], roll = event.values[0], yaw = event.values[2])
+                _gesture.postValue(result)
             }
             Sensor.TYPE_ACCELEROMETER -> {
                 _accelY.postValue(event.values[1])
