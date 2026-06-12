@@ -7,7 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import com.airmouse.bluetooth.BtHidHelper
 import com.airmouse.network.DataSender
 import com.airmouse.network.WebSocketManager
-import com.airmouse.touchpad.TcpClient
+import com.airmouse.network.TcpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
