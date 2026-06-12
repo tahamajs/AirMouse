@@ -7,31 +7,31 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.airmouse.presentation.about.AboutScreen
-import com.airmouse.presentation.accessibility.AccessibilityScreen
-import com.airmouse.presentation.battery.BatteryScreen
-import com.airmouse.presentation.calibration.CalibrationScreen
-import com.airmouse.presentation.edge.EdgeGesturesScreen
-import com.airmouse.presentation.gesture.GestureStudioScreen
-import com.airmouse.presentation.help.HelpScreen
-import com.airmouse.presentation.home.HomeScreen
-import com.airmouse.presentation.network.NetworkDiscoveryScreen
-import com.airmouse.presentation.onboarding.OnboardingScreen
-import com.airmouse.presentation.profiles.ProfilesScreen
-import com.airmouse.presentation.proximity.ProximityScreen
-import com.airmouse.presentation.serverlog.ServerLogScreen
-import com.airmouse.presentation.settings.SettingsScreen
-import com.airmouse.presentation.statistics.StatisticsScreen
-import com.airmouse.presentation.themes.ThemesScreen
-import com.airmouse.presentation.voice.VoiceCommandsScreen
-import com.airmouse.presentation.sensor.SensorVisualizerScreen
+import com.airmouse.presentation.ui.about.AboutScreen
+import com.airmouse.presentation.ui.accessibility.AccessibilityScreen
+import com.airmouse.presentation.ui.battery.BatteryScreen
+import com.airmouse.presentation.ui.calibration.CalibrationScreen
+import com.airmouse.presentation.ui.edge.EdgeGesturesScreen
+import com.airmouse.presentation.ui.gesture.GestureStudioScreen
+import com.airmouse.presentation.ui.help.HelpScreen
+import com.airmouse.presentation.ui.home.HomeScreen
+import com.airmouse.presentation.ui.network.NetworkDiscoveryScreen
+import com.airmouse.presentation.ui.onboarding.OnboardingScreen
+import com.airmouse.presentation.ui.profiles.ProfilesScreen
+import com.airmouse.presentation.ui.proximity.ProximityScreen
+import com.airmouse.presentation.ui.logs.ServerLogsScreen
+import com.airmouse.presentation.ui.settings.SettingsScreen
+import com.airmouse.presentation.ui.statistics.StatisticsScreen
+import com.airmouse.presentation.ui.themes.ThemesScreen
+import com.airmouse.presentation.ui.voice.VoiceCommandsScreen
+import com.airmouse.presentation.ui.sensor.SensorVisualizerScreen
 
 @Composable
 fun AirMouseNavHost(
     startDestination: Destinations = Destinations.Home,
     modifier: Modifier = Modifier
 ) {
-    val navController = rememberNavigationActions().navController
+    val navController = androidx.navigation.compose.rememberNavController()
     val navigationActions = rememberNavigationActions(navController)
 
     NavHost(
@@ -41,13 +41,13 @@ fun AirMouseNavHost(
     ) {
         // Main Screens
         composable(Destinations.Home.route) {
-            HomeScreen(navigationActions)
+            HomeScreen()
         }
         composable(Destinations.Statistics.route) {
-            StatisticsScreen(navigationActions)
+            StatisticsScreen()
         }
         composable(Destinations.Settings.route) {
-            SettingsScreen(navigationActions)
+            SettingsScreen()
         }
         composable(Destinations.Help.route) {
             HelpScreen(navigationActions)
@@ -76,7 +76,7 @@ fun AirMouseNavHost(
             ThemesScreen(navigationActions)
         }
         composable(Destinations.ServerLogs.route) {
-            ServerLogScreen(navigationActions)
+            ServerLogsScreen(navigationActions)
         }
         composable(Destinations.Battery.route) {
             BatteryScreen(navigationActions)
@@ -88,7 +88,7 @@ fun AirMouseNavHost(
             ProximityScreen(navigationActions)
         }
         composable(Destinations.SensorVisualizer.route) {
-            SensorVisualizerScreen(navigationActions)
+            SensorVisualizerScreen()
         }
 
         // Calibration Flow (with optional step argument)
