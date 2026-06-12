@@ -19,9 +19,9 @@ The system has two executable parts:
 | --- | --- |
 | Android 10/API 29+ support | `android/app/build.gradle`, `minSdk 29` |
 | Raw accelerometer/gyroscope/magnetometer use | `SensorService.kt`, `CalibrationHelper.kt` |
-| Gyroscope bias calibration | `CalibrationHelper.kt`, `HomeFragment.kt` |
-| Accelerometer calibration | `CalibrationHelper.kt` |
-| Magnetometer figure-8 calibration | `CalibrationHelper.kt` |
+| Gyroscope bias calibration | `CalibrationHelper.kt`, `CalibrationActivity.kt`, `GyroComposeFragment.kt` |
+| Accelerometer calibration | `CalibrationHelper.kt`, `CalibrationActivity.kt`, `AccelComposeFragment.kt` |
+| Magnetometer figure-8 calibration | `CalibrationHelper.kt`, `CalibrationActivity.kt`, `MagComposeFragment.kt` |
 | Sensor fusion for drift reduction | `MadgwickAHRS.kt`, `MadgwickFusion.kt` |
 | Horizontal/vertical cursor movement from phone orientation | `HomeFragment.attachSensorCallbacks()` |
 | Left click from fast Y-axis rotation | `EnhancedGestureDetector.kt` |
@@ -30,7 +30,7 @@ The system has two executable parts:
 | Scroll up/down from fast Y-axis acceleration | `EnhancedGestureDetector.kt` |
 | Adjustable sensitivity and thresholds | `PreferencesManager.kt`, `SettingsDialog.kt` |
 | UI with IP entry, calibration, start button, direction indicator, debug sensor values | `fragment_home.xml`, `HomeFragment.kt` |
-| Separate calibration workflow | `CalibrationFragment.kt`, `CalibrationHelper.kt`, `HomeFragment.startCalibration()` |
+| Separate calibration workflow | `CalibrationActivity.kt`, `CalibrationPagerAdapter.kt`, `CalibrationHelper.kt`, `HomeFragment.startCalibration()` |
 | TCP socket communication | `DataSender.kt`, `server.py`, `gui.py` |
 | JSON packet format | `DataSender.kt`, `server.py`, `gui.py` |
 | ACK for click/scroll commands | `DataSender.sendWithAck()`, server `_send_ack()` |
@@ -46,7 +46,7 @@ Main runtime flow:
 
 1. `OnboardingActivity` opens first and explains the app.
 2. The user enters the PC IP manually or scans the server QR code.
-3. The user calibrates the sensors.
+3. The user opens the dedicated calibration wizard and completes the sensor calibration steps.
 4. The user taps Start.
 5. `SensorService` starts accelerometer, gyroscope, and magnetometer listeners.
 6. `MadgwickAHRS` combines sensor values into stable roll/yaw orientation.
@@ -58,7 +58,10 @@ Important files:
 
 - `android/app/src/main/java/com/airmouse/HomeFragment.kt`: main app screen and runtime coordination.
 - `android/app/src/main/java/com/airmouse/sensors/SensorService.kt`: sensor collection and callbacks.
-- `android/app/src/main/java/com/airmouse/sensors/CalibrationHelper.kt`: gyro, accelerometer, and magnetometer calibration.
+- `android/app/src/main/java/com/airmouse/ui/CalibrationActivity.kt`: host activity for the guided calibration wizard.
+- `android/app/src/main/java/com/airmouse/calibration/CalibrationPagerAdapter.kt`: ViewPager2 adapter for the three guided steps.
+- `android/app/src/main/java/com/airmouse/calibration/GyroComposeFragment.kt`, `AccelComposeFragment.kt`, `MagComposeFragment.kt`: the actual calibration step screens.
+- `android/app/src/main/java/com/airmouse/sensors/CalibrationHelper.kt`: gyro, accelerometer, and magnetometer calibration math and persistence.
 - `android/app/src/main/java/com/airmouse/sensors/MadgwickAHRS.kt`: orientation fusion.
 - `android/app/src/main/java/com/airmouse/sensors/EnhancedGestureDetector.kt`: gesture detection.
 - `android/app/src/main/java/com/airmouse/network/DataSender.kt`: TCP client, ACK handling, resend logic.
