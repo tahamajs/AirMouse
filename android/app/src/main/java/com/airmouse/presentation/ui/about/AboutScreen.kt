@@ -62,7 +62,7 @@ fun AboutScreen(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Open Source Licenses", style = MaterialTheme.typography.titleMedium)
-                        Text("• TensorFlow Lite\n• OkHttp\n• PocketSphinx\n• MPAndroidChart")
+                        Text("• TensorFlow Lite\n• OkHttp\n• MPAndroidChart")
                     }
                 }
             }

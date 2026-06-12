@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="edge_gesture_actions">
+        <item>None</item>
+        <item>Click</item>
+        <item>Double Click</item>
+        <item>Right Click</item>
+        <item>Scroll Up</item>
+        <item>Scroll Down</item>
+        <item>Next Track</item>
+        <item>Previous Track</item>
+        <item>Volume Up</item>
+        <item>Volume Down</item>
+    </string-array>
+</resources>

@@ -12,6 +12,31 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <com.github.mikephil.charting.charts.BarChart
+            android:id="@+id/gesture_chart"
+            android:layout_width="match_parent"
+            android:layout_height="240dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/gesture_count_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Gesture counts"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/session_time_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="00:00:00"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
+
         <!-- 1. Cursor Behaviour -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"

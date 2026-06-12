@@ -77,20 +77,12 @@
         </activity>
 
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".MainActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.CalibrationActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.GestureStudioActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.ProximitySettingsFragment"
             android:exported="false" />
 
         <!-- QR code scanner (ZXing) -->

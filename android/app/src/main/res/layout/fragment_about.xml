@@ -56,7 +56,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="University of Tehran"
+                    android:text="@string/about_university_full"
                     app:chipIcon="@drawable/ic_university"
                     app:chipIconTint="@color/accent_blue"
                     app:chipBackgroundColor="@color/surface_light"
@@ -99,7 +99,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
-                        android:text="Developed by"
+                        android:text="@string/about_developed_by"
                         android:textColor="@color/text_primary"
                         android:textSize="20sp"
                         android:textStyle="bold" />
@@ -108,7 +108,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Embedded Systems Laboratory"
+                    android:text="@string/about_laboratory"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:layout_marginBottom="16dp" />
@@ -134,13 +134,13 @@
                             android:layout_width="80dp"
                             android:layout_height="80dp"
                             android:src="@drawable/ic_member_placeholder"
-                            android:contentDescription="Team member"
+                            android:contentDescription="@string/about_team_member_desc"
                             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Ali Rezaei"
+                            android:text="@string/about_member_1_name"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -149,7 +149,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Lead Developer"
+                            android:text="@string/about_member_1_role"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -167,13 +167,13 @@
                             android:layout_width="80dp"
                             android:layout_height="80dp"
                             android:src="@drawable/ic_member_placeholder"
-                            android:contentDescription="Team member"
+                            android:contentDescription="@string/about_team_member_desc"
                             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Sara Mohammadi"
+                            android:text="@string/about_member_2_name"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -182,7 +182,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="AI & Sensors"
+                            android:text="@string/about_member_2_role"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -200,13 +200,13 @@
                             android:layout_width="80dp"
                             android:layout_height="80dp"
                             android:src="@drawable/ic_member_placeholder"
-                            android:contentDescription="Team member"
+                            android:contentDescription="@string/about_team_member_desc"
                             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Mehdi Karimi"
+                            android:text="@string/about_member_3_name"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -215,7 +215,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="UI/UX & Protocols"
+                            android:text="@string/about_member_3_role"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -233,13 +233,13 @@
                             android:layout_width="80dp"
                             android:layout_height="80dp"
                             android:src="@drawable/ic_member_placeholder"
-                            android:contentDescription="Team member"
+                            android:contentDescription="@string/about_team_member_desc"
                             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Neda Ahmadi"
+                            android:text="@string/about_member_4_name"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -248,7 +248,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Testing & Docs"
+                            android:text="@string/about_member_4_role"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -275,7 +275,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="About the Project"
+                    android:text="@string/about_project_title"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -284,7 +284,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Air Mouse Pro is a graduate‑level embedded systems project that turns your smartphone into a smart, AI‑powered remote control for computers. It supports gesture recognition, proximity lock/unlock, predictive movement, and multi‑protocol connectivity (TCP, WebSocket, UDP, Bluetooth)."
+                    android:text="@string/about_project_description"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:lineSpacingExtra="4dp"
@@ -293,7 +293,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Key Technologies"
+                    android:text="@string/about_key_technologies"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -302,7 +302,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="• Go (server) & Kotlin (Android)\n• ONNX Runtime for AI smoothing\n• TensorFlow Lite for on‑device gesture recognition\n• Bluetooth Channel Sounding (BLE 6.0)\n• Kalman filter for predictive movement"
+                    android:text="@string/about_tech_details_short"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
                     android:lineSpacingExtra="4dp" />
@@ -328,7 +328,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Technical Specifications"
+                    android:text="@string/about_technical_specs"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -337,7 +337,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="• Cross‑platform: Windows, macOS, Linux\n• Multiple protocols: TCP, WebSocket, UDP, BLE\n• AI: RNN for smoothing, CNN for gestures\n• Battery‑optimised sensor processing\n• Low latency (<20ms)\n• Open‑source (MIT License)"
+                    android:text="@string/about_specs_details"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
                     android:lineSpacingExtra="4dp" />
@@ -362,7 +362,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="License"
+                    android:text="@string/about_license"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -371,7 +371,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="MIT License – Free to use, modify, and distribute."
+                    android:text="@string/about_license_text_short"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
                     android:layout_marginBottom="12dp" />
@@ -380,7 +380,7 @@
                     android:id="@+id/version_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Version 3.0.0"
+                    android:text="@string/about_version_static"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_gravity="center" />

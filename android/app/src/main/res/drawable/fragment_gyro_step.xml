@@ -1,2 +1,0 @@
-<ProgressBar android:id="@+id/stillnessBar" ... />
-<TextView android:id="@+id/countdownText" android:textSize="48sp" android:textColor="@color/accent_blue" android:visibility="gone" ... />

@@ -143,8 +143,6 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'com.opencsv:opencsv:5.9'
     implementation 'org.tensorflow:tensorflow-lite:2.16.1'
-    implementation 'com.google.mlkit:speech-recognition:18.0.0'
-    implementation 'edu.cmu.pocketsphinx:pocketsphinx-android:5prealpha@aar'
     implementation 'net.java.dev.jna:jna:5.13.0@aar'
     implementation 'com.linkedin.dexmaker:dexmaker:2.28.3'
 }

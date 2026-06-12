@@ -120,6 +120,16 @@
                     android:layout_gravity="center"
                     android:layout_marginBottom="4dp" />
 
+                <TextView
+                    android:id="@+id/positionBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Position 1/6"
+                    android:textColor="@color/accent_blue"
+                    android:textSize="13sp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="12dp" />
+
                 <!-- Dynamic description -->
                 <TextView
                     android:id="@+id/instructionDesc"

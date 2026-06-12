@@ -14,13 +14,13 @@
 
     <fragment
         android:id="@+id/statisticsFragment"
-        android:name="com.airmouse.ui.statistics.StatisticsFragment"
+        android:name="com.airmouse.StatisticsFragment"
         android:label="Statistics"
         tools:layout="@layout/fragment_statistics" />
 
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.airmouse.ui.SettingsFragment"
+        android:name="com.airmouse.SettingsFragment"
         android:label="Settings"
         tools:layout="@layout/fragment_settings" />
 
@@ -51,9 +51,9 @@
 
     <fragment
         android:id="@+id/gestureStudioFragment"
-        android:name="com.airmouse.GestureStudioActivity"
+        android:name="com.airmouse.GestureStudioFragment"
         android:label="Gesture Studio"
-        tools:layout="@layout/activity_gesture_studio" />
+        tools:layout="@layout/fragment_gesture_studio" />
 
     <fragment
         android:id="@+id/edgeGesturesFragment"
@@ -75,13 +75,13 @@
 
     <fragment
         android:id="@+id/serverLogFragment"
-        android:name="com.airmouse.ui.ServerLogFragment"
+        android:name="com.airmouse.ServerLogFragment"
         android:label="Server Logs"
         tools:layout="@layout/fragment_server_log" />
 
     <fragment
         android:id="@+id/batteryGraphFragment"
-        android:name="com.airmouse.ui.battery.BatteryGraphFragment"
+        android:name="com.airmouse.BatteryGraphFragment"
         android:label="Battery Monitor"
         tools:layout="@layout/fragment_battery" />
 
@@ -93,15 +93,9 @@
 
     <fragment
         android:id="@+id/proximitySettingsFragment"
-        android:name="com.airmouse.ui.ProximitySettingsFragment"
+        android:name="com.airmouse.ProximitySettingsFragment"
         android:label="Proximity Lock"
         tools:layout="@layout/fragment_proximity" />
-
-    <!-- Calibration Flow (not directly in nav drawer, but accessible via action) -->
-    <activity
-        android:id="@+id/calibrationActivity"
-        android:name="com.airmouse.ui.CalibrationActivity"
-        android:label="Calibration Wizard" />
 
     <!-- Onboarding Flow -->
     <activity
@@ -112,13 +106,6 @@
     <!-- Actions -->
     <action
         android:id="@+id/action_global_calibration"
-        app:destination="@id/calibrationActivity" />
-
-
-    <fragment
-        android:id="@+id/sensorVisualizerFragment"
-        android:name="com.airmouse.ui.SensorVisualizerFragment"
-        android:label="Sensor Visualizer"
-        tools:layout="@layout/fragment_sensor_visualizer" />
+        app:destination="@id/homeFragment" />
 
 </navigation>
