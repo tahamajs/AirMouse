@@ -19,6 +19,11 @@ class DebugOverlayService : Service() {
         private var instance: DebugOverlayService? = null
         private var currentText = ""
 
+        fun updateConnectionState(state: String) {
+            currentText = state
+            instance?.updateText()
+        }
+
         fun updateData(roll: Float, yaw: Float, gyroY: Float, accelY: Float, text: String) {
             currentText = text
             instance?.updateText()

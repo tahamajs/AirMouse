@@ -2,10 +2,10 @@
 package com.airmouse.di
 
 import androidx.lifecycle.ViewModel
-import com.airmouse.presentation.home.HomeViewModel
-import com.airmouse.presentation.calibration.CalibrationViewModel
-import com.airmouse.presentation.gesture.GestureStudioViewModel
-import com.airmouse.presentation.settings.SettingsViewModel
+import com.airmouse.presentation.ui.home.HomeViewModel
+import com.airmouse.presentation.ui.calibration.CalibrationViewModel
+import com.airmouse.presentation.ui.gesture.GestureStudioViewModel
+import com.airmouse.presentation.ui.settings.SettingsViewModel
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

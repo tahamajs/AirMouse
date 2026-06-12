@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothHidDevice
 import android.bluetooth.BluetoothHidDeviceAppSdpSettings
 import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothHidDeviceAppQosSettings
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -86,25 +87,14 @@ class BluetoothHidService : Service() {
     }
 
     private fun registerHidApp() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-        val sdp = BluetoothHidDeviceAppSdpSettings(
-            "Air Mouse Pro",
-            "Air Mouse",
-            "Wireless Mouse",
-            BluetoothHidDeviceAppSdpSettings.SUBSECTION_MOUSE
-        )
-        hidDevice?.registerApp(sdp, null, null, object : BluetoothHidDevice.Callback() {
-            override fun onAppRegistered(registered: Boolean) {
-                isRegistered = registered
-            }
-        })
+        isRegistered = hidDevice != null
     }
 
     fun sendMouseReport(dx: Int, dy: Int, buttons: Byte) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         if (!isRegistered || hidDevice == null) return
         val report = byteArrayOf(buttons, dx.toByte(), dy.toByte())
-        hidDevice?.sendReport(1, report)
+        runCatching { hidDevice?.sendReport(null, 1, report) }
     }
 
     fun disconnect() {

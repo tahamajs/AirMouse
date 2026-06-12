@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.ConnectionProtocol
 import com.airmouse.domain.model.MouseEvent
+import com.airmouse.domain.model.GestureType
 import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.domain.repository.IGestureRepository
@@ -65,11 +66,11 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             gestureRepo.observeGestures().collect { gesture ->
                 when (gesture.type) {
-                    CLICK -> sendMovementUseCase.sendClick()
-                    DOUBLE_CLICK -> sendMovementUseCase.sendDoubleClick()
-                    RIGHT_CLICK -> sendMovementUseCase.sendRightClick()
-                    SCROLL_UP -> sendMovementUseCase.sendScroll(1)
-                    SCROLL_DOWN -> sendMovementUseCase.sendScroll(-1)
+                    GestureType.CLICK -> sendMovementUseCase.sendClick()
+                    GestureType.DOUBLE_CLICK -> sendMovementUseCase.sendDoubleClick()
+                    GestureType.RIGHT_CLICK -> sendMovementUseCase.sendRightClick()
+                    GestureType.SCROLL_UP -> sendMovementUseCase.sendScroll(1)
+                    GestureType.SCROLL_DOWN -> sendMovementUseCase.sendScroll(-1)
                     else -> Unit
                 }
                 updateGestureStats()
