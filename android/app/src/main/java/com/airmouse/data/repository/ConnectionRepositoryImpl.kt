@@ -1,15 +1,14 @@
-// app/src/main/java/com/airmouse/data/repository/ConnectionRepositoryImpl.kt
 package com.airmouse.data.repository
 
 import com.airmouse.data.local.PreferencesManager
-import com.airmouse.data.remote.TcpClient
-import com.airmouse.data.remote.WebSocketManager
+import com.airmouse.network.TcpClient
+import com.airmouse.network.WebSocketManager
 import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.ConnectionProtocol
 import com.airmouse.domain.model.ConnectionStatus
 import com.airmouse.domain.model.MouseEvent
 import com.airmouse.domain.repository.IConnectionRepository
-import com.airmouse.data.model.NetworkMessage
+import com.airmouse.network.NetworkMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
