@@ -1,17 +1,16 @@
 package com.airmouse.presentation.ui.battery
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import com.github.mikephil.charting.compose.BarChart
-import com.github.mikephil.charting.data.BarData
-import com.github.mikephil.charting.data.BarDataSet
-import com.github.mikephil.charting.data.BarEntry
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,11 +37,16 @@ fun BatteryScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Battery Usage History", style = MaterialTheme.typography.titleMedium)
-                    val entries = uiState.history.mapIndexed { index, temp -> BarEntry(index.toFloat(), temp) }
-                    val dataSet = BarDataSet(entries, "Temperature (°C)").apply { color = MaterialTheme.colorScheme.primary.toArgb() }
-                    BarChart(BarData(dataSet), modifier = Modifier.fillMaxWidth().height(200.dp))
+                    Text("History points: ${uiState.history.size}")
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun BackButton(navigationActions: NavigationActions) {
+    IconButton(onClick = { navigationActions.navigateBack() }) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
     }
 }

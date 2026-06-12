@@ -16,9 +16,9 @@ import java.net.InetSocketAddress
 import java.net.Socket
 
 class TcpClient(
-    private val host: String,
-    private val port: Int,
-    private val onLine: (String) -> Unit,
+    private var host: String = "",
+    private var port: Int = 0,
+    private var onLine: (String) -> Unit = {},
     private val onConnected: () -> Unit = {},
     private val onDisconnected: () -> Unit = {}
 ) {
@@ -53,6 +53,20 @@ class TcpClient(
                 onDisconnected()
             }
         }
+    }
+
+    fun connect(host: String, port: Int) {
+        this.host = host
+        this.port = port
+        start()
+    }
+
+    suspend fun send(message: String) {
+        sendLine(message)
+    }
+
+    fun disconnect() {
+        stop()
     }
 
     suspend fun sendLine(line: String) = withContext(Dispatchers.IO) {

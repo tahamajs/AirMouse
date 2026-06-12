@@ -1,7 +1,7 @@
 // app/src/main/java/com/airmouse/data/repository/CalibrationRepositoryImpl.kt
 package com.airmouse.data.repository
 
-import com.airmouse.data.local.CalibrationDao
+import com.airmouse.data.datasource.local.CalibrationDao
 import com.airmouse.data.local.PreferencesManager
 import com.airmouse.domain.model.AccelCalibration
 import com.airmouse.domain.model.GyroBias

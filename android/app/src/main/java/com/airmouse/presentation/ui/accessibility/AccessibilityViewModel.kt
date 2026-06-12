@@ -19,10 +19,3 @@ class AccessibilityViewModel @Inject constructor() : ViewModel() {
     fun setHighContrast(enabled: Boolean) = _uiState.update { it.copy(highContrast = enabled) }
     fun setLargeText(enabled: Boolean) = _uiState.update { it.copy(largeText = enabled) }
 }
-
-data class AccessibilityUiState(
-    val announceMovement: Boolean = false,
-    val announceClicks: Boolean = false,
-    val highContrast: Boolean = false,
-    val largeText: Boolean = false
-)

@@ -2,11 +2,15 @@
 package com.airmouse.di
 
 import android.content.Context
+import com.airmouse.ConnectionManager
 import com.airmouse.proximity.ProximityAwareService
 import com.airmouse.service.BluetoothHidService
 import com.airmouse.service.GestureInferenceService
 import com.airmouse.service.SensorService
 import com.airmouse.service.VoiceCommandService
+import com.airmouse.sensors.CalibrationHelper
+import com.airmouse.sensors.GestureDetector
+import com.airmouse.data.local.PreferencesManager
 import com.airmouse.utils.BatterySaver
 import dagger.Module
 import dagger.Provides

@@ -25,14 +25,17 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideCalibrationHelper(preferencesManager: PreferencesManager): CalibrationHelper {
-        return CalibrationHelper(preferencesManager)
+    fun provideCalibrationHelper(
+        @ApplicationContext context: Context,
+        preferencesManager: PreferencesManager
+    ): CalibrationHelper {
+        return CalibrationHelper(context, preferencesManager)
     }
 
     @Provides
     @Singleton
     fun provideGestureDetector(preferencesManager: PreferencesManager): GestureDetector {
-        return GestureDetector(preferencesManager)
+        return GestureDetector(preferencesManager.getSensitivity())
     }
 
     @Provides

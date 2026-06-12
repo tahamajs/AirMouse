@@ -3,10 +3,10 @@ package com.airmouse.di
 
 import android.content.Context
 import androidx.room.Room
-import com.airmouse.data.local.AppDatabase
-import com.airmouse.data.local.CalibrationDao
-import com.airmouse.data.local.GestureDao
-import com.airmouse.data.local.ProfileDao
+import com.airmouse.data.datasource.local.AppDatabase
+import com.airmouse.data.datasource.local.CalibrationDao
+import com.airmouse.data.datasource.local.GestureDao
+import com.airmouse.data.datasource.local.ProfileDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
