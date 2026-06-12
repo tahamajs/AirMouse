@@ -18,7 +18,7 @@ class CalibrationUseCase @Inject constructor(
         val avgX = samples.map { it[0] }.average().toFloat()
         val avgY = samples.map { it[1] }.average().toFloat()
         val avgZ = samples.map { it[2] }.average().toFloat()
-        val bias = GyroBias(avgX, avgY, avgZ)
+        val bias = GyroBias(x = avgX, y = avgY, z = avgZ)
         calibrationRepo.saveGyroBias(bias)
         return bias
     }
@@ -42,7 +42,14 @@ class CalibrationUseCase @Inject constructor(
             offset[i] = posMeas - scale[i] * posIdeal
             if (scale[i] == 0f) scale[i] = 1f
         }
-        val calibration = AccelCalibration(offset[0], offset[1], offset[2], scale[0], scale[1], scale[2])
+        val calibration = AccelCalibration(
+            offsetX = offset[0],
+            offsetY = offset[1],
+            offsetZ = offset[2],
+            scaleX = scale[0],
+            scaleY = scale[1],
+            scaleZ = scale[2]
+        )
         calibrationRepo.saveAccelCalibration(calibration)
         return calibration
     }
@@ -50,7 +57,14 @@ class CalibrationUseCase @Inject constructor(
     suspend fun calibrateMagnetometer(min: FloatArray, max: FloatArray): MagCalibration {
         val offset = floatArrayOf((max[0] + min[0]) / 2f, (max[1] + min[1]) / 2f, (max[2] + min[2]) / 2f)
         val scale = floatArrayOf((max[0] - min[0]) / 2f, (max[1] - min[1]) / 2f, (max[2] - min[2]) / 2f)
-        val calibration = MagCalibration(offset[0], offset[1], offset[2], scale[0], scale[1], scale[2])
+        val calibration = MagCalibration(
+            offsetX = offset[0],
+            offsetY = offset[1],
+            offsetZ = offset[2],
+            scaleX = scale[0],
+            scaleY = scale[1],
+            scaleZ = scale[2]
+        )
         calibrationRepo.saveMagCalibration(calibration)
         calibrationRepo.markCalibrationComplete()
         return calibration

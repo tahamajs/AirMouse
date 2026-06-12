@@ -2,17 +2,26 @@
 package com.airmouse.presentation.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 
 // Primary Brand Colors
 val DeepOrange400 = Color(0xFFFF7043)
+val DeepOrange100 = Color(0xFFFFCCBC)
 val DeepOrange500 = Color(0xFFFF5722)
 val DeepOrange600 = Color(0xFFF4511E)
 val DeepOrange700 = Color(0xFFE64A19)
+val DeepOrange800 = Color(0xFFD84315)
+val DeepOrange900 = Color(0xFFBF360C)
 
 // Secondary / Accent Colors
 val Amber400 = Color(0xFFFFCA28)
+val Amber200 = Color(0xFFFFE082)
 val Amber500 = Color(0xFFFFC107)
 val Amber600 = Color(0xFFFFB300)
+val Amber800 = Color(0xFFFF8F00)
+val Amber900 = Color(0xFFF57F17)
 
 // Neutral Colors for Dark Theme
 val DarkBackground = Color(0xFF0F1115)

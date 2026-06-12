@@ -1,7 +1,7 @@
 // app/src/main/java/com/airmouse/di/NetworkModule.kt
 package com.airmouse.di
 
-import com.airmouse.network.ConnectionManager
+import com.airmouse.ConnectionManager
 import com.airmouse.network.TcpClient
 import com.airmouse.network.WebSocketManager
 import dagger.Module
@@ -34,7 +34,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideWebSocketManager(okHttpClient: OkHttpClient): WebSocketManager {
-        return WebSocketManager(okHttpClient)
+        return WebSocketManager
     }
 
     @Provides

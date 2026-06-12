@@ -1,7 +1,7 @@
 // app/src/main/java/com/airmouse/data/repository/GestureRepositoryImpl.kt
 package com.airmouse.data.repository
 
-import com.airmouse.data.local.GestureDao
+import com.airmouse.data.datasource.local.GestureDao
 import com.airmouse.data.local.PreferencesManager
 import com.airmouse.domain.model.CustomGestureTemplate
 import com.airmouse.domain.model.Gesture

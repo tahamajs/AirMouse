@@ -4,6 +4,7 @@ package com.airmouse.domain.usecase
 import com.airmouse.domain.model.MouseEvent
 import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.domain.repository.ISettingsRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 class SendMovementUseCase @Inject constructor(

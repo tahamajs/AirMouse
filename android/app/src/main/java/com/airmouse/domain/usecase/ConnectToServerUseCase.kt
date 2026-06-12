@@ -2,6 +2,7 @@
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.ConnectionConfig
+import com.airmouse.domain.model.ConnectionProtocol
 import com.airmouse.domain.repository.IConnectionRepository
 import javax.inject.Inject
 

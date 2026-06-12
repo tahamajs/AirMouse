@@ -3,19 +3,12 @@ package com.airmouse.presentation.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.airmouse.R
 
-// Custom font family (optional – replace with your own fonts)
-val InterFontFamily = FontFamily(
-    Font(R.font.inter_regular, FontWeight.Normal),
-    Font(R.font.inter_medium, FontWeight.Medium),
-    Font(R.font.inter_semibold, FontWeight.SemiBold),
-    Font(R.font.inter_bold, FontWeight.Bold)
-)
+// Fallback to system sans-serif so the build does not depend on bundled font assets.
+val InterFontFamily = FontFamily.SansSerif
 
 // Default Material 3 Typography with custom font
 val AppTypography = Typography(
