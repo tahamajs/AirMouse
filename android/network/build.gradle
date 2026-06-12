@@ -9,17 +9,18 @@ android {
     defaultConfig {
         minSdk 29
     }
-    compileOptions { sourceCompatibility JavaVersion.VERSION_11; targetCompatibility JavaVersion.VERSION_11 }
-    kotlinOptions { jvmTarget = '11' }
-    lint {
-        targetSdk 36
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
-    testOptions {
-        targetSdk 36
+    kotlinOptions {
+        jvmTarget = '11'
     }
 }
 
 dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
+    implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
 }
