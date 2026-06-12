@@ -9,7 +9,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 
 @Stable
-class NavigationActions(private val navController: NavHostController) {
+class NavigationActions(val navController: NavHostController) {
 
     fun navigateTo(destination: Destinations, clearBackStack: Boolean = false) {
         if (clearBackStack) {
