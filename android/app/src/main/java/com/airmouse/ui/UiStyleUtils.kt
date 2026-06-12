@@ -10,7 +10,7 @@ import androidx.cardview.widget.CardView
 
 object UiStyleUtils {
     fun styleCard(cardView: MaterialCardView) {
-        cardView.isUseCompatPadding = true
+        cardView.useCompatPadding = true
         cardView.strokeWidth = 1
         cardView.strokeColor = cardView.context.getColor(com.airmouse.R.color.card_stroke)
     }
