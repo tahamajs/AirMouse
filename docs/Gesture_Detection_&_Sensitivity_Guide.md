@@ -49,7 +49,7 @@ The thresholds are stored in `PreferencesDataStore` and are read each time the g
 4. Move each slider left/right to decrease/increase the respective threshold.
 5. Changes are saved instantly – no “Save” button required. You can close the dialog by tapping outside or the OK button.
 
-The dialog is implemented in `SettingsFragment.kt` (or `SettingsDialog.kt`). All values are displayed as numbers next to the sliders.
+The settings UI is implemented in `SettingsScreen.kt` with `SettingsViewModel`. All values are displayed as numbers next to the sliders and update immediately.
 
 ---
 

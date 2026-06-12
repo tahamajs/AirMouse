@@ -51,14 +51,14 @@ The phone is the primary intelligence layer. It decides how to interpret motion,
 | --- | --- | --- |
 | Android app, API 29+ | Complete | `android/app/build.gradle` |
 | Raw accelerometer, gyroscope, magnetometer | Complete | `SensorService.kt`, `CalibrationHelper.kt` |
-| Gyroscope bias calibration | Complete | `CalibrationHelper.kt`, `CalibrationFragment.kt` |
-| Accelerometer multi-position calibration support | Complete | `CalibrationHelper.kt`, `CalibrationFragment.kt` |
-| Magnetometer figure-eight calibration | Complete | `CalibrationHelper.kt`, `CalibrationFragment.kt` |
+| Gyroscope bias calibration | Complete | `CalibrationHelper.kt`, `GyroComposeFragment.kt`, `GyroStepFragment.kt` |
+| Accelerometer multi-position calibration support | Complete | `CalibrationHelper.kt`, `AccelComposeFragment.kt`, `AccelStepFragment.kt` |
+| Magnetometer figure-eight calibration | Complete | `CalibrationHelper.kt`, `MagComposeFragment.kt`, `MagStepFragment.kt` |
 | Sensor fusion with Madgwick AHRS | Complete | `MadgwickAHRS.kt` |
 | Cursor movement from phone rotation | Complete | `SensorService.kt`, `HomeFragment.kt` |
 | Click, double-click, right-click, scroll | Complete | `EnhancedGestureDetector.kt`, `DataSender.kt`, `server.py` |
 | Adjustable sensitivity | Complete | `HomeFragment.kt`, `PreferencesManager.kt` |
-| Guided calibration UI | Complete | `CalibrationFragment.kt`, `fragment_calibration.xml` |
+| Guided calibration UI | Complete | `CalibrationActivity.kt`, `CalibrationPagerAdapter.kt`, calibration fragments |
 | Home UI with connection, status, live data | Complete | `fragment_home.xml`, `HomeFragment.kt` |
 | QR scan with IP and port | Complete | `QRScanner.kt`, `ValidationUtils.kt`, `pc/gui.py` |
 | Live logs on phone and PC | Complete | `LogManager.kt`, `HomeFragment.kt`, `ServerLogFragment.kt`, `pc/gui.py` |
@@ -88,7 +88,10 @@ Important Android files:
 | `OnboardingActivity.kt` | Intro screens shown on first run |
 | `MainActivity.kt` | Navigation host and drawer shell |
 | `HomeFragment.kt` | Main control screen |
-| `CalibrationFragment.kt` | Guided calibration wizard |
+| `CalibrationActivity.kt` | Host activity for the guided calibration wizard |
+| `CalibrationPagerAdapter.kt` | ViewPager2 adapter for the three calibration steps |
+| `GyroComposeFragment.kt`, `AccelComposeFragment.kt`, `MagComposeFragment.kt` | Modern step-by-step calibration screens |
+| `GyroStepFragment.kt`, `AccelStepFragment.kt`, `MagStepFragment.kt` | Legacy XML step fragments kept in the source tree for compatibility and reference |
 | `ServerLogFragment.kt` | Persistent server log viewer |
 | `SensorService.kt` | Sensor registration, fusion, gesture pipeline |
 | `CalibrationHelper.kt` | Sensor calibration routines |
@@ -106,7 +109,7 @@ The app flow is designed for clarity:
 1. Open onboarding on first run.
 2. Land on `MainActivity`.
 3. Use the Home screen to enter the PC endpoint, scan a QR code, check sensor availability, and start or stop Air Mouse.
-4. Open the Calibration screen and follow the guided calibration steps.
+4. Open the Calibration screen and follow the guided calibration wizard.
 5. Use the Server Log page to inspect saved logs while debugging.
 
 ### Home Screen
@@ -130,16 +133,18 @@ This screen is intentionally practical and dense. It is not a landing page. It i
 
 ### Calibration Screen
 
-The Calibration screen is a dedicated wizard-like page. It includes:
+The Calibration screen is a dedicated `CalibrationActivity` that hosts a `ViewPager2` wizard. It includes:
 
-- Step-by-step instructions.
-- A progress bar.
-- Separate guidance for gyroscope, magnetometer, and accelerometer.
-- A Start Guided Calibration button.
-- A Skip Magnetometer button for devices without a magnetometer.
-- A Reset button.
+- A header that shows the current sensor step.
+- A timer and overall progress bar.
+- Back, Next, and Stop controls.
+- Three guided calibration pages:
+  - Gyroscope bias sampling on a still surface.
+  - Six-position accelerometer orientation mapping.
+  - Magnetometer figure-eight field mapping.
+- Validation before the user can advance to the next step.
 
-The user is not expected to guess what to do. The screen says what to do at each step.
+The calibration flow is explicit on purpose. The user sees what to do, when a step is complete, and what still needs attention.
 
 ### Server Log Screen
 
@@ -638,4 +643,3 @@ The remaining submission work is mostly operational:
 - record a real Perfetto trace,
 - extract answers from that trace,
 - and record the demonstration video.
-

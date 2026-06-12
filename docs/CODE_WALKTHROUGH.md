@@ -18,10 +18,10 @@ This document provides an **exhaustive, file‑by‑file explanation** of the Ai
    - [PreferencesDataStore.kt / PreferencesManager.kt](#9-preferencesdatastorekt--preferencesmanagerkt)
    - [SensorRepository.kt & NetworkRepository.kt](#10-sensorrepositorykt--networkrepositorykt)
    - [DebugOverlayService.kt & DebugOverlay.kt](#11-debugoverlayservicekt--debugoverlaykt)
-   - [CalibrationFragment.kt & SettingsFragment.kt](#12-calibrationfragmentkt--settingsfragmentkt)
+   - [CalibrationActivity.kt & SettingsScreen.kt](#12-calibrationactivitykt--settingsscreenkt)
 2. [UI Layouts (XML)](#ui-layouts-xml)
    - [activity_main.xml](#activity_mainxml)
-   - [fragment_calibration.xml & fragment_settings.xml](#fragment_calibrationxml--fragment_settingsxml)
+   - [activity_calibration.xml & fragment_settings.xml](#activity_calibrationxml--fragment_settingsxml)
    - [debug_overlay.xml](#debug_overlayxml)
    - [green_square.xml (drawable)](#green_squarexml-drawable)
 3. [AndroidManifest.xml](#androidmanifestxml)
@@ -472,19 +472,21 @@ enum class Gesture { NONE, CLICK, DOUBLE_CLICK, RIGHT_CLICK, SCROLL_UP, SCROLL_D
 
 ---
 
-## 12. `CalibrationFragment.kt` & `SettingsFragment.kt`
+## 12. `CalibrationActivity.kt` & `SettingsScreen.kt`
 
 **Location:** `com/airmouse/ui/`
 
-### `CalibrationFragment.kt`
+### `CalibrationActivity.kt`
 
-- A `DialogFragment` that shows a progress bar and status text.
-- Calls `sensorRepo.calibrateGyro()`, `calibrateMagnetometer(30000)`, and `calibrateAccelerometer()` in sequence.
+- A dedicated `AppCompatActivity` that hosts the calibration wizard.
+- Uses `ViewPager2` and `CalibrationPagerAdapter` to switch between the three guided sensor steps.
+- Shows a header, timer, progress bar, and Back/Next/Stop controls.
+- Prevents the user from advancing until the current step reports a valid calibration result.
 
-### `SettingsFragment.kt`
+### `SettingsScreen.kt`
 
-- A `DialogFragment` with three `SeekBar`s for click threshold, double‑click interval, and right‑click tilt.
-- Reads/writes to `PreferencesDataStore`.
+- A modern Compose settings screen with sliders and switches for sensitivity, click threshold, double-click interval, scroll threshold, right-click tilt, haptic feedback, theme, AI smoothing, and predictive movement.
+- Reads and writes through `SettingsViewModel`, which in turn talks to the settings repository.
 
 ---
 
@@ -493,8 +495,8 @@ enum class Gesture { NONE, CLICK, DOUBLE_CLICK, RIGHT_CLICK, SCROLL_UP, SCROLL_D
 ## `activity_main.xml`
 - Contains: IP input (TextInputLayout), buttons, status text, sensitivity seek bar, settings/debug buttons, and a `View` (green square) with a drawable background.
 
-## `fragment_calibration.xml`
-- Contains: `TextView` (status) and `ProgressBar`.
+## `activity_calibration.xml`
+- Contains: `ViewPager2`, step header, timer, progress bar, and the Back/Next/Stop control bar used by `CalibrationActivity`.
 
 ## `fragment_settings.xml`
 - Contains: three groups of (`TextView`, `SeekBar`, `TextView`) for the three thresholds.
