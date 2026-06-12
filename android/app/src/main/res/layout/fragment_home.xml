@@ -26,18 +26,26 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Air Mouse Pro"
+                android:text="@string/home_title"
                 android:textColor="@color/text_primary"
                 android:textSize="24sp"
                 android:textStyle="bold" />
 
-            <TextView
+            <ImageView
                 android:id="@+id/connection_quality_icon"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:src="@drawable/ic_signal_none"
-                android:contentDescription="Connection Quality" />
+                android:contentDescription="@string/connection_quality_icon_desc" />
         </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/home_subtitle"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
 
         <!-- ============================================================ -->
         <!-- MODE TOGGLE – Segmented button style (touchpad / motion)       -->
@@ -61,23 +69,23 @@
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_weight="1"
-                    android:text="Motion Mode"
+                    android:text="@string/motion_mode"
                     android:textColor="@android:color/white"
                     app:cornerRadius="28dp"
                     app:backgroundTint="@color/accent_blue"
                     android:layout_marginEnd="4dp" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/modeToggleTouchpad"  <!-- Optional: if you want separate button, but we reuse modeToggle -->
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:text="Touchpad Mode"
-                android:textColor="@color/text_secondary"
-                app:cornerRadius="28dp"
-                app:backgroundTint="@android:color/transparent"
-                android:stateListAnimator="@null"
-                android:elevation="0dp" />
+                    android:id="@+id/modeToggleTouchpad"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="@string/touchpad_mode"
+                    android:textColor="@color/text_secondary"
+                    app:cornerRadius="28dp"
+                    app:backgroundTint="@android:color/transparent"
+                    android:stateListAnimator="@null"
+                    android:elevation="0dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -116,7 +124,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Server Connection"
+                            android:text="@string/connect_to_pc"
                             android:textColor="@color/text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -125,7 +133,7 @@
                             android:id="@+id/status_text"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Disconnected"
+                            android:text="@string/connection_unset"
                             android:textColor="@color/error_red"
                             android:textSize="13sp"
                             android:background="@drawable/status_badge"
@@ -146,7 +154,7 @@
                             android:layout_height="56dp"
                             android:layout_weight="1"
                             android:background="@drawable/input_background"
-                            android:hint="IP Address"
+                            android:hint="@string/ip_hint"
                             android:inputType="phone"
                             android:textColor="@color/text_primary"
                             android:textColorHint="@color/text_secondary"
@@ -158,7 +166,7 @@
                             android:layout_width="90dp"
                             android:layout_height="56dp"
                             android:background="@drawable/input_background"
-                            android:hint="Port"
+                            android:hint="@string/port_hint"
                             android:inputType="number"
                             android:textColor="@color/text_primary"
                             android:textColorHint="@color/text_secondary"
@@ -176,7 +184,7 @@
                             android:layout_width="0dp"
                             android:layout_height="52dp"
                             android:layout_weight="1"
-                            android:text="Connect"
+                            android:text="@string/connect"
                             app:icon="@drawable/ic_connect"
                             app:iconGravity="textStart"
                             app:backgroundTint="@color/accent_blue"
@@ -194,22 +202,22 @@
                             android:layout_marginStart="8dp" />
                     </LinearLayout>
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/bt_mouse_btn"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="Bluetooth Mouse"
-                        app:icon="@drawable/ic_bluetooth"
-                        app:iconGravity="textStart"
-                        app:backgroundTint="@color/accent_blue"
-                        android:textColor="@android:color/white"
-                        android:layout_marginBottom="12dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/bt_mouse_btn"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="@string/use_bluetooth_mouse"
+                            app:icon="@drawable/ic_bluetooth"
+                            app:iconGravity="textStart"
+                            app:backgroundTint="@color/accent_blue"
+                            android:textColor="@android:color/white"
+                            android:layout_marginBottom="12dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/calibrate_btn"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
-                        android:text="Calibrate Sensors"
+                        android:text="@string/calibrate_sensors"
                         app:icon="@drawable/ic_calibrate"
                         app:iconGravity="textStart"
                         app:backgroundTint="@color/success_green"
@@ -245,7 +253,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Calibration"
+                            android:text="@string/calibration_title"
                             android:textColor="@color/text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -254,7 +262,7 @@
                             android:id="@+id/calibration_progress_text"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0/3"
+                            android:text="@string/calibration_progress_default"
                             android:textColor="@color/accent_blue"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -275,7 +283,7 @@
                         android:id="@+id/attempts_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Attempts remaining: 5"
+                        android:text="@string/attempts_remaining_default"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -301,7 +309,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Live Orientation"
+                        android:text="@string/motion_preview"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"
@@ -338,7 +346,7 @@
                                 android:id="@+id/gyro_value"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Yaw: 0.0°"
+                                android:text="@string/yaw_default"
                                 android:textColor="@color/text_primary"
                                 android:textSize="14sp"
                                 android:layout_marginBottom="4dp" />
@@ -347,7 +355,7 @@
                                 android:id="@+id/accel_value"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Pitch: 0.0°"
+                                android:text="@string/pitch_default"
                                 android:textColor="@color/text_primary"
                                 android:textSize="14sp" />
                         </LinearLayout>
@@ -375,7 +383,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Gesture Activity"
+                        android:text="@string/gesture_summary"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"
@@ -393,7 +401,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
-                            android:text="Clicks: 0"
+                            android:text="@string/clicks_default"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp"
                             android:drawableStart="@drawable/ic_click"
@@ -404,7 +412,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
-                            android:text="Scrolls: 0"
+                            android:text="@string/scrolls_default"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp"
                             android:drawableStart="@drawable/ic_scroll"
@@ -415,7 +423,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
-                            android:text="Right clicks: 0"
+                            android:text="@string/right_clicks_default"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp"
                             android:drawableStart="@drawable/ic_right_click"
@@ -426,7 +434,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
-                            android:text="Double clicks: 0"
+                            android:text="@string/double_clicks_default"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp"
                             android:drawableStart="@drawable/ic_double_click"
@@ -455,7 +463,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Cursor Sensitivity"
+                        android:text="@string/cursor_sensitivity_title"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold"
@@ -474,7 +482,7 @@
                         android:id="@+id/sensitivity_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="1.0x"
+                        android:text="@string/sensitivity_default"
                         android:textColor="@color/accent_blue"
                         android:textSize="14sp"
                         android:layout_gravity="end"
@@ -491,7 +499,7 @@
                             android:layout_width="0dp"
                             android:layout_height="52dp"
                             android:layout_weight="1"
-                            android:text="Start"
+                            android:text="@string/start"
                             app:icon="@drawable/ic_play"
                             app:iconGravity="textStart"
                             app:backgroundTint="@color/success_green"
@@ -503,7 +511,7 @@
                             android:layout_width="0dp"
                             android:layout_height="52dp"
                             android:layout_weight="1"
-                            android:text="Settings"
+                            android:text="@string/settings_button_label"
                             app:icon="@drawable/ic_settings"
                             app:iconGravity="textStart"
                             app:backgroundTint="@color/surface_light"
@@ -516,7 +524,7 @@
                             android:layout_width="0dp"
                             android:layout_height="52dp"
                             android:layout_weight="1"
-                            android:text="Debug"
+                            android:text="@string/debug_button_label"
                             app:icon="@drawable/ic_debug"
                             app:iconGravity="textStart"
                             app:backgroundTint="@color/surface_light"
@@ -563,7 +571,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Live Log"
+                        android:text="@string/recent_activity"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -572,7 +580,7 @@
                         android:id="@+id/clear_logs_btn"
                         android:layout_width="wrap_content"
                         android:layout_height="32dp"
-                        android:text="Clear"
+                        android:text="@string/clear_logs"
                         app:icon="@drawable/ic_clear"
                         app:iconGravity="textStart"
                         style="@style/Widget.Material3.Button.TextButton"
@@ -588,7 +596,7 @@
                         android:id="@+id/live_log_text"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="No logs"
+                        android:text="@string/live_log_empty"
                         android:textColor="@color/text_secondary"
                         android:textSize="11sp"
                         android:fontFamily="monospace"

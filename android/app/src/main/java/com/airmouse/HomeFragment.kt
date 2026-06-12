@@ -94,6 +94,7 @@ class HomeFragment : Fragment() {
     private lateinit var debugToggleBtn: MaterialButton
     private lateinit var btMouseBtn: MaterialButton
     private lateinit var modeToggle: MaterialButton
+    private lateinit var modeToggleTouchpad: MaterialButton
 
     private lateinit var liveLogText: TextView
     private lateinit var clearLogsBtn: MaterialButton
@@ -247,7 +248,8 @@ class HomeFragment : Fragment() {
         settingsBtn = view.findViewById(R.id.settings_btn)
         debugToggleBtn = view.findViewById(R.id.debug_toggle_btn)
         btMouseBtn = view.findViewById(R.id.bt_mouse_btn)
-        modeToggle = view.findViewById(R.id.mode_toggle)
+        modeToggle = view.findViewById(R.id.modeToggle)
+        modeToggleTouchpad = view.findViewById(R.id.modeToggleTouchpad)
 
         liveLogText = view.findViewById(R.id.live_log_text)
         clearLogsBtn = view.findViewById(R.id.clear_logs_btn)
@@ -288,28 +290,34 @@ class HomeFragment : Fragment() {
             .add(R.id.touchpadContainer, touchpadFragment, "touchpad")
             .commit()
 
-        modeToggle.setOnClickListener {
-            isTouchpadMode = !isTouchpadMode
-            if (isTouchpadMode) {
-                modeToggle.text = getString(R.string.motion_mode)
-                motionControlsContainer.visibility = View.GONE
-                touchpadContainer.visibility = View.VISIBLE
-                if (isActive) {
-                    sensorService.stop()
-                    batterySaver.stop()
-                }
-            } else {
-                modeToggle.text = getString(R.string.touchpad_mode)
-                motionControlsContainer.visibility = View.VISIBLE
-                touchpadContainer.visibility = View.GONE
-                if (isActive) {
-                    sensorService.start()
-                    batterySaver.start(sensorService)
-                }
+        fun showMotionMode() {
+            isTouchpadMode = false
+            modeToggle.text = getString(R.string.motion_mode)
+            modeToggleTouchpad.text = getString(R.string.touchpad_mode)
+            motionControlsContainer.visibility = View.VISIBLE
+            touchpadContainer.visibility = View.GONE
+            if (isActive) {
+                sensorService.start()
+                batterySaver.start(sensorService)
             }
         }
-        modeToggle.text = getString(R.string.touchpad_mode)
-        touchpadContainer.visibility = View.GONE
+
+        fun showTouchpadMode() {
+            isTouchpadMode = true
+            modeToggle.text = getString(R.string.motion_mode)
+            modeToggleTouchpad.text = getString(R.string.touchpad_mode)
+            motionControlsContainer.visibility = View.GONE
+            touchpadContainer.visibility = View.VISIBLE
+            if (isActive) {
+                sensorService.stop()
+                batterySaver.stop()
+            }
+        }
+
+        modeToggle.setOnClickListener { showMotionMode() }
+        modeToggleTouchpad.setOnClickListener { showTouchpadMode() }
+
+        showMotionMode()
     }
 
     private fun setupSensitivitySlider() {

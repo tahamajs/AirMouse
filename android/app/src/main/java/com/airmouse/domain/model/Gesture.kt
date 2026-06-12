@@ -1,6 +1,9 @@
 // app/src/main/java/com/airmouse/domain/model/Gesture.kt
 package com.airmouse.domain.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
 /**
  * Types of gestures that can be detected.
  */
@@ -32,9 +35,10 @@ data class Gesture(
 /**
  * Template for a custom user‑defined gesture.
  */
+@Entity(tableName = "custom_gestures")
 data class CustomGestureTemplate(
-    val id: String,
+    @PrimaryKey val id: String,
     val name: String,
-    val samples: List<List<Float>>, // sequence of sensor vectors
+    val samples: String,
     val threshold: Float = 0.7f
 )

@@ -126,6 +126,16 @@
                     android:layout_gravity="center"
                     android:layout_marginBottom="8dp" />
 
+                <TextView
+                    android:id="@+id/movementQualityText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Movement: --"
+                    android:textColor="@color/accent_orange"
+                    android:textSize="13sp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="12dp" />
+
                 <!-- Progress bar label -->
                 <TextView
                     android:layout_width="wrap_content"

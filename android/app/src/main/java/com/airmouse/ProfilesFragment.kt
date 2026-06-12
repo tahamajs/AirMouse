@@ -19,32 +19,20 @@ class ProfilesFragment : Fragment() {
     private lateinit var saveProfileBtn: Button
     private lateinit var deleteProfileBtn: Button
     private lateinit var profileNameInput: EditText
-    private fun loadSelectedProfile() {
-        val selected = profileSpinner.selectedItem?.toString() ?: return
-        currentProfile = selected
-        lifecycleScope.launch {
-            val sensitivity = preferences.getProfileSensitivity(selected)
-            val clickThreshold = preferences.getProfileClickThreshold(selected)
-            preferences.setSensitivity(sensitivity)
-            preferences.setClickThreshold(clickThreshold)
-            // Update the current profile indicator
-            currentProfileName.text = selected
-            Toast.makeText(requireContext(), "Loaded profile: $selected", Toast.LENGTH_SHORT).show()
-        }
-    }
     private val profiles = mutableListOf<String>()
     private var currentProfile = "Default"
+    private lateinit var currentProfileName: TextView
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_profiles, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val currentProfileName = view.findViewById<TextView>(R.id.current_profile_name)
-        currentProfileName.text = preferences.getLastUsedProfile() ?: "Default"
-
         super.onViewCreated(view, savedInstanceState)
         preferences = PreferencesManager(requireContext())
+
+        currentProfileName = view.findViewById(R.id.current_profile_name)
+        currentProfileName.text = preferences.getLastUsedProfile() ?: "Default"
 
         profileSpinner = view.findViewById(R.id.profile_spinner)
         loadProfileBtn = view.findViewById(R.id.load_profile_btn)
@@ -79,6 +67,7 @@ class ProfilesFragment : Fragment() {
             val clickThreshold = preferences.getProfileClickThreshold(selected)
             preferences.setSensitivity(sensitivity)
             preferences.setClickThreshold(clickThreshold)
+            currentProfileName.text = selected
             Toast.makeText(requireContext(), "Loaded profile: $selected", Toast.LENGTH_SHORT).show()
         }
     }

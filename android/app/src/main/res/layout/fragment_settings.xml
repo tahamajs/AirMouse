@@ -30,7 +30,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Cursor Behaviour"
+                    android:text="@string/settings_cursor_behaviour"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -40,7 +40,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Sensitivity"
+                    android:text="@string/settings_sensitivity"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:layout_marginBottom="8dp" />
@@ -68,7 +68,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Click Speed Threshold"
+                    android:text="@string/settings_click_speed_threshold"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:layout_marginBottom="8dp" />
@@ -96,7 +96,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Double Click Interval"
+                    android:text="@string/settings_double_click_interval"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:layout_marginBottom="8dp" />
@@ -124,7 +124,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Scroll Speed Threshold"
+                    android:text="@string/settings_scroll_threshold"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:layout_marginBottom="8dp" />
@@ -152,7 +152,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Right Click Tilt Angle"
+                    android:text="@string/settings_right_click_tilt"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:layout_marginBottom="8dp" />
@@ -197,7 +197,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Mouse Processing"
+                    android:text="@string/settings_mouse_processing"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -215,7 +215,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Mouse Smoothing (EMA)"
+                        android:text="@string/settings_mouse_smoothing"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -242,7 +242,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Mouse Acceleration"
+                            android:text="@string/settings_mouse_acceleration"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
 
@@ -255,7 +255,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Acceleration factor"
+                        android:text="@string/settings_acceleration_factor"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:layout_marginTop="8dp" />
@@ -300,7 +300,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="AI &amp; Predictive Features"
+                    android:text="@string/settings_ai_predictive"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -318,7 +318,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="AI Smoothing (RNN)"
+                        android:text="@string/settings_ai_smoothing"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -331,7 +331,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="AI blend factor (0=raw, 1=AI)"
+                    android:text="@string/settings_ai_blend_factor"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="4dp" />
@@ -367,7 +367,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Predictive Movement (Kalman)"
+                        android:text="@string/settings_predictive_movement"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -380,7 +380,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Prediction blend factor"
+                    android:text="@string/settings_prediction_blend_factor"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="4dp" />
@@ -424,7 +424,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Haptic &amp; Accessibility"
+                    android:text="@string/settings_haptic_accessibility"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -442,7 +442,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Haptic Feedback"
+                        android:text="@string/settings_haptic_feedback"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -464,7 +464,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Announce Movement (TalkBack)"
+                        android:text="@string/settings_announce_movement"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -486,7 +486,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Announce Clicks"
+                        android:text="@string/settings_announce_clicks"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -517,7 +517,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Behaviour"
+                    android:text="@string/settings_behaviour"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -535,7 +535,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Auto-pause motion when phone is flat"
+                        android:text="@string/settings_auto_pause_flat"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -557,7 +557,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Edge Gestures (Volume keys)"
+                        android:text="@string/settings_edge_gestures"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -578,7 +578,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Always on Top (Desktop)"
+                        android:text="@string/settings_always_on_top"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
 
@@ -609,7 +609,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Appearance"
+                    android:text="@string/settings_appearance"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -619,7 +619,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Theme"
+                    android:text="@string/settings_theme"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
                     android:layout_marginBottom="8dp" />
@@ -650,7 +650,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Advanced"
+                    android:text="@string/settings_advanced"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -661,7 +661,7 @@
                     android:id="@+id/reset_calibration_btn"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:text="Reset Calibration Attempts"
+                    android:text="@string/settings_reset_calibration_attempts"
                     app:icon="@drawable/ic_reset"
                     app:iconGravity="textStart"
                     style="@style/Widget.Material3.Button.OutlinedButton"
@@ -670,7 +670,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Warning: This will allow you to recalibrate sensors."
+                    android:text="@string/settings_reset_calibration_warning"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginTop="8dp" />
