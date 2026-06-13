@@ -1,0 +1,93 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Build artifacts
+dist/
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage
+coverage.out
+coverage.html
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# CI
+.github/
+.gitlab-ci.yml
+
+# Scripts
+scripts/
+*.sh
+!scripts/init-db.sql
+
+# Testing
+test/
+tests/
+
+# Local configuration
+config.json
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Data
+data/
+models/
+!models/.gitkeep
+
+# Web assets source
+web/static/src/
+web/static/node_modules/
+
+# Releases
+*.tar.gz
+*.zip
+*.deb
+*.rpm

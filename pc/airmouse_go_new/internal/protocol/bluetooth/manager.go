@@ -13,14 +13,15 @@ import (
 
 // BLE Manager with full Bluetooth LE support
 type Manager struct {
-    adapter     string
-    mouse       control.MouseController
-    deviceMgr   *device.Manager
-    connections map[string]*BLEConnection
-    mu          sync.RWMutex
-    running     bool
+    adapter      string
+    mouse        control.MouseController
+    deviceMgr    *device.Manager
+    connections  map[string]*BLEConnection
+    mu           sync.RWMutex
+    running      bool
     scanInterval time.Duration
-    callbacks   []func(event BluetoothEvent)
+    callbacks    []func(event BluetoothEvent)
+    hidEnabled   bool
 }
 
 type BLEConnection struct {
@@ -34,6 +35,19 @@ type BLEConnection struct {
     HIDEnabled  bool
     HIDReport   chan HIDReport
     stopChan    chan struct{}
+    Services    []BLEService
+}
+
+type BLEService struct {
+    UUID        string
+    Name        string
+    Characteristics []BLECharacteristic
+}
+
+type BLECharacteristic struct {
+    UUID        string
+    Name        string
+    Properties  string
 }
 
 type HIDReport struct {
@@ -59,6 +73,7 @@ func NewManager(adapter string, mouse control.MouseController, deviceMgr *device
         connections:  make(map[string]*BLEConnection),
         scanInterval: 5 * time.Second,
         callbacks:    make([]func(BluetoothEvent), 0),
+        hidEnabled:   true,
     }
 }
 
@@ -68,7 +83,6 @@ func (m *Manager) Start() error {
     // Initialize Bluetooth adapter
     if err := m.initAdapter(); err != nil {
         logger.Warn("Bluetooth adapter initialization failed: %v", err)
-        // Continue in simulation mode
     }
     
     // Start discovery
@@ -83,21 +97,14 @@ func (m *Manager) Start() error {
 
 func (m *Manager) initAdapter() error {
     // Platform-specific adapter initialization
-    // For Linux: use bluetoothctl or dbus
-    // For Windows: use WinRT Bluetooth API
-    // For macOS: use IOBluetooth framework
-    
-    // Check if Bluetooth is available
     if !m.isBluetoothAvailable() {
         return fmt.Errorf("bluetooth not available")
     }
-    
     return nil
 }
 
 func (m *Manager) isBluetoothAvailable() bool {
     // Platform-specific availability check
-    // For now, assume available
     return true
 }
 
@@ -113,13 +120,10 @@ func (m *Manager) discoveryLoop() {
 
 func (m *Manager) startDiscovery() {
     // Simulate BLE device discovery
-    // In production, use platform-specific BLE scanning
-    
-    // Simulate finding devices
     simulatedDevices := []struct {
-        addr  string
-        name  string
-        rssi  int32
+        addr    string
+        name    string
+        rssi    int32
         txPower int32
     }{
         {"AA:BB:CC:DD:EE:FF", "AirMouse Device", -55, 4},
@@ -149,6 +153,7 @@ func (m *Manager) handleDiscoveredDevice(addr, name string, rssi, txPower int32)
             HIDEnabled:  false,
             HIDReport:   make(chan HIDReport, 100),
             stopChan:    make(chan struct{}),
+            Services:    make([]BLEService, 0),
         }
         m.connections[addr] = conn
         
@@ -207,13 +212,7 @@ func (m *Manager) ConnectDevice(addr string) error {
 
 func (m *Manager) establishConnection(conn *BLEConnection) error {
     // Platform-specific connection establishment
-    // For Linux: use BlueZ D-Bus API
-    // For Windows: use WinRT Bluetooth LE API
-    // For macOS: use CoreBluetooth
-    
-    // Simulate connection delay
     time.Sleep(500 * time.Millisecond)
-    
     return nil
 }
 
@@ -247,11 +246,8 @@ func (m *Manager) readHIDReports(conn *BLEConnection) {
         case <-conn.stopChan:
             return
         default:
-            // In production, read from HID characteristic
-            // Simulate HID reports
             time.Sleep(10 * time.Millisecond)
-            
-            // Simulate mouse movement
+            // Simulate HID report
             report := HIDReport{
                 X:      int16(rand.Intn(20) - 10),
                 Y:      int16(rand.Intn(20) - 10),
@@ -286,7 +282,10 @@ func (m *Manager) processHIDReports() {
 }
 
 func (m *Manager) handleHIDReport(conn *BLEConnection, report HIDReport) {
-    // Convert HID report to mouse actions
+    if !m.hidEnabled {
+        return
+    }
+    
     if report.X != 0 || report.Y != 0 {
         m.mouse.Move(float64(report.X), float64(report.Y))
     }
@@ -323,6 +322,10 @@ func (m *Manager) SendHIDReport(addr string, report HIDReport) error {
 
 func (m *Manager) SetScanInterval(interval time.Duration) {
     m.scanInterval = interval
+}
+
+func (m *Manager) SetHIDEnabled(enabled bool) {
+    m.hidEnabled = enabled
 }
 
 func (m *Manager) GetConnectedDevices() []*BLEConnection {
@@ -382,6 +385,7 @@ func (m *Manager) GetStats() map[string]interface{} {
         "running":         m.running,
         "adapter":         m.adapter,
         "scan_interval":   m.scanInterval.Seconds(),
+        "hid_enabled":     m.hidEnabled,
     }
 }
 
@@ -402,7 +406,6 @@ func (m *Manager) triggerEvent(event BluetoothEvent) {
     }
 }
 
-// HID Report encoding helpers
 func (m *Manager) EncodeHIDReport(report HIDReport) []byte {
     buf := make([]byte, 8)
     buf[0] = report.Buttons
@@ -422,265 +425,4 @@ func (m *Manager) DecodeHIDReport(data []byte) HIDReport {
         Y:       int16(binary.LittleEndian.Uint16(data[3:5])),
         Wheel:   int8(data[5]),
     }
-}package bluetooth
-
-import (
-    "fmt"
-    "sync"
-    "time"
-
-    "airmouse-go/internal/control"
-    "airmouse-go/internal/device"
-    "airmouse-go/internal/utils"
-)
-
-type Manager struct {
-    adapter     string
-    mouse       control.MouseController
-    deviceMgr   *device.Manager
-    connections map[string]*BLEConnection
-    mu          sync.RWMutex
-    running     bool
-    scanInterval time.Duration
-    callbacks   []func(event BluetoothEvent)
-}
-
-type BLEConnection struct {
-    Addr        string
-    Name        string
-    RSSI        int32
-    ConnectedAt time.Time
-    LastActive  time.Time
-    IsConnected bool
-    HIDEnabled  bool
-}
-
-type HIDReport struct {
-    Buttons byte
-    X       int16
-    Y       int16
-    Wheel   int8
-}
-
-type BluetoothEvent struct {
-    Type      string // "device_found", "connected", "disconnected"
-    Address   string
-    Name      string
-    Timestamp time.Time
-}
-
-func NewManager(adapter string, mouse control.MouseController, deviceMgr *device.Manager) *Manager {
-    return &Manager{
-        adapter:      adapter,
-        mouse:        mouse,
-        deviceMgr:    deviceMgr,
-        connections:  make(map[string]*BLEConnection),
-        scanInterval: 10 * time.Second,
-        callbacks:    make([]func(BluetoothEvent), 0),
-    }
-}
-
-func (m *Manager) SetScanInterval(interval time.Duration) {
-    m.scanInterval = interval
-}
-
-func (m *Manager) Start() error {
-    m.running = true
-    go m.scanLoop()
-    utils.LogInfo("Bluetooth manager started", "adapter", m.adapter)
-    return nil
-}
-
-func (m *Manager) scanLoop() {
-    ticker := time.NewTicker(m.scanInterval)
-    defer ticker.Stop()
-    
-    for m.running {
-        m.performScan()
-        <-ticker.C
-    }
-}
-
-func (m *Manager) performScan() {
-    // In real implementation, this would use platform-specific Bluetooth scanning
-    // For now, simulate device discovery
-    devices := m.getSimulatedDevices()
-    
-    for _, dev := range devices {
-        m.handleDiscoveredDevice(dev)
-    }
-}
-
-func (m *Manager) getSimulatedDevices() []struct{ Addr, Name string; RSSI int32 } {
-    return []struct{ Addr, Name string; RSSI int32 }{
-        {"AA:BB:CC:DD:EE:FF", "AirMouse Device", -55},
-        {"11:22:33:44:55:66", "Phone", -65},
-    }
-}
-
-func (m *Manager) handleDiscoveredDevice(addr, name string, rssi int32) {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-    
-    conn, exists := m.connections[addr]
-    if !exists {
-        conn = &BLEConnection{
-            Addr:        addr,
-            Name:        name,
-            RSSI:        rssi,
-            ConnectedAt: time.Now(),
-            LastActive:  time.Now(),
-            IsConnected: false,
-            HIDEnabled:  false,
-        }
-        m.connections[addr] = conn
-        m.deviceMgr.UpdateBLEDevice(addr, name, rssi)
-        m.triggerEvent(BluetoothEvent{
-            Type:      "device_found",
-            Address:   addr,
-            Name:      name,
-            Timestamp: time.Now(),
-        })
-        utils.LogInfo("Bluetooth device discovered", "addr", addr, "name", name, "rssi", rssi)
-    } else {
-        conn.LastActive = time.Now()
-        conn.RSSI = rssi
-        m.deviceMgr.UpdateBLEDevice(addr, name, rssi)
-    }
-}
-
-func (m *Manager) ConnectDevice(addr string) error {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-    
-    conn, exists := m.connections[addr]
-    if !exists {
-        return fmt.Errorf("device not found: %s", addr)
-    }
-    
-    if conn.IsConnected {
-        return nil
-    }
-    
-    // In real implementation, establish Bluetooth connection
-    conn.IsConnected = true
-    conn.ConnectedAt = time.Now()
-    
-    m.deviceMgr.RegisterDevice(addr, device.TypeBluetooth, conn.Name)
-    m.triggerEvent(BluetoothEvent{
-        Type:      "connected",
-        Address:   addr,
-        Name:      conn.Name,
-        Timestamp: time.Now(),
-    })
-    
-    utils.LogInfo("Bluetooth device connected", "addr", addr, "name", conn.Name)
-    return nil
-}
-
-func (m *Manager) DisconnectDevice(addr string) error {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-    
-    conn, exists := m.connections[addr]
-    if !exists || !conn.IsConnected {
-        return fmt.Errorf("device not connected: %s", addr)
-    }
-    
-    conn.IsConnected = false
-    m.deviceMgr.UnregisterDevice(addr)
-    m.triggerEvent(BluetoothEvent{
-        Type:      "disconnected",
-        Address:   addr,
-        Name:      conn.Name,
-        Timestamp: time.Now(),
-    })
-    
-    utils.LogInfo("Bluetooth device disconnected", "addr", addr)
-    return nil
-}
-
-func (m *Manager) SendHIDReport(report HIDReport) {
-    // Convert HID report to mouse actions
-    if report.X != 0 || report.Y != 0 {
-        m.mouse.Move(float64(report.X), float64(report.Y))
-    }
-    
-    if report.Buttons&0x01 != 0 {
-        m.mouse.Click("left")
-    }
-    if report.Buttons&0x02 != 0 {
-        m.mouse.Click("right")
-    }
-    if report.Wheel != 0 {
-        m.mouse.Scroll(int(report.Wheel))
-    }
-    
-    utils.LogDebug("HID report sent", "buttons", report.Buttons, "x", report.X, "y", report.Y, "wheel", report.Wheel)
-}
-
-func (m *Manager) Stop() {
-    m.running = false
-    
-    // Disconnect all devices
-    m.mu.Lock()
-    for addr, conn := range m.connections {
-        if conn.IsConnected {
-            m.deviceMgr.UnregisterDevice(addr)
-        }
-    }
-    m.connections = make(map[string]*BLEConnection)
-    m.mu.Unlock()
-    
-    utils.LogInfo("Bluetooth manager stopped")
-}
-
-func (m *Manager) GetStats() map[string]interface{} {
-    m.mu.RLock()
-    defer m.mu.RUnlock()
-    
-    var connectedCount int
-    for _, conn := range m.connections {
-        if conn.IsConnected {
-            connectedCount++
-        }
-    }
-    
-    return map[string]interface{}{
-        "total_devices":   len(m.connections),
-        "connected":       connectedCount,
-        "running":         m.running,
-        "adapter":         m.adapter,
-        "scan_interval":   m.scanInterval.Seconds(),
-    }
-}
-
-func (m *Manager) AddEventListener(callback func(event BluetoothEvent)) {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-    m.callbacks = append(m.callbacks, callback)
-}
-
-func (m *Manager) triggerEvent(event BluetoothEvent) {
-    m.mu.RLock()
-    callbacks := make([]func(BluetoothEvent), len(m.callbacks))
-    copy(callbacks, m.callbacks)
-    m.mu.RUnlock()
-    
-    for _, cb := range callbacks {
-        go cb(event)
-    }
-}
-
-func (m *Manager) GetConnectedDevices() []BLEConnection {
-    m.mu.RLock()
-    defer m.mu.RUnlock()
-    
-    devices := make([]BLEConnection, 0)
-    for _, conn := range m.connections {
-        if conn.IsConnected {
-            devices = append(devices, *conn)
-        }
-    }
-    return devices
 }

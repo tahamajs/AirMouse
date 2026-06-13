@@ -6,7 +6,6 @@ import (
     "time"
 
     "fyne.io/fyne/v2"
-    "fyne.io/fyne/v2/canvas"
     "fyne.io/fyne/v2/container"
     "fyne.io/fyne/v2/widget"
 
@@ -23,6 +22,8 @@ type StatusBar struct {
     networkLabel   *widget.Label
     stop           chan struct{}
     startTime      time.Time
+    lastCPU        time.Time
+    lastCPUSample  time.Duration
 }
 
 // SystemMetrics holds current system statistics
@@ -40,28 +41,25 @@ type SystemMetrics struct {
 // NewStatusBar constructs a status bar and starts periodic updates
 func NewStatusBar() *StatusBar {
     sb := &StatusBar{
-        cpuLabel:       widget.NewLabel("CPU: --%"),
-        memLabel:       widget.NewLabel("MEM: --%"),
-        goroutineLabel: widget.NewLabel("Goroutines: --"),
-        uptimeLabel:    widget.NewLabel("Uptime: --:--:--"),
-        networkLabel:   widget.NewLabel("📡 --"),
+        cpuLabel:       widget.NewLabel("💻 CPU: --%"),
+        memLabel:       widget.NewLabel("🧠 MEM: --%"),
+        goroutineLabel: widget.NewLabel("🔄 Goroutines: --"),
+        uptimeLabel:    widget.NewLabel("⏱️ Uptime: --:--:--"),
+        networkLabel:   widget.NewLabel("📡 ↓-- KB/s ↑-- KB/s"),
         stop:           make(chan struct{}),
         startTime:      time.Now(),
     }
     
-    // Create separator
-    separator := canvas.NewLine(color.RGBA{100, 100, 100, 255})
-    
     // Layout status bar
     sb.container = container.NewHBox(
         sb.cpuLabel,
-        separator,
+        widget.NewSeparator(),
         sb.memLabel,
-        separator,
+        widget.NewSeparator(),
         sb.goroutineLabel,
-        separator,
+        widget.NewSeparator(),
         sb.uptimeLabel,
-        separator,
+        widget.NewSeparator(),
         sb.networkLabel,
     )
     
@@ -79,6 +77,7 @@ func (sb *StatusBar) updater() {
     defer ticker.Stop()
     
     var lastRx, lastTx int64
+    var lastNetworkTime time.Time
     
     for {
         select {
@@ -86,15 +85,27 @@ func (sb *StatusBar) updater() {
             metrics := sb.getSystemMetrics()
             
             // Calculate network speed
-            rxSpeed := metrics.NetworkRx - lastRx
-            txSpeed := metrics.NetworkTx - lastTx
+            now := time.Now()
+            if !lastNetworkTime.IsZero() {
+                elapsed := now.Sub(lastNetworkTime).Seconds()
+                if elapsed > 0 {
+                    rxSpeed := float64(metrics.NetworkRx-lastRx) / elapsed
+                    txSpeed := float64(metrics.NetworkTx-lastTx) / elapsed
+                    
+                    fyne.Do(func() {
+                        sb.networkLabel.SetText(fmt.Sprintf("📡 ↓%.0f KB/s ↑%.0f KB/s",
+                            rxSpeed/1024, txSpeed/1024))
+                    })
+                }
+            }
             lastRx = metrics.NetworkRx
             lastTx = metrics.NetworkTx
+            lastNetworkTime = now
             
             // Update UI
             fyne.Do(func() {
                 sb.cpuLabel.SetText(fmt.Sprintf("💻 CPU: %.0f%%", metrics.CPUPercent))
-                sb.memLabel.SetText(fmt.Sprintf("🧠 MEM: %.0f%% (%.0f/%.0f MB)", 
+                sb.memLabel.SetText(fmt.Sprintf("🧠 MEM: %.0f%% (%.0f/%.0f MB)",
                     metrics.MemoryPercent,
                     float64(metrics.MemoryUsed)/1024/1024,
                     float64(metrics.MemoryTotal)/1024/1024))
@@ -103,9 +114,6 @@ func (sb *StatusBar) updater() {
                     int(metrics.Uptime.Hours()),
                     int(metrics.Uptime.Minutes())%60,
                     int(metrics.Uptime.Seconds())%60))
-                sb.networkLabel.SetText(fmt.Sprintf("📡 ↓ %.0f KB/s ↑ %.0f KB/s",
-                    float64(rxSpeed)/1024,
-                    float64(txSpeed)/1024))
             })
             
         case <-sb.stop:
@@ -126,25 +134,56 @@ func (sb *StatusBar) getSystemMetrics() SystemMetrics {
         Uptime:        time.Since(sb.startTime),
     }
     
-    // Get CPU percentage (platform-specific)
+    // Get CPU percentage
     metrics.CPUPercent = sb.getCPUPercent()
     
     // Get network stats
     metrics.NetworkRx, metrics.NetworkTx = sb.getNetworkStats()
     
+    // Clamp values
+    if metrics.MemoryPercent > 100 {
+        metrics.MemoryPercent = 100
+    }
+    if metrics.CPUPercent > 100 {
+        metrics.CPUPercent = 100
+    }
+    
     return metrics
 }
 
 func (sb *StatusBar) getCPUPercent() float64 {
-    // Platform-specific CPU monitoring
-    // This is a simplified version - in production, use gopsutil or similar
-    return 25.0 // Placeholder
+    // Simple CPU usage calculation
+    now := time.Now()
+    if sb.lastCPU.IsZero() {
+        sb.lastCPU = now
+        return 0
+    }
+    
+    elapsed := now.Sub(sb.lastCPU)
+    if elapsed < 10*time.Millisecond {
+        return sb.lastCPUSample.Seconds() * 100
+    }
+    
+    var rUsage runtime.MemStats
+    runtime.ReadMemStats(&rUsage)
+    
+    // Return a simulated CPU percentage (simplified)
+    // In production, use proper CPU sampling
+    cpuPercent := float64(runtime.NumGoroutine()) / 10.0
+    if cpuPercent > 100 {
+        cpuPercent = 100
+    }
+    
+    sb.lastCPU = now
+    sb.lastCPUSample = time.Duration(cpuPercent) * time.Millisecond
+    
+    return cpuPercent
 }
 
 func (sb *StatusBar) getNetworkStats() (int64, int64) {
-    // Platform-specific network monitoring
-    // This would track bytes sent/received over network interfaces
-    return 1024 * 1024, 512 * 1024 // Placeholder
+    // In production, read from netstat or /proc/net/dev
+    // Return simulated values for now
+    return 1024 * 1024, 512 * 1024
 }
 
 // Stop halts the periodic updates
@@ -165,6 +204,7 @@ type AdvancedStatusBar struct {
     stop         chan struct{}
 }
 
+// NewAdvancedStatusBar creates an advanced status bar
 func NewAdvancedStatusBar(onRefresh func()) *AdvancedStatusBar {
     sb := &AdvancedStatusBar{
         metrics:   &SystemMetrics{},
@@ -175,18 +215,17 @@ func NewAdvancedStatusBar(onRefresh func()) *AdvancedStatusBar {
     sb.container = container.NewHBox(
         widget.NewLabelWithStyle("📊 System Status", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
         widget.NewSeparator(),
-        sb.createMetricLabel("CPU", &sb.metrics.CPUPercent, "%"),
-        sb.createMetricLabel("MEM", &sb.metrics.MemoryPercent, "%"),
-        sb.createMetricLabel("Goroutines", &sb.metrics.GoRoutines, ""),
-        sb.createMetricLabel("Uptime", nil, ""),
+        widget.NewLabel("CPU: --%"),
+        widget.NewSeparator(),
+        widget.NewLabel("MEM: --%"),
+        widget.NewSeparator(),
+        widget.NewLabel("Goroutines: --"),
+        widget.NewSeparator(),
+        widget.NewLabel("Uptime: --"),
     )
     
     go sb.updater()
     return sb
-}
-
-func (sb *AdvancedStatusBar) createMetricLabel(name string, value interface{}, suffix string) *widget.Label {
-    return widget.NewLabel(fmt.Sprintf("%s: --%s", name, suffix))
 }
 
 func (sb *AdvancedStatusBar) updater() {

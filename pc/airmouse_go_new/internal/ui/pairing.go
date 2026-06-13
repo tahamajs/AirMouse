@@ -105,10 +105,20 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
         container.NewHBox(copyIPBtn, copyURLBtn),
     )
     
+    helpTab := container.NewVBox(
+        widget.NewLabelWithStyle("Troubleshooting", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+        widget.NewSeparator(),
+        widget.NewLabel("• Make sure both devices are on the same network"),
+        widget.NewLabel("• Check firewall settings (port 8080, 8081, 8082)"),
+        widget.NewLabel("• Restart the server if connection fails"),
+        widget.NewLabel("• Try using the IP address directly"),
+        widget.NewLabel("• Check that the server is running"),
+    )
+    
     tabs := container.NewAppTabs(
         container.NewTabItemWithIcon("QR Code", theme.InfoIcon(), qrTab),
         container.NewTabItemWithIcon("Manual", theme.SettingsIcon(), manualTab),
-        container.NewTabItemWithIcon("Help", theme.HelpIcon(), instructions),
+        container.NewTabItemWithIcon("Help", theme.HelpIcon(), helpTab),
     )
     
     // Main content
@@ -140,6 +150,7 @@ func QuickPairDialog(parent fyne.Window) {
         widget.NewLabelWithStyle("Quick Pair", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
         qrImage,
         widget.NewLabel(fmt.Sprintf("IP: %s:%d", ip, cfg.Port)),
+        widget.NewButton("Close", func() { parent.Hide() }),
     )
     
     dialog.ShowCustom("Quick Pair", "Close", content, parent)
