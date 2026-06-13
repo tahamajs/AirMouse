@@ -1,7 +1,7 @@
 // app/src/main/java/com/airmouse/data/repository/SettingsRepositoryImpl.kt
 package com.airmouse.data.repository
 
-import com.airmouse.data.local.PreferencesManager
+import com.airmouse.utils.PreferencesManager
 import com.airmouse.domain.model.UserPreferences
 import com.airmouse.domain.repository.ISettingsRepository
 import kotlinx.coroutines.flow.Flow

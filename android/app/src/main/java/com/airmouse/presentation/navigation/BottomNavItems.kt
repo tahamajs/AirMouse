@@ -5,7 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.List
 import androidx.compose.ui.graphics.vector.ImageVector
 
 data class BottomNavItem(
@@ -22,7 +22,7 @@ val bottomNavItems = listOf(
     ),
     BottomNavItem(
         title = "Statistics",
-        icon = Icons.Default.BarChart,
+        icon = Icons.Default.List,
         destination = Destinations.Statistics
     ),
     BottomNavItem(

@@ -8,7 +8,9 @@ This document defines the **complete communication protocol** between the Air Mo
 
 - **Transport**: WebSocket over TCP (primary). Fallback to plain TCP is also supported.
 - **Port**: Default `8080` (configurable on server).
-- **Message format**: JSON lines (`\n` terminated). Each message is a JSON object with a `type` field and a `payload` (object).
+- **Message format**: JSON lines (`\n` terminated). The server accepts either:
+  - nested messages with a `payload` object
+  - flat messages where fields sit beside `type` and `id`
 - **Authentication**: Optional pairing token exchanged via QR code (JWT). The token is sent as a query parameter `?token=...` during WebSocket handshake.
 
 ---
@@ -19,7 +21,7 @@ This document defines the **complete communication protocol** between the Air Mo
 2. QR code contains: `airmouse://pair?token=<jwt>&ws=ws://<server-ip>:<port>/ws`
 3. Android app extracts the WebSocket URL and token.
 4. App connects to `ws://<server-ip>:<port>/ws?token=<jwt>`.
-5. Server validates token (JWT with short expiry). If valid, connection is accepted.
+5. Server validates token if authentication is enabled. If valid, connection is accepted.
 6. App sends a `hello` message to identify itself.
 7. Server responds with `welcome`.
 8. Normal control messages begin.
@@ -30,17 +32,15 @@ This document defines the **complete communication protocol** between the Air Mo
 
 ## 3. Message Specification
 
-All messages are JSON objects. The `type` field determines the structure of `payload`.
+All messages are JSON objects. The Android code currently sends flat JSON for TCP and WebSocket, while the server also accepts the older nested `payload` form.
 
 ### 3.1 `hello` – Identify device
 
 ```json
 {
   "type": "hello",
-  "payload": {
-    "name": "Pixel 8 Pro",
-    "version": "3.0"
-  }
+  "name": "Pixel 8 Pro",
+  "version": "3.0"
 }
 ```
 - `name`: User‑defined device name (appears in server’s **Devices** tab).
@@ -51,10 +51,8 @@ All messages are JSON objects. The `type` field determines the structure of `pay
 ```json
 {
   "type": "move",
-  "payload": {
-    "dx": 12.5,
-    "dy": -3.2
-  }
+  "dx": 12.5,
+  "dy": -3.2
 }
 ```
 - `dx`, `dy`: relative movement in pixels (floating point). Positive `dx` moves right, positive `dy` moves down.
@@ -64,9 +62,8 @@ All messages are JSON objects. The `type` field determines the structure of `pay
 ```json
 {
   "type": "click",
-  "payload": {
-    "button": "left"
-  }
+  "button": "left",
+  "id": 123
 }
 ```
 - `button`: `"left"`, `"right"`, or `"middle"`.
@@ -76,7 +73,7 @@ All messages are JSON objects. The `type` field determines the structure of `pay
 ```json
 {
   "type": "doubleclick",
-  "payload": {}
+  "id": 124
 }
 ```
 
@@ -85,7 +82,7 @@ All messages are JSON objects. The `type` field determines the structure of `pay
 ```json
 {
   "type": "rightclick",
-  "payload": {}
+  "id": 125
 }
 ```
 
@@ -94,9 +91,8 @@ All messages are JSON objects. The `type` field determines the structure of `pay
 ```json
 {
   "type": "scroll",
-  "payload": {
-    "delta": 1
-  }
+  "delta": 1,
+  "id": 126
 }
 ```
 - `delta`: integer. Positive = scroll up/forward, negative = down/backward.
@@ -106,10 +102,8 @@ All messages are JSON objects. The `type` field determines the structure of `pay
 ```json
 {
   "type": "gesture",
-  "payload": {
-    "gesture": "ThumbsUp",
-    "confidence": 0.92
-  }
+  "gesture": "ThumbsUp",
+  "confidence": 0.92
 }
 ```
 - `gesture`: string (e.g., `"LeftSwipe"`, `"CircleCW"`, custom name).
@@ -120,11 +114,9 @@ All messages are JSON objects. The `type` field determines the structure of `pay
 ```json
 {
   "type": "proximity",
-  "payload": {
-    "device_id": "abc123",
-    "is_near": true,
-    "distance": 1.23
-  }
+  "device_id": "abc123",
+  "is_near": true,
+  "distance": 1.23
 }
 ```
 - `device_id`: unique identifier (e.g., Android ID).
@@ -136,9 +128,7 @@ All messages are JSON objects. The `type` field determines the structure of `pay
 ```json
 {
   "type": "control",
-  "payload": {
-    "command": "pause_movement"
-  }
+  "command": "pause_movement"
 }
 ```
 Supported commands:
@@ -162,6 +152,13 @@ Server responds with `pong`.
   ```
 - **`ping`** – server asks client to reply with `pong`.
 - **`pong`** – client reply.
+
+### 3.12 ACK behavior
+
+- `click`, `doubleclick`, `rightclick`, and `scroll` may include an `id`.
+- The Go server replies with `{"type":"ack","id":<same id>}`.
+- `move` messages are not acknowledged.
+- The TCP and WebSocket handlers accept both the flat Android JSON and the older nested `payload` shape.
 
 ---
 
@@ -636,4 +633,3 @@ Server: locks screen (if far threshold exceeded)
 | `welcome` | S→C | Yes | `server`, `version` |
 
 ---
-

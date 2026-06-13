@@ -79,7 +79,7 @@ class ProfilesFragment : Fragment() {
             return
         }
         lifecycleScope.launch {
-            preferences.saveProfile(name, preferences.getSensitivity(), preferences.getClickThreshold())
+            preferences.saveProfile(name, preferences.getSensitivity(), preferences.getClickThreshold(), preferences.getScrollThreshold())
             refreshProfileList()
             Toast.makeText(requireContext(), "Profile saved: $name", Toast.LENGTH_SHORT).show()
         }

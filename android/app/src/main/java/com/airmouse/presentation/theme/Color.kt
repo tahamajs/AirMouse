@@ -17,6 +17,7 @@ val DeepOrange900 = Color(0xFFBF360C)
 
 // Secondary / Accent Colors
 val Amber400 = Color(0xFFFFCA28)
+val Amber100 = Color(0xFFFFF8E1)
 val Amber200 = Color(0xFFFFE082)
 val Amber500 = Color(0xFFFFC107)
 val Amber600 = Color(0xFFFFB300)

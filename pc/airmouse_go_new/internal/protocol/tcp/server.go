@@ -2,7 +2,6 @@ package tcp
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"net"
 	"sync"
@@ -32,12 +31,6 @@ type Server struct {
 	deviceMgr *device.Manager
 	mu        sync.RWMutex
 	running   bool
-}
-
-type Message struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
-	ID      string          `json:"id,omitempty"`
 }
 
 func NewServer(host string, port int, mouse control.MouseController, deviceMgr *device.Manager) *Server {
@@ -119,11 +112,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		}
 		client.LastActive = time.Now()
 		client.BytesRecv += int64(len(line))
-		var msg Message
-		if err := json.Unmarshal([]byte(line), &msg); err != nil {
-			continue
-		}
-		s.processMessage(client, &msg)
+		s.processLine(client, []byte(line))
 	}
 	conn.Close()
 	s.mu.Lock()
@@ -133,38 +122,60 @@ func (s *Server) handleClient(conn net.Conn) {
 	s.deviceMgr.UnregisterDevice(clientID)
 }
 
-func (s *Server) processMessage(client *Client, msg *Message) {
-	switch msg.Type {
+func (s *Server) processLine(client *Client, line []byte) {
+	msgType, payload, id, err := decodeWireMessage(line)
+	if err != nil {
+		return
+	}
+	switch msgType {
 	case "move":
-		var p struct{ DX, DY float64 }
-		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			s.mouse.Move(p.DX, p.DY)
-		}
+		s.mouse.Move(number(payload["dx"]), number(payload["dy"]))
 	case "click":
-		var p struct{ Button string }
-		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			s.mouse.Click(p.Button)
+		button, _ := payload["button"].(string)
+		if button == "" {
+			button = "left"
 		}
+		s.mouse.Click(button)
+		s.writeAck(client, id)
 	case "doubleclick":
 		s.mouse.DoubleClick()
+		s.writeAck(client, id)
 	case "rightclick":
 		s.mouse.Click("right")
+		s.writeAck(client, id)
 	case "scroll":
-		var p struct{ Delta int }
-		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			s.mouse.Scroll(p.Delta)
-		}
+		s.mouse.Scroll(int(number(payload["delta"])))
+		s.writeAck(client, id)
 	case "hello":
-		var p struct{ Name, Version string }
-		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			client.Name = p.Name
-			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
-			client.Conn.Write([]byte(`{"type":"welcome","payload":{"server":"AirMouse","version":"3.0"}}` + "\n"))
-		}
+		name, _ := payload["name"].(string)
+		client.Name = name
+		s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
+		client.Conn.Write([]byte(`{"type":"welcome","payload":{"server":"AirMouse","version":"3.0"}}` + "\n"))
 	case "ping":
 		client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))
+	case "proximity":
+		utils.LogInfo("TCP proximity update received", "id", client.ID)
+	case "gesture":
+		utils.LogInfo("TCP gesture received", "id", client.ID)
+	case "control":
+		command, _ := payload["command"].(string)
+		switch command {
+		case "pause_movement":
+			control.SetMovementPaused(true)
+		case "resume_movement":
+			control.SetMovementPaused(false)
+		}
+	default:
+		utils.LogDebug("TCP message ignored", "type", msgType)
 	}
 }
+
+func (s *Server) writeAck(client *Client, id *string) {
+	if ack := ackMessage(id); len(ack) > 0 {
+		_, _ = client.Conn.Write(ack)
+	}
+}
+
 
 func (s *Server) Stop() {
 	s.running = false

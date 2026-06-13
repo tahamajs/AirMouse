@@ -1,6 +1,6 @@
 package com.airmouse.data.repository
 
-import com.airmouse.data.local.PreferencesManager
+import com.airmouse.utils.PreferencesManager
 import com.airmouse.network.TcpClient
 import com.airmouse.network.WebSocketManager
 import com.airmouse.domain.model.ConnectionConfig

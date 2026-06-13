@@ -2,9 +2,9 @@ package control
 
 import (
     "sync"
-    "time"
+	"time"
 
-    "airmouse-go/internal/predictive"
+	"airmouse-go/internal/predictive"
 )
 
 type MovementPredictor struct {
@@ -32,12 +32,12 @@ func (p *MovementPredictor) AddMovement(dx, dy float64) (smoothedDx, smoothedDy 
     }
     now := time.Now()
     dt := now.Sub(p.lastTime).Seconds()
-    if dt < 0.001 {
-        dt = 0.001
-    }
-    p.kf.dt = dt
-    p.kf.Predict()
-    p.kf.Update(dx, dy)
+	if dt < 0.001 {
+		dt = 0.001
+	}
+	p.kf.SetDT(dt)
+	p.kf.Predict()
+	p.kf.Update(dx, dy)
     predDx, predDy := p.kf.GetPredictedMovement()
     smoothedDx = (1-p.blendFactor)*dx + p.blendFactor*predDx
     smoothedDy = (1-p.blendFactor)*dy + p.blendFactor*predDy

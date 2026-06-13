@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -24,10 +23,10 @@ var upgrader = gorilla.Upgrader{
 }
 
 type WSClient struct {
-	ID          string
-	Name        string
-	Conn        *gorilla.Conn
-	Send        chan []byte
+	ID         string
+	Name       string
+	Conn       *gorilla.Conn
+	Send       chan []byte
 	ConnectedAt time.Time
 	LastActive  time.Time
 	BytesSent   int64
@@ -46,14 +45,6 @@ type Server struct {
 	running      bool
 	jitterBuffer *jitter.JitterBuffer
 }
-
-type WMessage struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
-	ID      string          `json:"id,omitempty"`
-}
-
-// Payload types omitted for brevity; they are handled identically to previous implementation.
 
 func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *Server {
 	return &Server{
@@ -89,26 +80,117 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := utils.GenerateID()
-	client := &WSClient{ID: id, Conn: conn, Send: make(chan []byte, 256), ConnectedAt: time.Now(), LastActive: time.Now()}
+	client := &WSClient{
+		ID:         id,
+		Conn:       conn,
+		Send:       make(chan []byte, 256),
+		ConnectedAt: time.Now(),
+		LastActive:  time.Now(),
+	}
 
 	s.mu.Lock()
 	s.clients[id] = client
 	s.mu.Unlock()
+	s.deviceMgr.RegisterDevice(id, device.TypeWebSocket, "Android")
+	utils.LogInfo("WebSocket client connected", "id", id)
 
-	// simple read loop to keep connection alive; real implementation will spawn pumps
-	go func() {
-		defer func() {
-			conn.Close()
-			s.mu.Lock()
-			delete(s.clients, id)
-			s.mu.Unlock()
-		}()
-		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
-				break
-			}
-		}
+	go s.readLoop(client)
+	go s.writeLoop(client)
+}
+
+func (s *Server) readLoop(client *WSClient) {
+	defer func() {
+		client.Conn.Close()
+		s.mu.Lock()
+		delete(s.clients, client.ID)
+		s.mu.Unlock()
+		s.deviceMgr.UnregisterDevice(client.ID)
+		utils.LogInfo("WebSocket client disconnected", "id", client.ID)
 	}()
+
+	for {
+		_, data, err := client.Conn.ReadMessage()
+		if err != nil {
+			return
+		}
+		client.LastActive = time.Now()
+		client.BytesRecv += int64(len(data))
+		msgType, payload, id, err := decodeWireMessage(data)
+		if err != nil {
+			continue
+		}
+		s.processMessage(client, msgType, payload, id)
+	}
+}
+
+func (s *Server) writeLoop(client *WSClient) {
+	for msg := range client.Send {
+		if err := client.Conn.WriteMessage(gorilla.TextMessage, msg); err != nil {
+			return
+		}
+		client.BytesSent += int64(len(msg))
+	}
+}
+
+func (s *Server) processMessage(client *WSClient, msgType string, payload map[string]any, id *string) {
+	if ack := ackMessage(id); len(ack) > 0 {
+		client.Send <- ack
+	}
+
+	switch msgType {
+	case "move":
+		s.mouse.Move(number(payload["dx"]), number(payload["dy"]))
+	case "click":
+		button, _ := payload["button"].(string)
+		if button == "" {
+			button = "left"
+		}
+		s.mouse.Click(button)
+	case "doubleclick":
+		s.mouse.DoubleClick()
+	case "rightclick":
+		s.mouse.Click("right")
+	case "scroll":
+		s.mouse.Scroll(int(number(payload["delta"])))
+	case "hello":
+		name, _ := payload["name"].(string)
+		client.Name = name
+		if client.Name == "" {
+			client.Name = "Android"
+		}
+		s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
+		client.Send <- []byte(`{"type":"welcome","payload":{"server":"AirMouse","version":"3.0"}}`)
+	case "gesture":
+		gesture, _ := payload["gesture"].(string)
+		confidence := number(payload["confidence"])
+		utils.LogInfo("Gesture received", "device", client.ID, "gesture", gesture, "confidence", confidence)
+	case "proximity":
+		isNear, _ := payload["is_near"].(bool)
+		distance := number(payload["distance"])
+		utils.LogInfo("Proximity received", "device", client.ID, "near", isNear, "distance", distance)
+		if s.proximityMgr != nil {
+			s.proximityMgr.ProcessUpdate(proximity.ProximityUpdate{
+				DeviceID:  client.ID,
+				IsNear:    isNear,
+				Distance:  float32(distance),
+				Timestamp: time.Now().UnixMilli(),
+			})
+		}
+	case "control":
+		command, _ := payload["command"].(string)
+		switch command {
+		case "pause_movement":
+			control.SetMovementPaused(true)
+		case "resume_movement":
+			control.SetMovementPaused(false)
+		}
+	case "ping":
+		client.Send <- []byte(`{"type":"pong"}`)
+	case "pong":
+		// no-op
+	default:
+		utils.LogDebug("WebSocket message ignored", "type", msgType)
+	}
 }
 
 func (s *Server) Stop() error {
@@ -122,6 +204,7 @@ func (s *Server) Stop() error {
 		_ = s.server.Close()
 	}
 	for _, c := range s.clients {
+		close(c.Send)
 		c.Conn.Close()
 	}
 	s.clients = make(map[string]*WSClient)
@@ -133,6 +216,3 @@ func (s *Server) GetStats() map[string]interface{} {
 	defer s.mu.RUnlock()
 	return map[string]interface{}{"clients": len(s.clients)}
 }
-
-// Remaining methods (handleWebSocket, readPump, writePump, processMessage, Stop, GetStats)
-// are identical to the original implementation and can be expanded in follow-up edits.

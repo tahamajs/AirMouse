@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/service/GestureInferenceService.kt
 package com.airmouse.service
 
 import android.app.*
@@ -178,8 +177,10 @@ class GestureInferenceService : Service(), SensorEventListener {
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "START_INFERENCE") startInference()
-        else if (intent?.action == "STOP_INFERENCE") stopInference()
+        when (intent?.action) {
+            "START_INFERENCE" -> startInference()
+            "STOP_INFERENCE" -> stopInference()
+        }
         return START_STICKY
     }
 

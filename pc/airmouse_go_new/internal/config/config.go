@@ -34,6 +34,11 @@ type Config struct {
 
     // Performance
     Sensitivity       float64 `json:"sensitivity"`
+    ClickThreshold    float64 `json:"click_threshold"`
+    ScrollThreshold   float64 `json:"scroll_threshold"`
+    DoubleClickInterval int64 `json:"double_click_interval"`
+    RightClickTilt    float64 `json:"right_click_tilt"`
+    HapticEnabled     bool    `json:"haptic_enabled"`
     MoveRateLimit     int     `json:"move_rate_limit"`
     BufferSize        int     `json:"buffer_size"`
     HeartbeatInterval int     `json:"heartbeat_interval"`
@@ -134,6 +139,11 @@ func loadOrDefault() *Config {
         EncryptionKey:             "",
         EnablePairingUI:           true,
         Sensitivity:               0.5,
+        ClickThreshold:            10.0,
+        ScrollThreshold:           5.0,
+        DoubleClickInterval:       300,
+        RightClickTilt:            15.0,
+        HapticEnabled:             true,
         MoveRateLimit:             60,
         BufferSize:                1024,
         HeartbeatInterval:         10,

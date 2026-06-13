@@ -34,7 +34,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 
     ip := utils.GetLocalIP()
     port := config.Get().Port
-    u := url.URL{Scheme: "ws", Host: ip + ":" + port, Path: "/ws"}
+    u := url.URL{Scheme: "ws", Host: fmt.Sprintf("%s:%d", ip, port), Path: "/ws"}
     fullURL := u.String()
 
     instructions := widget.NewLabel(

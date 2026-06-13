@@ -3,7 +3,6 @@ package predictiveml
 import (
     "fmt"
     "sync"
-    "time"
 
     ort "github.com/yalue/onnxruntime_go"
 )

@@ -5,10 +5,10 @@ import com.airmouse.data.repository.CalibrationRepositoryImpl
 import com.airmouse.data.repository.ConnectionRepositoryImpl
 import com.airmouse.data.repository.GestureRepositoryImpl
 import com.airmouse.data.repository.SettingsRepositoryImpl
-import com.airmouse.data.local.PreferencesManager
-import com.airmouse.data.local.AppDatabase
-import com.airmouse.data.remote.WebSocketManager
-import com.airmouse.data.remote.TcpClient
+import com.airmouse.utils.PreferencesManager
+import com.airmouse.data.datasource.local.AppDatabase
+import com.airmouse.network.WebSocketManager
+import com.airmouse.network.TcpClient
 import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.domain.repository.IGestureRepository
@@ -60,7 +60,7 @@ object RepositoryProvidersModule {
         preferencesManager: PreferencesManager,
         appDatabase: AppDatabase
     ): CalibrationRepositoryImpl {
-        return CalibrationRepositoryImpl(preferencesManager, appDatabase)
+        return CalibrationRepositoryImpl(appDatabase.calibrationDao(), preferencesManager)
     }
 
     @Provides
@@ -69,7 +69,7 @@ object RepositoryProvidersModule {
         preferencesManager: PreferencesManager,
         appDatabase: AppDatabase
     ): GestureRepositoryImpl {
-        return GestureRepositoryImpl(preferencesManager, appDatabase)
+        return GestureRepositoryImpl(appDatabase.gestureDao(), preferencesManager)
     }
 
     @Provides

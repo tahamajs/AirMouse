@@ -1,0 +1,73 @@
+go: downloading golang.org/x/sys v0.30.0
+# github.com/shoenig/go-m1cpu
+/Users/tahamajs/go/pkg/mod/github.com/shoenig/go-m1cpu@v0.1.6/cpu.go:75:17: warning: variable length array folded to constant array as an extension [-Wgnu-folding-constant]
+/Users/tahamajs/go/pkg/mod/github.com/shoenig/go-m1cpu@v0.1.6/cpu.go:77:16: warning: variable length array folded to constant array as an extension [-Wgnu-folding-constant]
+# airmouse-go/internal/protocol [airmouse-go/internal/protocol.test]
+internal/protocol/message_test.go:8:6: WireMessage redeclared in this block
+	internal/protocol/message.go:8:6: other declaration of WireMessage
+FAIL	airmouse-go/internal/protocol [build failed]
+	airmouse-go/internal/protocol/bluetooth		coverage: 0.0% of statements
+=== RUN   TestDecodeWireMessageFlatPayload
+--- PASS: TestDecodeWireMessageFlatPayload (0.00s)
+=== RUN   TestDecodeWireMessageNestedPayloadAndStringID
+--- PASS: TestDecodeWireMessageNestedPayloadAndStringID (0.00s)
+=== RUN   TestAckMessage
+--- PASS: TestAckMessage (0.00s)
+=== RUN   TestNumber
+=== RUN   TestNumber/float64
+=== RUN   TestNumber/int
+=== RUN   TestNumber/json.Number
+=== RUN   TestNumber/string
+--- PASS: TestNumber (0.00s)
+    --- PASS: TestNumber/float64 (0.00s)
+    --- PASS: TestNumber/int (0.00s)
+    --- PASS: TestNumber/json.Number (0.00s)
+    --- PASS: TestNumber/string (0.00s)
+=== RUN   TestProcessLineMoveAndAck
+--- PASS: TestProcessLineMoveAndAck (0.00s)
+=== RUN   TestProcessLineHelloAndControl
+--- PASS: TestProcessLineHelloAndControl (0.00s)
+PASS
+coverage: 39.6% of statements
+ok  	airmouse-go/internal/protocol/tcp	1.209s	coverage: 39.6% of statements
+=== RUN   TestGetStatsReflectsRunningState
+--- PASS: TestGetStatsReflectsRunningState (0.00s)
+=== RUN   TestListenLoopDiscoveryResponseShape
+--- PASS: TestListenLoopDiscoveryResponseShape (0.00s)
+=== RUN   TestGetLocalIPReturnsValidIPAddress
+--- PASS: TestGetLocalIPReturnsValidIPAddress (0.00s)
+PASS
+coverage: 21.2% of statements
+ok  	airmouse-go/internal/protocol/udp	0.630s	coverage: 21.2% of statements
+	airmouse-go/internal/protocol/usb		coverage: 0.0% of statements
+=== RUN   TestDecodeWireMessageFlatPayload
+--- PASS: TestDecodeWireMessageFlatPayload (0.00s)
+=== RUN   TestDecodeWireMessageNestedPayload
+--- PASS: TestDecodeWireMessageNestedPayload (0.00s)
+=== RUN   TestAckMessage
+--- PASS: TestAckMessage (0.00s)
+=== RUN   TestProcessMessageRoutesAndroidCommands
+2026/06/13 04:56:03 INFO: Gesture received%!(EXTRA string=device, string=ws-1, string=gesture, string=ThumbsUp, string=confidence, float64=0.91)
+2026/06/13 04:56:03 INFO: Proximity received%!(EXTRA string=device, string=ws-1, string=near, bool=true, string=distance, float64=1.23)
+--- PASS: TestProcessMessageRoutesAndroidCommands (0.00s)
+=== RUN   TestProcessMessageSendsAckForCriticalCommands
+--- PASS: TestProcessMessageSendsAckForCriticalCommands (0.00s)
+=== RUN   TestProcessMessagePingPongAndUnknown
+2026/06/13 04:56:03 DEBUG: WebSocket message ignored%!(EXTRA string=type, string=unknown)
+--- PASS: TestProcessMessagePingPongAndUnknown (0.00s)
+=== RUN   TestSetProximityManagerStoresManager
+2026/06/13 04:56:03 Proximity: No lock command found for this OS
+--- PASS: TestSetProximityManagerStoresManager (0.00s)
+PASS
+coverage: 43.6% of statements
+ok  	airmouse-go/internal/protocol/websocket	1.443s	coverage: 43.6% of statements
+FAIL
+# airmouse-go/internal/integration
+internal/integration/complete_test.go:845:1: imports must appear before other declarations
+FAIL	airmouse-go/internal/integration [setup failed]
+FAIL
+# airmouse-go/internal/benchmark [airmouse-go/internal/benchmark.test]
+internal/benchmark/performance_test.go:6:5: "sync" imported and not used
+internal/benchmark/performance_test.go:8:5: "time" imported and not used
+FAIL	airmouse-go/internal/benchmark [build failed]
+FAIL

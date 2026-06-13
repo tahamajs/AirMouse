@@ -1,7 +1,6 @@
 // app/src/main/java/com/airmouse/di/NetworkModule.kt
 package com.airmouse.di
 
-import com.airmouse.ConnectionManager
 import com.airmouse.network.TcpClient
 import com.airmouse.network.WebSocketManager
 import dagger.Module
@@ -45,10 +44,5 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideConnectionManager(
-        webSocketManager: WebSocketManager,
-        tcpClient: TcpClient
-    ): ConnectionManager {
-        return ConnectionManager(webSocketManager, tcpClient)
-    }
+    fun provideConnectionManager(): com.airmouse.ConnectionManager = com.airmouse.ConnectionManager
 }
