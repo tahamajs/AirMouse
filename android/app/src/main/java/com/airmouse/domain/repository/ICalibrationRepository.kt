@@ -16,4 +16,16 @@ interface ICalibrationRepository {
     suspend fun markCalibrationComplete()
     fun isCalibrationComplete(): Flow<Boolean>
     suspend fun resetCalibration()
+    suspend fun getCalibrationStatus(): CalibrationStatus
+    suspend fun exportCalibrationData(): String
+    suspend fun importCalibrationData(data: String): Boolean
 }
+
+data class CalibrationStatus(
+    val isGyroCalibrated: Boolean,
+    val isAccelCalibrated: Boolean,
+    val isMagCalibrated: Boolean,
+    val isComplete: Boolean,
+    val lastCalibrationTime: Long,
+    val quality: Float
+)

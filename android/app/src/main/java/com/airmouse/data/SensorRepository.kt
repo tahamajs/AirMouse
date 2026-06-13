@@ -9,7 +9,6 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.MadgwickAHRS
-import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

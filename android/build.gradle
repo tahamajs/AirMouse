@@ -1,22 +1,25 @@
+buildscript {
+    ext.kotlin_version = '1.9.24'
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+    dependencies {
+        // Android Gradle Plugin – compatible with Kotlin 1.9.24 and Java 17
+        classpath 'com.android.tools.build:gradle:8.5.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.dagger:hilt-android-gradle-plugin:2.52'
+    }
+}
+
 plugins {
-    id 'com.android.application' version '8.5.2' apply false
-    id 'com.android.library' version '8.5.2' apply false
-    id 'org.jetbrains.kotlin.android' version '2.0.20' apply false
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.0.20' apply false
-    id 'com.google.dagger.hilt.android' version '2.52' apply false
+    id 'com.android.application' version '8.5.0' apply false
+    id 'com.android.library' version '8.5.0' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.24' apply false
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.24' apply false
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
-}
-
-task fixProject(type: Delete) {
-    // Remove duplicate implementations from domain package
-    delete 'app/src/main/java/com/airmouse/domain/repository/CalibrationRepositoryImpl.kt'
-    delete 'app/src/main/java/com/airmouse/domain/repository/ConnectionRepositoryImpl.kt'
-    delete 'app/src/main/java/com/airmouse/domain/repository/GestureRepositoryImpl.kt'
-    delete 'app/src/main/java/com/airmouse/domain/repository/SettingsRepositoryImpl.kt'
-    
-    // Remove duplicate DTO from app
-    delete 'app/src/main/java/com/airmouse/data/model/NetworkMessage.kt'
 }

@@ -1,56 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/debug_overlay_bg"
-    android:padding="12dp"
-    android:elevation="8dp">
-
-    <!-- Header with title and close button -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="🐞 Debug Info"
-            android:textColor="#FFAAAA"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:fontFamily="monospace" />
-
-        <ImageView
-            android:id="@+id/closeDebugBtn"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_close"
-            android:tint="#FFFFFF"
-            android:contentDescription="Close debug overlay"
-            android:clickable="true"
-            android:focusable="true" />
-    </LinearLayout>
-
-    <!-- Separator -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#33FFFFFF"
-        android:layout_marginBottom="8dp" />
-
-    <!-- Debug text (main content) -->
-    <TextView
-        android:id="@+id/debugText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
-        android:textSize="11sp"
-        android:fontFamily="monospace"
-        android:lineSpacingExtra="4dp" />
-
+    android:background="#CC000000"
+    android:padding="8dp">
+    <TextView android:id="@+id/debug_gyro" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Gyro: --" android:textColor="#FFFFFF" android:textSize="10sp"/>
+    <TextView android:id="@+id/debug_accel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Accel: --" android:textColor="#FFFFFF" android:textSize="10sp"/>
+    <TextView android:id="@+id/debug_orientation" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Orientation: --" android:textColor="#FFFFFF" android:textSize="10sp"/>
+    <TextView android:id="@+id/debug_gesture" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Gesture: --" android:textColor="#FFFFFF" android:textSize="10sp"/>
+    <TextView android:id="@+id/debug_connection" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connection: --" android:textColor="#FFFFFF" android:textSize="10sp"/>
+    <TextView android:id="@+id/debug_fps" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FPS: --" android:textColor="#FFFFFF" android:textSize="10sp"/>
+    <com.airmouse.ui.DebugOverlay.GraphCanvas
+        android:id="@+id/debug_graph"
+        android:layout_width="300dp"
+        android:layout_height="100dp" />
 </LinearLayout>

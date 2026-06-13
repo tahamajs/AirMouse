@@ -9,14 +9,18 @@
     <color name="deep_orange_100">#FFE0B2</color>
     <color name="card_stroke">#2B3341</color>
     <color name="accent_blue_light">#33007ACC</color>
+
     <!-- Secondary brand colors -->
     <color name="amber_100">#FFECB3</color>
     <color name="amber_200">#FFE082</color>
     <color name="amber_500">#FFC107</color>
     <color name="amber_700">#FFA000</color>
     <color name="amber_900">#FF6F00</color>
-
-    <!-- Neutrals – Light theme -->
+    <color name="onboarding_1_bg">#FF5722</color>
+    <color name="onboarding_2_bg">#2196F3</color>
+    <color name="onboarding_3_bg">#4CAF50</color>
+    <color name="onboarding_4_bg">#9C27B0</color>
+    <!-- Neutrals -->
     <color name="white">#FFFFFF</color>
     <color name="off_white">#F5F5F5</color>
     <color name="grey_50">#FAFAFA</color>
@@ -24,6 +28,7 @@
     <color name="grey_200">#EEEEEE</color>
     <color name="grey_300">#E0E0E0</color>
     <color name="grey_400">#BDBDBD</color>
+    <color name="gray_400">#BDBDBD</color> <!-- Alias for gray_400 -->
     <color name="grey_500">#9E9E9E</color>
     <color name="grey_600">#757575</color>
     <color name="grey_700">#616161</color>
@@ -38,7 +43,7 @@
     <color name="error">#F44336</color>
     <color name="info">#2196F3</color>
 
-    <!-- Background / Surface – Light theme -->
+    <!-- Background / Surface -->
     <color name="background_primary">@color/white</color>
     <color name="background_secondary">@color/grey_100</color>
     <color name="surface">@color/white</color>
@@ -49,23 +54,29 @@
     <color name="on_primary_container">@color/deep_orange_900</color>
     <color name="surface_inverse">@color/grey_900</color>
 
-    <!-- Text – Light theme -->
+    <!-- Text -->
     <color name="text_primary">@color/grey_900</color>
     <color name="text_secondary">@color/grey_700</color>
     <color name="text_disabled">@color/grey_500</color>
     <color name="text_hint">@color/grey_400</color>
     <color name="text_on_surface_inverse">@color/white</color>
-        <color name="background_dark">#0f1115</color>
 
+    <!-- Theme Specific aliases -->
+    <color name="light_background">@color/white</color>
+    <color name="dark_background">#121212</color>
+    <color name="background_dark">#0f1115</color>
+    <color name="light_text_primary">@color/grey_900</color>
+    <color name="light_text_secondary">@color/grey_700</color>
+    <color name="dark_text_primary">@color/white</color>
+    <color name="dark_text_secondary">@color/grey_400</color>
 
-    <!-- Accents -->
+    <!-- UI elements -->
+    <color name="icon_tint">@color/grey_700</color>
+    <color name="ripple_color">#20000000</color>
     <color name="accent_blue">#007acc</color>
     <color name="accent_orange">#FF9800</color>
     <color name="success_green">#4CAF50</color>
     <color name="error_red">#F44336</color>
-
-    <!-- Progress bars -->
     <color name="progress_accent">#007acc</color>
     <color name="progress_bg">#2b3341</color>
-
 </resources>

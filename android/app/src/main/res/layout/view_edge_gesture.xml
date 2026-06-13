@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/edge_gesture_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/edge_gesture_bg"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="center"
+        android:gravity="center">
+
+        <ImageView
+            android:id="@+id/btn_click"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_click"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Click" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <ImageView
+                android:id="@+id/btn_scroll_up"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_scroll_up"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Scroll Up" />
+
+            <ImageView
+                android:id="@+id/btn_scroll_down"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_scroll_down"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_marginStart="8dp"
+                android:contentDescription="Scroll Down" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/btn_right_click"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_right_click"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginTop="8dp"
+            android:contentDescription="Right Click" />
+
+        <ImageView
+            android:id="@+id/btn_close"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_close"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginTop="8dp"
+            android:contentDescription="Close" />
+    </LinearLayout>
+</FrameLayout>

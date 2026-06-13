@@ -1,13 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
-        android:shortcutId="start_airmouse"
+        android:shortcutId="calibrate"
         android:enabled="true"
-        android:icon="@drawable/ic_play"
-        android:shortcutShortLabel="@string/start"
-        android:shortcutLongLabel="@string/start_air_mouse">
+        android:icon="@drawable/ic_calibrate"
+        android:shortcutShortLabel="@string/calibrate"
+        android:shortcutLongLabel="@string/calibrate_sensors">
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.airmouse"
-            android:targetClass="com.airmouse.MainActivity" />
+            android:targetClass="com.airmouse.ui.CalibrationActivity" />
+    </shortcut>
+    
+    <shortcut
+        android:shortcutId="settings"
+        android:enabled="true"
+        android:icon="@drawable/ic_settings"
+        android:shortcutShortLabel="@string/settings"
+        android:shortcutLongLabel="@string/open_settings">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.airmouse"
+            android:targetClass="com.airmouse.MainActivity">
+            <extra android:name="open_settings" android:value="true" />
+        </intent>
     </shortcut>
 </shortcuts>

@@ -1,30 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Splash Screen Theme -->
     <style name="Theme.AirMouse.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/deep_orange_700</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_calibrate</item>
         <item name="windowSplashScreenAnimationDuration">1000</item>
         <item name="postSplashScreenTheme">@style/Theme.AirMouse</item>
     </style>
-        <style name="Theme.AirMouse.Modern" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-            <item name="colorPrimary">#007acc</item>
-            <item name="colorPrimaryVariant">#005f99</item>
-            <item name="colorOnPrimary">#ffffff</item>
-            <item name="colorSecondary">#4CAF50</item>
-            <item name="colorSecondaryVariant">#388E3C</item>
-            <item name="colorOnSecondary">#ffffff</item>
-            <item name="android:colorBackground">#0f1115</item>
-            <item name="colorSurface">#171b22</item>
-            <item name="colorOnSurface">#e5e7eb</item>
-            <item name="colorError">#ef5b5b</item>
-            <item name="android:statusBarColor">#0f1115</item>
-            <item name="android:navigationBarColor">#0f1115</item>
-        </style>
 
-
-
-
-
+    <!-- Base App Theme (Material 3) -->
     <style name="Theme.AirMouse" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_700</item>
         <item name="android:windowLightStatusBar">false</item>
@@ -44,7 +28,7 @@
         <item name="colorOnError">@color/white</item>
     </style>
 
-    <!-- Explicit light / dark variants for easier switching -->
+    <!-- Explicit Light Theme -->
     <style name="Theme.AirMouse.Light" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_700</item>
         <item name="android:windowLightStatusBar">true</item>
@@ -58,6 +42,7 @@
         <item name="android:windowBackground">@color/background_primary</item>
     </style>
 
+    <!-- Explicit Dark Theme -->
     <style name="Theme.AirMouse.Dark" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_800</item>
         <item name="android:windowLightStatusBar">false</item>
@@ -71,11 +56,13 @@
         <item name="android:windowBackground">@color/background_primary</item>
     </style>
 
-    <style name="Theme.AirMouse.PureBlack" parent="Theme.AirMouse">
+    <!-- Pure Black (AMOLED) Theme -->
+    <style name="Theme.AirMouse.PureBlack" parent="Theme.AirMouse.Dark">
         <item name="android:windowBackground">@color/black_pure</item>
         <item name="colorSurface">@color/black_pure</item>
     </style>
 
+    <!-- High Contrast Theme -->
     <style name="Theme.AirMouse.HighContrast" parent="Theme.AirMouse">
         <item name="colorPrimary">@color/deep_orange_800</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -86,11 +73,42 @@
         <item name="colorOnSurface">@color/black_pure</item>
     </style>
 
+    <!-- Dialog Theme -->
     <style name="Theme.AirMouse.Dialog" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:windowMinWidthMajor">90%</item>
         <item name="android:windowMinWidthMinor">90%</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="colorPrimary">@color/deep_orange_500</item>
+    </style>
+
+    <!-- Transparent Theme for QR Scanner -->
+    <style name="Theme.AirMouse.Transparent" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
+    <!-- Shape Appearances -->
+    <style name="ShapeAppearanceOverlay.App.CornerSize50Percent" parent="">
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- Legacy / Modern support -->
+    <style name="Theme.AirMouse.Modern" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#007acc</item>
+        <item name="colorPrimaryVariant">#005f99</item>
+        <item name="colorOnPrimary">#ffffff</item>
+        <item name="colorSecondary">#4CAF50</item>
+        <item name="colorSecondaryVariant">#388E3C</item>
+        <item name="colorOnSecondary">#ffffff</item>
+        <item name="android:colorBackground">#0f1115</item>
+        <item name="colorSurface">#171b22</item>
+        <item name="colorOnSurface">#e5e7eb</item>
+        <item name="colorError">#ef5b5b</item>
+        <item name="android:statusBarColor">#0f1115</item>
+        <item name="android:navigationBarColor">#0f1115</item>
     </style>
 </resources>
