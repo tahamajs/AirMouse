@@ -2,7 +2,6 @@ package all_tests
 
 import (
     "encoding/json"
-    "net"
     "sync"
     "testing"
     "time"
@@ -209,7 +208,6 @@ func TestProtocolAckMessage(t *testing.T) {
 // ==================== FLAT vs NESTED FORMAT TESTS ====================
 
 func TestProtocolFlatFormat(t *testing.T) {
-    // Flat format (no nested payload)
     flatMsg := map[string]interface{}{
         "type": "move",
         "dx":   10.5,
@@ -237,7 +235,6 @@ func TestProtocolFlatFormat(t *testing.T) {
 }
 
 func TestProtocolNestedFormat(t *testing.T) {
-    // Nested format (with payload)
     nestedMsg := map[string]interface{}{
         "type": "move",
         "payload": map[string]float64{
@@ -369,10 +366,10 @@ func TestProtocolConcurrentMarshal(t *testing.T) {
 
 func TestProtocolMessageSizes(t *testing.T) {
     messages := map[string]interface{}{
-        "move":     map[string]interface{}{"type": "move", "dx": 10.5, "dy": -3.2},
-        "click":    map[string]interface{}{"type": "click", "button": "left"},
-        "gesture":  map[string]interface{}{"type": "gesture", "gesture": "ThumbsUp", "confidence": 0.95},
-        "scroll":   map[string]interface{}{"type": "scroll", "delta": 5},
+        "move":      map[string]interface{}{"type": "move", "dx": 10.5, "dy": -3.2},
+        "click":     map[string]interface{}{"type": "click", "button": "left"},
+        "gesture":   map[string]interface{}{"type": "gesture", "gesture": "ThumbsUp", "confidence": 0.95},
+        "scroll":    map[string]interface{}{"type": "scroll", "delta": 5},
         "proximity": map[string]interface{}{"type": "proximity", "device_id": "test", "is_near": true, "distance": 1.5},
     }
     
