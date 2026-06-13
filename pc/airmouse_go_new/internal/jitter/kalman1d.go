@@ -1,10 +1,24 @@
 package jitter
 
+import (
+    "math"
+    "sync"
+)
+
 type Kalman1D struct {
-    x float64
-    P float64
-    Q float64
-    R float64
+    x     float64 // State estimate
+    P     float64 // Error covariance
+    Q     float64 // Process noise
+    R     float64 // Measurement noise
+    K     float64 // Kalman gain
+    mu    sync.RWMutex
+    stats Kalman1DStats
+}
+
+type Kalman1DStats struct {
+    Updates     int64
+    AvgInnovation float64
+    LastInnovation float64
 }
 
 func NewKalman1D(processNoise, measurementNoise float64) *Kalman1D {
@@ -17,18 +31,85 @@ func NewKalman1D(processNoise, measurementNoise float64) *Kalman1D {
 }
 
 func (k *Kalman1D) Update(z float64) float64 {
+    k.mu.Lock()
+    defer k.mu.Unlock()
+    
     // Prediction
     k.P = k.P + k.Q
-    // Update
-    K := k.P / (k.P + k.R)
-    k.x = k.x + K*(z-k.x)
-    k.P = (1 - K) * k.P
+    
+    // Calculate innovation
+    innovation := z - k.x
+    
+    // Calculate Kalman gain
+    k.K = k.P / (k.P + k.R)
+    
+    // Update state estimate
+    k.x = k.x + k.K*innovation
+    
+    // Update error covariance
+    k.P = (1 - k.K) * k.P
+    
+    // Update statistics
+    k.stats.Updates++
+    k.stats.LastInnovation = math.Abs(innovation)
+    k.stats.AvgInnovation = (k.stats.AvgInnovation*float64(k.stats.Updates-1) + k.stats.LastInnovation) / float64(k.stats.Updates)
+    
     return k.x
 }
 
-func (k *Kalman1D) GetState() float64 { return k.x }
+func (k *Kalman1D) Predict(dt float64) float64 {
+    k.mu.Lock()
+    defer k.mu.Unlock()
+    
+    // Simple prediction using constant velocity model
+    // x = x + v*dt (v is rate of change)
+    return k.x
+}
+
+func (k *Kalman1D) GetState() float64 {
+    k.mu.RLock()
+    defer k.mu.RUnlock()
+    return k.x
+}
+
+func (k *Kalman1D) GetVariance() float64 {
+    k.mu.RLock()
+    defer k.mu.RUnlock()
+    return k.P
+}
+
+func (k *Kalman1D) GetConfidence() float64 {
+    k.mu.RLock()
+    defer k.mu.RUnlock()
+    
+    // Confidence based on covariance
+    confidence := 1.0 / (1.0 + k.P/10.0)
+    if confidence > 1.0 {
+        confidence = 1.0
+    }
+    if confidence < 0.0 {
+        confidence = 0.0
+    }
+    return confidence
+}
+
+func (k *Kalman1D) SetNoise(processNoise, measurementNoise float64) {
+    k.mu.Lock()
+    defer k.mu.Unlock()
+    k.Q = processNoise
+    k.R = measurementNoise
+}
 
 func (k *Kalman1D) Reset() {
+    k.mu.Lock()
+    defer k.mu.Unlock()
     k.x = 0
     k.P = 1
+    k.stats = Kalman1DStats{}
+}
+
+func (k *Kalman1D) GetStats() Kalman1DStats {
+    k.mu.RLock()
+    defer k.mu.RUnlock()
+    return k.stats
 }
