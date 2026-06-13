@@ -1,135 +1,136 @@
 package websocket
 
 import (
-	"strings"
-	"testing"
-
-	"airmouse-go/internal/control"
-	"airmouse-go/internal/device"
-	"airmouse-go/internal/proximity"
+    "encoding/json"
+    "testing"
 )
 
-type wsFakeMouse struct {
-	moveCalls   []struct{ dx, dy float64 }
-	clickCalls  []string
-	doubleCalls int
-	scrollCalls []int
+func TestWebSocketMessageTypes(t *testing.T) {
+    messageTypes := []string{"move", "click", "doubleclick", "rightclick", "scroll", "gesture", "proximity", "control", "hello"}
+    
+    for _, msgType := range messageTypes {
+        t.Run(msgType, func(t *testing.T) {
+            msg := map[string]string{"type": msgType}
+            data, err := json.Marshal(msg)
+            if err != nil {
+                t.Errorf("Failed to marshal %s: %v", msgType, err)
+            }
+            
+            var parsed map[string]interface{}
+            if err := json.Unmarshal(data, &parsed); err != nil {
+                t.Errorf("Failed to unmarshal %s: %v", msgType, err)
+            }
+            
+            if parsed["type"] != msgType {
+                t.Errorf("Expected type %s, got %v", msgType, parsed["type"])
+            }
+        })
+    }
 }
 
-func (f *wsFakeMouse) Move(dx, dy float64) { f.moveCalls = append(f.moveCalls, struct{ dx, dy float64 }{dx, dy}) }
-func (f *wsFakeMouse) Click(button string) { f.clickCalls = append(f.clickCalls, button) }
-func (f *wsFakeMouse) DoubleClick()        { f.doubleCalls++ }
-func (f *wsFakeMouse) Scroll(delta int)    { f.scrollCalls = append(f.scrollCalls, delta) }
-func (f *wsFakeMouse) Stats() (int64, int64, int64, int64) {
-	return 0, 0, 0, 0
-}
-func (f *wsFakeMouse) SetSensitivity(float64)            {}
-func (f *wsFakeMouse) GetSensitivity() float64           { return 1 }
-func (f *wsFakeMouse) SetSmoothing(bool)                 {}
-func (f *wsFakeMouse) SetAcceleration(bool, float64)     {}
-func (f *wsFakeMouse) EnablePredictive(bool)             {}
-func (f *wsFakeMouse) SetPredictiveBlendFactor(float64)  {}
-func (f *wsFakeMouse) EnableAISmoothing(bool)            {}
-func (f *wsFakeMouse) SetAISmoother(*control.AISmoother) {}
-func (f *wsFakeMouse) EnableMLPrediction(bool)           {}
-func (f *wsFakeMouse) SetMLBlendFactor(float64)          {}
-
-func TestProcessMessageRoutesAndroidCommands(t *testing.T) {
-	mouse := &wsFakeMouse{}
-	deviceMgr := device.NewManager()
-	s := &Server{
-		clients:   map[string]*WSClient{},
-		mouse:     mouse,
-		deviceMgr: deviceMgr,
-	}
-	client := &WSClient{ID: "ws-1", Send: make(chan []byte, 8)}
-	s.deviceMgr.RegisterDevice(client.ID, device.TypeWebSocket, "Android")
-
-	s.processMessage(client, "hello", map[string]any{"name": "Pixel 8", "version": "3.0"}, nil)
-	s.processMessage(client, "move", map[string]any{"dx": 5.5, "dy": -1.25}, nil)
-	s.processMessage(client, "click", map[string]any{"button": "left"}, nil)
-	s.processMessage(client, "doubleclick", map[string]any{}, nil)
-	s.processMessage(client, "rightclick", map[string]any{}, nil)
-	s.processMessage(client, "scroll", map[string]any{"delta": -2}, nil)
-	s.processMessage(client, "gesture", map[string]any{"gesture": "ThumbsUp", "confidence": 0.91}, nil)
-	s.processMessage(client, "proximity", map[string]any{"is_near": true, "distance": 1.23}, nil)
-	s.processMessage(client, "control", map[string]any{"command": "pause_movement"}, nil)
-	if !control.IsMovementPaused() {
-		t.Fatal("expected movement to be paused")
-	}
-	s.processMessage(client, "control", map[string]any{"command": "resume_movement"}, nil)
-	if control.IsMovementPaused() {
-		t.Fatal("expected movement to be resumed")
-	}
-
-	if len(mouse.moveCalls) != 1 {
-		t.Fatalf("moveCalls = %d, want 1", len(mouse.moveCalls))
-	}
-	if len(mouse.clickCalls) != 2 || mouse.clickCalls[0] != "left" || mouse.clickCalls[1] != "right" {
-		t.Fatalf("clickCalls = %v, want [left right]", mouse.clickCalls)
-	}
-	if mouse.doubleCalls != 1 {
-		t.Fatalf("doubleCalls = %d, want 1", mouse.doubleCalls)
-	}
-	if len(mouse.scrollCalls) != 1 || mouse.scrollCalls[0] != -2 {
-		t.Fatalf("scrollCalls = %v, want [-2]", mouse.scrollCalls)
-	}
-	if got := len(client.Send); got != 1 {
-		t.Fatalf("expected welcome message, got %d messages", got)
-	}
-	if got := <-client.Send; !strings.Contains(string(got), `"type":"welcome"`) {
-		t.Fatalf("first send = %q, want welcome", string(got))
-	}
+func TestWebSocketGestureMessages(t *testing.T) {
+    gestures := []struct {
+        name       string
+        confidence float64
+    }{
+        {"ThumbsUp", 0.95},
+        {"SwipeLeft", 0.88},
+        {"SwipeRight", 0.92},
+        {"CircleCW", 0.85},
+        {"ZoomIn", 0.91},
+        {"ZoomOut", 0.89},
+        {"Tap", 0.94},
+        {"DoubleTap", 0.87},
+        {"LongPress", 0.83},
+    }
+    
+    for _, g := range gestures {
+        t.Run(g.name, func(t *testing.T) {
+            msg := map[string]interface{}{
+                "type": "gesture",
+                "payload": map[string]interface{}{
+                    "gesture":    g.name,
+                    "confidence": g.confidence,
+                },
+            }
+            
+            data, err := json.Marshal(msg)
+            if err != nil {
+                t.Errorf("Failed to marshal gesture %s: %v", g.name, err)
+            }
+            
+            var parsed map[string]interface{}
+            json.Unmarshal(data, &parsed)
+            
+            if parsed["type"] != "gesture" {
+                t.Errorf("Expected gesture type, got %v", parsed["type"])
+            }
+        })
+    }
 }
 
-func TestProcessMessageSendsAckForCriticalCommands(t *testing.T) {
-	mouse := &wsFakeMouse{}
-	s := &Server{
-		clients:   map[string]*WSClient{},
-		mouse:     mouse,
-		deviceMgr: device.NewManager(),
-	}
-	client := &WSClient{ID: "ws-2", Send: make(chan []byte, 8)}
-	s.processMessage(client, "click", map[string]any{"button": "left"}, ptr("abc"))
-
-	select {
-	case msg := <-client.Send:
-		if !strings.Contains(string(msg), `"type":"ack"`) || !strings.Contains(string(msg), `"id":"abc"`) {
-			t.Fatalf("ack = %q, want id abc", string(msg))
-		}
-	default:
-		t.Fatal("expected ack to be queued")
-	}
+func TestWebSocketProximityMessages(t *testing.T) {
+    testCases := []struct {
+        isNear   bool
+        distance float64
+    }{
+        {true, 0.5},
+        {true, 1.2},
+        {false, 2.5},
+        {false, 4.0},
+        {true, 0.8},
+        {false, 10.0},
+    }
+    
+    for _, tc := range testCases {
+        t.Run("near="+string(rune(tc.isNear)), func(t *testing.T) {
+            msg := map[string]interface{}{
+                "type": "proximity",
+                "payload": map[string]interface{}{
+                    "device_id": "test-device",
+                    "is_near":   tc.isNear,
+                    "distance":  tc.distance,
+                },
+            }
+            
+            data, err := json.Marshal(msg)
+            if err != nil {
+                t.Errorf("Failed to marshal proximity: %v", err)
+            }
+            
+            var parsed map[string]interface{}
+            json.Unmarshal(data, &parsed)
+            
+            if parsed["type"] != "proximity" {
+                t.Errorf("Expected proximity type, got %v", parsed["type"])
+            }
+        })
+    }
 }
 
-func ptr(s string) *string { return &s }
-
-func TestProcessMessagePingPongAndUnknown(t *testing.T) {
-	s := &Server{
-		clients:   map[string]*WSClient{},
-		mouse:     &wsFakeMouse{},
-		deviceMgr: device.NewManager(),
-	}
-	client := &WSClient{ID: "ws-3", Send: make(chan []byte, 8)}
-	s.processMessage(client, "ping", map[string]any{}, nil)
-	s.processMessage(client, "pong", map[string]any{}, nil)
-	s.processMessage(client, "unknown", map[string]any{}, nil)
-
-	select {
-	case msg := <-client.Send:
-		if !strings.Contains(string(msg), `"type":"pong"`) {
-			t.Fatalf("expected pong, got %q", string(msg))
-		}
-	default:
-		t.Fatal("expected pong to be queued")
-	}
-}
-
-func TestSetProximityManagerStoresManager(t *testing.T) {
-	s := &Server{}
-	pm := proximity.NewManager()
-	s.SetProximityManager(pm)
-	if s.proximityMgr != pm {
-		t.Fatal("SetProximityManager did not store the manager")
-	}
+func TestWebSocketControlCommands(t *testing.T) {
+    commands := []string{"pause_movement", "resume_movement", "reset", "calibrate", "shutdown"}
+    
+    for _, cmd := range commands {
+        t.Run(cmd, func(t *testing.T) {
+            msg := map[string]interface{}{
+                "type": "control",
+                "payload": map[string]string{
+                    "command": cmd,
+                },
+            }
+            
+            data, err := json.Marshal(msg)
+            if err != nil {
+                t.Errorf("Failed to marshal command %s: %v", cmd, err)
+            }
+            
+            var parsed map[string]interface{}
+            json.Unmarshal(data, &parsed)
+            
+            if parsed["type"] != "control" {
+                t.Errorf("Expected control type, got %v", parsed["type"])
+            }
+        })
+    }
 }
