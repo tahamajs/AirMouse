@@ -2,17 +2,17 @@ package usb
 
 import (
     "bufio"
+    "encoding/binary"
     "encoding/json"
     "fmt"
     "os"
     "runtime"
-    "strings"
     "sync"
     "time"
 
     "airmouse-go/internal/control"
     "airmouse-go/internal/device"
-    "airmouse-go/internal/utils"
+    "airmouse-go/internal/infra/logger"
 )
 
 type SerialDevice struct {
@@ -25,6 +25,9 @@ type SerialDevice struct {
     BytesSent   int64
     BytesRecv   int64
     DeviceInfo  string
+    VendorID    uint16
+    ProductID   uint16
+    BaudRate    int
 }
 
 type Server struct {
@@ -38,6 +41,8 @@ type Server struct {
     stopBits    int
     parity      string
     callbacks   []func(event USBEvent)
+    gadget      *USBGadget
+    autoDetect  bool
 }
 
 type USBMessage struct {
@@ -60,21 +65,26 @@ type ClickPayload struct {
 }
 
 type USBEvent struct {
-    Type      string    // "connected", "disconnected", "data"
+    Type      string // "connected", "disconnected", "data", "error"
     DeviceID  string
+    Data      []byte
+    Error     string
     Timestamp time.Time
 }
 
 func NewServer(mouse control.MouseController, deviceMgr *device.Manager) *Server {
+    cfg := DefaultGadgetConfig()
     return &Server{
-        devices:   make(map[string]*SerialDevice),
-        mouse:     mouse,
-        deviceMgr: deviceMgr,
-        baudRate:  115200,
-        dataBits:  8,
-        stopBits:  1,
-        parity:    "none",
-        callbacks: make([]func(USBEvent), 0),
+        devices:    make(map[string]*SerialDevice),
+        mouse:      mouse,
+        deviceMgr:  deviceMgr,
+        baudRate:   115200,
+        dataBits:   8,
+        stopBits:   1,
+        parity:     "none",
+        callbacks:  make([]func(USBEvent), 0),
+        gadget:     NewUSBGadget(cfg),
+        autoDetect: true,
     }
 }
 
@@ -83,22 +93,38 @@ func (s *Server) SetSerialConfig(baudRate, dataBits, stopBits int, parity string
     s.dataBits = dataBits
     s.stopBits = stopBits
     s.parity = parity
-    utils.LogInfo("USB serial config updated", "baud", baudRate, "bits", dataBits)
+    logger.Info("USB serial config updated", "baud", baudRate, "bits", dataBits)
+}
+
+func (s *Server) EnableAutoDetect(enabled bool) {
+    s.autoDetect = enabled
 }
 
 func (s *Server) Start() error {
     s.running = true
-    go s.scanSerialPorts()
-    utils.LogInfo("USB serial server started", "baud_rate", s.baudRate)
+    
+    // Start USB gadget if on Linux
+    if runtime.GOOS == "linux" {
+        if err := s.gadget.Setup(); err != nil {
+            logger.Warn("USB gadget setup failed: %v", err)
+        }
+    }
+    
+    // Start serial port scanning if auto-detect enabled
+    if s.autoDetect {
+        go s.scanSerialPorts()
+    }
+    
+    logger.Info("USB serial server started", "baud_rate", s.baudRate, "auto_detect", s.autoDetect)
     return nil
 }
 
 func (s *Server) scanSerialPorts() {
-    ports := s.getSerialPorts()
     ticker := time.NewTicker(3 * time.Second)
     defer ticker.Stop()
     
     for s.running {
+        ports := s.getSerialPorts()
         for _, port := range ports {
             s.tryConnectPort(port)
         }
@@ -131,39 +157,55 @@ func (s *Server) getSerialPorts() []string {
     return ports
 }
 
-func (s *Server) tryConnectPort(path string) {
+func (s *Server) AddSerialPort(port string, baudRate int) error {
+    if baudRate == 0 {
+        baudRate = s.baudRate
+    }
+    
+    dev := &SerialDevice{
+        Path:      port,
+        BaudRate:  baudRate,
+        Connected: false,
+    }
+    
+    s.mu.Lock()
+    s.devices[port] = dev
+    s.mu.Unlock()
+    
+    return s.tryConnectPort(port)
+}
+
+func (s *Server) tryConnectPort(path string) error {
     s.mu.RLock()
-    _, exists := s.devices[path]
+    dev, exists := s.devices[path]
     s.mu.RUnlock()
-    if exists {
-        return
+    
+    if !exists {
+        return fmt.Errorf("device not registered: %s", path)
+    }
+    
+    if dev.Connected {
+        return nil
     }
     
     file, err := os.OpenFile(path, os.O_RDWR, 0666)
     if err != nil {
-        return
+        return err
     }
     
-    // Configure serial port (platform-specific)
-    if err := s.configurePort(file); err != nil {
+    // Configure serial port
+    if err := s.configurePort(file, dev.BaudRate); err != nil {
         file.Close()
-        return
+        return err
     }
     
-    dev := &SerialDevice{
-        Path:        path,
-        File:        file,
-        Reader:      bufio.NewReader(file),
-        Connected:   true,
-        ConnectedAt: time.Now(),
-        LastActive:  time.Now(),
-    }
+    dev.File = file
+    dev.Reader = bufio.NewReader(file)
+    dev.Connected = true
+    dev.ConnectedAt = time.Now()
+    dev.LastActive = time.Now()
     
-    s.mu.Lock()
-    s.devices[path] = dev
-    s.mu.Unlock()
-    
-    utils.LogInfo("USB serial device connected", "path", path)
+    logger.Info("USB serial device connected", "path", path, "baud", dev.BaudRate)
     s.deviceMgr.RegisterDevice(path, device.TypeUSB, "USB Device")
     s.triggerEvent(USBEvent{
         Type:      "connected",
@@ -172,11 +214,13 @@ func (s *Server) tryConnectPort(path string) {
     })
     
     go s.handleDevice(dev)
+    return nil
 }
 
-func (s *Server) configurePort(file *os.File) error {
-    // Platform-specific serial configuration would go here
-    // For now, assume it's properly configured
+func (s *Server) configurePort(file *os.File, baudRate int) error {
+    // Platform-specific serial configuration
+    // In production, use appropriate syscalls or libraries
+    logger.Debug("Serial port configured", "baud", baudRate)
     return nil
 }
 
@@ -184,9 +228,10 @@ func (s *Server) handleDevice(dev *SerialDevice) {
     defer func() {
         dev.File.Close()
         s.mu.Lock()
-        delete(s.devices, dev.Path)
+        dev.Connected = false
         s.mu.Unlock()
-        utils.LogInfo("USB serial device disconnected", "path", dev.Path)
+        
+        logger.Info("USB serial device disconnected", "path", dev.Path)
         s.deviceMgr.UnregisterDevice(dev.Path)
         s.triggerEvent(USBEvent{
             Type:      "disconnected",
@@ -198,20 +243,27 @@ func (s *Server) handleDevice(dev *SerialDevice) {
     for s.running && dev.Connected {
         line, err := dev.Reader.ReadString('\n')
         if err != nil {
+            logger.Debug("USB read error", "path", dev.Path, "error", err)
             break
         }
         
         dev.LastActive = time.Now()
         dev.BytesRecv += int64(len(line))
         
-        line = strings.TrimSpace(line)
+        line = trimSpace(line)
         if line == "" {
             continue
         }
         
         var msg USBMessage
         if err := json.Unmarshal([]byte(line), &msg); err != nil {
-            utils.LogDebug("Invalid USB message", "error", err, "path", dev.Path)
+            logger.Debug("Invalid USB message", "error", err)
+            s.triggerEvent(USBEvent{
+                Type:      "error",
+                DeviceID:  dev.Path,
+                Error:     err.Error(),
+                Timestamp: time.Now(),
+            })
             continue
         }
         
@@ -219,6 +271,7 @@ func (s *Server) handleDevice(dev *SerialDevice) {
         s.triggerEvent(USBEvent{
             Type:      "data",
             DeviceID:  dev.Path,
+            Data:      []byte(line),
             Timestamp: time.Now(),
         })
     }
@@ -230,7 +283,6 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
         var p MovePayload
         if err := json.Unmarshal(msg.Payload, &p); err == nil {
             s.mouse.Move(p.DX, p.DY)
-            utils.LogDebug("USB move", "dx", p.DX, "dy", p.DY)
         }
         
     case "click":
@@ -240,26 +292,29 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
             button = p.Button
         }
         s.mouse.Click(button)
-        utils.LogDebug("USB click", "button", button)
         
     case "rightclick":
         s.mouse.Click("right")
-        utils.LogDebug("USB right click")
         
     case "doubleclick":
         s.mouse.DoubleClick()
-        utils.LogDebug("USB double click")
         
     case "scroll":
         var p ScrollPayload
         if err := json.Unmarshal(msg.Payload, &p); err == nil {
             s.mouse.Scroll(p.Delta)
-            utils.LogDebug("USB scroll", "delta", p.Delta)
         }
         
     case "hello":
-        utils.LogInfo("USB device identified", "path", dev.Path)
-        // Send welcome response
+        logger.Info("USB device identified", "path", dev.Path)
+        if len(msg.Payload) > 0 {
+            var hello map[string]string
+            if err := json.Unmarshal(msg.Payload, &hello); err == nil {
+                if name, ok := hello["name"]; ok {
+                    s.deviceMgr.UpdateDeviceName(dev.Path, name)
+                }
+            }
+        }
         response := `{"type":"welcome","payload":{"server":"AirMouse","version":"3.0"}}` + "\n"
         dev.File.Write([]byte(response))
         dev.BytesSent += int64(len(response))
@@ -268,7 +323,7 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
         dev.File.Write([]byte(`{"type":"pong"}` + "\n"))
         
     default:
-        utils.LogDebug("Unknown USB message type", "type", msg.Type)
+        logger.Debug("Unknown USB message type", "type", msg.Type)
     }
     
     // Send ACK if ID present
@@ -279,18 +334,52 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
     }
 }
 
+func (s *Server) SendMessage(devicePath string, msg interface{}) error {
+    s.mu.RLock()
+    dev, exists := s.devices[devicePath]
+    s.mu.RUnlock()
+    
+    if !exists || !dev.Connected {
+        return fmt.Errorf("device not connected: %s", devicePath)
+    }
+    
+    data, err := json.Marshal(msg)
+    if err != nil {
+        return err
+    }
+    
+    _, err = dev.File.Write(append(data, '\n'))
+    if err == nil {
+        dev.BytesSent += int64(len(data) + 1)
+    }
+    return err
+}
+
+func (s *Server) SendHIDReport(dx, dy int16, buttons byte, wheel int8) error {
+    if runtime.GOOS != "linux" {
+        return fmt.Errorf("HID reports only supported on Linux")
+    }
+    
+    return s.gadget.SendMouseReport(dx, dy, buttons, wheel)
+}
+
 func (s *Server) Stop() {
     s.running = false
-    s.mu.Lock()
-    defer s.mu.Unlock()
     
-    for path, dev := range s.devices {
-        dev.File.Close()
-        delete(s.devices, path)
-        utils.LogInfo("USB device closed", "path", path)
+    if runtime.GOOS == "linux" {
+        s.gadget.Teardown()
     }
-    s.devices = make(map[string]*SerialDevice)
-    utils.LogInfo("USB serial server stopped")
+    
+    s.mu.Lock()
+    for path, dev := range s.devices {
+        if dev.Connected {
+            dev.File.Close()
+        }
+        delete(s.devices, path)
+    }
+    s.mu.Unlock()
+    
+    logger.Info("USB serial server stopped")
 }
 
 func (s *Server) GetStats() map[string]interface{} {
@@ -298,13 +387,19 @@ func (s *Server) GetStats() map[string]interface{} {
     defer s.mu.RUnlock()
     
     var totalSent, totalRecv int64
+    var connectedCount int
+    
     for _, dev := range s.devices {
-        totalSent += dev.BytesSent
-        totalRecv += dev.BytesRecv
+        if dev.Connected {
+            connectedCount++
+            totalSent += dev.BytesSent
+            totalRecv += dev.BytesRecv
+        }
     }
     
-    return map[string]interface{}{
+    stats := map[string]interface{}{
         "devices":      len(s.devices),
+        "connected":    connectedCount,
         "bytes_sent":   totalSent,
         "bytes_recv":   totalRecv,
         "running":      s.running,
@@ -312,7 +407,11 @@ func (s *Server) GetStats() map[string]interface{} {
         "data_bits":    s.dataBits,
         "stop_bits":    s.stopBits,
         "parity":       s.parity,
+        "auto_detect":  s.autoDetect,
+        "gadget":       s.gadget.GetStatus(),
     }
+    
+    return stats
 }
 
 func (s *Server) AddEventListener(callback func(event USBEvent)) {
@@ -332,23 +431,12 @@ func (s *Server) triggerEvent(event USBEvent) {
     }
 }
 
-func (s *Server) SendMessage(devicePath string, msg interface{}) error {
-    s.mu.RLock()
-    dev, exists := s.devices[devicePath]
-    s.mu.RUnlock()
-    
-    if !exists {
-        return fmt.Errorf("device not found: %s", devicePath)
+func trimSpace(s string) string {
+    for len(s) > 0 && (s[0] == ' ' || s[0] == '\t' || s[0] == '\n' || s[0] == '\r') {
+        s = s[1:]
     }
-    
-    data, err := json.Marshal(msg)
-    if err != nil {
-        return err
+    for len(s) > 0 && (s[len(s)-1] == ' ' || s[len(s)-1] == '\t' || s[len(s)-1] == '\n' || s[len(s)-1] == '\r') {
+        s = s[:len(s)-1]
     }
-    
-    _, err = dev.File.Write(append(data, '\n'))
-    if err == nil {
-        dev.BytesSent += int64(len(data) + 1)
-    }
-    return err
+    return s
 }

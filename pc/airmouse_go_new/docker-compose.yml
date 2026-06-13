@@ -1,0 +1,189 @@
+version: '3.8'
+
+services:
+  airmouse-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-3.0.0}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    container_name: airmouse-server
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FILE=/var/log/airmouse/airmouse.log
+      - CONFIG_PATH=/etc/airmouse/config.json
+      - AUTH_ENABLED=${AUTH_ENABLED:-false}
+      - AUTH_SECRET=${AUTH_SECRET:-}
+    volumes:
+      - airmouse-data:/var/lib/airmouse
+      - airmouse-logs:/var/log/airmouse
+      - airmouse-config:/etc/airmouse
+      - /dev/uinput:/dev/uinput
+      - /sys/kernel/config/usb_gadget:/sys/kernel/config/usb_gadget:ro
+    devices:
+      - /dev/uinput:/dev/uinput
+    cap_add:
+      - SYS_RAWIO
+      - NET_ADMIN
+      - NET_RAW
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082/udp"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.airmouse.version=3.0.0"
+      - "com.airmouse.description=Air Mouse Pro Server"
+
+  airmouse-web:
+    image: nginx:alpine
+    container_name: airmouse-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./web/static:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - airmouse-server
+    environment:
+      - NGINX_HOST=airmouse.local
+      - NGINX_PORT=80
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  airmouse-redis:
+    image: redis:7-alpine
+    container_name: airmouse-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  airmouse-postgres:
+    image: postgres:15-alpine
+    container_name: airmouse-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=airmouse
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-airmouse123}
+      - POSTGRES_DB=airmouse
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airmouse"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  airmouse-python-trainer:
+    build:
+      context: ./trainer
+      dockerfile: Dockerfile.trainer
+    container_name: airmouse-python-trainer
+    restart: unless-stopped
+    environment:
+      - MODEL_PATH=/models/mouse_smoothing.onnx
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./models:/models
+      - ./data:/data
+    ports:
+      - "5001:5001"
+    depends_on:
+      - airmouse-redis
+      - airmouse-postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  airmouse-prometheus:
+    image: prom/prometheus:latest
+    container_name: airmouse-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:9090/-/healthy", "-O", "/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  airmouse-grafana:
+    image: grafana/grafana:latest
+    container_name: airmouse-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - airmouse-prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  airmouse-data:
+    driver: local
+  airmouse-logs:
+    driver: local
+  airmouse-config:
+    driver: local
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  default:
+    name: airmouse-network
+    driver: bridge

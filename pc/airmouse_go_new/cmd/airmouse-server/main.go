@@ -9,6 +9,9 @@ import (
     "syscall"
     "time"
 
+    "fyne.io/fyne/v2"
+    "fyne.io/fyne/v2/app"
+
     "airmouse-go/internal/auth"
     "airmouse-go/internal/config"
     "airmouse-go/internal/control"
@@ -37,9 +40,7 @@ func main() {
         Timestamp: true,
     })
     
-    logger.Info("╔═══════════════════════════════════════════════════════════════╗")
-    logger.Info("║     Air Mouse Pro Server v%s - Starting...                     ║", version)
-    logger.Info("╚═══════════════════════════════════════════════════════════════╝")
+    printBanner()
     
     // Print system info
     logger.Info("System Information:")
@@ -87,14 +88,18 @@ func main() {
     // Initialize protocol server
     protocolServer := protocol.NewProtocolServer(mouseController, deviceManager, authManager)
     
+    // Setup Fyne application with icon
+    a := app.New()
+    a.SetIcon(loadAppIcon())
+    
     // Create and run UI
-    app := ui.NewApp(cfg, protocolServer, mouseController, deviceManager)
+    appUI := ui.NewApp(cfg, protocolServer, mouseController, deviceManager)
     
     // Setup graceful shutdown
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
     
-    go handleSignals(ctx, app, protocolServer)
+    go handleSignals(ctx, appUI, protocolServer)
     
     // Run application
     logger.Info("Application started successfully")
@@ -102,7 +107,7 @@ func main() {
     logger.Info("TCP server will listen on port %d", cfg.Port)
     logger.Info("UDP discovery will listen on port %d", cfg.UDPPort)
     
-    if err := app.Run(); err != nil {
+    if err := appUI.Run(); err != nil {
         logger.Fatal("Application error: %v", err)
     }
     
@@ -112,7 +117,28 @@ func main() {
     logger.Close()
 }
 
-func handleSignals(ctx context.Context, app *ui.App, server *protocol.ProtocolServer) {
+func printBanner() {
+    banner := `
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v%s                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+`
+    logger.Info(banner, version)
+}
+
+func loadAppIcon() fyne.Resource {
+    // Try to load embedded icon, fallback to default
+    if len(AppIconData) > 0 {
+        return &fyne.StaticResource{
+            StaticName:    "app_icon.png",
+            StaticContent: AppIconData,
+        }
+    }
+    return nil
+}
+
+func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.ProtocolServer) {
     sigChan := make(chan os.Signal, 1)
     signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
     
@@ -129,8 +155,6 @@ func handleSignals(ctx context.Context, app *ui.App, server *protocol.ProtocolSe
                     logger.Error("Failed to reload config: %v", err)
                 } else {
                     logger.Info("Configuration reloaded successfully")
-                    // Update logger level
-                    logger.SetLevel(getLogLevel(config.Get().LogLevel))
                 }
                 
             case syscall.SIGINT, syscall.SIGTERM:
@@ -144,9 +168,9 @@ func handleSignals(ctx context.Context, app *ui.App, server *protocol.ProtocolSe
                 }
                 
                 // Stop the app
-                if app != nil {
+                if appUI != nil {
                     logger.Info("Stopping UI...")
-                    app.Stop()
+                    appUI.Stop()
                 }
                 
                 logger.Info("Shutdown complete")
@@ -157,20 +181,5 @@ func handleSignals(ctx context.Context, app *ui.App, server *protocol.ProtocolSe
         case <-ctx.Done():
             return
         }
-    }
-}
-
-func getLogLevel(level string) logger.Level {
-    switch level {
-    case "debug":
-        return logger.LevelDebug
-    case "info":
-        return logger.LevelInfo
-    case "warn":
-        return logger.LevelWarn
-    case "error":
-        return logger.LevelError
-    default:
-        return logger.LevelInfo
     }
 }

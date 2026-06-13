@@ -1,0 +1,205 @@
+# .goreleaser.yml
+project_name: airmouse-server
+
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=1
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: airmouse-linux
+    main: ./cmd/airmouse-server
+    binary: airmouse-server
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildTime={{.Date}}
+      - -X main.gitCommit={{.Commit}}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - 7
+    env:
+      - CGO_ENABLED=1
+    tags:
+      - ai
+      - netgo
+      - osusergo
+
+  - id: airmouse-windows
+    main: ./cmd/airmouse-server
+    binary: airmouse-server
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildTime={{.Date}}
+      - -X main.gitCommit={{.Commit}}
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=1
+    tags:
+      - ai
+
+  - id: airmouse-darwin
+    main: ./cmd/airmouse-server
+    binary: airmouse-server
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildTime={{.Date}}
+      - -X main.gitCommit={{.Commit}}
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=1
+    tags:
+      - ai
+
+archives:
+  - id: airmouse-archive
+    builds:
+      - airmouse-linux
+      - airmouse-windows
+      - airmouse-darwin
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+      - config.example.json
+      - scripts/install.sh
+      - scripts/uninstall.sh
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+
+brews:
+  - name: airmouse-server
+    homepage: "https://github.com/yourusername/airmouse-go"
+    description: "Air Mouse Pro Server - Turn your phone into a wireless mouse"
+    license: "MIT"
+    tap:
+      owner: yourusername
+      name: homebrew-tap
+    folder: Formula
+    install: |
+      bin.install "airmouse-server"
+      etc.install "config.example.json" => "airmouse/config.json"
+    test: |
+      system "#{bin}/airmouse-server --version"
+
+nfpms:
+  - id: airmouse-nfpm
+    package_name: airmouse-server
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    vendor: "AirMouse Team"
+    homepage: "https://github.com/yourusername/airmouse-go"
+    maintainer: "AirMouse Team <support@airmouse.io>"
+    description: "Air Mouse Pro Server - Turn your phone into a wireless mouse"
+    license: "MIT"
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/bin
+    dependencies:
+      - libc6
+      - libx11-6
+      - libxrandr2
+      - libxinerama1
+      - libxcursor1
+      - libxi6
+      - libgl1-mesa-glx
+    recommends:
+      - bluetooth
+      - bluez
+      - bluez-utils
+    suggests:
+      - xdotool
+      - wmctrl
+    files:
+      "config.example.json": "/etc/airmouse/config.json"
+      "scripts/install.sh": "/usr/lib/airmouse/install.sh"
+    config_files:
+      "/etc/airmouse/config.json": "config.example.json"
+    scripts:
+      preinstall: "scripts/preinstall.sh"
+      postinstall: "scripts/postinstall.sh"
+      preremove: "scripts/preremove.sh"
+      postremove: "scripts/postremove.sh"
+
+dockers:
+  - id: airmouse-docker
+    image_templates:
+      - "airmouse/airmouse-server:{{ .Version }}"
+      - "airmouse/airmouse-server:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.name=airmouse-server"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source=https://github.com/yourusername/airmouse-go"
+    files:
+      - config.example.json
+
+release:
+  github:
+    owner: yourusername
+    name: airmouse-go
+  draft: false
+  prerelease: auto
+  name_template: "Air Mouse Pro Server {{.Version}}"
+  extra_files:
+    - glob: ./dist/*.tar.gz
+    - glob: ./dist/*.deb
+    - glob: ./dist/*.rpm
+    - glob: ./dist/checksums.txt
+
+announce:
+  twitter:
+    enabled: true
+    message_template: "New release of Air Mouse Pro Server {{.Version}} is out! {{.ReleaseURL}}"
+  slack:
+    enabled: true
+    channel: "#releases"
+    message_template: "New release: {{.Version}} - {{.ReleaseURL}}"
+  discord:
+    enabled: true
+    message_template: "**New release of Air Mouse Pro Server {{.Version}}**\n{{.ReleaseURL}}"
+
+signs:
+  - artifacts: checksum
+    args: ["--batch", "-u", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]

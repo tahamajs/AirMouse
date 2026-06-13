@@ -2,6 +2,7 @@ package ui
 
 import (
     "fmt"
+    "image"
     "image/color"
     "time"
 
@@ -179,7 +180,6 @@ func (t *AnalyticsTab) drawChart(w, h int) image.Image {
     }
     
     if len(t.trainingHistory) == 0 {
-        // Draw "No data" text
         return img
     }
     
@@ -330,7 +330,7 @@ func (t *AnalyticsTab) exportTrainingData() {
         if err == nil && writer != nil {
             defer writer.Close()
             
-            // Export as JSON
+            // Export as CSV
             data := "Timestamp,Samples,Accuracy,Loss\n"
             for _, record := range t.trainingHistory {
                 data += fmt.Sprintf("%s,%d,%.4f,%.4f\n",

@@ -13,7 +13,8 @@ import (
     "fyne.io/fyne/v2/widget"
 )
 
-func showAboutDialog(parent fyne.Window) {
+// ShowAboutDialog displays the about dialog with application information
+func ShowAboutDialog(parent fyne.Window) {
     // Build information
     buildTime := "2025-01-15"
     goVersion := runtime.Version()
@@ -26,6 +27,7 @@ func showAboutDialog(parent fyne.Window) {
         "Go Server: Taha Majd",
         "AI/ML Integration: Taha Majd",
         "UI/UX Design: Taha Majd",
+        "Testing & QA: Taha Majd",
     }
     
     // Features list
@@ -38,9 +40,11 @@ func showAboutDialog(parent fyne.Window) {
         "✓ Cross-platform (Windows/Linux/macOS)",
         "✓ Modern Fyne GUI",
         "✓ QR code pairing",
+        "✓ Bluetooth HID support",
+        "✓ USB gadget support",
     }
     
-    // Create logo placeholder (you can replace with actual logo)
+    // Create logo placeholder
     logo := canvas.NewRectangle(theme.PrimaryColor())
     logo.SetMinSize(fyne.NewSize(100, 100))
     logo.CornerRadius = 50
@@ -83,7 +87,6 @@ func showAboutDialog(parent fyne.Window) {
     
     // Links
     githubBtn := widget.NewButtonWithIcon("GitHub Repository", theme.InfoIcon(), func() {
-        // Open GitHub URL
         dialog.ShowInformation("GitHub", "https://github.com/yourusername/airmouse-go", parent)
     })
     
@@ -121,8 +124,8 @@ func showAboutDialog(parent fyne.Window) {
     dialog.ShowCustom("About Air Mouse Pro", "Close", container.NewScroll(content), parent)
 }
 
-// Additional helper for showing system info
-func showSystemInfoDialog(parent fyne.Window) {
+// ShowSystemInfoDialog displays system information
+func ShowSystemInfoDialog(parent fyne.Window) {
     var memStats runtime.MemStats
     runtime.ReadMemStats(&memStats)
     
@@ -141,8 +144,8 @@ func showSystemInfoDialog(parent fyne.Window) {
     dialog.ShowCustom("System Information", "Close", content, parent)
 }
 
-// Contributor info modal
-func showContributorsDialog(parent fyne.Window) {
+// ShowContributorsDialog displays contributor information
+func ShowContributorsDialog(parent fyne.Window) {
     contributors := []struct {
         Name    string
         Role    string
@@ -168,13 +171,15 @@ func showContributorsDialog(parent fyne.Window) {
     dialog.ShowCustom("Contributors", "Close", content, parent)
 }
 
-// Open source licenses
-func showLicensesDialog(parent fyne.Window) {
+// ShowLicensesDialog displays open source licenses
+func ShowLicensesDialog(parent fyne.Window) {
     licenses := map[string]string{
         "Fyne.io/fyne/v2":     "BSD 3-Clause License",
         "gorilla/websocket":   "BSD 2-Clause License",
         "go-vgo/robotgo":      "MIT License",
         "skip2/go-qrcode":     "MIT License",
+        "golang-jwt/jwt":      "MIT License",
+        "gonum/org/v1/gonum":  "BSD 3-Clause License",
     }
     
     var licenseWidgets []fyne.CanvasObject
