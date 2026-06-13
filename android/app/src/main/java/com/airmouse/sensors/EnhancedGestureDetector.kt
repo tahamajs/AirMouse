@@ -31,7 +31,7 @@ class EnhancedGestureDetector(
     private var clickSpeedThreshold: Float = 5f
     private var doubleClickMaxInterval: Long = 400L
     private var scrollSpeedThreshold: Float = 8f
-    private var scrollDebounceThreshold: Float = 2f
+    private var scrollDebounceThreshold: Long = 100L
     private var rightClickTiltThreshold: Float = 45f
     private var rightClickDurationMs: Long = 500L
 
@@ -49,7 +49,7 @@ class EnhancedGestureDetector(
         clickSpeedThreshold = preferences.getClickThreshold()
         doubleClickMaxInterval = preferences.getDoubleClickInterval()
         scrollSpeedThreshold = preferences.getScrollThreshold()
-        scrollDebounceThreshold = preferences.getScrollDebounce()
+        scrollDebounceThreshold = preferences.getScrollDebounce ()
         rightClickTiltThreshold = preferences.getRightClickTilt()
         rightClickDurationMs = preferences.getRightClickDuration()
     }
@@ -125,7 +125,7 @@ class EnhancedGestureDetector(
             scrollInProgress = true
             vibrate(20)
             return if (accelY > 0) Gesture.SCROLL_DOWN else Gesture.SCROLL_UP
-        } else if (speed < scrollDebounceThreshold) {
+        } else if (speed < scrollDebounceThreshold.toFloat()) {
             scrollInProgress = false
         }
 

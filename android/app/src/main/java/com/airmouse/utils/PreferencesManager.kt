@@ -2,224 +2,203 @@ package com.airmouse.utils
 
 import android.content.Context
 import android.content.SharedPreferences
-import org.json.JSONObject
+import javax.inject.Inject
+import javax.inject.Singleton
 
-@Suppress("unused", "SpellCheckingInspection")
-class PreferencesManager(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("airmouse", Context.MODE_PRIVATE)
+@Singleton
+class PreferencesManager @Inject constructor(
+    private val context: Context
+) {
+    private val prefs: SharedPreferences = context.getSharedPreferences("airmouse_prefs", Context.MODE_PRIVATE)
 
-    // ----------------------------------------------------------------------
-    // Basic settings
-    // ----------------------------------------------------------------------
-    fun getSensitivity(): Float = prefs.getFloat("sensitivity", 0.5f)
-    fun setSensitivity(value: Float) = prefs.edit().putFloat("sensitivity", value).apply()
+    // ==================== Basic Operations ====================
+    fun putBoolean(key: String, value: Boolean) = prefs.edit().putBoolean(key, value).apply()
+    fun getBoolean(key: String, default: Boolean = false): Boolean = prefs.getBoolean(key, default)
+    
+    fun putFloat(key: String, value: Float) = prefs.edit().putFloat(key, value).apply()
+    fun getFloat(key: String, default: Float = 0f): Float = prefs.getFloat(key, default)
+    
+    fun putInt(key: String, value: Int) = prefs.edit().putInt(key, value).apply()
+    fun getInt(key: String, default: Int = 0): Int = prefs.getInt(key, default)
+    
+    fun putString(key: String, value: String) = prefs.edit().putString(key, value).apply()
+    fun getString(key: String, default: String = ""): String = prefs.getString(key, default) ?: default
+    
+    fun putLong(key: String, value: Long) = prefs.edit().putLong(key, value).apply()
+    fun getLong(key: String, default: Long = 0L): Long = prefs.getLong(key, default)
 
-    fun getClickThreshold(): Float = prefs.getFloat("click_threshold", 10f)
-    fun setClickThreshold(value: Float) = prefs.edit().putFloat("click_threshold", value).apply()
-    fun setEdgeGestureAction(key: String, action: String) {
-        prefs.edit().putString("edge_gesture_$key", action).apply()
-    }
-    fun getEdgeGestureAction(key: String): String {
-        return prefs.getString("edge_gesture_$key", "Click") ?: "Click"
-    }
-    fun getDoubleClickInterval(): Long = prefs.getLong("double_click_interval", 300L)
-    fun setDoubleClickInterval(value: Long) = prefs.edit().putLong("double_click_interval", value).apply()
-
-    fun getScrollThreshold(): Float = prefs.getFloat("scroll_threshold", 5f)
-    fun setScrollThreshold(value: Float) = prefs.edit().putFloat("scroll_threshold", value).apply()
-
-    fun getScrollDebounce(): Float = prefs.getFloat("scroll_debounce", 0.1f)
-    fun setScrollDebounce(value: Float) = prefs.edit().putFloat("scroll_debounce", value).apply()
-
-    fun getRightClickTilt(): Float = prefs.getFloat("rightclick_tilt", 15f)
-    fun setRightClickTilt(value: Float) = prefs.edit().putFloat("rightclick_tilt", value).apply()
-
-    fun getRightClickDuration(): Long = prefs.getLong("rightclick_duration", 200L)
-    fun setRightClickDuration(value: Long) = prefs.edit().putLong("rightclick_duration", value).apply()
-
-    fun isHapticEnabled(): Boolean = prefs.getBoolean("haptic_enabled", true)
-    fun setHapticEnabled(enabled: Boolean) = prefs.edit().putBoolean("haptic_enabled", enabled).apply()
-
-    fun getLastIp(): String = prefs.getString("last_ip", "") ?: ""
-    fun setLastIp(ip: String) = prefs.edit().putString("last_ip", ip).apply()
-
-    fun getLastPort(): Int = prefs.getInt("last_port", 8080)
-    fun setLastPort(port: Int) = prefs.edit().putInt("last_port", port.coerceIn(1, 65535)).apply()
-
-    fun getServerMac(): String = prefs.getString("server_mac", "") ?: ""
-    fun setServerMac(mac: String) = prefs.edit().putString("server_mac", mac).apply()
-
-    fun getNearThreshold(): Float = prefs.getFloat("proximity_near_threshold", 2.0f)
-    fun setNearThreshold(value: Float) = prefs.edit().putFloat("proximity_near_threshold", value).apply()
-
-    fun getFarThreshold(): Float = prefs.getFloat("proximity_far_threshold", 3.5f)
-    fun setFarThreshold(value: Float) = prefs.edit().putFloat("proximity_far_threshold", value).apply()
-
-    // ----------------------------------------------------------------------
-    // Calibration data
-    // ----------------------------------------------------------------------
-    fun saveGyroBias(bias: FloatArray) {
-        prefs.edit()
-            .putFloat("gyro_bias_x", bias[0])
-            .putFloat("gyro_bias_y", bias[1])
-            .putFloat("gyro_bias_z", bias[2])
-            .apply()
-    }
+    // ==================== Calibration Methods ====================
+    fun isCalibrated(): Boolean = getBoolean("calibration_complete", false)
+    fun setCalibrated(calibrated: Boolean) = putBoolean("calibration_complete", calibrated)
+    
+    fun resetCalibrationAttempts() = putInt("calibration_attempts", 0)
+    
     fun getGyroBias(): FloatArray = floatArrayOf(
-        prefs.getFloat("gyro_bias_x", 0f),
-        prefs.getFloat("gyro_bias_y", 0f),
-        prefs.getFloat("gyro_bias_z", 0f)
+        getFloat("gyro_bias_x", 0f),
+        getFloat("gyro_bias_y", 0f),
+        getFloat("gyro_bias_z", 0f)
     )
-
-    fun saveAccelParams(offset: FloatArray, scale: FloatArray) {
-        prefs.edit()
-            .putFloat("accel_off_x", offset[0])
-            .putFloat("accel_off_y", offset[1])
-            .putFloat("accel_off_z", offset[2])
-            .putFloat("accel_scale_x", scale[0])
-            .putFloat("accel_scale_y", scale[1])
-            .putFloat("accel_scale_z", scale[2])
-            .apply()
+    fun saveGyroBias(bias: FloatArray) {
+        putFloat("gyro_bias_x", bias.getOrElse(0) { 0f })
+        putFloat("gyro_bias_y", bias.getOrElse(1) { 0f })
+        putFloat("gyro_bias_z", bias.getOrElse(2) { 0f })
     }
-    fun saveAccelerometerParams(offset: FloatArray, scale: FloatArray) = saveAccelParams(offset, scale)
-
+    
     fun getAccelOffset(): FloatArray = floatArrayOf(
-        prefs.getFloat("accel_off_x", 0f),
-        prefs.getFloat("accel_off_y", 0f),
-        prefs.getFloat("accel_off_z", 0f)
+        getFloat("accel_offset_x", 0f),
+        getFloat("accel_offset_y", 0f),
+        getFloat("accel_offset_z", 0f)
     )
     fun getAccelScale(): FloatArray = floatArrayOf(
-        prefs.getFloat("accel_scale_x", 1f),
-        prefs.getFloat("accel_scale_y", 1f),
-        prefs.getFloat("accel_scale_z", 1f)
+        getFloat("accel_scale_x", 1f),
+        getFloat("accel_scale_y", 1f),
+        getFloat("accel_scale_z", 1f)
     )
-
-    fun saveMagCalibration(offset: FloatArray, scale: FloatArray) {
-        prefs.edit()
-            .putFloat("mag_off_x", offset[0])
-            .putFloat("mag_off_y", offset[1])
-            .putFloat("mag_off_z", offset[2])
-            .putFloat("mag_scale_x", scale[0])
-            .putFloat("mag_scale_y", scale[1])
-            .putFloat("mag_scale_z", scale[2])
-            .apply()
+    fun saveAccelParams(offset: FloatArray, scale: FloatArray) {
+        putFloat("accel_offset_x", offset.getOrElse(0) { 0f })
+        putFloat("accel_offset_y", offset.getOrElse(1) { 0f })
+        putFloat("accel_offset_z", offset.getOrElse(2) { 0f })
+        putFloat("accel_scale_x", scale.getOrElse(0) { 1f })
+        putFloat("accel_scale_y", scale.getOrElse(1) { 1f })
+        putFloat("accel_scale_z", scale.getOrElse(2) { 1f })
     }
+    
+    fun saveAccelerometerParams(offset: FloatArray, scale: FloatArray) = saveAccelParams(offset, scale)
+    
     fun getMagOffset(): FloatArray = floatArrayOf(
-        prefs.getFloat("mag_off_x", 0f),
-        prefs.getFloat("mag_off_y", 0f),
-        prefs.getFloat("mag_off_z", 0f)
+        getFloat("mag_offset_x", 0f),
+        getFloat("mag_offset_y", 0f),
+        getFloat("mag_offset_z", 0f)
     )
     fun getMagScale(): FloatArray = floatArrayOf(
-        prefs.getFloat("mag_scale_x", 1f),
-        prefs.getFloat("mag_scale_y", 1f),
-        prefs.getFloat("mag_scale_z", 1f)
+        getFloat("mag_scale_x", 1f),
+        getFloat("mag_scale_y", 1f),
+        getFloat("mag_scale_z", 1f)
     )
+    fun saveMagCalibration(offset: FloatArray, scale: FloatArray) {
+        putFloat("mag_offset_x", offset.getOrElse(0) { 0f })
+        putFloat("mag_offset_y", offset.getOrElse(1) { 0f })
+        putFloat("mag_offset_z", offset.getOrElse(2) { 0f })
+        putFloat("mag_scale_x", scale.getOrElse(0) { 1f })
+        putFloat("mag_scale_y", scale.getOrElse(1) { 1f })
+        putFloat("mag_scale_z", scale.getOrElse(2) { 1f })
+    }
 
-    fun isCalibrated(): Boolean = prefs.getBoolean("is_calibrated", false)
-    fun setCalibrated(calibrated: Boolean) = prefs.edit().putBoolean("is_calibrated", calibrated).apply()
+    // ==================== Settings Methods ====================
+    fun getSensitivity(): Float = getFloat("sensitivity", 0.5f)
+    fun setSensitivity(value: Float) = putFloat("sensitivity", value)
+    
+    fun getClickThreshold(): Float = getFloat("click_threshold", 8f)
+    fun setClickThreshold(value: Float) = putFloat("click_threshold", value)
+    
+    fun getDoubleClickInterval(): Long = getLong("double_click_interval", 300L)
+    fun setDoubleClickInterval(value: Long) = putLong("double_click_interval", value)
+    
+    fun getScrollThreshold(): Float = getFloat("scroll_threshold", 6f)
+    fun setScrollThreshold(value: Float) = putFloat("scroll_threshold", value)
+    
+    fun getScrollDebounce(): Long = getLong("scroll_debounce", 100L)
+    fun setScrollDebounce(value: Long) = putLong("scroll_debounce", value)
+    
+    fun getRightClickTilt(): Float = getFloat("right_click_tilt", 15f)
+    fun setRightClickTilt(value: Float) = putFloat("right_click_tilt", value)
+    
+    fun getRightClickDuration(): Long = getLong("right_click_duration", 500L)
+    fun setRightClickDuration(value: Long) = putLong("right_click_duration", value)
+    
+    fun isHapticEnabled(): Boolean = getBoolean("haptic_enabled", true)
+    fun setHapticEnabled(enabled: Boolean) = putBoolean("haptic_enabled", enabled)
+    
+    fun isAISmoothingEnabled(): Boolean = getBoolean("ai_smoothing", false)
+    fun setAISmoothingEnabled(enabled: Boolean) = putBoolean("ai_smoothing", enabled)
+    
+    fun isPredictiveEnabled(): Boolean = getBoolean("predictive_movement", false)
+    fun setPredictiveEnabled(enabled: Boolean) = putBoolean("predictive_movement", enabled)
 
-    // ----------------------------------------------------------------------
-    // Gesture counters
-    // ----------------------------------------------------------------------
-    fun getClickCount(): Int = prefs.getInt("click_count", 0)
-    fun incrementClick() = prefs.edit().putInt("click_count", getClickCount() + 1).apply()
+    // ==================== Connection Methods ====================
+    fun getLastIp(): String = getString("last_ip", "")
+    fun setLastIp(ip: String) = putString("last_ip", ip)
+    
+    fun getLastPort(): Int = getInt("last_port", 8080)
+    fun setLastPort(port: Int) = putInt("last_port", port)
+    
+    fun getServerMac(): String = getString("server_mac", "")
+    fun setServerMac(mac: String) = putString("server_mac", mac)
 
-    fun getScrollCount(): Int = prefs.getInt("scroll_count", 0)
-    fun incrementScroll() = prefs.edit().putInt("scroll_count", getScrollCount() + 1).apply()
+    // ==================== Proximity Methods ====================
+    fun getNearThreshold(): Float = getFloat("near_threshold", 0.5f)
+    fun setNearThreshold(value: Float) = putFloat("near_threshold", value)
+    
+    fun getFarThreshold(): Float = getFloat("far_threshold", 1.5f)
+    fun setFarThreshold(value: Float) = putFloat("far_threshold", value)
 
-    fun getRightClickCount(): Int = prefs.getInt("right_click_count", 0)
-    fun incrementRightClick() = prefs.edit().putInt("right_click_count", getRightClickCount() + 1).apply()
+    // ==================== Accessibility Methods ====================
+    fun isAnnounceMovementEnabled(): Boolean = getBoolean("announce_movement", false)
+    fun setAnnounceMovementEnabled(enabled: Boolean) = putBoolean("announce_movement", enabled)
+    
+    fun isAnnounceClicksEnabled(): Boolean = getBoolean("announce_clicks", false)
+    fun setAnnounceClicksEnabled(enabled: Boolean) = putBoolean("announce_clicks", enabled)
 
-    fun getDoubleClickCount(): Int = prefs.getInt("double_click_count", 0)
-    fun incrementDoubleClick() = prefs.edit().putInt("double_click_count", getDoubleClickCount() + 1).apply()
+    // ==================== Onboarding Methods ====================
+    fun isOnboardingCompleted(): Boolean = getBoolean("onboarding_completed", false)
+    fun setOnboardingCompleted(completed: Boolean) = putBoolean("onboarding_completed", completed)
 
-    // ----------------------------------------------------------------------
-    // Calibration attempts
-    // ----------------------------------------------------------------------
-    fun getCalibrationAttempts(): Int = prefs.getInt("calibration_attempts", 0)
-    fun incrementCalibrationAttempts() = prefs.edit().putInt("calibration_attempts", getCalibrationAttempts() + 1).apply()
-    fun resetCalibrationAttempts() = prefs.edit().putInt("calibration_attempts", 0).apply()
-
-    // ----------------------------------------------------------------------
-    // Profiles (stored as JSON strings)
-    // ----------------------------------------------------------------------
+    // ==================== Profile Methods ====================
+    fun getLastUsedProfile(): String = getString("last_used_profile", "Default")
+    fun setLastUsedProfile(profile: String) = putString("last_used_profile", profile)
+    
+    fun saveProfile(name: String, sensitivity: Float, clickThreshold: Float, scrollThreshold: Float) {
+        putFloat("profile_${name}_sensitivity", sensitivity)
+        putFloat("profile_${name}_click_threshold", clickThreshold)
+        putFloat("profile_${name}_scroll_threshold", scrollThreshold)
+    }
+    
     fun saveProfile(name: String, sensitivity: Float, clickThreshold: Float) {
-        val json = JSONObject().apply {
-            put("sensitivity", sensitivity)
-            put("clickThreshold", clickThreshold)
-        }
-        prefs.edit().putString("profile_$name", json.toString()).apply()
+        saveProfile(name, sensitivity, clickThreshold, getScrollThreshold())
+    }
+    
+    fun getProfileSensitivity(name: String): Float = getFloat("profile_${name}_sensitivity", 0.5f)
+    fun getProfileClickThreshold(name: String): Float = getFloat("profile_${name}_click_threshold", 8f)
+    fun getProfileScrollThreshold(name: String): Float = getFloat("profile_${name}_scroll_threshold", 6f)
+    
+    fun getAllProfileNames(): List<String> {
+        val allKeys = prefs.all.keys
+        return allKeys.filter { it.startsWith("profile_") && it.endsWith("_sensitivity") }
+            .map { it.removePrefix("profile_").removeSuffix("_sensitivity") }
+            .distinct()
+    }
+    
+    fun deleteProfile(name: String) {
+        prefs.edit()
+            .remove("profile_${name}_sensitivity")
+            .remove("profile_${name}_click_threshold")
+            .remove("profile_${name}_scroll_threshold")
+            .apply()
     }
 
-    fun getProfileSensitivity(name: String): Float {
-        val json = prefs.getString("profile_$name", null) ?: return 0.5f
-        return try {
-            JSONObject(json).getDouble("sensitivity").toFloat()
-        } catch (e: Exception) { 0.5f }
+    // ==================== Statistics Methods ====================
+    fun getClickCount(): Int = getInt("stat_clicks", 0)
+    fun incrementClickCount() = putInt("stat_clicks", getClickCount() + 1)
+    
+    fun getScrollCount(): Int = getInt("stat_scrolls", 0)
+    fun incrementScrollCount() = putInt("stat_scrolls", getScrollCount() + 1)
+    
+    fun getRightClickCount(): Int = getInt("stat_right_clicks", 0)
+    fun incrementRightClickCount() = putInt("stat_right_clicks", getRightClickCount() + 1)
+    
+    fun getDoubleClickCount(): Int = getInt("stat_double_clicks", 0)
+    fun incrementDoubleClickCount() = putInt("stat_double_clicks", getDoubleClickCount() + 1)
+
+    // ==================== Gesture Methods ====================
+    fun saveCustomGesture(name: String, data: Float) = putFloat("gesture_$name", data)
+    fun getCustomGesture(name: String): Float = getFloat("gesture_$name", 0f)
+    fun getAllCustomGestures(): Map<String, Float> {
+        val allKeys = prefs.all.keys
+        return allKeys.filter { it.startsWith("gesture_") }
+            .associate { it.removePrefix("gesture_") to getFloat(it, 0f) }
     }
 
-    fun getProfileClickThreshold(name: String): Float {
-        val json = prefs.getString("profile_$name", null) ?: return 10f
-        return try {
-            JSONObject(json).getDouble("clickThreshold").toFloat()
-        } catch (e: Exception) { 10f }
-    }
-
-    fun deleteProfile(name: String) = prefs.edit().remove("profile_$name").apply()
-    fun getAllProfileNames(): List<String> = prefs.all.keys.filter { it.startsWith("profile_") }.map { it.removePrefix("profile_") }.toList()
-    fun getLastUsedProfile(): String? = prefs.getString("last_used_profile", null)
-    fun setLastUsedProfile(name: String) = prefs.edit().putString("last_used_profile", name).apply()
-
-    // ----------------------------------------------------------------------
-    // Themes
-    // ----------------------------------------------------------------------
-    fun getTheme(): String = prefs.getString("theme", "system") ?: "system"
-    fun setTheme(theme: String) = prefs.edit().putString("theme", theme).apply()
-
-    // ----------------------------------------------------------------------
-    // Accessibility (TalkBack announcements)
-    // ----------------------------------------------------------------------
-    fun isAnnounceMovementEnabled(): Boolean = prefs.getBoolean("announce_movement", false)
-    fun setAnnounceMovementEnabled(enabled: Boolean) = prefs.edit().putBoolean("announce_movement", enabled).apply()
-
-    fun isAnnounceClicksEnabled(): Boolean = prefs.getBoolean("announce_clicks", false)
-    fun setAnnounceClicksEnabled(enabled: Boolean) = prefs.edit().putBoolean("announce_clicks", enabled).apply()
-
-    // ----------------------------------------------------------------------
-    // Edge gestures (floating button)
-    // ----------------------------------------------------------------------
-    fun isEdgeGesturesEnabled(): Boolean = prefs.getBoolean("edge_gestures", false)
-    fun setEdgeGesturesEnabled(enabled: Boolean) = prefs.edit().putBoolean("edge_gestures", enabled).apply()
-
-    // ----------------------------------------------------------------------
-    // Server communication logs
-    // ----------------------------------------------------------------------
-    fun addServerLog(entry: String) {
-        val logs = getServerLogs().toMutableList()
-        logs.add(0, entry)
-        while (logs.size > 200) logs.removeAt(logs.lastIndex)
-        prefs.edit().putString("server_logs", logs.joinToString("\n")).apply()
-    }
-
-    fun getServerLogs(): List<String> {
-        val data = prefs.getString("server_logs", "") ?: ""
-        return data.split("\n").filter { it.isNotBlank() }
-    }
-
-    fun clearServerLogs() = prefs.edit().remove("server_logs").apply()
-
-    // ----------------------------------------------------------------------
-    // Custom gestures (store numeric template values)
-    // ----------------------------------------------------------------------
-    fun saveCustomGesture(action: String, value: Float) {
-        prefs.edit().putFloat("custom_gesture_${action.replace(" ", "_")}", value).apply()
-    }
-
-    fun getCustomGesture(action: String): Float = prefs.getFloat("custom_gesture_${action.replace(" ", "_")}", 0f)
-
-    // ----------------------------------------------------------------------
-    // Onboarding completed flag
-    // ----------------------------------------------------------------------
-    fun isOnboardingCompleted(): Boolean = prefs.getBoolean("onboarding_completed", false)
-    fun setOnboardingCompleted(completed: Boolean) = prefs.edit().putBoolean("onboarding_completed", completed).apply()
+    // ==================== Theme Methods ====================
+    fun getTheme(): String = getString("theme", "system")
+    fun setTheme(theme: String) = putString("theme", theme)
 }

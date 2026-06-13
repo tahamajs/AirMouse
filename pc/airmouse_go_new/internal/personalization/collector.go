@@ -48,6 +48,12 @@ func (dc *DataCollector) SampleCount() int {
     return len(dc.buffer)
 }
 
+func (dc *DataCollector) LastFineTune() time.Time {
+	dc.mu.Lock()
+	defer dc.mu.Unlock()
+	return dc.lastFineTune
+}
+
 func (dc *DataCollector) ForceFineTune() error {
     dc.mu.Lock()
     if len(dc.buffer) == 0 {

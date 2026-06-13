@@ -56,10 +56,3 @@ func Execute(a Action) {
         // other actions can be added
     }
 }
-
-// platform‑specific functions (implemented in _windows.go, _darwin.go, _linux.go)
-func keyTap(key string)    {}
-func mouseClick(btn string) {}
-func mouseDoubleClick()    {}
-func mouseScroll(delta int) {}
-func lockScreen()          {}

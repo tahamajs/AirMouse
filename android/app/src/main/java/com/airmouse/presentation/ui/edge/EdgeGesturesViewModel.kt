@@ -18,9 +18,3 @@ class EdgeGesturesViewModel @Inject constructor() : ViewModel() {
     fun setVolumeUpAction(action: String) = _uiState.update { it.copy(volumeUpAction = action) }
     fun setVolumeDownAction(action: String) = _uiState.update { it.copy(volumeDownAction = action) }
 }
-
-data class EdgeGesturesUiState(
-    val isEnabled: Boolean = false,
-    val volumeUpAction: String = "Click",
-    val volumeDownAction: String = "Scroll Up"
-)

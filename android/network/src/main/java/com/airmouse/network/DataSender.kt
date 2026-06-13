@@ -144,6 +144,7 @@ class DataSender(
         sendRaw(HelloMessage(name = deviceName).let { JSONObject().apply {
             put("type", it.type)
             put("name", it.name)
+            put("version", "3.0")
         }.toString() })
     }
 

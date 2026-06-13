@@ -2,7 +2,7 @@
 package com.airmouse.data.repository
 
 import com.airmouse.data.datasource.local.CalibrationDao
-import com.airmouse.data.local.PreferencesManager
+import com.airmouse.utils.PreferencesManager
 import com.airmouse.domain.model.AccelCalibration
 import com.airmouse.domain.model.GyroBias
 import com.airmouse.domain.model.MagCalibration
@@ -49,7 +49,9 @@ class CalibrationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun resetCalibration() {
-        dao.clearAllCalibration()
+        dao.clearGyroBias()
+        dao.clearAccelCalibration()
+        dao.clearMagCalibration()
         prefs.setCalibrated(false)
     }
 }

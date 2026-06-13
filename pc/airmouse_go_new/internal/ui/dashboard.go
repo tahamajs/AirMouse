@@ -131,13 +131,13 @@ func showQuickQRDialog(parent fyne.Window) {
     }
     qrImage := canvas.NewImageFromImage(img)
     qrImage.FillMode = canvas.ImageFillOriginal
+    var popUp *widget.PopUp
     content := container.NewVBox(
         widget.NewLabelWithStyle("Scan with Air Mouse Android App", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
         qrImage,
         widget.NewLabel(data),
         widget.NewButton("Close", func() { popUp.Hide() }),
     )
-    var popUp *widget.PopUp
     popUp = widget.NewModalPopUp(content, parent.Canvas())
     popUp.Resize(fyne.NewSize(300, 350))
     popUp.Show()

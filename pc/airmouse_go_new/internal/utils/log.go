@@ -1,65 +1,49 @@
 package utils
 
 import (
-    "fmt"
-    "log"
-    "os"
-    "sync"
+	"log"
+	"os"
 )
 
-type LogHook func(level, message string)
-
-var (
-    mu     sync.RWMutex
-    hooks  []LogHook
-    logger *log.Logger
-)
-
-func InitLogger() {
-    logger = log.New(os.Stdout, "", log.LstdFlags)
-}
-
-func AddLogHook(hook LogHook) {
-    mu.Lock()
-    defer mu.Unlock()
-    hooks = append(hooks, hook)
-}
-
-func SetLogHook(hook LogHook) {
-    mu.Lock()
-    defer mu.Unlock()
-    hooks = []LogHook{hook}
-}
-
-func logMessage(level, format string, args ...interface{}) {
-    msg := fmt.Sprintf(format, args...)
-    if logger != nil {
-        logger.Printf("[%s] %s", level, msg)
-    }
-    mu.RLock()
-    defer mu.RUnlock()
-    for _, hook := range hooks {
-        go hook(level, msg)
-    }
-}
+var logger = log.New(os.Stdout, "", log.LstdFlags)
 
 func LogInfo(format string, args ...interface{}) {
-    logMessage("INFO", format, args...)
+	if len(args) > 0 {
+		logger.Printf("INFO: "+format, args...)
+	} else {
+		logger.Print("INFO: " + format)
+	}
 }
 
 func LogError(format string, args ...interface{}) {
-    logMessage("ERROR", format, args...)
+	if len(args) > 0 {
+		logger.Printf("ERROR: "+format, args...)
+	} else {
+		logger.Print("ERROR: " + format)
+	}
 }
 
 func LogDebug(format string, args ...interface{}) {
-    logMessage("DEBUG", format, args...)
-}
-
-func LogWarn(format string, args ...interface{}) {
-    logMessage("WARN", format, args...)
+	if len(args) > 0 {
+		logger.Printf("DEBUG: "+format, args...)
+	} else {
+		logger.Print("DEBUG: " + format)
+	}
 }
 
 func LogFatal(format string, args ...interface{}) {
-    logMessage("FATAL", format, args...)
-    os.Exit(1)
+	if len(args) > 0 {
+		logger.Fatalf("FATAL: "+format, args...)
+	} else {
+		logger.Fatal("FATAL: " + format)
+	}
 }
+
+// Keep these for compatibility with existing code
+type LogHook func(level string, msg string)
+
+var hooks []LogHook
+
+func InitLogger() {}
+func AddLogHook(hook LogHook) { hooks = append(hooks, hook) }
+func SetLogHook(hook LogHook) { hooks = []LogHook{hook} }

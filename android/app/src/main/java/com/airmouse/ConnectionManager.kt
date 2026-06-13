@@ -57,7 +57,7 @@ object ConnectionManager {
     fun connectTcp(ip: String, port: Int) {
         _tcpState.postValue(ConnectionState.CONNECTING)
         if (tcpClient == null) {
-            tcpClient = TcpClient { status ->
+            tcpClient = TcpClient(onLine = { status ->
                 // report human-readable status to UI
                 _tcpStatus.postValue(status)
                 // derive connected state heuristically
@@ -68,7 +68,7 @@ object ConnectionManager {
                 }
                 // also update debug overlay if running
                 try { DebugOverlayService.updateConnectionState(status) } catch (_: Exception) {}
-            }
+            })
         }
         scope.launch { try { tcpClient?.connect(ip, port) } catch (t: Throwable) { _tcpState.postValue(ConnectionState.DISCONNECTED); _tcpStatus.postValue("Error: ${t.message}") } }
     }

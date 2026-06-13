@@ -1,6 +1,4 @@
 package com.airmouse.presentation.ui.about
-
-import com.airmouse.BuildConfig
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,4 +12,4 @@ class AboutViewModel @Inject constructor() : ViewModel() {
     private val _uiState = MutableStateFlow(AboutUiState())
     val uiState: StateFlow<AboutUiState> = _uiState.asStateFlow()
 }
-data class AboutUiState(val version: String = BuildConfig.VERSION_NAME)
+data class AboutUiState(val version: String = "1.0.0")

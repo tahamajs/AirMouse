@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -44,7 +45,7 @@ func NewProximityTab() fyne.CanvasObject {
 			tab.stopProximityService()
 		}
 	})
-	tab.enableCheck.SetChecked(tab.cfg.EnableProximity)
+	tab.enableCheck.SetChecked(tab.cfg.EnableBluetooth)
 
 	// Near threshold controls
 	tab.nearSlider = widget.NewSlider(0.5, 5.0)
@@ -140,7 +141,7 @@ func (t *ProximityTab) simulateDistanceUpdates() {
 		select {
 		case <-ticker.C:
 			// Simulate random distance between 0.5 and 8 meters
-			dist := 1.5 + (float64(time.Now().UnixNano())%650)/100.0
+			dist := 1.5 + math.Mod(float64(time.Now().UnixNano()), 650)/100.0
 			t.updateDistance(dist)
 		case <-t.stopUpdate:
 			return

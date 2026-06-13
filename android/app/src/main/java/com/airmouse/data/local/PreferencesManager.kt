@@ -16,6 +16,58 @@ class PreferencesManager @Inject constructor(
     // Calibration
     fun setCalibrated(calibrated: Boolean) = prefs.edit().putBoolean("is_calibrated", calibrated).apply()
     fun isCalibrated(): Boolean = prefs.getBoolean("is_calibrated", false)
+    fun saveGyroBias(bias: FloatArray) {
+        prefs.edit()
+            .putFloat("gyro_bias_x", bias[0])
+            .putFloat("gyro_bias_y", bias[1])
+            .putFloat("gyro_bias_z", bias[2])
+            .apply()
+    }
+    fun getGyroBias(): FloatArray = floatArrayOf(
+        prefs.getFloat("gyro_bias_x", 0f),
+        prefs.getFloat("gyro_bias_y", 0f),
+        prefs.getFloat("gyro_bias_z", 0f)
+    )
+    fun saveAccelParams(offset: FloatArray, scale: FloatArray) {
+        prefs.edit()
+            .putFloat("accel_off_x", offset[0])
+            .putFloat("accel_off_y", offset[1])
+            .putFloat("accel_off_z", offset[2])
+            .putFloat("accel_scale_x", scale[0])
+            .putFloat("accel_scale_y", scale[1])
+            .putFloat("accel_scale_z", scale[2])
+            .apply()
+    }
+    fun getAccelOffset(): FloatArray = floatArrayOf(
+        prefs.getFloat("accel_off_x", 0f),
+        prefs.getFloat("accel_off_y", 0f),
+        prefs.getFloat("accel_off_z", 0f)
+    )
+    fun getAccelScale(): FloatArray = floatArrayOf(
+        prefs.getFloat("accel_scale_x", 1f),
+        prefs.getFloat("accel_scale_y", 1f),
+        prefs.getFloat("accel_scale_z", 1f)
+    )
+    fun saveMagCalibration(offset: FloatArray, scale: FloatArray) {
+        prefs.edit()
+            .putFloat("mag_off_x", offset[0])
+            .putFloat("mag_off_y", offset[1])
+            .putFloat("mag_off_z", offset[2])
+            .putFloat("mag_scale_x", scale[0])
+            .putFloat("mag_scale_y", scale[1])
+            .putFloat("mag_scale_z", scale[2])
+            .apply()
+    }
+    fun getMagOffset(): FloatArray = floatArrayOf(
+        prefs.getFloat("mag_off_x", 0f),
+        prefs.getFloat("mag_off_y", 0f),
+        prefs.getFloat("mag_off_z", 0f)
+    )
+    fun getMagScale(): FloatArray = floatArrayOf(
+        prefs.getFloat("mag_scale_x", 1f),
+        prefs.getFloat("mag_scale_y", 1f),
+        prefs.getFloat("mag_scale_z", 1f)
+    )
 
     // Connection
     fun getLastIp(): String = prefs.getString("last_ip", "") ?: ""

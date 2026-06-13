@@ -22,7 +22,6 @@ import com.airmouse.presentation.ui.proximity.ProximityScreen
 import com.airmouse.presentation.ui.settings.SettingsScreen
 import com.airmouse.presentation.ui.statistics.StatisticsScreen
 import com.airmouse.presentation.ui.themes.ThemesScreen
-import com.airmouse.presentation.ui.touchpad.TouchpadScreen
 import com.airmouse.presentation.ui.voice.VoiceCommandsScreen
 
 sealed class Screen(val route: String) {
@@ -48,6 +47,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
+    val navigationActions = NavigationActions(navController)
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
@@ -59,16 +59,15 @@ fun NavGraph(modifier: Modifier = Modifier) {
         composable(Screen.Settings.route) { SettingsScreen() }
         composable(Screen.Proximity.route) { ProximityScreen() }
         composable(Screen.VoiceCommands.route) { VoiceCommandsScreen() }
-        composable(Screen.EdgeGestures.route) { EdgeGesturesScreen() }
+        composable(Screen.EdgeGestures.route) { EdgeGesturesScreen(navigationActions) }
         composable(Screen.Themes.route) { ThemesScreen() }
         composable(Screen.Profiles.route) { ProfilesScreen() }
         composable(Screen.NetworkDiscovery.route) { NetworkDiscoveryScreen() }
-        composable(Screen.ServerLogs.route) { ServerLogsScreen() }
-        composable(Screen.Battery.route) { BatteryScreen() }
+        composable(Screen.ServerLogs.route) { ServerLogsScreen(navigationActions) }
+        composable(Screen.Battery.route) { BatteryScreen(navigationActions) }
         composable(Screen.Accessibility.route) { AccessibilityScreen() }
         composable(Screen.Statistics.route) { StatisticsScreen() }
-        composable(Screen.About.route) { AboutScreen() }
+        composable(Screen.About.route) { AboutScreen(navigationActions) }
         composable(Screen.Help.route) { HelpScreen() }
-        composable(Screen.Touchpad.route) { TouchpadScreen() }
     }
 }

@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/service/SensorService.kt
 package com.airmouse.service
 
 import android.app.*
@@ -12,16 +11,15 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import com.airmouse.R
-import com.airmouse.domain.model.Orientation
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.GestureDetector
-import com.airmouse.utils.BatterySaver
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 import kotlin.math.*
 
@@ -29,35 +27,25 @@ import kotlin.math.*
 class SensorService : Service(), SensorEventListener {
 
     @Inject lateinit var sensorManager: SensorManager
-    @Inject lateinit var calibrationHelper: CalibrationHelper
-    @Inject lateinit var gestureDetector: GestureDetector
     @Inject lateinit var prefs: PreferencesManager
-    @Inject lateinit var batterySaver: BatterySaver
 
+    private var isActive = false
     private lateinit var wakeLock: PowerManager.WakeLock
-    private var rotationVectorSensor: Sensor? = null
-    private var gyroscope: Sensor? = null
-    private var accelerometer: Sensor? = null
-
-    private val _orientation = MutableLiveData<Orientation>()
-    val orientation: LiveData<Orientation> = _orientation
-
-    private val _gesture = MutableLiveData<GestureDetector.MotionResult>()
-    val gesture: LiveData<GestureDetector.MotionResult> = _gesture
-
-    private val _gyroY = MutableLiveData<Float>()
-    val gyroY: LiveData<Float> = _gyroY
-
-    private val _accelY = MutableLiveData<Float>()
-    val accelY: LiveData<Float> = _accelY
-
-    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var isCollecting = false
-    private var lastTimestamp = 0L
+    private var gyroX = 0f
+    private var gyroY = 0f
+    private var gyroZ = 0f
+    private var accelX = 0f
+    private var accelY = 0f
+    private var accelZ = 0f
+    
+    private val _orientationData = MutableSharedFlow<OrientationData>()
+    val orientationData: SharedFlow<OrientationData> = _orientationData.asSharedFlow()
+    
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     companion object {
         private const val NOTIFICATION_ID = 1001
-        private const val CHANNEL_ID = "sensor_service_channel"
+        private const val CHANNEL_ID = "sensor_service"
 
         fun start(context: Context) {
             val intent = Intent(context, SensorService::class.java)
@@ -77,10 +65,9 @@ class SensorService : Service(), SensorEventListener {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
+        
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AirMouse::SensorWakeLock")
-        wakeLock.acquire(10 * 60 * 1000L)
-        initSensors()
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SensorService::WakeLock")
     }
 
     private fun createNotificationChannel() {
@@ -90,81 +77,111 @@ class SensorService : Service(), SensorEventListener {
                 "Sensor Service",
                 NotificationManager.IMPORTANCE_LOW
             )
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
         }
     }
 
     private fun createNotification(): Notification {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Air Mouse Sensors")
-            .setContentText("Collecting motion data...")
-            .setSmallIcon(R.drawable.ic_sensor)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Air Mouse Pro")
+            .setContentText("Sensors active - controlling cursor")
+            .setSmallIcon(android.R.drawable.ic_menu_compass)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder.setPriority(NotificationCompat.PRIORITY_LOW)
+        }
+        
+        return builder.build()
     }
 
-    private fun initSensors() {
-        rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
-        gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    fun startSensors() {
+        if (isActive) return
+        
+        val gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        
+        gyroscope?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+        }
+        accelerometer?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+        }
+        
+        isActive = true
+        wakeLock.acquire(10 * 60 * 1000L)
     }
 
-    fun startCollection() {
-        if (isCollecting) return
-        isCollecting = true
-        sensorManager.registerListener(this, rotationVectorSensor, SensorManager.SENSOR_DELAY_GAME)
-        sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME)
-        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME)
-    }
-
-    fun stopCollection() {
-        if (!isCollecting) return
-        isCollecting = false
+    fun stopSensors() {
+        if (!isActive) return
         sensorManager.unregisterListener(this)
+        isActive = false
+        
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        val now = System.currentTimeMillis()
-        val dt = (now - lastTimestamp).coerceAtLeast(1).toFloat() / 1000f
-        lastTimestamp = now
-
+        if (!isActive) return
+        
         when (event.sensor.type) {
-            Sensor.TYPE_GAME_ROTATION_VECTOR -> {
-                val rotationMatrix = FloatArray(9)
-                SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
-                val orientation = FloatArray(3)
-                SensorManager.getOrientation(rotationMatrix, orientation)
-                val roll = Math.toDegrees(orientation[2].toDouble()).toFloat()
-                val pitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
-                val yaw = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                _orientation.postValue(Orientation(roll, pitch, yaw))
-            }
             Sensor.TYPE_GYROSCOPE -> {
-                val gyroY = event.values[1]
-                _gyroY.postValue(gyroY)
-                val result = gestureDetector.process(pitch = event.values[1], roll = event.values[0], yaw = event.values[2])
-                _gesture.postValue(result)
+                gyroX = event.values[0]
+                gyroY = event.values[1]
+                gyroZ = event.values[2]
             }
             Sensor.TYPE_ACCELEROMETER -> {
-                _accelY.postValue(event.values[1])
+                accelX = event.values[0]
+                accelY = event.values[1]
+                accelZ = event.values[2]
             }
+        }
+        
+        serviceScope.launch {
+            _orientationData.emit(
+                OrientationData(
+                    yaw = 0f,
+                    pitch = 0f,
+                    roll = 0f,
+                    gyroX = gyroX,
+                    gyroY = gyroY,
+                    gyroZ = gyroZ,
+                    accelX = accelX,
+                    accelY = accelY,
+                    accelZ = accelZ
+                )
+            )
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "START_COLLECTION") startCollection()
-        else if (intent?.action == "STOP_COLLECTION") stopCollection()
+        when (intent?.action) {
+            "START_SENSORS" -> startSensors()
+            "STOP_SENSORS" -> stopSensors()
+        }
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        stopCollection()
-        if (::wakeLock.isInitialized && wakeLock.isHeld) wakeLock.release()
+        stopSensors()
         serviceScope.cancel()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 }
+
+data class OrientationData(
+    val yaw: Float,
+    val pitch: Float,
+    val roll: Float,
+    val gyroX: Float,
+    val gyroY: Float,
+    val gyroZ: Float,
+    val accelX: Float,
+    val accelY: Float,
+    val accelZ: Float
+)

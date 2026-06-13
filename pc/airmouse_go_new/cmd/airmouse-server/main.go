@@ -1,6 +1,7 @@
 package main
 
 import (
+    "fmt"
     "os"
     "os/signal"
     "syscall"
@@ -17,7 +18,7 @@ import (
 func main() {
     utils.InitLogger()
     cfg := config.Get()
-    utils.LogInfo("Air Mouse Pro Server starting", "version", "3.0.0")
+    utils.LogInfo(fmt.Sprintf("Air Mouse Pro Server starting version=%s", "3.0.0"))
 
     deviceMgr := device.NewManager()
     authMgr := auth.NewManager(cfg.AuthSecret)
@@ -28,7 +29,7 @@ func main() {
     if cfg.EnableMLPrediction {
         mouseCtrl.EnableMLPrediction(true)
         mouseCtrl.SetMLBlendFactor(cfg.MLBlendFactor)
-        utils.LogInfo("ML‑powered trajectory prediction enabled")
+        utils.LogInfo("ML-powered trajectory prediction enabled")
     }
 
     server := protocol.NewProtocolServer(mouseCtrl, deviceMgr, authMgr)
@@ -53,7 +54,7 @@ func main() {
 
     // This blocks until the window is closed
     if err := app.Run(); err != nil {
-        utils.LogError("UI error", "error", err)
+        utils.LogError(fmt.Sprintf("UI error error=%v", err))
         os.Exit(1)
     }
 }

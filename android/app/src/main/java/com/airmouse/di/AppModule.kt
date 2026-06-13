@@ -1,8 +1,10 @@
-// app/src/main/java/com/airmouse/di/AppModule.kt
 package com.airmouse.di
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.Context
-import com.airmouse.data.local.PreferencesManager
+import android.hardware.SensorManager
+import com.airmouse.utils.PreferencesManager
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.GestureDetector
 import com.airmouse.utils.BatterySaver
@@ -42,5 +44,12 @@ object AppModule {
     @Singleton
     fun provideBatterySaver(): BatterySaver {
         return BatterySaver()
+    }
+
+    @Provides
+    @Singleton
+    fun provideBluetoothAdapter(@ApplicationContext context: Context): BluetoothAdapter {
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        return bluetoothManager.adapter
     }
 }
