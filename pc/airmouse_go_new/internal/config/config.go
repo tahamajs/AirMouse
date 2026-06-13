@@ -247,3 +247,15 @@ func getConfigPath() string {
     }
     return filepath.Join(configDir, "airmouse", "config.json")
 }
+
+
+// internal/config/config.go
+
+
+func Get() *Config {
+    return &Config{
+        TCPPort: 8080,
+        WSPort:  8081,
+        UDPPort: 8082,
+    }
+}

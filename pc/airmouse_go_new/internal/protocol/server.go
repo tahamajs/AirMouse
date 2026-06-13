@@ -13,7 +13,17 @@ import (
 	"airmouse-go/internal/protocol/usb"
 	"airmouse-go/internal/protocol/websocket"
 	"airmouse-go/internal/utils"
+	    "time"
+    "github.com/gorilla/websocket"
+
 )
+type Client struct {
+    ID       string
+    Name     string
+    Conn     *websocket.Conn
+    LastSeen time.Time
+    IsActive bool
+}
 
 type startStopStats interface {
 	Start() error

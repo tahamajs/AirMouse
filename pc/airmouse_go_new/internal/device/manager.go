@@ -128,3 +128,12 @@ func (m *Manager) notifyCallbacks(dev *DeviceInfo) {
 		go cb(dev)
 	}
 }
+type Manager struct {
+    devices map[string]interface{}
+}
+
+func NewManager() *Manager {
+    return &Manager{
+        devices: make(map[string]interface{}),
+    }
+}

@@ -10,6 +10,12 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/yalue/onnxruntime_go v1.11.0
 	gonum.org/v1/gonum v0.15.1
+	    fyne.io/fyne/v2 v2.4.5
+    github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+    github.com/getlantern/systray v1.2.2
+    github.com/gorilla/websocket v1.5.1
+    github.com/shoenig/go-m1cpu v0.1.6 // indirect
+
 )
 
 require (
