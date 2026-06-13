@@ -1,40 +1,65 @@
+// app/src/main/java/com/airmouse/utils/Constants.kt
 package com.airmouse.utils
 
 /**
  * Application‑wide constants. Change these values to adjust default behaviour.
  */
 object Constants {
-    /** Default TCP port for the PC server. */
+    // Network Constants
     const val DEFAULT_PORT = 8080
-
-    /** Sensor sampling delay in microseconds (20 ms = 50 Hz). */
-    const val SENSOR_DELAY_US = 20000
-
-    /** Default cursor sensitivity multiplier (0.2–2.0). */
-    const val DEFAULT_SENSITIVITY = 0.5f
-
-    /** Default gyro angular speed threshold for a click (rad/s). */
-    const val CLICK_SPEED_THRESHOLD = 5.0f
-
-    /** Default linear acceleration threshold for scroll (m/s²). */
-    const val SCROLL_SPEED_THRESHOLD = 8.0f
-
-    /** Default debounce value for scroll (m/s²). */
-    const val SCROLL_DEBOUNCE = 2.0f
-
-    /** Default double‑click interval (ms). */
-    const val DOUBLE_CLICK_INTERVAL_MS = 400L
-
-    /** Default tilt angle for right‑click (degrees). */
-    const val RIGHT_CLICK_TILT_DEG = 45f
-
-    /** Default hold duration for right‑click (ms). */
-    const val RIGHT_CLICK_DURATION_MS = 500L
-
-    /** Time to wait for ACK before retransmission (ms). */
+    const val DEFAULT_WS_PORT = 8081
+    const val DEFAULT_UDP_PORT = 8082
+    const val CONNECTION_TIMEOUT_MS = 5000
     const val ACK_TIMEOUT_MS = 500L
-
-    /** Reconnect delay after connection loss (ms). */
     const val RECONNECT_DELAY_MS = 5000L
+    const val MAX_RECONNECT_ATTEMPTS = 5
+    const val KEEP_ALIVE_INTERVAL_MS = 30000L
 
+    // Sensor Constants
+    const val SENSOR_DELAY_US = 20000
+    const val GYRO_SAMPLE_COUNT = 500
+    const val ACCEL_SAMPLES_PER_POSITION = 100
+    const val MAG_SAMPLE_DURATION_MS = 15000L
+
+    // Gesture Constants
+    const val DEFAULT_SENSITIVITY = 0.5f
+    const val CLICK_SPEED_THRESHOLD = 8f
+    const val SCROLL_SPEED_THRESHOLD = 6f
+    const val SCROLL_DEBOUNCE = 2f
+    const val DOUBLE_CLICK_INTERVAL_MS = 400L
+    const val RIGHT_CLICK_TILT_DEG = 45f
+    const val RIGHT_CLICK_DURATION_MS = 500L
+    const val SWIPE_THRESHOLD = 15f
+    const val GESTURE_COOLDOWN_MS = 500L
+
+    // UI Constants
+    const val ANIMATION_DURATION_MS = 300
+    const val SNACKBAR_DURATION_MS = 3000
+    const val DEBOUNCE_DELAY_MS = 500
+    const val TYPING_DELAY_MS = 1000
+
+    // Database Constants
+    const val DATABASE_NAME = "airmouse_db"
+    const val DATABASE_VERSION = 1
+
+    // Logging Constants
+    const val MAX_LOG_ENTRIES = 500
+    const val LOG_FILE_MAX_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
+
+    // Performance Constants
+    const val MOVEMENT_THROTTLE_MS = 10L
+    const val SENSOR_FUSION_RATE_HZ = 50
+    const val MAX_MESSAGE_QUEUE_SIZE = 1000
+
+    // Calibration Constants
+    const val CALIBRATION_GYRO_SAMPLES = 500
+    const val CALIBRATION_ACCEL_SAMPLES = 100
+    const val CALIBRATION_MAG_DURATION_MS = 15000L
+
+    // Feature Flags
+    const val ENABLE_AI_SMOOTHING = false
+    const val ENABLE_PREDICTIVE_MOVEMENT = true
+    const val ENABLE_BATTERY_SAVER = true
+    const val ENABLE_EDGE_GESTURES = true
+    const val ENABLE_VOICE_COMMANDS = true
 }

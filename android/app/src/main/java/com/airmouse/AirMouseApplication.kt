@@ -1,8 +1,8 @@
 package com.airmouse
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
 import com.airmouse.utils.PreferencesHelper
+import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
 class AirMouseApplication : Application() {

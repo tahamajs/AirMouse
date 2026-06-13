@@ -1,13 +1,22 @@
 pluginManagement {
     repositories {
+        // Aliyun mirrors for faster access (adjust or remove if not needed)
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
         google()
         mavenCentral()
         gradlePluginPortal()
+        // Required for usb‑serial‑for‑android
+        maven { url 'https://jitpack.io' }
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' }

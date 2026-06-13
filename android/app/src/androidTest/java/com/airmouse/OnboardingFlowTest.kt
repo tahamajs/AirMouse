@@ -11,7 +11,6 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.airmouse.ui.onboarding.OnboardingActivity
-import com.airmouse.utils.PreferencesManager
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -1,7 +1,6 @@
 package com.airmouse
 
 import android.hardware.SensorManager
-import com.airmouse.sensors.SensorService
 import com.airmouse.utils.BatterySaver
 import org.junit.Assert.assertFalse
 import org.junit.Before

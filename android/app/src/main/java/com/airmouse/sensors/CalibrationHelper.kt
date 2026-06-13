@@ -7,9 +7,9 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Handler
 import android.os.HandlerThread
-import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Handles calibration of gyroscope (bias), magnetometer (hard‑iron),
@@ -26,6 +26,7 @@ class CalibrationHelper(
     private var accelScale = FloatArray(3) { 1f }
     private var magOffset = FloatArray(3)
     private var magScale = FloatArray(3) { 1f }
+    private var isCalibrated = false
 
     private var calibrationCallback: CalibrationCallback? = null
 
@@ -45,6 +46,7 @@ class CalibrationHelper(
         accelScale = prefs.getAccelScale()
         magOffset = prefs.getMagOffset()
         magScale = prefs.getMagScale()
+        isCalibrated = prefs.getBoolean("calibration_complete", false)
     }
 
     fun loadCalibrationStatus(): Boolean {
@@ -72,11 +74,11 @@ class CalibrationHelper(
 
     fun startCalibration(callback: CalibrationCallback? = null) {
         calibrationCallback = callback
-        // Reset calibration status
         prefs.putBoolean("calibration_complete", false)
         prefs.putFloat("gyro_offset_x", 0f)
         prefs.putFloat("gyro_offset_y", 0f)
         prefs.putFloat("gyro_offset_z", 0f)
+        isCalibrated = false
         calibrationCallback?.onProgress(0, "Calibration started")
     }
 
@@ -85,45 +87,68 @@ class CalibrationHelper(
         prefs.putFloat("gyro_offset_x", 0f)
         prefs.putFloat("gyro_offset_y", 0f)
         prefs.putFloat("gyro_offset_z", 0f)
+        prefs.putFloat("accel_offset_x", 0f)
+        prefs.putFloat("accel_offset_y", 0f)
+        prefs.putFloat("accel_offset_z", 0f)
+        prefs.putFloat("mag_offset_x", 0f)
+        prefs.putFloat("mag_offset_y", 0f)
+        prefs.putFloat("mag_offset_z", 0f)
         gyroBias = floatArrayOf(0f, 0f, 0f)
+        accelOffset = floatArrayOf(0f, 0f, 0f)
+        accelScale = floatArrayOf(1f, 1f, 1f)
+        magOffset = floatArrayOf(0f, 0f, 0f)
+        magScale = floatArrayOf(1f, 1f, 1f)
+        isCalibrated = false
         calibrationCallback?.onProgress(0, "Calibration reset")
     }
 
     fun isDeviceCalibrated(): Boolean = loadCalibrationStatus()
 
-    // ------------------- Gyroscope -------------------
+    // ==================== Gyroscope Calibration ====================
+
     suspend fun calibrateGyro(onInstruction: (String) -> Unit) {
-        onInstruction("Keep phone perfectly still...")
+        onInstruction("Keep phone perfectly still on a flat surface...")
 
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val gyro = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) ?: run {
             onInstruction("Gyroscope not available on this device")
+            calibrationCallback?.onError("Gyroscope not available")
             return
         }
-        
+
         val sensorThread = HandlerThread("CalibrationGyroThread").also { it.start() }
         val handler = Handler(sensorThread.looper)
         val samples = mutableListOf<FloatArray>()
         var count = 0
+        var lastProgress = 0
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
                 if (count < 500) {
                     samples.add(event.values.clone())
                     count++
-                    if (count % 50 == 0) onInstruction("Gyro: ${count / 5}%")
+                    val progress = (count * 100 / 500)
+                    if (progress > lastProgress) {
+                        lastProgress = progress
+                        onInstruction("Gyro calibration: $progress%")
+                        calibrationCallback?.onProgress(progress, "Collecting gyro data...")
+                    }
                 } else {
                     sensorManager.unregisterListener(this)
                 }
             }
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
-        
+
         try {
             sensorManager.registerListener(listener, gyro, SensorManager.SENSOR_DELAY_FASTEST, handler)
 
-            // Wait for samples
-            while (count < 500) delay(10)
+            // Wait for samples with timeout
+            var timeout = 0
+            while (count < 500 && timeout < 100) {
+                delay(100)
+                timeout++
+            }
             sensorManager.unregisterListener(listener)
 
             if (samples.isNotEmpty()) {
@@ -133,14 +158,14 @@ class CalibrationHelper(
                     samples.map { it[2] }.average().toFloat()
                 )
                 prefs.saveGyroBias(gyroBias)
-                prefs.putBoolean("calibration_complete", true)
                 prefs.putFloat("gyro_offset_x", gyroBias[0])
                 prefs.putFloat("gyro_offset_y", gyroBias[1])
                 prefs.putFloat("gyro_offset_z", gyroBias[2])
-                onInstruction("Gyroscope calibrated!")
-                calibrationCallback?.onComplete()
+
+                onInstruction("✓ Gyroscope calibrated successfully!")
+                calibrationCallback?.onProgress(100, "Gyroscope calibrated")
             } else {
-                onInstruction("Gyroscope calibration failed: no data")
+                onInstruction("✗ Gyroscope calibration failed: insufficient data")
                 calibrationCallback?.onError("No gyro data collected")
             }
         } finally {
@@ -151,14 +176,16 @@ class CalibrationHelper(
 
     fun correctGyro(value: Float, axis: Int): Float = value - gyroBias[axis]
 
-    // ------------------- Accelerometer (6‑point) -------------------
+    // ==================== Accelerometer Calibration (6-point) ====================
+
     suspend fun calibrateAccelerometer(onInstruction: (String) -> Unit) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: run {
             onInstruction("Accelerometer not available on this device")
+            calibrationCallback?.onError("Accelerometer not available")
             return
         }
-        
+
         val sensorThread = HandlerThread("CalibrationAccelThread").also { it.start() }
         val handler = Handler(sensorThread.looper)
 
@@ -175,9 +202,10 @@ class CalibrationHelper(
 
         try {
             for (i in orientations.indices) {
-                onInstruction("${orientations[i]}\nStarting in 3s...")
+                onInstruction("${orientations[i]}\nStarting in 3 seconds...")
+                calibrationCallback?.onProgress(i * 100 / 6, orientations[i])
                 delay(3000)
-                onInstruction("Measuring...")
+                onInstruction("Measuring... (${i + 1}/6)")
 
                 val samples = mutableListOf<FloatArray>()
                 var sampleCount = 0
@@ -192,11 +220,15 @@ class CalibrationHelper(
                     }
                     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
                 }
-                
+
                 try {
                     sensorManager.registerListener(listener, accel, SensorManager.SENSOR_DELAY_FASTEST, handler)
 
-                    while (sampleCount < 100) delay(10)
+                    var timeout = 0
+                    while (sampleCount < 100 && timeout < 50) {
+                        delay(100)
+                        timeout++
+                    }
                     sensorManager.unregisterListener(listener)
 
                     measured.add(floatArrayOf(
@@ -222,8 +254,13 @@ class CalibrationHelper(
                 accelOffset[i] = (posMeas + negMeas) / 2f
             }
             prefs.saveAccelParams(accelOffset, accelScale)
-            onInstruction(if (scaleWarning) "Accelerometer calibrated with fallback scale values." else "Accelerometer calibrated!")
-            calibrationCallback?.onComplete()
+
+            val message = if (scaleWarning)
+                "Accelerometer calibrated with fallback scale values."
+            else
+                "✓ Accelerometer calibrated successfully!"
+            onInstruction(message)
+            calibrationCallback?.onProgress(100, "Accelerometer calibrated")
         } finally {
             sensorThread.quitSafely()
         }
@@ -237,16 +274,18 @@ class CalibrationHelper(
         )
     }
 
-    // ------------------- Magnetometer (hard‑iron) -------------------
-    suspend fun calibrateMagnetometer(durationMs: Long, onInstruction: (String) -> Unit) {
-        onInstruction("Rotate phone in a figure-8 pattern...")
+    // ==================== Magnetometer Calibration (hard-iron) ====================
+
+    suspend fun calibrateMagnetometer(durationMs: Long = 15000, onInstruction: (String) -> Unit) {
+        onInstruction("Move phone in a figure-8 pattern...")
 
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val mag = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) ?: run {
-            onInstruction("Magnetometer not available on this device")
+            onInstruction("Magnetometer not available on this device, skipping...")
+            calibrationCallback?.onProgress(100, "Magnetometer skipped")
             return
         }
-        
+
         val sensorThread = HandlerThread("CalibrationMagThread").also { it.start() }
         val handler = Handler(sensorThread.looper)
         var min = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE)
@@ -261,14 +300,16 @@ class CalibrationHelper(
             }
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
-        
+
         try {
             sensorManager.registerListener(listener, mag, SensorManager.SENSOR_DELAY_FASTEST, handler)
 
             val steps = 10
             for (i in 1..steps) {
                 delay(durationMs / steps)
-                onInstruction("Calibrating Magnetometer... ${(i * 100) / steps}%")
+                val progress = (i * 100 / steps)
+                onInstruction("Calibrating Magnetometer... $progress%")
+                calibrationCallback?.onProgress(progress, "Collecting magnetic field data...")
             }
 
             sensorManager.unregisterListener(listener)
@@ -291,8 +332,8 @@ class CalibrationHelper(
             }
 
             prefs.saveMagCalibration(magOffset, magScale)
-            onInstruction("Magnetometer optimized!")
-            calibrationCallback?.onComplete()
+            onInstruction("✓ Magnetometer calibrated successfully!")
+            calibrationCallback?.onProgress(100, "Magnetometer calibrated")
         } finally {
             sensorManager.unregisterListener(listener)
             sensorThread.quitSafely()
@@ -314,5 +355,11 @@ class CalibrationHelper(
             y - getGyroOffsetY(),
             z - getGyroOffsetZ()
         )
+    }
+
+    fun completeCalibration() {
+        prefs.putBoolean("calibration_complete", true)
+        isCalibrated = true
+        calibrationCallback?.onComplete()
     }
 }

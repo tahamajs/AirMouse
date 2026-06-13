@@ -1,17 +1,12 @@
-// app/src/main/java/com/airmouse/service/BluetoothHidService.kt
 package com.airmouse.service
 
 import android.app.*
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothHidDevice
-import android.bluetooth.BluetoothHidDeviceAppSdpSettings
-import android.bluetooth.BluetoothProfile
-import android.bluetooth.BluetoothHidDeviceAppQosSettings
+import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.airmouse.R
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,11 +19,14 @@ class BluetoothHidService : Service() {
     @Inject lateinit var bluetoothAdapter: BluetoothAdapter
     private var hidDevice: BluetoothHidDevice? = null
     private var isRegistered = false
+    private var isConnected = false
+    private var connectedDevice: BluetoothDevice? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     companion object {
         private const val NOTIFICATION_ID = 1005
         private const val CHANNEL_ID = "bluetooth_hid_channel"
+        private const val TAG = "BluetoothHidService"
 
         fun start(context: Context) {
             val intent = Intent(context, BluetoothHidService::class.java)
@@ -47,7 +45,7 @@ class BluetoothHidService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, createNotification())
+        startForeground(NOTIFICATION_ID, createNotification("Initializing", "Setting up HID profile"))
         initHid()
     }
 
@@ -57,52 +55,154 @@ class BluetoothHidService : Service() {
                 CHANNEL_ID,
                 "Bluetooth HID Mouse",
                 NotificationManager.IMPORTANCE_LOW
-            )
+            ).apply {
+                description = "Bluetooth HID Mouse Service"
+            }
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
-    private fun createNotification(): Notification {
+    private fun createNotification(title: String, content: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Bluetooth HID Mouse")
-            .setContentText("Ready to connect as mouse")
+            .setContentTitle(title)
+            .setContentText(content)
             .setSmallIcon(R.drawable.ic_bluetooth)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
     }
 
     private fun initHid() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            Log.e(TAG, "HID Device requires Android 10+")
+            return
+        }
+
         bluetoothAdapter.getProfileProxy(this, object : BluetoothProfile.ServiceListener {
             override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
                 if (profile == BluetoothProfile.HID_DEVICE) {
                     hidDevice = proxy as BluetoothHidDevice
+                    Log.i(TAG, "HID Device service connected")
                     registerHidApp()
                 }
             }
+
             override fun onServiceDisconnected(profile: Int) {
-                hidDevice = null
+                if (profile == BluetoothProfile.HID_DEVICE) {
+                    hidDevice = null
+                    isRegistered = false
+                    Log.i(TAG, "HID Device service disconnected")
+                }
             }
         }, BluetoothProfile.HID_DEVICE)
     }
 
     private fun registerHidApp() {
-        isRegistered = hidDevice != null
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+
+        val sdpSettings = BluetoothHidDeviceAppSdpSettings(
+            "Air Mouse Pro",
+            "Air Mouse Pro HID",
+            "Air Mouse",
+            BluetoothHidDevice.SUBCLASS1_COMBO,
+            byteArrayOf()
+        )
+
+        val qosSettings = BluetoothHidDeviceAppQosSettings(100, 100, 0, 0, 0, 0)
+
+        hidDevice?.registerApp(sdpSettings, qosSettings, null, object : BluetoothHidDevice.Callback() {
+            override fun onAppStatusChanged(registered: Boolean, appId: Int) {
+                isRegistered = registered
+                if (registered) {
+                    Log.i(TAG, "HID App registered successfully")
+                    updateNotification("Ready", "HID profile registered")
+                } else {
+                    Log.w(TAG, "HID App registration failed")
+                    updateNotification("Error", "Failed to register HID profile")
+                }
+            }
+
+            override fun onConnectionStateChanged(device: BluetoothDevice?, state: Int) {
+                super.onConnectionStateChanged(device, state)
+                when (state) {
+                    BluetoothProfile.STATE_CONNECTED -> {
+                        isConnected = true
+                        connectedDevice = device
+                        Log.i(TAG, "Device connected: ${device?.name}")
+                        updateNotification("Connected", "Mouse connected to ${device?.name}")
+                    }
+                    BluetoothProfile.STATE_DISCONNECTED -> {
+                        isConnected = false
+                        connectedDevice = null
+                        Log.i(TAG, "Device disconnected")
+                        updateNotification("Disconnected", "Waiting for connection")
+                    }
+                }
+            }
+        })
     }
 
     fun sendMouseReport(dx: Int, dy: Int, buttons: Byte) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         if (!isRegistered || hidDevice == null) return
+        if (!isConnected) return
+
         val report = byteArrayOf(buttons, dx.toByte(), dy.toByte())
-        runCatching { hidDevice?.sendReport(null, 1, report) }
+        runCatching {
+            hidDevice?.sendReport(connectedDevice, 1, report)
+        }.onFailure {
+            Log.e(TAG, "Failed to send report: ${it.message}")
+        }
+    }
+
+    fun sendClick(button: Int) {
+        // Left click: 0x01, Right click: 0x02, Middle click: 0x04
+        sendMouseReport(0, 0, button.toByte())
+        serviceScope.launch {
+            delay(50)
+            sendMouseReport(0, 0, 0)
+        }
+    }
+
+    fun sendMove(dx: Int, dy: Int) {
+        sendMouseReport(dx, dy, 0)
+    }
+
+    fun sendScroll(delta: Int) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        if (!isRegistered || hidDevice == null || !isConnected) return
+
+        val scroll = when {
+            delta > 0 -> byteArrayOf(0x00, delta.toByte(), 0x00)
+            delta < 0 -> byteArrayOf(0x00, 0x00, (-delta).toByte())
+            else -> return
+        }
+        runCatching {
+            hidDevice?.sendReport(connectedDevice, 1, scroll)
+        }.onFailure {
+            Log.e(TAG, "Failed to send scroll: ${it.message}")
+        }
     }
 
     fun disconnect() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && hidDevice != null) {
-            hidDevice?.unregisterApp()
+            runCatching {
+                hidDevice?.unregisterApp()
+                bluetoothAdapter.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
+            }
             isRegistered = false
+            isConnected = false
+            connectedDevice = null
+            Log.i(TAG, "Disconnected and unregistered")
         }
     }
+
+    private fun updateNotification(title: String, content: String) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, createNotification(title, content))
+    }
+
+    fun isConnected(): Boolean = isConnected
+    fun isRegistered(): Boolean = isRegistered
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
@@ -112,6 +212,7 @@ class BluetoothHidService : Service() {
         super.onDestroy()
         disconnect()
         serviceScope.cancel()
+        Log.i(TAG, "Service destroyed")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

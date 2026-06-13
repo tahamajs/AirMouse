@@ -1,5 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- Theme Options -->
+    <string-array name="theme_names">
+        <item>Light</item>
+        <item>Dark</item>
+        <item>Pure Black (AMOLED)</item>
+        <item>High Contrast</item>
+        <item>System Default</item>
+    </string-array>
+
+    <string-array name="theme_values">
+        <item>light</item>
+        <item>dark</item>
+        <item>pure_black</item>
+        <item>high_contrast</item>
+        <item>system</item>
+    </string-array>
+
+    <!-- Edge Gesture Actions -->
     <string-array name="edge_gesture_actions">
         <item>None</item>
         <item>Click</item>
@@ -12,4 +31,137 @@
         <item>Volume Up</item>
         <item>Volume Down</item>
     </string-array>
+
+    <!-- Edge Gesture Action Values -->
+    <string-array name="edge_gesture_action_values">
+        <item>none</item>
+        <item>click</item>
+        <item>double_click</item>
+        <item>right_click</item>
+        <item>scroll_up</item>
+        <item>scroll_down</item>
+        <item>next_track</item>
+        <item>prev_track</item>
+        <item>volume_up</item>
+        <item>volume_down</item>
+    </string-array>
+
+    <!-- Sensitivity Levels -->
+    <string-array name="sensitivity_levels">
+        <item>Very Low</item>
+        <item>Low</item>
+        <item>Medium</item>
+        <item>High</item>
+        <item>Very High</item>
+    </string-array>
+
+    <string-array name="sensitivity_values">
+        <item>0.25</item>
+        <item>0.5</item>
+        <item>1.0</item>
+        <item>1.5</item>
+        <item>2.0</item>
+    </string-array>
+
+    <!-- Connection Quality Levels -->
+    <string-array name="connection_quality">
+        <item>Poor</item>
+        <item>Fair</item>
+        <item>Good</item>
+        <item>Excellent</item>
+    </string-array>
+
+    <!-- Gesture Types -->
+    <string-array name="gesture_types">
+        <item>Click</item>
+        <item>Double Click</item>
+        <item>Right Click</item>
+        <item>Swipe Left</item>
+        <item>Swipe Right</item>
+        <item>Swipe Up</item>
+        <item>Swipe Down</item>
+        <item>Circle Clockwise</item>
+        <item>Circle Counter-Clockwise</item>
+    </string-array>
+
+    <!-- Scroll Directions -->
+    <string-array name="scroll_directions">
+        <item>Up</item>
+        <item>Down</item>
+        <item>Left</item>
+        <item>Right</item>
+    </string-array>
+
+    <!-- Cursor Speed Profiles -->
+    <string-array name="cursor_profiles">
+        <item>Precision</item>
+        <item>Standard</item>
+        <item>Gaming</item>
+        <item>Presentation</item>
+    </string-array>
+
+    <!-- Update Intervals -->
+    <string-array name="update_intervals">
+        <item>Fast (50 Hz)</item>
+        <item>Normal (30 Hz)</item>
+        <item>Power Saving (15 Hz)</item>
+    </string-array>
+
+    <string-array name="update_interval_values">
+        <item>20</item>
+        <item>33</item>
+        <item>66</item>
+    </string-array>
+
+    <!-- Haptic Feedback Strengths -->
+    <string-array name="haptic_strengths">
+        <item>Off</item>
+        <item>Light</item>
+        <item>Medium</item>
+        <item>Strong</item>
+    </string-array>
+
+    <!-- Language Options -->
+    <string-array name="language_names">
+        <item>English</item>
+        <item>Spanish</item>
+        <item>French</item>
+        <item>German</item>
+        <item>Chinese</item>
+        <item>Japanese</item>
+        <item>Korean</item>
+    </string-array>
+
+    <string-array name="language_codes">
+        <item>en</item>
+        <item>es</item>
+        <item>fr</item>
+        <item>de</item>
+        <item>zh</item>
+        <item>ja</item>
+        <item>ko</item>
+    </string-array>
+
+    <!-- Custom Gesture Icons -->
+    <string-array name="gesture_icons">
+        <item>👆</item>
+        <item>👆👆</item>
+        <item>👉</item>
+        <item>⬅️</item>
+        <item>➡️</item>
+        <item>⬆️</item>
+        <item>⬇️</item>
+        <item>🔄</item>
+        <item>⭕</item>
+    </string-array>
+
+    <!-- Notification Sounds -->
+    <string-array name="notification_sounds">
+        <item>Silent</item>
+        <item>Default</item>
+        <item>Beep</item>
+        <item>Chime</item>
+        <item>Pop</item>
+    </string-array>
+
 </resources>

@@ -1,34 +1,67 @@
+// app/src/main/java/com/airmouse/utils/SensorUtils.kt
 package com.airmouse.utils
 
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 
-/**
- * Utilities for checking sensor presence and obtaining sensor features.
- */
-object SensorUtils {
+class SensorUtils(private val context: Context) {
 
-    fun hasGyroscope(context: Context): Boolean {
-        val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        return sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
+    private val sensorManager: SensorManager by lazy {
+        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
 
-    fun hasAccelerometer(context: Context): Boolean {
-        val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        return sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
+    fun isGyroscopeAvailable(): Boolean {
+        return sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
     }
 
-    fun hasMagnetometer(context: Context): Boolean {
-        val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        return sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null
+    fun isAccelerometerAvailable(): Boolean {
+        return sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
     }
 
-    fun getMissingSensorsMessage(context: Context): String {
-        val missing = mutableListOf<String>()
-        if (!hasGyroscope(context)) missing.add("Gyroscope")
-        if (!hasAccelerometer(context)) missing.add("Accelerometer")
-        if (!hasMagnetometer(context)) missing.add("Magnetometer")
-        return if (missing.isEmpty()) "All sensors present" else "Missing sensors: ${missing.joinToString(", ")}"
+    fun isMagnetometerAvailable(): Boolean {
+        return sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null
+    }
+
+    fun isRotationVectorAvailable(): Boolean {
+        return sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) != null
+    }
+
+    fun getAvailableSensors(): List<SensorInfo> {
+        val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
+        return sensors.map { sensor ->
+            SensorInfo(
+                name = sensor.name,
+                type = sensor.type,
+                vendor = sensor.vendor,
+                version = sensor.version,
+                power = sensor.power,
+                resolution = sensor.resolution,
+                maxRange = sensor.maximumRange
+            )
+        }
+    }
+
+    fun getSensorDelay(rate: SensorRate): Int {
+        return when (rate) {
+            SensorRate.FASTEST -> SensorManager.SENSOR_DELAY_FASTEST
+            SensorRate.GAME -> SensorManager.SENSOR_DELAY_GAME
+            SensorRate.UI -> SensorManager.SENSOR_DELAY_UI
+            SensorRate.NORMAL -> SensorManager.SENSOR_DELAY_NORMAL
+        }
+    }
+
+    data class SensorInfo(
+        val name: String,
+        val type: Int,
+        val vendor: String,
+        val version: Int,
+        val power: Float,
+        val resolution: Float,
+        val maxRange: Float
+    )
+
+    enum class SensorRate {
+        FASTEST, GAME, UI, NORMAL
     }
 }

@@ -2,7 +2,6 @@
 package com.airmouse.sensor
 
 import com.airmouse.sensors.EnhancedGestureDetector
-import com.airmouse.utils.PreferencesManager
 import android.content.Context
 import android.os.Vibrator
 import io.mockk.*

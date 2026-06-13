@@ -3,18 +3,20 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- ==================== PERMISSIONS ==================== -->
-    <!-- Network -->
+
+    <!-- Network & Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
-    <!-- Camera (QR scan) -->
+    <!-- Camera (QR code scanning) -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Haptic feedback -->
+    <!-- Haptic Feedback -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- System overlay (debug overlay) -->
+    <!-- System Overlay (debug overlay) -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- Bluetooth (HID mouse, proximity) -->
@@ -24,33 +26,60 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Foreground services -->
+    <!-- Foreground Services (Android 14+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
     <!-- Sensors -->
     <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
 
-    <!-- Storage (for exporting datasets) -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Storage (for exporting datasets and logs) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <!-- USB -->
     <uses-permission android:name="android.permission.USB_PERMISSION" />
-    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <!-- Audio (voice commands) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- ==================== FEATURES ==================== -->
+    <!-- Wake Lock -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Run at startup (optional) -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Nearby devices -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /> <!-- for WiFi scanning on older Android -->
+    <!-- ==================== FEATURE DECLARATIONS ==================== -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <uses-feature android:name="android.software.home_screen" android:required="false" />
 
     <application
         android:name=".AirMouseApplication"
@@ -62,82 +91,175 @@
         android:theme="@style/Theme.AirMouse"
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
-        tools:targetApi="31">
+        android:requestLegacyExternalStorage="true"
+        android:allowNativeHeapPointerTagging="false"
+        android:enableOnBackInvokedCallback="true"
+        android:largeHeap="true"
+        tools:targetApi="34">
 
         <!-- ==================== ACTIVITIES ==================== -->
+
+        <!-- Main Activity (Launcher) -->
         <activity
-            android:name=".ui.onboarding.OnboardingActivity"
+            android:name=".MainActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:theme="@style/Theme.AirMouse.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
 
+            <!-- Deep linking for QR codes -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="airmouse" android:host="connect" />
+            </intent-filter>
+        </activity>
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.onboarding.OnboardingActivity"
             android:exported="false"
+            android:theme="@style/Theme.AirMouse"
             android:screenOrientation="portrait" />
 
+        <!-- Onboarding Activity (first launch) -->
         <activity
-            android:name=".ui.CalibrationActivity"
-            android:exported="false" />
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AirMouse"
+            android:screenOrientation="portrait" />
 
-        <!-- QR code scanner (ZXing) -->
+        <!-- Calibration Activity -->
+        <activity
+            android:name=".ui.calibration.CalibrationActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AirMouse" />
+
+        <!-- QR Code Scanner (ZXing) -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            tools:replace="android:screenOrientation" />
+            android:theme="@style/Theme.AirMouse.Transparent"
+            tools:replace="android:screenOrientation,android:theme" />
+
+        <!-- Settings Activity (fallback for older devices) -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
 
         <!-- ==================== SERVICES ==================== -->
+
+        <!-- Core Sensor Service -->
         <service
-            android:name=".bluetooth.BluetoothMouseService"
+            android:name=".service.SensorService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Gesture Services -->
+        <service
+            android:name=".service.GestureInferenceService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".service.GestureRecorderService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Bluetooth HID Service -->
+        <service
+            android:name=".service.BluetoothHidService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
 
+        <!-- Proximity Services -->
         <service
-            android:name=".proximity.ProximityAwareService"
+            android:name=".service.ProximityAwareService"
+            android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <service
-            android:name=".gesture.GestureRecorderService"
+            android:name=".service.ProximityService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- USB Services -->
+        <service
+            android:name=".service.UsbHidService"
+            android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <service
-            android:name=".gesture.GestureInferenceService"
+            android:name=".service.UsbSerialService"
+            android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Voice Command Service -->
         <service
-            android:name=".orientation.OrientationMonitorService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".voice.VoiceCommandService"
+            android:name=".service.VoiceCommandService"
+            android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!-- Orientation Monitor Service -->
         <service
-            android:name=".usb.UsbHidService"
+            android:name=".service.OrientationMonitorService"
+            android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Edge Gesture Service (no foreground needed) -->
         <service
-            android:name=".usb.UsbSerialService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".DebugOverlayService"
+            android:name=".service.EdgeGestureService"
+            android:enabled="true"
             android:exported="false" />
 
-        <!-- ==================== FILE PROVIDER ==================== -->
+        <!-- Debug Overlay Service -->
+        <service
+            android:name=".service.DebugOverlayService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- ==================== RECEIVERS ==================== -->
+
+        <!-- Boot Receiver (optional auto-start) -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Network Change Receiver -->
+        <receiver
+            android:name=".NetworkChangeReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ==================== PROVIDERS ==================== -->
+
+        <!-- File Provider for sharing logs and datasets -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -148,10 +270,27 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- ==================== SHORTCUTS ==================== -->
+        <!-- ==================== METADATA ==================== -->
+
+        <!-- App Shortcuts -->
         <meta-data
             android:name="android.app.shortcuts"
             android:resource="@xml/shortcuts" />
+
+        <!-- Firebase Analytics (optional) -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+
+        <!-- Splash Screen Theme Icon -->
+        <meta-data
+            android:name="android.app.splash_screen_icon"
+            android:resource="@drawable/ic_splash" />
+
+        <!-- Network Security Config (already referenced) -->
+        <meta-data
+            android:name="android.security.net.config"
+            android:resource="@xml/network_security_config" />
 
     </application>
 

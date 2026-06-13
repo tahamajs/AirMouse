@@ -2,14 +2,16 @@
 package com.airmouse.domain.repository
 
 import com.airmouse.domain.model.CustomGestureTemplate
-import com.airmouse.domain.model.Gesture
 import kotlinx.coroutines.flow.Flow
 
 interface IGestureRepository {
-    suspend fun saveCustomGesture(template: CustomGestureTemplate)
-    suspend fun getCustomGesture(id: String): CustomGestureTemplate?
     suspend fun getAllCustomGestures(): List<CustomGestureTemplate>
+    suspend fun getCustomGesture(id: String): CustomGestureTemplate?
+    suspend fun saveCustomGesture(gesture: CustomGestureTemplate)
     suspend fun deleteCustomGesture(id: String)
-    suspend fun updateGestureThreshold(id: String, threshold: Float)
-    fun observeGestures(): Flow<Gesture>
+    suspend fun trainGesture(gestureId: String, newSamples: List<FloatArray>? = null): Boolean
+    suspend fun recognizeGesture(samples: List<FloatArray>): Pair<String?, Float> // returns (gestureName, confidence)
+    suspend fun exportGesturesToCSV(): String
+    suspend fun importGesturesFromCSV(filePath: String): Boolean
+    fun observeGestures(): Flow<List<CustomGestureTemplate>>
 }

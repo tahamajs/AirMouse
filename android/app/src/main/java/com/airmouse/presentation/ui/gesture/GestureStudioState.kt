@@ -6,5 +6,16 @@ data class GestureStudioUiState(
     val gestureName: String = "",
     val isRecording: Boolean = false,
     val status: String = "Ready",
-    val savedGestures: List<CustomGestureTemplate> = emptyList()
+    val statusColor: Long = 0xFF4CAF50,
+    val progress: Int = 0,
+    val recordingTime: Int = 0,
+    val savedGestures: List<CustomGestureTemplate> = emptyList(),
+    val selectedGesture: CustomGestureTemplate? = null,
+    val isTraining: Boolean = false,
+    val trainingProgress: Int = 0,
+    val showDeleteDialog: Boolean = false,
+    val showTrainDialog: Boolean = false,
+    val showExportDialog: Boolean = false,
+    val errorMessage: String? = null,
+    val successMessage: String? = null
 )

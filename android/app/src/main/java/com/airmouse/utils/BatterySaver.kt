@@ -1,9 +1,11 @@
+// app/src/main/java/com/airmouse/utils/BatterySaver.kt
 package com.airmouse.utils
 
 import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
 import com.airmouse.sensors.SensorService
+import kotlin.math.abs
 
 /**
  * Reduces sensor sampling rate when the phone is stationary to save battery.
@@ -21,6 +23,10 @@ class BatterySaver {
     private val idleThresholdMs = 10000L   // 10 seconds of no movement
     private var lastRoll = 0f
     private var lastYaw = 0f
+    private var lastPitch = 0f
+
+    private var isEnabled = true
+    private var onPowerStateChange: ((Boolean) -> Unit)? = null
 
     private val checkRunnable = object : Runnable {
         override fun run() {
@@ -28,8 +34,7 @@ class BatterySaver {
 
             // If we haven't moved for a while and aren't in low power mode yet
             if (!isLowPower && System.currentTimeMillis() - lastMovementTime > idleThresholdMs) {
-                sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_NORMAL)
-                isLowPower = true
+                enterLowPowerMode()
             }
 
             handler?.postDelayed(this, 2000)
@@ -45,8 +50,7 @@ class BatterySaver {
     fun stop() {
         handler?.removeCallbacks(checkRunnable)
         if (isLowPower) {
-            sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
-            isLowPower = false
+            exitLowPowerMode()
         }
         sensorService = null
     }
@@ -55,21 +59,49 @@ class BatterySaver {
 
     fun onMovement() {
         lastMovementTime = System.currentTimeMillis()
-        sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
         if (isLowPower) {
-            isLowPower = false
+            exitLowPowerMode()
         }
     }
 
-    fun updateMovement(roll: Float, yaw: Float) {
-        // Simple delta check for movement
-        val delta = kotlin.math.abs(roll - lastRoll) + kotlin.math.abs(yaw - lastYaw)
+    fun updateMovement(roll: Float, pitch: Float, yaw: Float) {
+        // Calculate movement delta
+        val deltaRoll = abs(roll - lastRoll)
+        val deltaPitch = abs(pitch - lastPitch)
+        val deltaYaw = abs(yaw - lastYaw)
+        val totalDelta = deltaRoll + deltaPitch + deltaYaw
+
         lastRoll = roll
+        lastPitch = pitch
         lastYaw = yaw
 
         // Threshold for what we consider 'movement' (0.05 rad is approx 3 degrees)
-        if (delta > 0.05f) {
+        if (totalDelta > 0.05f) {
             onMovement()
         }
+    }
+
+    private fun enterLowPowerMode() {
+        if (!isEnabled) return
+        sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_NORMAL)
+        isLowPower = true
+        onPowerStateChange?.invoke(true)
+    }
+
+    private fun exitLowPowerMode() {
+        sensorService?.setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
+        isLowPower = false
+        onPowerStateChange?.invoke(false)
+    }
+
+    fun setEnabled(enabled: Boolean) {
+        isEnabled = enabled
+        if (!enabled && isLowPower) {
+            exitLowPowerMode()
+        }
+    }
+
+    fun setOnPowerStateChange(callback: (Boolean) -> Unit) {
+        onPowerStateChange = callback
     }
 }

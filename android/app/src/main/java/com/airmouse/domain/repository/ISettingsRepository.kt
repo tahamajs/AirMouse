@@ -1,17 +1,42 @@
-// app/src/main/java/com/airmouse/domain/repository/ISettingsRepository.kt
 package com.airmouse.domain.repository
 
-import com.airmouse.domain.model.UserPreferences
-import kotlinx.coroutines.flow.Flow
-
 interface ISettingsRepository {
-    fun getPreferences(): Flow<UserPreferences>
-    suspend fun updatePreferences(preferences: UserPreferences)
-    suspend fun setSensitivity(value: Float)
-    suspend fun setClickThreshold(value: Float)
-    suspend fun setDoubleClickInterval(value: Long)
-    suspend fun setScrollThreshold(value: Float)
-    suspend fun setRightClickTilt(value: Float)
-    suspend fun setHapticEnabled(enabled: Boolean)
-    suspend fun setTheme(theme: String)
+    fun getSensitivity(): Float
+    fun setSensitivity(value: Float)
+
+    fun getClickThreshold(): Float
+    fun setClickThreshold(value: Float)
+
+    fun getDoubleClickInterval(): Long
+    fun setDoubleClickInterval(value: Long)
+
+    fun getScrollThreshold(): Float
+    fun setScrollThreshold(value: Float)
+
+    fun getRightClickTilt(): Float
+    fun setRightClickTilt(value: Float)
+
+    fun isHapticEnabled(): Boolean
+    fun setHapticEnabled(enabled: Boolean)
+
+    fun isInvertX(): Boolean
+    fun setInvertX(invert: Boolean)
+
+    fun isInvertY(): Boolean
+    fun setInvertY(invert: Boolean)
+
+    fun isAccelerationEnabled(): Boolean
+    fun setAccelerationEnabled(enabled: Boolean)
+
+    fun isSmoothingEnabled(): Boolean
+    fun setSmoothingEnabled(enabled: Boolean)
+
+    fun getSmoothingFactor(): Float
+    fun setSmoothingFactor(value: Float)
+
+    fun getTheme(): String
+    fun setTheme(theme: String)
+
+    fun getLastServerIp(): String
+    fun setLastServerIp(ip: String)
 }

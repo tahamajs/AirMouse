@@ -3,6 +3,8 @@ package com.airmouse.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.airmouse.data.datasource.local.AppDatabase
 import com.airmouse.data.datasource.local.CalibrationDao
 import com.airmouse.data.datasource.local.GestureDao
@@ -18,6 +20,38 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE custom_gestures ADD COLUMN detectionCount INTEGER NOT NULL DEFAULT 0")
+            database.execSQL("ALTER TABLE custom_gestures ADD COLUMN lastDetected INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS profiles (" +
+                    "id TEXT PRIMARY KEY, " +
+                    "name TEXT NOT NULL, " +
+                    "sensitivity REAL NOT NULL, " +
+                    "clickThreshold REAL NOT NULL, " +
+                    "doubleClickInterval INTEGER NOT NULL, " +
+                    "scrollThreshold REAL NOT NULL, " +
+                    "rightClickTilt REAL NOT NULL, " +
+                    "hapticEnabled INTEGER NOT NULL, " +
+                    "theme TEXT NOT NULL, " +
+                    "aiSmoothing INTEGER NOT NULL, " +
+                    "predictiveMovement INTEGER NOT NULL, " +
+                    "invertX INTEGER NOT NULL, " +
+                    "invertY INTEGER NOT NULL, " +
+                    "accelerationEnabled INTEGER NOT NULL, " +
+                    "smoothingEnabled INTEGER NOT NULL, " +
+                    "createdAt INTEGER NOT NULL, " +
+                    "lastUsed INTEGER NOT NULL, " +
+                    "isDefault INTEGER NOT NULL, " +
+                    "isFavorite INTEGER NOT NULL)")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -25,7 +59,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "airmouse_db"
-        ).fallbackToDestructiveMigration().build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides

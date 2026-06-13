@@ -3,7 +3,6 @@ package com.airmouse
 import android.content.Context
 import android.os.Vibrator
 import com.airmouse.sensors.EnhancedGestureDetector
-import com.airmouse.utils.PreferencesManager
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test

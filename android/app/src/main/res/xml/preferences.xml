@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:key="cursor_category"
+        android:title="Cursor Control">
+        <Preference
+            android:key="sensitivity"
+            android:title="Cursor Sensitivity"
+            android:summary="Adjust in the main screen" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="gesture_category"
+        android:title="Gestures &amp; Feedback">
+        <SwitchPreferenceCompat
+            android:key="haptic_enabled"
+            android:title="Haptic Feedback"
+            android:summary="Vibrate on click and scroll"
+            android:defaultValue="true" />
+        <SwitchPreferenceCompat
+            android:key="ai_smoothing"
+            android:title="AI Smoothing"
+            android:summary="Machine learning for smoother cursor"
+            android:defaultValue="false" />
+        <SwitchPreferenceCompat
+            android:key="predictive_movement"
+            android:title="Predictive Movement"
+            android:summary="Kalman filter for reduced lag"
+            android:defaultValue="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="appearance_category"
+        android:title="Appearance">
+        <ListPreference
+            android:key="theme"
+            android:title="Theme"
+            android:entries="@array/theme_names"
+            android:entryValues="@array/theme_values"
+            android:defaultValue="system"
+            android:summary="%s" />
+    </PreferenceCategory>
+
+</PreferenceScreen>
