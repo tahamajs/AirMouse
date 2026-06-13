@@ -1,78 +1,115 @@
 package protocol
 
 import (
-	"encoding/json"
-	"fmt"
+    "encoding/json"
+    "fmt"
 )
 
 type WireMessage struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload,omitempty"`
-	ID      *json.RawMessage `json:"id,omitempty"`
+    Type    string          `json:"type"`
+    Payload json.RawMessage `json:"payload,omitempty"`
+    ID      *json.RawMessage `json:"id,omitempty"`
+}
+
+type MessageHandler interface {
+    HandleMessage(msgType string, payload map[string]interface{}, clientID string) error
 }
 
 func decodeWireMessage(line []byte) (msgType string, payload map[string]any, id *string, err error) {
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(line, &raw); err != nil {
-		return "", nil, nil, err
-	}
+    var raw map[string]json.RawMessage
+    if err := json.Unmarshal(line, &raw); err != nil {
+        return "", nil, nil, fmt.Errorf("failed to unmarshal: %w", err)
+    }
 
-	if t, ok := raw["type"]; ok {
-		if err := json.Unmarshal(t, &msgType); err != nil {
-			return "", nil, nil, err
-		}
-	}
+    // Extract type
+    if t, ok := raw["type"]; ok {
+        if err := json.Unmarshal(t, &msgType); err != nil {
+            return "", nil, nil, fmt.Errorf("invalid type field: %w", err)
+        }
+    } else {
+        return "", nil, nil, fmt.Errorf("missing type field")
+    }
 
-	payload = map[string]any{}
-	if p, ok := raw["payload"]; ok {
-		if err := json.Unmarshal(p, &payload); err != nil {
-			return "", nil, nil, err
-		}
-	} else {
-		for k, v := range raw {
-			if k == "type" || k == "id" {
-				continue
-			}
-			var value any
-			if err := json.Unmarshal(v, &value); err != nil {
-				continue
-			}
-			payload[k] = value
-		}
-	}
+    // Extract payload (supports both nested and flat formats)
+    payload = make(map[string]any)
+    if p, ok := raw["payload"]; ok {
+        if err := json.Unmarshal(p, &payload); err != nil {
+            return "", nil, nil, fmt.Errorf("invalid payload: %w", err)
+        }
+    } else {
+        // Flat format: all non-type, non-id fields are payload
+        for k, v := range raw {
+            if k == "type" || k == "id" {
+                continue
+            }
+            var value any
+            if err := json.Unmarshal(v, &value); err != nil {
+                continue
+            }
+            payload[k] = value
+        }
+    }
 
-	if rawID, ok := raw["id"]; ok {
-		if s, err := rawMessageToString(rawID); err == nil {
-			id = &s
-		}
-	}
+    // Extract ID if present
+    if rawID, ok := raw["id"]; ok {
+        if s, err := rawMessageToString(rawID); err == nil {
+            id = &s
+        }
+    }
 
-	return msgType, payload, id, nil
+    return msgType, payload, id, nil
 }
 
 func rawMessageToString(raw json.RawMessage) (string, error) {
-	var s string
-	if err := json.Unmarshal(raw, &s); err == nil {
-		return s, nil
-	}
-	var n json.Number
-	if err := json.Unmarshal(raw, &n); err == nil {
-		return n.String(), nil
-	}
-	var i int64
-	if err := json.Unmarshal(raw, &i); err == nil {
-		return fmt.Sprintf("%d", i), nil
-	}
-	return "", fmt.Errorf("unsupported id format")
+    var s string
+    if err := json.Unmarshal(raw, &s); err == nil {
+        return s, nil
+    }
+    var n json.Number
+    if err := json.Unmarshal(raw, &n); err == nil {
+        return n.String(), nil
+    }
+    var i int64
+    if err := json.Unmarshal(raw, &i); err == nil {
+        return fmt.Sprintf("%d", i), nil
+    }
+    return "", fmt.Errorf("unsupported id format")
 }
 
 func ackMessage(id *string) []byte {
-	if id == nil || *id == "" {
-		return nil
-	}
-	body, _ := json.Marshal(map[string]any{
-		"type": "ack",
-		"id":   *id,
-	})
-	return append(body, '\n')
+    if id == nil || *id == "" {
+        return nil
+    }
+    body, _ := json.Marshal(map[string]any{
+        "type": "ack",
+        "id":   *id,
+    })
+    return append(body, '\n')
+}
+
+func errorMessage(errMsg string) []byte {
+    body, _ := json.Marshal(map[string]any{
+        "type":  "error",
+        "error": errMsg,
+    })
+    return append(body, '\n')
+}
+
+func welcomeMessage(serverName, version string) []byte {
+    body, _ := json.Marshal(map[string]any{
+        "type": "welcome",
+        "payload": map[string]string{
+            "server":  serverName,
+            "version": version,
+        },
+    })
+    return append(body, '\n')
+}
+
+func pongMessage() []byte {
+    return []byte(`{"type":"pong"}` + "\n")
+}
+
+func pingMessage() []byte {
+    return []byte(`{"type":"ping"}` + "\n")
 }

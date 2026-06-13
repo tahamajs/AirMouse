@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Air Mouse Pro - Wireless Mouse Control</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">
+                <div class="logo-icon">🎯</div>
+                <div class="logo-text">
+                    <span class="logo-title">Air Mouse</span>
+                    <span class="logo-subtitle">Pro Server</span>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-page="devices">
+                    <span class="nav-icon">📱</span>
+                    <span class="nav-text">Devices</span>
+                </a>
+                <a href="#" class="nav-item" data-page="network">
+                    <span class="nav-icon">🌐</span>
+                    <span class="nav-text">Network</span>
+                </a>
+                <a href="#" class="nav-item" data-page="gestures">
+                    <span class="nav-icon">✋</span>
+                    <span class="nav-text">Gestures</span>
+                </a>
+                <a href="#" class="nav-item" data-page="proximity">
+                    <span class="nav-icon">📡</span>
+                    <span class="nav-text">Proximity</span>
+                </a>
+                <a href="#" class="nav-item" data-page="analytics">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text">Analytics</span>
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">Settings</span>
+                </a>
+                <a href="#" class="nav-item" data-page="logs">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Logs</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="server-status">
+                    <div class="status-indicator" id="serverStatusIndicator"></div>
+                    <span id="serverStatusText">Offline</span>
+                </div>
+                <div class="version">v3.0.0</div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                <div class="header-actions">
+                    <div class="notification-bell" id="notificationBell">🔔</div>
+                    <div class="user-menu">
+                        <span class="user-name" id="userName">Admin</span>
+                        <div class="user-avatar">👤</div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Dashboard Page -->
+            <div id="dashboardPage" class="page active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🖱️</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="statClicks">0</span>
+                            <span class="stat-label">Total Clicks</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📜</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="statScrolls">0</span>
+                            <span class="stat-label">Scrolls</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📱</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="statDevices">0</span>
+                            <span class="stat-label">Connected Devices</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="statUptime">00:00:00</span>
+                            <span class="stat-label">Uptime</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Movement Speed</h3>
+                            <button class="chart-action" id="refreshSpeedChart">↻</button>
+                        </div>
+                        <canvas id="speedChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Connection Quality</h3>
+                        </div>
+                        <div class="connection-quality">
+                            <div class="quality-indicator" id="qualityIndicator"></div>
+                            <div class="quality-details">
+                                <span id="qualityLatency">Latency: -- ms</span>
+                                <span id="qualitySignal">Signal: --</span>
+                            </div>
+                        </div>
+                        <canvas id="pingChart" width="400" height="150"></canvas>
+                    </div>
+                </div>
+                
+                <div class="action-grid">
+                    <div class="action-card">
+                        <h3>Quick Actions</h3>
+                        <div class="action-buttons">
+                            <button class="btn-primary" id="startServerBtn">▶ Start Server</button>
+                            <button class="btn-secondary" id="stopServerBtn">⏹️ Stop Server</button>
+                            <button class="btn-outline" id="restartServerBtn">🔄 Restart</button>
+                        </div>
+                    </div>
+                    <div class="action-card">
+                        <h3>Pair New Device</h3>
+                        <div class="qr-container" id="qrContainer">
+                            <div class="qr-placeholder">Loading QR...</div>
+                        </div>
+                        <button class="btn-outline" id="refreshQrBtn">Refresh QR</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Devices Page -->
+            <div id="devicesPage" class="page">
+                <div class="page-header">
+                    <h2>Connected Devices</h2>
+                    <button class="btn-outline" id="refreshDevicesBtn">↻ Refresh</button>
+                </div>
+                <div class="devices-grid" id="devicesGrid">
+                    <div class="loading">Loading devices...</div>
+                </div>
+            </div>
+            
+            <!-- Network Page -->
+            <div id="networkPage" class="page">
+                <div class="page-header">
+                    <h2>Network Configuration</h2>
+                </div>
+                <div class="settings-panel">
+                    <div class="setting-group">
+                        <label>Server IP</label>
+                        <input type="text" id="serverIp" readonly class="readonly-input">
+                        <button class="btn-small" id="copyIpBtn">Copy</button>
+                    </div>
+                    <div class="setting-group">
+                        <label>TCP Port</label>
+                        <input type="number" id="tcpPort" value="8080">
+                    </div>
+                    <div class="setting-group">
+                        <label>WebSocket Port</label>
+                        <input type="number" id="wsPort" value="8081">
+                    </div>
+                    <div class="setting-group">
+                        <label>UDP Port</label>
+                        <input type="number" id="udpPort" value="8082">
+                    </div>
+                    <button class="btn-primary" id="saveNetworkBtn">Save Settings</button>
+                </div>
+            </div>
+            
+            <!-- Gestures Page -->
+            <div id="gesturesPage" class="page">
+                <div class="page-header">
+                    <h2>Gesture Mapping</h2>
+                    <button class="btn-primary" id="addGestureBtn">+ Add Gesture</button>
+                </div>
+                <div class="gestures-list" id="gesturesList">
+                    <div class="loading">Loading gestures...</div>
+                </div>
+            </div>
+            
+            <!-- Proximity Page -->
+            <div id="proximityPage" class="page">
+                <div class="page-header">
+                    <h2>Proximity Security</h2>
+                </div>
+                <div class="settings-panel">
+                    <div class="setting-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="proximityEnabled">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Enable Proximity Lock/Unlock</span>
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <label>Near Threshold (Unlock)</label>
+                        <input type="range" id="nearThreshold" min="0.5" max="5" step="0.1" value="1.5">
+                        <span id="nearThresholdValue">1.5 m</span>
+                    </div>
+                    <div class="setting-group">
+                        <label>Far Threshold (Lock)</label>
+                        <input type="range" id="farThreshold" min="1" max="10" step="0.2" value="3.0">
+                        <span id="farThresholdValue">3.0 m</span>
+                    </div>
+                    <div class="proximity-status">
+                        <div class="distance-indicator">
+                            <span>Current Distance:</span>
+                            <strong id="currentDistance">-- m</strong>
+                        </div>
+                        <div class="lock-status" id="lockStatus">🔓 Unlocked</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analytics Page -->
+            <div id="analyticsPage" class="page">
+                <div class="page-header">
+                    <h2>Analytics & Statistics</h2>
+                    <button class="btn-outline" id="resetStatsBtn">Reset Statistics</button>
+                </div>
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>Movement Statistics</h3>
+                        <canvas id="movementChart" width="300" height="200"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Usage by Hour</h3>
+                        <canvas id="usageChart" width="300" height="200"></canvas>
+                    </div>
+                </div>
+                <div class="stats-table">
+                    <h3>Detailed Statistics</h3>
+                    <table id="statsTable">
+                        <tr><td>Total Movements:</td><td id="totalMovements">0</td></tr>
+                        <tr><td>Avg Speed:</td><td id="avgSpeed">0 px/s</td></tr>
+                        <tr><td>Total Clicks:</td><td id="totalClicks">0</td></tr>
+                        <tr><td>Total Scrolls:</td><td id="totalScrolls">0</td></tr>
+                        <tr><td>Session Duration:</td><td id="sessionDuration">00:00:00</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Settings Page -->
+            <div id="settingsPage" class="page">
+                <div class="page-header">
+                    <h2>Settings</h2>
+                </div>
+                <div class="settings-tabs">
+                    <button class="tab-btn active" data-tab="general">General</button>
+                    <button class="tab-btn" data-tab="mouse">Mouse</button>
+                    <button class="tab-btn" data-tab="ai">AI & Prediction</button>
+                    <button class="tab-btn" data-tab="security">Security</button>
+                </div>
+                
+                <div id="generalTab" class="tab-content active">
+                    <div class="setting-group">
+                        <label>Server Name</label>
+                        <input type="text" id="serverName" placeholder="Air Mouse Pro">
+                    </div>
+                    <div class="setting-group">
+                        <label>Theme</label>
+                        <select id="themeSelect">
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                            <option value="auto">Auto</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label>Language</label>
+                        <select id="languageSelect">
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="fr">Français</option>
+                            <option value="de">Deutsch</option>
+                            <option value="zh">中文</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="mouseTab" class="tab-content">
+                    <div class="setting-group">
+                        <label>Sensitivity</label>
+                        <input type="range" id="sensitivity" min="0.2" max="2.0" step="0.01" value="1.0">
+                        <span id="sensitivityValue">1.00</span>
+                    </div>
+                    <div class="setting-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="smoothingEnabled">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Mouse Smoothing</span>
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="accelerationEnabled">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Mouse Acceleration</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="aiTab" class="tab-content">
+                    <div class="setting-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="aiSmoothing">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">AI Smoothing</span>
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="predictiveMovement">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Predictive Movement</span>
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <label>Prediction Blend Factor</label>
+                        <input type="range" id="blendFactor" min="0" max="1" step="0.05" value="0.6">
+                        <span id="blendFactorValue">0.60</span>
+                    </div>
+                </div>
+                
+                <div id="securityTab" class="tab-content">
+                    <div class="setting-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="authEnabled">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Authentication Required</span>
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <label>Auth Token</label>
+                        <input type="password" id="authToken">
+                        <button class="btn-small" id="generateTokenBtn">Generate New</button>
+                    </div>
+                </div>
+                
+                <button class="btn-primary" id="saveSettingsBtn">Save All Settings</button>
+            </div>
+            
+            <!-- Logs Page -->
+            <div id="logsPage" class="page">
+                <div class="page-header">
+                    <h2>System Logs</h2>
+                    <div class="log-controls">
+                        <button class="btn-outline" id="clearLogsBtn">Clear</button>
+                        <button class="btn-outline" id="exportLogsBtn">Export</button>
+                        <select id="logLevelFilter">
+                            <option value="all">All Levels</option>
+                            <option value="info">Info</option>
+                            <option value="warn">Warning</option>
+                            <option value="error">Error</option>
+                            <option value="debug">Debug</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry system">System ready</div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Toast Notification -->
+        <div id="toast" class="toast"></div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
