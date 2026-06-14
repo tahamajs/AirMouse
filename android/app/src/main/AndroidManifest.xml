@@ -98,7 +98,12 @@
         tools:targetApi="34">
 
         <!-- ==================== ACTIVITIES ==================== -->
-
+        <!-- Add calibration activity -->
+        <activity
+            android:name=".presentation.calibration.CalibrationActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AirMouse" />
         <!-- Main Activity (Launcher) -->
         <activity
             android:name=".MainActivity"
