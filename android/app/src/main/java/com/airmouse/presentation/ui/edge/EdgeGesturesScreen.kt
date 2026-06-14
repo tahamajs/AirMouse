@@ -763,3 +763,53 @@ fun StatisticsRow(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
+
+
+// EdgeGesturesScreen.kt - Use these components:
+@Composable
+fun EdgeGesturesScreen() {
+    Column {
+        // Radar animation for edge detection
+        RadarAnimation(isActive = isEnabled, size = 80)
+        
+        // Gesture waveform for swipe patterns
+        GestureWaveform(
+            dataPoints = gestureHistory,
+            color = Color(0xFF00BCD4),
+            animated = true
+        )
+        
+        // Animated switches for each edge
+        AnimatedSwitch(
+            checked = leftEdge,
+            onCheckedChange = { /* toggle */ },
+            label = "Left Edge"
+        )
+        AnimatedSwitch(
+            checked = rightEdge,
+            onCheckedChange = { /* toggle */ },
+            label = "Right Edge"
+        )
+        AnimatedSwitch(
+            checked = topEdge,
+            onCheckedChange = { /* toggle */ },
+            label = "Top Edge"
+        )
+        AnimatedSwitch(
+            checked = bottomEdge,
+            onCheckedChange = { /* toggle */ },
+            label = "Bottom Edge"
+        )
+        
+        // Notification badge for conflicts
+        NotificationBadge(count = conflictCount)
+        
+        // Slide up panel for gesture configuration
+        SlideUpPanel(
+            isVisible = showConfig,
+            onDismiss = { /* close */ }
+        ) {
+            // Configuration form
+        }
+    }
+}

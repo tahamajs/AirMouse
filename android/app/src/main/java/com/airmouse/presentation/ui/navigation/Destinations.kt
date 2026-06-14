@@ -1,34 +1,19 @@
-package com.airmouse.presentation.ui.navigation
-
-sealed class Destinations(val route: String) {
-    object Home : Destinations("home")
-    object Statistics : Destinations("statistics")
-    object Settings : Destinations("settings")
-    object Help : Destinations("help")
-    object About : Destinations("about")
-    object NetworkDiscovery : Destinations("network_discovery")
-    object Profiles : Destinations("profiles")
-    object GestureStudio : Destinations("gesture_studio")
-    object EdgeGestures : Destinations("edge_gestures")
-    object VoiceCommands : Destinations("voice_commands")
-    object Themes : Destinations("themes")
-    object ServerLogs : Destinations("server_logs")
-    object Battery : Destinations("battery")
-    object Accessibility : Destinations("accessibility")
-    object Proximity : Destinations("proximity")
-    object SensorVisualizer : Destinations("sensor_visualizer")
-    object Calibration : Destinations("calibration")
-    object Onboarding : Destinations("onboarding")
-}
-
 package com.airmouse.presentation.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
-sealed class Destinations(val route: String, val title: String, val icon: ImageVector? = null) {
-    // Main Bottom Navigation Screens
+/**
+ * Navigation destinations for Air Mouse Pro app
+ * Contains all screens with their routes, titles, and icons
+ */
+sealed class Destinations(
+    val route: String,
+    val title: String,
+    val icon: ImageVector? = null
+) {
+    // Main Bottom Navigation Screens (4 screens)
     data object Home : Destinations("home", "Home", Icons.Default.Home)
     data object Statistics : Destinations("statistics", "Statistics", Icons.Default.BarChart)
     data object Settings : Destinations("settings", "Settings", Icons.Default.Settings)
@@ -61,24 +46,25 @@ sealed class Destinations(val route: String, val title: String, val icon: ImageV
     // System
     data object Battery : Destinations("battery", "Battery Monitor", Icons.Default.BatteryFull)
     data object Accessibility : Destinations("accessibility", "Accessibility", Icons.Default.Accessibility)
+    data object TouchpadSettings : Destinations("touchpad_settings", "Touchpad Settings", Icons.Default.Settings)
     
     // Onboarding
     data object Onboarding : Destinations("onboarding", "Onboarding")
-}
-
-val bottomNavItems = listOf(
-    Destinations.Home,
-    Destinations.Statistics,
-    Destinations.Settings,
-    Destinations.Help
-)
-
-fun getSelectedBottomNavIndex(route: String?): Int {
-    return when (route) {
-        Destinations.Home.route -> 0
-        Destinations.Statistics.route -> 1
-        Destinations.Settings.route -> 2
-        Destinations.Help.route -> 3
-        else -> 0
+    
+    companion object {
+        val bottomNavItems = listOf(Home, Statistics, Settings, Help)
+        
+        fun getBottomNavIndex(route: String?): Int = when (route) {
+            Home.route -> 0
+            Statistics.route -> 1
+            Settings.route -> 2
+            Help.route -> 3
+            else -> 0
+        }
+        
+        fun isBottomNavScreen(route: String?): Boolean = when (route) {
+            Home.route, Statistics.route, Settings.route, Help.route -> true
+            else -> false
+        }
     }
 }

@@ -411,7 +411,64 @@ class CalibrationViewModel @Inject constructor(
         2 -> "Magnetometer Calibration"
         else -> ""
     }
+// Add these methods to CalibrationViewModel.kt
 
+fun nextAccelPosition() {
+    val nextPos = _uiState.value.currentPosition + 1
+    if (nextPos < positions.size) {
+        _uiState.update {
+            it.copy(
+                currentPosition = nextPos,
+                progress = 0,
+                samplesCollected = 0,
+                statusMessage = "Position ${nextPos + 1}/${positions.size}: ${positions[nextPos]}"
+            )
+        }
+        startAccelCollectionForPosition(nextPos)
+    } else {
+        stopCollection()
+        nextStep()
+    }
+}
+
+fun jumpToPosition(position: Int) {
+    if (position in 0 until positions.size && position <= _uiState.value.currentPosition + 1) {
+        _uiState.update {
+            it.copy(
+                currentPosition = position,
+                statusMessage = "Position ${position + 1}/${positions.size}: ${positions[position]}"
+            )
+        }
+    }
+}
+
+fun stopCollection() {
+    isCollecting = false
+    sensorManager.unregisterListener(gyroListener)
+    sensorManager.unregisterListener(accelListener)
+    sensorManager.unregisterListener(magListener)
+    _uiState.update {
+        it.copy(
+            isCollecting = false,
+            statusMessage = "Collection stopped"
+        )
+    }
+}
+
+fun skipCalibration() {
+    prefs.putBoolean("calibration_skipped", true)
+    _uiState.update {
+        it.copy(
+            isSkipped = true,
+            isComplete = true,
+            statusMessage = "Calibration skipped. You can calibrate later from settings."
+        )
+    }
+}
+
+fun openHelp() {
+    // Show help dialog or navigate to help screen
+}
     private fun getStepDescription(step: Int) = when (step) {
         0 -> "Remove gyro drift by measuring bias while stationary"
         1 -> "Align gravity vector using 6 positions"

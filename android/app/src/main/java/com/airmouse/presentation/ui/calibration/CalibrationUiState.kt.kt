@@ -4,20 +4,24 @@ package com.airmouse.presentation.ui.calibration
 data class CalibrationUiState(
     val currentStep: Int = 0,
     val stepTitle: String = "Gyroscope Calibration",
-    val stepDescription: String = "Place the phone on a flat, stationary surface",
-    val stepInstruction: String = "Keep the phone perfectly still",
+    val stepDescription: String = "Remove gyro drift by measuring bias while stationary",
+    val stepInstruction: String = "Place phone on a flat, stationary surface",
     val statusMessage: String = "Ready to calibrate",
+    val errorMessage: String? = null,
     val progress: Int = 0,
     val isCollecting: Boolean = false,
     val isComplete: Boolean = false,
-    val errorMessage: String? = null,
+    val isSkipped: Boolean = false,
     val calibrationData: CalibrationData = CalibrationData(),
+    val calibrationQuality: String = "Unknown",
     val currentPosition: Int = 0,
     val totalPositions: Int = 6,
     val samplesCollected: Int = 0,
-    val totalSamplesNeeded: Int = 500
+    val totalSamplesNeeded: Int = 500,
+    val gyroData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
+    val accelData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
+    val magData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f)
 )
-
 data class CalibrationData(
     val gyroOffsetX: Float = 0f,
     val gyroOffsetY: Float = 0f,

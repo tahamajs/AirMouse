@@ -837,3 +837,46 @@ fun DetailsRow(label: String, value: String) {
         Text(value, fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.Monospace)
     }
 }
+
+
+// GestureStudioScreen.kt - Use these components:
+@Composable
+fun GestureStudioScreen() {
+    Column {
+        // Gesture waveform visualization
+        GestureWaveform(
+            dataPoints = gestureData,
+            color = Color(0xFF00BCD4),
+            animated = true,
+            showPeaks = true
+        )
+        
+        // Voice wave for voice commands
+        VoiceWaveAnimation(isActive = isListening)
+        
+        // 3D sensor visualizer
+        SensorVisualizer(
+            roll = currentRoll,
+            pitch = currentPitch,
+            yaw = currentYaw,
+            size = VisualizerSize.LARGE
+        )
+        
+        // Tutorial cards for new gestures
+        InteractiveTutorialCard(
+            title = "Record New Gesture",
+            description = "Move your phone in a smooth motion",
+            icon = Icons.Default.Gesture,
+            currentStep = 1,
+            totalSteps = 3,
+            onNext = { /* next step */ },
+            onSkip = { /* skip */ }
+        )
+        
+        // Progress indicator
+        CircularProgressWithLabel(progress = trainingProgress)
+        
+        // Animated counter for samples
+        AnimatedCounter(targetValue = sampleCount, suffix = " samples collected")
+    }
+}

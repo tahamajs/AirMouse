@@ -827,3 +827,47 @@ fun DetailRow(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
     }
 }
+// ProfilesScreen.kt - Use these components:
+@Composable
+fun ProfilesScreen() {
+    Column {
+        // Neumorphic cards for each profile
+        profiles.forEach { profile ->
+            NeumorphicCard {
+                Row {
+                    Text(profile.name)
+                    if (profile.isActive) {
+                        NotificationBadge(count = 1)
+                    }
+                    GradientIconButton(
+                        onClick = { selectProfile(profile) },
+                        icon = Icons.Default.Person,
+                        contentDescription = "Select",
+                        gradient = listOf(Color(0xFF00BCD4), Color(0xFF4CAF50))
+                    )
+                }
+            }
+        }
+        
+        // Animated switch for default profile
+        AnimatedSwitch(
+            checked = isDefault,
+            onCheckedChange = { /* set default */ },
+            label = "Set as Default"
+        )
+        
+        // Donut chart for usage stats
+        DonutChart(percentage = usagePercentage, size = 80)
+        
+        // Glitch text for profile name editing
+        GlitchText(text = profileName)
+        
+        // Slide up panel for profile editor
+        SlideUpPanel(
+            isVisible = showEditor,
+            onDismiss = { /* close */ }
+        ) {
+            // Profile edit form
+        }
+    }
+}

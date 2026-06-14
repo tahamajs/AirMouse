@@ -838,3 +838,8 @@ class PreferencesManager @Inject constructor(
     fun isCalibrated(): Boolean = getBoolean("calibration_complete", false)
     fun setCalibrated(calibrated: Boolean) = putBoolean("calibration_complete", calibrated)
 }
+
+// Add these methods to your existing PreferencesManager.kt
+fun getTheme(): String = getString("theme", "system")
+fun isOnboardingCompleted(): Boolean = getBoolean("onboarding_completed", false)
+fun getFontSize(): Float = getFloat("font_size", 16f)

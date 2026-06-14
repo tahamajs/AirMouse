@@ -375,3 +375,226 @@ init {
         }
     }
 }
+
+package com.airmouse.presentation.ui.statistics
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.presentation.ui.components.*
+import com.airmouse.presentation.ui.home.AnimatedCounter
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StatisticsScreen(
+    navigationActions: NavigationActions,
+    viewModel: StatisticsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val stats by viewModel.statistics.collectAsStateWithLifecycle()
+    var selectedPeriod by remember { mutableStateOf(Period.DAILY) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Statistics", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navigationActions.navigateBack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Period selector
+            item {
+                PeriodSelector(
+                    selected = selectedPeriod,
+                    onSelected = { selectedPeriod = it }
+                )
+            }
+
+            // Overview Stats
+            item {
+                GlassCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Overview", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            StatBox(
+                                label = "Total Clicks",
+                                value = stats.totalClicks,
+                                icon = Icons.Default.Mouse,
+                                color = Color(0xFF00BCD4)
+                            )
+                            StatBox(
+                                label = "Total Scrolls",
+                                value = stats.totalScrolls,
+                                icon = Icons.Default.SwapVert,
+                                color = Color(0xFF4CAF50)
+                            )
+                            StatBox(
+                                label = "Total Time",
+                                value = stats.totalTimeFormatted,
+                                icon = Icons.Default.Timer,
+                                color = Color(0xFFFF9800)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Charts
+            item {
+                GlassCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Activity Chart", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LineChart(
+                            data = stats.dailyActivity,
+                            color = Color(0xFF00BCD4),
+                            animated = true
+                        )
+                    }
+                }
+            }
+
+            // Gesture Distribution
+            item {
+                GlassCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Gesture Distribution", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            GesturePieItem("Clicks", stats.clickPercentage, Color(0xFF00BCD4))
+                            GesturePieItem("Scrolls", stats.scrollPercentage, Color(0xFF4CAF50))
+                            GesturePieItem("Right Clicks", stats.rightClickPercentage, Color(0xFFFF9800))
+                            GesturePieItem("Double Clicks", stats.doubleClickPercentage, Color(0xFFE91E63))
+                        }
+                    }
+                }
+            }
+
+            // Session History
+            item {
+                GlassCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Recent Sessions", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        stats.sessions.forEach { session ->
+                            SessionRow(session = session)
+                            HorizontalDivider()
+                        }
+                    }
+                }
+            }
+
+            // Reset button
+            item {
+                Button(
+                    onClick = { viewModel.resetStatistics() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Reset All Statistics")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatBox(label: String, value: Any, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(32.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        if (value is Int) {
+            AnimatedCounter(targetValue = value, fontSize = 24.sp, color = color)
+        } else {
+            Text(value.toString(), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
+        }
+        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun GesturePieItem(label: String, percentage: Int, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        DonutChart(percentage = percentage / 100f, size = 60, color = color)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("$percentage%", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun SessionRow(session: SessionData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(session.date, fontWeight = FontWeight.Medium)
+            Text("${session.duration}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text("${session.clicks} clicks", fontSize = 12.sp)
+            Text("${session.gestures} gestures", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+enum class Period { DAILY, WEEKLY, MONTHLY }
+
+@Composable
+fun PeriodSelector(selected: Period, onSelected: (Period) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Period.values().forEach { period ->
+            FilterChip(
+                selected = selected == period,
+                onClick = { onSelected(period) },
+                label = { Text(period.name) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}

@@ -800,3 +800,59 @@ fun AnimatedText(text: String, fontSize: Int, fontWeight: FontWeight = FontWeigh
         )
     }
 }
+
+// OnboardingScreen.kt - Use these components:
+@Composable
+fun OnboardingScreen() {
+    // Animated gradient background
+    AnimatedGradientBackground(
+        colors = listOf(Color(0xFF1A1D24), Color(0xFF0F1115))
+    )
+    
+    // Floating particles effect
+    FloatingParticles(count = 50)
+    
+    // Typewriter text for intro
+    TypewriterText(
+        text = "Welcome to Air Mouse Pro",
+        style = MaterialTheme.typography.headlineLarge
+    )
+    
+    // Holographic text for branding
+    HolographicText(text = "Air Mouse")
+    
+    // Interactive tutorial cards
+    InteractiveTutorialCard(
+        title = "Motion Control",
+        description = "Move your phone to control the cursor",
+        icon = Icons.Default.Mouse,
+        currentStep = 1,
+        totalSteps = 4,
+        onNext = { /* next */ },
+        onSkip = { /* skip */ }
+    )
+    
+    InteractiveTutorialCard(
+        title = "Gesture Recognition",
+        description = "Quick flips for clicks and scrolls",
+        icon = Icons.Default.Gesture,
+        currentStep = 2,
+        totalSteps = 4,
+        onNext = { /* next */ },
+        onSkip = { /* skip */ }
+    )
+    
+    // Animated checkbox for agreements
+    AnimatedCheckbox(
+        checked = agreed,
+        onCheckedChange = { /* agree */ },
+        label = "I agree to the terms"
+    )
+    
+    // Gradient button to proceed
+    GradientTextButton(
+        onClick = { /* start */ },
+        text = "Get Started",
+        gradient = listOf(Color(0xFF00BCD4), Color(0xFF4CAF50))
+    )
+}

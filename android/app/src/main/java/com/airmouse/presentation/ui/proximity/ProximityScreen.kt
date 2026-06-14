@@ -418,3 +418,38 @@ fun HistoryEntryItem(entry: ProximityHistoryEntry) {
         }
     }
 }
+
+// ProximityScreen.kt - Use these components:
+@Composable
+fun ProximityScreen() {
+    Column {
+        // Radar animation for distance detection
+        RadarAnimation(isActive = isActive, size = 120)
+        
+        // Distance indicator with donut chart
+        DonutChart(percentage = distance / maxDistance, size = 150)
+        
+        // Animated switch to enable
+        AnimatedSwitch(
+            checked = isEnabled,
+            onCheckedChange = { /* toggle */ },
+            label = "Proximity Lock",
+            description = "Auto-lock when you walk away"
+        )
+        
+        // Battery level indicator for Bluetooth
+        BatteryLevelIndicator(level = batteryLevel)
+        
+        // Notification badge for alerts
+        NotificationBadge(count = alertCount)
+        
+        // Glass card with stats
+        GlassCard {
+            AnimatedCounter(targetValue = unlockCount, suffix = " unlocks")
+            Text("Last lock: $lastLockTime")
+        }
+        
+        // Voice wave for status announcements
+        VoiceWaveAnimation(isActive = isAnnouncing)
+    }
+}
