@@ -6,8 +6,6 @@ import (
     "fmt"
     "sync"
     "time"
-
-    "airmouse-go/internal/infra/logger"
 )
 
 type DeviceType string
@@ -31,36 +29,45 @@ const (
 )
 
 type DeviceInfo struct {
-    ID          string       `json:"id"`
-    Name        string       `json:"name"`
-    Type        DeviceType   `json:"type"`
-    Status      DeviceStatus `json:"status"`
-    ConnectedAt time.Time    `json:"connected_at"`
-    LastActive  time.Time    `json:"last_active"`
-    BytesSent   int64        `json:"bytes_sent"`
-    BytesRecv   int64        `json:"bytes_recv"`
-    MessagesSent int64       `json:"messages_sent"`
-    MessagesRecv int64       `json:"messages_recv"`
-    RSSI        int32        `json:"rssi,omitempty"`
-    MACAddress  string       `json:"mac_address,omitempty"`
-    IPAddress   string       `json:"ip_address,omitempty"`
-    UserAgent   string       `json:"user_agent,omitempty"`
-    Version     string       `json:"version,omitempty"`
-}
-
-type DeviceManager struct {
-    mu          sync.RWMutex
-    devices     map[string]*DeviceInfo
-    blockedIDs  map[string]bool
-    callbacks   []func(event DeviceEvent)
-    maxDevices  int
+    ID           string       `json:"id"`
+    Name         string       `json:"name"`
+    Type         DeviceType   `json:"type"`
+    Status       DeviceStatus `json:"status"`
+    ConnectedAt  time.Time    `json:"connected_at"`
+    LastActive   time.Time    `json:"last_active"`
+    BytesSent    int64        `json:"bytes_sent"`
+    BytesRecv    int64        `json:"bytes_recv"`
+    MessagesSent int64        `json:"messages_sent"`
+    MessagesRecv int64        `json:"messages_recv"`
+    RSSI         int32        `json:"rssi,omitempty"`
+    MACAddress   string       `json:"mac_address,omitempty"`
+    IPAddress    string       `json:"ip_address,omitempty"`
+    UserAgent    string       `json:"user_agent,omitempty"`
+    Version      string       `json:"version,omitempty"`
 }
 
 type DeviceEvent struct {
-    Type      string // "registered", "unregistered", "updated", "blocked"
-    DeviceID  string
+    Type       string // "registered", "unregistered", "updated", "blocked"
+    DeviceID   string
     DeviceName string
-    Timestamp time.Time
+    Timestamp  time.Time
+}
+
+type DeviceManager struct {
+    mu         sync.RWMutex
+    devices    map[string]*DeviceInfo
+    blockedIDs map[string]bool
+    callbacks  []func(event DeviceEvent)
+    maxDevices int
+}
+
+// Simple logger functions to avoid external dependency
+func logInfo(msg string, args ...interface{}) {
+    fmt.Printf("[INFO] "+msg+"\n", args...)
+}
+
+func logDebug(msg string, args ...interface{}) {
+    fmt.Printf("[DEBUG] "+msg+"\n", args...)
 }
 
 func NewManager() *DeviceManager {
@@ -99,13 +106,13 @@ func (m *DeviceManager) RegisterDevice(id string, deviceType DeviceType, name st
     }
 
     m.triggerEvent(DeviceEvent{
-        Type:      "registered",
-        DeviceID:  id,
+        Type:       "registered",
+        DeviceID:   id,
         DeviceName: name,
-        Timestamp: now,
+        Timestamp:  now,
     })
 
-    logger.Info("Device registered: %s (%s)", name, deviceType)
+    logInfo("Device registered: %s (%s)", name, deviceType)
     return nil
 }
 
@@ -121,13 +128,13 @@ func (m *DeviceManager) UnregisterDevice(id string) error {
     delete(m.devices, id)
 
     m.triggerEvent(DeviceEvent{
-        Type:      "unregistered",
-        DeviceID:  id,
+        Type:       "unregistered",
+        DeviceID:   id,
         DeviceName: device.Name,
-        Timestamp: time.Now(),
+        Timestamp:  time.Now(),
     })
 
-    logger.Info("Device unregistered: %s (%s)", device.Name, device.Type)
+    logInfo("Device unregistered: %s (%s)", device.Name, device.Type)
     return nil
 }
 
@@ -143,12 +150,12 @@ func (m *DeviceManager) UpdateDeviceName(id string, name string) error {
     if name != "" {
         device.Name = name
         device.LastActive = time.Now()
-        
+
         m.triggerEvent(DeviceEvent{
-            Type:      "updated",
-            DeviceID:  id,
+            Type:       "updated",
+            DeviceID:   id,
             DeviceName: name,
-            Timestamp: time.Now(),
+            Timestamp:  time.Now(),
         })
     }
     return nil
@@ -206,7 +213,7 @@ func (m *DeviceManager) UpdateBLEDevice(addr, name string, rssi int32) {
             RSSI:        rssi,
             MACAddress:  addr,
         }
-        logger.Debug("BLE device discovered: %s (%s)", name, addr)
+        logDebug("BLE device discovered: %s (%s)", name, addr)
     }
 }
 
@@ -215,16 +222,16 @@ func (m *DeviceManager) BlockDevice(id string) error {
     defer m.mu.Unlock()
 
     m.blockedIDs[id] = true
-    
+
     if device, exists := m.devices[id]; exists {
         device.Status = StatusBlocked
         m.triggerEvent(DeviceEvent{
-            Type:      "blocked",
-            DeviceID:  id,
+            Type:       "blocked",
+            DeviceID:   id,
             DeviceName: device.Name,
-            Timestamp: time.Now(),
+            Timestamp:  time.Now(),
         })
-        logger.Info("Device blocked: %s (%s)", device.Name, id)
+        logInfo("Device blocked: %s (%s)", device.Name, id)
     }
 
     return nil
@@ -238,7 +245,7 @@ func (m *DeviceManager) UnblockDevice(id string) error {
 
     if device, exists := m.devices[id]; exists {
         device.Status = StatusConnected
-        logger.Info("Device unblocked: %s (%s)", device.Name, id)
+        logInfo("Device unblocked: %s (%s)", device.Name, id)
     }
 
     return nil
@@ -264,7 +271,7 @@ func (m *DeviceManager) GetAllDevices() []*DeviceInfo {
 func (m *DeviceManager) GetDevice(id string) *DeviceInfo {
     m.mu.RLock()
     defer m.mu.RUnlock()
-    
+
     if device, exists := m.devices[id]; exists {
         // Return a copy to prevent external modification
         copy := *device
@@ -329,13 +336,13 @@ func (m *DeviceManager) GetStatistics() map[string]interface{} {
     }
 
     return map[string]interface{}{
-        "total_devices":   len(m.devices),
-        "blocked_devices": len(m.blockedIDs),
-        "by_type":         typeCount,
-        "by_status":       statusCount,
-        "total_bytes_sent": totalSent,
-        "total_bytes_recv": totalRecv,
-        "max_devices":     m.maxDevices,
+        "total_devices":     len(m.devices),
+        "blocked_devices":   len(m.blockedIDs),
+        "by_type":           typeCount,
+        "by_status":         statusCount,
+        "total_bytes_sent":  totalSent,
+        "total_bytes_recv":  totalRecv,
+        "max_devices":       m.maxDevices,
     }
 }
 
@@ -348,7 +355,7 @@ func (m *DeviceManager) PruneInactive(maxIdle time.Duration) int {
         if time.Since(device.LastActive) > maxIdle {
             delete(m.devices, id)
             removed++
-            logger.Debug("Pruned inactive device: %s", id)
+            logDebug("Pruned inactive device: %s", id)
         }
     }
     return removed
@@ -363,7 +370,7 @@ func (m *DeviceManager) AddEventListener(callback func(event DeviceEvent)) {
 func (m *DeviceManager) triggerEvent(event DeviceEvent) {
     callbacks := make([]func(DeviceEvent), len(m.callbacks))
     copy(callbacks, m.callbacks)
-    
+
     for _, cb := range callbacks {
         go cb(event)
     }

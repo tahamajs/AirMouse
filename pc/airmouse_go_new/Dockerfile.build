@@ -1,0 +1,29 @@
+FROM golang:1.23-alpine AS builder
+
+RUN apk add --no-cache git gcc musl-dev
+
+ENV GOPROXY=https://proxy.golang.org,direct
+ENV GO111MODULE=on
+
+WORKDIR /app
+
+# Copy go.mod and go.sum first (better caching)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN go build -tags noai -o airmouse-server ./cmd/airmouse-server
+
+# Final stage
+FROM alpine:latest
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=builder /app/airmouse-server /usr/local/bin/
+
+EXPOSE 8080 8081 8082
+
+CMD ["airmouse-server"]
