@@ -1,0 +1,41 @@
+<!-- res/values/calibration_strings.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="calibration_title">Calibrate Your Device</string>
+    <string name="calibration_subtitle">Follow the instructions to calibrate your sensors</string>
+    
+    <string name="gyro_title">Gyroscope Calibration</string>
+    <string name="gyro_instruction">Place your device on a flat, stationary surface</string>
+    <string name="gyro_progress">Collecting gyroscope data...</string>
+    
+    <string name="mag_title">Magnetometer Calibration</string>
+    <string name="mag_instruction">Move your device in a figure-8 pattern</string>
+    <string name="mag_progress">Collecting magnetic field data...</string>
+    
+    <string name="accel_title">Accelerometer Calibration</string>
+    <string name="accel_instruction_flat_up">Place device flat facing UP</string>
+    <string name="accel_instruction_flat_down">Place device flat facing DOWN</string>
+    <string name="accel_instruction_left_side">Place device on LEFT side</string>
+    <string name="accel_instruction_right_side">Place device on RIGHT side</string>
+    <string name="accel_instruction_top_edge">Place device standing on TOP edge</string>
+    <string name="accel_instruction_bottom_edge">Place device standing on BOTTOM edge</string>
+    
+    <string name="complete_title">Calibration Complete!</string>
+    <string name="complete_subtitle">Your device is now calibrated for optimal performance</string>
+    
+    <string name="button_start">Start Calibration</string>
+    <string name="button_next">Next Position</string>
+    <string name="button_finish">Start Using Air Mouse</string>
+    <string name="button_skip">Skip Calibration</string>
+    <string name="button_recalibrate">Recalibrate</string>
+    
+    <string name="quality_excellent">Excellent</string>
+    <string name="quality_good">Good</string>
+    <string name="quality_fair">Fair</string>
+    <string name="quality_poor">Poor</string>
+    
+    <string name="toast_gyro_complete">Gyroscope calibration complete!</string>
+    <string name="toast_mag_complete">Magnetometer calibration complete!</string>
+    <string name="toast_accel_complete">Accelerometer calibration complete!</string>
+    <string name="toast_calibration_saved">Calibration data saved</string>
+</resources>
