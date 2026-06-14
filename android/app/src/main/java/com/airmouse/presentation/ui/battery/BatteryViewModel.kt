@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/presentation/ui/battery/BatteryViewModel.kt
 package com.airmouse.presentation.ui.battery
 
 import android.content.BroadcastReceiver
@@ -7,17 +6,17 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Build
+import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
@@ -65,6 +64,11 @@ class BatteryViewModel @Inject constructor(
             batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) / 1000f
         } else 0f
 
+        val capacity = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+            batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+        } else 0
+
         val status = when (intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)) {
             BatteryManager.BATTERY_STATUS_CHARGING -> "Charging"
             BatteryManager.BATTERY_STATUS_DISCHARGING -> "Discharging"
@@ -111,6 +115,7 @@ class BatteryViewModel @Inject constructor(
                 temperature = temperature,
                 voltage = voltage,
                 current = current,
+                capacity = capacity,
                 status = status,
                 plugged = plugged,
                 health = health,
@@ -137,7 +142,7 @@ class BatteryViewModel @Inject constructor(
 
     private fun loadBatterySaverState() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             _uiState.update { it.copy(batterySaverEnabled = powerManager.isPowerSaveMode) }
         }
     }
@@ -160,7 +165,6 @@ class BatteryViewModel @Inject constructor(
             isCollecting = true
             while (isCollecting) {
                 delay(60000)
-                // History already updated via broadcasts
             }
         }
     }
@@ -168,6 +172,30 @@ class BatteryViewModel @Inject constructor(
     fun refreshBatteryInfo() {
         val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         batteryIntent?.let { updateBatteryInfo(it) }
+    }
+
+    fun getTopBatteryApps(): List<AppBatteryUsage> {
+        // In production, this would use UsageStatsManager
+        return listOf(
+            AppBatteryUsage("Air Mouse", 25.5f, null),
+            AppBatteryUsage("Screen", 18.2f, null),
+            AppBatteryUsage("Android System", 12.8f, null)
+        )
+    }
+
+    fun openBatterySettings() {
+        val intent = Intent(android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS)
+        context.startActivity(intent)
+    }
+
+    fun openBatteryOptimizationSettings() {
+        val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        context.startActivity(intent)
+    }
+
+    fun openPowerSavingSettings() {
+        val intent = Intent(android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS)
+        context.startActivity(intent)
     }
 
     fun formatRemainingTime(minutes: Long): String {
@@ -194,3 +222,5 @@ class BatteryViewModel @Inject constructor(
         try { context.unregisterReceiver(batteryReceiver) } catch (_: Exception) { }
     }
 }
+
+data class AppBatteryUsage(val name: String, val usagePercent: Float, val icon: androidx.compose.ui.graphics.vector.ImageVector?)

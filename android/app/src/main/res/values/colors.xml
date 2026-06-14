@@ -79,4 +79,22 @@
     <color name="error_red">#F44336</color>
     <color name="progress_accent">#007acc</color>
     <color name="progress_bg">#2b3341</color>
+
+        <color name="background_dark">#0F1115</color>
+    <color name="surface_dark">#1A1D24</color>
+    <color name="primary_dark">#00BCD4</color>
+    <color name="secondary_dark">#4CAF50</color>
+    
+    <!-- Light theme colors -->
+    <color name="background_light">#F8FAFC</color>
+    <color name="surface_light">#FFFFFF</color>
+    <color name="primary_light">#00BCD4</color>
+    <color name="secondary_light">#4CAF50</color>
+    
+    <!-- Common colors -->
+    <color name="error">#F44336</color>
+    <color name="warning">#FFC107</color>
+    <color name="success">#4CAF50</color>
+    <color name="info">#2196F3</color>
+
 </resources>

@@ -856,3 +856,42 @@ fun EmptyStateCard(title: String, message: String, icon: androidx.compose.ui.gra
         }
     }
 }
+
+// NetworkDiscoveryScreen.kt - Use these components:
+@Composable
+fun NetworkDiscoveryScreen() {
+    Column {
+        // Radar animation while scanning
+        RadarAnimation(isActive = isScanning, size = 100)
+        
+        // Connection status
+        ConnectionStatusBadge(connectionManager)
+        
+        // Server list with glass cards
+        LazyColumn {
+            items(servers) { server ->
+                GlassCard {
+                    Row {
+                        Text(server.name)
+                        BatteryLevelIndicator(level = server.signalStrength)
+                        GradientIconButton(
+                            onClick = { connect(server) },
+                            icon = Icons.Default.Connect,
+                            contentDescription = "Connect",
+                            gradient = listOf(Color(0xFF00BCD4), Color(0xFF4CAF50))
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Loading skeleton while scanning
+        if (isScanning) {
+            ShimmerLoadingCard()
+            ShimmerLoadingCard()
+        }
+        
+        // Voice wave animation for discovery
+        VoiceWaveAnimation(isActive = isScanning)
+    }
+}

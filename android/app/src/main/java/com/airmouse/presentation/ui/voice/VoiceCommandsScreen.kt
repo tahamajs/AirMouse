@@ -681,3 +681,49 @@ fun SliderSetting(
         )
     }
 }
+// VoiceCommandsScreen.kt - Use these components:
+@Composable
+fun VoiceCommandsScreen() {
+    Column {
+        // Voice wave animation
+        VoiceWaveAnimation(isActive = isListening, amplitude = voiceAmplitude)
+        
+        // Typewriter text for recognized command
+        TypewriterText(text = recognizedCommand, delayMs = 30)
+        
+        // List of commands with glass cards
+        LazyColumn {
+            items(commands) { cmd ->
+                GlassCard {
+                    Row {
+                        HolographicText(text = cmd.name)
+                        GradientIconButton(
+                            onClick = { testCommand(cmd) },
+                            icon = Icons.Default.PlayArrow,
+                            contentDescription = "Test"
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Animated switch for wake word
+        AnimatedSwitch(
+            checked = wakeWordEnabled,
+            onCheckedChange = { /* toggle */ },
+            label = "Wake Word",
+            description = "Say 'Hey Air Mouse'"
+        )
+        
+        // Circular progress for confidence
+        CircularProgressWithLabel(progress = confidence)
+        
+        // Animated toast for feedback
+        AnimatedToast(
+            message = "Command recognized: $lastCommand",
+            isVisible = showFeedback,
+            onDismiss = { /* dismiss */ },
+            type = ToastType.SUCCESS
+        )
+    }
+}

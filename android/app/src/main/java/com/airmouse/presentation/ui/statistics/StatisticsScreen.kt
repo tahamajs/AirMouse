@@ -600,3 +600,28 @@ private fun formatDuration(seconds: Long): String {
     val secs = seconds % 60
     return String.format("%02d:%02d:%02d", hours, minutes, secs)
 }
+
+// StatisticsScreen.kt - Use these components:
+@Composable
+fun StatisticsScreen() {
+    Column {
+        // Stats cards with neumorphic style
+        NeumorphicCard {
+            AnimatedCounter(targetValue = totalClicks, suffix = " clicks")
+            DonutChart(percentage = 0.68f, size = 100)
+        }
+        
+        // Battery level indicator
+        BatteryLevelIndicator(level = batteryLevel, isCharging = isCharging)
+        
+        // Data charts
+        LineChart(data = dailyClicks, color = Color(0xFF4CAF50))
+        DonutChart(percentage = gestureAccuracy, size = 80)
+        
+        // Animated stats cards
+        Row {
+            GlassCard { AnimatedCounter(targetValue = activeSessions) }
+            GlassCard { AnimatedCounter(targetValue = avgSpeed, suffix = " px/s") }
+        }
+    }
+}

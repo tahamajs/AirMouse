@@ -397,3 +397,124 @@ class StatisticsViewModel @Inject constructor(
         prefs.putLong("stat_session_start", System.currentTimeMillis())
     }
 }
+
+
+package com.airmouse.presentation.ui.statistics
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.airmouse.utils.PreferencesManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+import javax.inject.Inject
+
+@HiltViewModel
+class StatisticsViewModel @Inject constructor(
+    private val prefs: PreferencesManager
+) : ViewModel() {
+
+    private val _statistics = MutableStateFlow(StatisticsData())
+    val statistics: StateFlow<StatisticsData> = _statistics.asStateFlow()
+    
+    private val _uiState = MutableStateFlow(StatisticsUiState())
+    val uiState: StateFlow<StatisticsUiState> = _uiState.asStateFlow()
+
+    init {
+        loadStatistics()
+    }
+
+    private fun loadStatistics() {
+        viewModelScope.launch {
+            val totalClicks = prefs.getClickCount()
+            val totalScrolls = prefs.getScrollCount()
+            val totalRightClicks = prefs.getRightClickCount()
+            val totalDoubleClicks = prefs.getDoubleClickCount()
+            val totalGestures = totalClicks + totalScrolls + totalRightClicks + totalDoubleClicks
+            
+            _statistics.update {
+                it.copy(
+                    totalClicks = totalClicks,
+                    totalScrolls = totalScrolls,
+                    totalRightClicks = totalRightClicks,
+                    totalDoubleClicks = totalDoubleClicks,
+                    totalGestures = totalGestures,
+                    clickPercentage = if (totalGestures > 0) (totalClicks * 100 / totalGestures) else 0,
+                    scrollPercentage = if (totalGestures > 0) (totalScrolls * 100 / totalGestures) else 0,
+                    rightClickPercentage = if (totalGestures > 0) (totalRightClicks * 100 / totalGestures) else 0,
+                    doubleClickPercentage = if (totalGestures > 0) (totalDoubleClicks * 100 / totalGestures) else 0,
+                    dailyActivity = generateDailyActivity(),
+                    sessions = generateSessions(),
+                    totalTimeFormatted = formatDuration(prefs.getLong("total_session_time", 0))
+                )
+            }
+        }
+    }
+
+    fun resetStatistics() {
+        viewModelScope.launch {
+            prefs.resetStatistics()
+            loadStatistics()
+        }
+    }
+
+    private fun generateDailyActivity(): List<Float> {
+        return List(30) { (10..100).random().toFloat() }
+    }
+
+    private fun generateSessions(): List<SessionData> {
+        val sessions = mutableListOf<SessionData>()
+        val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+        for (i in 0..6) {
+            sessions.add(
+                SessionData(
+                    date = dateFormat.format(Date(System.currentTimeMillis() - i * 24L * 3600 * 1000)),
+                    duration = "${(10..60).random()} min",
+                    clicks = (10..200).random(),
+                    gestures = (5..50).random()
+                )
+            )
+        }
+        return sessions
+    }
+
+    private fun formatDuration(seconds: Long): String {
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        val secs = seconds % 60
+        return if (hours > 0) {
+            String.format("%02d:%02d:%02d", hours, minutes, secs)
+        } else {
+            String.format("%02d:%02d", minutes, secs)
+        }
+    }
+}
+
+data class StatisticsData(
+    val totalClicks: Int = 0,
+    val totalScrolls: Int = 0,
+    val totalRightClicks: Int = 0,
+    val totalDoubleClicks: Int = 0,
+    val totalGestures: Int = 0,
+    val clickPercentage: Int = 0,
+    val scrollPercentage: Int = 0,
+    val rightClickPercentage: Int = 0,
+    val doubleClickPercentage: Int = 0,
+    val totalTimeFormatted: String = "00:00",
+    val dailyActivity: List<Float> = emptyList(),
+    val sessions: List<SessionData> = emptyList()
+)
+
+data class SessionData(
+    val date: String,
+    val duration: String,
+    val clicks: Int,
+    val gestures: Int
+)
+
+data class StatisticsUiState(
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
