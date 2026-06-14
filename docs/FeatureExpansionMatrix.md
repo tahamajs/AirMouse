@@ -173,3 +173,64 @@ This table benchmarks your app against the top competitors and highlights key op
 
 To fully implement your Air Mouse app, you will need to build robust server-side components in Go to handle advanced features like file management, process control, and screen mirroring. For the mobile client, Kotlin with Jetpack Compose will provide the modern and responsive UI you've been designing. The recommended approach is to start with **Phase 1** to quickly deliver high-value features, then progressively tackle **Phases 2 and 3** to solidify your position as a market leader.
 
+Based on a deep analysis of over a dozen leading remote control apps and emerging technologies in 2025–2026, here is the next wave of features to make Air Mouse Pro a true all-in-one PC command center. This list goes far beyond basic control, focusing on `automation`, `AI`, `advanced UX`, and `cross-device integration`.
+
+The most impactful features to prioritize next are the ones that automate workflows or use AI to simplify tasks.
+
+---
+
+### ⚡ Phase 1: Automation & Productivity (High-Impact, Medium Effort)
+
+These features turn your app from a simple remote into a powerful productivity tool.
+
+*   **Macro Recorder & Automation:** Allows users to record sequences of mouse movements, clicks, and keyboard inputs. They can then assign these macros to a single button or voice command to automate repetitive tasks. This could be your most powerful power-user feature.
+*   **Smart Remote Builder:** Enables users to create fully customized remote control panels. They can design layouts with buttons, sliders, and macros for specific apps, games, or workflows. This provides infinite flexibility for advanced users.
+*   **Application & Process Manager:** Provides a mobile interface to launch applications, view running processes, and forcefully terminate unresponsive software remotely. Great for troubleshooting.
+*   **Shared Clipboard (Cross-Device):** Allows users to copy text or images on their phone and paste them directly on their PC, and vice versa. This is consistently a top-requested feature in the productivity space.
+*   **Integrated Voice-to-Text & AI Commands:** Dictate on your phone and have the text instantly typed on your PC. For advanced users, include natural language AI commands like, "Open Chrome and search for the weather."
+
+### ⚙️ Phase 2: Advanced Control & Connectivity (Medium Effort, Broad Appeal)
+
+These features expand the use cases and improve the reliability of your app.
+
+*   **Gamepad & Media Remote Overlays:** Offer dedicated, context-aware control interfaces. Automatically show a media remote when a media player (like Spotify or VLC) is in focus, and a gamepad overlay when a game is detected. This makes your app instantly more useful for entertainment.
+*   **Multi-Device Management & Auto-Discovery:** Allow users to save and seamlessly switch between connections to multiple computers (e.g., home, work, laptop). A `UDP broadcast` is the most efficient method for automatic server discovery on the local network.
+*   **Secure Multi-User & Remote Access:** Provide a secure way to share remote access with friends or colleagues for collaborative work. Include an optional password for connection and a `device whitelist` for security.
+*   **Drag-and-Drop File Transfer:** Implement an intuitive interface to browse the remote PC's file system and transfer files with drag-and-drop gestures, complete with progress indicators.
+
+### 🧠 Phase 3: AI & Next-Gen UX (High Innovation, High Potential)
+
+These features will differentiate Air Mouse Pro from all competitors by leveraging modern hardware capabilities and AI.
+
+*   **Camera-Based Hand Tracking (MediaPipe):** Utilize the phone's front camera and Google's MediaPipe framework to recognize hand gestures. Allow users to control the cursor by moving their hand in the air and perform clicks with finger taps. This offers a completely touchless, futuristic experience.
+*   **Facial Motion Control:** An advanced accessibility feature that allows users to control the cursor by moving their head or face. This could open up a significant new market segment for users with motor impairments.
+*   **AI-Driven Automation Agent:** Implement an on-device AI agent that can understand natural language commands to execute complex tasks. For example, a user could say, "Find the quarterly sales report, attach it to a new email, and send it to my manager," and the AI would perform all the steps.
+*   **Augmented Reality (AR) Screen Extension:** Use the phone's camera to create a virtual, floating monitor. This could act as a second display or an ultra-wide workspace, extending the PC's desktop into AR space.
+
+---
+
+### 📊 Competitive Feature Matrix
+
+| Feature Category | WiFi Mouse | Remote Mouse | KDE Connect | PCLink | Any Command | **Air Mouse Pro (Target)** |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **AI-Driven Automation** | ❌ | ❌ | ❌ | ❌ | ❌ | **🚧** |
+| **Camera-Based Hand Tracking** | ❌ | ❌ | ❌ | ❌ | ❌ | **🚧** |
+| **Macro Recorder** | ❌ | ❌ | ❌ | ✅ | ❌ | **🟢 Add** |
+| **Smart Remote Builder** | ❌ | ❌ | ✅ | ✅ | ❌ | **🟢 Add** |
+| **Multi-Device Management** | ❌ | ❌ | ✅ | ❌ | ✅ | **🟢 Add** |
+
+### 📈 Implementation Roadmap
+
+*   **Month 1 (Core Enhancements):** Implement `File Explorer`, `System Monitoring`, `Clipboard Sync`, and `Media/Gamepad Remotes`. Release to beta.
+*   **Month 2 (Core Enhancements):** Launch `Voice-to-Text/AI`, `Barcode Scanner`, and `Process Manager`. These features will quickly attract a broader audience.
+*   **Month 3 (Premium Features):** Begin work on the open-source Go server and `Custom Remote Builder`. Prepare a premium tier with advanced features.
+*   **Month 4 (Premium Features):** Release the `Multi-Device Management` and `Secure Authentication` system. Polish the UI for the premium features.
+*   **Month 5 (Premium Features):** Implement `Camera-Based Hand Tracking` using MediaPipe and `Remote Terminal Access`.
+*   **Month 6 (Innovation Features):** Start development on the `Wear OS Companion` and `Web-Based Control Panel`. This is about future-proofing your app.
+
+---
+
+### 💡 Key Takeaway
+
+The most impactful next steps are to focus on **automation (Macro Recorder)** and **advanced UX (Custom Remote Builder)**. These features offer the best balance of high user value and moderate implementation complexity, allowing you to quickly and significantly enhance your application's appeal and functionality.
+
