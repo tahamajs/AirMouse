@@ -1,6 +1,7 @@
 package sensorfusion
 
 import (
+    "fmt"
     "math"
 )
 
