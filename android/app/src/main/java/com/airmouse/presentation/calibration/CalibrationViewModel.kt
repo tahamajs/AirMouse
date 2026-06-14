@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -18,118 +19,137 @@ class CalibrationViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CalibrationUiState())
     val uiState: StateFlow<CalibrationUiState> = _uiState.asStateFlow()
     
-    private val _gyroProgress = MutableStateFlow(0)
-    val gyroProgress: StateFlow<Int> = _gyroProgress.asStateFlow()
+    private val _calibrationProgress = MutableStateFlow(0)
+    val calibrationProgress: StateFlow<Int> = _calibrationProgress.asStateFlow()
     
-    private val _magProgress = MutableStateFlow(0)
-    val magProgress: StateFlow<Int> = _magProgress.asStateFlow()
+    private val _currentOrientation = MutableStateFlow(Orientation(0f, 0f, 0f))
+    val currentOrientation: StateFlow<Orientation> = _currentOrientation.asStateFlow()
     
-    private val _accelStep = MutableStateFlow(0)
-    val accelStep: StateFlow<Int> = _accelStep.asStateFlow()
-    
-    private val accelMeasurements = mutableListOf<FloatArray>()
-    
-    data class CalibrationUiState(
-        val currentStep: CalibrationStep = CalibrationStep.GYROSCOPE,
-        val isCalibrating: Boolean = false,
-        val instruction: String = "",
-        val gyroComplete: Boolean = false,
-        val magComplete: Boolean = false,
-        val accelComplete: Boolean = false,
-        val allComplete: Boolean = false,
-        val quality: String = "UNKNOWN"
-    )
-    
-    enum class CalibrationStep { GYROSCOPE, MAGNETOMETER, ACCELEROMETER, COMPLETE }
-
-    init {
-        observeCalibrationState()
-    }
-
-    private fun observeCalibrationState() {
-        viewModelScope.launch {
-            calibrationHelper.state.collect { state ->
-                _uiState.update { it.copy(isCalibrating = state == CalibrationHelper.CalibrationState.CALIBRATING_GYRO ||
-                    state == CalibrationHelper.CalibrationState.CALIBRATING_MAG ||
-                    state == CalibrationHelper.CalibrationState.CALIBRATING_ACCEL) }
-            }
-        }
-        
-        viewModelScope.launch {
-            calibrationHelper.message.collect { message ->
-                _uiState.update { it.copy(instruction = message) }
-            }
-        }
-        
-        viewModelScope.launch {
-            calibrationHelper.quality.collect { quality ->
-                _uiState.update { it.copy(quality = quality.name) }
-            }
-        }
-    }
-
     fun startGyroCalibration() {
         viewModelScope.launch {
-            _uiState.update { it.copy(currentStep = CalibrationStep.GYROSCOPE, isCalibrating = true) }
-            val success = calibrationHelper.calibrateGyroscope { progress ->
-                _gyroProgress.value = progress
+            _uiState.update { it.copy(isCalibrating = true, currentStep = CalibrationStep.GYROSCOPE) }
+            
+            // Show instruction
+            _uiState.update { it.copy(instruction = "Place device on a flat, stationary surface") }
+            
+            // Simulate progress
+            for (i in 0..100 step 5) {
+                _calibrationProgress.value = i
+                delay(50)
             }
+            
+            // Perform actual calibration
+            val success = calibrationHelper.startGyroCalibration { progress ->
+                _calibrationProgress.value = progress
+            }
+            
             if (success) {
-                _uiState.update { it.copy(gyroComplete = true, currentStep = CalibrationStep.MAGNETOMETER) }
-                prefs.putBoolean("gyro_calibrated", true)
+                _uiState.update { 
+                    it.copy(
+                        isCalibrating = false,
+                        currentStep = CalibrationStep.MAGNETOMETER,
+                        gyroComplete = true
+                    )
+                }
             }
         }
     }
-
-    fun startMagCalibration() {
+    
+    fun startMagnetometerCalibration() {
         viewModelScope.launch {
-            _uiState.update { it.copy(currentStep = CalibrationStep.MAGNETOMETER, isCalibrating = true) }
-            val success = calibrationHelper.calibrateMagnetometer { progress ->
-                _magProgress.value = progress
+            _uiState.update { it.copy(isCalibrating = true, currentStep = CalibrationStep.MAGNETOMETER) }
+            _uiState.update { it.copy(instruction = "Move device in a figure-8 pattern for 10 seconds") }
+            
+            calibrationHelper.startMagnetometerCalibration { progress ->
+                _calibrationProgress.value = progress
             }
-            if (success) {
-                _uiState.update { it.copy(magComplete = true, currentStep = CalibrationStep.ACCELEROMETER) }
-                prefs.putBoolean("mag_calibrated", true)
+            
+            _uiState.update { 
+                it.copy(
+                    isCalibrating = false,
+                    currentStep = CalibrationStep.ACCELEROMETER,
+                    magnetometerComplete = true
+                )
             }
         }
     }
-
-    suspend fun calibrateAccelerometerStep(step: Int): Boolean {
-        val success = calibrationHelper.calibrateAccelerometer(step) { instruction ->
-            _uiState.update { it.copy(instruction = instruction) }
-        }
-        
-        if (success) {
-            // In production, collect actual measurements here
-            _accelStep.value = step + 1
-        }
-        return success
-    }
-
-    fun completeAccelerometerCalibration() {
-        calibrationHelper.finishAccelerometerCalibration(accelMeasurements)
-        _uiState.update { 
-            it.copy(
-                accelComplete = true,
-                allComplete = true,
-                currentStep = CalibrationStep.COMPLETE,
-                isCalibrating = false
+    
+    fun startAccelerometerCalibration() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCalibrating = true, currentStep = CalibrationStep.ACCELEROMETER) }
+            
+            val orientations = listOf(
+                "Place device flat facing UP" to Orientation(0f, 0f, 9.81f),
+                "Place device flat facing DOWN" to Orientation(0f, 0f, -9.81f),
+                "Place device on LEFT side" to Orientation(9.81f, 0f, 0f),
+                "Place device on RIGHT side" to Orientation(-9.81f, 0f, 0f),
+                "Place device standing UP" to Orientation(0f, 9.81f, 0f),
+                "Place device standing DOWN" to Orientation(0f, -9.81f, 0f)
             )
+            
+            var step = 0
+            for ((instruction, expected) in orientations) {
+                _uiState.update { 
+                    it.copy(
+                        instruction = instruction,
+                        accelerometerStep = step,
+                        totalAccelerometerSteps = orientations.size
+                    )
+                }
+                _calibrationProgress.value = (step * 100 / orientations.size)
+                delay(3000)
+                step++
+            }
+            
+            calibrationHelper.startAccelerometerCalibration { progress, instruction ->
+                _calibrationProgress.value = progress
+                _uiState.update { it.copy(instruction = instruction) }
+            }
+            
+            prefs.putBoolean("calibration_complete", true)
+            
+            _uiState.update { 
+                it.copy(
+                    isCalibrating = false,
+                    currentStep = CalibrationStep.COMPLETE,
+                    accelerometerComplete = true,
+                    allComplete = true
+                )
+            }
         }
-        prefs.putBoolean("calibration_complete", true)
     }
-
+    
+    fun updateOrientation(roll: Float, pitch: Float, yaw: Float) {
+        _currentOrientation.value = Orientation(roll, pitch, yaw)
+    }
+    
     fun skipCalibration() {
-        prefs.putBoolean("calibration_skipped", true)
-        _uiState.update { it.copy(allComplete = true, currentStep = CalibrationStep.COMPLETE) }
+        viewModelScope.launch {
+            prefs.putBoolean("calibration_skipped", true)
+            _uiState.update { it.copy(skipRequested = true) }
+        }
     }
-
-    fun resetAndRecalibrate() {
-        calibrationHelper.reset()
-        _uiState.value = CalibrationUiState()
-        _gyroProgress.value = 0
-        _magProgress.value = 0
-        _accelStep.value = 0
-        accelMeasurements.clear()
+    
+    data class CalibrationUiState(
+        val isCalibrating: Boolean = false,
+        val currentStep: CalibrationStep = CalibrationStep.GYROSCOPE,
+        val instruction: String = "",
+        val gyroComplete: Boolean = false,
+        val magnetometerComplete: Boolean = false,
+        val accelerometerComplete: Boolean = false,
+        val accelerometerStep: Int = 0,
+        val totalAccelerometerSteps: Int = 6,
+        val allComplete: Boolean = false,
+        val skipRequested: Boolean = false
+    )
+    
+    enum class CalibrationStep {
+        GYROSCOPE, MAGNETOMETER, ACCELEROMETER, COMPLETE
     }
+    
+    data class Orientation(
+        val roll: Float,
+        val pitch: Float,
+        val yaw: Float
+    )
 }

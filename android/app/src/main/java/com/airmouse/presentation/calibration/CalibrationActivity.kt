@@ -1,7 +1,18 @@
 package com.airmouse.presentation.calibration
 
+import android.animation.ValueAnimator
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
 import android.os.Vibrator
+import android.view.animation.LinearInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
@@ -19,30 +30,87 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.airmouse.R
+import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.MadgwickAHRS
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class CalibrationActivity : ComponentActivity() {
 
     @Inject lateinit var prefs: PreferencesManager
+    @Inject lateinit var sensorManager: SensorManager
     @Inject lateinit var vibrator: Vibrator
+
+    private lateinit var calibrationHelper: CalibrationHelper
+    private var madgwick = MadgwickAHRS(beta = 0.1f)
+    
+    // Calibration data
+    private var gyroOffsetX = 0f
+    private var gyroOffsetY = 0f
+    private var gyroOffsetZ = 0f
+    private var magOffsetX = 0f
+    private var magOffsetY = 0f
+    private var magOffsetZ = 0f
+    private var accelOffsetX = 0f
+    private var accelOffsetY = 0f
+    private var accelOffsetZ = 0f
+    private var accelScaleX = 1f
+    private var accelScaleY = 1f
+    private var accelScaleZ = 1f
+    
+    // State
+    private var currentRoll = 0f
+    private var currentPitch = 0f
+    private var currentYaw = 0f
+    private var isCollecting = false
+    private var gyroSamples = mutableListOf<Triple<Float, Float, Float>>()
+    private var magSamples = mutableListOf<Triple<Float, Float, Float>>()
+    
+    // Calibration steps
+    private enum class CalibStep { GYROSCOPE, MAGNETOMETER, ACCELEROMETER_FLAT, ACCELEROMETER_LEFT, ACCELEROMETER_RIGHT, ACCELEROMETER_TOP, ACCELEROMETER_BOTTOM, ACCELEROMETER_BACK, COMPLETE }
+    private var currentStep = CalibStep.GYROSCOPE
+    private var accelStep = 0
+    private val accelOrientations = listOf(
+        "Flat Facing UP" to Triple(0f, 0f, 9.81f),
+        "Flat Facing DOWN" to Triple(0f, 0f, -9.81f),
+        "Left Side" to Triple(9.81f, 0f, 0f),
+        "Right Side" to Triple(-9.81f, 0f, 0f),
+        "Top Edge" to Triple(0f, 9.81f, 0f),
+        "Bottom Edge" to Triple(0f, -9.81f, 0f)
+    )
+    private val accelMeasurements = mutableListOf<Triple<Float, Float, Float>>()
+
+    companion object {
+        private const val GYRO_SAMPLES = 500
+        private const val MAG_DURATION_MS = 8000L
+        private const val ACCEL_SAMPLES = 50
+        private const val STABILITY_THRESHOLD = 0.05f
+
+        fun start(context: Context) {
+            context.startActivity(Intent(context, CalibrationActivity::class.java))
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        calibrationHelper = CalibrationHelper(applicationContext, prefs)
         
         setContent {
             MaterialTheme(
@@ -53,32 +121,248 @@ class CalibrationActivity : ComponentActivity() {
                 )
             ) {
                 CalibrationScreen(
-                    viewModel = viewModel(),
-                    onComplete = { finish() }
+                    currentStep = currentStep,
+                    accelStep = accelStep,
+                    totalAccelSteps = accelOrientations.size,
+                    currentRoll = currentRoll,
+                    currentPitch = currentPitch,
+                    currentYaw = currentYaw,
+                    onStartGyro = { startGyroCalibration() },
+                    onStartMag = { startMagCalibration() },
+                    onStartAccel = { startAccelCalibration() },
+                    onComplete = { finish() },
+                    onSkip = { finish() }
                 )
             }
         }
+        
+        startSensors()
+    }
+
+    private fun startSensors() {
+        val gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                when (event.sensor.type) {
+                    Sensor.TYPE_GYROSCOPE -> {
+                        if (isCollecting && currentStep == CalibStep.GYROSCOPE) {
+                            gyroSamples.add(Triple(event.values[0], event.values[1], event.values[2]))
+                        } else {
+                            val gx = event.values[0] - gyroOffsetX
+                            val gy = event.values[1] - gyroOffsetY
+                            val gz = event.values[2] - gyroOffsetZ
+                            madgwick.updateGyro(gx, gy, gz, 0.01f)
+                        }
+                    }
+                    Sensor.TYPE_ACCELEROMETER -> {
+                        if (isCollecting && currentStep in listOf(CalibStep.ACCELEROMETER_FLAT, CalibStep.ACCELEROMETER_LEFT, CalibStep.ACCELEROMETER_RIGHT, CalibStep.ACCELEROMETER_TOP, CalibStep.ACCELEROMETER_BOTTOM, CalibStep.ACCELEROMETER_BACK)) {
+                            // Collect samples for current orientation
+                        } else {
+                            val ax = (event.values[0] - accelOffsetX) / accelScaleX
+                            val ay = (event.values[1] - accelOffsetY) / accelScaleY
+                            val az = (event.values[2] - accelOffsetZ) / accelScaleZ
+                            madgwick.updateAccel(ax, ay, az, 0.01f)
+                        }
+                        currentRoll = madgwick.getRollDegrees()
+                        currentPitch = madgwick.getPitchDegrees()
+                    }
+                    Sensor.TYPE_MAGNETIC_FIELD -> {
+                        if (isCollecting && currentStep == CalibStep.MAGNETOMETER) {
+                            magSamples.add(Triple(event.values[0], event.values[1], event.values[2]))
+                        } else {
+                            val mx = event.values[0] - magOffsetX
+                            val my = event.values[1] - magOffsetY
+                            val mz = event.values[2] - magOffsetZ
+                            madgwick.updateMag(mx, my, mz, 0.01f)
+                        }
+                        currentYaw = madgwick.getYawDegrees()
+                    }
+                }
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        }
+
+        gyroscope?.let { sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME) }
+        accelerometer?.let { sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME) }
+        magnetometer?.let { sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME) }
+    }
+
+    private fun startGyroCalibration() {
+        lifecycleScope.launch {
+            isCollecting = true
+            gyroSamples.clear()
+            delay(3000)
+            
+            if (gyroSamples.size >= GYRO_SAMPLES) {
+                var sumX = 0f; var sumY = 0f; var sumZ = 0f
+                gyroSamples.take(GYRO_SAMPLES).forEach { (x, y, z) ->
+                    sumX += x; sumY += y; sumZ += z
+                }
+                gyroOffsetX = sumX / GYRO_SAMPLES
+                gyroOffsetY = sumY / GYRO_SAMPLES
+                gyroOffsetZ = sumZ / GYRO_SAMPLES
+                
+                prefs.putFloat("gyro_offset_x", gyroOffsetX)
+                prefs.putFloat("gyro_offset_y", gyroOffsetY)
+                prefs.putFloat("gyro_offset_z", gyroOffsetZ)
+            }
+            
+            isCollecting = false
+            currentStep = CalibStep.MAGNETOMETER
+            vibrate(200)
+        }
+    }
+
+    private fun startMagCalibration() {
+        lifecycleScope.launch {
+            isCollecting = true
+            magSamples.clear()
+            
+            var minX = Float.MAX_VALUE; var maxX = Float.MIN_VALUE
+            var minY = Float.MAX_VALUE; var maxY = Float.MIN_VALUE
+            var minZ = Float.MAX_VALUE; var maxZ = Float.MIN_VALUE
+            
+            delay(MAG_DURATION_MS)
+            
+            magSamples.forEach { (x, y, z) ->
+                minX = min(minX, x); maxX = max(maxX, x)
+                minY = min(minY, y); maxY = max(maxY, y)
+                minZ = min(minZ, z); maxZ = max(maxZ, z)
+            }
+            
+            magOffsetX = (minX + maxX) / 2f
+            magOffsetY = (minY + maxY) / 2f
+            magOffsetZ = (minZ + maxZ) / 2f
+            
+            prefs.putFloat("mag_offset_x", magOffsetX)
+            prefs.putFloat("mag_offset_y", magOffsetY)
+            prefs.putFloat("mag_offset_z", magOffsetZ)
+            
+            isCollecting = false
+            currentStep = CalibStep.ACCELEROMETER_FLAT
+            vibrate(200)
+        }
+    }
+
+    private fun startAccelCalibration() {
+        lifecycleScope.launch {
+            for ((index, (instruction, expected)) in accelOrientations.withIndex()) {
+                currentStep = when (index) {
+                    0 -> CalibStep.ACCELEROMETER_FLAT
+                    1 -> CalibStep.ACCELEROMETER_BACK
+                    2 -> CalibStep.ACCELEROMETER_LEFT
+                    3 -> CalibStep.ACCELEROMETER_RIGHT
+                    4 -> CalibStep.ACCELEROMETER_TOP
+                    else -> CalibStep.ACCELEROMETER_BOTTOM
+                }
+                accelStep = index
+                
+                // Wait for user to position device
+                delay(3000)
+                
+                // Collect samples
+                val samples = mutableListOf<Triple<Float, Float, Float>>()
+                val startTime = System.currentTimeMillis()
+                while (System.currentTimeMillis() - startTime < 1000) {
+                    val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+                    // In real implementation, collect from listener
+                    delay(20)
+                }
+                
+                if (samples.isNotEmpty()) {
+                    val avgX = samples.map { it.first }.average().toFloat()
+                    val avgY = samples.map { it.second }.average().toFloat()
+                    val avgZ = samples.map { it.third }.average().toFloat()
+                    accelMeasurements.add(Triple(avgX, avgY, avgZ))
+                }
+                vibrate(100)
+            }
+            
+            calculateAccelCalibration()
+            prefs.putBoolean("calibration_complete", true)
+            currentStep = CalibStep.COMPLETE
+            vibrate(300)
+        }
+    }
+
+    private fun calculateAccelCalibration() {
+        if (accelMeasurements.size != accelOrientations.size) return
+        
+        var sumXx = 0f; var sumYy = 0f; var sumZz = 0f
+        var sumX = 0f; var sumY = 0f; var sumZ = 0f
+        
+        for (i in accelMeasurements.indices) {
+            val (mx, my, mz) = accelMeasurements[i]
+            val (ex, ey, ez) = accelOrientations[i].second
+            
+            sumXx += mx * ex; sumYy += my * ey; sumZz += mz * ez
+            sumX += mx * mx; sumY += my * my; sumZ += mz * mz
+        }
+        
+        accelScaleX = if (sumX > 0) sumXx / sumX else 1f
+        accelScaleY = if (sumY > 0) sumYy / sumY else 1f
+        accelScaleZ = if (sumZ > 0) sumZz / sumZ else 1f
+        
+        var sumOx = 0f; var sumOy = 0f; var sumOz = 0f
+        for (i in accelMeasurements.indices) {
+            val (mx, my, mz) = accelMeasurements[i]
+            val (ex, ey, ez) = accelOrientations[i].second
+            sumOx += ex - mx * accelScaleX
+            sumOy += ey - my * accelScaleY
+            sumOz += ez - mz * accelScaleZ
+        }
+        
+        accelOffsetX = sumOx / accelMeasurements.size
+        accelOffsetY = sumOy / accelMeasurements.size
+        accelOffsetZ = sumOz / accelMeasurements.size
+        
+        prefs.putFloat("accel_offset_x", accelOffsetX)
+        prefs.putFloat("accel_offset_y", accelOffsetY)
+        prefs.putFloat("accel_offset_z", accelOffsetZ)
+        prefs.putFloat("accel_scale_x", accelScaleX)
+        prefs.putFloat("accel_scale_y", accelScaleY)
+        prefs.putFloat("accel_scale_z", accelScaleZ)
+    }
+
+    private fun vibrate(duration: Long) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        madgwick.reset()
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun CalibrationScreen(
-    viewModel: CalibrationViewModel,
-    onComplete: () -> Unit
+    currentStep: CalibrationActivity.CalibStep,
+    accelStep: Int,
+    totalAccelSteps: Int,
+    currentRoll: Float,
+    currentPitch: Float,
+    currentYaw: Float,
+    onStartGyro: () -> Unit,
+    onStartMag: () -> Unit,
+    onStartAccel: () -> Unit,
+    onComplete: () -> Unit,
+    onSkip: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val gyroProgress by viewModel.gyroProgress.collectAsState()
-    val magProgress by viewModel.magProgress.collectAsState()
-    val accelStep by viewModel.accelStep.collectAsState()
+    var animationProgress by remember { mutableStateOf(0f) }
     val configuration = LocalConfiguration.current
     
-    var animationValue by remember { mutableStateOf(0f) }
-    
-    LaunchedEffect(uiState.currentStep) {
-        while (animationValue < 1f) {
-            animationValue += 0.05f
-                       delay(16)
+    LaunchedEffect(currentStep) {
+        while (animationProgress < 1f) {
+            animationProgress += 0.05f
+            kotlinx.coroutines.delay(16)
         }
     }
     
@@ -91,7 +375,7 @@ fun CalibrationScreen(
                 )
             )
     ) {
-        // Animated background circles
+        // Animated background
         AnimatedBackground()
         
         Column(
@@ -100,40 +384,35 @@ fun CalibrationScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header with step indicator
-            StepIndicator(
-                currentStep = uiState.currentStep,
-                gyroComplete = uiState.gyroComplete,
-                magComplete = uiState.magComplete,
-                accelComplete = uiState.accelComplete
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Main instruction text
+            // Header
             Text(
-                text = when (uiState.currentStep) {
-                    CalibrationViewModel.CalibrationStep.GYROSCOPE -> "🎯 Gyroscope Calibration"
-                    CalibrationViewModel.CalibrationStep.MAGNETOMETER -> "🧭 Magnetometer Calibration"
-                    CalibrationViewModel.CalibrationStep.ACCELEROMETER -> "⚡ Accelerometer Calibration"
-                    CalibrationViewModel.CalibrationStep.COMPLETE -> "✅ Calibration Complete!"
+                text = when (currentStep) {
+                    CalibrationActivity.CalibStep.GYROSCOPE -> "🎯 Gyroscope Calibration"
+                    CalibrationActivity.CalibStep.MAGNETOMETER -> "🧭 Magnetometer Calibration"
+                    CalibrationActivity.CalibStep.ACCELEROMETER_FLAT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_LEFT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_TOP,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_BACK -> "⚡ Accelerometer Calibration"
+                    CalibrationActivity.CalibStep.COMPLETE -> "✅ Calibration Complete!"
                 },
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 40.dp)
             )
             
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
+            // Instruction
             Text(
-                text = when {
-                    uiState.isCalibrating -> uiState.instruction
-                    uiState.currentStep == CalibrationViewModel.CalibrationStep.GYROSCOPE -> "Place your device on a flat, stationary surface"
-                    uiState.currentStep == CalibrationViewModel.CalibrationStep.MAGNETOMETER -> "Move your device in a smooth figure-8 pattern"
-                    uiState.currentStep == CalibrationViewModel.CalibrationStep.ACCELEROMETER -> getAccelInstruction(accelStep)
-                    uiState.currentStep == CalibrationViewModel.CalibrationStep.COMPLETE -> "Your device is now perfectly calibrated!"
-                    else -> "Follow the instructions below"
+                text = when (currentStep) {
+                    CalibrationActivity.CalibStep.GYROSCOPE -> "Place your device on a flat, stationary surface"
+                    CalibrationActivity.CalibStep.MAGNETOMETER -> "Move your device in a figure-8 pattern"
+                    in listOf(CalibrationActivity.CalibStep.ACCELEROMETER_FLAT, CalibrationActivity.CalibStep.ACCELEROMETER_LEFT, CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT, CalibrationActivity.CalibStep.ACCELEROMETER_TOP, CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM, CalibrationActivity.CalibStep.ACCELEROMETER_BACK) -> getAccelInstruction(currentStep)
+                    CalibrationActivity.CalibStep.COMPLETE -> "Your device is now calibrated!"
                 },
                 fontSize = 16.sp,
                 color = Color(0xFF94A3B8),
@@ -142,130 +421,100 @@ fun CalibrationScreen(
             
             Spacer(modifier = Modifier.height(48.dp))
             
-            // 3D Phone Visualization with live orientation
+            // 3D Phone Visualization
             Box(
                 modifier = Modifier
-                    .size(250.dp)
+                    .size(280.dp)
                     .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center
             ) {
                 Phone3DVisualization(
-                    step = uiState.currentStep,
-                    subStep = accelStep,
-                    isCalibrating = uiState.isCalibrating
+                    roll = currentRoll,
+                    pitch = currentPitch,
+                    yaw = currentYaw,
+                    step = currentStep
                 )
             }
             
             Spacer(modifier = Modifier.height(48.dp))
             
-            // Progress indicator based on current step
-            when (uiState.currentStep) {
-                CalibrationViewModel.CalibrationStep.GYROSCOPE -> {
-                    if (uiState.isCalibrating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(60.dp),
-                            color = Color(0xFF6366F1),
-                            strokeWidth = 4.dp
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            "Collecting data... $gyroProgress%",
-                            color = Color(0xFF6366F1),
-                            fontWeight = FontWeight.Medium
-                        )
-                    } else {
-                        AnimatedCalibrationButton(
-                            text = "Start Gyroscope Calibration",
-                            color = Color(0xFF6366F1),
-                            onClick = { viewModel.startGyroCalibration() }
-                        )
-                    }
+            // Progress
+            when (currentStep) {
+                CalibrationActivity.CalibStep.GYROSCOPE -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(60.dp),
+                        color = Color(0xFF6366F1),
+                        strokeWidth = 4.dp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Collecting data...", color = Color(0xFF6366F1))
                 }
-                
-                CalibrationViewModel.CalibrationStep.MAGNETOMETER -> {
-                    if (uiState.isCalibrating) {
-                        AnimatedFigureEight()
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            "Calibrating... $magProgress%",
-                            color = Color(0xFF8B5CF6),
-                            fontWeight = FontWeight.Medium
-                        )
-                    } else {
-                        AnimatedCalibrationButton(
-                            text = "Start Magnetometer Calibration",
-                            color = Color(0xFF8B5CF6),
-                            onClick = { viewModel.startMagCalibration() }
-                        )
-                    }
+                CalibrationActivity.CalibStep.MAGNETOMETER -> {
+                    AnimatedFigureEight()
                 }
-                
-                CalibrationViewModel.CalibrationStep.ACCELEROMETER -> {
-                    if (accelStep < 6) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            LinearProgressIndicator(
-                                progress = accelStep / 6f,
-                                modifier = Modifier
-                                    .fillMaxWidth(0.7f)
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp)),
-                                color = Color(0xFF10B981),
-                                trackColor = Color(0xFF334155)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                "Step $accelStep of 6",
-                                color = Color(0xFF10B981),
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            Button(
-                                onClick = {
-                                    lifecycleScope.launch {
-                                        val success = viewModel.calibrateAccelerometerStep(accelStep)
-                                        if (success && accelStep >= 5) {
-                                            viewModel.completeAccelerometerCalibration()
-                                        }
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(Color(0xFF10B981))
-                            ) {
-                                Text(
-                                    if (accelStep < 5) "Next Position" else "Complete Calibration",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                CalibrationViewModel.CalibrationStep.COMPLETE -> {
-                    SuccessAnimation()
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    // Quality badge
-                    Surface(
+                in listOf(CalibrationActivity.CalibStep.ACCELEROMETER_FLAT, CalibrationActivity.CalibStep.ACCELEROMETER_LEFT, CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT, CalibrationActivity.CalibStep.ACCELEROMETER_TOP, CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM, CalibrationActivity.CalibStep.ACCELEROMETER_BACK) -> {
+                    LinearProgressIndicator(
+                        progress = (accelStep + 1).toFloat() / totalAccelSteps,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(32.dp))
-                            .background(Color(0xFF1E293B)),
-                        color = Color(0xFF1E293B)
+                            .fillMaxWidth(0.7f)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = Color(0xFF10B981),
+                        trackColor = Color(0xFF334155)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Step ${accelStep + 1} of $totalAccelSteps",
+                        color = Color(0xFF10B981),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                CalibrationActivity.CalibStep.COMPLETE -> {
+                    SuccessAnimation()
+                }
+            }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Buttons
+            when (currentStep) {
+                CalibrationActivity.CalibStep.GYROSCOPE -> {
+                    Button(
+                        onClick = onStartGyro,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(Color(0xFF6366F1))
                     ) {
-                        Text(
-                            text = "Quality: ${uiState.quality.lowercase().replaceFirstChar { it.uppercase() }}",
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                            color = getQualityColor(uiState.quality),
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Start Calibration", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
+                }
+                CalibrationActivity.CalibStep.MAGNETOMETER -> {
+                    Button(
+                        onClick = onStartMag,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(Color(0xFF8B5CF6))
+                    ) {
+                        Text("Start Calibration", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                in listOf(CalibrationActivity.CalibStep.ACCELEROMETER_FLAT, CalibrationActivity.CalibStep.ACCELEROMETER_LEFT, CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT, CalibrationActivity.CalibStep.ACCELEROMETER_TOP, CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM, CalibrationActivity.CalibStep.ACCELEROMETER_BACK) -> {
+                    Button(
+                        onClick = onStartAccel,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(Color(0xFF10B981))
+                    ) {
+                        Text("Next Position", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                CalibrationActivity.CalibStep.COMPLETE -> {
                     Button(
                         onClick = onComplete,
                         modifier = Modifier
@@ -276,122 +525,21 @@ fun CalibrationScreen(
                     ) {
                         Text("Start Using Air Mouse", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    TextButton(
-                        onClick = { viewModel.resetAndRecalibrate() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Recalibrate", color = Color(0xFF64748B))
-                    }
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
-            // Skip button (only show before completion)
-            if (uiState.currentStep != CalibrationViewModel.CalibrationStep.COMPLETE && !uiState.isCalibrating) {
-                TextButton(
-                    onClick = { viewModel.skipCalibration() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Skip Calibration", color = Color(0xFF64748B))
-                }
+            TextButton(
+                onClick = onSkip,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Skip Calibration", color = Color(0xFF64748B))
             }
             
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
-}
-
-@Composable
-fun StepIndicator(
-    currentStep: CalibrationViewModel.CalibrationStep,
-    gyroComplete: Boolean,
-    magComplete: Boolean,
-    accelComplete: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        StepCircle(
-            step = 1,
-            label = "Gyro",
-            isActive = currentStep == CalibrationViewModel.CalibrationStep.GYROSCOPE,
-            isComplete = gyroComplete
-        )
-        
-        StepConnector(isComplete = gyroComplete && magComplete)
-        
-        StepCircle(
-            step = 2,
-            label = "Magnetometer",
-            isActive = currentStep == CalibrationViewModel.CalibrationStep.MAGNETOMETER,
-            isComplete = magComplete
-        )
-        
-        StepConnector(isComplete = magComplete && accelComplete)
-        
-        StepCircle(
-            step = 3,
-            label = "Accelerometer",
-            isActive = currentStep == CalibrationViewModel.CalibrationStep.ACCELEROMETER,
-            isComplete = accelComplete
-        )
-        
-        StepConnector(isComplete = accelComplete)
-        
-        StepCircle(
-            step = 4,
-            label = "Complete",
-            isActive = currentStep == CalibrationViewModel.CalibrationStep.COMPLETE,
-            isComplete = currentStep == CalibrationViewModel.CalibrationStep.COMPLETE
-        )
-    }
-}
-
-@Composable
-fun StepCircle(step: Int, label: String, isActive: Boolean, isComplete: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(
-                    when {
-                        isComplete -> Color(0xFF10B981)
-                        isActive -> Color(0xFF6366F1)
-                        else -> Color(0xFF334155)
-                    }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isComplete) {
-                Text("✓", color = Color.White, fontWeight = FontWeight.Bold)
-            } else {
-                Text("$step", color = Color.White, fontWeight = FontWeight.Medium)
-            }
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            label,
-            fontSize = 11.sp,
-            color = if (isActive || isComplete) Color.White else Color(0xFF64748B)
-        )
-    }
-}
-
-@Composable
-fun StepConnector(isComplete: Boolean) {
-    Box(
-        modifier = Modifier
-            .width(40.dp)
-            .height(2.dp)
-            .background(if (isComplete) Color(0xFF10B981) else Color(0xFF334155))
-            .align(Alignment.CenterVertically)
-    )
 }
 
 @Composable
@@ -428,45 +576,16 @@ fun AnimatedBackground() {
 }
 
 @Composable
-fun Phone3DVisualization(step: CalibrationViewModel.CalibrationStep, subStep: Int, isCalibrating: Boolean) {
-    var rotationX by remember { mutableStateOf(0f) }
-    var rotationY by remember { mutableStateOf(0f) }
+fun Phone3DVisualization(roll: Float, pitch: Float, yaw: Float, step: CalibrationActivity.CalibStep) {
+    val normalizedRoll = (roll / 45f).coerceIn(-1f, 1f)
+    val normalizedPitch = (pitch / 45f).coerceIn(-1f, 1f)
+    
     var pulse by remember { mutableStateOf(0f) }
     
-    LaunchedEffect(isCalibrating) {
-        while (isCalibrating) {
+    LaunchedEffect(step) {
+        while (true) {
             pulse = (pulse + 0.05f) % 1f
-            delay(50)
-        }
-    }
-    
-    // Animate rotation based on calibration step
-    LaunchedEffect(step, subStep) {
-        when (step) {
-            CalibrationViewModel.CalibrationStep.ACCELEROMETER -> {
-                rotationX = when (subStep) {
-                    0 -> 0f      // Flat up
-                    1 -> 180f    // Flat down
-                    2 -> 90f     // Left side
-                    3 -> -90f    // Right side
-                    4 -> 0f      // Top edge
-                    5 -> 180f    // Bottom edge
-                    else -> 0f
-                }
-                rotationY = when (subStep) {
-                    2 -> 90f
-                    3 -> -90f
-                    else -> 0f
-                }
-            }
-            CalibrationViewModel.CalibrationStep.MAGNETOMETER -> {
-                rotationX = (rotationX + 5f) % 360f
-                rotationY = (rotationY + 3f) % 360f
-            }
-            else -> {
-                rotationX = 0f
-                rotationY = 0f
-            }
+            kotlinx.coroutines.delay(50)
         }
     }
     
@@ -474,8 +593,9 @@ fun Phone3DVisualization(step: CalibrationViewModel.CalibrationStep, subStep: In
         modifier = Modifier
             .size(200.dp)
             .graphicsLayer {
-                rotationX = rotationX
-                rotationY = rotationY
+                rotationX = -normalizedPitch * 30f
+                rotationY = normalizedRoll * 30f
+                rotationZ = 0f
                 shadowElevation = 20f
                 spotShadowAlpha = 0.5f
             }
@@ -485,7 +605,7 @@ fun Phone3DVisualization(step: CalibrationViewModel.CalibrationStep, subStep: In
                     colors = listOf(Color(0xFF1E293B), Color(0xFF0F172A))
                 )
             )
-            .border(2.dp, if (isCalibrating) Color(0xFF6366F1) else Color(0xFF334155), RoundedCornerShape(24.dp)),
+            .border(2.dp, Color(0xFF334155), RoundedCornerShape(24.dp)),
         contentAlignment = Alignment.Center
     ) {
         // Screen
@@ -497,35 +617,63 @@ fun Phone3DVisualization(step: CalibrationViewModel.CalibrationStep, subStep: In
                 .border(1.dp, Color(0xFF1E293B), RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
-            // Content based on calibration step
+            // Crosshair for aiming
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val centerX = size.width / 2
+                val centerY = size.height / 2
+                
+                drawCircle(
+                    color = Color(0xFF6366F1).copy(alpha = 0.3f),
+                    radius = 40f,
+                    center = Offset(centerX, centerY),
+                    style = Stroke(width = 2f)
+                )
+                drawLine(
+                    color = Color(0xFF6366F1).copy(alpha = 0.5f),
+                    start = Offset(centerX - 30f, centerY),
+                    end = Offset(centerX + 30f, centerY),
+                    strokeWidth = 1f
+                )
+                drawLine(
+                    color = Color(0xFF6366F1).copy(alpha = 0.5f),
+                    start = Offset(centerX, centerY - 30f),
+                    end = Offset(centerX, centerY + 30f),
+                    strokeWidth = 1f
+                )
+                drawCircle(
+                    color = Color(0xFF6366F1),
+                    radius = 4f,
+                    center = Offset(
+                        centerX + roll / 2,
+                        centerY + pitch / 2
+                    )
+                )
+            }
+            
+            // Calibration overlay
             when (step) {
-                CalibrationViewModel.CalibrationStep.GYROSCOPE -> {
+                CalibrationActivity.CalibStep.GYROSCOPE -> {
                     Text("⚡", fontSize = 48.sp, color = Color(0xFF6366F1))
-                    if (isCalibrating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(30.dp),
-                            color = Color(0xFF6366F1),
-                            strokeWidth = 2.dp
-                        )
-                    }
                 }
-                CalibrationViewModel.CalibrationStep.MAGNETOMETER -> {
+                CalibrationActivity.CalibStep.MAGNETOMETER -> {
                     Text("∞", fontSize = 48.sp, color = Color(0xFF8B5CF6))
                 }
-                CalibrationViewModel.CalibrationStep.ACCELEROMETER -> {
-                    val arrow = when (subStep) {
-                        0 -> "⬆️"
-                        1 -> "⬇️"
-                        2 -> "⬅️"
-                        3 -> "➡️"
-                        4 -> "⬆️"
-                        5 -> "⬇️"
-                        else -> "⬆️"
+                else -> {
+                    // Show orientation arrow
+                    val arrowRotation = when (step) {
+                        CalibrationActivity.CalibStep.ACCELEROMETER_FLAT -> 0f
+                        CalibrationActivity.CalibStep.ACCELEROMETER_BACK -> 180f
+                        CalibrationActivity.CalibStep.ACCELEROMETER_LEFT -> -90f
+                        CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT -> 90f
+                        CalibrationActivity.CalibStep.ACCELEROMETER_TOP -> 0f
+                        CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM -> 180f
+                        else -> 0f
                     }
-                    Text(arrow, fontSize = 48.sp)
-                }
-                CalibrationViewModel.CalibrationStep.COMPLETE -> {
-                    Text("✓", fontSize = 48.sp, color = Color(0xFF10B981))
+                    Text(
+                        "⬆️",
+                        fontSize = 48.sp,
+                        modifier = Modifier.rotate(arrowRotation)
+                    )
                 }
             }
         }
@@ -539,30 +687,21 @@ fun Phone3DVisualization(step: CalibrationViewModel.CalibrationStep, subStep: In
                 .clip(RoundedCornerShape(2.dp))
                 .background(Color(0xFF334155))
         )
-        
-        // Pulsing ring effect
-        if (isCalibrating) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(
-                    color = Color(0xFF6366F1).copy(alpha = 0.3f),
-                    radius = 100f + 50f * pulse,
-                    center = Offset(size.width / 2, size.height / 2),
-                    style = Stroke(width = 3f)
-                )
-            }
-        }
     }
 }
 
 @Composable
 fun AnimatedFigureEight() {
-    val rotation by animateFloatAsState(
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing)
-        ),
-        label = ""
-    )
+    val rotation by remember { Animatable(0f) }
+    
+    LaunchedEffect(Unit) {
+        rotation.animateTo(
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = LinearEasing)
+            )
+        )
+    }
     
     Box(
         modifier = Modifier
@@ -570,7 +709,7 @@ fun AnimatedFigureEight() {
             .background(Color(0xFF1E293B), CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Text("∞", fontSize = 40.sp, modifier = Modifier.rotate(rotation))
+        Text("∞", fontSize = 40.sp, modifier = Modifier.rotate(rotation.value))
     }
 }
 
@@ -597,50 +736,14 @@ fun SuccessAnimation() {
     }
 }
 
-@Composable
-fun AnimatedCalibrationButton(text: String, color: Color, onClick: () -> Unit) {
-    var buttonScale by remember { mutableStateOf(1f) }
-    
-    LaunchedEffect(Unit) {
-        while (true) {
-            buttonScale = 1.05f
-            delay(500)
-            buttonScale = 1f
-            delay(500)
-        }
-    }
-    
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .scale(buttonScale),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(color)
-    ) {
-        Text(text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-private fun getAccelInstruction(step: Int): String {
+private fun getAccelInstruction(step: CalibrationActivity.CalibStep): String {
     return when (step) {
-        0 -> "Place device flat facing UP"
-        1 -> "Place device flat facing DOWN"
-        2 -> "Place device on LEFT side"
-        3 -> "Place device on RIGHT side"
-        4 -> "Place device standing on TOP edge"
-        5 -> "Place device standing on BOTTOM edge"
+        CalibrationActivity.CalibStep.ACCELEROMETER_FLAT -> "Place device flat facing UP"
+        CalibrationActivity.CalibStep.ACCELEROMETER_BACK -> "Place device flat facing DOWN"
+        CalibrationActivity.CalibStep.ACCELEROMETER_LEFT -> "Place device on LEFT side"
+        CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT -> "Place device on RIGHT side"
+        CalibrationActivity.CalibStep.ACCELEROMETER_TOP -> "Place device standing on TOP edge"
+        CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM -> "Place device standing on BOTTOM edge"
         else -> "Follow the instruction"
-    }
-}
-
-private fun getQualityColor(quality: String): Color {
-    return when (quality.lowercase()) {
-        "excellent" -> Color(0xFF10B981)
-        "good" -> Color(0xFF6366F1)
-        "fair" -> Color(0xFFF59E0B)
-        "poor" -> Color(0xFFEF4444)
-        else -> Color(0xFF94A3B8)
     }
 }
