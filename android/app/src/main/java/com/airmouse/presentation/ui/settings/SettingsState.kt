@@ -1,5 +1,31 @@
 package com.airmouse.presentation.ui.settings
 
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+
+enum class SettingsSection(
+    val title: String,
+    val description: String,
+    val icon: ImageVector
+) {
+    CURSOR("Cursor", "Movement and sensitivity", Icons.Default.Mouse),
+    GESTURE("Gesture", "Click and scroll detection", Icons.Default.Gesture),
+    AI("AI & Predictive", "Smart movement prediction", Icons.Default.Psychology),
+    HAPTIC("Haptic & Sound", "Feedback preferences", Icons.Default.Vibration),
+    DISPLAY("Display", "Theme and appearance", Icons.Default.DisplaySettings),
+    CONNECTION("Connection", "Network settings", Icons.Default.Wifi),
+    PRIVACY("Privacy & Data", "Your data preferences", Icons.Default.PrivacyTip),
+    PRESENTATION("Presentation", "Slide control settings", Icons.Default.Slideshow),
+    ABOUT("About", "App information", Icons.Default.Info)
+}
+
+enum class HapticStrength(val displayName: String, val duration: Long) {
+    LIGHT("Light", 20),
+    MEDIUM("Medium", 50),
+    STRONG("Strong", 80)
+}
+
 data class SettingsUiState(
     // Cursor Settings
     val sensitivity: Float = 0.5f,
@@ -52,15 +78,15 @@ data class SettingsUiState(
     val crashReporting: Boolean = true,
     val clearDataOnExit: Boolean = false,
 
+    // Presentation Settings
+    val presentationModeEnabled: Boolean = false,
+    val laserPointerSpeed: Float = 1.0f,
+    val showPresentationTimer: Boolean = true,
+    val autoHideLaser: Boolean = true,
+
     // Status
     val isLoading: Boolean = false,
     val error: String? = null,
     val success: String? = null,
     val isSaving: Boolean = false
 )
-
-enum class HapticStrength(val displayName: String, val duration: Long) {
-    LIGHT("Light", 20),
-    MEDIUM("Medium", 50),
-    STRONG("Strong", 80)
-}
