@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/ui/UiStyleUtils.kt
 package com.airmouse.ui
 
 import android.animation.Animator
@@ -6,7 +5,7 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.view.View
-import android.view.animation.*
+import android.view.animation.OvershootInterpolator
 import androidx.core.animation.doOnEnd
 import com.google.android.material.button.MaterialButton
 
@@ -102,9 +101,9 @@ object UiStyleUtils {
      * Apply ripple effect to a view
      */
     fun ripple(view: View) {
-        val ripple = ObjectAnimator.ofFloat(view, View.SCALE_X, 1f, 1.2f, 1f)
-        ripple.duration = 150
-        ripple.start()
+        val animator = ObjectAnimator.ofFloat(view, View.SCALE_X, 1f, 1.2f, 1f)
+        animator.duration = 150
+        animator.start()
     }
 
     /**
@@ -225,14 +224,6 @@ object UiStyleUtils {
         }
         animator.duration = DEFAULT_ANIMATION_DURATION
         animator.start()
-    }
-
-    /**
-     * Apply border animation to a view (requires custom implementation)
-     */
-    fun animateBorder(view: View, strokeWidth: Float) {
-        // This is a placeholder – requires custom drawable or ViewOutlineProvider.
-        // For simplicity, we skip actual implementation.
     }
 
     /**

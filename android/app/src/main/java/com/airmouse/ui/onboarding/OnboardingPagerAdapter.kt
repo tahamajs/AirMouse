@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/ui/onboarding/OnboardingPagerAdapter.kt
 package com.airmouse.ui.onboarding
 
 import android.view.LayoutInflater
@@ -60,6 +59,3 @@ class OnboardingPagerAdapter(
         }
     }
 }
-
-fun isOnboardingCompleted(): Boolean = getBoolean("onboarding_completed", false)
-fun setOnboardingCompleted(completed: Boolean) = putBoolean("onboarding_completed", completed)
