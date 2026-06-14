@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/presentation/ui/main/MainNavHost.kt
 package com.airmouse.presentation.ui.main
 
 import androidx.compose.animation.*
@@ -62,7 +61,7 @@ fun MainNavHost(
                     slideOutHorizontally(animationSpec = tween(300)) { it }
         }
     ) {
-        // ==================== MAIN BOTTOM NAV SCREENS ====================
+        // Main Bottom Navigation Screens
         composable(Destinations.Home.route) {
             HomeScreen(navigationActions = navigationActions)
         }
@@ -76,87 +75,72 @@ fun MainNavHost(
             HelpScreen(navigationActions = navigationActions)
         }
 
-        // ==================== INFO SCREENS ====================
+        // Info Screens
         composable(Destinations.About.route) {
             AboutScreen(navigationActions = navigationActions)
         }
 
-        // ==================== CALIBRATION ====================
+        // Calibration & Sensors
         composable(Destinations.Calibration.route) {
             CalibrationScreen(
                 navigationActions = navigationActions,
                 onComplete = { navController.popBackStack() }
             )
         }
+        composable(Destinations.SensorVisualizer.route) {
+            SensorVisualizerScreen(navigationActions = navigationActions)
+        }
 
-        // ==================== GESTURE STUDIO ====================
+        // Gesture & Touch
         composable(Destinations.GestureStudio.route) {
             GestureStudioScreen(navigationActions = navigationActions)
         }
-
-        // ==================== PROXIMITY LOCK ====================
-        composable(Destinations.Proximity.route) {
-            ProximityScreen(navigationActions = navigationActions)
-        }
-
-        // ==================== VOICE COMMANDS ====================
-        composable(Destinations.VoiceCommands.route) {
-            VoiceCommandsScreen(navigationActions = navigationActions)
-        }
-
-        // ==================== EDGE GESTURES ====================
         composable(Destinations.EdgeGestures.route) {
             EdgeGesturesScreen(navigationActions = navigationActions)
         }
-
-        // ==================== THEMES ====================
-        composable(Destinations.Themes.route) {
-            ThemesScreen(navigationActions = navigationActions)
+        composable(Destinations.Touchpad.route) {
+            TouchpadScreen(navigationActions = navigationActions)
         }
 
-        // ==================== PROFILES ====================
-        composable(Destinations.Profiles.route) {
-            ProfilesScreen(navigationActions = navigationActions)
-        }
-
-        // ==================== NETWORK DISCOVERY ====================
+        // Connectivity
         composable(Destinations.NetworkDiscovery.route) {
             NetworkDiscoveryScreen(
                 navigationActions = navigationActions,
                 onServerSelected = { ip, port ->
-                    // After selecting a server, go back to home and auto‑connect
                     navController.popBackStack()
                     navigationActions.navigateToHome()
                 }
             )
         }
-
-        // ==================== SERVER LOGS ====================
         composable(Destinations.ServerLogs.route) {
             ServerLogsScreen(navigationActions = navigationActions)
         }
 
-        // ==================== BATTERY MONITOR ====================
+        // Security & Privacy
+        composable(Destinations.Proximity.route) {
+            ProximityScreen(navigationActions = navigationActions)
+        }
+        composable(Destinations.VoiceCommands.route) {
+            VoiceCommandsScreen(navigationActions = navigationActions)
+        }
+
+        // Customization
+        composable(Destinations.Profiles.route) {
+            ProfilesScreen(navigationActions = navigationActions)
+        }
+        composable(Destinations.Themes.route) {
+            ThemesScreen(navigationActions = navigationActions)
+        }
+
+        // System
         composable(Destinations.Battery.route) {
             BatteryScreen(navigationActions = navigationActions)
         }
-
-        // ==================== ACCESSIBILITY ====================
         composable(Destinations.Accessibility.route) {
             AccessibilityScreen(navigationActions = navigationActions)
         }
 
-        // ==================== SENSOR VISUALIZER ====================
-        composable(Destinations.SensorVisualizer.route) {
-            SensorVisualizerScreen(navigationActions = navigationActions)
-        }
-
-        // ==================== TOUCHPAD MODE ====================
-        composable(Destinations.Touchpad.route) {
-            TouchpadScreen(navigationActions = navigationActions)
-        }
-
-        // ==================== ONBOARDING ====================
+        // Onboarding
         composable(Destinations.Onboarding.route) {
             OnboardingScreen(
                 navigationActions = navigationActions,

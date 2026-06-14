@@ -1,7 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/main/MainScreen.kt
 package com.airmouse.presentation.ui.main
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -15,21 +12,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.airmouse.presentation.navigation.Destinations
-import com.airmouse.presentation.navigation.MainNavHost
 import com.airmouse.presentation.navigation.bottomNavItems
 import com.airmouse.presentation.navigation.getSelectedBottomNavIndex
-import com.airmouse.presentation.theme.AirMouseTheme
-import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
@@ -46,8 +42,6 @@ fun MainScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-    // Observe connection status for visual feedback
     val isConnected by viewModel.isConnected.collectAsState()
 
     ModalNavigationDrawer(
@@ -68,7 +62,8 @@ fun MainScreen(
                     viewModel.updateControlMode(mode)
                     scope.launch { drawerState.close() }
                 },
-                isConnected = isConnected
+                isConnected = isConnected,
+                onDisconnect = { viewModel.disconnect() }
             )
         },
         gesturesEnabled = drawerState.isOpen
@@ -80,7 +75,7 @@ fun MainScreen(
                     ModernBottomBar(
                         selectedIndex = selectedIndex,
                         onItemSelected = { index ->
-                            val route = bottomNavItems[index].destination.route
+                            val route = bottomNavItems[index].route
                             navController.navigate(route) {
                                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                                 launchSingleTop = true
@@ -103,7 +98,7 @@ fun MainScreen(
                         }
                         "arm_movement" -> {
                             AnimatedFAB(
-                                onClick = { /* Show arm calibration dialog */ },
+                                onClick = { viewModel.showArmCalibrationDialog() },
                                 icon = Icons.Default.Accessibility,
                                 text = "Arm Mode",
                                 gradient = listOf(Color(0xFF9C27B0), Color(0xFFE91E63)),
@@ -130,10 +125,7 @@ fun MainScreen(
                     .padding(paddingValues)
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFF1A1D24),
-                                Color(0xFF0F1115)
-                            )
+                            colors = listOf(Color(0xFF1A1D24), Color(0xFF0F1115))
                         )
                     )
             ) {
@@ -156,26 +148,26 @@ fun ModernBottomBar(
         containerColor = Color(0xFF1A1D24),
         tonalElevation = 0.dp,
         modifier = Modifier
+            .shadow(8.dp)
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
     ) {
-        bottomNavItems.forEachIndexed { index, item ->
+        bottomNavItems.forEachIndexed { index, destination ->
             val isSelected = selectedIndex == index
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onItemSelected(index) },
                 icon = {
                     Icon(
-                        item.getIcon(isSelected),
-                        contentDescription = item.title,
+                        if (isSelected) destination.icon else destination.icon?.let { it },
+                        contentDescription = destination.title,
                         modifier = Modifier.size(24.dp)
                     )
                 },
                 label = {
                     Text(
-                        item.title,
+                        destination.title,
                         fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        maxLines = 1
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
@@ -184,8 +176,7 @@ fun ModernBottomBar(
                     unselectedIconColor = Color(0xFF96A0AE),
                     unselectedTextColor = Color(0xFF96A0AE),
                     indicatorColor = Color(0xFF00BCD4).copy(alpha = 0.2f)
-                ),
-                enabled = item.enabled
+                )
             )
         }
     }
@@ -197,7 +188,8 @@ fun ModernDrawerContent(
     currentRoute: String?,
     controlMode: String,
     onModeSelected: (String) -> Unit,
-    isConnected: Boolean
+    isConnected: Boolean,
+    onDisconnect: () -> Unit
 ) {
     ModalDrawerSheet(
         drawerContainerColor = Color(0xFF1A1D24),
@@ -242,7 +234,7 @@ fun ModernDrawerContent(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF96A0AE)
                 )
-                // Connection status indicator
+                // Connection status
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 8.dp)
@@ -259,6 +251,12 @@ fun ModernDrawerContent(
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isConnected) Color(0xFF4CAF50) else Color(0xFFF44336)
                     )
+                    if (isConnected) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(onClick = onDisconnect) {
+                            Text("Disconnect", fontSize = 11.sp, color = Color(0xFFF44336))
+                        }
+                    }
                 }
             }
         }
@@ -290,9 +288,9 @@ fun ModernDrawerContent(
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
         )
         listOf(
-            "motion" to "Motion Mode (Rotation)",
-            "touchpad" to "Touchpad Mode",
-            "arm_movement" to "Arm Movement Mode"
+            "motion" to "🎯 Motion Mode (Rotation)",
+            "touchpad" to "🖐️ Touchpad Mode",
+            "arm_movement" to "💪 Arm Movement Mode"
         ).forEach { (mode, label) ->
             val isSelected = controlMode == mode
             NavigationDrawerItem(
@@ -317,33 +315,38 @@ fun ModernDrawerContent(
 
         // Advanced tools group
         Text(
-            text = "Advanced",
+            text = "Advanced Tools",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFF96A0AE),
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
         )
-        listOf(
-            Destinations.GestureStudio.route to "Gesture Studio",
-            Destinations.NetworkDiscovery.route to "Network Discovery",
-            Destinations.Proximity.route to "Proximity Lock",
-            Destinations.VoiceCommands.route to "Voice Commands",
-            Destinations.EdgeGestures.route to "Edge Gestures",
-            Destinations.Touchpad.route to "Touchpad Settings",
-            Destinations.SensorVisualizer.route to "Sensor Visualizer",
-            Destinations.ServerLogs.route to "Server Logs",
-            Destinations.Battery.route to "Battery",
-            Destinations.Accessibility.route to "Accessibility"
-        ).forEach { (route, title) ->
+        
+        val advancedTools = listOf(
+            Destinations.GestureStudio.route to "✋ Gesture Studio",
+            Destinations.NetworkDiscovery.route to "🌐 Network Discovery",
+            Destinations.Proximity.route to "📡 Proximity Lock",
+            Destinations.VoiceCommands.route to "🎤 Voice Commands",
+            Destinations.EdgeGestures.route to "👆 Edge Gestures",
+            Destinations.Touchpad.route to "🖱️ Touchpad Settings",
+            Destinations.SensorVisualizer.route to "📊 Sensor Visualizer",
+            Destinations.ServerLogs.route to "📋 Server Logs",
+            Destinations.Battery.route to "🔋 Battery Monitor",
+            Destinations.Accessibility.route to "♿ Accessibility",
+            Destinations.Profiles.route to "👤 Profiles",
+            Destinations.Themes.route to "🎨 Themes"
+        )
+        
+        advancedTools.forEach { (route, title) ->
             NavigationDrawerItem(
-                label = { Text(title, color = Color(0xFFE5E7EB)) },
+                label = { Text(title, color = Color(0xFFE5E7EB), fontSize = 13.sp) },
                 selected = currentRoute == route,
                 onClick = { onItemClick(route) },
                 icon = {
                     Icon(
                         Icons.Default.Circle,
                         contentDescription = null,
-                        modifier = Modifier.size(8.dp),
+                        modifier = Modifier.size(6.dp),
                         tint = Color(0xFF4CAF50)
                     )
                 },
@@ -404,7 +407,7 @@ fun AnimatedFAB(
     val infiniteTransition = rememberInfiniteTransition()
     val pulse by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.1f,
+        targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -418,11 +421,7 @@ fun AnimatedFAB(
         elevation = FloatingActionButtonDefaults.elevation(
             defaultElevation = if (isActive) 8.dp else 4.dp
         ),
-        modifier = Modifier
-            .then(
-                if (isActive) Modifier
-                else Modifier
-            )
+        modifier = Modifier.then(if (isActive) Modifier else Modifier)
     ) {
         Box(
             modifier = Modifier
@@ -434,8 +433,7 @@ fun AnimatedFAB(
         ) {
             Row(
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     icon,
