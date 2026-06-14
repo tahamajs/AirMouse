@@ -3,6 +3,7 @@ package predictive
 import (
     "math"
     "sync"
+    "time"  // Add this import
 )
 
 type KalmanFilter2D struct {
@@ -51,7 +52,7 @@ func NewKalmanFilter2D(dt float64) *KalmanFilter2D {
         {0, 0, 0, 1},
     }
     
-    // Observation matrix (we observe position and velocity)
+    // Observation matrix
     kf.H = [4][4]float64{
         {1, 0, 0, 0},
         {0, 1, 0, 0},
@@ -171,7 +172,6 @@ func (kf *KalmanFilter2D) Update(dx, dy float64) {
     }
     
     // Calculate Kalman gain: K = P*H'*inv(S)
-    // Use full matrix inversion for better accuracy
     invS := kf.invertMatrix4x4(S)
     
     var K [4][4]float64

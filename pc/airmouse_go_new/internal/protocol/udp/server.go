@@ -100,12 +100,13 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
     client.LastSeen = time.Now()
     s.mu.Unlock()
     
-    switch msg {
-    case "AIRMOUSE_DISCOVER":
+    // Handle different message types
+    switch {
+    case msg == "AIRMOUSE_DISCOVER" || msg == "AIRMOUSE_DISCOVERY":
         s.sendDiscoveryResponse(clientAddr)
         utils.LogDebug("UDP discovery request from", "ip", clientIP)
         
-    case "AIRMOUSE_HELLO":
+    case msg == "AIRMOUSE_HELLO":
         s.triggerEvent(UDPEvent{
             Type:      "hello",
             ClientIP:  clientIP,
@@ -116,9 +117,19 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
         // Parse JSON message
         var parsed map[string]interface{}
         if err := json.Unmarshal([]byte(msg), &parsed); err == nil {
-            if msgType, ok := parsed["type"].(string); ok && msgType == "proximity" {
-                utils.LogDebug("UDP proximity update", "from", clientIP)
+            if msgType, ok := parsed["type"].(string); ok {
+                switch msgType {
+                case "proximity":
+                    utils.LogDebug("UDP proximity update", "from", clientIP)
+                case "ping":
+                    // Respond to ping
+                    s.sendPong(clientAddr)
+                default:
+                    utils.LogDebug("UDP message received", "type", msgType, "from", clientIP)
+                }
             }
+        } else {
+            utils.LogDebug("UDP unknown message", "msg", msg, "from", clientIP)
         }
     }
 }
@@ -126,16 +137,33 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 func (s *Server) sendDiscoveryResponse(clientAddr *net.UDPAddr) {
     localIP := getLocalIP()
     response := map[string]interface{}{
-        "type": "discovery_response",
-        "port": 8080,
-        "ip":   localIP,
-        "name": "AirMouse Server",
+        "type":    "discovery_response",
+        "port":    8080,
+        "ip":      localIP,
+        "name":    "Air Mouse Server",
         "version": "3.0.0",
     }
     
     data, err := json.Marshal(response)
     if err != nil {
         utils.LogError("Failed to marshal discovery response", "error", err)
+        return
+    }
+    
+    _, err = s.conn.WriteToUDP(data, clientAddr)
+    if err != nil {
+        utils.LogDebug("Failed to send discovery response", "error", err)
+    }
+}
+
+func (s *Server) sendPong(clientAddr *net.UDPAddr) {
+    response := map[string]interface{}{
+        "type": "pong",
+        "time": time.Now().UnixMilli(),
+    }
+    
+    data, err := json.Marshal(response)
+    if err != nil {
         return
     }
     
@@ -206,6 +234,17 @@ func (s *Server) BroadcastMessage(msg interface{}) error {
     }
     
     return nil
+}
+
+func (s *Server) GetConnectedClients() []*UDPClient {
+    s.mu.RLock()
+    defer s.mu.RUnlock()
+    
+    clients := make([]*UDPClient, 0, len(s.clients))
+    for _, client := range s.clients {
+        clients = append(clients, client)
+    }
+    return clients
 }
 
 func getLocalIP() string {
