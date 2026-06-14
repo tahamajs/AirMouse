@@ -677,3 +677,164 @@ class PreferencesManager @Inject constructor(
         putFloat("sensitivity", value)
     }
 }
+
+
+package com.airmouse.utils
+
+import android.content.Context
+import android.content.SharedPreferences
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class PreferencesManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+    companion object {
+        private const val PREF_NAME = "airmouse_prefs"
+        private const val DEFAULT_SENSITIVITY = 0.5f
+        private const val DEFAULT_CLICK_THRESHOLD = 5.0f
+        private const val DEFAULT_DOUBLE_CLICK_INTERVAL = 400L
+        private const val DEFAULT_SCROLL_THRESHOLD = 8.0f
+        private const val DEFAULT_RIGHT_CLICK_TILT = 45f
+        private const val DEFAULT_THEME = "dark"
+    }
+
+    private val prefs: SharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+
+    // ==================== String operations ====================
+    fun putString(key: String, value: String) {
+        prefs.edit().putString(key, value).apply()
+    }
+
+    fun getString(key: String, defaultValue: String = ""): String {
+        return prefs.getString(key, defaultValue) ?: defaultValue
+    }
+
+    // ==================== Int operations ====================
+    fun putInt(key: String, value: Int) {
+        prefs.edit().putInt(key, value).apply()
+    }
+
+    fun getInt(key: String, defaultValue: Int = 0): Int {
+        return prefs.getInt(key, defaultValue)
+    }
+
+    // ==================== Long operations ====================
+    fun putLong(key: String, value: Long) {
+        prefs.edit().putLong(key, value).apply()
+    }
+
+    fun getLong(key: String, defaultValue: Long = 0L): Long {
+        return prefs.getLong(key, defaultValue)
+    }
+
+    // ==================== Float operations ====================
+    fun putFloat(key: String, value: Float) {
+        prefs.edit().putFloat(key, value).apply()
+    }
+
+    fun getFloat(key: String, defaultValue: Float = 0f): Float {
+        return prefs.getFloat(key, defaultValue)
+    }
+
+    // ==================== Boolean operations ====================
+    fun putBoolean(key: String, value: Boolean) {
+        prefs.edit().putBoolean(key, value).apply()
+    }
+
+    fun getBoolean(key: String, defaultValue: Boolean = false): Boolean {
+        return prefs.getBoolean(key, defaultValue)
+    }
+
+    // ==================== Remove operations ====================
+    fun remove(key: String) {
+        prefs.edit().remove(key).apply()
+    }
+
+    fun clear() {
+        prefs.edit().clear().apply()
+    }
+
+    fun contains(key: String): Boolean {
+        return prefs.contains(key)
+    }
+
+    // ==================== Settings Getters/Setters ====================
+    fun getSensitivity(): Float = getFloat("sensitivity", DEFAULT_SENSITIVITY)
+    fun setSensitivity(value: Float) = putFloat("sensitivity", value)
+
+    fun getClickThreshold(): Float = getFloat("click_threshold", DEFAULT_CLICK_THRESHOLD)
+    fun setClickThreshold(value: Float) = putFloat("click_threshold", value)
+
+    fun getDoubleClickInterval(): Long = getLong("double_click_interval", DEFAULT_DOUBLE_CLICK_INTERVAL)
+    fun setDoubleClickInterval(value: Long) = putLong("double_click_interval", value)
+
+    fun getScrollThreshold(): Float = getFloat("scroll_threshold", DEFAULT_SCROLL_THRESHOLD)
+    fun setScrollThreshold(value: Float) = putFloat("scroll_threshold", value)
+
+    fun getRightClickTilt(): Float = getFloat("right_click_tilt", DEFAULT_RIGHT_CLICK_TILT)
+    fun setRightClickTilt(value: Float) = putFloat("right_click_tilt", value)
+
+    fun getTheme(): String = getString("theme", DEFAULT_THEME)
+    fun setTheme(value: String) = putString("theme", value)
+
+    fun getLastIp(): String = getString("last_ip", "")
+    fun setLastIp(value: String) = putString("last_ip", value)
+
+    fun isHapticEnabled(): Boolean = getBoolean("haptic_enabled", true)
+    fun setHapticEnabled(enabled: Boolean) = putBoolean("haptic_enabled", enabled)
+
+    fun isAccelerationEnabled(): Boolean = getBoolean("acceleration_enabled", true)
+    fun setAccelerationEnabled(enabled: Boolean) = putBoolean("acceleration_enabled", enabled)
+
+    fun isSmoothingEnabled(): Boolean = getBoolean("smoothing_enabled", true)
+    fun setSmoothingEnabled(enabled: Boolean) = putBoolean("smoothing_enabled", enabled)
+
+    fun isInvertX(): Boolean = getBoolean("invert_x", false)
+    fun setInvertX(enabled: Boolean) = putBoolean("invert_x", enabled)
+
+    fun isInvertY(): Boolean = getBoolean("invert_y", false)
+    fun setInvertY(enabled: Boolean) = putBoolean("invert_y", enabled)
+
+    // ==================== Statistics ====================
+    fun incrementClickCount() {
+        val current = getInt("click_count", 0)
+        putInt("click_count", current + 1)
+    }
+
+    fun getClickCount(): Int = getInt("click_count", 0)
+
+    fun incrementScrollCount() {
+        val current = getInt("scroll_count", 0)
+        putInt("scroll_count", current + 1)
+    }
+
+    fun getScrollCount(): Int = getInt("scroll_count", 0)
+
+    fun incrementRightClickCount() {
+        val current = getInt("right_click_count", 0)
+        putInt("right_click_count", current + 1)
+    }
+
+    fun getRightClickCount(): Int = getInt("right_click_count", 0)
+
+    fun incrementDoubleClickCount() {
+        val current = getInt("double_click_count", 0)
+        putInt("double_click_count", current + 1)
+    }
+
+    fun getDoubleClickCount(): Int = getInt("double_click_count", 0)
+
+    fun resetStatistics() {
+        putInt("click_count", 0)
+        putInt("scroll_count", 0)
+        putInt("right_click_count", 0)
+        putInt("double_click_count", 0)
+    }
+
+    // ==================== Calibration ====================
+    fun isCalibrated(): Boolean = getBoolean("calibration_complete", false)
+    fun setCalibrated(calibrated: Boolean) = putBoolean("calibration_complete", calibrated)
+}
