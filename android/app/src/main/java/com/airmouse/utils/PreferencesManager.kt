@@ -19,7 +19,33 @@ class PreferencesManager @Inject constructor(
     fun putFloat(key: String, value: Float) = prefs.edit().putFloat(key, value).apply()
     fun getBoolean(key: String, default: Boolean): Boolean = prefs.getBoolean(key, default)
     fun putBoolean(key: String, value: Boolean) = prefs.edit().putBoolean(key, value).apply()
+// Add these methods to PreferencesManager.kt
 
+// Gyroscope calibration
+fun getGyroBiasX(): Float = getFloat("gyro_bias_x", 0f)
+fun getGyroBiasY(): Float = getFloat("gyro_bias_y", 0f)
+fun getGyroBiasZ(): Float = getFloat("gyro_bias_z", 0f)
+
+// Magnetometer calibration
+fun getMagOffsetX(): Float = getFloat("mag_offset_x", 0f)
+fun getMagOffsetY(): Float = getFloat("mag_offset_y", 0f)
+fun getMagOffsetZ(): Float = getFloat("mag_offset_z", 0f)
+fun getMagScaleX(): Float = getFloat("mag_scale_x", 1f)
+fun getMagScaleY(): Float = getFloat("mag_scale_y", 1f)
+fun getMagScaleZ(): Float = getFloat("mag_scale_z", 1f)
+
+// Accelerometer calibration
+fun getAccelOffsetX(): Float = getFloat("accel_offset_x", 0f)
+fun getAccelOffsetY(): Float = getFloat("accel_offset_y", 0f)
+fun getAccelOffsetZ(): Float = getFloat("accel_offset_z", 0f)
+fun getAccelScaleX(): Float = getFloat("accel_scale_x", 1f)
+fun getAccelScaleY(): Float = getFloat("accel_scale_y", 1f)
+fun getAccelScaleZ(): Float = getFloat("accel_scale_z", 1f)
+
+// Status flags
+fun isGyroCalibrated(): Boolean = getBoolean("gyro_calibrated", false)
+fun isMagCalibrated(): Boolean = getBoolean("mag_calibrated", false)
+fun isAccelCalibrated(): Boolean = getBoolean("accel_calibrated", false)
     fun putString(key: String, value: String) = prefs.edit { putString(key, value) }
     fun getString(key: String, defaultValue: String = ""): String = prefs.getString(key, defaultValue) ?: defaultValue
 
