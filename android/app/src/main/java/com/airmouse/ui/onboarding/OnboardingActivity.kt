@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/ui/onboarding/OnboardingActivity.kt
 package com.airmouse.ui.onboarding
 
 import android.animation.ArgbEvaluator
@@ -203,7 +202,7 @@ class ParallaxPageTransformer : ViewPager2.PageTransformer {
             scaleY = scaleX
 
             // Parallax effect for the image
-            val imageView = findViewById<android.widget.ImageView>(R.id.iv_onboarding_image)
+            val imageView = page.findViewById<android.widget.ImageView>(R.id.iv_onboarding_image)
             imageView?.translationX = -position * width * 0.3f
         }
     }
