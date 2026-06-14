@@ -30,9 +30,36 @@ builds:
     env:
       - CGO_ENABLED=1
     tags:
-      - ai
       - netgo
       - osusergo
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: airmouse-linux-noai
+    main: ./cmd/airmouse-server
+    binary: airmouse-server-noai
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildTime={{.Date}}
+      - -X main.gitCommit={{.Commit}}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - 7
+    env:
+      - CGO_ENABLED=0
+    tags:
+      - noai
+      - netgo
+      - osusergo
+    flags:
+      - -trimpath
 
   - id: airmouse-windows
     main: ./cmd/airmouse-server
@@ -50,7 +77,29 @@ builds:
     env:
       - CGO_ENABLED=1
     tags:
-      - ai
+      - netgo
+    flags:
+      - -trimpath
+
+  - id: airmouse-windows-noai
+    main: ./cmd/airmouse-server
+    binary: airmouse-server-noai
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildTime={{.Date}}
+      - -X main.gitCommit={{.Commit}}
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    tags:
+      - noai
+    flags:
+      - -trimpath
 
   - id: airmouse-darwin
     main: ./cmd/airmouse-server
@@ -68,25 +117,54 @@ builds:
     env:
       - CGO_ENABLED=1
     tags:
-      - ai
+      - netgo
+    flags:
+      - -trimpath
+
+  - id: airmouse-darwin-noai
+    main: ./cmd/airmouse-server
+    binary: airmouse-server-noai
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildTime={{.Date}}
+      - -X main.gitCommit={{.Commit}}
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    tags:
+      - noai
+    flags:
+      - -trimpath
 
 archives:
   - id: airmouse-archive
     builds:
       - airmouse-linux
+      - airmouse-linux-noai
       - airmouse-windows
+      - airmouse-windows-noai
       - airmouse-darwin
+      - airmouse-darwin-noai
     format: tar.gz
     format_overrides:
       - goos: windows
         format: zip
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Tags }}_noai{{ end }}"
     files:
       - README.md
       - LICENSE
       - config.example.json
       - scripts/install.sh
       - scripts/uninstall.sh
+      - scripts/postinstall.sh
+      - scripts/preinstall.sh
+      - scripts/preremove.sh
+      - scripts/postremove.sh
 
 checksum:
   name_template: "checksums.txt"
@@ -97,13 +175,28 @@ snapshot:
 
 changelog:
   sort: asc
+  use: github
+  groups:
+    - title: "🚀 Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "🐛 Bug fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "📚 Documentation"
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "🧹 Chores"
+      order: 3
   filters:
     exclude:
       - '^docs:'
       - '^test:'
       - '^ci:'
-      - Merge pull request
-      - Merge branch
+      - '^chore:'
+      - 'Merge pull request'
+      - 'Merge branch'
+      - 'go mod tidy'
 
 brews:
   - name: airmouse-server
@@ -119,6 +212,11 @@ brews:
       etc.install "config.example.json" => "airmouse/config.json"
     test: |
       system "#{bin}/airmouse-server --version"
+    caveats: |
+      To start the server:
+        airmouse-server
+      To run at login:
+        brew services start airmouse-server
 
 nfpms:
   - id: airmouse-nfpm
@@ -159,12 +257,25 @@ nfpms:
       postinstall: "scripts/postinstall.sh"
       preremove: "scripts/preremove.sh"
       postremove: "scripts/postremove.sh"
+    rpm:
+      group: "System Environment/Daemons"
+      summary: "Air Mouse Pro Server"
+    deb:
+      breaks:
+        - airmouse-server-legacy
+      recommends:
+        - systemd
+      suggests:
+        - bluetooth
+        - bluez
 
 dockers:
   - id: airmouse-docker
     image_templates:
       - "airmouse/airmouse-server:{{ .Version }}"
       - "airmouse/airmouse-server:latest"
+      - "ghcr.io/yourusername/airmouse-server:{{ .Version }}"
+      - "ghcr.io/yourusername/airmouse-server:latest"
     dockerfile: Dockerfile
     build_flag_templates:
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -172,8 +283,22 @@ dockers:
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--label=org.opencontainers.image.source=https://github.com/yourusername/airmouse-go"
+      - "--platform=linux/amd64,linux/arm64"
     files:
       - config.example.json
+    use: buildx
+    goos: linux
+    goarch: amd64
+
+docker_manifests:
+  - name_template: "airmouse/airmouse-server:{{ .Version }}"
+    image_templates:
+      - "airmouse/airmouse-server:{{ .Version }}-amd64"
+      - "airmouse/airmouse-server:{{ .Version }}-arm64"
+  - name_template: "airmouse/airmouse-server:latest"
+    image_templates:
+      - "airmouse/airmouse-server:latest-amd64"
+      - "airmouse/airmouse-server:latest-arm64"
 
 release:
   github:
@@ -186,20 +311,14 @@ release:
     - glob: ./dist/*.tar.gz
     - glob: ./dist/*.deb
     - glob: ./dist/*.rpm
+    - glob: ./dist/*.apk
     - glob: ./dist/checksums.txt
-
-announce:
-  twitter:
-    enabled: true
-    message_template: "New release of Air Mouse Pro Server {{.Version}} is out! {{.ReleaseURL}}"
-  slack:
-    enabled: true
-    channel: "#releases"
-    message_template: "New release: {{.Version}} - {{.ReleaseURL}}"
-  discord:
-    enabled: true
-    message_template: "**New release of Air Mouse Pro Server {{.Version}}**\n{{.ReleaseURL}}"
-
-signs:
-  - artifacts: checksum
-    args: ["--batch", "-u", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]
+  header: |
+    ## Air Mouse Pro Server {{.Version}}
+    
+    ### Installation
+    
+    #### macOS (Homebrew)
+    ```bash
+    brew tap yourusername/airmouse
+    brew install airmouse-server

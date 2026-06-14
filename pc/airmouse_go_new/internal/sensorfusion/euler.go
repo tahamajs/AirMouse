@@ -70,17 +70,12 @@ func (e EulerAngles) Clamp() EulerAngles {
 // IsValid checks if Euler angles are within reasonable ranges
 func (e EulerAngles) IsValid() bool {
     return !math.IsNaN(e.Roll) && !math.IsNaN(e.Pitch) && !math.IsNaN(e.Yaw) &&
-           math.Abs(e.Roll) <= 180 && math.Abs(e.Pitch) <= 180 && math.Abs(e.Yaw) <= 360
+        math.Abs(e.Roll) <= 180 && math.Abs(e.Pitch) <= 180 && math.Abs(e.Yaw) <= 360
 }
 
 // ToQuaternion converts Euler angles to quaternion
 func (e EulerAngles) ToQuaternion() Quaternion {
     return FromEuler(e.Roll, e.Pitch, e.Yaw)
-}
-
-// String returns string representation
-func (e EulerAngles) String() string {
-    return fmt.Sprintf("Euler(roll=%.2f°, pitch=%.2f°, yaw=%.2f°)", e.Roll, e.Pitch, e.Yaw)
 }
 
 // Difference returns the angular difference between two Euler angle sets
@@ -90,4 +85,9 @@ func (e EulerAngles) Difference(other EulerAngles) EulerAngles {
         Pitch: math.Abs(e.Pitch - other.Pitch),
         Yaw:   math.Abs(e.Yaw - other.Yaw),
     }.Normalize()
+}
+
+// String returns string representation
+func (e EulerAngles) String() string {
+    return fmt.Sprintf("Euler(roll=%.2f°, pitch=%.2f°, yaw=%.2f°)", e.Roll, e.Pitch, e.Yaw)
 }
