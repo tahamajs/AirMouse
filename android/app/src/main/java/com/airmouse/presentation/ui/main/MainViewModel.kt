@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/presentation/ui/main/MainViewModel.kt
 package com.airmouse.presentation.ui.main
 
 import androidx.lifecycle.ViewModel
@@ -6,10 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.airmouse.network.ConnectionManager
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,11 +20,51 @@ class MainViewModel @Inject constructor(
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+    
+    private val _connectionQuality = MutableStateFlow<ConnectionQuality?>(null)
+    val connectionQuality: StateFlow<ConnectionQuality?> = _connectionQuality.asStateFlow()
+    
+    private val _serverInfo = MutableStateFlow(Pair("", ""))
+    val serverInfo: StateFlow<Pair<String, String>> = _serverInfo.asStateFlow()
+
+    data class ConnectionQuality(
+        val ping: Int,
+        val signalStrength: Int,
+        val isStable: Boolean
+    )
+
+    data class MainUiState(
+        val controlMode: String = "motion",
+        val isLoading: Boolean = false,
+        val error: String? = null
+    )
 
     init {
         viewModelScope.launch {
             connectionManager.connectionStatus.collect { status ->
                 _isConnected.value = status == ConnectionManager.ConnectionStatus.CONNECTED
+            }
+        }
+        
+        viewModelScope.launch {
+            connectionManager.connectionQuality.collect { quality ->
+                _connectionQuality.value = ConnectionQuality(
+                    ping = quality.ping,
+                    signalStrength = quality.level(),
+                    isStable = quality.isHealthy()
+                )
+            }
+        }
+        
+        viewModelScope.launch {
+            connectionManager.serverName.collect { name ->
+                _serverInfo.value = Pair(name, _serverInfo.value.second)
+            }
+        }
+        
+        viewModelScope.launch {
+            connectionManager.serverVersion.collect { version ->
+                _serverInfo.value = Pair(_serverInfo.value.first, version)
             }
         }
 
@@ -43,8 +79,25 @@ class MainViewModel @Inject constructor(
         prefs.putString("control_mode", mode)
         _uiState.update { it.copy(controlMode = mode) }
     }
-
-    data class MainUiState(
-        val controlMode: String = "motion"
-    )
+    
+    fun disconnect() {
+        viewModelScope.launch {
+            connectionManager.disconnect()
+        }
+    }
+    
+    fun reconnect() {
+        viewModelScope.launch {
+            connectionManager.reconnect()
+        }
+    }
+    
+    fun showArmCalibrationDialog() {
+        // Show arm calibration dialog
+        _uiState.update { it.copy(error = "Arm calibration coming soon") }
+    }
+    
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
 }

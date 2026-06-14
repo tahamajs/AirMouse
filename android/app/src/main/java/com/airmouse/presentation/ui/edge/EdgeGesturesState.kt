@@ -1,128 +1,63 @@
 package com.airmouse.presentation.ui.edge
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 data class EdgeGesturesUiState(
     val isEnabled: Boolean = false,
-    val volumeUpAction: String = "Left Click",
-    val volumeDownAction: String = "Right Click",
-    val longPressAction: String = "Scroll",
-    val doublePressAction: String = "Double Click",
+    val volumeUpAction: EdgeAction = EdgeAction.LEFT_CLICK,
+    val volumeDownAction: EdgeAction = EdgeAction.RIGHT_CLICK,
+    val longPressAction: EdgeAction = EdgeAction.SCROLL,
+    val doublePressAction: EdgeAction = EdgeAction.DOUBLE_CLICK,
     val vibrationFeedback: Boolean = true,
     val screenEdgeSensitivity: Float = 0.2f,
-    val availableActions: List<String> = listOf(
-        "Left Click", "Right Click", "Double Click", "Scroll Up", "Scroll Down",
-        "Volume Up", "Volume Down", "Previous Track", "Next Track", "Play/Pause",
-        "None"
-    )
+    val isConfiguring: Boolean = false,
+    val configuringAction: EdgeAction? = null,
+    val lastDetectedGesture: String? = null,
+    val gestureDetectionProgress: Float = 0f
 )
 
-@HiltViewModel
-class EdgeGesturesViewModel @Inject constructor(
-    private val prefs: PreferencesManager
-) : ViewModel() {
+enum class EdgeAction(
+    val displayName: String,
+    val description: String,
+    val icon: ImageVector
+) {
+    LEFT_CLICK("Left Click", "Simulate left mouse button click", Icons.Default.Mouse),
+    RIGHT_CLICK("Right Click", "Simulate right mouse button click", Icons.Default.Mouse),
+    DOUBLE_CLICK("Double Click", "Simulate double click", Icons.Default.Cached),
+    SCROLL_UP("Scroll Up", "Scroll up", Icons.Default.ArrowUpward),
+    SCROLL_DOWN("Scroll Down", "Scroll down", Icons.Default.ArrowDownward),
+    VOLUME_UP("Volume Up", "Increase system volume", Icons.Default.VolumeUp),
+    VOLUME_DOWN("Volume Down", "Decrease system volume", Icons.Default.VolumeDown),
+    PREV_TRACK("Previous Track", "Previous media track", Icons.Default.SkipPrevious),
+    NEXT_TRACK("Next Track", "Next media track", Icons.Default.SkipNext),
+    PLAY_PAUSE("Play/Pause", "Play or pause media", Icons.Default.PlayArrow),
+    LOCK_SCREEN("Lock Screen", "Lock the screen", Icons.Default.Lock),
+    SHOW_DESKTOP("Show Desktop", "Minimize all windows", Icons.Default.DesktopWindows),
+    TASK_VIEW("Task View", "Show task switcher", Icons.Default.Window),
+    TAKE_SCREENSHOT("Take Screenshot", "Capture screenshot", Icons.Default.CameraAlt),
+    TOGGLE_KEYBOARD("Toggle Keyboard", "Show/hide keyboard", Icons.Default.Keyboard),
+    VOICE_COMMAND("Voice Command", "Activate voice assistant", Icons.Default.Mic),
+    NONE("None", "Disabled", Icons.Default.Cancel)
+}
 
-    private val _uiState = MutableStateFlow(EdgeGesturesUiState())
-    val uiState: StateFlow<EdgeGesturesUiState> = _uiState.asStateFlow()
-
-    init {
-        loadSettings()
-    }
-
-    private fun loadSettings() {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isEnabled = prefs.getBoolean("edge_gestures_enabled", false),
-                    volumeUpAction = prefs.getString("edge_gestures_volume_up", "Left Click"),
-                    volumeDownAction = prefs.getString("edge_gestures_volume_down", "Right Click"),
-                    longPressAction = prefs.getString("edge_gestures_long_press", "Scroll"),
-                    doublePressAction = prefs.getString("edge_gestures_double_press", "Double Click"),
-                    vibrationFeedback = prefs.getBoolean("edge_gestures_vibration", true),
-                    screenEdgeSensitivity = prefs.getFloat("edge_gestures_sensitivity", 0.2f)
-                )
-            }
-        }
-    }
-
-    fun setEnabled(enabled: Boolean) {
-        prefs.putBoolean("edge_gestures_enabled", enabled)
-        _uiState.update { it.copy(isEnabled = enabled) }
-    }
-
-    fun setVolumeUpAction(action: String) {
-        prefs.putString("edge_gestures_volume_up", action)
-        _uiState.update { it.copy(volumeUpAction = action) }
-    }
-
-    fun setVolumeDownAction(action: String) {
-        prefs.putString("edge_gestures_volume_down", action)
-        _uiState.update { it.copy(volumeDownAction = action) }
-    }
-
-    fun setLongPressAction(action: String) {
-        prefs.putString("edge_gestures_long_press", action)
-        _uiState.update { it.copy(longPressAction = action) }
-    }
-
-    fun setDoublePressAction(action: String) {
-        prefs.putString("edge_gestures_double_press", action)
-        _uiState.update { it.copy(doublePressAction = action) }
-    }
-
-    fun setVibrationFeedback(enabled: Boolean) {
-        prefs.putBoolean("edge_gestures_vibration", enabled)
-        _uiState.update { it.copy(vibrationFeedback = enabled) }
-    }
-
-    fun setScreenEdgeSensitivity(sensitivity: Float) {
-        prefs.putFloat("edge_gestures_sensitivity", sensitivity)
-        _uiState.update { it.copy(screenEdgeSensitivity = sensitivity) }
-    }
-
-    fun resetToDefaults() {
-        prefs.putBoolean("edge_gestures_enabled", false)
-        prefs.putString("edge_gestures_volume_up", "Left Click")
-        prefs.putString("edge_gestures_volume_down", "Right Click")
-        prefs.putString("edge_gestures_long_press", "Scroll")
-        prefs.putString("edge_gestures_double_press", "Double Click")
-        prefs.putBoolean("edge_gestures_vibration", true)
-        prefs.putFloat("edge_gestures_sensitivity", 0.2f)
-
-        loadSettings()
-    }
-}package com.airmouse.presentation.ui.edge
-
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import javax.inject.Inject
-
-data class EdgeGesturesUiState(
-    val isEnabled: Boolean = false,
-    val volumeUpAction: String = "Left Click",
-    val volumeDownAction: String = "Right Click",
-    val longPressAction: String = "Scroll",
-    val doublePressAction: String = "Double Click",
-    val vibrationFeedback: Boolean = true,
-    val screenEdgeSensitivity: Float = 0.2f,
-    val availableActions: List<String> = listOf(
-        "Left Click", "Right Click", "Double Click", "Scroll Up", "Scroll Down",
-        "Volume Up", "Volume Down", "Previous Track", "Next Track", "Play/Pause",
-        "None"
-    )
+data class EdgeGestureEvent(
+    val type: GestureType,
+    val timestamp: Long = System.currentTimeMillis(),
+    val confidence: Float = 1f
 )
 
+enum class GestureType {
+    VOLUME_UP, VOLUME_DOWN, LONG_PRESS, DOUBLE_PRESS
+}
+
+data class EdgeGesturesStats(
+    val totalDetections: Int = 0,
+    val volumeUpCount: Int = 0,
+    val volumeDownCount: Int = 0,
+    val longPressCount: Int = 0,
+    val doublePressCount: Int = 0,
+    val successfulExecutions: Int = 0,
+    val failedExecutions: Int = 0
+)
