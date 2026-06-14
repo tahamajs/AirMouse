@@ -25,23 +25,23 @@ type MovementSample struct {
 }
 
 type JitterBuffer struct {
-    cfg         JitterBufferConfig
-    predictor   *DeadReckoningPredictor
-    mu          sync.Mutex
-    lastTime    time.Time
+    cfg            JitterBufferConfig
+    predictor      *DeadReckoningPredictor
+    mu             sync.Mutex
+    lastTime       time.Time
     lastDx, lastDy float64
-    history     []MovementSample
-    maxHistory  int
-    stats       BufferStats
-    callbacks   []func(event BufferEvent)
+    history        []MovementSample
+    maxHistory     int
+    stats          BufferStats
+    callbacks      []func(event BufferEvent)
 }
 
 type BufferStats struct {
-    TotalSamples    int64
-    AvgLatency      time.Duration
-    MaxLatency      time.Duration
-    AvgBlendFactor  float64
-    DroppedSamples  int64
+    TotalSamples   int64
+    AvgLatency     time.Duration
+    MaxLatency     time.Duration
+    AvgBlendFactor float64
+    DroppedSamples int64
 }
 
 type BufferEvent struct {
@@ -52,14 +52,14 @@ type BufferEvent struct {
 
 func DefaultJitterBufferConfig() JitterBufferConfig {
     return JitterBufferConfig{
-        MaxLatency:        100 * time.Millisecond,
-        PredictionWindow:  20 * time.Millisecond,
-        BlendFactor:       0.7,
-        UseKalmanVelocity: true,
-        UseAcceleration:   false,
-        AdaptiveBlend:     true,
-        MinBlend:          0.3,
-        MaxBlend:          0.9,
+        MaxLatency:         100 * time.Millisecond,
+        PredictionWindow:   20 * time.Millisecond,
+        BlendFactor:        0.7,
+        UseKalmanVelocity:  true,
+        UseAcceleration:    false,
+        AdaptiveBlend:      true,
+        MinBlend:           0.3,
+        MaxBlend:           0.9,
     }
 }
 
@@ -77,34 +77,34 @@ func NewJitterBuffer(cfg JitterBufferConfig) *JitterBuffer {
 func (jb *JitterBuffer) AddMovement(dx, dy float64, receivedAt time.Time) (smoothedDx, smoothedDy float64) {
     jb.mu.Lock()
     defer jb.mu.Unlock()
-    
+
     now := time.Now()
     dt := now.Sub(jb.lastTime).Seconds()
     if dt < 0.001 {
         dt = 0.02
     }
-    
+
     latency := now.Sub(receivedAt)
     quality := jb.calculateQuality(dx, dy, latency)
-    
+
     // Update predictor
     if jb.cfg.UseKalmanVelocity {
         jb.predictor.UpdateVelocity(dx, dy, dt)
     }
-    
+
     // Predict future movement
     predDx, predDy := jb.predictor.Predict(jb.cfg.PredictionWindow.Seconds())
-    
+
     // Calculate adaptive blend factor
     blend := jb.cfg.BlendFactor
     if jb.cfg.AdaptiveBlend {
         blend = jb.calculateAdaptiveBlend(latency, quality)
     }
-    
+
     // Apply smoothing
     smoothedDx = (1-blend)*dx + blend*predDx
     smoothedDy = (1-blend)*dy + blend*predDy
-    
+
     // Store sample
     sample := MovementSample{
         Timestamp: now,
@@ -117,7 +117,7 @@ func (jb *JitterBuffer) AddMovement(dx, dy float64, receivedAt time.Time) (smoot
     if len(jb.history) > jb.maxHistory {
         jb.history = jb.history[1:]
     }
-    
+
     // Update statistics
     jb.stats.TotalSamples++
     jb.stats.AvgLatency = (jb.stats.AvgLatency*time.Duration(jb.stats.TotalSamples-1) + latency) / time.Duration(jb.stats.TotalSamples)
@@ -130,7 +130,7 @@ func (jb *JitterBuffer) AddMovement(dx, dy float64, receivedAt time.Time) (smoot
         })
     }
     jb.stats.AvgBlendFactor = (jb.stats.AvgBlendFactor*float64(jb.stats.TotalSamples-1) + blend) / float64(jb.stats.TotalSamples)
-    
+
     // Check for drop
     if latency > jb.cfg.MaxLatency {
         jb.stats.DroppedSamples++
@@ -140,14 +140,14 @@ func (jb *JitterBuffer) AddMovement(dx, dy float64, receivedAt time.Time) (smoot
             Latency:   latency,
         })
     }
-    
+
     jb.lastTime = now
     jb.lastDx, jb.lastDy = smoothedDx, smoothedDy
     jb.triggerEvent(BufferEvent{
         Type:      "sample_added",
         Timestamp: now,
     })
-    
+
     return
 }
 
@@ -155,10 +155,10 @@ func (jb *JitterBuffer) calculateQuality(dx, dy float64, latency time.Duration) 
     // Quality based on movement magnitude and latency
     magnitude := math.Hypot(dx, dy)
     magQuality := math.Min(1.0, magnitude/50.0)
-    
+
     latencyQuality := 1.0 - math.Min(1.0, float64(latency)/float64(jb.cfg.MaxLatency))
-    
-    return magQuality * 0.4 + latencyQuality * 0.6
+
+    return magQuality*0.4 + latencyQuality*0.6
 }
 
 func (jb *JitterBuffer) calculateAdaptiveBlend(latency time.Duration, quality float64) float64 {
@@ -167,26 +167,26 @@ func (jb *JitterBuffer) calculateAdaptiveBlend(latency time.Duration, quality fl
     if latencyFactor > 1 {
         latencyFactor = 1
     }
-    
+
     // Lower quality = higher blend
     qualityFactor := 1 - quality
-    
+
     blend := jb.cfg.MinBlend + (latencyFactor*0.7+qualityFactor*0.3)*(jb.cfg.MaxBlend-jb.cfg.MinBlend)
-    
+
     if blend < jb.cfg.MinBlend {
         blend = jb.cfg.MinBlend
     }
     if blend > jb.cfg.MaxBlend {
         blend = jb.cfg.MaxBlend
     }
-    
+
     return blend
 }
 
 func (jb *JitterBuffer) PredictNow() (dx, dy float64) {
     jb.mu.Lock()
     defer jb.mu.Unlock()
-    
+
     dt := time.Since(jb.lastTime).Seconds()
     if dt > 0.1 {
         dt = 0.1
@@ -209,7 +209,7 @@ func (jb *JitterBuffer) GetStats() BufferStats {
 func (jb *JitterBuffer) GetHistory() []MovementSample {
     jb.mu.Lock()
     defer jb.mu.Unlock()
-    
+
     history := make([]MovementSample, len(jb.history))
     copy(history, jb.history)
     return history
@@ -218,7 +218,7 @@ func (jb *JitterBuffer) GetHistory() []MovementSample {
 func (jb *JitterBuffer) Reset() {
     jb.mu.Lock()
     defer jb.mu.Unlock()
-    
+
     jb.predictor.Reset()
     jb.history = jb.history[:0]
     jb.lastTime = time.Now()
@@ -238,12 +238,40 @@ func (jb *JitterBuffer) AddEventListener(callback func(event BufferEvent)) {
 }
 
 func (jb *JitterBuffer) triggerEvent(event BufferEvent) {
+    // Make a copy of callbacks to avoid holding lock during callbacks
     jb.mu.Lock()
     callbacks := make([]func(BufferEvent), len(jb.callbacks))
     copy(callbacks, jb.callbacks)
     jb.mu.Unlock()
-    
+
     for _, cb := range callbacks {
         go cb(event)
     }
+}
+
+// GetAverageLatency returns the average latency
+func (jb *JitterBuffer) GetAverageLatency() time.Duration {
+    jb.mu.Lock()
+    defer jb.mu.Unlock()
+    return jb.stats.AvgLatency
+}
+
+// GetDroppedSamples returns the number of dropped samples
+func (jb *JitterBuffer) GetDroppedSamples() int64 {
+    jb.mu.Lock()
+    defer jb.mu.Unlock()
+    return jb.stats.DroppedSamples
+}
+
+// IsHealthy returns true if the buffer is operating within acceptable parameters
+func (jb *JitterBuffer) IsHealthy() bool {
+    jb.mu.Lock()
+    defer jb.mu.Unlock()
+    
+    if jb.stats.TotalSamples == 0 {
+        return true
+    }
+    
+    dropRate := float64(jb.stats.DroppedSamples) / float64(jb.stats.TotalSamples)
+    return dropRate < 0.1 && jb.stats.AvgLatency < jb.cfg.MaxLatency*2
 }

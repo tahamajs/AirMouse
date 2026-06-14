@@ -16,53 +16,59 @@ type Kalman1D struct {
 }
 
 type Kalman1DStats struct {
-    Updates     int64
-    AvgInnovation float64
+    Updates        int64
+    AvgInnovation  float64
     LastInnovation float64
 }
 
 func NewKalman1D(processNoise, measurementNoise float64) *Kalman1D {
     return &Kalman1D{
-        x: 0,
-        P: 1,
-        Q: processNoise,
-        R: measurementNoise,
+        x:     0,
+        P:     1,
+        Q:     processNoise,
+        R:     measurementNoise,
+        stats: Kalman1DStats{}, // Initialize stats to zero values
     }
 }
 
 func (k *Kalman1D) Update(z float64) float64 {
     k.mu.Lock()
     defer k.mu.Unlock()
-    
+
     // Prediction
     k.P = k.P + k.Q
-    
+
     // Calculate innovation
     innovation := z - k.x
-    
+
     // Calculate Kalman gain
     k.K = k.P / (k.P + k.R)
-    
+
     // Update state estimate
     k.x = k.x + k.K*innovation
-    
+
     // Update error covariance
     k.P = (1 - k.K) * k.P
-    
+
     // Update statistics
     k.stats.Updates++
     k.stats.LastInnovation = math.Abs(innovation)
-    k.stats.AvgInnovation = (k.stats.AvgInnovation*float64(k.stats.Updates-1) + k.stats.LastInnovation) / float64(k.stats.Updates)
-    
+    // Calculate running average safely
+    if k.stats.Updates > 1 {
+        k.stats.AvgInnovation = (k.stats.AvgInnovation*float64(k.stats.Updates-1) + k.stats.LastInnovation) / float64(k.stats.Updates)
+    } else {
+        k.stats.AvgInnovation = k.stats.LastInnovation
+    }
+
     return k.x
 }
 
 func (k *Kalman1D) Predict(dt float64) float64 {
-    k.mu.Lock()
-    defer k.mu.Unlock()
-    
+    k.mu.RLock()
+    defer k.mu.RUnlock()
+
     // Simple prediction using constant velocity model
-    // x = x + v*dt (v is rate of change)
+    // For 1D Kalman, we assume velocity is the rate of change
     return k.x
 }
 
@@ -81,8 +87,8 @@ func (k *Kalman1D) GetVariance() float64 {
 func (k *Kalman1D) GetConfidence() float64 {
     k.mu.RLock()
     defer k.mu.RUnlock()
-    
-    // Confidence based on covariance
+
+    // Confidence based on covariance (lower variance = higher confidence)
     confidence := 1.0 / (1.0 + k.P/10.0)
     if confidence > 1.0 {
         confidence = 1.0
@@ -105,7 +111,7 @@ func (k *Kalman1D) Reset() {
     defer k.mu.Unlock()
     k.x = 0
     k.P = 1
-    k.stats = Kalman1DStats{}
+    k.stats = Kalman1DStats{} // Reset stats to zero
 }
 
 func (k *Kalman1D) GetStats() Kalman1DStats {

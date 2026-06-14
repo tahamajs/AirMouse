@@ -52,8 +52,14 @@ func (p *DeadReckoningPredictor) UpdateVelocity(dx, dy, dt float64) {
     if p.useAcceleration {
         ax := (vx - p.lastVX) / dt
         ay := (vy - p.lastVY) / dt
-        p.accelX.Update(ax)
-        p.accelY.Update(ay)
+        
+        // Filter acceleration to reduce noise
+        if math.Abs(ax) < 100 {
+            p.accelX.Update(ax)
+        }
+        if math.Abs(ay) < 100 {
+            p.accelY.Update(ay)
+        }
     }
     
     p.lastVX = vx
@@ -83,7 +89,7 @@ func (p *DeadReckoningPredictor) Predict(dt float64) (dx, dy float64) {
     }
     
     p.stats.Predictions++
-    return
+    return dx, dy
 }
 
 func (p *DeadReckoningPredictor) PredictPosition(currentX, currentY, dt float64) (x, y float64) {
@@ -113,7 +119,7 @@ func (p *DeadReckoningPredictor) GetConfidence() float64 {
     velConf := (p.velocityX.GetConfidence() + p.velocityY.GetConfidence()) / 2
     if p.useAcceleration {
         accConf := (p.accelX.GetConfidence() + p.accelY.GetConfidence()) / 2
-        return velConf * 0.7 + accConf * 0.3
+        return velConf*0.7 + accConf*0.3
     }
     return velConf
 }
@@ -136,4 +142,16 @@ func (p *DeadReckoningPredictor) GetStats() DRStats {
     p.mu.RLock()
     defer p.mu.RUnlock()
     return p.stats
+}
+
+func (p *DeadReckoningPredictor) SetError(error float64) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    
+    p.stats.LastError = error
+    if p.stats.Predictions > 0 {
+        p.stats.AvgError = (p.stats.AvgError*float64(p.stats.Predictions-1) + error) / float64(p.stats.Predictions)
+    } else {
+        p.stats.AvgError = error
+    }
 }
