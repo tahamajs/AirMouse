@@ -16,4 +16,34 @@
         android:icon="@drawable/ic_refresh"
         android:title="@string/action_refresh"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_reset"
+        android:icon="@drawable/ic_reset"
+        android:title="@string/action_reset"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_calibration_guide"
+        android:icon="@drawable/ic_calibration"
+        android:title="@string/calibration_guide_title"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sensor_info"
+        android:icon="@drawable/ic_sensor"
+        android:title="@string/sensor_info_title"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_connection_guide"
+        android:icon="@drawable/ic_connection"
+        android:title="@string/connection_guide_title"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_about"
+        android:icon="@drawable/ic_about"
+        android:title="@string/about_title"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_license"
+        android:icon="@drawable/ic_license"
+        android:title="@string/license_title"
+        app:showAsAction="never" />
 </menu>

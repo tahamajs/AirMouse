@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <!-- Main sections -->
+        <item
+            android:id="@+id/homeFragment"
+            android:icon="@drawable/ic_home"
+            android:title="@string/menu_home" />
+        <item
+            android:id="@+id/statisticsFragment"
+            android:icon="@drawable/ic_stats"
+            android:title="@string/menu_statistics" />
+        <item
+            android:id="@+id/settingsFragment"
+            android:icon="@drawable/ic_settings"
+            android:title="@string/menu_settings" />
+        <item
+            android:id="@+id/helpFragment"
+            android:icon="@drawable/ic_help"
+            android:title="@string/menu_help" />
+        <item
+            android:id="@+id/aboutFragment"
+            android:icon="@drawable/ic_info"
+            android:title="@string/menu_about" />
+        <item
+            android:id="@+id/sensorVisualizerFragment"
+            android:icon="@drawable/ic_sensor"
+            android:title="@string/menu_sensor_visualizer" />
+    </group>
+
+    <item android:title="@string/menu_advanced">
+        <menu>
+            <item
+                android:id="@+id/networkDiscoveryFragment"
+                android:icon="@drawable/ic_wifi"
+                android:title="@string/menu_network_discovery" />
+            <item
+                android:id="@+id/profilesFragment"
+                android:icon="@drawable/ic_profile"
+                android:title="@string/menu_profiles" />
+            <item
+                android:id="@+id/gestureStudioFragment"
+                android:icon="@drawable/ic_gesture"
+                android:title="@string/menu_gesture_studio" />
+            <item
+                android:id="@+id/edgeGesturesFragment"
+                android:icon="@drawable/ic_edge_gestures"
+                android:title="@string/menu_edge_gestures" />
+            <item
+                android:id="@+id/voiceCommandsFragment"
+                android:icon="@drawable/ic_mic"
+                android:title="@string/menu_voice_commands" />
+            <item
+                android:id="@+id/themesFragment"
+                android:icon="@drawable/ic_theme"
+                android:title="@string/menu_themes" />
+            <item
+                android:id="@+id/serverLogFragment"
+                android:icon="@drawable/ic_logs"
+                android:title="@string/menu_server_logs" />
+            <item
+                android:id="@+id/batteryGraphFragment"
+                android:icon="@drawable/ic_battery"
+                android:title="@string/menu_battery" />
+            <item
+                android:id="@+id/accessibilityFragment"
+                android:icon="@drawable/ic_accessibility"
+                android:title="@string/menu_accessibility" />
+            <item
+                android:id="@+id/proximitySettingsFragment"
+                android:icon="@drawable/ic_proximity"
+                android:title="@string/menu_proximity" />
+        </menu>
+    </item>
+</menu>
