@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,42 +21,6 @@ class AccessibilityViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AccessibilityUiState())
     val uiState: StateFlow<AccessibilityUiState> = _uiState.asStateFlow()
-
-    data class AccessibilityUiState(
-        // Display Settings
-        val highContrast: Boolean = false,
-        val largeText: Boolean = false,
-        val reduceMotion: Boolean = false,
-        val darkMode: Boolean = false,
-        val customFontSize: Float = 16f,
-        val colorBlindMode: ColorBlindMode = ColorBlindMode.NONE,
-        
-        // Feedback Settings
-        val hapticFeedback: Boolean = true,
-        val hapticIntensity: HapticIntensity = HapticIntensity.MEDIUM,
-        val soundFeedback: Boolean = false,
-        val voiceFeedback: Boolean = false,
-        
-        // Gesture Settings
-        val simplifiedGestures: Boolean = false,
-        val screenReader: Boolean = false,
-        val announceMovement: Boolean = false,
-        val announceClicks: Boolean = false,
-        val gestureSensitivity: Float = 1.0f,
-        
-        // Voice Settings
-        val voiceWakeWord: Boolean = true,
-        val wakeWord: String = "Hey Air Mouse",
-        val voiceConfirmation: Boolean = true,
-        val voiceContinuousListening: Boolean = false,
-        
-        // Advanced Settings
-        val switchAccess: Boolean = false,
-        val dwellClick: Boolean = false,
-        val dwellTime: Int = 1000,
-        val audioCues: Boolean = true,
-        val flashOnClick: Boolean = false
-    )
 
     init {
         loadSettings()
@@ -110,202 +75,213 @@ class AccessibilityViewModel @Inject constructor(
         }
     }
 
-    private fun saveColorBlindMode(mode: ColorBlindMode) {
-        prefs.putString("color_blind_mode", mode.name)
-        applyTheme()
+    private fun showSuccess(message: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(successMessage = message) }
+            delay(3000)
+            _uiState.update { it.copy(successMessage = null) }
+        }
     }
 
-    private fun saveHapticIntensity(intensity: HapticIntensity) {
-        prefs.putString("haptic_intensity", intensity.name)
+    private fun showError(message: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(errorMessage = message) }
+            delay(3000)
+            _uiState.update { it.copy(errorMessage = null) }
+        }
     }
 
     private fun applyTheme() {
-        // Theme application would be handled by MainActivity
-        // Could broadcast an intent or use LiveData to trigger recreation
+        val intent = Intent("com.airmouse.THEME_CHANGED")
+        intent.putExtra("theme", if (_uiState.value.darkMode) "dark" else "light")
+        context.sendBroadcast(intent)
     }
 
-    // Display Settings
+    // --- Display ---
     fun setHighContrast(enabled: Boolean) {
         prefs.putBoolean("high_contrast", enabled)
         _uiState.update { it.copy(highContrast = enabled) }
         applyTheme()
+        showSuccess("High contrast ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setLargeText(enabled: Boolean) {
         prefs.putBoolean("large_text", enabled)
         _uiState.update { it.copy(largeText = enabled) }
+        showSuccess("Large text ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setReduceMotion(enabled: Boolean) {
         prefs.putBoolean("reduce_motion", enabled)
         _uiState.update { it.copy(reduceMotion = enabled) }
+        showSuccess("Reduce motion ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setDarkMode(enabled: Boolean) {
         prefs.putBoolean("dark_mode", enabled)
         _uiState.update { it.copy(darkMode = enabled) }
         applyTheme()
+        showSuccess("Dark mode ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setCustomFontSize(size: Float) {
         prefs.putFloat("custom_font_size", size)
         _uiState.update { it.copy(customFontSize = size) }
+        showSuccess("Font size set to ${size.toInt()}sp")
     }
 
     fun setColorBlindMode(mode: ColorBlindMode) {
+        prefs.putString("color_blind_mode", mode.name)
         _uiState.update { it.copy(colorBlindMode = mode) }
-        saveColorBlindMode(mode)
+        applyTheme()
+        showSuccess("Color blind mode set to ${mode.displayName}")
     }
 
-    // Feedback Settings
+    // --- Feedback ---
     fun setHapticFeedback(enabled: Boolean) {
         prefs.putBoolean("haptic_enabled", enabled)
         _uiState.update { it.copy(hapticFeedback = enabled) }
+        showSuccess("Haptic feedback ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setHapticIntensity(intensity: HapticIntensity) {
+        prefs.putString("haptic_intensity", intensity.name)
         _uiState.update { it.copy(hapticIntensity = intensity) }
-        saveHapticIntensity(intensity)
+        showSuccess("Haptic intensity set to ${intensity.name.lowercase()}")
     }
 
     fun setSoundFeedback(enabled: Boolean) {
         prefs.putBoolean("sound_feedback", enabled)
         _uiState.update { it.copy(soundFeedback = enabled) }
+        showSuccess("Sound feedback ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setVoiceFeedback(enabled: Boolean) {
         prefs.putBoolean("voice_feedback", enabled)
         _uiState.update { it.copy(voiceFeedback = enabled) }
+        showSuccess("Voice feedback ${if (enabled) "enabled" else "disabled"}")
     }
 
-    // Gesture Settings
+    // --- Gesture ---
     fun setSimplifiedGestures(enabled: Boolean) {
         prefs.putBoolean("simplified_gestures", enabled)
         _uiState.update { it.copy(simplifiedGestures = enabled) }
+        showSuccess("Simplified gestures ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setScreenReader(enabled: Boolean) {
         prefs.putBoolean("screen_reader", enabled)
         _uiState.update { it.copy(screenReader = enabled) }
+        showSuccess("Screen reader support ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setAnnounceMovement(enabled: Boolean) {
         prefs.putBoolean("announce_movement", enabled)
         _uiState.update { it.copy(announceMovement = enabled) }
+        showSuccess("Announce movement ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setAnnounceClicks(enabled: Boolean) {
         prefs.putBoolean("announce_clicks", enabled)
         _uiState.update { it.copy(announceClicks = enabled) }
+        showSuccess("Announce clicks ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setGestureSensitivity(sensitivity: Float) {
         prefs.putFloat("gesture_sensitivity", sensitivity)
         _uiState.update { it.copy(gestureSensitivity = sensitivity) }
+        showSuccess("Gesture sensitivity set to $sensitivity")
     }
 
-    // Voice Settings
+    // --- Voice ---
     fun setVoiceWakeWord(enabled: Boolean) {
         prefs.putBoolean("voice_wake_word", enabled)
         _uiState.update { it.copy(voiceWakeWord = enabled) }
+        showSuccess("Wake word ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setWakeWord(word: String) {
         prefs.putString("wake_word", word)
         _uiState.update { it.copy(wakeWord = word) }
+        showSuccess("Wake word set to '$word'")
     }
 
     fun setVoiceConfirmation(enabled: Boolean) {
         prefs.putBoolean("voice_confirmation", enabled)
         _uiState.update { it.copy(voiceConfirmation = enabled) }
+        showSuccess("Voice confirmation ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setVoiceContinuousListening(enabled: Boolean) {
         prefs.putBoolean("voice_continuous_listening", enabled)
         _uiState.update { it.copy(voiceContinuousListening = enabled) }
+        showSuccess("Continuous listening ${if (enabled) "enabled" else "disabled"}")
     }
 
-    // Advanced Settings
+    // --- Advanced ---
     fun setSwitchAccess(enabled: Boolean) {
         prefs.putBoolean("switch_access", enabled)
         _uiState.update { it.copy(switchAccess = enabled) }
+        showSuccess("Switch access ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setDwellClick(enabled: Boolean) {
         prefs.putBoolean("dwell_click", enabled)
         _uiState.update { it.copy(dwellClick = enabled) }
+        showSuccess("Dwell click ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setDwellTime(time: Int) {
         prefs.putInt("dwell_time", time)
         _uiState.update { it.copy(dwellTime = time) }
+        showSuccess("Dwell time set to ${time}ms")
     }
 
     fun setAudioCues(enabled: Boolean) {
         prefs.putBoolean("audio_cues", enabled)
         _uiState.update { it.copy(audioCues = enabled) }
+        showSuccess("Audio cues ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setFlashOnClick(enabled: Boolean) {
         prefs.putBoolean("flash_on_click", enabled)
         _uiState.update { it.copy(flashOnClick = enabled) }
+        showSuccess("Flash on click ${if (enabled) "enabled" else "disabled"}")
     }
 
-    // Reset all settings to defaults
+    // --- Reset ---
     fun resetToDefaults() {
-        _uiState.update {
-            it.copy(
-                highContrast = false,
-                largeText = false,
-                reduceMotion = false,
-                darkMode = false,
-                customFontSize = 16f,
-                colorBlindMode = ColorBlindMode.NONE,
-                hapticFeedback = true,
-                hapticIntensity = HapticIntensity.MEDIUM,
-                soundFeedback = false,
-                voiceFeedback = false,
-                simplifiedGestures = false,
-                screenReader = false,
-                announceMovement = false,
-                announceClicks = false,
-                gestureSensitivity = 1.0f,
-                voiceWakeWord = true,
-                wakeWord = "Hey Air Mouse",
-                voiceConfirmation = true,
-                voiceContinuousListening = false,
-                switchAccess = false,
-                dwellClick = false,
-                dwellTime = 1000,
-                audioCues = true,
-                flashOnClick = false
-            )
-        }
-        prefs.putBoolean("high_contrast", false)
-        prefs.putBoolean("large_text", false)
-        prefs.putBoolean("reduce_motion", false)
-        prefs.putBoolean("dark_mode", false)
-        prefs.putFloat("custom_font_size", 16f)
-        prefs.putString("color_blind_mode", ColorBlindMode.NONE.name)
-        prefs.putBoolean("haptic_enabled", true)
-        prefs.putString("haptic_intensity", HapticIntensity.MEDIUM.name)
-        prefs.putBoolean("sound_feedback", false)
-        prefs.putBoolean("voice_feedback", false)
-        prefs.putBoolean("simplified_gestures", false)
-        prefs.putBoolean("screen_reader", false)
-        prefs.putBoolean("announce_movement", false)
-        prefs.putBoolean("announce_clicks", false)
-        prefs.putFloat("gesture_sensitivity", 1.0f)
-        prefs.putBoolean("voice_wake_word", true)
-        prefs.putString("wake_word", "Hey Air Mouse")
-        prefs.putBoolean("voice_confirmation", true)
-        prefs.putBoolean("voice_continuous_listening", false)
-        prefs.putBoolean("switch_access", false)
-        prefs.putBoolean("dwell_click", false)
-        prefs.putInt("dwell_time", 1000)
-        prefs.putBoolean("audio_cues", true)
-        prefs.putBoolean("flash_on_click", false)
+        setHighContrast(false)
+        setLargeText(false)
+        setReduceMotion(false)
+        setDarkMode(false)
+        setCustomFontSize(16f)
+        setColorBlindMode(ColorBlindMode.NONE)
+
+        setHapticFeedback(true)
+        setHapticIntensity(HapticIntensity.MEDIUM)
+        setSoundFeedback(false)
+        setVoiceFeedback(false)
+
+        setSimplifiedGestures(false)
+        setScreenReader(false)
+        setAnnounceMovement(false)
+        setAnnounceClicks(false)
+        setGestureSensitivity(1.0f)
+
+        setVoiceWakeWord(true)
+        setWakeWord("Hey Air Mouse")
+        setVoiceConfirmation(true)
+        setVoiceContinuousListening(false)
+
+        setSwitchAccess(false)
+        setDwellClick(false)
+        setDwellTime(1000)
+        setAudioCues(true)
+        setFlashOnClick(false)
+
         applyTheme()
+        showSuccess("All accessibility settings reset to defaults")
     }
 
     fun openAccessibilityHelp() {

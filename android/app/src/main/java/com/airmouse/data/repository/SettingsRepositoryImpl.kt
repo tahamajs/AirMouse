@@ -1,7 +1,7 @@
-// app/src/main/java/com/airmouse/data/repository/SettingsRepositoryImpl.kt
 package com.airmouse.data.repository
 
 import com.airmouse.domain.model.UserPreferences
+import com.airmouse.domain.repository.ISettingsRepository
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,33 +39,7 @@ class SettingsRepositoryImpl @Inject constructor(
             lastUpdated = prefs.getLong("settings_last_updated", System.currentTimeMillis())
         )
     }
-    package com.airmouse.data.repository
 
-    import com.airmouse.domain.model.SensorData
-    import com.airmouse.domain.model.SensorStatus
-    import com.airmouse.domain.repository.ISensorRepository
-    import com.airmouse.utils.PreferencesManager
-    import kotlinx.coroutines.flow.Flow
-    import kotlinx.coroutines.flow.MutableStateFlow
-    import javax.inject.Inject
-    import javax.inject.Singleton
-
-    @Singleton
-    class SensorRepositoryImpl @Inject constructor(
-        private val prefs: PreferencesManager
-    ) : ISensorRepository {
-
-        private val _sensorData = MutableStateFlow(SensorData(0f,0f,0f,0f,0f,0f,0f,0f,0f,0f,0f,0f))
-        override fun getSensorData(): Flow<SensorData> = _sensorData
-
-        override suspend fun setSamplingRate(rate: SensorRate) { /* pass to service */ }
-
-        override suspend fun calibrateGyro(): Boolean = true
-        override suspend fun calibrateAccelerometer(): Boolean = true
-        override suspend fun calibrateMagnetometer(): Boolean = true
-
-        override suspend fun getCalibrationStatus() = CalibrationStatus(false,false,false,false,0,0f)
-    }
     private fun savePreferences(preferences: UserPreferences) {
         prefs.putFloat("sensitivity", preferences.cursorSensitivity)
         prefs.putFloat("click_threshold", preferences.clickThreshold)

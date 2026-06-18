@@ -195,9 +195,9 @@ class CompleteFeatureImplementation @Inject constructor(
         }
 
         private fun hasMicrophonePermission(): Boolean {
-            return ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO)
-            == android.content.pm.PackageManager.PERMISSION_GRANTED
+            return ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
         }
+
 
         private fun vibrate(duration: Long) {
             val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator

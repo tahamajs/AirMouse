@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/domain/repository/IUpdateRepository.kt
 package com.airmouse.domain.repository
 
 interface IUpdateRepository {

@@ -1,190 +1,70 @@
-// app/src/main/java/com/airmouse/domain/usecase/ManageProfileUseCase.kt
 package com.airmouse.domain.usecase
 
-import com.airmouse.domain.model.Profile
-import com.airmouse.domain.model.UserPreferences
+import com.airmouse.domain.model.UserProfile
 import com.airmouse.domain.repository.IProfileRepository
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
+/**
+ * Use case to manage user profiles.
+ */
 class ManageProfileUseCase @Inject constructor(
-    private val profileRepo: IProfileRepository,
-    private val settingsRepo: ISettingsRepository
+    private val profileRepository: IProfileRepository
 ) {
-
-    suspend fun saveCurrentAsProfile(name: String): Result<Profile> {
-        return try {
-            val prefs = settingsRepo.getPreferences().first()
-            val profile = Profile(
-                name = name,
-                sensitivity = prefs.cursorSensitivity,
-                clickThreshold = prefs.clickThreshold,
-                doubleClickInterval = prefs.doubleClickInterval,
-                scrollThreshold = prefs.scrollThreshold,
-                rightClickTilt = prefs.rightClickTilt,
-                hapticEnabled = prefs.hapticFeedbackEnabled,
-                theme = prefs.theme,
-                aiSmoothing = prefs.useAiSmoothing,
-                predictiveMovement = prefs.usePredictiveMovement,
-                invertX = prefs.invertX,
-                invertY = prefs.invertY,
-                accelerationEnabled = prefs.accelerationEnabled,
-                smoothingEnabled = prefs.smoothingEnabled
-            )
-            profileRepo.saveProfile(profile)
-            Result.success(profile)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    /**
+     * Saves a new or existing profile.
+     */
+    suspend fun saveProfile(profile: UserProfile) {
+        profileRepository.saveProfile(profile)
     }
 
-    suspend fun loadProfile(profileId: String): Result<Unit> {
-        return try {
-            val profile = profileRepo.getProfile(profileId)
-            if (profile != null) {
-                settingsRepo.setSensitivity(profile.sensitivity)
-                settingsRepo.setClickThreshold(profile.clickThreshold)
-                settingsRepo.setDoubleClickInterval(profile.doubleClickInterval)
-                settingsRepo.setScrollThreshold(profile.scrollThreshold)
-                settingsRepo.setRightClickTilt(profile.rightClickTilt)
-                settingsRepo.setHapticEnabled(profile.hapticEnabled)
-                settingsRepo.setTheme(profile.theme)
-                settingsRepo.setAiSmoothing(profile.aiSmoothing)
-                settingsRepo.setPredictiveMovement(profile.predictiveMovement)
-                settingsRepo.setInvertX(profile.invertX)
-                settingsRepo.setInvertY(profile.invertY)
-                settingsRepo.setAccelerationEnabled(profile.accelerationEnabled)
-                settingsRepo.setSmoothingEnabled(profile.smoothingEnabled)
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Profile not found"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-}// app/src/main/java/com/airmouse/domain/usecase/ManageProfileUseCase.kt
-package com.airmouse.domain.usecase
+    /**
+     * Retrieves a profile by its ID.
+     */
+    suspend fun getProfile(id: String): UserProfile? =
+        profileRepository.getProfile(id)
 
-import com.airmouse.domain.model.Profile
-import com.airmouse.domain.model.UserPreferences
-import com.airmouse.domain.repository.IProfileRepository
-import kotlinx.coroutines.flow.first
-import javax.inject.Inject
+    /**
+     * Returns all stored profiles.
+     */
+    suspend fun getAllProfiles(): List<UserProfile> =
+        profileRepository.getAllProfiles()
 
-class ManageProfileUseCase @Inject constructor(
-    private val profileRepo: IProfileRepository,
-    private val settingsRepo: ISettingsRepository
-) {
-
-    suspend fun saveCurrentAsProfile(name: String): Result<Profile> {
-        return try {
-            val prefs = settingsRepo.getPreferences().first()
-            val profile = Profile(
-                name = name,
-                sensitivity = prefs.cursorSensitivity,
-                clickThreshold = prefs.clickThreshold,
-                doubleClickInterval = prefs.doubleClickInterval,
-                scrollThreshold = prefs.scrollThreshold,
-                rightClickTilt = prefs.rightClickTilt,
-                hapticEnabled = prefs.hapticFeedbackEnabled,
-                theme = prefs.theme,
-                aiSmoothing = prefs.useAiSmoothing,
-                predictiveMovement = prefs.usePredictiveMovement,
-                invertX = prefs.invertX,
-                invertY = prefs.invertY,
-                accelerationEnabled = prefs.accelerationEnabled,
-                smoothingEnabled = prefs.smoothingEnabled
-            )
-            profileRepo.saveProfile(profile)
-            Result.success(profile)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    /**
+     * Deletes a profile by ID.
+     */
+    suspend fun deleteProfile(id: String) {
+        profileRepository.deleteProfile(id)
     }
 
-    suspend fun loadProfile(profileId: String): Result<Unit> {
-        return try {
-            val profile = profileRepo.getProfile(profileId)
-            if (profile != null) {
-                settingsRepo.setSensitivity(profile.sensitivity)
-                settingsRepo.setClickThreshold(profile.clickThreshold)
-                settingsRepo.setDoubleClickInterval(profile.doubleClickInterval)
-                settingsRepo.setScrollThreshold(profile.scrollThreshold)
-                settingsRepo.setRightClickTilt(profile.rightClickTilt)
-                settingsRepo.setHapticEnabled(profile.hapticEnabled)
-                settingsRepo.setTheme(profile.theme)
-                settingsRepo.setAiSmoothing(profile.aiSmoothing)
-                settingsRepo.setPredictiveMovement(profile.predictiveMovement)
-                settingsRepo.setInvertX(profile.invertX)
-                settingsRepo.setInvertY(profile.invertY)
-                settingsRepo.setAccelerationEnabled(profile.accelerationEnabled)
-                settingsRepo.setSmoothingEnabled(profile.smoothingEnabled)
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Profile not found"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-}
-
-package com.airmouse.domain.usecase
-
-import com.airmouse.domain.model.Profile
-import com.airmouse.domain.model.UserPreferences
-import com.airmouse.domain.repository.IProfileRepository
-import com.airmouse.domain.repository.ISettingsRepository
-import kotlinx.coroutines.flow.first
-import javax.inject.Inject
-
-class ManageProfileUseCase @Inject constructor(
-    private val profileRepo: IProfileRepository,
-    private val settingsRepo: ISettingsRepository
-) {
-    suspend fun saveCurrentAsProfile(name: String): Profile {
-        val prefs = settingsRepo.getPreferences().first()
-        val profile = Profile(
-            id = java.util.UUID.randomUUID().toString(),
-            name = name,
-            sensitivity = prefs.cursorSensitivity,
-            clickThreshold = prefs.clickThreshold,
-            doubleClickInterval = prefs.doubleClickInterval,
-            scrollThreshold = prefs.scrollThreshold,
-            rightClickTilt = prefs.rightClickTilt,
-            hapticEnabled = prefs.hapticFeedbackEnabled,
-            theme = prefs.theme,
-            aiSmoothing = prefs.useAiSmoothing,
-            predictiveMovement = prefs.usePredictiveMovement,
-            invertX = prefs.invertX,
-            invertY = prefs.invertY,
-            accelerationEnabled = prefs.accelerationEnabled,
-            smoothingEnabled = prefs.smoothingEnabled,
-            createdAt = System.currentTimeMillis(),
-            lastUsed = System.currentTimeMillis(),
-            isDefault = false,
-            isFavorite = false
-        )
-        profileRepo.saveProfile(profile)
-        return profile
+    /**
+     * Sets the active profile.
+     */
+    suspend fun setActiveProfile(id: String) {
+        profileRepository.setActiveProfile(id)
     }
 
-    suspend fun loadProfile(profileId: String) {
-        val profile = profileRepo.getProfile(profileId) ?: return
-        settingsRepo.setSensitivity(profile.sensitivity)
-        settingsRepo.setClickThreshold(profile.clickThreshold)
-        settingsRepo.setDoubleClickInterval(profile.doubleClickInterval)
-        settingsRepo.setScrollThreshold(profile.scrollThreshold)
-        settingsRepo.setRightClickTilt(profile.rightClickTilt)
-        settingsRepo.setHapticEnabled(profile.hapticEnabled)
-        settingsRepo.setTheme(profile.theme)
-        settingsRepo.setAiSmoothing(profile.aiSmoothing)
-        settingsRepo.setPredictiveMovement(profile.predictiveMovement)
-        settingsRepo.setInvertX(profile.invertX)
-        settingsRepo.setInvertY(profile.invertY)
-        settingsRepo.setAccelerationEnabled(profile.accelerationEnabled)
-        settingsRepo.setSmoothingEnabled(profile.smoothingEnabled)
-        profileRepo.updateLastUsed(profileId)
-    }
+    /**
+     * Returns the currently active profile as a Flow.
+     */
+    fun getActiveProfile(): Flow<UserProfile?> =
+        profileRepository.getActiveProfile()
+
+    /**
+     * Duplicates an existing profile.
+     */
+    suspend fun duplicateProfile(id: String): UserProfile =
+        profileRepository.duplicateProfile(id)
+
+    /**
+     * Exports a profile to a JSON string.
+     */
+    suspend fun exportProfile(id: String): String =
+        profileRepository.exportProfile(id)
+
+    /**
+     * Imports a profile from a JSON string.
+     */
+    suspend fun importProfile(data: String): Boolean =
+        profileRepository.importProfile(data)
 }

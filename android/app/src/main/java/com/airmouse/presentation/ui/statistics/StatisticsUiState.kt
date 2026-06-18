@@ -2,9 +2,12 @@ package com.airmouse.presentation.ui.statistics
 
 import java.util.Date
 
+/**
+ * Complete UI state for the statistics screen.
+ */
 data class StatisticsUiState(
-    // Session Stats
-    val sessionTime: Long = 0,
+    // Session
+    val sessionTime: Long = 0,                    // seconds
     val sessionStartTime: Long = System.currentTimeMillis(),
     val lastActivityTime: Long = System.currentTimeMillis(),
 
@@ -33,19 +36,19 @@ data class StatisticsUiState(
     val calibrationCount: Int = 0,
     val calibrationSuccessRate: Float = 0f,
 
-    // Device Stats
+    // Device / Performance
     val batteryUsage: Int = 0,
     val cpuUsage: Float = 0f,
     val memoryUsage: Float = 0f,
     val temperature: Float = 0f,
 
-    // History
+    // History & Breakdown
     val dailyStats: List<DailyStats> = emptyList(),
     val gestureBreakdown: Map<String, Int> = emptyMap(),
 
     // UI State
     val isLoading: Boolean = false,
-    val timeRange: TimeRange = TimeRange.TODAY,
+    val timeRange: TimeRange = TimeRange.LAST_30_DAYS,
     val selectedChart: ChartType = ChartType.GESTURES,
     val showExportDialog: Boolean = false,
     val showResetDialog: Boolean = false,
@@ -53,6 +56,9 @@ data class StatisticsUiState(
     val success: String? = null
 )
 
+/**
+ * Daily aggregated statistics for a single day.
+ */
 data class DailyStats(
     val date: Date,
     val clicks: Int,
@@ -62,6 +68,9 @@ data class DailyStats(
     val distance: Float
 )
 
+/**
+ * Time range filter options.
+ */
 enum class TimeRange(val displayName: String, val days: Int) {
     TODAY("Today", 1),
     WEEK("This Week", 7),
@@ -70,6 +79,9 @@ enum class TimeRange(val displayName: String, val days: Int) {
     ALL_TIME("All Time", 0)
 }
 
+/**
+ * Chart types for the statistics screen.
+ */
 enum class ChartType(val displayName: String) {
     GESTURES("Gesture Distribution"),
     MOVEMENT("Movement Over Time"),

@@ -1,448 +1,211 @@
-// app/src/main/java/com/airmouse/presentation/navigation/Destinations.kt
-package com.airmouse.presentation.navigation
-
-import android.os.Bundle
-import androidx.navigation.NavType
-import kotlinx.serialization.Serializable
-
-/**
- * Sealed class for all navigation destinations in the app.
- * Provides type-safe navigation with route definitions and argument handling.
- */
-sealed class Destinations(
-    val route: String,
-    val title: String = "",
-    val icon: Int? = null,
-    val showInBottomBar: Boolean = false
-) {
-    object Touchpad : Destinations("touchpad")
-
-    // ==================== MAIN SCREENS ====================
-    
-    /** Home screen - main dashboard */
-    object Home : Destinations(
-        route = "home",
-        title = "Air Mouse Pro",
-        showInBottomBar = true
-    )
-    
-    /** Statistics screen - gesture usage and performance metrics */
-    object Statistics : Destinations(
-        route = "statistics",
-        title = "Statistics",
-        showInBottomBar = true
-    )
-    
-    /** Settings screen - app configuration */
-    object Settings : Destinations(
-        route = "settings",
-        title = "Settings",
-        showInBottomBar = true
-    )
-    
-    /** Help screen - user guide and documentation */
-    object Help : Destinations(
-        route = "help",
-        title = "Help",
-        showInBottomBar = true
-    )
-    
-    /** About screen - app information */
-    object About : Destinations(
-        route = "about",
-        title = "About"
-    )
-    
-    // ==================== ADVANCED FEATURES ====================
-    
-    /** Network discovery - find servers on local network */
-    object NetworkDiscovery : Destinations(
-        route = "network_discovery",
-        title = "Network Discovery"
-    )
-    
-    /** Profiles - save and load different configurations */
-    object Profiles : Destinations(
-        route = "profiles",
-        title = "Profiles"
-    )
-    
-    /** Gesture Studio - create and train custom gestures */
-    object GestureStudio : Destinations(
-        route = "gesture_studio",
-        title = "Gesture Studio"
-    )
-    
-    /** Edge Gestures - configure edge-based gestures */
-    object EdgeGestures : Destinations(
-        route = "edge_gestures",
-        title = "Edge Gestures"
-    )
-    
-    /** Voice Commands - voice control configuration */
-    object VoiceCommands : Destinations(
-        route = "voice_commands",
-        title = "Voice Commands"
-    )
-    
-    /** Themes - customize app appearance */
-    object Themes : Destinations(
-        route = "themes",
-        title = "Themes"
-    )
-    
-    /** Server Logs - view and export server logs */
-    object ServerLogs : Destinations(
-        route = "server_logs",
-        title = "Server Logs"
-    )
-    
-    /** Battery - battery usage and optimization */
-    object Battery : Destinations(
-        route = "battery",
-        title = "Battery"
-    )
-    
-    /** Accessibility - accessibility features */
-    object Accessibility : Destinations(
-        route = "accessibility",
-        title = "Accessibility"
-    )
-    
-    /** Proximity - proximity-based auto-lock settings */
-    object Proximity : Destinations(
-        route = "proximity",
-        title = "Proximity Lock"
-    )
-    
-    /** Sensor Visualizer - real-time sensor data visualization */
-    object SensorVisualizer : Destinations(
-        route = "sensor_visualizer",
-        title = "Sensor Visualizer"
-    )
-    
-    // ==================== CALIBRATION FLOW ====================
-    
-    /** Calibration - sensor calibration wizard */
-    object Calibration : Destinations(
-        route = "calibration",
-        title = "Calibration"
-    )
-    
-    /** Calibration with step parameter */
-    object CalibrationWithStep : Destinations(
-        route = "calibration/{step}",
-        title = "Calibration"
-    ) {
-        fun createRoute(step: Int) = "calibration/$step"
-        const val STEP_ARG = "step"
-    }
-    
-    // ==================== GESTURE DETAIL ====================
-    
-    /** Gesture detail - view/edit specific gesture */
-    object GestureDetail : Destinations(
-        route = "gesture/{gestureName}",
-        title = "Gesture Details"
-    ) {
-        fun createRoute(gestureName: String) = "gesture/$gestureName"
-        const val GESTURE_NAME_ARG = "gestureName"
-    }
-    
-    // ==================== PROFILE DETAIL ====================
-    
-    /** Profile detail - view/edit specific profile */
-    object ProfileDetail : Destinations(
-        route = "profile/{profileName}",
-        title = "Profile Details"
-    ) {
-        fun createRoute(profileName: String) = "profile/$profileName"
-        const val PROFILE_NAME_ARG = "profileName"
-    }
-    
-    // ==================== ONBOARDING ====================
-    
-    /** Onboarding - first-time user experience */
-    object Onboarding : Destinations(
-        route = "onboarding",
-        title = "Welcome"
-    )
-    package com.airmouse.presentation.navigation
-
-    sealed class Destinations(val route: String) {
-        // Main Screens (Bottom Navigation)
-        object Home : Destinations("home")
-        object Statistics : Destinations("statistics")
-        object Settings : Destinations("settings")
-        object Help : Destinations("help")
-
-        // Secondary Screens
-        object About : Destinations("about")
-        object Calibration : Destinations("calibration")
-        object GestureStudio : Destinations("gesture_studio")
-        object Proximity : Destinations("proximity")
-        object VoiceCommands : Destinations("voice_commands")
-        object EdgeGestures : Destinations("edge_gestures")
-        object Themes : Destinations("themes")
-        object Profiles : Destinations("profiles")
-        object NetworkDiscovery : Destinations("network_discovery")
-        object ServerLogs : Destinations("server_logs")
-        object Battery : Destinations("battery")
-        object Accessibility : Destinations("accessibility")
-        object SensorVisualizer : Destinations("sensor_visualizer")
-        object Touchpad : Destinations("touchpad")
-        object Onboarding : Destinations("onboarding")
-
-        // Parameterized routes
-        object CalibrationWithStep : Destinations("calibration/{step}") {
-            const val STEP_ARG = "step"
-            fun passStep(step: Int) = "calibration/$step"
-        }
-    }
-    // ==================== SETTINGS SUB-SECTIONS ====================
-    
-    /** Settings General - general app settings */
-    object SettingsGeneral : Destinations(
-        route = "settings/general",
-        title = "General Settings"
-    )
-    
-    /** Settings Sensors - sensor configuration */
-    object SettingsSensors : Destinations(
-        route = "settings/sensors",
-        title = "Sensor Settings"
-    )
-    
-    /** Settings Gestures - gesture sensitivity and thresholds */
-    object SettingsGestures : Destinations(
-        route = "settings/gestures",
-        title = "Gesture Settings"
-    )
-    
-    /** Settings Network - network configuration */
-    object SettingsNetwork : Destinations(
-        route = "settings/network",
-        title = "Network Settings"
-    )
-    
-    /** Settings Bluetooth - Bluetooth configuration */
-    object SettingsBluetooth : Destinations(
-        route = "settings/bluetooth",
-        title = "Bluetooth Settings"
-    )
-    
-    /** Settings Appearance - appearance settings */
-    object SettingsAppearance : Destinations(
-        route = "settings/appearance",
-        title = "Appearance"
-    )
-    
-    // ==================== HELPER PROPERTIES ====================
-    
-    /** All main destinations for bottom navigation */
-    companion object {
-        val bottomNavDestinations = listOf(
-            Home,
-            Statistics,
-            Settings,
-            Help
-        )
-        
-        val allDestinations = listOf(
-            Home, Statistics, Settings, Help, About,
-            NetworkDiscovery, Profiles, GestureStudio, EdgeGestures,
-            VoiceCommands, Themes, ServerLogs, Battery, Accessibility,
-            Proximity, SensorVisualizer, Calibration, Onboarding
-        )
-        
-        val settingsDestinations = listOf(
-            SettingsGeneral, SettingsSensors, SettingsGestures,
-            SettingsNetwork, SettingsBluetooth, SettingsAppearance
-        )
-    }
-    
-    /**
-     * Get the route with URL-encoded arguments
-     */
-    fun withArgs(vararg args: Pair<String, Any>): String {
-        if (args.isEmpty()) return route
-        
-        val queryParams = args.joinToString("&") { (key, value) ->
-            "$key=${value.toString().replace(" ", "%20")}"
-        }
-        
-        return if (route.contains("?")) {
-            "$route&$queryParams"
-        } else {
-            "$route?$queryParams"
-        }
-    }
-    
-    /**
-     * Get the route with a single argument
-     */
-    fun withArg(key: String, value: Any): String {
-        return withArgs(key to value)
-    }
-    
-    /**
-     * Check if this destination matches a given route
-     */
-    fun matches(route: String): Boolean {
-        return this.route == route || route.startsWith(this.route.split("{").first())
-    }
-}
-
-// ==================== ARGUMENT KEYS ====================
-
-object NavigationArguments {
-    const val STEP = "step"
-    const val GESTURE_NAME = "gestureName"
-    const val PROFILE_NAME = "profileName"
-    const val SERVER_IP = "serverIp"
-    const val SERVER_PORT = "serverPort"
-    const val CALIBRATION_TYPE = "calibrationType"
-    const val SENSOR_TYPE = "sensorType"
-}
-
-// ==================== ARGUMENT TYPES ====================
-
-object NavigationArgTypes {
-    val step = NavType.IntType
-    val gestureName = NavType.StringType
-    val profileName = NavType.StringType
-    val serverIp = NavType.StringType
-    val serverPort = NavType.IntType
-}
-
-// ==================== EXTENSION FUNCTIONS ====================
-
-/**
- * Convert a destination to a Bundle for argument passing
- */
-fun Destinations.toBundle(vararg args: Pair<String, Any>): Bundle {
-    return Bundle().apply {
-        args.forEach { (key, value) ->
-            when (value) {
-                is String -> putString(key, value)
-                is Int -> putInt(key, value)
-                is Boolean -> putBoolean(key, value)
-                is Long -> putLong(key, value)
-                is Float -> putFloat(key, value)
-                is Double -> putDouble(key, value)
-                else -> putString(key, value.toString())
-            }
-        }
-    }
-}
-
-/**
- * Get the title of a destination from its route
- */
-fun getTitleFromRoute(route: String?): String {
-    return when {
-        route?.startsWith(Destinations.Home.route) == true -> Destinations.Home.title
-        route?.startsWith(Destinations.Statistics.route) == true -> Destinations.Statistics.title
-        route?.startsWith(Destinations.Settings.route) == true -> Destinations.Settings.title
-        route?.startsWith(Destinations.Help.route) == true -> Destinations.Help.title
-        route?.startsWith(Destinations.About.route) == true -> Destinations.About.title
-        route?.startsWith(Destinations.Calibration.route) == true -> Destinations.Calibration.title
-        route?.startsWith(Destinations.GestureStudio.route) == true -> Destinations.GestureStudio.title
-        route?.startsWith(Destinations.Proximity.route) == true -> Destinations.Proximity.title
-        route?.startsWith(Destinations.VoiceCommands.route) == true -> Destinations.VoiceCommands.title
-        route?.startsWith(Destinations.Themes.route) == true -> Destinations.Themes.title
-        route?.startsWith(Destinations.Profiles.route) == true -> Destinations.Profiles.title
-        route?.startsWith(Destinations.Battery.route) == true -> Destinations.Battery.title
-        route?.startsWith(Destinations.Accessibility.route) == true -> Destinations.Accessibility.title
-        route?.startsWith(Destinations.SensorVisualizer.route) == true -> Destinations.SensorVisualizer.title
-        route?.startsWith(Destinations.NetworkDiscovery.route) == true -> Destinations.NetworkDiscovery.title
-        route?.startsWith(Destinations.EdgeGestures.route) == true -> Destinations.EdgeGestures.title
-        route?.startsWith(Destinations.ServerLogs.route) == true -> Destinations.ServerLogs.title
-        else -> "Air Mouse"
-    }
-}
-
-/**
- * Check if a destination should show the bottom bar
- */
-fun Destinations.shouldShowBottomBar(): Boolean {
-    return showInBottomBar
-}
-
-/**
- * Get the icon resource for a destination
- */
-fun Destinations.getIcon(): Int? {
-    return icon
-}
-
 package com.airmouse.presentation.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavType
 
 /**
- * Navigation destinations for Air Mouse Pro app
- * Contains all screens with their routes, titles, and icons
+ * Central navigation destinations for the entire app.
+ * Provides type-safe routes, titles, icons, and argument handling.
  */
 sealed class Destinations(
     val route: String,
-    val title: String,
-    val icon: ImageVector? = null
+    val title: String = "",
+    val icon: ImageVector? = null,
+    val showInBottomBar: Boolean = false
 ) {
-    // Main Bottom Navigation Screens (4 screens)
-    data object Home : Destinations("home", "Home", Icons.Default.Home)
-    data object Statistics : Destinations("statistics", "Statistics", Icons.Default.BarChart)
-    data object Settings : Destinations("settings", "Settings", Icons.Default.Settings)
-    data object Help : Destinations("help", "Help", Icons.Default.Help)
-    
-    // Info Screens
-    data object About : Destinations("about", "About", Icons.Default.Info)
-    
-    // Calibration & Sensors
-    data object Calibration : Destinations("calibration", "Calibration", Icons.Default.Build)
-    data object SensorVisualizer : Destinations("sensor_visualizer", "Sensor Visualizer", Icons.Default.GraphicEq)
-    
-    // Gesture & Touch
-    data object GestureStudio : Destinations("gesture_studio", "Gesture Studio", Icons.Default.Gesture)
-    data object EdgeGestures : Destinations("edge_gestures", "Edge Gestures", Icons.Default.Swipe)
-    data object Touchpad : Destinations("touchpad", "Touchpad Mode", Icons.Default.TouchApp)
-    
-    // Connectivity
-    data object NetworkDiscovery : Destinations("network_discovery", "Network Discovery", Icons.Default.Wifi)
-    data object ServerLogs : Destinations("server_logs", "Server Logs", Icons.Default.ListAlt)
-    
-    // Security & Privacy
-    data object Proximity : Destinations("proximity", "Proximity Lock", Icons.Default.LocationOn)
-    data object VoiceCommands : Destinations("voice_commands", "Voice Commands", Icons.Default.Mic)
-    
-    // Customization
-    data object Profiles : Destinations("profiles", "Profiles", Icons.Default.Person)
-    data object Themes : Destinations("themes", "Themes", Icons.Default.Palette)
-    
-    // System
-    data object Battery : Destinations("battery", "Battery Monitor", Icons.Default.BatteryFull)
-    data object Accessibility : Destinations("accessibility", "Accessibility", Icons.Default.Accessibility)
-    data object TouchpadSettings : Destinations("touchpad_settings", "Touchpad Settings", Icons.Default.Settings)
-    
-    // Onboarding
-    data object Onboarding : Destinations("onboarding", "Onboarding")
-    
+    // ==================== BOTTOM NAVIGATION SCREENS ====================
+    object Home : Destinations(
+        route = "home",
+        title = "Home",
+        icon = Icons.Outlined.Home,
+        showInBottomBar = true
+    )
+
+    object Statistics : Destinations(
+        route = "statistics",
+        title = "Statistics",
+        icon = Icons.Outlined.BarChart,
+        showInBottomBar = true
+    )
+
+    object GestureStudio : Destinations(
+        route = "gesture_studio",
+        title = "Gesture Studio",
+        icon = Icons.Outlined.Gesture,
+        showInBottomBar = true
+    )
+
+    object Settings : Destinations(
+        route = "settings",
+        title = "Settings",
+        icon = Icons.Outlined.Settings,
+        showInBottomBar = true
+    )
+
+    // ==================== HELP & INFO ====================
+    object Help : Destinations(
+        route = "help",
+        title = "Help",
+        icon = Icons.Outlined.Help
+    )
+
+    object About : Destinations(
+        route = "about",
+        title = "About",
+        icon = Icons.Outlined.Info
+    )
+
+    // ==================== ADVANCED FEATURES ====================
+    object NetworkDiscovery : Destinations(
+        route = "network_discovery",
+        title = "Network Discovery",
+        icon = Icons.Outlined.Wifi
+    )
+
+    object Profiles : Destinations(
+        route = "profiles",
+        title = "Profiles",
+        icon = Icons.Outlined.Person
+    )
+
+    object EdgeGestures : Destinations(
+        route = "edge_gestures",
+        title = "Edge Gestures",
+        icon = Icons.Outlined.Swipe
+    )
+
+    object VoiceCommands : Destinations(
+        route = "voice_commands",
+        title = "Voice Commands",
+        icon = Icons.Outlined.Mic
+    )
+
+    object Themes : Destinations(
+        route = "themes",
+        title = "Themes",
+        icon = Icons.Outlined.Palette
+    )
+
+    object ServerLogs : Destinations(
+        route = "server_logs",
+        title = "Server Logs",
+        icon = Icons.Outlined.ListAlt
+    )
+
+    object Battery : Destinations(
+        route = "battery",
+        title = "Battery Monitor",
+        icon = Icons.Outlined.BatteryFull
+    )
+
+    object Accessibility : Destinations(
+        route = "accessibility",
+        title = "Accessibility",
+        icon = Icons.Outlined.Accessibility
+    )
+
+    object Proximity : Destinations(
+        route = "proximity",
+        title = "Proximity Lock",
+        icon = Icons.Outlined.LocationOn
+    )
+
+    object SensorVisualizer : Destinations(
+        route = "sensor_visualizer",
+        title = "Sensor Visualizer",
+        icon = Icons.Outlined.GraphicEq
+    )
+
+    object Calibration : Destinations(
+        route = "calibration",
+        title = "Calibration",
+        icon = Icons.Outlined.Build
+    )
+
+    object Touchpad : Destinations(
+        route = "touchpad",
+        title = "Touchpad Mode",
+        icon = Icons.Outlined.TouchApp
+    )
+
+    // ==================== ONBOARDING ====================
+    object Onboarding : Destinations(
+        route = "onboarding",
+        title = "Onboarding"
+    )
+
+    // ==================== PARAMETERISED ROUTES ====================
+    object CalibrationWithStep : Destinations(
+        route = "calibration/{step}",
+        title = "Calibration Step"
+    ) {
+        const val STEP_ARG = "step"
+        fun createRoute(step: Int) = "calibration/$step"
+        fun getStep(arguments: Map<String, String>): Int? =
+            arguments[STEP_ARG]?.toIntOrNull()
+    }
+
+    object GestureDetail : Destinations(
+        route = "gesture/{gestureName}",
+        title = "Gesture Details"
+    ) {
+        const val GESTURE_NAME_ARG = "gestureName"
+        fun createRoute(name: String) = "gesture/$name"
+        fun getGestureName(arguments: Map<String, String>): String? =
+            arguments[GESTURE_NAME_ARG]
+    }
+
+    object ProfileDetail : Destinations(
+        route = "profile/{profileName}",
+        title = "Profile Details"
+    ) {
+        const val PROFILE_NAME_ARG = "profileName"
+        fun createRoute(name: String) = "profile/$name"
+        fun getProfileName(arguments: Map<String, String>): String? =
+            arguments[PROFILE_NAME_ARG]
+    }
+
+    // ==================== COMPANION ====================
     companion object {
-        val bottomNavItems = listOf(Home, Statistics, Settings, Help)
-        
-        fun getBottomNavIndex(route: String?): Int = when (route) {
-            Home.route -> 0
-            Statistics.route -> 1
-            Settings.route -> 2
-            Help.route -> 3
-            else -> 0
-        }
-        
-        fun isBottomNavScreen(route: String?): Boolean = when (route) {
-            Home.route, Statistics.route, Settings.route, Help.route -> true
-            else -> false
-        }
+        /**
+         * List of destinations shown in the bottom navigation bar.
+         * Order determines their position.
+         */
+        val bottomNavDestinations = listOf(Home, Statistics, GestureStudio, Settings)
+
+        /**
+         * All destinations for reference (useful for debugging or dynamic menus).
+         */
+        val allDestinations = listOf(
+            Home, Statistics, GestureStudio, Settings,
+            Help, About,
+            NetworkDiscovery, Profiles, EdgeGestures, VoiceCommands,
+            Themes, ServerLogs, Battery, Accessibility,
+            Proximity, SensorVisualizer, Calibration, Touchpad,
+            Onboarding
+        )
+
+        /**
+         * Get the bottom navigation index for a given route.
+         */
+        fun getBottomNavIndex(route: String?): Int =
+            bottomNavDestinations.indexOfFirst { route?.startsWith(it.route) == true }
+                .takeIf { it >= 0 } ?: 0
+
+        /**
+         * Check if a route belongs to a bottom navigation screen.
+         */
+        fun isBottomNavRoute(route: String?): Boolean =
+            bottomNavDestinations.any { route?.startsWith(it.route) == true }
+
+        /**
+         * Get the title of a destination from its route.
+         */
+        fun getTitleFromRoute(route: String?): String =
+            allDestinations.firstOrNull { route?.startsWith(it.route) == true }?.title
+                ?: "Air Mouse"
     }
 }
