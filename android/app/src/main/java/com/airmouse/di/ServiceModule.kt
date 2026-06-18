@@ -5,6 +5,7 @@ import com.airmouse.sensors.SensorService
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.EnhancedGestureDetector
 import com.airmouse.utils.BatterySaver
+import com.airmouse.utils.PreferencesManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
