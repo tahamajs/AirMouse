@@ -2,33 +2,20 @@ package com.airmouse.presentation.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Gesture
-import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Build
-import androidx.compose.material.icons.outlined.Gesture
-import androidx.compose.material.icons.outlined.Help
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Data class representing a bottom navigation item
- * @param title The display title of the item
- * @param icon The icon to show when not selected
- * @param selectedIcon The icon to show when selected (optional, falls back to icon)
- * @param destination The navigation destination
- * @param badgeCount Optional badge count to show on the item
- * @param enabled Whether the item is enabled
+ * Data class representing a bottom navigation item.
+ *
+ * @param title Display title
+ * @param icon Icon when unselected
+ * @param selectedIcon Icon when selected (falls back to [icon] if null)
+ * @param destination Navigation destination
+ * @param badgeCount Optional badge count (shown as a badge)
+ * @param enabled Whether the item is tappable
  */
 data class BottomNavItem(
     val title: String,
@@ -39,15 +26,17 @@ data class BottomNavItem(
     val enabled: Boolean = true
 ) {
     /**
-     * Get the appropriate icon based on selection state
+     * Returns the appropriate icon based on the selection state.
      */
-    fun getIcon(isSelected: Boolean): ImageVector {
-        return if (isSelected && selectedIcon != null) selectedIcon else icon
-    }
+    fun getIcon(isSelected: Boolean): ImageVector =
+        if (isSelected && selectedIcon != null) selectedIcon else icon
 }
 
+// ==================== MAIN BOTTOM NAV ITEMS (DEFAULT) ====================
+
 /**
- * Bottom navigation items for main screens
+ * The default bottom navigation items – used in the main screen.
+ * Must match the order of [Destinations.bottomNavDestinations].
  */
 val bottomNavItems = listOf(
     BottomNavItem(
@@ -76,8 +65,10 @@ val bottomNavItems = listOf(
     )
 )
 
+// ==================== EXTENDED NAV ITEMS (TABLETS) ====================
+
 /**
- * Extended bottom navigation items for tablets/larger screens
+ * Extended bottom navigation for tablets or larger screens.
  */
 val extendedBottomNavItems = listOf(
     BottomNavItem(
@@ -124,8 +115,10 @@ val extendedBottomNavItems = listOf(
     )
 )
 
+// ==================== NAV ITEMS WITH BADGE SUPPORT ====================
+
 /**
- * Bottom navigation items with badges for notifications
+ * Default items with badge placeholders – useful for showing notifications.
  */
 val bottomNavItemsWithBadges = listOf(
     BottomNavItem(
@@ -158,41 +151,40 @@ val bottomNavItemsWithBadges = listOf(
     )
 )
 
-/**
- * Map of destination to bottom nav item for quick lookup
- */
-val destinationToBottomNavItem: Map<Destinations, BottomNavItem> = bottomNavItems.associateBy { it.destination }
+// ==================== HELPER FUNCTIONS ====================
 
 /**
- * Get bottom nav item for a given destination
+ * Maps each destination to its corresponding bottom nav item for quick lookup.
  */
-fun getBottomNavItemForDestination(destination: Destinations): BottomNavItem? {
-    return destinationToBottomNavItem[destination]
-}
+val destinationToBottomNavItem: Map<Destinations, BottomNavItem> =
+    bottomNavItems.associateBy { it.destination }
 
 /**
- * Check if a destination should be shown in bottom navigation
+ * Retrieves the bottom nav item for a given destination.
  */
-fun Destinations.isInBottomNav(): Boolean {
-    return this in destinationToBottomNavItem.keys
-}
+fun getBottomNavItemForDestination(destination: Destinations): BottomNavItem? =
+    destinationToBottomNavItem[destination]
 
 /**
- * Get the index of a destination in bottom navigation
+ * Extension property to check if a destination appears in the bottom nav.
  */
-fun getBottomNavIndex(destination: Destinations): Int {
-    return bottomNavItems.indexOfFirst { it.destination == destination }
-}
+fun Destinations.isInBottomNav(): Boolean =
+    destinationToBottomNavItem.containsKey(this)
 
 /**
- * Get the destination at a specific bottom nav index
+ * Returns the index of a destination in the bottom nav list.
  */
-fun getDestinationAtIndex(index: Int): Destinations? {
-    return bottomNavItems.getOrNull(index)?.destination
-}
+fun getBottomNavIndex(destination: Destinations): Int =
+    bottomNavItems.indexOfFirst { it.destination == destination }
 
 /**
- * Screen titles for bottom navigation items
+ * Returns the destination at a given index in the bottom nav list.
+ */
+fun getDestinationAtIndex(index: Int): Destinations? =
+    bottomNavItems.getOrNull(index)?.destination
+
+/**
+ * Object holding constant titles for bottom nav items.
  */
 object BottomNavTitles {
     const val HOME = "Home"
@@ -206,34 +198,35 @@ object BottomNavTitles {
 }
 
 /**
- * Helper function to get the current selected index based on route
+ * Returns the selected index based on the current route.
+ * Used in the bottom bar composable.
  */
 @Composable
-fun getSelectedBottomNavIndex(currentRoute: String?): Int {
-    return when {
+fun getSelectedBottomNavIndex(currentRoute: String?): Int =
+    when {
         currentRoute?.startsWith(Destinations.Home.route) == true -> 0
         currentRoute?.startsWith(Destinations.Statistics.route) == true -> 1
         currentRoute?.startsWith(Destinations.GestureStudio.route) == true -> 2
         currentRoute?.startsWith(Destinations.Settings.route) == true -> 3
         else -> 0
     }
-}
 
 /**
- * Get the route for a given bottom nav index
+ * Returns the route for a given bottom nav index.
  */
-fun getRouteForBottomNavIndex(index: Int): String {
-    return when (index) {
+fun getRouteForBottomNavIndex(index: Int): String =
+    when (index) {
         0 -> Destinations.Home.route
         1 -> Destinations.Statistics.route
         2 -> Destinations.GestureStudio.route
         3 -> Destinations.Settings.route
         else -> Destinations.Home.route
     }
-}
+
+// ==================== STATE & CONFIGURATION ====================
 
 /**
- * Data class for bottom navigation state
+ * State class for the bottom navigation bar.
  */
 data class BottomNavState(
     val selectedIndex: Int = 0,
@@ -242,39 +235,23 @@ data class BottomNavState(
 )
 
 /**
- * Predefined bottom navigation configurations
+ * Predefined configurations for different use cases.
  */
 object BottomNavConfigs {
     val default = BottomNavState()
-    
-    val noLabels = BottomNavState(
-        selectedIndex = 0,
-        items = bottomNavItems,
-        showLabels = false
-    )
-    
-    val extended = BottomNavState(
-        selectedIndex = 0,
-        items = extendedBottomNavItems,
-        showLabels = true
-    )
-    
-    val withBadges = BottomNavState(
-        selectedIndex = 0,
-        items = bottomNavItemsWithBadges,
-        showLabels = true
-    )
+    val noLabels = BottomNavState(showLabels = false)
+    val extended = BottomNavState(items = extendedBottomNavItems)
+    val withBadges = BottomNavState(items = bottomNavItemsWithBadges)
 }
 
 /**
- * Extension function to update badge counts
+ * Extension to update a single badge count.
  */
-fun BottomNavItem.withBadgeCount(count: Int): BottomNavItem {
-    return this.copy(badgeCount = count)
-}
+fun BottomNavItem.withBadgeCount(count: Int): BottomNavItem =
+    this.copy(badgeCount = count)
 
 /**
- * Extension function to update multiple badge counts
+ * Extension to update badge counts for multiple items at once.
  */
 fun List<BottomNavItem>.updateBadgeCounts(vararg updates: Pair<Destinations, Int>): List<BottomNavItem> {
     val updateMap = updates.toMap()
@@ -283,69 +260,6 @@ fun List<BottomNavItem>.updateBadgeCounts(vararg updates: Pair<Destinations, Int
             item.copy(badgeCount = updateMap[item.destination] ?: 0)
         } else {
             item
-        }
-    }
-}
-
-package com.airmouse.presentation.navigation
-
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-@Composable
-fun AirMouseBottomBar(
-    currentRoute: String?,
-    onItemSelected: (Destinations) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val items = Destinations.bottomNavItems
-    val selectedIndex = Destinations.getBottomNavIndex(currentRoute)
-    
-    NavigationBar(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
-    ) {
-        items.forEachIndexed { index, destination ->
-            val selected = selectedIndex == index
-            
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onItemSelected(destination) },
-                icon = {
-                    Icon(
-                        imageVector = destination.icon ?: Icons.Default.Circle,
-                        contentDescription = destination.title,
-                        modifier = Modifier.size(24.dp)
-                    )
-                },
-                label = {
-                    Text(
-                        text = destination.title,
-                        fontSize = 11.sp,
-                        maxLines = 1
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF00BCD4),
-                    selectedTextColor = Color(0xFF00BCD4),
-                    unselectedIconColor = Color(0xFF96A0AE),
-                    unselectedTextColor = Color(0xFF96A0AE),
-                    indicatorColor = Color(0xFF00BCD4).copy(alpha = 0.2f)
-                )
-            )
         }
     }
 }

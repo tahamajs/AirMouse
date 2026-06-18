@@ -1,9 +1,7 @@
 package com.airmouse.presentation.calibration
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -12,10 +10,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.view.animation.LinearInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,16 +28,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.airmouse.R
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.MadgwickAHRS
@@ -50,6 +49,10 @@ import kotlinx.coroutines.launch
 import kotlin.math.*
 import javax.inject.Inject
 
+/**
+ * Calibration Activity – guides the user through gyroscope, magnetometer and accelerometer calibration.
+ * Uses sensor fusion (Madgwick AHRS) for real‑time orientation feedback.
+ */
 @AndroidEntryPoint
 class CalibrationActivity : ComponentActivity() {
 
@@ -57,10 +60,11 @@ class CalibrationActivity : ComponentActivity() {
     @Inject lateinit var sensorManager: SensorManager
     @Inject lateinit var vibrator: Vibrator
 
+    // These are initialised in onCreate after dependencies are injected.
     private lateinit var calibrationHelper: CalibrationHelper
-    private var madgwick = MadgwickAHRS(beta = 0.1f)
-    
-    // Calibration data
+    private val madgwick = MadgwickAHRS(beta = 0.1f)
+
+    // Calibration data (will be saved to preferences)
     private var gyroOffsetX = 0f
     private var gyroOffsetY = 0f
     private var gyroOffsetZ = 0f
@@ -73,17 +77,27 @@ class CalibrationActivity : ComponentActivity() {
     private var accelScaleX = 1f
     private var accelScaleY = 1f
     private var accelScaleZ = 1f
-    
-    // State
+
+    // State for the UI
     private var currentRoll = 0f
     private var currentPitch = 0f
     private var currentYaw = 0f
     private var isCollecting = false
-    private var gyroSamples = mutableListOf<Triple<Float, Float, Float>>()
-    private var magSamples = mutableListOf<Triple<Float, Float, Float>>()
-    
+    private val gyroSamples = mutableListOf<Triple<Float, Float, Float>>()
+    private val magSamples = mutableListOf<Triple<Float, Float, Float>>()
+
     // Calibration steps
-    private enum class CalibStep { GYROSCOPE, MAGNETOMETER, ACCELEROMETER_FLAT, ACCELEROMETER_LEFT, ACCELEROMETER_RIGHT, ACCELEROMETER_TOP, ACCELEROMETER_BOTTOM, ACCELEROMETER_BACK, COMPLETE }
+    enum class CalibStep {
+        GYROSCOPE,
+        MAGNETOMETER,
+        ACCELEROMETER_FLAT,
+        ACCELEROMETER_LEFT,
+        ACCELEROMETER_RIGHT,
+        ACCELEROMETER_TOP,
+        ACCELEROMETER_BOTTOM,
+        ACCELEROMETER_BACK,
+        COMPLETE
+    }
     private var currentStep = CalibStep.GYROSCOPE
     private var accelStep = 0
     private val accelOrientations = listOf(
@@ -109,10 +123,13 @@ class CalibrationActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         calibrationHelper = CalibrationHelper(applicationContext, prefs)
-        
+
         setContent {
+            // We use the CalibrationViewModel to hold the UI state (if you have one)
+            // For simplicity, we manage state in the activity and pass it to the composable.
+            // If you have a ViewModel, you can use it instead.
             MaterialTheme(
                 colorScheme = darkColorScheme(
                     primary = Color(0xFF6366F1),
@@ -135,7 +152,7 @@ class CalibrationActivity : ComponentActivity() {
                 )
             }
         }
-        
+
         startSensors()
     }
 
@@ -158,8 +175,17 @@ class CalibrationActivity : ComponentActivity() {
                         }
                     }
                     Sensor.TYPE_ACCELEROMETER -> {
-                        if (isCollecting && currentStep in listOf(CalibStep.ACCELEROMETER_FLAT, CalibStep.ACCELEROMETER_LEFT, CalibStep.ACCELEROMETER_RIGHT, CalibStep.ACCELEROMETER_TOP, CalibStep.ACCELEROMETER_BOTTOM, CalibStep.ACCELEROMETER_BACK)) {
-                            // Collect samples for current orientation
+                        if (isCollecting && currentStep in listOf(
+                                CalibStep.ACCELEROMETER_FLAT,
+                                CalibStep.ACCELEROMETER_LEFT,
+                                CalibStep.ACCELEROMETER_RIGHT,
+                                CalibStep.ACCELEROMETER_TOP,
+                                CalibStep.ACCELEROMETER_BOTTOM,
+                                CalibStep.ACCELEROMETER_BACK
+                            )
+                        ) {
+                            // Samples are collected directly in startAccelCalibration using a separate listener.
+                            // We ignore here to avoid duplication.
                         } else {
                             val ax = (event.values[0] - accelOffsetX) / accelScaleX
                             val ay = (event.values[1] - accelOffsetY) / accelScaleY
@@ -190,12 +216,15 @@ class CalibrationActivity : ComponentActivity() {
         magnetometer?.let { sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME) }
     }
 
+    // ==================== Calibration Procedures ====================
+
     private fun startGyroCalibration() {
         lifecycleScope.launch {
             isCollecting = true
             gyroSamples.clear()
+            // Wait for the user to place the device still
             delay(3000)
-            
+
             if (gyroSamples.size >= GYRO_SAMPLES) {
                 var sumX = 0f; var sumY = 0f; var sumZ = 0f
                 gyroSamples.take(GYRO_SAMPLES).forEach { (x, y, z) ->
@@ -204,12 +233,12 @@ class CalibrationActivity : ComponentActivity() {
                 gyroOffsetX = sumX / GYRO_SAMPLES
                 gyroOffsetY = sumY / GYRO_SAMPLES
                 gyroOffsetZ = sumZ / GYRO_SAMPLES
-                
+
                 prefs.putFloat("gyro_offset_x", gyroOffsetX)
                 prefs.putFloat("gyro_offset_y", gyroOffsetY)
                 prefs.putFloat("gyro_offset_z", gyroOffsetZ)
             }
-            
+
             isCollecting = false
             currentStep = CalibStep.MAGNETOMETER
             vibrate(200)
@@ -220,27 +249,31 @@ class CalibrationActivity : ComponentActivity() {
         lifecycleScope.launch {
             isCollecting = true
             magSamples.clear()
-            
+
             var minX = Float.MAX_VALUE; var maxX = Float.MIN_VALUE
             var minY = Float.MAX_VALUE; var maxY = Float.MIN_VALUE
             var minZ = Float.MAX_VALUE; var maxZ = Float.MIN_VALUE
-            
+
+            // Collect samples for the specified duration
             delay(MAG_DURATION_MS)
-            
+
             magSamples.forEach { (x, y, z) ->
-                minX = min(minX, x); maxX = max(maxX, x)
-                minY = min(minY, y); maxY = max(maxY, y)
-                minZ = min(minZ, z); maxZ = max(maxZ, z)
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+                if (z < minZ) minZ = z
+                if (z > maxZ) maxZ = z
             }
-            
+
             magOffsetX = (minX + maxX) / 2f
             magOffsetY = (minY + maxY) / 2f
             magOffsetZ = (minZ + maxZ) / 2f
-            
+
             prefs.putFloat("mag_offset_x", magOffsetX)
             prefs.putFloat("mag_offset_y", magOffsetY)
             prefs.putFloat("mag_offset_z", magOffsetZ)
-            
+
             isCollecting = false
             currentStep = CalibStep.ACCELEROMETER_FLAT
             vibrate(200)
@@ -249,7 +282,9 @@ class CalibrationActivity : ComponentActivity() {
 
     private fun startAccelCalibration() {
         lifecycleScope.launch {
-            for ((index, (instruction, expected)) in accelOrientations.withIndex()) {
+            accelMeasurements.clear()
+
+            for (index in accelOrientations.indices) {
                 currentStep = when (index) {
                     0 -> CalibStep.ACCELEROMETER_FLAT
                     1 -> CalibStep.ACCELEROMETER_BACK
@@ -259,53 +294,70 @@ class CalibrationActivity : ComponentActivity() {
                     else -> CalibStep.ACCELEROMETER_BOTTOM
                 }
                 accelStep = index
-                
-                // Wait for user to position device
+
+                // Wait for user to position the device
                 delay(3000)
-                
-                // Collect samples
-                val samples = mutableListOf<Triple<Float, Float, Float>>()
-                val startTime = System.currentTimeMillis()
-                while (System.currentTimeMillis() - startTime < 1000) {
-                    val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                    // In real implementation, collect from listener
-                    delay(20)
-                }
-                
-                if (samples.isNotEmpty()) {
-                    val avgX = samples.map { it.first }.average().toFloat()
-                    val avgY = samples.map { it.second }.average().toFloat()
-                    val avgZ = samples.map { it.third }.average().toFloat()
-                    accelMeasurements.add(Triple(avgX, avgY, avgZ))
+
+                // Collect accelerometer samples for this orientation
+                val samples = collectAccelSamples()
+                if (samples != null) {
+                    accelMeasurements.add(samples)
                 }
                 vibrate(100)
             }
-            
+
+            // Compute calibration parameters
             calculateAccelCalibration()
+
+            // Save state
             prefs.putBoolean("calibration_complete", true)
             currentStep = CalibStep.COMPLETE
             vibrate(300)
         }
     }
+    /**
+     * Collects a short burst of accelerometer samples and returns their average.
+     */
+    private suspend fun collectAccelSamples(): Triple<Float, Float, Float>? {
+        val samples = mutableListOf<Triple<Float, Float, Float>>()
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return null
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                samples.add(Triple(event.values[0], event.values[1], event.values[2]))
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        }
+
+        sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_FASTEST)
+        delay(ACCEL_SAMPLES.toLong() * 20L) // ~1 second
+        sensorManager.unregisterListener(listener)
+
+        if (samples.isEmpty()) return null
+        val avgX = samples.map { it.first }.average().toFloat()
+        val avgY = samples.map { it.second }.average().toFloat()
+        val avgZ = samples.map { it.third }.average().toFloat()
+        return Triple(avgX, avgY, avgZ)
+    }
 
     private fun calculateAccelCalibration() {
         if (accelMeasurements.size != accelOrientations.size) return
-        
+
         var sumXx = 0f; var sumYy = 0f; var sumZz = 0f
         var sumX = 0f; var sumY = 0f; var sumZ = 0f
-        
+
         for (i in accelMeasurements.indices) {
             val (mx, my, mz) = accelMeasurements[i]
             val (ex, ey, ez) = accelOrientations[i].second
-            
+
             sumXx += mx * ex; sumYy += my * ey; sumZz += mz * ez
             sumX += mx * mx; sumY += my * my; sumZ += mz * mz
         }
-        
+
         accelScaleX = if (sumX > 0) sumXx / sumX else 1f
         accelScaleY = if (sumY > 0) sumYy / sumY else 1f
         accelScaleZ = if (sumZ > 0) sumZz / sumZ else 1f
-        
+
         var sumOx = 0f; var sumOy = 0f; var sumOz = 0f
         for (i in accelMeasurements.indices) {
             val (mx, my, mz) = accelMeasurements[i]
@@ -314,11 +366,11 @@ class CalibrationActivity : ComponentActivity() {
             sumOy += ey - my * accelScaleY
             sumOz += ez - mz * accelScaleZ
         }
-        
+
         accelOffsetX = sumOx / accelMeasurements.size
         accelOffsetY = sumOy / accelMeasurements.size
         accelOffsetZ = sumOz / accelMeasurements.size
-        
+
         prefs.putFloat("accel_offset_x", accelOffsetX)
         prefs.putFloat("accel_offset_y", accelOffsetY)
         prefs.putFloat("accel_offset_z", accelOffsetZ)
@@ -342,6 +394,8 @@ class CalibrationActivity : ComponentActivity() {
     }
 }
 
+// ==================== Compose UI ====================
+
 @Composable
 fun CalibrationScreen(
     currentStep: CalibrationActivity.CalibStep,
@@ -358,14 +412,14 @@ fun CalibrationScreen(
 ) {
     var animationProgress by remember { mutableStateOf(0f) }
     val configuration = LocalConfiguration.current
-    
+
     LaunchedEffect(currentStep) {
         while (animationProgress < 1f) {
             animationProgress += 0.05f
-            kotlinx.coroutines.delay(16)
+            delay(16)
         }
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -375,9 +429,8 @@ fun CalibrationScreen(
                 )
             )
     ) {
-        // Animated background
         AnimatedBackground()
-        
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -403,24 +456,31 @@ fun CalibrationScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 40.dp)
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Instruction
             Text(
                 text = when (currentStep) {
                     CalibrationActivity.CalibStep.GYROSCOPE -> "Place your device on a flat, stationary surface"
                     CalibrationActivity.CalibStep.MAGNETOMETER -> "Move your device in a figure-8 pattern"
-                    in listOf(CalibrationActivity.CalibStep.ACCELEROMETER_FLAT, CalibrationActivity.CalibStep.ACCELEROMETER_LEFT, CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT, CalibrationActivity.CalibStep.ACCELEROMETER_TOP, CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM, CalibrationActivity.CalibStep.ACCELEROMETER_BACK) -> getAccelInstruction(currentStep)
+                    in listOf(
+                        CalibrationActivity.CalibStep.ACCELEROMETER_FLAT,
+                        CalibrationActivity.CalibStep.ACCELEROMETER_LEFT,
+                        CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT,
+                        CalibrationActivity.CalibStep.ACCELEROMETER_TOP,
+                        CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM,
+                        CalibrationActivity.CalibStep.ACCELEROMETER_BACK
+                    ) -> getAccelInstruction(currentStep)
                     CalibrationActivity.CalibStep.COMPLETE -> "Your device is now calibrated!"
                 },
                 fontSize = 16.sp,
                 color = Color(0xFF94A3B8),
                 textAlign = TextAlign.Center
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             // 3D Phone Visualization
             Box(
                 modifier = Modifier
@@ -435,10 +495,10 @@ fun CalibrationScreen(
                     step = currentStep
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
-            // Progress
+
+            // Progress indicators
             when (currentStep) {
                 CalibrationActivity.CalibStep.GYROSCOPE -> {
                     CircularProgressIndicator(
@@ -452,7 +512,14 @@ fun CalibrationScreen(
                 CalibrationActivity.CalibStep.MAGNETOMETER -> {
                     AnimatedFigureEight()
                 }
-                in listOf(CalibrationActivity.CalibStep.ACCELEROMETER_FLAT, CalibrationActivity.CalibStep.ACCELEROMETER_LEFT, CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT, CalibrationActivity.CalibStep.ACCELEROMETER_TOP, CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM, CalibrationActivity.CalibStep.ACCELEROMETER_BACK) -> {
+                in listOf(
+                    CalibrationActivity.CalibStep.ACCELEROMETER_FLAT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_LEFT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_TOP,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_BACK
+                ) -> {
                     LinearProgressIndicator(
                         progress = (accelStep + 1).toFloat() / totalAccelSteps,
                         modifier = Modifier
@@ -473,9 +540,9 @@ fun CalibrationScreen(
                     SuccessAnimation()
                 }
             }
-            
+
             Spacer(modifier = Modifier.weight(1f))
-            
+
             // Buttons
             when (currentStep) {
                 CalibrationActivity.CalibStep.GYROSCOPE -> {
@@ -502,7 +569,14 @@ fun CalibrationScreen(
                         Text("Start Calibration", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
-                in listOf(CalibrationActivity.CalibStep.ACCELEROMETER_FLAT, CalibrationActivity.CalibStep.ACCELEROMETER_LEFT, CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT, CalibrationActivity.CalibStep.ACCELEROMETER_TOP, CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM, CalibrationActivity.CalibStep.ACCELEROMETER_BACK) -> {
+                in listOf(
+                    CalibrationActivity.CalibStep.ACCELEROMETER_FLAT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_LEFT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_RIGHT,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_TOP,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_BOTTOM,
+                    CalibrationActivity.CalibStep.ACCELEROMETER_BACK
+                ) -> {
                     Button(
                         onClick = onStartAccel,
                         modifier = Modifier
@@ -527,20 +601,22 @@ fun CalibrationScreen(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             TextButton(
                 onClick = onSkip,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Skip Calibration", color = Color(0xFF64748B))
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
+
+// ==================== Reusable Composables ====================
 
 @Composable
 fun AnimatedBackground() {
@@ -552,7 +628,7 @@ fun AnimatedBackground() {
             animation = tween(20000, easing = LinearEasing)
         )
     )
-    
+
     Box(modifier = Modifier.fillMaxSize()) {
         for (i in 0..2) {
             Box(
@@ -576,19 +652,24 @@ fun AnimatedBackground() {
 }
 
 @Composable
-fun Phone3DVisualization(roll: Float, pitch: Float, yaw: Float, step: CalibrationActivity.CalibStep) {
+fun Phone3DVisualization(
+    roll: Float,
+    pitch: Float,
+    yaw: Float,
+    step: CalibrationActivity.CalibStep
+) {
     val normalizedRoll = (roll / 45f).coerceIn(-1f, 1f)
     val normalizedPitch = (pitch / 45f).coerceIn(-1f, 1f)
-    
+
     var pulse by remember { mutableStateOf(0f) }
-    
+
     LaunchedEffect(step) {
         while (true) {
             pulse = (pulse + 0.05f) % 1f
-            kotlinx.coroutines.delay(50)
+            delay(50)
         }
     }
-    
+
     Box(
         modifier = Modifier
             .size(200.dp)
@@ -617,11 +698,11 @@ fun Phone3DVisualization(roll: Float, pitch: Float, yaw: Float, step: Calibratio
                 .border(1.dp, Color(0xFF1E293B), RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
-            // Crosshair for aiming
+            // Crosshair
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val centerX = size.width / 2
                 val centerY = size.height / 2
-                
+
                 drawCircle(
                     color = Color(0xFF6366F1).copy(alpha = 0.3f),
                     radius = 40f,
@@ -649,7 +730,7 @@ fun Phone3DVisualization(roll: Float, pitch: Float, yaw: Float, step: Calibratio
                     )
                 )
             }
-            
+
             // Calibration overlay
             when (step) {
                 CalibrationActivity.CalibStep.GYROSCOPE -> {
@@ -659,7 +740,6 @@ fun Phone3DVisualization(roll: Float, pitch: Float, yaw: Float, step: Calibratio
                     Text("∞", fontSize = 48.sp, color = Color(0xFF8B5CF6))
                 }
                 else -> {
-                    // Show orientation arrow
                     val arrowRotation = when (step) {
                         CalibrationActivity.CalibStep.ACCELEROMETER_FLAT -> 0f
                         CalibrationActivity.CalibStep.ACCELEROMETER_BACK -> 180f
@@ -677,7 +757,7 @@ fun Phone3DVisualization(roll: Float, pitch: Float, yaw: Float, step: Calibratio
                 }
             }
         }
-        
+
         // Home button
         Box(
             modifier = Modifier
@@ -693,7 +773,7 @@ fun Phone3DVisualization(roll: Float, pitch: Float, yaw: Float, step: Calibratio
 @Composable
 fun AnimatedFigureEight() {
     val rotation by remember { Animatable(0f) }
-    
+
     LaunchedEffect(Unit) {
         rotation.animateTo(
             targetValue = 360f,
@@ -702,7 +782,7 @@ fun AnimatedFigureEight() {
             )
         )
     }
-    
+
     Box(
         modifier = Modifier
             .size(80.dp)
@@ -723,7 +803,7 @@ fun SuccessAnimation() {
         ),
         label = ""
     )
-    
+
     Box(
         modifier = Modifier
             .size(80.dp)
