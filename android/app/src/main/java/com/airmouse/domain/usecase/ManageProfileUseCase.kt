@@ -1,6 +1,6 @@
 package com.airmouse.domain.usecase
 
-import com.airmouse.domain.model.UserProfile
+import com.airmouse.domain.model.Profile
 import com.airmouse.domain.repository.IProfileRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -11,60 +11,34 @@ import javax.inject.Inject
 class ManageProfileUseCase @Inject constructor(
     private val profileRepository: IProfileRepository
 ) {
-    /**
-     * Saves a new or existing profile.
-     */
-    suspend fun saveProfile(profile: UserProfile) {
-        profileRepository.saveProfile(profile)
-    }
+    fun getProfiles(): Flow<List<Profile>> = profileRepository.getProfiles()
+    
+    fun getActiveProfileId(): Flow<String?> = profileRepository.getActiveProfileId()
 
-    /**
-     * Retrieves a profile by its ID.
-     */
-    suspend fun getProfile(id: String): UserProfile? =
+    suspend fun getProfile(id: String): Profile? =
         profileRepository.getProfile(id)
 
-    /**
-     * Returns all stored profiles.
-     */
-    suspend fun getAllProfiles(): List<UserProfile> =
-        profileRepository.getAllProfiles()
+    suspend fun createProfile(name: String): Profile =
+        profileRepository.createProfile(name)
 
-    /**
-     * Deletes a profile by ID.
-     */
-    suspend fun deleteProfile(id: String) {
+    suspend fun updateProfile(profile: Profile) =
+        profileRepository.updateProfile(profile)
+
+    suspend fun deleteProfile(id: String) =
         profileRepository.deleteProfile(id)
-    }
 
-    /**
-     * Sets the active profile.
-     */
-    suspend fun setActiveProfile(id: String) {
+    suspend fun setActiveProfile(id: String) =
         profileRepository.setActiveProfile(id)
-    }
 
-    /**
-     * Returns the currently active profile as a Flow.
-     */
-    fun getActiveProfile(): Flow<UserProfile?> =
+    suspend fun getActiveProfile(): Profile? =
         profileRepository.getActiveProfile()
 
-    /**
-     * Duplicates an existing profile.
-     */
-    suspend fun duplicateProfile(id: String): UserProfile =
+    suspend fun duplicateProfile(id: String): Profile? =
         profileRepository.duplicateProfile(id)
 
-    /**
-     * Exports a profile to a JSON string.
-     */
-    suspend fun exportProfile(id: String): String =
-        profileRepository.exportProfile(id)
+    suspend fun exportProfiles(): String =
+        profileRepository.exportProfiles()
 
-    /**
-     * Imports a profile from a JSON string.
-     */
-    suspend fun importProfile(data: String): Boolean =
-        profileRepository.importProfile(data)
+    suspend fun importProfiles(json: String): Boolean =
+        profileRepository.importProfiles(json)
 }
