@@ -6,6 +6,7 @@ import com.airmouse.domain.usecase.SendMovementUseCase
 import com.airmouse.domain.usecase.CalibrationUseCase
 import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.domain.repository.ICalibrationRepository
+import com.airmouse.domain.repository.ISettingsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
