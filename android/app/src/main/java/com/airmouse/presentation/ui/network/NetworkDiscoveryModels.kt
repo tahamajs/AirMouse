@@ -2,6 +2,9 @@ package com.airmouse.presentation.ui.network
 
 import java.util.UUID
 
+/**
+ * Represents a discovered Air Mouse server on the network
+ */
 data class DiscoveredServer(
     val id: String = UUID.randomUUID().toString(),
     val ip: String,
@@ -18,12 +21,14 @@ data class DiscoveredServer(
     val protocol: Protocol = Protocol.WEBSOCKET
 ) {
     val formattedPing: String get() = if (ping < 0) "N/A" else "${ping}ms"
+
     val pingColor: Int get() = when {
         ping < 50 -> 0xFF4CAF50.toInt()
         ping < 100 -> 0xFFFFC107.toInt()
         ping >= 0 -> 0xFFF44336.toInt()
         else -> 0xFF9E9E9E.toInt()
     }
+
     val signalQuality: SignalQuality get() = when {
         ping < 50 -> SignalQuality.EXCELLENT
         ping < 100 -> SignalQuality.GOOD
@@ -33,43 +38,9 @@ data class DiscoveredServer(
     }
 }
 
-enum class DeviceType(val displayName: String, val icon: String) {
-    UNKNOWN("Unknown", "🖥️"),
-    PC("PC", "💻"),
-    LAPTOP("Laptop", "📱"),
-    SERVER("Server", "🗄️"),
-    RASPBERRY_PI("Raspberry Pi", "🍓"),
-    MAC("Mac", "🍎")
-}
-
-enum class Protocol(val displayName: String) {
-    WEBSOCKET("WebSocket"),
-    TCP("TCP"),
-    UDP("UDP"),
-    AUTO("Auto Detect")
-}
-
-enum class SignalQuality(val displayName: String, val color: Long) {
-    EXCELLENT("Excellent", 0xFF4CAF50),
-    GOOD("Good", 0xFF8BC34A),
-    FAIR("Fair", 0xFFFFC107),
-    POOR("Poor", 0xFFF44336),
-    UNKNOWN("Unknown", 0xFF9E9E9E)
-}
-
-enum class SortBy(val displayName: String) {
-    IP("IP Address"),
-    NAME("Name"),
-    PING("Ping"),
-    PORT("Port"),
-    SIGNAL("Signal Strength"),
-    LAST_SEEN("Last Seen")
-}
-
-enum class DiscoveryTab {
-    DISCOVERED, SAVED, HISTORY
-}
-
+/**
+ * Connection history record
+ */
 data class ConnectionHistory(
     val id: String = UUID.randomUUID().toString(),
     val serverId: String,
@@ -81,6 +52,9 @@ data class ConnectionHistory(
     val errorMessage: String? = null
 )
 
+/**
+ * UI State for Network Discovery screen
+ */
 data class NetworkDiscoveryUiState(
     val isScanning: Boolean = false,
     val discoveredServers: List<DiscoveredServer> = emptyList(),
@@ -103,3 +77,57 @@ data class NetworkDiscoveryUiState(
     val scanTimeout: Int = 2000,
     val scanPorts: List<Int> = listOf(8080, 8081, 8082)
 )
+
+/**
+ * Device types for server identification
+ */
+enum class DeviceType(val displayName: String, val icon: String) {
+    UNKNOWN("Unknown", "🖥️"),
+    PC("PC", "💻"),
+    LAPTOP("Laptop", "📱"),
+    SERVER("Server", "🗄️"),
+    RASPBERRY_PI("Raspberry Pi", "🍓"),
+    MAC("Mac", "🍎")
+}
+
+/**
+ * Communication protocols
+ */
+enum class Protocol(val displayName: String) {
+    WEBSOCKET("WebSocket"),
+    TCP("TCP"),
+    UDP("UDP"),
+    AUTO("Auto Detect")
+}
+
+/**
+ * Signal quality levels
+ */
+enum class SignalQuality(val displayName: String, val color: Long) {
+    EXCELLENT("Excellent", 0xFF4CAF50),
+    GOOD("Good", 0xFF8BC34A),
+    FAIR("Fair", 0xFFFFC107),
+    POOR("Poor", 0xFFF44336),
+    UNKNOWN("Unknown", 0xFF9E9E9E)
+}
+
+/**
+ * Sort options for server list
+ */
+enum class SortBy(val displayName: String) {
+    IP("IP Address"),
+    NAME("Name"),
+    PING("Ping"),
+    PORT("Port"),
+    SIGNAL("Signal Strength"),
+    LAST_SEEN("Last Seen")
+}
+
+/**
+ * Discovery tabs
+ */
+enum class DiscoveryTab {
+    DISCOVERED,
+    SAVED,
+    HISTORY
+}

@@ -1,6 +1,5 @@
 package com.airmouse.presentation.ui.network
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,6 +9,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Comment
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,7 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,27 +30,42 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+// ==================== MAIN SCREEN ====================
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NetworkDiscoveryScreen(
     navigationActions: NavigationActions,
-    viewModel: NetworkDiscoveryViewModel = hiltViewModel(),
-    onServerSelected: (String, Int) -> Unit = { _, _ -> }
+    viewModel: NetworkDiscoveryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val filteredServers by viewModel.filteredServers.collectAsStateWithLifecycle()
     val filteredSavedServers by viewModel.filteredSavedServers.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showSortMenu by remember { mutableStateOf(false) }
     var showManualConnectDialog by remember { mutableStateOf(false) }
-    var showAdvancedOptions by remember { mutableStateOf(false) }
+    fun clearConnectionHistory() {
+        viewModelScope.launch {
+            // Step A: Perform the heavy lifting (Data Layer)
+            // If you are using a database (e.g., Room), do the delete operation here.
+            // repository.clearConnectionHistory()
 
+            // Step B: Update the state so the UI reacts
+            _uiState.update { currentState ->
+                currentState.copy(
+                    connectionHistory = emptyList(), // Clear the list
+                    status = "History cleared"         // Optional: Update status message
+                )
+            }
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         "Network Discovery",
                         fontWeight = FontWeight.Bold
@@ -55,21 +73,30 @@ fun NetworkDiscoveryScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { showSortMenu = true }) {
-                        Icon(Icons.Default.Sort, contentDescription = "Sort")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = "Sort"
+                        )
                     }
                     IconButton(onClick = { viewModel.refreshScan() }) {
                         Icon(
-                            if (uiState.isScanning) Icons.Default.Close else Icons.Default.Refresh,
-                            contentDescription = "Refresh"
+                            imageVector = if (uiState.isScanning) Icons.Default.Close else Icons.Default.Refresh,
+                            contentDescription = if (uiState.isScanning) "Stop Scan" else "Refresh"
                         )
                     }
                     IconButton(onClick = { showManualConnectDialog = true }) {
-                        Icon(Icons.Default.AddLink, contentDescription = "Manual Connect")
+                        Icon(
+                            imageVector = Icons.Default.AddLink,
+                            contentDescription = "Manual Connect"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -84,7 +111,10 @@ fun NetworkDiscoveryScreen(
                     containerColor = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(56.dp)
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Cancel")
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cancel Connection"
+                    )
                 }
             }
         }
@@ -95,12 +125,12 @@ fun NetworkDiscoveryScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Sort dropdown
+            // Sort Dropdown
             DropdownMenu(
                 expanded = showSortMenu,
                 onDismissRequest = { showSortMenu = false }
             ) {
-                SortBy.values().forEach { sortBy ->
+                SortBy.entries.forEach { sortBy ->
                     DropdownMenuItem(
                         text = { Text(sortBy.displayName) },
                         onClick = {
@@ -109,7 +139,10 @@ fun NetworkDiscoveryScreen(
                         },
                         trailingIcon = {
                             if (uiState.sortBy == sortBy) {
-                                Icon(Icons.Default.Check, contentDescription = "Selected")
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected"
+                                )
                             }
                         }
                     )
@@ -120,8 +153,10 @@ fun NetworkDiscoveryScreen(
             if (showManualConnectDialog) {
                 ManualConnectDialog(
                     onDismiss = { showManualConnectDialog = false },
-                    onConnect = { ip, port ->
-                        viewModel.connectManual(ip, port)
+                    onConnect = { ip: String, port: Int ->
+                        scope.launch {
+                            viewModel.connectManual(ip, port)
+                        }
                         showManualConnectDialog = false
                     },
                     initialIp = uiState.manualIp,
@@ -129,16 +164,24 @@ fun NetworkDiscoveryScreen(
                 )
             }
 
-            // Search bar
+            // Search Bar
             OutlinedTextField(
                 value = uiState.filterText,
                 onValueChange = viewModel::setFilterText,
                 label = { Text("Filter servers...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search"
+                    )
+                },
                 trailingIcon = {
                     if (uiState.filterText.isNotEmpty()) {
                         IconButton(onClick = { viewModel.setFilterText("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear")
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear"
+                            )
                         }
                     }
                 },
@@ -178,7 +221,7 @@ fun NetworkDiscoveryScreen(
                         )
                         if (uiState.lastScanTime != null) {
                             Text(
-                                "Last scan: ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(uiState.lastScanTime)}",
+                                "Last scan: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(uiState.lastScanTime)}",
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -186,11 +229,19 @@ fun NetworkDiscoveryScreen(
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (viewModel.isWifiConnected()) {
-                            Icon(Icons.Default.Wifi, contentDescription = "WiFi", tint = Color(0xFF4CAF50))
+                            Icon(
+                                imageVector = Icons.Default.Wifi,
+                                contentDescription = "WiFi Connected",
+                                tint = Color(0xFF4CAF50)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Connected", fontSize = 12.sp, color = Color(0xFF4CAF50))
                         } else {
-                            Icon(Icons.Default.WifiOff, contentDescription = "No WiFi", tint = Color(0xFFF44336))
+                            Icon(
+                                imageVector = Icons.Default.WifiOff,
+                                contentDescription = "No WiFi",
+                                tint = Color(0xFFF44336)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("No WiFi", fontSize = 12.sp, color = Color(0xFFF44336))
                         }
@@ -200,7 +251,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Scan Button with Progress
+            // Scan Button
             Button(
                 onClick = { viewModel.scanNetwork() },
                 modifier = Modifier.fillMaxWidth(),
@@ -208,11 +259,18 @@ fun NetworkDiscoveryScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (uiState.isScanning) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        progress = { uiState.scanProgress / 100f },
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Scanning... ${uiState.scanProgress}%")
                 } else {
-                    Icon(Icons.Default.Search, contentDescription = "Scan")
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Scan Network"
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Scan Network")
                 }
@@ -221,7 +279,7 @@ fun NetworkDiscoveryScreen(
             if (uiState.isScanning) {
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
-                    progress = uiState.scanProgress / 100f,
+                    progress = { uiState.scanProgress / 100f },
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
@@ -230,8 +288,9 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Status and Error
-            if (uiState.errorMessage != null) {
+            // Status and Error - FIXED: Local variable for smart cast
+            val errorMessage = uiState.errorMessage
+            if (errorMessage != null) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
@@ -243,13 +302,17 @@ fun NetworkDiscoveryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            uiState.errorMessage!!,
+                            text = errorMessage,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             fontSize = 12.sp,
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { viewModel.clearErrorMessage() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = MaterialTheme.colorScheme.onErrorContainer)
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Dismiss Error",
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
                         }
                     }
                 }
@@ -277,9 +340,13 @@ fun NetworkDiscoveryScreen(
                 Tab(
                     selected = uiState.activeTab == DiscoveryTab.DISCOVERED,
                     onClick = { viewModel.setActiveTab(DiscoveryTab.DISCOVERED) },
-                    text = { 
+                    text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Wifi, modifier = Modifier.size(18.dp))
+                            Icon(
+                                imageVector = Icons.Default.Wifi,
+                                contentDescription = "Discovered",
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Discovered")
                             if (uiState.discoveredServers.isNotEmpty()) {
@@ -298,7 +365,11 @@ fun NetworkDiscoveryScreen(
                     onClick = { viewModel.setActiveTab(DiscoveryTab.SAVED) },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Bookmark, modifier = Modifier.size(18.dp))
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = "Saved",
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Saved")
                             if (uiState.savedServers.isNotEmpty()) {
@@ -317,7 +388,11 @@ fun NetworkDiscoveryScreen(
                     onClick = { viewModel.setActiveTab(DiscoveryTab.HISTORY) },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.History, modifier = Modifier.size(18.dp))
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "History",
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("History")
                         }
@@ -340,9 +415,12 @@ fun NetworkDiscoveryScreen(
                                     server = server,
                                     isConnecting = uiState.isConnecting && uiState.selectedServerId == server.id,
                                     connectionProgress = uiState.connectionProgress,
-                                    onConnect = { viewModel.connectToServer(server) },
-                                    onSave = { viewModel.addServerToSaved(server) },
-                                    onDetails = { /* Show details dialog */ }
+                                    onConnect = {
+                                        scope.launch {
+                                            viewModel.connectToServer(server)
+                                        }
+                                    },
+                                    onSave = { viewModel.addServerToSaved(server) }
                                 )
                             }
                         }
@@ -366,7 +444,7 @@ fun NetworkDiscoveryScreen(
                         )
                     }
                 }
-                
+
                 DiscoveryTab.SAVED -> {
                     if (filteredSavedServers.isNotEmpty()) {
                         LazyColumn(
@@ -378,11 +456,15 @@ fun NetworkDiscoveryScreen(
                                     server = server,
                                     isConnecting = uiState.isConnecting && uiState.selectedServerId == server.id,
                                     connectionProgress = uiState.connectionProgress,
-                                    onConnect = { viewModel.connectToServer(server) },
+                                    onConnect = {
+                                        scope.launch {
+                                            viewModel.connectToServer(server)
+                                        }
+                                    },
                                     onDelete = { viewModel.removeSavedServer(server.id) },
                                     onFavorite = { viewModel.toggleFavorite(server.id) },
-                                    onEditNotes = { notes -> viewModel.updateServerNotes(server.id, notes) },
-                                    onEditDeviceType = { deviceType -> viewModel.updateDeviceType(server.id, deviceType) }
+                                    onEditNotes = { notes: String -> viewModel.updateServerNotes(server.id, notes) },
+                                    onEditDeviceType = { deviceType: DeviceType -> viewModel.updateDeviceType(server.id, deviceType) }
                                 )
                             }
                         }
@@ -395,7 +477,7 @@ fun NetworkDiscoveryScreen(
                         )
                     }
                 }
-                
+
                 DiscoveryTab.HISTORY -> {
                     if (uiState.connectionHistory.isNotEmpty()) {
                         LazyColumn(
@@ -436,21 +518,22 @@ fun NetworkDiscoveryScreen(
     }
 }
 
+// ==================== COMPONENTS ====================
+
 @Composable
 fun DiscoveredServerItem(
     server: DiscoveredServer,
     isConnecting: Boolean,
     connectionProgress: Int,
     onConnect: () -> Unit,
-    onSave: () -> Unit,
-    onDetails: () -> Unit
+    onSave: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isConnecting) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
+            containerColor = if (isConnecting)
+                MaterialTheme.colorScheme.primaryContainer
+            else
                 MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp)
@@ -495,20 +578,32 @@ fun DiscoveredServerItem(
             }
             Row {
                 IconButton(onClick = onSave) {
-                    Icon(Icons.Default.BookmarkAdd, contentDescription = "Save", modifier = Modifier.size(22.dp))
+                    Icon(
+                        imageVector = Icons.Default.BookmarkAdd,
+                        contentDescription = "Save Server",
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
                 if (isConnecting) {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp), progress = connectionProgress / 100f, strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        progress = { connectionProgress / 100f },
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 2.dp
+                    )
                 } else {
                     IconButton(onClick = onConnect) {
-                        Icon(Icons.Default.ArrowForward, contentDescription = "Connect", tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Connect to Server",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
         }
         if (isConnecting) {
             LinearProgressIndicator(
-                progress = connectionProgress / 100f,
+                progress = { connectionProgress / 100f },
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.primary
             )
@@ -533,9 +628,9 @@ fun SavedServerItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isConnecting) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
+            containerColor = if (isConnecting)
+                MaterialTheme.colorScheme.primaryContainer
+            else
                 MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp)
@@ -553,7 +648,12 @@ fun SavedServerItem(
                         Text(server.deviceType.icon, fontSize = 20.sp)
                         Text(server.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         if (server.isFavorite) {
-                            Icon(Icons.Filled.Star, contentDescription = "Favorite", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = "Favorite",
+                                tint = Color(0xFFFFC107),
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                         StatusChip(isReachable = server.isReachable, ping = server.ping)
                     }
@@ -566,7 +666,12 @@ fun SavedServerItem(
                     )
                     if (server.notes.isNotEmpty()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Comment, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Comment,
+                                contentDescription = "Notes",
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("📝 ${server.notes}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -574,34 +679,54 @@ fun SavedServerItem(
                 }
                 Row {
                     IconButton(onClick = { showDeviceTypeDialog = true }) {
-                        Icon(Icons.Default.Devices, contentDescription = "Device Type", modifier = Modifier.size(22.dp))
-                    }
-                    IconButton(onClick = { showNotesDialog = true }) {
-                        Icon(Icons.Default.EditNote, contentDescription = "Add note", modifier = Modifier.size(22.dp))
-                    }
-                    IconButton(onClick = onFavorite) {
                         Icon(
-                            if (server.isFavorite) Icons.Filled.Favorite else Icons.Outlined.Favorite,
-                            contentDescription = "Favorite",
-                            tint = if (server.isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            imageVector = Icons.Default.Devices,
+                            contentDescription = "Device Type",
                             modifier = Modifier.size(22.dp)
                         )
                     }
+                    IconButton(onClick = { showNotesDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.EditNote,
+                            contentDescription = "Edit Notes",
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    IconButton(onClick = onFavorite) {
+                        Icon(
+                            imageVector = if (server.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (server.isFavorite) "Remove Favorite" else "Add Favorite",
+                            tint = if (server.isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )                    }
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(22.dp))
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Server",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                     if (isConnecting) {
-                        CircularProgressIndicator(modifier = Modifier.size(32.dp), progress = connectionProgress / 100f, strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            progress = { connectionProgress / 100f },
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 2.dp
+                        )
                     } else {
                         IconButton(onClick = onConnect) {
-                            Icon(Icons.Default.ArrowForward, contentDescription = "Connect", tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "Connect to Server",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
             }
             if (isConnecting) {
                 LinearProgressIndicator(
-                    progress = connectionProgress / 100f,
+                    progress = { connectionProgress / 100f },
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -642,7 +767,7 @@ fun SavedServerItem(
             title = { Text("Device Type") },
             text = {
                 Column {
-                    DeviceType.values().forEach { type ->
+                    DeviceType.entries.forEach { type ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -657,7 +782,7 @@ fun SavedServerItem(
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(type.displayName)
                         }
-                        Divider()
+                        HorizontalDivider()
                     }
                 }
             },
@@ -673,9 +798,9 @@ fun HistoryItem(history: ConnectionHistory) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (history.success) 
-                MaterialTheme.colorScheme.surfaceVariant 
-            else 
+            containerColor = if (history.success)
+                MaterialTheme.colorScheme.surfaceVariant
+            else
                 MaterialTheme.colorScheme.errorContainer
         ),
         shape = RoundedCornerShape(8.dp)
@@ -698,7 +823,7 @@ fun HistoryItem(history: ConnectionHistory) {
                     Text(":${history.port}", fontFamily = FontFamily.Monospace)
                 }
                 Text(
-                    java.text.SimpleDateFormat("MMM dd, HH:mm:ss", java.util.Locale.getDefault()).format(history.timestamp),
+                    SimpleDateFormat("MMM dd, HH:mm:ss", Locale.getDefault()).format(history.timestamp),
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -709,18 +834,30 @@ fun HistoryItem(history: ConnectionHistory) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (history.errorMessage != null) {
+                // FIXED: Local variable for smart cast
+                val errorMsg = history.errorMessage
+                if (errorMsg != null) {
                     Text(
-                        history.errorMessage!!,
+                        errorMsg,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
             }
             if (history.success) {
-                Icon(Icons.Default.CheckCircle, contentDescription = "Success", tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Success",
+                    tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(20.dp)
+                )
             } else {
-                Icon(Icons.Default.Error, contentDescription = "Failed", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = "Failed",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -732,8 +869,7 @@ fun StatusChip(isReachable: Boolean, ping: Int) {
         !isReachable -> Color(0xFFF44336) to "Offline"
         ping < 50 -> Color(0xFF4CAF50) to "Excellent"
         ping < 100 -> Color(0xFFFFC107) to "Good"
-        ping >= 0 -> Color(0xFFF44336) to "Slow"
-        else -> Color(0xFF9E9E9E) to "Unknown"
+        else -> Color(0xFFF44336) to "Slow"
     }
     Surface(
         shape = CircleShape,
@@ -755,7 +891,7 @@ fun SignalStrengthBar(strength: Int) {
             Box(
                 modifier = Modifier
                     .width(3.dp)
-                    .height((index + 1) * 3.dp)
+                    .height(((index + 1) * 3).dp) // FIXED: Proper Dp calculation
                     .clip(RoundedCornerShape(1.dp))
                     .background(
                         if (index < strength / 25)
@@ -778,7 +914,7 @@ fun ManualConnectDialog(
 ) {
     var ip by remember { mutableStateOf(initialIp) }
     var port by remember { mutableStateOf(initialPort) }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Manual Connection") },
@@ -829,7 +965,7 @@ fun ManualConnectDialog(
 }
 
 @Composable
-fun EmptyStateCard(title: String, message: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onRetry: () -> Unit) {
+fun EmptyStateCard(title: String, message: String, icon: ImageVector, onRetry: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxSize(),
         colors = CardDefaults.cardColors(
@@ -844,7 +980,12 @@ fun EmptyStateCard(title: String, message: String, icon: androidx.compose.ui.gra
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(icon, contentDescription = title, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(8.dp))
@@ -854,44 +995,5 @@ fun EmptyStateCard(title: String, message: String, icon: androidx.compose.ui.gra
                 Text("Try Again")
             }
         }
-    }
-}
-
-// NetworkDiscoveryScreen.kt - Use these components:
-@Composable
-fun NetworkDiscoveryScreen() {
-    Column {
-        // Radar animation while scanning
-        RadarAnimation(isActive = isScanning, size = 100)
-        
-        // Connection status
-        ConnectionStatusBadge(connectionManager)
-        
-        // Server list with glass cards
-        LazyColumn {
-            items(servers) { server ->
-                GlassCard {
-                    Row {
-                        Text(server.name)
-                        BatteryLevelIndicator(level = server.signalStrength)
-                        GradientIconButton(
-                            onClick = { connect(server) },
-                            icon = Icons.Default.Connect,
-                            contentDescription = "Connect",
-                            gradient = listOf(Color(0xFF00BCD4), Color(0xFF4CAF50))
-                        )
-                    }
-                }
-            }
-        }
-        
-        // Loading skeleton while scanning
-        if (isScanning) {
-            ShimmerLoadingCard()
-            ShimmerLoadingCard()
-        }
-        
-        // Voice wave animation for discovery
-        VoiceWaveAnimation(isActive = isScanning)
     }
 }
