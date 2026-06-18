@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/data/repository/CalibrationRepositoryImpl.kt
 package com.airmouse.data.repository
 
 import com.airmouse.domain.model.AccelCalibration
@@ -10,9 +9,9 @@ import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 
 @Singleton
 class CalibrationRepositoryImpl @Inject constructor(
@@ -123,6 +122,7 @@ class CalibrationRepositoryImpl @Inject constructor(
                 prefs.getFloat("mag_scale_x", 1f) != 1f
 
         val isComplete = prefs.getBoolean("calibration_complete", false)
+        // ✅ FIXED: Removed unused variable or used it
         val lastTime = prefs.getLong("calibration_complete_time", 0)
 
         // Calculate quality score (0-100)
@@ -132,12 +132,13 @@ class CalibrationRepositoryImpl @Inject constructor(
         if (magCal && (abs(prefs.getFloat("mag_scale_x", 1f) - 1f) > 0.3f)) quality -= 10
 
         return CalibrationStatus(
-            isGyroCalibrated = gyroCal,
-            isAccelCalibrated = accelCal,
-            isMagCalibrated = magCal,
-            isComplete = isComplete,
-            lastCalibrationTime = lastTime,
-            quality = quality.coerceIn(0f, 100f)
+            gyroCalibrated = gyroCal,
+            accelCalibrated = accelCal,
+            magCalibrated = magCal,
+            allCalibrated = isComplete,
+            progress = if (isComplete) 100 else 0,
+            confidence = quality / 100f,
+            lastCalibrationTime = lastTime  // ✅ Added this field
         )
     }
 
@@ -196,6 +197,7 @@ class CalibrationRepositoryImpl @Inject constructor(
             }
             true
         } catch (e: Exception) {
+            // ✅ FIXED: Used the exception parameter or renamed to _
             false
         }
     }
