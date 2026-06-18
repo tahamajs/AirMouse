@@ -1,35 +1,19 @@
 pluginManagement {
     repositories {
-        // Aliyun mirrors for faster downloads (great for China)
-        maven { url 'https://maven.aliyun.com/repository/public' }
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-
-        // Official repositories as fallback
         google()
         mavenCentral()
         gradlePluginPortal()
-        maven { url 'https://jitpack.io' }
     }
 }
-
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // Aliyun mirrors
-        maven { url 'https://maven.aliyun.com/repository/public' }
-        maven { url 'https://maven.aliyun.com/repository/google' }
-
-        // Official repositories
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' }  // Required for GitHub dependencies
-
-        // Local Maven for development
-        mavenLocal()
+        maven { url 'https://jitpack.io' } // <-- ADD THIS LINE
     }
 }
 
-rootProject.name = "AirMousePro"
+rootProject.name = "Air Mouse Pro"
 include ':app'
 include ':network'
