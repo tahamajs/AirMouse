@@ -24,8 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.presentation.ui.components.AnimatedSwitch
-import com.airmouse.presentation.ui.components.GlassCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

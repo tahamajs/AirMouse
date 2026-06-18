@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -646,47 +647,3 @@ fun DropdownSetting(
     }
 }
 
-// SettingsScreen.kt - Use these components:
-@Composable
-fun SettingsScreen() {
-    Column {
-        // Animated switches for each setting
-        AnimatedSwitch(
-            checked = hapticEnabled,
-            onCheckedChange = { /* update */ },
-            label = "Haptic Feedback",
-            description = "Vibration on gestures"
-        )
-        
-        AnimatedSwitch(
-            checked = aiSmoothing,
-            onCheckedChange = { /* update */ },
-            label = "AI Smoothing",
-            description = "Machine learning movement"
-        )
-        
-        AnimatedSwitch(
-            checked = autoConnect,
-            onCheckedChange = { /* update */ },
-            label = "Auto Connect",
-            description = "Connect to last server"
-        )
-        
-        // Gradient button for actions
-        GradientTextButton(
-            onClick = { /* calibrate */ },
-            text = "Start Calibration",
-            gradient = listOf(Color(0xFF00BCD4), Color(0xFF4CAF50))
-        )
-        
-        // Sliders
-        SliderSetting(
-            label = "Sensitivity",
-            value = sensitivity,
-            onValueChange = { /* update */ }
-        )
-        
-        // Notification badge for updates
-        NotificationBadge(count = updateCount)
-    }
-}

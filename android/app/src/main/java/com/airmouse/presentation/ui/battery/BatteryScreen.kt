@@ -1,35 +1,190 @@
 package com.airmouse.presentation.ui.battery
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.presentation.ui.components.*
 import java.text.SimpleDateFormat
 import java.util.*
+
+// ==================== DATA CLASSES ====================
+
+data class BatteryUiState(
+    val level: Int = 0,
+    val isCharging: Boolean = false,
+    val temperature: Float = 0f,
+    val voltage: Float = 0f,
+    val current: Float = 0f,
+    val health: String = "Unknown",
+    val status: String = "Unknown",
+    val technology: String = "Unknown",
+    val plugged: String = "Unknown",
+    val chargeCounter: Int = 0,
+    val energyCounter: Long = 0,
+    val isPresent: Boolean = true,
+    val batterySaverEnabled: Boolean = false,
+    val capacity: Int = 100,
+    val history: List<BatteryHistoryEntry> = emptyList()
+)
+
+data class BatteryHistoryEntry(
+    val timestamp: Long,
+    val level: Int,
+    val temperature: Float,
+    val isCharging: Boolean
+)
+
+data class BatteryAppUsage(
+    val name: String,
+    val usagePercent: Float,
+    val icon: ImageVector? = null
+)
+
+// ==================== HELPER FUNCTIONS ====================
+
+fun getBatteryColor(level: Int): Color {
+    return when {
+        level >= 80 -> Color(0xFF4CAF50)  // Green
+        level >= 60 -> Color(0xFF8BC34A)  // Light Green
+        level >= 40 -> Color(0xFFFFC107)  // Amber
+        level >= 20 -> Color(0xFFFF9800)  // Orange
+        else -> Color(0xFFF44336)         // Red
+    }
+}
+
+fun getHealthColor(healthPercent: Int): Color {
+    return when {
+        healthPercent >= 80 -> Color(0xFF4CAF50)
+        healthPercent >= 60 -> Color(0xFFFF9800)
+        else -> Color(0xFFF44336)
+    }
+}
+
+// ==================== COMPONENTS ====================
+
+@Composable
+fun BatteryLevelIndicator(
+    level: Int,
+    isCharging: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val color = getBatteryColor(level)
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val width = size.width
+            val height = size.height
+            val strokeWidth = width * 0.08f
+            val radius = (width / 2) - strokeWidth / 2
+
+            // Background circle
+            drawCircle(
+                color = Color.White.copy(alpha = 0.1f),
+                radius = radius,
+                center = Offset(width / 2, height / 2),
+                style = Stroke(width = strokeWidth)
+            )
+
+            // Progress circle
+            val sweepAngle = (level / 100f) * 360f
+            drawArc(
+                color = color,
+                startAngle = -90f,
+                sweepAngle = sweepAngle,
+                useCenter = false,
+                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
+                size = Size(width - strokeWidth, height - strokeWidth),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            // Charging indicator
+            if (isCharging) {
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.3f),
+                    radius = radius * 0.9f,
+                    center = Offset(width / 2, height / 2),
+                    style = Stroke(width = 2f)
+                )
+                // Lightning bolt
+                drawText(
+                    text = "⚡",
+                    topLeft = Offset(width / 2 - 30f, height / 2 - 30f),
+                    fontSize = 60f
+                )
+            }
+        }
+
+        // Percentage text
+        Text(
+            text = if (isCharging) "⚡" else "${level}%",
+            fontSize = if (isCharging) 32.sp else 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isCharging) Color.White else color
+        )
+    }
+}
+
+// drawText extension for Canvas
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawText(
+    text: String,
+    topLeft: Offset,
+    fontSize: Float
+) {
+    // Simple text drawing - in production use proper text rendering
+    // This is a placeholder
+}
+
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            content = content
+        )
+    }
+}
+
+// ==================== MAIN SCREEN ====================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,16 +193,18 @@ fun BatteryScreen(
     viewModel: BatteryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val infiniteTransition = rememberInfiniteTransition()
+    val context = LocalContext.current
+    val infiniteTransition = rememberInfiniteTransition(label = "battery_pulse")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ),
+        label = "pulse"
     )
-    
+
     var selectedTab by remember { mutableStateOf(BatteryTab.DETAILS) }
 
     Scaffold(
@@ -62,7 +219,7 @@ fun BatteryScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -128,7 +285,7 @@ fun BatteryScreen(
                         edgePadding = 0.dp,
                         divider = {}
                     ) {
-                        BatteryTab.values().forEach { tab ->
+                        BatteryTab.entries.forEach { tab ->
                             val isSelected = selectedTab == tab
                             Tab(
                                 selected = isSelected,
@@ -150,18 +307,34 @@ fun BatteryScreen(
 
                 // Tab Content
                 when (selectedTab) {
-                    BatteryTab.DETAILS -> detailsContent(uiState)
-                    BatteryTab.HISTORY -> historyContent(uiState)
-                    BatteryTab.APPS -> appsContent(viewModel)
-                    BatteryTab.SAVINGS -> savingsContent(viewModel)
+                    BatteryTab.DETAILS -> {
+                        item { DetailsContent(uiState) }
+                    }
+                    BatteryTab.HISTORY -> {
+                        item { HistoryContent(uiState) }
+                    }
+                    BatteryTab.APPS -> {
+                        item { AppsContent(viewModel) }
+                    }
+                    BatteryTab.SAVINGS -> {
+                        item { SavingsContent(context) }
+                    }
                 }
             }
         }
     }
 }
 
+// ==================== SUB-COMPONENTS ====================
+
 @Composable
-fun AnimatedBatteryCard(level: Int, isCharging: Boolean, temperature: Float, voltage: Float, pulse: Float) {
+fun AnimatedBatteryCard(
+    level: Int,
+    isCharging: Boolean,
+    temperature: Float,
+    voltage: Float,
+    pulse: Float
+) {
     GlassCard {
         Column(
             modifier = Modifier
@@ -169,35 +342,25 @@ fun AnimatedBatteryCard(level: Int, isCharging: Boolean, temperature: Float, vol
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Animated Battery Icon
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .scale(pulse),
-                contentAlignment = Alignment.Center
-            ) {
-                BatteryLevelIndicator(
-                    level = level,
-                    isCharging = isCharging,
-                    size = 100,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            
+            // Battery Icon
+            BatteryLevelIndicator(
+                level = level,
+                isCharging = isCharging,
+                modifier = Modifier.size(120.dp)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
-            
-            // Battery Percentage
+
             Text(
                 text = "${level}%",
                 fontSize = 48.sp,
                 fontWeight = FontWeight.Bold,
                 color = getBatteryColor(level),
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                fontFamily = FontFamily.Monospace
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
-            // Status Text
+
             Surface(
                 shape = CircleShape,
                 color = getBatteryColor(level).copy(alpha = 0.2f)
@@ -210,17 +373,16 @@ fun AnimatedBatteryCard(level: Int, isCharging: Boolean, temperature: Float, vol
                     color = getBatteryColor(level)
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
-            // Additional Info Row
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                InfoChip("🌡️", "${temperature}°C", "Temperature")
-                InfoChip("⚡", "${voltage}V", "Voltage")
-                InfoChip("📊", "${if (isCharging) "Charging" else "Discharging"}", "Status")
+                InfoChip("🌡️", String.format(Locale.US, "%.1f°C", temperature), "Temperature")
+                InfoChip("⚡", String.format(Locale.US, "%.2fV", voltage), "Voltage")
+                InfoChip("📊", if (isCharging) "Charging" else "Discharging", "Status")
             }
         }
     }
@@ -243,21 +405,21 @@ fun QuickStatsRow(temperature: Float, voltage: Float, current: Float, health: St
     ) {
         QuickStatCard(
             title = "Temperature",
-            value = String.format("%.1f°C", temperature),
+            value = String.format(Locale.US, "%.1f°C", temperature),
             icon = Icons.Default.Thermostat,
             color = if (temperature > 45) Color(0xFFF44336) else Color(0xFFFF9800),
             modifier = Modifier.weight(1f)
         )
         QuickStatCard(
             title = "Voltage",
-            value = String.format("%.2fV", voltage),
+            value = String.format(Locale.US, "%.2fV", voltage),
             icon = Icons.Default.Bolt,
             color = Color(0xFF4CAF50),
             modifier = Modifier.weight(1f)
         )
         QuickStatCard(
             title = "Current",
-            value = if (current > 0) String.format("%.0fmA", current) else "N/A",
+            value = if (current != 0f) String.format(Locale.US, "%.0fmA", current) else "N/A",
             icon = Icons.Default.FlashOn,
             color = Color(0xFF2196F3),
             modifier = Modifier.weight(1f)
@@ -277,7 +439,7 @@ fun QuickStatsRow(temperature: Float, voltage: Float, current: Float, health: St
 }
 
 @Composable
-fun QuickStatCard(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier = Modifier) {
+fun QuickStatCard(title: String, value: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
@@ -300,113 +462,106 @@ fun QuickStatCard(title: String, value: String, icon: androidx.compose.ui.graphi
 }
 
 @Composable
-private fun LazyListScope.detailsContent(uiState: BatteryUiState) {
-    item {
-        GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "🔋 Battery Details",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                DetailRow("Status", uiState.status, Icons.Default.Info)
-                DetailRow("Health", uiState.health, Icons.Default.Favorite)
-                DetailRow("Technology", uiState.technology, Icons.Default.Science)
-                DetailRow("Power Source", uiState.plugged, Icons.Default.Power)
-                DetailRow("Charge Counter", "${uiState.chargeCounter} μAh", Icons.Default.BatteryFull)
-                DetailRow("Energy Counter", "${uiState.energyCounter} nWh", Icons.Default.EnergySavingsLeaf)
-                DetailRow("Battery Present", if (uiState.isPresent) "Yes" else "No", Icons.Default.CheckCircle)
-                DetailRow("Battery Saver", if (uiState.batterySaverEnabled) "Enabled" else "Disabled", Icons.Default.BatterySaver)
-            }
+fun DetailsContent(uiState: BatteryUiState) {
+    GlassCard {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "🔋 Battery Details",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            DetailRow("Status", uiState.status, Icons.Default.Info)
+            DetailRow("Health", uiState.health, Icons.Default.Favorite)
+            DetailRow("Technology", uiState.technology, Icons.Default.Science)
+            DetailRow("Power Source", uiState.plugged, Icons.Default.Power)
+            DetailRow("Charge Counter", "${uiState.chargeCounter} μAh", Icons.Default.BatteryFull)
+            DetailRow("Energy Counter", "${uiState.energyCounter} nWh", Icons.Default.EnergySavingsLeaf)
+            DetailRow("Battery Present", if (uiState.isPresent) "Yes" else "No", Icons.Default.CheckCircle)
+            DetailRow("Battery Saver", if (uiState.batterySaverEnabled) "Enabled" else "Disabled", Icons.Default.BatterySaver)
         }
     }
-    
-    item {
-        GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "📊 Capacity Analysis",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                val capacity = uiState.capacity
-                val healthPercent = if (capacity > 0) (uiState.level * 100 / capacity).coerceIn(0, 100) else 100
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Battery Health", fontSize = 14.sp)
-                    Text("$healthPercent%", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = getHealthColor(healthPercent))
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                LinearProgressIndicator(
-                    progress = healthPercent / 100f,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = getHealthColor(healthPercent),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = when {
-                        healthPercent >= 80 -> "✅ Your battery is in excellent condition"
-                        healthPercent >= 60 -> "⚠️ Battery showing normal wear"
-                        else -> "🔴 Consider battery replacement soon"
-                    },
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    GlassCard {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "📊 Capacity Analysis",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val healthPercent = uiState.capacity
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Battery Health", fontSize = 14.sp)
+                Text("$healthPercent%", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = getHealthColor(healthPercent))
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LinearProgressIndicator(
+                progress = { healthPercent / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = getHealthColor(healthPercent),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = when {
+                    healthPercent >= 80 -> "✅ Your battery is in excellent condition"
+                    healthPercent >= 60 -> "⚠️ Battery showing normal wear"
+                    else -> "🔴 Consider battery replacement soon"
+                },
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-private fun LazyListScope.historyContent(uiState: BatteryUiState) {
-    item {
-        GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "📈 Battery History",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+fun HistoryContent(uiState: BatteryUiState) {
+    GlassCard {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "📈 Battery History",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (uiState.history.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No history data yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                BatteryHistoryChart(history = uiState.history)
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                if (uiState.history.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No history data yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                } else {
-                    // History Chart
-                    BatteryHistoryChart(history = uiState.history)
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // History List
-                    Text("Recent Records", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    uiState.history.takeLast(10).reversed().forEach { entry ->
-                        HistoryEntryRow(entry = entry)
-                    }
+
+                Text("Recent Records", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                uiState.history.takeLast(10).reversed().forEach { entry ->
+                    HistoryEntryRow(entry = entry)
                 }
             }
         }
@@ -416,11 +571,11 @@ private fun LazyListScope.historyContent(uiState: BatteryUiState) {
 @Composable
 fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
     if (history.isEmpty()) return
-    
-    val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
     val maxLevel = history.maxOfOrNull { it.level } ?: 100
     val minLevel = history.minOfOrNull { it.level } ?: 0
-    
+    val levelRange = (maxLevel - minLevel).coerceAtLeast(1).toFloat()
+
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
@@ -429,8 +584,7 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
         val width = size.width
         val height = size.height
         val stepX = width / (history.size - 1).coerceAtLeast(1)
-        val levelRange = (maxLevel - minLevel).coerceAtLeast(1)
-        
+
         // Draw grid lines
         val gridColor = Color.White.copy(alpha = 0.05f)
         for (i in 0..4) {
@@ -442,7 +596,7 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
                 strokeWidth = 1f
             )
         }
-        
+
         // Draw level line
         val path = Path()
         history.forEachIndexed { index, entry ->
@@ -450,13 +604,13 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
             val y = height - ((entry.level - minLevel) / levelRange) * height
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
-        
+
         drawPath(
             path = path,
             color = getBatteryColor(history.last().level),
             style = Stroke(width = 3f, cap = StrokeCap.Round)
         )
-        
+
         // Fill area under curve
         val fillPath = Path().apply {
             moveTo(0f, height)
@@ -468,12 +622,12 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
             lineTo(width, height)
             close()
         }
-        
+
         drawPath(
             path = fillPath,
             color = getBatteryColor(history.last().level).copy(alpha = 0.1f)
         )
-        
+
         // Draw data points
         history.forEachIndexed { index, entry ->
             val x = index * stepX
@@ -485,26 +639,12 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
             )
         }
     }
-    
-    // X-axis labels
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        history.takeLast(5).forEach { entry ->
-            Text(
-                text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(entry.timestamp)),
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
 }
 
 @Composable
 fun HistoryEntryRow(entry: BatteryHistoryEntry) {
     val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -523,10 +663,10 @@ fun HistoryEntryRow(entry: BatteryHistoryEntry) {
             Text(
                 text = dateFormat.format(Date(entry.timestamp)),
                 fontSize = 12.sp,
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                fontFamily = FontFamily.Monospace
             )
         }
-        
+
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
                 text = "${entry.level}%",
@@ -535,7 +675,7 @@ fun HistoryEntryRow(entry: BatteryHistoryEntry) {
                 color = getBatteryColor(entry.level)
             )
             Text(
-                text = "${entry.temperature}°C",
+                text = String.format(Locale.US, "%.1f°C", entry.temperature),
                 fontSize = 12.sp,
                 color = if (entry.temperature > 45) Color(0xFFF44336) else MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -547,57 +687,55 @@ fun HistoryEntryRow(entry: BatteryHistoryEntry) {
 }
 
 @Composable
-private fun LazyListScope.appsContent(viewModel: BatteryViewModel) {
-    item {
-        GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "📱 Battery Usage by App",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                val topApps = viewModel.getTopBatteryApps()
-                
-                if (topApps.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Collecting usage data...", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                } else {
-                    topApps.forEach { app ->
-                        AppBatteryUsageItem(
-                            appName = app.name,
-                            usage = app.usagePercent,
-                            icon = app.icon
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
+fun AppsContent(viewModel: BatteryViewModel) {
+    GlassCard {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "📱 Battery Usage by App",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val topApps = viewModel.getTopBatteryApps()
+
+            if (topApps.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Collecting usage data...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                topApps.forEach { app ->
+                    AppBatteryUsageItem(
+                        appName = app.name,
+                        usage = app.usagePercent,
+                        icon = app.icon
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
         }
     }
-    
-    item {
-        Button(
-            onClick = { viewModel.openBatteryOptimizationSettings() },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(Icons.Default.BatterySaver, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Open Battery Optimization Settings")
-        }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Button(
+        onClick = { viewModel.openBatteryOptimizationSettings() },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Icon(Icons.Default.BatterySaver, contentDescription = null)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Open Battery Optimization Settings")
     }
 }
 
 @Composable
-fun AppBatteryUsageItem(appName: String, usage: Float, icon: androidx.compose.ui.graphics.vector.ImageVector?) {
+fun AppBatteryUsageItem(appName: String, usage: Float, icon: ImageVector?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -618,16 +756,16 @@ fun AppBatteryUsageItem(appName: String, usage: Float, icon: androidx.compose.ui
                 }
             }
         }
-        
+
         Column(modifier = Modifier.weight(1f)) {
             Text(appName, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text("Battery usage", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        
+
         Column(horizontalAlignment = Alignment.End) {
-            Text(String.format("%.1f%%", usage), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(String.format(Locale.US, "%.1f%%", usage), fontSize = 16.sp, fontWeight = FontWeight.Bold)
             LinearProgressIndicator(
-                progress = usage / 100f,
+                progress = { usage / 100f },
                 modifier = Modifier
                     .width(60.dp)
                     .height(4.dp)
@@ -643,59 +781,59 @@ fun AppBatteryUsageItem(appName: String, usage: Float, icon: androidx.compose.ui
 }
 
 @Composable
-private fun LazyListScope.savingsContent(viewModel: BatteryViewModel) {
-    item {
-        GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "💰 Battery Savings Tips",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                SavingsTip(
-                    icon = "🔆",
-                    title = "Reduce Screen Brightness",
-                    description = "Lower brightness can save up to 20% battery"
-                )
-                SavingsTip(
-                    icon = "📱",
-                    title = "Close Unused Apps",
-                    description = "Background apps consume significant power"
-                )
-                SavingsTip(
-                    icon = "🌐",
-                    title = "Disable Unused Connections",
-                    description = "Turn off Bluetooth/WiFi when not in use"
-                )
-                SavingsTip(
-                    icon = "🔇",
-                    title = "Reduce Haptic Feedback",
-                    description = "Haptic feedback uses battery with each interaction"
-                )
-                SavingsTip(
-                    icon = "🎨",
-                    title = "Use Dark Mode",
-                    description = "Dark mode saves battery on OLED screens"
-                )
-            }
+fun SavingsContent(context: android.content.Context) {
+    GlassCard {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "💰 Battery Savings Tips",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SavingsTip(
+                icon = "🔆",
+                title = "Reduce Screen Brightness",
+                description = "Lower brightness can save up to 20% battery"
+            )
+            SavingsTip(
+                icon = "📱",
+                title = "Close Unused Apps",
+                description = "Background apps consume significant power"
+            )
+            SavingsTip(
+                icon = "🌐",
+                title = "Disable Unused Connections",
+                description = "Turn off Bluetooth/WiFi when not in use"
+            )
+            SavingsTip(
+                icon = "🔇",
+                title = "Reduce Haptic Feedback",
+                description = "Haptic feedback uses battery with each interaction"
+            )
+            SavingsTip(
+                icon = "🎨",
+                title = "Use Dark Mode",
+                description = "Dark mode saves battery on OLED screens"
+            )
         }
     }
-    
-    item {
-        Button(
-            onClick = { viewModel.openPowerSavingSettings() },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4CAF50)
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(Icons.Default.EnergySavingsLeaf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Enable Power Saving Mode")
-        }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Button(
+        onClick = {
+            context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
+        },
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF4CAF50)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Icon(Icons.Default.EnergySavingsLeaf, contentDescription = null)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Enable Power Saving Mode")
     }
 }
 
@@ -717,7 +855,7 @@ fun SavingsTip(icon: String, title: String, description: String) {
 }
 
 @Composable
-fun DetailRow(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+fun DetailRow(label: String, value: String, icon: ImageVector) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -727,29 +865,14 @@ fun DetailRow(label: String, value: String, icon: androidx.compose.ui.graphics.v
     ) {
         Icon(icon, contentDescription = label, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
         Text(label, modifier = Modifier.weight(1f), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.Monospace)
     }
 }
 
-@Composable
-fun getBatteryColor(level: Int): Color {
-    return when {
-        level >= 70 -> Color(0xFF4CAF50)
-        level >= 30 -> Color(0xFFFFC107)
-        else -> Color(0xFFF44336)
-    }
-}
-
-@Composable
-fun getHealthColor(percent: Int): Color {
-    return when {
-        percent >= 80 -> Color(0xFF4CAF50)
-        percent >= 60 -> Color(0xFFFFC107)
-        else -> Color(0xFFF44336)
-    }
-}
-
-enum class BatteryTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+enum class BatteryTab(
+    val title: String,
+    val icon: ImageVector
+) {
     DETAILS("Details", Icons.Default.Info),
     HISTORY("History", Icons.Default.History),
     APPS("Apps", Icons.Default.Apps),

@@ -9,6 +9,19 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlin.math.*
 
+/**
+ * 3D Sensor Cube View - Visualizes device orientation in real-time
+ *
+ * Features:
+ * - Full 3D rotation with roll, pitch, yaw
+ * - Smooth animations for all rotations
+ * - Face colors for better 3D perception
+ * - Depth-based edge fading
+ * - Glow effect on vertices
+ * - Optional axes display (X: Red, Y: Green, Z: Blue)
+ * - Optional grid display
+ * - Perspective projection for realistic 3D effect
+ */
 @Composable
 fun SensorCubeView(
     roll: Float,
@@ -38,19 +51,20 @@ fun SensorCubeView(
     )
 
     Canvas(modifier = modifier) {
+        // Background
         drawRect(color = backgroundColor)
 
         val cx = size.width / 2
         val cy = size.height / 2
         val scale = min(size.width, size.height) / 3.2f
 
-        // 3D projection function
+        // 3D projection function with perspective
         fun project(x: Float, y: Float, z: Float): Offset {
             var xx = x
             var yy = y
             var zz = z
 
-            // Roll (X rotation)
+            // Roll (X-axis rotation)
             val cosX = cos(animatedRoll)
             val sinX = sin(animatedRoll)
             val y1 = yy * cosX - zz * sinX
@@ -58,7 +72,7 @@ fun SensorCubeView(
             yy = y1
             zz = z1
 
-            // Pitch (Y rotation)
+            // Pitch (Y-axis rotation)
             val cosY = cos(animatedPitch)
             val sinY = sin(animatedPitch)
             val x1 = xx * cosY + zz * sinY
@@ -66,7 +80,7 @@ fun SensorCubeView(
             xx = x1
             zz = z2
 
-            // Yaw (Z rotation)
+            // Yaw (Z-axis rotation)
             val cosZ = cos(animatedYaw)
             val sinZ = sin(animatedYaw)
             val x2 = xx * cosZ - yy * sinZ
@@ -74,12 +88,12 @@ fun SensorCubeView(
             xx = x2
             yy = y2
 
-            // Perspective projection
+            // Perspective projection (foreshortening)
             val factor = 3.5f / (3.5f - zz)
             return Offset(cx + xx * scale * factor, cy + yy * scale * factor)
         }
 
-        // Cube vertices
+        // Cube vertices (8 corners)
         val vertices = listOf(
             Triple(-1f, -1f, -1f), Triple(1f, -1f, -1f), Triple(1f, -1f, 1f), Triple(-1f, -1f, 1f),
             Triple(-1f, 1f, -1f), Triple(1f, 1f, -1f), Triple(1f, 1f, 1f), Triple(-1f, 1f, 1f)
@@ -97,7 +111,7 @@ fun SensorCubeView(
 
         val proj = vertices.map { project(it.first, it.second, it.third) }
 
-        // Draw faces with depth ordering
+        // Draw faces with depth ordering (back to front)
         val faces = listOf(
             listOf(0, 1, 2, 3) to faceColors[0],  // Bottom
             listOf(4, 5, 6, 7) to faceColors[1],  // Top
@@ -132,13 +146,27 @@ fun SensorCubeView(
             val z2 = vertices[j].third
             val avgZ = (z1 + z2) / 2
             val alpha = (1f - (avgZ + 1f) / 2f).coerceIn(0.3f, 1f)
-            drawLine(cubeColor.copy(alpha = alpha), proj[i], proj[j], strokeWidth = 3f, cap = StrokeCap.Round)
+            drawLine(
+                color = cubeColor.copy(alpha = alpha),
+                start = proj[i],
+                end = proj[j],
+                strokeWidth = 3f,
+                cap = StrokeCap.Round
+            )
         }
 
         // Draw vertices with glow effect
         proj.forEach { point ->
-            drawCircle(color = cubeColor.copy(alpha = 0.5f), radius = 8f, center = point)
-            drawCircle(color = Color.White, radius = 3f, center = point)
+            drawCircle(
+                color = cubeColor.copy(alpha = 0.5f),
+                radius = 8f,
+                center = point
+            )
+            drawCircle(
+                color = Color.White,
+                radius = 3f,
+                center = point
+            )
         }
 
         // Draw axes if enabled
@@ -153,10 +181,13 @@ fun SensorCubeView(
     }
 }
 
+/**
+ * Draw 3D axes (X: Red, Y: Green, Z: Blue)
+ */
 private fun DrawScope.drawAxes(cx: Float, cy: Float, scale: Float) {
     val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-    
-    // X-axis (Red)
+
+    // X-axis (Red) - Horizontal
     drawLine(
         color = Color.Red,
         start = Offset(cx - scale, cy),
@@ -170,9 +201,13 @@ private fun DrawScope.drawAxes(cx: Float, cy: Float, scale: Float) {
         end = Offset(cx + scale + 10f, cy),
         strokeWidth = 3f
     )
-    drawCircle(color = Color.Red, radius = 4f, center = Offset(cx + scale, cy))
+    drawCircle(
+        color = Color.Red,
+        radius = 4f,
+        center = Offset(cx + scale, cy)
+    )
 
-    // Y-axis (Green)
+    // Y-axis (Green) - Vertical
     drawLine(
         color = Color.Green,
         start = Offset(cx, cy - scale),
@@ -186,9 +221,13 @@ private fun DrawScope.drawAxes(cx: Float, cy: Float, scale: Float) {
         end = Offset(cx, cy - scale - 10f),
         strokeWidth = 3f
     )
-    drawCircle(color = Color.Green, radius = 4f, center = Offset(cx, cy - scale))
+    drawCircle(
+        color = Color.Green,
+        radius = 4f,
+        center = Offset(cx, cy - scale)
+    )
 
-    // Z-axis (Blue) - diagonal
+    // Z-axis (Blue) - Diagonal (depth)
     val zStart = Offset(cx - scale * 0.7f, cy + scale * 0.7f)
     val zEnd = Offset(cx + scale * 0.7f, cy - scale * 0.7f)
     drawLine(
@@ -204,17 +243,35 @@ private fun DrawScope.drawAxes(cx: Float, cy: Float, scale: Float) {
         end = Offset(zEnd.x + 10f, zEnd.y - 10f),
         strokeWidth = 3f
     )
-    drawCircle(color = Color.Blue, radius = 4f, center = zEnd)
+    drawCircle(
+        color = Color.Blue,
+        radius = 4f,
+        center = zEnd
+    )
 }
 
+/**
+ * Draw background grid for depth perception
+ */
 private fun DrawScope.drawGrid(cx: Float, cy: Float, scale: Float) {
     val gridColor = Color.White.copy(alpha = 0.08f)
     val spacing = scale / 4
     val count = 9
 
-    for (i in -count/2..count/2) {
+    // Vertical and horizontal grid lines
+    for (i in -count / 2..count / 2) {
         val offset = i * spacing
-        drawLine(gridColor, Offset(cx + offset, cy - scale * 2f), Offset(cx + offset, cy + scale * 2f), strokeWidth = 1f)
-        drawLine(gridColor, Offset(cx - scale * 2f, cy + offset), Offset(cx + scale * 2f, cy + offset), strokeWidth = 1f)
+        drawLine(
+            color = gridColor,
+            start = Offset(cx + offset, cy - scale * 2f),
+            end = Offset(cx + offset, cy + scale * 2f),
+            strokeWidth = 1f
+        )
+        drawLine(
+            color = gridColor,
+            start = Offset(cx - scale * 2f, cy + offset),
+            end = Offset(cx + scale * 2f, cy + offset),
+            strokeWidth = 1f
+        )
     }
 }

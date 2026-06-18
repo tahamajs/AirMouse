@@ -1,3 +1,5 @@
+@file:Suppress("SpellCheckingInspection", "unused")
+
 package com.airmouse.presentation
 
 import android.content.Context
@@ -9,7 +11,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.abs
+import java.util.Locale
 
 /**
  * Professional Presentation Mode Service
@@ -140,7 +142,7 @@ class PresentationModeService(
                         action?.let { gestureMappings[gesture] = it }
                     }
                 }
-            } catch (e: Exception) { /* Use defaults */ }
+            } catch (_: Exception) { /* Use defaults */ }
         }
     }
 
@@ -338,8 +340,8 @@ class PresentationModeService(
         val seconds = (_state.value.elapsedTime / 1000) % 60
         val minutes = (_state.value.elapsedTime / (1000 * 60)) % 60
         val hours = (_state.value.elapsedTime / (1000 * 60 * 60))
-        return if (hours > 0) String.format("%02d:%02d:%02d", hours, minutes, seconds)
-               else String.format("%02d:%02d", minutes, seconds)
+        return if (hours > 0) String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+        else String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 
     private fun activateBlackScreen() {
@@ -428,7 +430,7 @@ class PresentationModeService(
     fun setTool(tool: Tool) {
         _state.value = _state.value.copy(currentTool = tool)
         if (tool != Tool.LASER && laserPointerActive) toggleLaserPointer()
-        connectionManager.send("""{"type":"presentation","action":"setTool","tool":"${tool.name.lowercase()}"}""")
+        connectionManager.send("""{"type":"presentation","action":"setTool","tool":"${tool.name.lowercase(Locale.US)}"}""")
     }
 
     fun setTotalSlides(total: Int) { _state.value = _state.value.copy(totalSlides = total) }
@@ -470,9 +472,13 @@ class PresentationModeService(
     }
 
     private fun resetInactivityTimer() {
-        inactivityTimer?.let { handler.removeCallbacks(it) }
-        inactivityTimer = Runnable { if (_state.value.isActive && laserPointerActive) disableLaserPointer() }
-        handler.postDelayed(inactivityTimer, INACTIVITY_TIMEOUT_MS)
+        val currentTimer = inactivityTimer
+        if (currentTimer != null) {
+            handler.removeCallbacks(currentTimer)
+        }
+        val newTimer = Runnable { if (_state.value.isActive && laserPointerActive) disableLaserPointer() }
+        inactivityTimer = newTimer
+        handler.postDelayed(newTimer, INACTIVITY_TIMEOUT_MS)
     }
 
     fun isActive(): Boolean = _state.value.isActive

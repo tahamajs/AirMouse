@@ -1,97 +1,57 @@
-package com.airmouse.ui.components
+package com.airmouse.presentation.ui.components
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import com.airmouse.presentation.ui.battery.getBatteryColor
 
 @Composable
 fun BatteryLevelIndicator(
     level: Int,
-    isCharging: Boolean = false,
-    modifier: Modifier = Modifier,
-    size: Int = 40
+    isCharging: Boolean,
+    size: Int = 80
 ) {
-    val isLow = level < 20
-    val color = when {
-        isCharging -> Color(0xFF4CAF50)
-        level > 50 -> Color(0xFF4CAF50)
-        level > 20 -> Color(0xFFFFC107)
-        else -> Color(0xFFF44336)
-    }
-    
-    val animatedLevel by animateIntAsState(
-        targetValue = level,
-        animationSpec = tween(500, easing = FastOutSlowInEasing),
-        label = "battery"
-    )
-    
-    Box(
-        modifier = modifier.size(size.dp),
-        contentAlignment = Alignment.Center
+    val batteryColor = getBatteryColor(level)
+
+    Canvas(
+        modifier = Modifier.size(size.dp)
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val batteryWidth = size.toFloat() - 8f
-            val batteryHeight = size.toFloat() - 4f
-            val fillWidth = batteryWidth * (animatedLevel / 100f)
-            
-            // Battery outline
-            drawRoundRect(
-                color = Color.Gray,
-                topLeft = Offset(2f, 2f),
-                size = Size(batteryWidth, batteryHeight),
-                cornerRadius = CornerRadius(4f),
-                style = Stroke(width = 2f)
-            )
-            
-            // Battery fill
-            drawRoundRect(
-                color = color,
-                topLeft = Offset(4f, 4f),
-                size = Size(fillWidth - 4f, batteryHeight - 4f),
-                cornerRadius = CornerRadius(2f)
-            )
-            
-            // Battery terminal
-            drawRoundRect(
-                color = Color.Gray,
-                topLeft = Offset(batteryWidth + 2f, batteryHeight / 3),
-                size = Size(4f, batteryHeight / 3),
-                cornerRadius = CornerRadius(2f)
-            )
-            
-            // Charging indicator
-            if (isCharging) {
-                drawLine(
-                    color = Color.White,
-                    start = Offset(batteryWidth / 3, batteryHeight / 2),
-                    end = Offset(batteryWidth / 2, batteryHeight / 3),
-                    strokeWidth = 2f
-                )
-                drawLine(
-                    color = Color.White,
-                    start = Offset(batteryWidth / 2, batteryHeight / 3),
-                    end = Offset(batteryWidth * 2 / 3, batteryHeight / 2),
-                    strokeWidth = 2f
-                )
-            }
-        }
-        
-        // Percentage text for small indicator
-        if (size > 50) {
-            Text(
-                text = "$animatedLevel%",
-                fontSize = 10.sp,
-                color = if (isLow) Color(0xFFF44336) else Color.White
+        val strokeWidth = size * 0.1f
+        val radius = size / 2f - strokeWidth / 2
+
+        // Background circle
+        drawCircle(
+            color = Color.White.copy(alpha = 0.1f),
+            radius = radius,
+            center = Offset(size / 2f, size / 2f),
+            style = Stroke(width = strokeWidth)
+        )
+
+        // Level arc
+        val sweepAngle = 360f * (level / 100f)
+        drawArc(
+            color = batteryColor,
+            startAngle = -90f,
+            sweepAngle = sweepAngle,
+            useCenter = false,
+            topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
+            size = Size(radius * 2, radius * 2),
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+        )
+
+        // Charging indicator
+        if (isCharging) {
+            drawCircle(
+                color = Color(0xFFFFC107),
+                radius = radius * 0.3f,
+                center = Offset(size / 2f, size / 2f)
             )
         }
     }

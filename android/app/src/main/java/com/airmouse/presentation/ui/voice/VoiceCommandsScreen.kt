@@ -29,48 +29,6 @@ import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// Data Classes
-data class VoiceCommand(
-    val keyword: String,
-    val action: String,
-    val description: String,
-    val icon: String = "🎤"
-)
-
-data class CustomVoiceCommand(
-    val id: String,
-    val phrase: String,
-    val action: String,
-    val enabled: Boolean = true
-)
-
-data class VoiceCommandHistory(
-    val timestamp: Long,
-    val command: String,
-    val confidence: Float,
-    val success: Boolean
-)
-
-data class VoiceCommandsUiState(
-    val isListening: Boolean = false,
-    val isProcessing: Boolean = false,
-    val lastCommand: String? = null,
-    val lastConfidence: Float = 0f,
-    val status: String = "Ready",
-    val statusColor: Long = 0xFF4CAF50,
-    val availableCommands: List<VoiceCommand> = emptyList(),
-    val commandHistory: List<VoiceCommandHistory> = emptyList(),
-    val microphonePermissionGranted: Boolean = false,
-    val wakeWordEnabled: Boolean = false,
-    val wakeWord: String = "Hey Air Mouse",
-    val sensitivity: Float = 0.5f,
-    val language: String = "en-US",
-    val continuousListening: Boolean = false,
-    val voiceFeedback: Boolean = true,
-    val soundEffects: Boolean = true,
-    val customCommands: List<CustomVoiceCommand> = emptyList()
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VoiceCommandsScreen(
@@ -79,7 +37,6 @@ fun VoiceCommandsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     var isAnimating by remember { mutableStateOf(false) }
 
     // Check microphone permission
@@ -678,52 +635,6 @@ fun SliderSetting(
             onValueChange = onValueChange,
             valueRange = valueRange,
             modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-// VoiceCommandsScreen.kt - Use these components:
-@Composable
-fun VoiceCommandsScreen() {
-    Column {
-        // Voice wave animation
-        VoiceWaveAnimation(isActive = isListening, amplitude = voiceAmplitude)
-        
-        // Typewriter text for recognized command
-        TypewriterText(text = recognizedCommand, delayMs = 30)
-        
-        // List of commands with glass cards
-        LazyColumn {
-            items(commands) { cmd ->
-                GlassCard {
-                    Row {
-                        HolographicText(text = cmd.name)
-                        GradientIconButton(
-                            onClick = { testCommand(cmd) },
-                            icon = Icons.Default.PlayArrow,
-                            contentDescription = "Test"
-                        )
-                    }
-                }
-            }
-        }
-        
-        // Animated switch for wake word
-        AnimatedSwitch(
-            checked = wakeWordEnabled,
-            onCheckedChange = { /* toggle */ },
-            label = "Wake Word",
-            description = "Say 'Hey Air Mouse'"
-        )
-        
-        // Circular progress for confidence
-        CircularProgressWithLabel(progress = confidence)
-        
-        // Animated toast for feedback
-        AnimatedToast(
-            message = "Command recognized: $lastCommand",
-            isVisible = showFeedback,
-            onDismiss = { /* dismiss */ },
-            type = ToastType.SUCCESS
         )
     }
 }

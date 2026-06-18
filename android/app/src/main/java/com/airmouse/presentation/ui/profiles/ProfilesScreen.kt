@@ -1,17 +1,18 @@
 package com.airmouse.presentation.ui.profiles
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,742 +20,388 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfilesScreen(
     navigationActions: NavigationActions,
-    viewModel: ProfilesViewModel = hiltViewModel()
+    modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val filteredProfiles by viewModel.filteredProfiles.collectAsStateWithLifecycle()
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val coroutineScope = rememberCoroutineScope()
-    var showSortMenu by remember { mutableStateOf(false) }
+    // --- State Handlers (Mocking ViewModel state layers locally) ---
+    var profilesList by remember {
+        mutableStateOf(
+            listOf(
+                UserProfile(name = "Default Setup", isDefault = true, color = "#00BCD4"),
+                UserProfile(name = "FPS Gaming Arena", isFavorite = true, color = "#9C27B0", usageCount = 42),
+                UserProfile(name = "Office & Productivity", color = "#4CAF50", usageCount = 15),
+                UserProfile(name = "Precise CAD Design", color = "#FF9800", usageCount = 8)
+            )
+        )
+    }
+
+    var selectedSort by remember { mutableStateOf(ProfileSort.LAST_USED) }
+    var currentViewMode by remember { mutableStateOf(ViewMode.LIST) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var newProfileName by remember { mutableStateOf("") }
 
     Scaffold(
+        modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Profiles", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "User Profiles",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = { navigationActions.navigateToHome() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 actions = {
-                    // Sort button
-                    IconButton(onClick = { showSortMenu = true }) {
-                        Icon(Icons.Default.Sort, contentDescription = "Sort")
-                    }
-                    // View mode toggle
-                    IconButton(onClick = {
-                        val newMode = when (uiState.viewMode) {
-                            ViewMode.LIST -> ViewMode.GRID
-                            ViewMode.GRID -> ViewMode.COMPACT
-                            ViewMode.COMPACT -> ViewMode.LIST
+                    // View Mode Switcher
+                    IconButton(
+                        onClick = {
+                            currentViewMode = when (currentViewMode) {
+                                ViewMode.LIST -> ViewMode.GRID
+                                ViewMode.GRID -> ViewMode.COMPACT
+                                ViewMode.COMPACT -> ViewMode.LIST
+                            }
                         }
-                        viewModel.setViewMode(newMode)
-                    }) {
+                    ) {
                         Icon(
-                            when (uiState.viewMode) {
-                                ViewMode.LIST -> Icons.Default.GridView
-                                ViewMode.GRID -> Icons.Default.ViewAgenda
-                                ViewMode.COMPACT -> Icons.Default.List
+                            imageVector = when (currentViewMode) {
+                                ViewMode.LIST -> Icons.Default.ViewModule
+                                ViewMode.GRID -> Icons.Default.ViewStream
+                                ViewMode.COMPACT -> Icons.Default.ViewList
                             },
-                            contentDescription = "View mode"
+                            contentDescription = "Change View Mode",
+                            tint = Color.White
                         )
                     }
-                    // Export button
-                    IconButton(onClick = { viewModel.showExportDialog(true) }) {
-                        Icon(Icons.Default.Share, contentDescription = "Export")
+
+                    // Sort Menu Button
+                    var showSortMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showSortMenu = true }) {
+                        Icon(Icons.Default.Sort, contentDescription = "Sort Profiles", tint = Color.White)
                     }
-                    // Import button
-                    IconButton(onClick = { viewModel.showImportDialog(true) }) {
-                        Icon(Icons.Default.FileUpload, contentDescription = "Import")
-                    }
-                    // Create button
-                    IconButton(onClick = { showCreateDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Create")
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false },
+                        modifier = Modifier.background(Color(0xFF1A1D24))
+                    ) {
+                        ProfileSort.values().forEach { sortOption ->
+                            DropdownMenuItem(
+                                text = { Text(sortOption.displayName, color = Color.White) },
+                                onClick = {
+                                    selectedSort = sortOption
+                                    showSortMenu = false
+                                    profilesList = when (sortOption) {
+                                        ProfileSort.NAME -> profilesList.sortedBy { it.name }
+                                        ProfileSort.DATE_CREATED -> profilesList.sortedByDescending { it.createdAt }
+                                        ProfileSort.LAST_USED -> profilesList.sortedByDescending { it.lastUsedAt }
+                                        ProfileSort.FAVORITE -> profilesList.sortedByDescending { it.isFavorite }
+                                        ProfileSort.USAGE_COUNT -> profilesList.sortedByDescending { it.usageCount }
+                                    }
+                                }
+                            )
+                        }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF1A1D24))
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = Color(0xFF00BCD4),
+                contentColor = Color.White,
+                shape = CircleShape
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Create Profile")
             }
-        }
+        },
+        containerColor = Color(0xFF0F1115)
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
         ) {
-            // Sort dropdown
-            DropdownMenu(
-                expanded = showSortMenu,
-                onDismissRequest = { showSortMenu = false }
-            ) {
-                ProfileSort.values().forEach { sortBy ->
-                    DropdownMenuItem(
-                        text = { Text(sortBy.displayName) },
-                        onClick = {
-                            viewModel.setSortBy(sortBy)
-                            showSortMenu = false
-                        },
-                        trailingIcon = {
-                            if (uiState.sortBy == sortBy) {
-                                Icon(Icons.Default.Check, contentDescription = "Selected")
+            if (profilesList.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No profiles found. Tap + to create one.", color = Color(0xFF96A0AE))
+                }
+            } else {
+                AnimatedContent(
+                    targetState = currentViewMode,
+                    transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                    label = "ViewModeAnimation"
+                ) { viewMode ->
+                    when (viewMode) {
+                        ViewMode.LIST -> {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(profilesList, key = { it.id }) { profile ->
+                                    ProfileListCard(
+                                        profile = profile,
+                                        onSelect = {
+                                            profilesList = profilesList.map {
+                                                it.copy(isDefault = it.id == profile.id).incrementUsage()
+                                            }
+                                        },
+                                        onToggleFavorite = {
+                                            profilesList = profilesList.map {
+                                                if (it.id == profile.id) it.copy(isFavorite = !it.isFavorite) else it
+                                            }
+                                        },
+                                        onDelete = {
+                                            profilesList = profilesList.filter { it.id != profile.id }
+                                        }
+                                    )
+                                }
                             }
                         }
-                    )
-                }
-            }
-
-            // Create Profile Dialog
-            if (showCreateDialog) {
-                CreateProfileDialog(
-                    onDismiss = { showCreateDialog = false },
-                    onCreate = { name ->
-                        viewModel.saveProfile()
-                        showCreateDialog = false
-                    },
-                    profileName = uiState.newProfileName,
-                    onNameChange = viewModel::updateNewProfileName
-                )
-            }
-
-            // Search and Filter Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = viewModel::setSearchQuery,
-                    label = { Text("Search profiles...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                
-                // Tag filter chip
-                if (uiState.selectedTags.isNotEmpty()) {
-                    AssistChip(
-                        onClick = { viewModel.clearTagFilters() },
-                        label = { Text("Clear filters (${uiState.selectedTags.size})") },
-                        leadingIcon = { Icon(Icons.Default.Close, contentDescription = "Clear") },
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                }
-            }
-            
-            // Tag filter row
-            AnimatedVisibility(visible = true) {
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(uiState.availableTags) { tag ->
-                        FilterChip(
-                            selected = uiState.selectedTags.contains(tag),
-                            onClick = { viewModel.toggleTagFilter(tag) },
-                            label = { Text(tag) },
-                            modifier = Modifier.animateContentSize()
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Active Profile Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "ACTIVE PROFILE",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = uiState.selectedProfile?.name ?: "Default",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (uiState.selectedProfile?.tags?.isNotEmpty() == true) {
-                            Row(
-                                modifier = Modifier.padding(top = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ViewMode.GRID -> {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(2),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                uiState.selectedProfile!!.tags.take(3).forEach { tag ->
-                                    AssistChip(
-                                        onClick = {},
-                                        label = { Text(tag, fontSize = 10.sp) },
-                                        modifier = Modifier.height(24.dp)
+                                items(profilesList, key = { it.id }) { profile ->
+                                    ProfileGridCard(
+                                        profile = profile,
+                                        onSelect = {
+                                            profilesList = profilesList.map {
+                                                it.copy(isDefault = it.id == profile.id).incrementUsage()
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        ViewMode.COMPACT -> {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(profilesList, key = { it.id }) { profile ->
+                                    ProfileCompactRow(
+                                        profile = profile,
+                                        onSelect = {
+                                            profilesList = profilesList.map {
+                                                it.copy(isDefault = it.id == profile.id).incrementUsage()
+                                            }
+                                        }
                                     )
                                 }
                             }
                         }
                     }
-                    if (uiState.selectedProfile?.isFavorite == true) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = "Favorite",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Reset to default button
-            OutlinedButton(
-                onClick = { viewModel.resetToDefault() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.Restore, contentDescription = "Reset")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Reset to Default Settings")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Profiles count and info
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "${filteredProfiles.size} profiles",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "${filteredProfiles.count { it.isFavorite }} favorites",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Profiles list/grid
-            when (uiState.viewMode) {
-                ViewMode.LIST -> {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(filteredProfiles, key = { it.id }) { profile ->
-                            ProfileCard(
-                                profile = profile,
-                                isSelected = uiState.selectedProfile?.id == profile.id,
-                                onSelect = { viewModel.selectProfile(profile) },
-                                onEdit = { viewModel.showEditDialog(true) },
-                                onDelete = { viewModel.showDeleteDialog(true) },
-                                onFavorite = { viewModel.toggleFavorite(profile) },
-                                onDuplicate = { viewModel.duplicateProfile(profile) },
-                                onDetails = { viewModel.showDetailsDialog(true) }
-                            )
-                        }
-                    }
-                }
-                ViewMode.GRID -> {
-                    val columns = if (isLandscape) 3 else 2
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(columns),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(filteredProfiles, key = { it.id }) { profile ->
-                            ProfileGridItem(
-                                profile = profile,
-                                isSelected = uiState.selectedProfile?.id == profile.id,
-                                onSelect = { viewModel.selectProfile(profile) },
-                                onFavorite = { viewModel.toggleFavorite(profile) }
-                            )
-                        }
-                    }
-                }
-                ViewMode.COMPACT -> {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(filteredProfiles, key = { it.id }) { profile ->
-                            ProfileCompactItem(
-                                profile = profile,
-                                isSelected = uiState.selectedProfile?.id == profile.id,
-                                onSelect = { viewModel.selectProfile(profile) },
-                                onFavorite = { viewModel.toggleFavorite(profile) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
-    // Dialogs
-    if (uiState.showDeleteDialog && uiState.selectedProfile != null) {
+    // --- Create Profile Dialog Dialog Builder ---
+    if (showCreateDialog) {
         AlertDialog(
-            onDismissRequest = { viewModel.showDeleteDialog(false) },
-            title = { Text("Delete Profile") },
-            text = { Text("Are you sure you want to delete '${uiState.selectedProfile?.name}'? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.deleteProfile() },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.showDeleteDialog(false) }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (uiState.showEditDialog && uiState.selectedProfile != null) {
-        var editedName by remember { mutableStateOf(uiState.selectedProfile?.name ?: "") }
-        var selectedColor by remember { mutableStateOf(uiState.selectedProfile?.color ?: "#6366F1") }
-        val colors = listOf("#6366F1", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899")
-
-        AlertDialog(
-            onDismissRequest = { viewModel.showEditDialog(false) },
-            title = { Text("Edit Profile") },
+            onDismissRequest = { showCreateDialog = false },
+            containerColor = Color(0xFF1A1D24),
+            title = { Text("New Profile", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
-                Column {
-                    OutlinedTextField(
-                        value = editedName,
-                        onValueChange = { editedName = it },
-                        label = { Text("Profile Name") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Profile Color", style = MaterialTheme.typography.labelMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        colors.forEach { color ->
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(android.graphics.Color.parseColor(color)))
-                                    .clickable { selectedColor = color }
-                                    .then(
-                                        if (selectedColor == color) Modifier
-                                            .border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                        else Modifier
-                                    )
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (editedName.isNotBlank()) {
-                            viewModel.updateSelectedProfileName(editedName)
-                            uiState.selectedProfile?.let { viewModel.updateProfileColor(it, selectedColor) }
-                        }
-                        viewModel.showEditDialog(false)
-                    }
-                ) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.showEditDialog(false) }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (uiState.showDetailsDialog && uiState.selectedProfile != null) {
-        val profile = uiState.selectedProfile!!
-        AlertDialog(
-            onDismissRequest = { viewModel.showDetailsDialog(false) },
-            title = { Text(profile.name) },
-            text = {
-                Column {
-                    DetailRow("Created", viewModel.formatDate(profile.createdAt))
-                    DetailRow("Last Used", viewModel.formatDate(profile.lastUsedAt))
-                    DetailRow("Usage Count", "${profile.usageCount} times")
-                    DetailRow("Sensitivity", "${profile.settings.sensitivity}")
-                    DetailRow("Theme", profile.settings.theme)
-                    DetailRow("AI Smoothing", if (profile.settings.aiSmoothing) "Enabled" else "Disabled")
-                    DetailRow("Predictive Movement", if (profile.settings.predictiveMovement) "Enabled" else "Disabled")
-                    if (profile.tags.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Tags:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            profile.tags.forEach { tag ->
-                                AssistChip(
-                                    onClick = {},
-                                    label = { Text(tag, fontSize = 11.sp) },
-                                    modifier = Modifier.height(28.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.showDetailsDialog(false) }) {
-                    Text("Close")
-                }
-            }
-        )
-    }
-
-    if (uiState.showExportDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.showExportDialog(false) },
-            title = { Text("Export Profiles") },
-            text = { Text("Export all profiles to a JSON file? This will save all your profile settings.") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.exportProfiles() }) {
-                    Text("Export")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.showExportDialog(false) }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (uiState.showImportDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.showImportDialog(false) },
-            title = { Text("Import Profiles") },
-            text = { Text("Import profiles from a JSON file. This will merge with existing profiles.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        // File picker would go here
-                        viewModel.showImportDialog(false)
-                    }
-                ) {
-                    Text("Import")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.showImportDialog(false) }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Success/Error messages
-    if (uiState.successMessage != null) {
-        Snackbar(
-            modifier = Modifier.padding(8.dp),
-            shape = RoundedCornerShape(8.dp),
-            action = {
-                TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Dismiss", color = MaterialTheme.colorScheme.onPrimary)
-                }
-            }
-        ) {
-            Text(uiState.successMessage!!)
-        }
-    }
-
-    if (uiState.errorMessage != null) {
-        Snackbar(
-            modifier = Modifier.padding(8.dp),
-            containerColor = MaterialTheme.colorScheme.error,
-            shape = RoundedCornerShape(8.dp),
-            action = {
-                TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Dismiss", color = MaterialTheme.colorScheme.onError)
-                }
-            }
-        ) {
-            Text(uiState.errorMessage!!)
-        }
-    }
-}
-
-@Composable
-fun CreateProfileDialog(
-    onDismiss: () -> Unit,
-    onCreate: () -> Unit,
-    profileName: String,
-    onNameChange: (String) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Create New Profile") },
-        text = {
-            Column {
                 OutlinedTextField(
-                    value = profileName,
-                    onValueChange = onNameChange,
-                    label = { Text("Profile Name") },
-                    placeholder = { Text("e.g., Gaming, Work, Presentation") },
+                    value = newProfileName,
+                    onValueChange = { newProfileName = it },
+                    label = { Text("Profile Name", color = Color(0xFF96A0AE)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF00BCD4),
+                        unfocusedBorderColor = Color(0xFF2B3341)
+                    ),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "This will create a new profile with current settings.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newProfileName.isNotBlank()) {
+                            val colors = listOf("#6366F1", "#EC4899", "#10B981", "#F59E0B", "#3B82F6")
+                            profilesList = profilesList + UserProfile(
+                                name = newProfileName.trim(),
+                                color = colors.random()
+                            )
+                            newProfileName = ""
+                            showCreateDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BCD4))
+                ) {
+                    Text("Create", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateDialog = false }) {
+                    Text("Cancel", color = Color(0xFF96A0AE))
+                }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onCreate,
-                enabled = profileName.isNotBlank()
-            ) {
-                Text("Create")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
+        )
+    }
 }
 
+// ==========================================
+// Sub-Components & Layout Variants
+// ==========================================
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ProfileCard(
+fun ProfileListCard(
     profile: UserProfile,
-    isSelected: Boolean,
     onSelect: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onFavorite: () -> Unit,
-    onDuplicate: () -> Unit,
-    onDetails: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect() }
-            .animateContentSize(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(12.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .combinedClickable(
+                onClick = onSelect,
+                onLongClick = { if (!profile.isDefault) onDelete() }
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1D24))
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(16.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color(android.graphics.Color.parseColor(profile.color))),
+                contentAlignment = Alignment.Center
             ) {
-                // Profile icon with color
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color(android.graphics.Color.parseColor(profile.color))),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = profile.name.take(1).uppercase(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                }
-
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = profile.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (profile.isFavorite) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                Icons.Default.Star,
-                                contentDescription = "Favorite",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    Text(
-                        text = if (profile.isDefault) "Default profile" else "Last used: ${java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault()).format(java.util.Date(profile.lastUsedAt))}",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (profile.tags.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            profile.tags.take(2).forEach { tag ->
-                                AssistChip(
-                                    onClick = {},
-                                    label = { Text(tag, fontSize = 10.sp) },
-                                    modifier = Modifier.height(22.dp)
-                                )
-                            }
-                            if (profile.tags.size > 2) {
-                                Text("+${profile.tags.size - 2}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
+                Icon(
+                    imageVector = if (profile.isDefault) Icons.Default.CheckCircle else Icons.Default.SettingsInputComponent,
+                    contentDescription = null,
+                    tint = Color.White
+                )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (!profile.isDefault) {
-                    IconButton(onClick = onFavorite, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            if (profile.isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
-                            contentDescription = "Favorite",
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    IconButton(onClick = onDuplicate, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Duplicate", modifier = Modifier.size(20.dp))
-                    }
-                    IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(20.dp))
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = profile.name,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (profile.isDefault) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("Active", fontSize = 10.sp) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                labelColor = Color(0xFF00BCD4),
+                                containerColor = Color(0xFF00BCD4).copy(alpha = 0.15f)
+                            ),
+                            border = null,
+                            modifier = Modifier.height(20.dp)
                         )
                     }
                 }
-                IconButton(onClick = onDetails, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Info, contentDescription = "Details", modifier = Modifier.size(20.dp))
-                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Used: ${profile.formattedLastUsed} • Count: ${profile.usageCount}",
+                    color = Color(0xFF96A0AE),
+                    fontSize = 12.sp
+                )
+            }
+
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    imageVector = if (profile.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Favorite Toggle",
+                    tint = if (profile.isFavorite) Color(0xFFEC4899) else Color(0xFF96A0AE)
+                )
             }
         }
     }
 }
 
 @Composable
-fun ProfileGridItem(
+fun ProfileGridCard(
     profile: UserProfile,
-    isSelected: Boolean,
-    onSelect: () -> Unit,
-    onFavorite: () -> Unit
+    onSelect: () -> Unit
 ) {
     Card(
+        onClick = onSelect,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect() }
-            .animateContentSize(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(12.dp)
+            .height(140.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1D24)),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(14.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(Color(android.graphics.Color.parseColor(profile.color))),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(android.graphics.Color.parseColor(profile.color))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Mouse, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                if (profile.isFavorite) {
+                    Icon(Icons.Default.Favorite, contentDescription = null, tint = Color(0xFFEC4899), modifier = Modifier.size(18.dp))
+                }
+            }
+
+            Column {
                 Text(
-                    text = profile.name.take(1).uppercase(),
+                    text = profile.name,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = profile.name,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-            if (profile.isFavorite) {
-                Icon(
-                    Icons.Default.Star,
-                    contentDescription = "Favorite",
-                    modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${profile.usageCount} uses",
+                    color = Color(0xFF96A0AE),
+                    fontSize = 11.sp
                 )
             }
         }
@@ -762,112 +409,42 @@ fun ProfileGridItem(
 }
 
 @Composable
-fun ProfileCompactItem(
+fun ProfileCompactRow(
     profile: UserProfile,
-    isSelected: Boolean,
-    onSelect: () -> Unit,
-    onFavorite: () -> Unit
+    onSelect: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect() }
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        onClick = onSelect,
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xFF1A1D24),
+        shape = RoundedCornerShape(8.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(symmetric = PaddingValues(horizontal = 12.dp, vertical = 8.dp)),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(12.dp)
                     .clip(CircleShape)
-                    .background(Color(android.graphics.Color.parseColor(profile.color))),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = profile.name.take(1).uppercase(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
+                    .background(Color(android.graphics.Color.parseColor(profile.color)))
+            )
             Text(
                 text = profile.name,
-                style = MaterialTheme.typography.bodyMedium,
+                color = if (profile.isDefault) Color(0xFF00BCD4) else Color.White,
+                fontWeight = if (profile.isDefault) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-        }
-        if (!profile.isDefault) {
-            IconButton(onClick = onFavorite, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    if (profile.isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
-                    contentDescription = "Favorite",
-                    modifier = Modifier.size(16.dp)
-                )
+            if (profile.isDefault) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF00BCD4), modifier = Modifier.size(16.dp))
             }
         }
     }
 }
 
-@Composable
-fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-    }
-}
-// ProfilesScreen.kt - Use these components:
-@Composable
-fun ProfilesScreen() {
-    Column {
-        // Neumorphic cards for each profile
-        profiles.forEach { profile ->
-            NeumorphicCard {
-                Row {
-                    Text(profile.name)
-                    if (profile.isActive) {
-                        NotificationBadge(count = 1)
-                    }
-                    GradientIconButton(
-                        onClick = { selectProfile(profile) },
-                        icon = Icons.Default.Person,
-                        contentDescription = "Select",
-                        gradient = listOf(Color(0xFF00BCD4), Color(0xFF4CAF50))
-                    )
-                }
-            }
-        }
-        
-        // Animated switch for default profile
-        AnimatedSwitch(
-            checked = isDefault,
-            onCheckedChange = { /* set default */ },
-            label = "Set as Default"
-        )
-        
-        // Donut chart for usage stats
-        DonutChart(percentage = usagePercentage, size = 80)
-        
-        // Glitch text for profile name editing
-        GlitchText(text = profileName)
-        
-        // Slide up panel for profile editor
-        SlideUpPanel(
-            isVisible = showEditor,
-            onDismiss = { /* close */ }
-        ) {
-            // Profile edit form
-        }
-    }
-}
+// Extension helper function for localized compact configuration padding rules
+private fun Modifier.padding(symmetric: PaddingValues): Modifier = this.padding(symmetric)

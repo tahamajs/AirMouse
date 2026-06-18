@@ -10,10 +10,11 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -33,7 +35,134 @@ import androidx.compose.ui.unit.sp
 import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.*
 import kotlin.math.*
+import kotlin.math.sqrt
+import androidx.compose.ui.draw.clip
+import kotlin.math.pow
+
+// ==================== DATA CLASSES ====================
+
+data class SensorVisualizerUiState(
+    val roll: Float = 0f,
+    val pitch: Float = 0f,
+    val yaw: Float = 0f,
+    val gyroX: Float = 0f,
+    val gyroY: Float = 0f,
+    val gyroZ: Float = 0f,
+    val accelX: Float = 0f,
+    val accelY: Float = 0f,
+    val accelZ: Float = 0f,
+    val magX: Float = 0f,
+    val magY: Float = 0f,
+    val magZ: Float = 0f,
+    val temperature: Float = 0f,
+    val pressure: Float = 0f,
+    val light: Float = 0f,
+    val proximity: Float = 0f,
+    val humidity: Float = 0f,
+    val gravityX: Float = 0f,
+    val gravityY: Float = 0f,
+    val gravityZ: Float = 0f,
+    val linearAccelX: Float = 0f,
+    val linearAccelY: Float = 0f,
+    val linearAccelZ: Float = 0f,
+    val rotationX: Float = 0f,
+    val rotationY: Float = 0f,
+    val rotationZ: Float = 0f,
+    val gameRotationX: Float = 0f,
+    val gameRotationY: Float = 0f,
+    val gameRotationZ: Float = 0f,
+    val steps: Int = 0,
+    val stepDetector: Boolean = false,
+    val heartRate: Float = 0f,
+    val deviceOrientation: DeviceOrientation = DeviceOrientation.PORTRAIT,
+    val isSensorAvailable: Boolean = true,
+    val activeSensor: ActiveSensor = ActiveSensor.ORIENTATION,
+    val showAxes: Boolean = true,
+    val showGrid: Boolean = true,
+    val show3DModel: Boolean = true,
+    val showRawData: Boolean = false,
+    val sampleRate: Int = 0,
+    val calibrationStatus: CalibrationStatus = CalibrationStatus.IDLE,
+    val signalQuality: SignalQuality = SignalQuality.GOOD,
+    val cubeColor: Color = Color(0xFFFF5722),
+    val backgroundColor: Color = Color(0xFF1A1A2E),
+    val accentColor: Color = Color(0xFF00BCD4)
+)
+
+enum class ActiveSensor(val displayName: String, val icon: String) {
+    ORIENTATION("Orientation", "🔄"),
+    GYROSCOPE("Gyroscope", "⚡"),
+    ACCELEROMETER("Accelerometer", "📊"),
+    MAGNETOMETER("Magnetometer", "🧭"),
+    ENVIRONMENTAL("Environmental", "🌡️")
+}
+
+enum class DeviceOrientation(val displayName: String) {
+    PORTRAIT("Portrait"),
+    LANDSCAPE("Landscape"),
+    REVERSE_PORTRAIT("Reverse Portrait"),
+    REVERSE_LANDSCAPE("Reverse Landscape"),
+    UNKNOWN("Unknown")
+}
+
+enum class CalibrationStatus(val displayName: String, val color: Color) {
+    IDLE("Not Calibrated", Color(0xFF9E9E9E)),
+    CALIBRATING("Calibrating...", Color(0xFFFFC107)),
+    CALIBRATED("Calibrated", Color(0xFF4CAF50)),
+    FAILED("Calibration Failed", Color(0xFFF44336))
+}
+
+enum class SignalQuality(val displayName: String, val color: Color, val level: Int) {
+    EXCELLENT("Excellent", Color(0xFF4CAF50), 100),
+    GOOD("Good", Color(0xFF8BC34A), 75),
+    FAIR("Fair", Color(0xFFFFC107), 50),
+    POOR("Poor", Color(0xFFFF9800), 25),
+    NONE("No Signal", Color(0xFFF44336), 0)
+}
+
+data class SensorDataPoint(
+    val timestamp: Long,
+    val roll: Float,
+    val pitch: Float,
+    val yaw: Float,
+    val gyroX: Float = 0f,
+    val gyroY: Float = 0f,
+    val gyroZ: Float = 0f,
+    val accelX: Float = 0f,
+    val accelY: Float = 0f,
+    val accelZ: Float = 0f,
+    val magX: Float = 0f,
+    val magY: Float = 0f,
+    val magZ: Float = 0f
+)
+
+data class SensorHistory(
+    val dataPoints: List<SensorDataPoint> = emptyList(),
+    val maxHistorySize: Int = 300,
+    val isRecording: Boolean = false,
+    val startTime: Long = 0L,
+    val recordingName: String = "",
+    val recordingDuration: Long = 0L
+)
+
+data class SensorStatistics(
+    val minRoll: Float = 0f,
+    val maxRoll: Float = 0f,
+    val avgRoll: Float = 0f,
+    val minPitch: Float = 0f,
+    val maxPitch: Float = 0f,
+    val avgPitch: Float = 0f,
+    val minYaw: Float = 0f,
+    val maxYaw: Float = 0f,
+    val avgYaw: Float = 0f,
+    val stabilityScore: Float = 0f,
+    val movementIntensity: Float = 0f,
+    val sampleCount: Int = 0
+)
+
+// ==================== MAIN SCREEN ====================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,16 +171,31 @@ fun SensorVisualizerScreen(
 ) {
     val context = LocalContext.current
     val sensorManager = remember { context.getSystemService(SensorManager::class.java) }
-    val scope = rememberCoroutineScope()
-    var isInitialized by remember { mutableStateOf(false) }
 
     var uiState by remember { mutableStateOf(SensorVisualizerUiState()) }
     var history by remember { mutableStateOf(SensorHistory()) }
     var statistics by remember { mutableStateOf(SensorStatistics()) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
+    fun updateStatistics() {
+        val points = history.dataPoints.takeLast(100)
+        if (points.isNotEmpty()) {
+            val rolls = points.map { it.roll }
+            val pitches = points.map { it.pitch }
+            val yaws = points.map { it.yaw }
 
-    // Sensor listener
+            val stability = 1f - (rolls.std() + pitches.std() + yaws.std()) / 3f
+
+            statistics = SensorStatistics(
+                minRoll = rolls.minOrNull() ?: 0f,
+                maxRoll = rolls.maxOrNull() ?: 0f,
+                avgRoll = rolls.average().toFloat(),
+                // ... map the rest of your fields
+                stabilityScore = stability.coerceIn(0f, 1f),
+                sampleCount = points.size
+            )
+        }
+    }
     DisposableEffect(Unit) {
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
@@ -143,16 +287,18 @@ fun SensorVisualizerScreen(
 
         fun updateStatistics() {
             val points = history.dataPoints.takeLast(100)
+
             if (points.isNotEmpty()) {
                 val rolls = points.map { it.roll }
                 val pitches = points.map { it.pitch }
                 val yaws = points.map { it.yaw }
-                
-                val stability = 1f - (rolls.std() + pitches.std() + yaws.std()) / 3f
-                val intensity = (rolls.map { abs(it) }.average() + 
-                                 pitches.map { abs(it) }.average() + 
-                                 yaws.map { abs(it) }.average()) / 3f
-                
+
+// Ensure stability and intensity are explicitly Floats
+                val stability = (1f - (rolls.std() + pitches.std() + yaws.std()) / 3f).toFloat()
+                val intensity = ((rolls.map { abs(it) }.average() +
+                        pitches.map { abs(it) }.average() +
+                        yaws.map { abs(it) }.average()) / 3.0).toFloat()
+
                 statistics = SensorStatistics(
                     minRoll = rolls.minOrNull() ?: 0f,
                     maxRoll = rolls.maxOrNull() ?: 0f,
@@ -164,9 +310,9 @@ fun SensorVisualizerScreen(
                     maxYaw = yaws.maxOrNull() ?: 0f,
                     avgYaw = yaws.average().toFloat(),
                     stabilityScore = stability.coerceIn(0f, 1f),
-                    movementIntensity = intensity.coerceIn(0f, 5f)
-                )
-            }
+                    movementIntensity = intensity.coerceIn(0f, 5f),
+                    sampleCount = points.size
+                )            }
         }
 
         // Register all sensors
@@ -194,8 +340,6 @@ fun SensorVisualizerScreen(
         }
         registerSensor(Sensor.TYPE_HEART_RATE)
 
-        isInitialized = true
-
         onDispose { sensorManager.unregisterListener(listener) }
     }
 
@@ -222,36 +366,24 @@ fun SensorVisualizerScreen(
                 navigationIcon = {
                     if (navigationActions != null) {
                         IconButton(onClick = { navigationActions.navigateBack() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
                 },
                 actions = {
                     IconButton(onClick = { uiState = uiState.copy(showAxes = !uiState.showAxes) }) {
-                        Icon(
-                            if (uiState.showAxes) Icons.Filled.GridOn else Icons.Outlined.GridOn,
-                            contentDescription = "Toggle Axes"
-                        )
+                        Icon(Icons.Filled.GridOn, contentDescription = "Toggle Axes")
                     }
                     IconButton(onClick = { uiState = uiState.copy(showGrid = !uiState.showGrid) }) {
-                        Icon(
-                            if (uiState.showGrid) Icons.Filled.Grid3x3 else Icons.Outlined.Grid3x3,
-                            contentDescription = "Toggle Grid"
-                        )
+                        Icon(Icons.Filled.Grid3x3, contentDescription = "Toggle Grid")
                     }
                     IconButton(onClick = { uiState = uiState.copy(show3DModel = !uiState.show3DModel) }) {
-                        Icon(
-                            if (uiState.show3DModel) Icons.Filled.CropFree else Icons.Outlined.CropFree,
-                            contentDescription = "Toggle 3D"
-                        )
+                        Icon(Icons.Filled.CropFree, contentDescription = "Toggle 3D")
                     }
                     IconButton(onClick = { uiState = uiState.copy(showRawData = !uiState.showRawData) }) {
-                        Icon(
-                            if (uiState.showRawData) Icons.Filled.Code else Icons.Outlined.Code,
-                            contentDescription = "Raw Data"
-                        )
+                        Icon(Icons.Filled.Code, contentDescription = "Raw Data")
                     }
-                    IconButton(onClick = { 
+                    IconButton(onClick = {
                         history = history.copy(isRecording = !history.isRecording, startTime = System.currentTimeMillis())
                     }) {
                         Icon(
@@ -402,8 +534,7 @@ fun SensorVisualizerScreen(
     if (showExportDialog) {
         ExportDialog(
             onDismiss = { showExportDialog = false },
-            onExport = { format ->
-                // Export logic here
+            onExport = { _ ->
                 showExportDialog = false
             },
             sampleCount = history.dataPoints.size
@@ -420,29 +551,22 @@ fun SensorVisualizerScreen(
     }
 }
 
+// ==================== COMPONENTS ====================
+
 @Composable
 fun SignalQualityCard(quality: SignalQuality, calibration: CalibrationStatus) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = quality.color.copy(alpha = 0.1f)
-        ),
+        colors = CardDefaults.cardColors(containerColor = quality.color.copy(alpha = 0.1f)),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(quality.color)
-                )
+                Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(quality.color))
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text("Signal Quality", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
@@ -450,18 +574,13 @@ fun SignalQualityCard(quality: SignalQuality, calibration: CalibrationStatus) {
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(calibration.color)
-                )
+                Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(calibration.color))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(calibration.displayName, fontSize = 12.sp, color = calibration.color)
             }
         }
         LinearProgressIndicator(
-            progress = quality.level / 100f,
+            progress = { quality.level / 100f },
             modifier = Modifier.fillMaxWidth(),
             color = quality.color,
             trackColor = quality.color.copy(alpha = 0.2f)
@@ -469,28 +588,24 @@ fun SignalQualityCard(quality: SignalQuality, calibration: CalibrationStatus) {
     }
 }
 
+
+
+
 @Composable
 fun SensorTypeSelector(selectedSensor: ActiveSensor, onSensorSelected: (ActiveSensor) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "📡 Sensor Stream",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Text("📡 Sensor Stream", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
-            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ActiveSensor.values().forEach { sensor ->
+                ActiveSensor.entries.forEach { sensor ->
                     FilterChip(
                         selected = selectedSensor == sensor,
                         onClick = { onSensorSelected(sensor) },
@@ -549,28 +664,27 @@ fun SensorDataCard(uiState: SensorVisualizerUiState, activeSensor: ActiveSensor)
                 }
                 ActiveSensor.ENVIRONMENTAL -> {
                     if (uiState.temperature != 0f) {
-                        SensorInfoRow(Icons.Default.Thermostat, "Temperature", String.format("%.1f°C", uiState.temperature))
+                        SensorInfoRow(Icons.Default.Thermostat, "Temperature", String.format(Locale.US, "%.1f°C", uiState.temperature))
                     }
                     if (uiState.pressure != 0f) {
-                        SensorInfoRow(Icons.Default.BarChart, "Pressure", String.format("%.1f hPa", uiState.pressure))
+                        SensorInfoRow(Icons.Default.BarChart, "Pressure", String.format(Locale.US, "%.1f hPa", uiState.pressure))
                     }
                     if (uiState.light != 0f) {
-                        SensorInfoRow(Icons.Default.Lightbulb, "Light", String.format("%.0f lx", uiState.light))
+                        SensorInfoRow(Icons.Default.Lightbulb, "Light", String.format(Locale.US, "%.0f lx", uiState.light))
                     }
                     if (uiState.humidity != 0f) {
-                        SensorInfoRow(Icons.Default.WaterDrop, "Humidity", String.format("%.0f%%", uiState.humidity))
+                        SensorInfoRow(Icons.Default.WaterDrop, "Humidity", String.format(Locale.US, "%.0f%%", uiState.humidity))
                     }
                     if (uiState.proximity != 0f) {
-                        SensorInfoRow(Icons.Default.Radar, "Proximity", String.format("%.0f cm", uiState.proximity))
+                        SensorInfoRow(Icons.Default.Radar, "Proximity", String.format(Locale.US, "%.0f cm", uiState.proximity))
                     }
                     if (uiState.steps > 0) {
-                        SensorInfoRow(Icons.Default.DirectionsWalk, "Steps", uiState.steps.toString())
+                        SensorInfoRow(Icons.AutoMirrored.Filled.DirectionsWalk, "Steps", uiState.steps.toString())
                     }
                     if (uiState.heartRate > 0) {
-                        SensorInfoRow(Icons.Default.Favorite, "Heart Rate", String.format("%.0f BPM", uiState.heartRate))
+                        SensorInfoRow(Icons.Default.Favorite, "Heart Rate", String.format(Locale.US, "%.0f BPM", uiState.heartRate))
                     }
                 }
-                else -> {}
             }
         }
     }
@@ -592,7 +706,7 @@ fun RawDataCard(uiState: SensorVisualizerUiState) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -601,12 +715,12 @@ fun RawDataCard(uiState: SensorVisualizerUiState) {
             ) {
                 Text(
                     text = buildString {
-                        appendLine("Roll: ${String.format("%.4f", uiState.roll)} rad")
-                        appendLine("Pitch: ${String.format("%.4f", uiState.pitch)} rad")
-                        appendLine("Yaw: ${String.format("%.4f", uiState.yaw)} rad")
-                        appendLine("Gyro: (${String.format("%.2f", uiState.gyroX)}, ${String.format("%.2f", uiState.gyroY)}, ${String.format("%.2f", uiState.gyroZ)}) rad/s")
-                        appendLine("Accel: (${String.format("%.2f", uiState.accelX)}, ${String.format("%.2f", uiState.accelY)}, ${String.format("%.2f", uiState.accelZ)}) m/s²")
-                        appendLine("Mag: (${String.format("%.1f", uiState.magX)}, ${String.format("%.1f", uiState.magY)}, ${String.format("%.1f", uiState.magZ)}) μT")
+                        appendLine("Roll: ${String.format(Locale.US, "%.4f", uiState.roll)} rad")
+                        appendLine("Pitch: ${String.format(Locale.US, "%.4f", uiState.pitch)} rad")
+                        appendLine("Yaw: ${String.format(Locale.US, "%.4f", uiState.yaw)} rad")
+                        appendLine("Gyro: (${String.format(Locale.US, "%.2f", uiState.gyroX)}, ${String.format(Locale.US, "%.2f", uiState.gyroY)}, ${String.format(Locale.US, "%.2f", uiState.gyroZ)}) rad/s")
+                        appendLine("Accel: (${String.format(Locale.US, "%.2f", uiState.accelX)}, ${String.format(Locale.US, "%.2f", uiState.accelY)}, ${String.format(Locale.US, "%.2f", uiState.accelZ)}) m/s²")
+                        appendLine("Mag: (${String.format(Locale.US, "%.1f", uiState.magX)}, ${String.format(Locale.US, "%.1f", uiState.magY)}, ${String.format(Locale.US, "%.1f", uiState.magZ)}) μT")
                     },
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
@@ -619,6 +733,7 @@ fun RawDataCard(uiState: SensorVisualizerUiState) {
 
 @Composable
 fun RecordingCard(duration: Long, sampleCount: Int) {
+    val infiniteTransition = rememberInfiniteTransition()
     val pulse by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.5f,
@@ -627,7 +742,7 @@ fun RecordingCard(duration: Long, sampleCount: Int) {
             repeatMode = RepeatMode.Reverse
         )
     )
-    
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -644,10 +759,12 @@ fun RecordingCard(duration: Long, sampleCount: Int) {
                 Box(
                     modifier = Modifier
                         .size(12.dp)
-                        .scale(pulse)
+                        .graphicsLayer { // Use graphicsLayer for smoother performance
+                            scaleX = pulse
+                            scaleY = pulse
+                        }
                         .clip(CircleShape)
-                        .background(Color.Red)
-                )
+                        .background(Color.Red)                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text("Recording...", fontWeight = FontWeight.Bold)
@@ -657,7 +774,7 @@ fun RecordingCard(duration: Long, sampleCount: Int) {
             Text("${sampleCount} samples", fontSize = 12.sp, fontFamily = FontFamily.Monospace)
         }
         LinearProgressIndicator(
-            progress = 1f,
+            progress = { 1f },
             modifier = Modifier.fillMaxWidth(),
             color = Color.Red,
             trackColor = Color.Red.copy(alpha = 0.3f)
@@ -711,22 +828,22 @@ fun StatisticsCard(statistics: SensorStatistics) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatItem("Min Roll", String.format("%.1f°", Math.toDegrees(statistics.minRoll.toDouble())))
-                StatItem("Max Roll", String.format("%.1f°", Math.toDegrees(statistics.maxRoll.toDouble())))
-                StatItem("Avg Roll", String.format("%.1f°", Math.toDegrees(statistics.avgRoll.toDouble())))
+                StatItem("Min Roll", String.format(Locale.US, "%.1f°", Math.toDegrees(statistics.minRoll.toDouble())))
+                StatItem("Max Roll", String.format(Locale.US, "%.1f°", Math.toDegrees(statistics.maxRoll.toDouble())))
+                StatItem("Avg Roll", String.format(Locale.US, "%.1f°", Math.toDegrees(statistics.avgRoll.toDouble())))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatItem("Stability", String.format("%.0f%%", statistics.stabilityScore * 100))
-                StatItem("Movement", String.format("%.1f", statistics.movementIntensity))
+                StatItem("Stability", String.format(Locale.US, "%.0f%%", statistics.stabilityScore * 100))
+                StatItem("Movement", String.format(Locale.US, "%.1f", statistics.movementIntensity))
                 StatItem("Samples", statistics.sampleCount.toString())
             }
         }
@@ -740,16 +857,16 @@ fun StatisticsDialog(statistics: SensorStatistics, onDismiss: () -> Unit, onRese
         title = { Text("Sensor Statistics") },
         text = {
             Column {
-                StatisticsRow("Min Roll", String.format("%.2f rad (%.1f°)", statistics.minRoll, Math.toDegrees(statistics.minRoll.toDouble())))
-                StatisticsRow("Max Roll", String.format("%.2f rad (%.1f°)", statistics.maxRoll, Math.toDegrees(statistics.maxRoll.toDouble())))
-                StatisticsRow("Avg Roll", String.format("%.2f rad (%.1f°)", statistics.avgRoll, Math.toDegrees(statistics.avgRoll.toDouble())))
+                StatisticsRow("Min Roll", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.minRoll, Math.toDegrees(statistics.minRoll.toDouble())))
+                StatisticsRow("Max Roll", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.maxRoll, Math.toDegrees(statistics.maxRoll.toDouble())))
+                StatisticsRow("Avg Roll", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.avgRoll, Math.toDegrees(statistics.avgRoll.toDouble())))
                 HorizontalDivider()
-                StatisticsRow("Min Pitch", String.format("%.2f rad (%.1f°)", statistics.minPitch, Math.toDegrees(statistics.minPitch.toDouble())))
-                StatisticsRow("Max Pitch", String.format("%.2f rad (%.1f°)", statistics.maxPitch, Math.toDegrees(statistics.maxPitch.toDouble())))
-                StatisticsRow("Avg Pitch", String.format("%.2f rad (%.1f°)", statistics.avgPitch, Math.toDegrees(statistics.avgPitch.toDouble())))
+                StatisticsRow("Min Pitch", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.minPitch, Math.toDegrees(statistics.minPitch.toDouble())))
+                StatisticsRow("Max Pitch", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.maxPitch, Math.toDegrees(statistics.maxPitch.toDouble())))
+                StatisticsRow("Avg Pitch", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.avgPitch, Math.toDegrees(statistics.avgPitch.toDouble())))
                 HorizontalDivider()
-                StatisticsRow("Stability Score", String.format("%.1f%%", statistics.stabilityScore * 100))
-                StatisticsRow("Movement Intensity", String.format("%.2f", statistics.movementIntensity))
+                StatisticsRow("Stability Score", String.format(Locale.US, "%.1f%%", statistics.stabilityScore * 100))
+                StatisticsRow("Movement Intensity", String.format(Locale.US, "%.2f", statistics.movementIntensity))
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onReset, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                     Text("Reset Statistics")
@@ -765,7 +882,7 @@ fun StatisticsDialog(statistics: SensorStatistics, onDismiss: () -> Unit, onRese
 @Composable
 fun ExportDialog(onDismiss: () -> Unit, onExport: (String) -> Unit, sampleCount: Int) {
     var selectedFormat by remember { mutableStateOf("CSV") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Export Data") },
@@ -773,7 +890,7 @@ fun ExportDialog(onDismiss: () -> Unit, onExport: (String) -> Unit, sampleCount:
             Column {
                 Text("Export ${sampleCount} sensor data points to file")
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -835,7 +952,7 @@ fun AnimatedSensorChip(label: String, value: Float, color: Color) {
             shadowElevation = 2.dp
         ) {
             Text(
-                text = String.format("%.1f°", Math.toDegrees(animatedValue.toDouble())),
+                text = String.format(Locale.US, "%.1f°", Math.toDegrees(animatedValue.toDouble())),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 fontWeight = FontWeight.Bold,
                 color = color,
@@ -860,7 +977,7 @@ fun AnimatedSensorBar(label: String, value: Float, min: Float, max: Float, unit:
         ) {
             Text(label, fontWeight = FontWeight.Medium, fontSize = 13.sp)
             Text(
-                text = String.format("%.2f %s", displayValue, unit),
+                text = String.format(Locale.US, "%.2f %s", displayValue, unit),
                 fontFamily = FontFamily.Monospace,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
@@ -868,7 +985,7 @@ fun AnimatedSensorBar(label: String, value: Float, min: Float, max: Float, unit:
         }
         Spacer(modifier = Modifier.height(4.dp))
         LinearProgressIndicator(
-            progress = animatedProgress,
+            progress = { animatedProgress },
             modifier = Modifier.fillMaxWidth().height(6.dp),
             color = getColorForValue(value, min, max),
             trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
@@ -894,7 +1011,7 @@ fun SmoothLineChart(dataPoints: List<SensorDataPoint>) {
     if (dataPoints.isEmpty()) return
 
     val animatedAlpha by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
-    Canvas(
+    androidx.compose.foundation.Canvas(
         modifier = Modifier
             .fillMaxWidth()
             .height(160.dp)
@@ -981,12 +1098,14 @@ fun StatisticsRow(label: String, value: String) {
     }
 }
 
+// ==================== HELPER FUNCTIONS ====================
+
 private fun formatDuration(millis: Long): String {
     val seconds = (millis / 1000) % 60
     val minutes = (millis / (1000 * 60)) % 60
     val hours = millis / (1000 * 60 * 60)
-    return if (hours > 0) String.format("%02d:%02d:%02d", hours, minutes, seconds)
-    else String.format("%02d:%02d", minutes, seconds)
+    return if (hours > 0) String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+    else String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }
 
 private fun getColorForValue(value: Float, min: Float, max: Float): Color {
@@ -1000,7 +1119,7 @@ private fun getColorForValue(value: Float, min: Float, max: Float): Color {
 
 private fun List<Float>.std(): Float {
     if (isEmpty()) return 0f
-    val mean = average()
-    val variance = map { (it - mean) * (it - mean) }.average()
-    return sqrt(variance).toFloat()
+    val mean = this.average().toFloat()
+    val variance = this.map { (it - mean).pow(2f) }.average().toFloat()
+    return sqrt(variance)
 }

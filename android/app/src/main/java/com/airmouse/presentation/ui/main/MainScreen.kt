@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,11 +26,33 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.airmouse.presentation.navigation.Destinations
-import com.airmouse.presentation.navigation.bottomNavItems
-import com.airmouse.presentation.navigation.getSelectedBottomNavIndex
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
+// =======================================================================
+// Navigation Elements Mock / Setup
+// NOTE: If bottomNavItems and getSelectedBottomNavIndex are defined in
+// your com.airmouse.presentation.navigation package, delete these copies.
+// =======================================================================
+data class BottomNavItem(
+    val route: String,
+    val title: String,
+    val icon: ImageVector
+)
+
+val bottomNavItems = listOf(
+    BottomNavItem(Destinations.Home.route, "Home", Icons.Default.Home),
+    BottomNavItem(Destinations.Statistics.route, "Statistics", Icons.Default.BarChart),
+    BottomNavItem(Destinations.Settings.route, "Settings", Icons.Default.Settings),
+    BottomNavItem(Destinations.Help.route, "Help", Icons.AutoMirrored.Filled.Help)
+)
+
+fun getSelectedBottomNavIndex(currentRoute: String?): Int {
+    val index = bottomNavItems.indexOfFirst { it.route == currentRoute }
+    return if (index != -1) index else 0
+}
+// =======================================================================
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     navController: NavHostController = rememberNavController(),
@@ -158,7 +182,7 @@ fun ModernBottomBar(
                 onClick = { onItemSelected(index) },
                 icon = {
                     Icon(
-                        if (isSelected) destination.icon else destination.icon?.let { it },
+                        imageVector = destination.icon,
                         contentDescription = destination.title,
                         modifier = Modifier.size(24.dp)
                     )
@@ -270,7 +294,7 @@ fun ModernDrawerContent(
                 DrawerItem(Destinations.Home.route, "Home", Icons.Default.Home),
                 DrawerItem(Destinations.Statistics.route, "Statistics", Icons.Default.BarChart),
                 DrawerItem(Destinations.Settings.route, "Settings", Icons.Default.Settings),
-                DrawerItem(Destinations.Help.route, "Help", Icons.Default.Help),
+                DrawerItem(Destinations.Help.route, "Help", Icons.AutoMirrored.Filled.Help),
                 DrawerItem(Destinations.About.route, "About", Icons.Default.Info)
             ),
             currentRoute = currentRoute,
@@ -321,7 +345,7 @@ fun ModernDrawerContent(
             color = Color(0xFF96A0AE),
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
         )
-        
+
         val advancedTools = listOf(
             Destinations.GestureStudio.route to "✋ Gesture Studio",
             Destinations.NetworkDiscovery.route to "🌐 Network Discovery",
@@ -336,7 +360,7 @@ fun ModernDrawerContent(
             Destinations.Profiles.route to "👤 Profiles",
             Destinations.Themes.route to "🎨 Themes"
         )
-        
+
         advancedTools.forEach { (route, title) ->
             NavigationDrawerItem(
                 label = { Text(title, color = Color(0xFFE5E7EB), fontSize = 13.sp) },
@@ -353,13 +377,14 @@ fun ModernDrawerContent(
                 colors = NavigationDrawerItemDefaults.colors(
                     selectedContainerColor = Color(0xFF00BCD4).copy(alpha = 0.1f)
                 ),
-                modifier = Modifier.padding(start = 32.dp, end = 16.dp, vertical = 2.dp)
+                // Fixed broken padding syntax mixing vertical/start/end incorrectly
+                modifier = Modifier.padding(start = 32.dp, end = 16.dp, top = 2.dp, bottom = 2.dp)
             )
         }
     }
 }
 
-data class DrawerItem(val route: String, val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+data class DrawerItem(val route: String, val title: String, val icon: ImageVector)
 
 @Composable
 fun DrawerSection(
@@ -399,19 +424,20 @@ fun DrawerSection(
 @Composable
 fun AnimatedFAB(
     onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     text: String,
     gradient: List<Color>,
     isActive: Boolean = false
 ) {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "pulseTransition")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ),
+        label = "pulseScaling"
     )
 
     ExtendedFloatingActionButton(
@@ -421,7 +447,13 @@ fun AnimatedFAB(
         elevation = FloatingActionButtonDefaults.elevation(
             defaultElevation = if (isActive) 8.dp else 4.dp
         ),
-        modifier = Modifier.then(if (isActive) Modifier else Modifier)
+        // Applied the requested pulse animation parameter safely to the graphics layout modifier
+        modifier = Modifier.graphicsLayer {
+            if (isActive) {
+                scaleX = pulse
+                scaleY = pulse
+            }
+        }
     ) {
         Box(
             modifier = Modifier
