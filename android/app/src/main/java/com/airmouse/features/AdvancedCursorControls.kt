@@ -16,7 +16,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class AdvancedCursorControls @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val prefs: PreferencesManager
 ) {
 
@@ -189,20 +189,23 @@ class AdvancedCursorControls @Inject constructor(
             newDy = snapToGrid(newDy, snapConfig.gridSize, snapConfig.strength)
         }
 
-        // 5. Momentum is applied separately in the gesture handler – we return the instantaneous delta.
-        //    The momentum handler (outside) will keep a velocity variable.
         return newDx to newDy
     }
 
     // Helper: apply curve to a single axis value
     private fun applyCurve(value: Float): Float {
-        val sign = sign(value)
+        val signValue = sign(value)
         val absVal = abs(value)
         return when (speedCurve) {
             SpeedCurve.LINEAR -> value
-            SpeedCurve.EXPONENTIAL -> sign * (absVal.pow(1.5f))
-            SpeedCurve.LOGARITHMIC -> sign * (log(1f + absVal * 10) / log(11f)) * (absVal)
-            SpeedCurve.CUSTOM -> interpolateCurve(absVal) * sign
+            SpeedCurve.EXPONENTIAL -> signValue * (absVal.pow(1.5f))
+            SpeedCurve.LOGARITHMIC -> {
+                // Fixed log calculations to explicitly operate over Floats
+                val logNumerator = ln(1f + absVal * 10f)
+                val logDenominator = ln(11f)
+                signValue * (logNumerator / logDenominator) * absVal
+            }
+            SpeedCurve.CUSTOM -> interpolateCurve(absVal) * signValue
         }
     }
 
@@ -215,6 +218,7 @@ class AdvancedCursorControls @Inject constructor(
             val (x1, y1) = points[i]
             val (x2, y2) = points[i + 1]
             if (input in x1..x2) {
+                if (x2 == x1) return y1
                 val t = (input - x1) / (x2 - x1)
                 return y1 + t * (y2 - y1)
             }

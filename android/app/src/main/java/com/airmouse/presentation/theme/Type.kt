@@ -10,8 +10,8 @@ import androidx.compose.ui.unit.sp
 // Fallback to system sans-serif so the build does not depend on bundled font assets.
 val InterFontFamily = FontFamily.SansSerif
 
-// Default Material 3 Typography with custom font
-val AppTypography = Typography(
+// FIXED: Renamed to AirMouseTypography to resolve conflicting declaration
+val AirMouseTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.Bold,

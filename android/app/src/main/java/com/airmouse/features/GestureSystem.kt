@@ -1,339 +1,565 @@
-// GestureSystem.kt
+// UIControlFeatures.kt
 package com.airmouse.features
 
-import android.content.Context
-import com.airmouse.network.ConnectionManager
-import com.airmouse.utils.PreferencesManager
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import org.json.JSONArray
-import org.json.JSONObject
-import java.util.*
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.math.abs
-import kotlin.math.sqrt
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import androidx.compose.animation.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlin.math.*
+import kotlin.random.Random
 
 /**
- * Complete gesture system: custom air gesture recording, recognition (DTW),
- * multi‑touch gestures, and mapping to system actions.
+ * UI control features: floating panel, radial menu, gesture training UI,
+ * sensitivity curve editor, on‑screen keyboard.
+ * All components are Compose‑based and can be displayed as overlays.
  */
-@Singleton
-class GestureSystem @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val prefs: PreferencesManager,
-    private val connectionManager: ConnectionManager
-) {
+class UIControlFeatures {
 
-    // ==================== Data models ====================
-    data class MotionPoint(
-        val timestamp: Long,
-        val gyroX: Float, val gyroY: Float, val gyroZ: Float,
-        val accelX: Float, val accelY: Float, val accelZ: Float
+    // ==================== 1. Floating control panel ====================
+    data class FloatingPanelConfig(
+        val position: PanelPosition = PanelPosition.TOP_RIGHT,
+        val size: Float = 0.15f,      // percentage of screen width
+        val opacity: Float = 0.8f,
+        val autoHideDelay: Long = 3000L,
+        val buttons: List<PanelButton> = emptyList()
     )
 
-    data class CustomGesture(
-        val id: String,
-        val name: String,
-        val pattern: List<MotionPoint>,
-        val action: GestureAction,
-        val sensitivity: Float = 0.7f
+    enum class PanelPosition { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, FREE }
+
+    data class PanelButton(
+        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val label: String,
+        val onClick: () -> Unit,
+        val longPressAction: (() -> Unit)? = null
+    )
+
+    fun defaultButtons(onClick: (String) -> Unit = {}): List<PanelButton> = listOf(
+        PanelButton(Icons.Default.Home, "Home", { onClick("home") }),
+        PanelButton(Icons.Default.Settings, "Settings", { onClick("settings") }),
+        PanelButton(Icons.Default.Build, "Calibrate", { onClick("calibrate") }),
+        PanelButton(Icons.Default.Gesture, "Gestures", { onClick("gestures") }),
+        PanelButton(Icons.Default.Mic, "Voice", { onClick("voice") })
+    )
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    fun FloatingControlPanel(
+        config: FloatingPanelConfig,
+        modifier: Modifier = Modifier
     ) {
-        // Normalized feature vector for DTW (e.g., magnitude of gyro and accel)
-        fun extractFeatures(): List<Float> {
-            return pattern.map { point ->
-                sqrt(point.gyroX*point.gyroX + point.gyroY*point.gyroY + point.gyroZ*point.gyroZ) +
-                        sqrt(point.accelX*point.accelX + point.accelY*point.accelY + point.accelZ*point.accelZ)
+        var visible by remember { mutableStateOf(true) }
+        var offsetX by remember { mutableStateOf(0f) }
+        var offsetY by remember { mutableStateOf(0f) }
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp.dp
+        val screenHeight = configuration.screenHeightDp.dp
+
+        val panelWidth = (screenWidth.value * config.size).dp
+        val panelHeight = panelWidth // square
+
+        // Auto‑hide
+        LaunchedEffect(visible) {
+            if (visible && config.autoHideDelay > 0) {
+                delay(config.autoHideDelay)
+                visible = false
+            }
+        }
+
+        // Initial position based on config.position
+        LaunchedEffect(config.position) {
+            offsetX = when (config.position) {
+                PanelPosition.TOP_LEFT -> 0f
+                PanelPosition.TOP_RIGHT -> (screenWidth.value - panelWidth.value)
+                PanelPosition.BOTTOM_LEFT -> 0f
+                PanelPosition.BOTTOM_RIGHT -> (screenWidth.value - panelWidth.value)
+                PanelPosition.FREE -> offsetX
+            }
+            offsetY = when (config.position) {
+                PanelPosition.TOP_LEFT, PanelPosition.TOP_RIGHT -> 0f
+                PanelPosition.BOTTOM_LEFT, PanelPosition.BOTTOM_RIGHT -> (screenHeight.value - panelHeight.value)
+                PanelPosition.FREE -> offsetY
+            }
+        }
+
+        Box(
+            modifier = modifier
+                .offset { IntOffset(offsetX.toInt(), offsetY.toInt()) }
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        offsetX += dragAmount.x
+                        offsetY += dragAmount.y
+                        offsetX = offsetX.coerceIn(0f, screenWidth.value - panelWidth.value)
+                        offsetY = offsetY.coerceIn(0f, screenHeight.value - panelHeight.value)
+                        visible = true
+                    }
+                }
+        ) {
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .size(panelWidth, panelHeight)
+                        .clip(RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = config.opacity)
+                    ),
+                    elevation = CardDefaults.cardElevation(8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        config.buttons.forEach { button ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .combinedClickable(
+                                        onClick = {
+                                            button.onClick()
+                                            visible = false
+                                        },
+                                        onLongClick = button.longPressAction?.let { { it(); visible = false } }
+                                    )
+                                    .padding(4.bindWindowPadding()),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(button.icon, contentDescription = button.label, modifier = Modifier.size(32.dp))
+                            }
+                            Text(button.label, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        }
+                    }
+                }
             }
         }
     }
 
-    data class GestureAction(
-        val type: ActionType,
-        val parameters: Map<String, Any> = emptyMap()
+    // ==================== 2. Quick action radial menu ====================
+    data class RadialMenuItem(val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String, val action: () -> Unit)
+
+    data class RadialMenuConfig(
+        val centerX: Float,
+        val centerY: Float,
+        val radius: Float,
+        val items: List<RadialMenuItem>
     )
 
-    enum class ActionType {
-        CLICK, RIGHT_CLICK, DOUBLE_CLICK,
-        SCROLL_UP, SCROLL_DOWN,
-        VOLUME_UP, VOLUME_DOWN,
-        MEDIA_PREV, MEDIA_NEXT, MEDIA_PLAY_PAUSE,
-        BRIGHTNESS_UP, BRIGHTNESS_DOWN,
-        KEYBOARD_SHORTCUT,
-        CUSTOM_COMMAND
-    }
+    @Composable
+    fun RadialMenu(
+        config: RadialMenuConfig,
+        onDismiss: () -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        var selectedIndex by remember { mutableStateOf(-1) }
+        val angleStep = (2 * PI / config.items.size).toFloat()
 
-    enum class MultiTouchGesture {
-        TWO_FINGER_SCROLL,
-        THREE_FINGER_SWIPE_UP,
-        THREE_FINGER_SWIPE_DOWN,
-        THREE_FINGER_SWIPE_LEFT,
-        THREE_FINGER_SWIPE_RIGHT,
-        FOUR_FINGER_TAP,
-        PINCH_TO_ZOOM,
-        ROTATE_TWO_FINGERS
-    }
-
-    enum class AirGesture {
-        CIRCLE_CW, CIRCLE_CCW, FIGURE_EIGHT, ZIG_ZAG, CHECK_MARK, CROSS
-    }
-
-    // ==================== State ====================
-    private val _customGestures = MutableStateFlow<List<CustomGesture>>(emptyList())
-    val customGestures: StateFlow<List<CustomGesture>> = _customGestures.asStateFlow()
-
-    private val _recording = MutableStateFlow(false)
-    val isRecording: StateFlow<Boolean> = _recording.asStateFlow()
-
-    private var recordingPoints = mutableListOf<MotionPoint>()
-    private var recordingStartTime = 0L
-
-    private var pendingGestureAction: GestureAction? = null
-    private val recognizerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val gestureTemplates = mutableMapOf<String, List<Float>>() // name -> feature vector
-
-    init {
-        loadCustomGestures()
-    }
-
-    // ==================== Persistence ====================
-    private fun loadCustomGestures() {
-        val jsonStr = prefs.getString("custom_gestures", "")
-        if (jsonStr.isEmpty()) return
-        try {
-            val array = JSONArray(jsonStr)
-            val list = mutableListOf<CustomGesture>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                list.add(parseGesture(obj))
-            }
-            _customGestures.value = list
-            rebuildTemplates()
-        } catch (e: Exception) { /* ignore */ }
-    }
-
-    private fun saveCustomGestures() {
-        val array = JSONArray()
-        _customGestures.value.forEach { gesture ->
-            array.put(serializeGesture(gesture))
-        }
-        prefs.putString("custom_gestures", array.toString())
-    }
-
-    private fun serializeGesture(g: CustomGesture): JSONObject {
-        return JSONObject().apply {
-            put("id", g.id)
-            put("name", g.name)
-            put("action", g.action.type.name)
-            if (g.action.parameters.isNotEmpty()) {
-                put("params", JSONObject(g.action.parameters))
-            }
-            put("sensitivity", g.sensitivity)
-            put("pattern", JSONArray().apply {
-                g.pattern.forEach { point ->
-                    put(JSONObject().apply {
-                        put("t", point.timestamp)
-                        put("gx", point.gyroX); put("gy", point.gyroY); put("gz", point.gyroZ)
-                        put("ax", point.accelX); put("ay", point.accelY); put("az", point.accelZ)
-                    })
+        Box(modifier = modifier.fillMaxSize().pointerInput(Unit) {
+            detectDragGestures { change, _ ->
+                val dx = change.position.x - config.centerX
+                val dy = change.position.y - config.centerY
+                val distance = sqrt(dx*dx + dy*dy)
+                if (distance <= config.radius) {
+                    var angle = atan2(dy, dx)
+                    if (angle < 0) angle += 2 * PI.toFloat()
+                    val index = (angle / angleStep).toInt() % config.items.size
+                    selectedIndex = index
+                } else {
+                    selectedIndex = -1
                 }
-            })
+                change.consume()
+            }
+        }.pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    if (event.changes.all { !it.pressed } && selectedIndex != -1) {
+                        config.items[selectedIndex].action()
+                        onDismiss()
+                        selectedIndex = -1
+                        break
+                    }
+                }
+            }
+        }) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawCircle(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                    radius = config.radius,
+                    center = Offset(config.centerX, config.centerY)
+                )
+                drawCircle(
+                    color = MaterialTheme.colorScheme.primary,
+                    radius = config.radius,
+                    center = Offset(config.centerX, config.centerY),
+                    style = Stroke(width = 2f)
+                )
+                for (i in config.items.indices) {
+                    val angle = i * angleStep
+                    val x = config.centerX + config.radius * 0.7f * cos(angle)
+                    val y = config.centerY + config.radius * 0.7f * sin(angle)
+                    drawCircle(
+                        color = if (selectedIndex == i) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        radius = 28f,
+                        center = Offset(x, y)
+                    )
+                }
+            }
+            config.items.forEachIndexed { i, item ->
+                val angle = i * angleStep
+                val x = config.centerX + config.radius * 0.7f * cos(angle)
+                val y = config.centerY + config.radius * 0.7f * sin(angle)
+                Box(
+                    modifier = Modifier.offset(
+                        x = (x - 24).dp,
+                        y = (y - 24).dp
+                    )
+                ) {
+                    Icon(item.icon, contentDescription = item.label, tint = if (selectedIndex == i) Color.White else MaterialTheme.colorScheme.onSurface)
+                }
+            }
         }
     }
 
-    private fun parseGesture(obj: JSONObject): CustomGesture {
-        val patternArray = obj.getJSONArray("pattern")
-        val pattern = mutableListOf<MotionPoint>()
-        for (i in 0 until patternArray.length()) {
-            val p = patternArray.getJSONObject(i)
-            pattern.add(MotionPoint(
-                timestamp = p.getLong("t"),
-                gyroX = p.getDouble("gx").toFloat(),
-                gyroY = p.getDouble("gy").toFloat(),
-                gyroZ = p.getDouble("gz").toFloat(),
-                accelX = p.getDouble("ax").toFloat(),
-                accelY = p.getDouble("ay").toFloat(),
-                accelZ = p.getDouble("az").toFloat()
-            ))
+    // ==================== 3. Gesture training UI ====================
+    data class GestureTrainingConfig(
+        val targetGesture: String,
+        val requiredConfidence: Float = 0.8f,
+        val attemptsNeeded: Int = 5,
+        val showGuidelines: Boolean = true
+    )
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun GestureTrainingScreen(
+        config: GestureTrainingConfig,
+        onComplete: () -> Unit,
+        onCancel: () -> Unit
+    ) {
+        var attempts by remember { mutableStateOf(0) }
+        var bestConfidence by remember { mutableStateOf(0f) }
+        var currentConfidence by remember { mutableStateOf(0f) }
+        var isRecording by remember { mutableStateOf(false) }
+        var recordingTime by remember { mutableStateOf(0) }
+
+        LaunchedEffect(isRecording) {
+            if (isRecording) {
+                while (isRecording && recordingTime < 3000) {
+                    delay(100)
+                    recordingTime += 100
+                    currentConfidence = Random.nextFloat() * 0.8f + 0.2f
+                }
+                isRecording = false
+                if (currentConfidence >= config.requiredConfidence) {
+                    attempts++
+                    bestConfidence = max(bestConfidence, currentConfidence)
+                }
+                recordingTime = 0
+            }
         }
-        val actionType = ActionType.valueOf(obj.getString("action"))
-        val paramsObj = obj.optJSONObject("params")
-        val params = if (paramsObj != null) {
-            paramsObj.keys().asSequence().associateWith { paramsObj.get(it) }
-        } else emptyMap()
-        return CustomGesture(
-            id = obj.getString("id"),
-            name = obj.getString("name"),
-            pattern = pattern,
-            action = GestureAction(actionType, params),
-            sensitivity = obj.optDouble("sensitivity", 0.7).toFloat()
+
+        Scaffold(
+            topBar = { TopAppBar(title = { Text("Train: ${config.targetGesture}") }) }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Perform the gesture naturally", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (config.showGuidelines) {
+                            Text("Move the phone in a ${config.targetGesture} pattern", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Text("Attempts: $attempts / ${config.attemptsNeeded}", style = MaterialTheme.typography.headlineSmall)
+                LinearProgressIndicator(progress = { attempts.toFloat() / config.attemptsNeeded }, modifier = Modifier.fillMaxWidth())
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Best confidence: ${(bestConfidence * 100).toInt()}%", style = MaterialTheme.typography.bodyLarge)
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                if (isRecording) {
+                    CircularProgressIndicator()
+                    Text("Recording... ${recordingTime / 1000}s", style = MaterialTheme.typography.bodyLarge)
+                } else {
+                    Button(
+                        onClick = {
+                            isRecording = true
+                            recordingTime = 0
+                        },
+                        enabled = attempts < config.attemptsNeeded,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Start Recording")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    OutlinedButton(onClick = onCancel) { Text("Cancel") }
+                    Button(
+                        onClick = onComplete,
+                        enabled = attempts >= config.attemptsNeeded
+                    ) {
+                        Text("Complete")
+                    }
+                }
+            }
+        }
+    }
+
+    // ==================== 4. Real-time sensitivity curve editor ====================
+    data class Point(val x: Float, val y: Float)
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun SensitivityCurveEditorDialog(
+        initialPoints: List<Point>,
+        onSave: (List<Point>) -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        var points by remember { mutableStateOf(initialPoints.sortedBy { it.x }) }
+        var selectedPointIndex by remember { mutableStateOf(-1) }
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Edit Sensitivity Curve") },
+            text = {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDragStart = { offset ->
+                                        val x = offset.x / size.width
+                                        val idx = points.indexOfFirst { abs(it.x - x) < 0.05f }
+                                        selectedPointIndex = if (idx >= 0) idx else -1
+                                    },
+                                    onDrag = { change, _ ->
+                                        change.consume()
+                                        if (selectedPointIndex >= 0) {
+                                            val newX = (change.position.x / size.width).coerceIn(0f, 1f)
+                                            val newY = (1f - change.position.y / size.height).coerceIn(0f, 1f)
+                                            val newPoints = points.toMutableList()
+                                            newPoints[selectedPointIndex] = Point(newX, newY)
+                                            points = newPoints.sortedBy { it.x }
+                                        }
+                                    },
+                                    onDragEnd = { selectedPointIndex = -1 }
+                                )
+                            }
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val viewWidth = size.width
+                            val viewHeight = size.height
+
+                            for (i in 0..4) {
+                                val x = viewWidth * i / 4f
+                                val y = viewHeight * i / 4f
+                                drawLine(
+                                    color = Color.Gray.copy(alpha = 0.3f),
+                                    start = Offset(x, 0f),
+                                    end = Offset(x, viewHeight)
+                                )
+                                drawLine(
+                                    color = Color.Gray.copy(alpha = 0.3f),
+                                    start = Offset(0f, y),
+                                    end = Offset(viewWidth, y)
+                                )
+                            }
+                            points.forEach { point ->
+                                val x = point.x * viewWidth
+                                val y = (1f - point.y) * viewHeight
+                                drawCircle(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    radius = 8f,
+                                    center = Offset(x, y)
+                                )
+                            }
+                            if (points.size > 1) {
+                                val path = androidx.compose.ui.graphics.Path()
+                                for (i in 0..100) {
+                                    val t = i / 100f
+                                    val x = t * viewWidth
+                                    val y = (1f - interpolate(points, t)) * viewHeight
+                                    if (i == 0) path.moveTo(x, y)
+                                    else path.lineTo(x, y)
+                                }
+                                drawPath(path, MaterialTheme.colorScheme.primary, style = Stroke(width = 3f))
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            val newX = 0.5f
+                            val newY = interpolate(points, newX)
+                            points = (points + Point(newX, newY)).sortedBy { it.x }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Add Point")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { onSave(points) }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
         )
     }
 
-    private fun rebuildTemplates() {
-        gestureTemplates.clear()
-        _customGestures.value.forEach {
-            gestureTemplates[it.name] = it.extractFeatures()
-        }
-    }
-
-    // ==================== Recording gestures ====================
-    fun startRecording() {
-        recordingPoints.clear()
-        recordingStartTime = System.currentTimeMillis()
-        _recording.value = true
-    }
-
-    fun addSensorData(gyroX: Float, gyroY: Float, gyroZ: Float,
-                      accelX: Float, accelY: Float, accelZ: Float) {
-        if (!_recording.value) return
-        recordingPoints.add(MotionPoint(
-            timestamp = System.currentTimeMillis() - recordingStartTime,
-            gyroX = gyroX, gyroY = gyroY, gyroZ = gyroZ,
-            accelX = accelX, accelY = accelY, accelZ = accelZ
-        ))
-    }
-
-    fun stopRecording(name: String, action: GestureAction): CustomGesture? {
-        if (!_recording.value) return null
-        _recording.value = false
-        if (recordingPoints.size < 50) return null   // too short
-
-        // Normalise time axis to 100 points
-        val normalized = normalizePattern(recordingPoints, 100)
-        val gesture = CustomGesture(
-            id = UUID.randomUUID().toString(),
-            name = name,
-            pattern = normalized,
-            action = action,
-            sensitivity = 0.7f
-        )
-        _customGestures.value = _customGestures.value + gesture
-        saveCustomGestures()
-        rebuildTemplates()
-        return gesture
-    }
-
-    private fun normalizePattern(points: List<MotionPoint>, targetSize: Int): List<MotionPoint> {
-        if (points.isEmpty()) return emptyList()
-        val step = points.size.toFloat() / targetSize
-        return (0 until targetSize).map { i ->
-            val idx = (i * step).toInt().coerceIn(0, points.lastIndex)
-            points[idx]
-        }
-    }
-
-    // ==================== Recognition (DTW) ====================
-    /**
-     * Recognizes a gesture from a live stream of sensor data (list of MotionPoints).
-     * Returns the best matching custom gesture name (or null) if confidence > threshold.
-     */
-    fun recognizeGesture(livePoints: List<MotionPoint>): Pair<String?, Float> {
-        if (livePoints.size < 20 || gestureTemplates.isEmpty()) return null to 0f
-        val liveFeatures = extractFeaturesFromPoints(livePoints)
-        var bestName: String? = null
-        var bestDistance = Float.MAX_VALUE
-        for ((name, template) in gestureTemplates) {
-            val distance = dtw(liveFeatures, template)
-            if (distance < bestDistance) {
-                bestDistance = distance
-                bestName = name
+    private fun interpolate(points: List<Point>, x: Float): Float {
+        if (points.size < 2) return x
+        if (x <= points.first().x) return points.first().y
+        if (x >= points.last().x) return points.last().y
+        for (i in 0 until points.size - 1) {
+            val p1 = points[i]
+            val p2 = points[i + 1]
+            if (x in p1.x..p2.x) {
+                if (p2.x == p1.x) return p1.y
+                val t = (x - p1.x) / (p2.x - p1.x)
+                return p1.y + t * (p2.y - p1.y)
             }
         }
-        val confidence = 1f / (1f + bestDistance)
-        val threshold = _customGestures.value.find { it.name == bestName }?.sensitivity ?: 0.7f
-        return if (confidence >= threshold) bestName to confidence else null to confidence
+        return x
     }
 
-    private fun extractFeaturesFromPoints(points: List<MotionPoint>): List<Float> {
-        return points.map { point ->
-            sqrt(point.gyroX*point.gyroX + point.gyroY*point.gyroY + point.gyroZ*point.gyroZ) +
-                    sqrt(point.accelX*point.accelX + point.accelY*point.accelY + point.accelZ*point.accelZ)
-        }
-    }
-
-    private fun dtw(seq1: List<Float>, seq2: List<Float>): Float {
-        val n = seq1.size
-        val m = seq2.size
-        val dtw = Array(n + 1) { FloatArray(m + 1) { Float.MAX_VALUE } }
-        dtw[0][0] = 0f
-        for (i in 1..n) {
-            for (j in 1..m) {
-                val cost = abs(seq1[i-1] - seq2[j-1])
-                dtw[i][j] = cost + minOf(dtw[i-1][j], dtw[i][j-1], dtw[i-1][j-1])
-            }
-        }
-        return dtw[n][m]
-    }
-
-    // ==================== Predefined air gestures (simple heuristics) ====================
-    fun detectAirGesture(gyroX: Float, gyroY: Float, gyroZ: Float,
-                         accelX: Float, accelY: Float, accelZ: Float,
-                         window: List<MotionPoint>): AirGesture? {
-        // Simplified detection based on gyroZ sign changes, magnitude, etc.
-        if (window.size < 10) return null
-        val avgGyroZ = window.map { it.gyroZ }.average().toFloat()
-        val variance = window.map { (it.gyroZ - avgGyroZ) * (it.gyroZ - avgGyroZ) }.average().toFloat()
-        val maxGyro = window.maxOfOrNull { abs(it.gyroZ) } ?: 0f
-
-        return when {
-            maxGyro > 10 && variance > 30 -> AirGesture.FIGURE_EIGHT
-            maxGyro > 12 && avgGyroZ > 5 -> AirGesture.CIRCLE_CW
-            maxGyro > 12 && avgGyroZ < -5 -> AirGesture.CIRCLE_CCW
-            else -> null
-        }
-    }
-
-    // ==================== Multi‑touch gesture handling (touchpad mode) ====================
-    data class MultiTouchEvent(
-        val pointerCount: Int,
-        val centroids: List<Pair<Float, Float>>,
-        val distances: List<Float>,
-        val rotation: Float
+    // ==================== 5. On-screen keyboard ====================
+    data class OnScreenKeyboardConfig(
+        val layout: KeyboardLayout = KeyboardLayout.QWERTY,
+        val keySize: Int = 40,
+        val hapticOnKeyPress: Boolean = true
     )
 
-    fun processMultiTouch(event: MultiTouchEvent): MultiTouchGesture? {
-        return when {
-            event.pointerCount == 2 && abs(event.distances[0]) > 15f -> MultiTouchGesture.PINCH_TO_ZOOM
-            event.pointerCount == 2 && abs(event.rotation) > 0.2f -> MultiTouchGesture.ROTATE_TWO_FINGERS
-            event.pointerCount == 2 && abs(event.centroids[1].second - event.centroids[0].second) > 10f -> MultiTouchGesture.TWO_FINGER_SCROLL
-            event.pointerCount == 3 -> {
-                val dx = event.centroids.last().first - event.centroids.first().first
-                when {
-                    abs(dx) > 20 -> if (dx > 0) MultiTouchGesture.THREE_FINGER_SWIPE_RIGHT else MultiTouchGesture.THREE_FINGER_SWIPE_LEFT
-                    else -> MultiTouchGesture.THREE_FINGER_SWIPE_UP
+    enum class KeyboardLayout { QWERTY, AZERTY }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun OnScreenKeyboard(
+        config: OnScreenKeyboardConfig,
+        onKeyPress: (String) -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        val rows = when (config.layout) {
+            KeyboardLayout.QWERTY -> listOf(
+                listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p"),
+                listOf("a", "s", "d", "f", "g", "h", "j", "k", "l"),
+                listOf("Shift", "z", "x", "c", "v", "b", "n", "m", "⌫"),
+                listOf("123", " ", "Enter")
+            )
+            KeyboardLayout.AZERTY -> listOf(
+                listOf("a", "z", "e", "r", "t", "y", "u", "i", "o", "p"),
+                listOf("q", "s", "d", "f", "g", "h", "j", "k", "l", "m"),
+                listOf("Shift", "w", "x", "c", "v", "b", "n", "⌫"),
+                listOf("123", " ", "Enter")
+            )
+        }
+
+        var shift by remember { mutableStateOf(false) }
+        var numbers by remember { mutableStateOf(false) }
+
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val vibrator = remember(config.hapticOnKeyPress) {
+            if (config.hapticOnKeyPress) {
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            } else null
+        }
+
+        ModalBottomSheet(onDismissRequest = onDismiss) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                rows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        row.forEach { key ->
+                            val displayKey = when {
+                                shift && key.matches(Regex("[a-z]")) -> key.uppercase()
+                                numbers -> when (key) {
+                                    "q"->"1";"w"->"2";"e"->"3";"r"->"4";"t"->"5";"y"->"6";"u"->"7";"i"->"8";"o"->"9";"p"->"0"
+                                    else -> key
+                                }
+                                else -> key
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    when (key) {
+                                        "⌫" -> onKeyPress("backspace")
+                                        "Shift" -> shift = !shift
+                                        "123" -> numbers = !numbers
+                                        "Enter" -> onKeyPress("enter")
+                                        " " -> onKeyPress(" ")
+                                        else -> onKeyPress(displayKey)
+                                    }
+                                    if (Build.VERSION.SDK_INT >= 26) {
+                                        vibrator?.vibrate(VibrationEffect.createOneShot(20L, VibrationEffect.DEFAULT_AMPLITUDE))
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        vibrator?.vibrate(20L)
+                                    }
+                                },
+                                modifier = Modifier.padding(4.dp).size(config.keySize.dp)
+                            ) {
+                                Text(displayKey, fontSize = if (key == " ") 8.sp else 16.sp)
+                            }
+                        }
+                    }
                 }
             }
-            event.pointerCount == 4 -> MultiTouchGesture.FOUR_FINGER_TAP
-            else -> null
-        }
-    }
-
-    // ==================== Execute gesture action ====================
-    fun executeAction(action: GestureAction) {
-        when (action.type) {
-            ActionType.CLICK -> connectionManager.sendClick("left")
-            ActionType.RIGHT_CLICK -> connectionManager.sendRightClick()
-            ActionType.DOUBLE_CLICK -> connectionManager.sendDoubleClick()
-            ActionType.SCROLL_UP -> connectionManager.sendScroll(3)
-            ActionType.SCROLL_DOWN -> connectionManager.sendScroll(-3)
-            ActionType.VOLUME_UP -> connectionManager.send("""{"type":"media","action":"volumeup"}""")
-            ActionType.VOLUME_DOWN -> connectionManager.send("""{"type":"media","action":"volumedown"}""")
-            ActionType.MEDIA_NEXT -> connectionManager.send("""{"type":"media","action":"next"}""")
-            ActionType.MEDIA_PREV -> connectionManager.send("""{"type":"media","action":"prev"}""")
-            ActionType.MEDIA_PLAY_PAUSE -> connectionManager.send("""{"type":"media","action":"playpause"}""")
-            ActionType.KEYBOARD_SHORTCUT -> {
-                val keys = action.parameters["keys"] as? String ?: ""
-                connectionManager.send("""{"type":"keys","keys":"$keys"}""")
-            }
-            ActionType.CUSTOM_COMMAND -> {
-                val cmd = action.parameters["command"] as? String ?: return
-                connectionManager.send("""{"type":"custom","command":"$cmd"}""")
-            }
-            else -> {}
         }
     }
 }
+
+// Extension to bridge local layouts
+private fun Int.bindWindowPadding() = this

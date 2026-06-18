@@ -7,7 +7,9 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
-import androidx.core.app.ActivityCompat
+import android.speech.tts.TextToSpeech
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,17 +26,64 @@ import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
 
+// --- Target Data Models to satisfy your UI Architecture and ViewModel ---
+
+data class VoiceCommand(
+    val keyword: String,
+    val action: String,
+    val description: String,
+    val icon: String
+)
+
+data class CustomVoiceCommand(
+    val id: String,
+    val phrase: String,
+    val action: String,
+    val enabled: Boolean
+)
+
+data class VoiceCommandHistory(
+    val id: String = UUID.randomUUID().toString(),
+    val command: String,
+    val timestamp: Long,
+    val confidence: Float,
+    val success: Boolean
+)
+
+data class VoiceCommandsUiState(
+    val microphonePermissionGranted: Boolean = false,
+    val isListening: Boolean = false,
+    val isProcessing: Boolean = false,
+    val wakeWordEnabled: Boolean = false,
+    val wakeWord: String = "Hey Air Mouse",
+    val sensitivity: Float = 0.5f,
+    val language: String = "en-US",
+    val continuousListening: Boolean = false,
+    val voiceFeedback: Boolean = true,
+    val soundEffects: Boolean = true,
+    val status: String = "Stopped",
+    val statusColor: Int = 0xFF9E9E9E.toInt(),
+    val lastCommand: String? = null,
+    val lastConfidence: Float = 0.0f,
+    val availableCommands: List<VoiceCommand> = emptyList(),
+    val customCommands: List<CustomVoiceCommand> = emptyList(),
+    val commandHistory: List<VoiceCommandHistory> = emptyList()
+)
+
 @HiltViewModel
 class VoiceCommandsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: PreferencesManager,
     private val connectionManager: ConnectionManager
-) : ViewModel() {
+) : ViewModel(), TextToSpeech.OnInitListener {
 
     private val _uiState = MutableStateFlow(VoiceCommandsUiState())
     val uiState: StateFlow<VoiceCommandsUiState> = _uiState.asStateFlow()
 
-    private val availableCommands = listOf(
+    private var textToSpeech: TextToSpeech? = null
+    private var ttsReady = false
+
+    private val availableCommandsList = listOf(
         VoiceCommand("click", "CLICK", "Perform left click", "👆"),
         VoiceCommand("double click", "DOUBLE_CLICK", "Perform double click", "👆👆"),
         VoiceCommand("right click", "RIGHT_CLICK", "Perform right click", "👉"),
@@ -55,7 +104,15 @@ class VoiceCommandsViewModel @Inject constructor(
         loadSettings()
         loadCustomCommands()
         checkMicrophonePermission()
-        _uiState.update { it.copy(availableCommands = availableCommands) }
+        _uiState.update { it.copy(availableCommands = availableCommandsList) }
+        textToSpeech = TextToSpeech(context, this)
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            textToSpeech?.language = Locale.US
+            ttsReady = true
+        }
     }
 
     private fun loadSettings() {
@@ -105,24 +162,30 @@ class VoiceCommandsViewModel @Inject constructor(
     }
 
     private fun checkMicrophonePermission() {
-        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        } else true
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
         _uiState.update { it.copy(microphonePermissionGranted = hasPermission) }
 
         if (!hasPermission) {
             _uiState.update {
                 it.copy(
                     status = "Microphone permission required",
-                    statusColor = 0xFFF44336
+                    statusColor = 0xFFF44336.toInt()
                 )
             }
         }
     }
 
     fun requestMicrophonePermission() {
-        // This should be handled in the activity
-        _uiState.update { it.copy(status = "Please grant microphone permission in settings") }
+        _uiState.update {
+            it.copy(
+                status = "Please grant microphone permission in settings",
+                statusColor = 0xFFFF9800.toInt()
+            )
+        }
     }
 
     fun startListening() {
@@ -130,7 +193,7 @@ class VoiceCommandsViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     status = "Please grant microphone permission first",
-                    statusColor = 0xFFF44336
+                    statusColor = 0xFFF44336.toInt()
                 )
             }
             return
@@ -141,7 +204,7 @@ class VoiceCommandsViewModel @Inject constructor(
                 isListening = true,
                 isProcessing = false,
                 status = "Listening... Speak now",
-                statusColor = 0xFF4CAF50
+                statusColor = 0xFF4CAF50.toInt()
             )
         }
 
@@ -149,11 +212,9 @@ class VoiceCommandsViewModel @Inject constructor(
             playBeepSound()
         }
 
-        // Simulate speech recognition (in real app, integrate with SpeechRecognizer)
         viewModelScope.launch {
             delay(5000) // Simulate listening for 5 seconds
             if (_uiState.value.isListening) {
-                // Simulate a command for demo
                 processVoiceInput("click", 0.9f)
                 if (!_uiState.value.continuousListening) {
                     stopListening()
@@ -168,7 +229,7 @@ class VoiceCommandsViewModel @Inject constructor(
                 isListening = false,
                 isProcessing = false,
                 status = "Stopped",
-                statusColor = 0xFF9E9E9E
+                statusColor = 0xFF9E9E9E.toInt()
             )
         }
 
@@ -183,14 +244,10 @@ class VoiceCommandsViewModel @Inject constructor(
         _uiState.update { it.copy(isProcessing = true) }
 
         val lowerText = text.lowercase().trim()
-        var matchedCommand: VoiceCommand? = null
-
-        // Match built-in commands
-        matchedCommand = availableCommands.find {
+        var matchedCommand: VoiceCommand? = availableCommandsList.find {
             lowerText.contains(it.keyword) || it.keyword.contains(lowerText)
         }
 
-        // Check custom commands
         if (matchedCommand == null) {
             val customMatch = _uiState.value.customCommands.find {
                 it.enabled && lowerText.contains(it.phrase.lowercase())
@@ -203,7 +260,7 @@ class VoiceCommandsViewModel @Inject constructor(
                         lastCommand = customMatch.phrase,
                         lastConfidence = confidence,
                         status = "Command executed: ${customMatch.phrase}",
-                        statusColor = 0xFF4CAF50,
+                        statusColor = 0xFF4CAF50.toInt(),
                         isProcessing = false
                     )
                 }
@@ -220,7 +277,7 @@ class VoiceCommandsViewModel @Inject constructor(
                     lastCommand = matchedCommand.keyword,
                     lastConfidence = confidence,
                     status = "Recognized: ${matchedCommand.keyword}",
-                    statusColor = 0xFF4CAF50,
+                    statusColor = 0xFF4CAF50.toInt(),
                     isProcessing = false
                 )
             }
@@ -229,7 +286,7 @@ class VoiceCommandsViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     status = "Command not recognized: $text",
-                    statusColor = 0xFFFF9800,
+                    statusColor = 0xFFFF9800.toInt(),
                     isProcessing = false
                 )
             }
@@ -237,64 +294,68 @@ class VoiceCommandsViewModel @Inject constructor(
             if (_uiState.value.voiceFeedback) speakResponse("Command not recognized")
         }
 
-        // Auto-stop if not in continuous mode
         if (!_uiState.value.continuousListening) {
             stopListening()
         }
     }
 
     private fun executeCommand(command: VoiceCommand) {
-        when (command.action) {
-            "CLICK" -> connectionManager.sendClick("left")
-            "DOUBLE_CLICK" -> connectionManager.sendDoubleClick()
-            "RIGHT_CLICK" -> connectionManager.sendClick("right")
-            "SCROLL_UP" -> connectionManager.sendScroll(3)
-            "SCROLL_DOWN" -> connectionManager.sendScroll(-3)
-            "CALIBRATE" -> connectionManager.sendControl("calibrate")
-            "CONNECT" -> connectionManager.connect("", 0) // This would need proper parameters
-            "DISCONNECT" -> connectionManager.disconnect()
-            "STOP" -> connectionManager.sendControl("stop")
-            "START" -> connectionManager.sendControl("start")
-            "BACK" -> connectionManager.sendControl("back")
-            "HOME" -> connectionManager.sendControl("home")
+        viewModelScope.launch {
+            when (command.action) {
+                "CLICK" -> connectionManager.sendClick("left")
+                "DOUBLE_CLICK" -> connectionManager.sendDoubleClick()
+                "RIGHT_CLICK" -> connectionManager.sendClick("right")
+                "SCROLL_UP" -> connectionManager.sendScroll(3)
+                "SCROLL_DOWN" -> connectionManager.sendScroll(-3)
+                "CALIBRATE" -> connectionManager.sendControl("calibrate")
+                "CONNECT" -> connectionManager.connect("", 0)
+                "DISCONNECT" -> connectionManager.disconnect()
+                "STOP" -> connectionManager.sendControl("stop")
+                "START" -> connectionManager.sendControl("start")
+                "BACK" -> connectionManager.sendControl("back")
+                "HOME" -> connectionManager.sendControl("home")
+            }
         }
         vibrate(30)
     }
 
     private fun executeCustomAction(action: String) {
-        when {
-            action.startsWith("move:") -> {
-                val parts = action.split(":")
-                if (parts.size >= 3) {
-                    connectionManager.sendMove(parts[1].toIntOrNull() ?: 0, parts[2].toIntOrNull() ?: 0)
+        viewModelScope.launch {
+            when {
+                action.startsWith("move:") -> {
+                    val parts = action.split(":")
+                    if (parts.size >= 3) {
+                        val x = parts[1].toFloatOrNull() ?: 0f
+                        val y = parts[2].toFloatOrNull() ?: 0f
+                        connectionManager.sendMove(x, y)
+                    }
                 }
-            }
-            action.startsWith("scroll:") -> {
-                val delta = action.substringAfter(":").toIntOrNull() ?: 1
-                connectionManager.sendScroll(delta)
-            }
-            action.startsWith("click:") -> {
-                val button = action.substringAfter(":")
-                connectionManager.sendClick(button)
-            }
-            else -> {
-                connectionManager.sendControl(action)
+                action.startsWith("scroll:") -> {
+                    val delta = action.substringAfter(":").toIntOrNull() ?: 1
+                    connectionManager.sendScroll(delta)
+                }
+                action.startsWith("click:") -> {
+                    val button = action.substringAfter(":")
+                    connectionManager.sendClick(button)
+                }
+                else -> {
+                    connectionManager.sendControl(action)
+                }
             }
         }
         vibrate(30)
     }
 
     private fun addToHistory(command: String, confidence: Float, success: Boolean) {
-        val history = listOf(
-            VoiceCommandHistory(
-                timestamp = System.currentTimeMillis(),
-                command = command,
-                confidence = confidence,
-                success = success
-            )
-        ) + _uiState.value.commandHistory
-
-        _uiState.update { it.copy(commandHistory = history.take(50)) }
+        val newHistory = VoiceCommandHistory(
+            timestamp = System.currentTimeMillis(),
+            command = command,
+            confidence = confidence,
+            success = success
+        )
+        _uiState.update {
+            it.copy(commandHistory = (listOf(newHistory) + it.commandHistory).take(50))
+        }
         saveHistory()
     }
 
@@ -336,8 +397,7 @@ class VoiceCommandsViewModel @Inject constructor(
     fun updateCustomCommand(commandId: String, enabled: Boolean) {
         _uiState.update { state ->
             val updatedCommands = state.customCommands.map {
-                if (it.id == commandId) it.copy(enabled = enabled)
-                else it
+                if (it.id == commandId) it.copy(enabled = enabled) else it
             }
             state.copy(customCommands = updatedCommands)
         }
@@ -404,19 +464,11 @@ class VoiceCommandsViewModel @Inject constructor(
     }
 
     private fun speakResponse(text: String) {
-        if (!_uiState.value.voiceFeedback) return
-
+        if (!_uiState.value.voiceFeedback || !ttsReady) return
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val tts = android.speech.tts.TextToSpeech(context) { status ->
-                    if (status == android.speech.tts.TextToSpeech.SUCCESS) {
-                        tts.language = Locale.US
-                        tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, null)
-                    }
-                }
-            }
+            textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
         } catch (e: Exception) {
-            // TTS not available
+            // TTS handling recovery fallback
         }
     }
 
@@ -435,5 +487,7 @@ class VoiceCommandsViewModel @Inject constructor(
         if (_uiState.value.isListening) {
             stopListening()
         }
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
     }
 }

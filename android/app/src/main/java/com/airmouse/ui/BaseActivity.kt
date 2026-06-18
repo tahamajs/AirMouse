@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import android.view.WindowManager
+import android.view.ViewGroup
+import android.view.WindowInsetsController
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -13,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.airmouse.utils.PreferencesManager
-import com.airmouse.utils.PermissionHelper
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
@@ -30,7 +31,6 @@ import kotlinx.coroutines.launch
 abstract class BaseActivity : AppCompatActivity() {
 
     protected lateinit var prefs: PreferencesManager
-    protected lateinit var permissionHelper: PermissionHelper
 
     // Debug overlay
     private var debugOverlay: DebugOverlay? = null
@@ -38,20 +38,44 @@ abstract class BaseActivity : AppCompatActivity() {
 
     // Loading state
     private var loadingView: View? = null
-    private var isShowingLoading = false
+    protected var isShowingLoading = false
 
     companion object {
         private const val DEBUG_OVERLAY_PREF = "debug_overlay_enabled"
     }
 
+    // FIXED: Permission Launchers must be initialized during creation phase, not dynamically in a function
+    private var singlePermissionCallback: (() -> Unit)? = null
+    private var singlePermissionDeniedCallback: (() -> Unit)? = null
+    private val requestSinglePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            singlePermissionCallback?.invoke()
+        } else {
+            singlePermissionDeniedCallback?.invoke() ?: showToast("Permission denied")
+        }
+    }
+
+    private var multiplePermissionsCallback: (() -> Unit)? = null
+    private var multiplePermissionsDeniedCallback: (() -> Unit)? = null
+    private val requestMultiplePermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (results.values.all { it }) {
+            multiplePermissionsCallback?.invoke()
+        } else {
+            multiplePermissionsDeniedCallback?.invoke() ?: showToast("Some permissions were denied")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme()
         super.onCreate(savedInstanceState)
-        
+
         prefs = PreferencesManager(this)
-        permissionHelper = PermissionHelper(this)
         isDebugOverlayEnabled = prefs.getBoolean(DEBUG_OVERLAY_PREF, false)
-        
+
         initDebugOverlay()
     }
 
@@ -99,7 +123,7 @@ abstract class BaseActivity : AppCompatActivity() {
     protected fun toggleDebugOverlay() {
         isDebugOverlayEnabled = !isDebugOverlayEnabled
         prefs.putBoolean(DEBUG_OVERLAY_PREF, isDebugOverlayEnabled)
-        
+
         if (isDebugOverlayEnabled) {
             debugOverlay?.show()
             showToast("Debug overlay enabled")
@@ -128,15 +152,9 @@ abstract class BaseActivity : AppCompatActivity() {
             onGranted()
             return
         }
-
-        val launcher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                onGranted()
-            } else {
-                onDenied?.invoke() ?: showToast("Permission denied")
-            }
-        }
-        launcher.launch(permission)
+        singlePermissionCallback = onGranted
+        singlePermissionDeniedCallback = onDenied
+        requestSinglePermissionLauncher.launch(permission)
     }
 
     protected fun requestMultiplePermissions(
@@ -145,32 +163,26 @@ abstract class BaseActivity : AppCompatActivity() {
         onDenied: (() -> Unit)? = null
     ) {
         val missingPermissions = permissions.filter { !checkPermission(it) }.toTypedArray()
-        
+
         if (missingPermissions.isEmpty()) {
             onAllGranted()
             return
         }
 
-        val launcher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            val allGranted = results.values.all { it }
-            if (allGranted) {
-                onAllGranted()
-            } else {
-                onDenied?.invoke() ?: showToast("Some permissions were denied")
-            }
-        }
-        launcher.launch(missingPermissions)
+        multiplePermissionsCallback = onAllGranted
+        multiplePermissionsDeniedCallback = onDenied
+        requestMultiplePermissionsLauncher.launch(missingPermissions)
     }
 
     // ==================== LOADING STATE ====================
 
     protected fun showLoading(containerId: Int = android.R.id.content) {
         if (isShowingLoading) return
-        
-        val container = findViewById<View>(containerId) ?: return
+
+        val container = findViewById<ViewGroup>(containerId) ?: return
         loadingView = LayoutInflater.from(this).inflate(
-            com.airmouse.R.layout.view_loading, 
-            container as? ViewGroup, 
+            com.airmouse.R.layout.view_loading,
+            container,
             false
         )
         container.addView(loadingView)
@@ -246,23 +258,38 @@ abstract class BaseActivity : AppCompatActivity() {
         } else {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            )
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    )
         }
     }
 
     protected fun setStatusBarColor(colorResId: Int) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = ContextCompat.getColor(this, colorResId)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val isLight = isColorLight(ContextCompat.getColor(this, colorResId))
+        window.statusBarColor = ContextCompat.getColor(this, colorResId)
+        val isLight = isColorLight(ContextCompat.getColor(this, colorResId))
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val controller = window.insetsController
+            if (controller != null) {
                 if (isLight) {
-                    window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    controller.setSystemBarsAppearance(
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                    )
                 } else {
-                    window.decorView.systemUiVisibility = window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                    controller.setSystemBarsAppearance(
+                        0,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                    )
                 }
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            if (isLight) {
+                window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            } else {
+                window.decorView.systemUiVisibility = window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
             }
         }
     }
@@ -276,21 +303,14 @@ abstract class BaseActivity : AppCompatActivity() {
 
     protected fun isNetworkAvailable(): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-            return capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
-                   capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                   capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
-        } else {
-            @Suppress("DEPRECATION")
-            val networkInfo = connectivityManager.activeNetworkInfo ?: return false
-            @Suppress("DEPRECATION")
-            return networkInfo.isConnected
-        }
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+                capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
-    // ==================== LIFEcycle SCOPE HELPERS ====================
+    // ==================== LIFECYCLE SCOPE HELPERS ====================
 
     protected fun launchCoroutine(block: suspend () -> Unit) {
         lifecycleScope.launch {

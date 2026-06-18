@@ -1,16 +1,19 @@
+// app/src/main/java/com/airmouse/di/RepositoryModule.kt
 package com.airmouse.di
 
 import android.bluetooth.BluetoothAdapter
+import android.content.Context
+import android.hardware.SensorManager
 import com.airmouse.data.datasource.local.AppDatabase
 import com.airmouse.data.repository.*
 import com.airmouse.domain.repository.*
-import com.airmouse.network.TcpClient
-import com.airmouse.network.WebSocketManager
+import com.airmouse.network.ConnectionManager
 import com.airmouse.utils.PreferencesManager
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -92,29 +95,26 @@ object RepositoryProvidersModule {
     @Provides
     @Singleton
     fun provideCalibrationRepositoryImpl(
-        preferencesManager: PreferencesManager,
-        appDatabase: AppDatabase
+        preferencesManager: PreferencesManager
     ): CalibrationRepositoryImpl {
-        return CalibrationRepositoryImpl(appDatabase.calibrationDao(), preferencesManager)
+        return CalibrationRepositoryImpl(preferencesManager)
     }
 
     @Provides
     @Singleton
     fun provideGestureRepositoryImpl(
-        preferencesManager: PreferencesManager,
-        appDatabase: AppDatabase
+        preferencesManager: PreferencesManager
     ): GestureRepositoryImpl {
-        return GestureRepositoryImpl(appDatabase.gestureDao(), preferencesManager)
+        return GestureRepositoryImpl(preferencesManager)
     }
 
     @Provides
     @Singleton
     fun provideConnectionRepositoryImpl(
-        webSocketManager: WebSocketManager,
-        tcpClient: TcpClient,
+        connectionManager: ConnectionManager,
         preferencesManager: PreferencesManager
     ): ConnectionRepositoryImpl {
-        return ConnectionRepositoryImpl(webSocketManager, tcpClient, preferencesManager)
+        return ConnectionRepositoryImpl(connectionManager, preferencesManager)
     }
 
     @Provides
@@ -128,41 +128,44 @@ object RepositoryProvidersModule {
     @Provides
     @Singleton
     fun provideMouseRepositoryImpl(
+        @ApplicationContext context: Context,
         preferencesManager: PreferencesManager
     ): MouseRepositoryImpl {
-        return MouseRepositoryImpl(preferencesManager)
+        return MouseRepositoryImpl(context, preferencesManager)
     }
 
     @Provides
     @Singleton
     fun provideSensorRepositoryImpl(
+        sensorManager: SensorManager,
         preferencesManager: PreferencesManager
     ): SensorRepositoryImpl {
-        return SensorRepositoryImpl(preferencesManager)
+        return SensorRepositoryImpl(sensorManager, preferencesManager)
     }
 
     @Provides
     @Singleton
     fun provideProximityRepositoryImpl(
-        preferencesManager: PreferencesManager,
-        bluetoothAdapter: BluetoothAdapter
+        @ApplicationContext context: Context,
+        preferencesManager: PreferencesManager
     ): ProximityRepositoryImpl {
-        return ProximityRepositoryImpl(preferencesManager, bluetoothAdapter)
+        return ProximityRepositoryImpl(context, preferencesManager)
     }
 
     @Provides
     @Singleton
     fun provideVoiceCommandRepositoryImpl(
+        @ApplicationContext context: Context,
         preferencesManager: PreferencesManager
     ): VoiceCommandRepositoryImpl {
-        return VoiceCommandRepositoryImpl(preferencesManager)
+        return VoiceCommandRepositoryImpl(context, preferencesManager)
     }
 
     @Provides
     @Singleton
     fun provideProfileRepositoryImpl(
-        preferencesManager: PreferencesManager,
-        appDatabase: AppDatabase
+        appDatabase: AppDatabase,
+        preferencesManager: PreferencesManager
     ): ProfileRepositoryImpl {
         return ProfileRepositoryImpl(appDatabase.profileDao(), preferencesManager)
     }

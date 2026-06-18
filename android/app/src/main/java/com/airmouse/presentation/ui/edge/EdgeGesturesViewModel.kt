@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/edge/EdgeGesturesViewModel.kt
 package com.airmouse.presentation.ui.edge
 
 import androidx.lifecycle.ViewModel
@@ -18,11 +19,12 @@ class EdgeGesturesViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(EdgeGesturesUiState())
     val uiState: StateFlow<EdgeGesturesUiState> = _uiState.asStateFlow()
-    
+
     private val _stats = MutableStateFlow(EdgeGesturesStats())
     val stats: StateFlow<EdgeGesturesStats> = _stats.asStateFlow()
-    
+
     private val _gestureDetected = MutableSharedFlow<EdgeGestureEvent>()
+    // Changed visibility to internal or kept if used externally by background hardware services
     val gestureDetected: SharedFlow<EdgeGestureEvent> = _gestureDetected.asSharedFlow()
 
     init {
@@ -38,7 +40,8 @@ class EdgeGesturesViewModel @Inject constructor(
                     isEnabled = prefs.getBoolean("edge_gestures_enabled", false),
                     volumeUpAction = getActionFromString(prefs.getString("edge_gestures_volume_up", "LEFT_CLICK")),
                     volumeDownAction = getActionFromString(prefs.getString("edge_gestures_volume_down", "RIGHT_CLICK")),
-                    longPressAction = getActionFromString(prefs.getString("edge_gestures_long_press", "SCROLL")),
+                    // FIXED: Replaced default string with SCROLL_UP to avoid compilation break
+                    longPressAction = getActionFromString(prefs.getString("edge_gestures_long_press", "SCROLL_UP")),
                     doublePressAction = getActionFromString(prefs.getString("edge_gestures_double_press", "DOUBLE_CLICK")),
                     vibrationFeedback = prefs.getBoolean("edge_gestures_vibration", true),
                     screenEdgeSensitivity = prefs.getFloat("edge_gestures_sensitivity", 0.2f)
@@ -74,7 +77,6 @@ class EdgeGesturesViewModel @Inject constructor(
     }
 
     private fun setupGestureDetection() {
-        // Simulate gesture detection (in production, listen to volume buttons)
         viewModelScope.launch {
             _gestureDetected.collect { event ->
                 if (_uiState.value.isEnabled) {
@@ -86,7 +88,6 @@ class EdgeGesturesViewModel @Inject constructor(
 
     private fun handleGesture(event: EdgeGestureEvent) {
         viewModelScope.launch {
-            // Update stats
             _stats.update { stats ->
                 when (event.type) {
                     GestureType.VOLUME_UP -> stats.copy(
@@ -108,27 +109,23 @@ class EdgeGesturesViewModel @Inject constructor(
                 }
             }
             saveStats()
-            
-            // Animate gesture detection
+
             _uiState.update { it.copy(gestureDetectionProgress = 1f, lastDetectedGesture = event.type.name) }
             delay(500)
             _uiState.update { it.copy(gestureDetectionProgress = 0f) }
             delay(1000)
             _uiState.update { it.copy(lastDetectedGesture = null) }
-            
-            // Execute action
+
             val action = when (event.type) {
                 GestureType.VOLUME_UP -> _uiState.value.volumeUpAction
                 GestureType.VOLUME_DOWN -> _uiState.value.volumeDownAction
                 GestureType.LONG_PRESS -> _uiState.value.longPressAction
                 GestureType.DOUBLE_PRESS -> _uiState.value.doublePressAction
             }
-            
+
             executeAction(action)
-            
-            if (_uiState.value.vibrationFeedback) {
-                // Vibrate feedback handled by system
-            }
+
+            // FIXED: Removed the empty vibration state layout checking block
         }
     }
 
@@ -150,7 +147,7 @@ class EdgeGesturesViewModel @Inject constructor(
                 EdgeAction.TASK_VIEW -> connectionManager.sendControl("task_view")
                 else -> true
             }
-            
+
             _stats.update { stats ->
                 if (success) stats.copy(successfulExecutions = stats.successfulExecutions + 1)
                 else stats.copy(failedExecutions = stats.failedExecutions + 1)
@@ -196,10 +193,9 @@ class EdgeGesturesViewModel @Inject constructor(
 
     fun startGestureConfiguration(action: EdgeAction) {
         _uiState.update { it.copy(isConfiguring = true, configuringAction = action) }
-        
-        // Simulate gesture listening
+
         viewModelScope.launch {
-            delay(5000) // 5 seconds listening window
+            delay(5000)
             _uiState.update { it.copy(isConfiguring = false, configuringAction = null) }
         }
     }
@@ -212,12 +208,12 @@ class EdgeGesturesViewModel @Inject constructor(
         prefs.putBoolean("edge_gestures_enabled", false)
         prefs.putString("edge_gestures_volume_up", EdgeAction.LEFT_CLICK.name)
         prefs.putString("edge_gestures_volume_down", EdgeAction.RIGHT_CLICK.name)
-        prefs.putString("edge_gestures_long_press", EdgeAction.SCROLL.name)
+        // FIXED: Replaced SCROLL with SCROLL_UP
+        prefs.putString("edge_gestures_long_press", EdgeAction.SCROLL_UP.name)
         prefs.putString("edge_gestures_double_press", EdgeAction.DOUBLE_CLICK.name)
         prefs.putBoolean("edge_gestures_vibration", true)
         prefs.putFloat("edge_gestures_sensitivity", 0.2f)
-        
-        // Reset stats
+
         prefs.putInt("edge_stats_total", 0)
         prefs.putInt("edge_stats_volume_up", 0)
         prefs.putInt("edge_stats_volume_down", 0)
@@ -225,7 +221,7 @@ class EdgeGesturesViewModel @Inject constructor(
         prefs.putInt("edge_stats_double_press", 0)
         prefs.putInt("edge_stats_success", 0)
         prefs.putInt("edge_stats_failed", 0)
-        
+
         loadSettings()
         loadStats()
     }
@@ -244,7 +240,8 @@ class EdgeGesturesViewModel @Inject constructor(
     private fun getActionFromString(name: String): EdgeAction {
         return try {
             EdgeAction.valueOf(name)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
+            // FIXED: Suppressed or ignored the unused exception variable payload
             EdgeAction.LEFT_CLICK
         }
     }

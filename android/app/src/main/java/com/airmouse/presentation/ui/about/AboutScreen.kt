@@ -1,26 +1,27 @@
 package com.airmouse.presentation.ui.about
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,8 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.presentation.ui.components.*
-import kotlinx.coroutines.delay
+import com.airmouse.presentation.ui.accessibility.GlassCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,32 +38,26 @@ fun AboutScreen(
     viewModel: AboutViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "logoScale")
     val logoScale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ), label = "scale"
     )
-    
+
     var showContributors by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "About",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                },
+                title = { Text("About", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -104,8 +98,6 @@ fun AboutScreen(
                     )
                 )
         ) {
-            ParticleBackground(particleCount = 20)
-            
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -114,7 +106,6 @@ fun AboutScreen(
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Animated Logo Section
                 Surface(
                     modifier = Modifier
                         .size(120.dp)
@@ -132,20 +123,19 @@ fun AboutScreen(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                // App Name with Holographic Effect
-                HolographicText(
+
+                Text(
                     text = uiState.appName,
-                    modifier = Modifier
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Version Badge
+
                 Surface(
-                    modifier = Modifier,
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
@@ -157,7 +147,7 @@ fun AboutScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                
+
                 if (uiState.buildDate.isNotEmpty()) {
                     Text(
                         text = "Built: ${uiState.buildDate}",
@@ -166,10 +156,9 @@ fun AboutScreen(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(32.dp))
-                
-                // Tagline
+
                 Text(
                     text = "Turn your Android phone into a wireless mouse using motion sensors, gestures, and voice commands.",
                     fontSize = 14.sp,
@@ -177,57 +166,35 @@ fun AboutScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                
+
                 Spacer(modifier = Modifier.height(32.dp))
-                
-                // Stats Card
+
                 GlassCard {
                     Column(
                         modifier = Modifier.padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "📊 Quick Stats",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("📊 Quick Stats", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            StatItem(
-                                value = uiState.totalDownloads.toString(),
-                                label = "Downloads",
-                                icon = Icons.Default.Download
-                            )
-                            StatItem(
-                                value = uiState.totalUsers.toString(),
-                                label = "Active Users",
-                                icon = Icons.Default.People
-                            )
-                            StatItem(
-                                value = uiState.totalGestures.toString(),
-                                label = "Gestures",
-                                icon = Icons.Default.Gesture
-                            )
+                            StatItem(value = uiState.totalDownloads.toString(), label = "Downloads", icon = Icons.Default.Download)
+                            StatItem(value = uiState.totalUsers.toString(), label = "Active Users", icon = Icons.Default.People)
+                            StatItem(value = uiState.totalGestures.toString(), label = "Gestures", icon = Icons.Default.Gesture)
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Features Section
+
                 GlassCard {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "✨ Features",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("✨ Features", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         FeatureItem("🎯", "Motion Control", "Move cursor by rotating your phone")
                         FeatureItem("👆", "Click Detection", "Quick flick for left click")
                         FeatureItem("✌️", "Double Click", "Two quick flicks")
@@ -240,19 +207,14 @@ fun AboutScreen(
                         FeatureItem("📱", "Edge Gestures", "Quick actions from screen edge")
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Tech Stack Card
+
                 GlassCard {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "🛠️ Tech Stack",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("🛠️ Tech Stack", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         TechStackItem("Android", "Kotlin, Jetpack Compose", Color(0xFF3DDC84))
                         TechStackItem("Networking", "OkHttp, WebSocket", Color(0xFF00BCD4))
                         TechStackItem("AI/ML", "TensorFlow Lite", Color(0xFFFF6D00))
@@ -261,10 +223,9 @@ fun AboutScreen(
                         TechStackItem("Server", "Go, WebSocket, TCP", Color(0xFF00ADD8))
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Team Section
+
                 GlassCard {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(
@@ -272,43 +233,30 @@ fun AboutScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "👥 Team",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text("👥 Team", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             TextButton(onClick = { showContributors = !showContributors }) {
                                 Text(if (showContributors) "Show Less" else "Show More")
                             }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         TeamMember("Arian Firoozi", "Lead Developer", "Full-stack & AI/ML")
                         TeamMember("Arsalan Talaee", "Core Developer", "Android & Networking")
-                        
+
                         AnimatedVisibility(visible = showContributors) {
                             Column {
                                 TeamMember("Dr. Mohsen Shokri", "Instructor", "Embedded Systems")
                                 TeamMember("Dr. Mehdi Kargahi", "Instructor", "Real-time Systems")
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    "University of Tehran",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    "Faculty of Electrical and Computer Engineering",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Text("University of Tehran", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Faculty of Electrical and Computer Engineering", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Open Source Libraries
+
                 GlassCard {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(
@@ -316,17 +264,13 @@ fun AboutScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "📚 Open Source Libraries",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text("📚 Open Source Libraries", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             TextButton(onClick = { showLicenses = !showLicenses }) {
                                 Text(if (showLicenses) "Hide Licenses" else "View Licenses")
                             }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         LibraryItem("Jetpack Compose", "UI Toolkit", "Apache 2.0")
                         LibraryItem("OkHttp", "Networking", "Apache 2.0")
                         LibraryItem("Coroutines", "Async Programming", "Apache 2.0")
@@ -334,11 +278,11 @@ fun AboutScreen(
                         LibraryItem("TensorFlow Lite", "ML Inference", "Apache 2.0")
                         LibraryItem("Room", "Database", "Apache 2.0")
                         LibraryItem("DataStore", "Preferences", "Apache 2.0")
-                        
+
                         AnimatedVisibility(visible = showLicenses) {
                             Column {
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Divider()
+                                HorizontalDivider()
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = "Full license information available in the app's LICENSE file.",
@@ -350,48 +294,30 @@ fun AboutScreen(
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Links Card
+
                 GlassCard {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "🔗 Links",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("🔗 Links", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
-                        
-                        LinkItem("GitHub Repository", Icons.Default.Code, "github.com/airmouse")
-                        LinkItem("Website", Icons.Default.Language, "www.airmouse.io")
-                        LinkItem("Documentation", Icons.Default.Description, "docs.airmouse.io")
-                        LinkItem("Support", Icons.Default.SupportAgent, "support@airmouse.io")
-                        LinkItem("Discord Community", Icons.Default.Chat, "discord.gg/airmouse")
+
+                        LinkItem("GitHub Repository", Icons.Default.Code, "github.com/airmouse") { viewModel.openUrl("https://github.com/airmouse") }
+                        LinkItem("Website", Icons.Default.Language, "www.airmouse.io") { viewModel.openUrl("https://www.airmouse.io") }
+                        LinkItem("Documentation", Icons.Default.Description, "docs.airmouse.io") { viewModel.openUrl("https://docs.airmouse.io") }
+                        LinkItem("Support", Icons.Default.SupportAgent, "support@airmouse.io") { viewModel.openUrl("mailto:support@airmouse.io") }
+                        LinkItem("Discord Community", Icons.AutoMirrored.Filled.Chat, "discord.gg/airmouse") { viewModel.openUrl("https://discord.gg/airmouse") }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // License Card
+
                 GlassCard {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "📄 License",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("📄 License", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "MIT License",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "Copyright (c) 2024-2025 Air Mouse Team",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("MIT License", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("Copyright (c) 2024-2025 Air Mouse Team", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "Permission is hereby granted, free of charge, to any person obtaining a copy of this software...",
@@ -400,10 +326,9 @@ fun AboutScreen(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                // Action Buttons
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -421,37 +346,21 @@ fun AboutScreen(
                             Text("Check Updates")
                         }
                     }
-                    
+
                     Button(
                         onClick = { navigationActions.navigateBack() },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Back")
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                // Copyright
-                Text(
-                    text = "© 2024-2025 Air Mouse Team",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "All rights reserved. Made with ❤️ at University of Tehran",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-                
+
+                Text("© 2024-2025 Air Mouse Team", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Text("All rights reserved. Made with ❤️ at University of Tehran", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -471,9 +380,7 @@ fun StatItem(value: String, label: String, icon: androidx.compose.ui.graphics.ve
 @Composable
 fun FeatureItem(emoji: String, title: String, description: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(text = emoji, fontSize = 22.sp, modifier = Modifier.width(36.dp))
@@ -487,18 +394,11 @@ fun FeatureItem(emoji: String, title: String, description: String) {
 @Composable
 fun TechStackItem(tech: String, description: String, color: Color) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = tech, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(text = description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -509,9 +409,7 @@ fun TechStackItem(tech: String, description: String, color: Color) {
 @Composable
 fun TeamMember(name: String, role: String, expertise: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -521,12 +419,7 @@ fun TeamMember(name: String, role: String, expertise: String) {
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = name.take(1).uppercase(),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Text(text = name.take(1).uppercase(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
         }
         Column(modifier = Modifier.weight(1f)) {
@@ -540,9 +433,7 @@ fun TeamMember(name: String, role: String, expertise: String) {
 @Composable
 fun LibraryItem(name: String, description: String, license: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -555,11 +446,11 @@ fun LibraryItem(name: String, description: String, license: String) {
 }
 
 @Composable
-fun LinkItem(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, url: String) {
+fun LinkItem(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, url: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Open URL */ }
+            .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -569,6 +460,6 @@ fun LinkItem(title: String, icon: androidx.compose.ui.graphics.vector.ImageVecto
             Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(text = url, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Icon(Icons.Default.OpenInNew, contentDescription = "Open", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

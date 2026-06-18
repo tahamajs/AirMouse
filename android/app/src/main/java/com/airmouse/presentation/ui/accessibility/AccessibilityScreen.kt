@@ -1,23 +1,23 @@
 package com.airmouse.presentation.ui.accessibility
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +40,7 @@ fun AccessibilityScreen(
                 title = { Text("Accessibility", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -48,7 +48,7 @@ fun AccessibilityScreen(
                         Icon(Icons.Default.Restore, contentDescription = "Reset")
                     }
                     IconButton(onClick = { viewModel.openAccessibilityHelp() }) {
-                        Icon(Icons.Default.Help, contentDescription = "Help")
+                        Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Help")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -75,14 +75,14 @@ fun AccessibilityScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Category Tabs
+                // Category Tabs using modern Enum entries API
                 ScrollableTabRow(
                     selectedTabIndex = selectedCategory.ordinal,
                     containerColor = Color.Transparent,
                     edgePadding = 16.dp,
                     divider = {}
                 ) {
-                    AccessibilityCategory.values().forEach { category ->
+                    AccessibilityCategory.entries.forEach { category ->
                         val isSelected = selectedCategory == category
                         LeadingIconTab(
                             selected = isSelected,
@@ -103,18 +103,20 @@ fun AccessibilityScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Content based on selected category
+                // Fixed: Wrapped dynamic composable functions inside item {} block closures
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    when (selectedCategory) {
-                        AccessibilityCategory.DISPLAY -> displaySettings(uiState, viewModel)
-                        AccessibilityCategory.FEEDBACK -> feedbackSettings(uiState, viewModel)
-                        AccessibilityCategory.GESTURE -> gestureSettings(uiState, viewModel)
-                        AccessibilityCategory.VOICE -> voiceSettings(uiState, viewModel)
-                        AccessibilityCategory.ADVANCED -> advancedSettings(uiState, viewModel)
+                    item {
+                        when (selectedCategory) {
+                            AccessibilityCategory.DISPLAY -> DisplaySettings(uiState, viewModel)
+                            AccessibilityCategory.FEEDBACK -> FeedbackSettings(uiState, viewModel)
+                            AccessibilityCategory.GESTURE -> GestureSettings(uiState, viewModel)
+                            AccessibilityCategory.VOICE -> VoiceSettings(uiState, viewModel)
+                            AccessibilityCategory.ADVANCED -> AdvancedSettings(uiState, viewModel)
+                        }
                     }
                 }
             }
@@ -122,86 +124,159 @@ fun AccessibilityScreen(
     }
 }
 
-// ----- Display Settings -----
+// ----- Custom Essential UI Architecture Atoms -----
+
 @Composable
-private fun displaySettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
-    GlassCard {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text("🖼️ Display Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            AnimatedSwitch(
-                checked = uiState.highContrast,
-                onCheckedChange = viewModel::setHighContrast,
-                label = "High Contrast Mode",
-                description = "Increase contrast for better visibility"
-            )
-
-            AnimatedSwitch(
-                checked = uiState.largeText,
-                onCheckedChange = viewModel::setLargeText,
-                label = "Large Text",
-                description = "Increase text size throughout the app"
-            )
-
-            AnimatedSwitch(
-                checked = uiState.reduceMotion,
-                onCheckedChange = viewModel::setReduceMotion,
-                label = "Reduce Motion",
-                description = "Minimize animations and transitions"
-            )
-
-            AnimatedSwitch(
-                checked = uiState.darkMode,
-                onCheckedChange = viewModel::setDarkMode,
-                label = "Dark Mode",
-                description = "Use dark theme for reduced eye strain"
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text("Custom Font Size", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text("Adjust text size to your preference", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+    ) {
+        Column(content = content)
+            @Composable
+            fun GlassCard(
+                modifier: Modifier = Modifier,
+                content: @Composable ColumnScope.() -> Unit
             ) {
-                Text("A", fontSize = 12.sp)
-                Text("${uiState.customFontSize.toInt()}sp", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text("A", fontSize = 20.sp)
+                Card(
+                    modifier = modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        content = content
+                    )
+                }
             }
 
-            Slider(
-                value = uiState.customFontSize,
-                onValueChange = viewModel::setCustomFontSize,
-                valueRange = 12f..24f,
-                modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        }
     }
+}
 
-    GlassCard {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text("🎨 Color Vision Deficiency", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ColorBlindModeSelector(
-                selectedMode = uiState.colorBlindMode,
-                onModeSelected = viewModel::setColorBlindMode
+@Composable
+fun AnimatedSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
             )
+        )
+    }
+}
+
+// ----- PascalCase Corrected Layout Components -----
+
+@Composable
+private fun DisplaySettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        GlassCard {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("🖼️ Display Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                AnimatedSwitch(
+                    checked = uiState.highContrast,
+                    onCheckedChange = viewModel::setHighContrast,
+                    label = "High Contrast Mode",
+                    description = "Increase contrast for better visibility"
+                )
+
+                AnimatedSwitch(
+                    checked = uiState.largeText,
+                    onCheckedChange = viewModel::setLargeText,
+                    label = "Large Text",
+                    description = "Increase text size throughout the app"
+                )
+
+                AnimatedSwitch(
+                    checked = uiState.reduceMotion,
+                    onCheckedChange = viewModel::setReduceMotion,
+                    label = "Reduce Motion",
+                    description = "Minimize animations and transitions"
+                )
+
+                AnimatedSwitch(
+                    checked = uiState.darkMode,
+                    onCheckedChange = viewModel::setDarkMode,
+                    label = "Dark Mode",
+                    description = "Use dark theme for reduced eye strain"
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text("Custom Font Size", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text("Adjust text size to your preference", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("A", fontSize = 12.sp)
+                    Text("${uiState.customFontSize.toInt()}sp", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("A", fontSize = 20.sp)
+                }
+
+                Slider(
+                    value = uiState.customFontSize,
+                    onValueChange = viewModel::setCustomFontSize,
+                    valueRange = 12f..24f,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+        }
+
+        GlassCard {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("🎨 Color Vision Deficiency", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ColorBlindModeSelector(
+                    selectedMode = uiState.colorBlindMode,
+                    onModeSelected = viewModel::setColorBlindMode
+                )
+            }
         }
     }
 }
 
-// ----- Feedback Settings -----
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun feedbackSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
+private fun FeedbackSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
     GlassCard {
         Column(modifier = Modifier.padding(20.dp)) {
             Text("🔊 Haptic & Sound", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -215,14 +290,14 @@ private fun feedbackSettings(uiState: AccessibilityUiState, viewModel: Accessibi
             )
 
             if (uiState.hapticFeedback) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     Text("Haptic Intensity", fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HapticIntensity.values().forEach { intensity ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        HapticIntensity.entries.forEach { intensity ->
                             FilterChip(
                                 selected = uiState.hapticIntensity == intensity,
                                 onClick = { viewModel.setHapticIntensity(intensity) },
@@ -251,9 +326,8 @@ private fun feedbackSettings(uiState: AccessibilityUiState, viewModel: Accessibi
     }
 }
 
-// ----- Gesture Settings -----
 @Composable
-private fun gestureSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
+private fun GestureSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
     GlassCard {
         Column(modifier = Modifier.padding(20.dp)) {
             Text("✋ Gesture Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -316,9 +390,8 @@ private fun gestureSettings(uiState: AccessibilityUiState, viewModel: Accessibil
     }
 }
 
-// ----- Voice Settings -----
 @Composable
-private fun voiceSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
+private fun VoiceSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
     GlassCard {
         Column(modifier = Modifier.padding(20.dp)) {
             Text("🎤 Voice Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -340,6 +413,7 @@ private fun voiceSettings(uiState: AccessibilityUiState, viewModel: Accessibilit
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             AnimatedSwitch(
@@ -359,113 +433,114 @@ private fun voiceSettings(uiState: AccessibilityUiState, viewModel: Accessibilit
     }
 }
 
-// ----- Advanced Settings -----
 @Composable
-private fun advancedSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
-    GlassCard {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text("⚙️ Advanced Accessibility", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
+private fun AdvancedSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        GlassCard {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("⚙️ Advanced Accessibility", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
 
-            AnimatedSwitch(
-                checked = uiState.switchAccess,
-                onCheckedChange = viewModel::setSwitchAccess,
-                label = "Switch Access",
-                description = "Use external switches for control"
-            )
+                AnimatedSwitch(
+                    checked = uiState.switchAccess,
+                    onCheckedChange = viewModel::setSwitchAccess,
+                    label = "Switch Access",
+                    description = "Use external switches for control"
+                )
 
-            AnimatedSwitch(
-                checked = uiState.dwellClick,
-                onCheckedChange = viewModel::setDwellClick,
-                label = "Dwell Click",
-                description = "Auto-click after cursor stops moving"
-            )
+                AnimatedSwitch(
+                    checked = uiState.dwellClick,
+                    onCheckedChange = viewModel::setDwellClick,
+                    label = "Dwell Click",
+                    description = "Auto-click after cursor stops moving"
+                )
 
-            if (uiState.dwellClick) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Dwell Time", fontSize = 13.sp)
-                    Text("${uiState.dwellTime}ms", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                if (uiState.dwellClick) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Dwell Time", fontSize = 13.sp)
+                        Text("${uiState.dwellTime}ms", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Slider(
+                        value = uiState.dwellTime.toFloat(),
+                        onValueChange = { viewModel.setDwellTime(it.toInt()) },
+                        valueRange = 500f..3000f,
+                        steps = 5,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
-                Slider(
-                    value = uiState.dwellTime.toFloat(),
-                    onValueChange = { viewModel.setDwellTime(it.toInt()) },
-                    valueRange = 500f..3000f,
-                    steps = 5,
-                    modifier = Modifier.fillMaxWidth()
+
+                AnimatedSwitch(
+                    checked = uiState.audioCues,
+                    onCheckedChange = viewModel::setAudioCues,
+                    label = "Audio Cues",
+                    description = "Sound effects for all interactions"
+                )
+
+                AnimatedSwitch(
+                    checked = uiState.flashOnClick,
+                    onCheckedChange = viewModel::setFlashOnClick,
+                    label = "Flash on Click",
+                    description = "Visual flash when clicking"
                 )
             }
-
-            AnimatedSwitch(
-                checked = uiState.audioCues,
-                onCheckedChange = viewModel::setAudioCues,
-                label = "Audio Cues",
-                description = "Sound effects for all interactions"
-            )
-
-            AnimatedSwitch(
-                checked = uiState.flashOnClick,
-                onCheckedChange = viewModel::setFlashOnClick,
-                label = "Flash on Click",
-                description = "Visual flash when clicking"
-            )
         }
-    }
 
-    GlassCard {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text("ℹ️ Accessibility Info", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
+        GlassCard {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("ℹ️ Accessibility Info", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Accessibility,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                    Surface(
+                        modifier = Modifier.size(48.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Accessibility,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Screen Reader Ready", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Air Mouse Pro is fully compatible with TalkBack and other screen readers",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Screen Reader Ready", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Air Mouse Pro is fully compatible with TalkBack and other screen readers",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = { viewModel.openAccessibilityHelp() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Learn More About Accessibility")
                 }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = { viewModel.openAccessibilityHelp() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.Help, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Learn More About Accessibility")
             }
         }
     }
 }
 
-// ----- Color Blind Mode Selector -----
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColorBlindModeSelector(
     selectedMode: ColorBlindMode,
@@ -480,7 +555,7 @@ fun ColorBlindModeSelector(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ColorBlindMode.values().forEach { mode ->
+            ColorBlindMode.entries.forEach { mode ->
                 FilterChip(
                     selected = selectedMode == mode,
                     onClick = { onModeSelected(mode) },

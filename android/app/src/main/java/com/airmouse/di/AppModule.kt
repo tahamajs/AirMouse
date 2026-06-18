@@ -14,7 +14,6 @@ import com.airmouse.utils.BatterySaver
 import com.airmouse.utils.VibrateUtils
 import com.airmouse.utils.AudioUtils
 import com.airmouse.utils.BluetoothUtils
-import com.airmouse.utils.QRScanner
 import com.airmouse.utils.PermissionHelper
 import com.airmouse.utils.PreferencesHelper
 import com.airmouse.network.ConnectionManager
@@ -62,7 +61,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideVibrator(@ApplicationContext context: Context): Vibrator {
-        return context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        return context.getSystemService(Vibrator::class.java)
     }
 
     @Provides
@@ -82,7 +81,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSensorManager(@ApplicationContext context: Context): SensorManager {
-        return context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        return context.getSystemService(SensorManager::class.java)
     }
 
     @Provides
@@ -100,7 +99,8 @@ object AppModule {
         @ApplicationContext context: Context,
         preferencesManager: PreferencesManager
     ): GestureDetector {
-        return GestureDetector(preferencesManager.getSensitivity())
+        // Aligned constructor parameters to match your codebase layout requirements
+        return GestureDetector(context, preferencesManager)
     }
 
     @Provides
@@ -124,7 +124,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideBluetoothAdapter(@ApplicationContext context: Context): BluetoothAdapter {
-        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager = context.getSystemService(BluetoothManager::class.java)
         return bluetoothManager.adapter
     }
 
@@ -148,8 +148,12 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideConnectionManager(): ConnectionManager {
-        return ConnectionManager
+    fun provideConnectionManager(
+        @ApplicationContext context: Context,
+        preferencesManager: PreferencesManager
+    ): ConnectionManager {
+        // Resolved Companion object return type mismatch by explicitly initializing instances
+        return ConnectionManager(context, preferencesManager)
     }
 
     // ==================== Application Context ====================
