@@ -1,5 +1,6 @@
 package com.airmouse.data.repository
 
+import com.airmouse.BuildConfig
 import com.airmouse.data.datasource.local.AppDatabase
 import com.airmouse.domain.repository.IUpdateRepository
 import com.airmouse.domain.repository.UpdateInfo
@@ -14,9 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
