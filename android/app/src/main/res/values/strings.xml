@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <resources>
     <string name="help_network_connection">Network &amp; Connection</string>
     <string name="help_advanced_title">Advanced Features</string>
@@ -16,7 +15,6 @@
     <string name="sensors">Sensors</string>
     <string name="live_data">Live Data</string>
     <string name="calibrate">Calibrate</string>
-    <string name="calibration_title">Calibration</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="settings">Settings</string>
@@ -102,7 +100,7 @@
     <string name="calib_ready">Sensors ready</string>
     <string name="calib_complete">Calibration complete!</string>
     <string name="calib_failed">Calibration failed: %s</string>
-    <string name="calibrated_ready">Sensors calibrated. Ready.</string>
+    <string name="calibrated_ready">Sensibrated. Ready.</string>
     <string name="calibrating_gyro">Calibrating Gyro… Do not move.</string>
     <string name="rotate_figure8">Rotate phone in 3D (figure‑8)…</string>
     <string name="calibration_complete">Calibration complete!</string>
@@ -223,10 +221,8 @@
         <string name="accel_flat_up_desc">Place device on a flat surface facing up</string>
         <string name="collection_progress">Collection Progress: %d%%</string>
         <string name="stability_meter">Stability: %.2f</string>
-        <string name="gyro_instruction">Rotate device slowly along each axis</string>
         <string name="variance_meter">Variance: %.4f</string>
         <string name="gyro_ready_desc">Gyroscope ready. Click start to continue.</string>
-        <string name="mag_instruction">Move device in a figure-8 pattern</string>
         <string name="mag_ready_desc">Magnetometer calibrated. Ready to proceed.</string>
         <string name="touchpad_hint">Use two fingers to scroll, one finger to tap</string>
     <string name="calibration_done">Calibration completed successfully!</string>
@@ -456,17 +452,6 @@
     <string name="edge_gestures">Edge Gestures</string>
     <string name="enable_edge_gestures">Enable floating action button</string>
     <string name="edge_gesture_description">Tap = click, long press = right click</string>
-    <string name="onboarding_title_1">Welcome to Air Mouse Pro</string>
-    <string name="onboarding_desc_1">Turn your phone into a wireless air mouse using motion sensors.</string>
-    <string name="onboarding_title_2">Intuitive Gestures</string>
-    <string name="onboarding_desc_2">Rotate, tilt, and move naturally to control your PC.</string>
-    <string name="onboarding_title_3">Quick Connection</string>
-    <string name="onboarding_desc_3">Scan a QR code or enter IP address to connect instantly.</string>
-    <string name="onboarding_title_4">Advanced Features</string>
-    <string name="onboarding_desc_4">Voice commands, custom gestures, statistics, and more.</string>
-    <string name="onboarding_next">Next</string>
-    <string name="onboarding_skip">Skip setup</string>
-    <string name="onboarding_get_started">Start Air Mouse</string>
     <string name="information">Information</string>
     <string name="version_format">Version %s</string>
     <string name="about_description_title">What is Air Mouse Pro?</string>
@@ -521,12 +506,10 @@
     <string name="gyro_ready">Ready to calibrate</string>
     <string name="gyro_collecting_header">Gyroscope: Keep the phone perfectly still…</string>
     <string name="gyro_collecting">Collecting samples…</string>
-    <string name="gyro_progress">Collecting… %1$d / %2$d</string>
     <string name="gyro_done">✅ Gyroscope calibration complete!</string>
     <string name="btn_start_collection">Start Collection</string>
     <string name="btn_recalibrate">Recalibrate</string>
     <string name="phone_position">Phone position</string>
-    <string name="accel_instruction_flat_up">Flat on table, screen up</string>
     <string name="accel_ready">Ready to record position</string>
     <string name="btn_record_position">Record Position</string>
     <string name="mag_ready">Move phone in figure‑8 pattern…</string>

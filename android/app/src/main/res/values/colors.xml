@@ -1,92 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary brand colors -->
+    <!-- ==================== DEEP ORANGE (Primary Brand) ==================== -->
+    <color name="deep_orange_50">#FBE9E7</color>
+    <color name="deep_orange_100">#FFCCBC</color>
+    <color name="deep_orange_200">#FFAB91</color>
+    <color name="deep_orange_300">#FF8A65</color>
+    <color name="deep_orange_400">#FF7043</color>
     <color name="deep_orange_500">#FF5722</color>
-    <color name="deep_orange_600">#F4511E</color>
-    <color name="deep_orange_700">#E64A19</color>
-    <color name="deep_orange_800">#D84315</color>
-    <color name="deep_orange_900">#BF360C</color>
-    <color name="deep_orange_100">#FFE0B2</color>
-    <color name="card_stroke">#2B3341</color>
-    <color name="accent_blue_light">#33007ACC</color>
+    <color name="deep_orange_600">#E64A19</color>
+    <color name="deep_orange_700">#D84315</color>
+    <color name="deep_orange_800">#BF360C</color>
+    <color name="deep_orange_900">#A52A0A</color>
 
-    <!-- Secondary brand colors -->
-    <color name="amber_100">#FFECB3</color>
-    <color name="amber_200">#FFE082</color>
-    <color name="amber_500">#FFC107</color>
-    <color name="amber_700">#FFA000</color>
-    <color name="amber_900">#FF6F00</color>
-    <color name="onboarding_1_bg">#FF5722</color>
-    <color name="onboarding_2_bg">#2196F3</color>
-    <color name="onboarding_3_bg">#4CAF50</color>
-    <color name="onboarding_4_bg">#9C27B0</color>
+    <!-- ==================== AMBER (Secondary Brand) ==================== -->
+    <color name="amber_100">#FFE082</color>
+    <color name="amber_200">#FFD54F</color>
+    <color name="amber_300">#FFCA28</color>
+    <color name="amber_400">#FFC107</color>
+    <color name="amber_500">#FFB300</color>
+    <color name="amber_600">#FFA000</color>
+    <color name="amber_700">#FF8F00</color>
+    <color name="amber_800">#FF6F00</color>
+    <color name="amber_900">#E65100</color>
 
-    <!-- Neutrals -->
+    <!-- ==================== BASIC COLORS ==================== -->
+    <color name="black">#000000</color>
+    <color name="black_pure">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="off_white">#F5F5F5</color>
+    <color name="error">#DC2626</color>
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFC107</color>
+    <color name="info">#2196F3</color>
+
+    <!-- ==================== NEUTRAL GRAYS ==================== -->
     <color name="grey_50">#FAFAFA</color>
     <color name="grey_100">#F5F5F5</color>
     <color name="grey_200">#EEEEEE</color>
     <color name="grey_300">#E0E0E0</color>
     <color name="grey_400">#BDBDBD</color>
-    <color name="gray_400">#BDBDBD</color> <!-- Alias for gray_400 -->
     <color name="grey_500">#9E9E9E</color>
     <color name="grey_600">#757575</color>
     <color name="grey_700">#616161</color>
     <color name="grey_800">#424242</color>
     <color name="grey_900">#212121</color>
-    <color name="black">#000000</color>
-    <color name="black_pure">#000000</color>
 
-    <!-- Semantic colors -->
-    <color name="success">#4CAF50</color>
-    <color name="warning">#FFC107</color>
-    <color name="error">#F44336</color>
-    <color name="info">#2196F3</color>
+    <!-- Aliases for consistent naming -->
+    <color name="gray_400">#BDBDBD</color>
 
-    <!-- Background / Surface -->
-    <color name="background_primary">@color/white</color>
+    <!-- ==================== SURFACE & BACKGROUND ==================== -->
+    <color name="background_primary">#FFFFFF</color>
     <color name="background_secondary">@color/grey_100</color>
-    <color name="surface">@color/white</color>
+    <color name="background_dark">#0F1115</color>
+    <color name="surface">#FAFAFA</color>
     <color name="surface_dark">#121212</color>
     <color name="surface_light">#FFFFFF</color>
     <color name="surface_variant">@color/grey_50</color>
-    <color name="primary_container">@color/deep_orange_100</color>
-    <color name="on_primary_container">@color/deep_orange_900</color>
     <color name="surface_inverse">@color/grey_900</color>
+    <color name="card_stroke">#2B3341</color>
 
-    <!-- Text -->
-    <color name="text_primary">@color/grey_900</color>
+    <!-- ==================== CONTAINER COLORS ==================== -->
+    <color name="primary_container">#442211</color>
+    <color name="on_primary_container">#FFCCBC</color>
+
+    <!-- ==================== TEXT COLORS ==================== -->
+    <color name="text_primary">#1F2937</color>
     <color name="text_secondary">@color/grey_700</color>
     <color name="text_disabled">@color/grey_500</color>
     <color name="text_hint">@color/grey_400</color>
     <color name="text_on_surface_inverse">@color/white</color>
 
-    <!-- Theme Specific aliases -->
-    <color name="light_background">@color/white</color>
-    <color name="dark_background">#121212</color>
-    <color name="background_dark">#0F1115</color>
+    <!-- Theme-specific text colors -->
     <color name="light_text_primary">@color/grey_900</color>
     <color name="light_text_secondary">@color/grey_700</color>
     <color name="dark_text_primary">@color/white</color>
     <color name="dark_text_secondary">@color/grey_400</color>
 
-    <!-- UI elements -->
+    <!-- ==================== UI ELEMENTS ==================== -->
     <color name="icon_tint">@color/grey_700</color>
     <color name="ripple_color">#20000000</color>
-    <color name="accent_blue">#007acc</color>
+    <color name="accent_blue">#007ACC</color>
+    <color name="accent_blue_light">#33007ACC</color>
     <color name="accent_orange">#FF9800</color>
     <color name="success_green">#4CAF50</color>
     <color name="error_red">#F44336</color>
-    <color name="progress_accent">#007acc</color>
-    <color name="progress_bg">#2b3341</color>
+    <color name="progress_accent">#007ACC</color>
+    <color name="progress_bg">#2B3341</color>
 
+    <!-- ==================== THEME-SPECIFIC ALIASES ==================== -->
+    <color name="colorPrimaryModern">#007ACC</color>
+    <color name="colorPrimaryVariantModern">#005F99</color>
+    <color name="colorSecondaryModern">#4CAF50</color>
+    <color name="colorSecondaryVariantModern">#388E3C</color>
+    <color name="backgroundModern">#0F1115</color>
+    <color name="surfaceModern">#171B22</color>
+    <color name="onSurfaceModern">#E5E7EB</color>
     <color name="primary_dark">#00BCD4</color>
     <color name="secondary_dark">#4CAF50</color>
-    
-    <!-- Light theme colors -->
+
+    <!-- Light theme aliases -->
     <color name="background_light">#F8FAFC</color>
     <color name="primary_light">#00BCD4</color>
     <color name="secondary_light">#4CAF50</color>
 
+    <!-- ==================== ONBOARDING BACKGROUNDS ==================== -->
+    <color name="onboarding_1_bg">#FF5722</color>
+    <color name="onboarding_2_bg">#2196F3</color>
+    <color name="onboarding_3_bg">#4CAF50</color>
+    <color name="onboarding_4_bg">#9C27B0</color>
 </resources>
