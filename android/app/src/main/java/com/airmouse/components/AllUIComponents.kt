@@ -1,17 +1,22 @@
-// AllUIComponents.kt
-package com.airmouse.ui.components
+package com.airmouse.presentation.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,10 +25,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import java.util.*
 import kotlin.random.Random
 
 // ==================== 1. CONTROL DASHBOARD ====================
@@ -100,7 +106,7 @@ fun ControlDashboard(
                     Text(
                         "X: ${cursorPosition.first} | Y: ${cursorPosition.second}",
                         fontWeight = FontWeight.Bold,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace
                     )
                 }
             }
@@ -138,7 +144,7 @@ fun ControlDashboard(
                 QuickActionButton("Calibrate", Icons.Default.Tune) { onActionClick("calibrate") }
                 QuickActionButton("Settings", Icons.Default.Settings) { onActionClick("settings") }
                 QuickActionButton("Statistics", Icons.Default.BarChart) { onActionClick("stats") }
-                QuickActionButton("Help", Icons.Default.Help) { onActionClick("help") }
+                QuickActionButton("Help", Icons.AutoMirrored.Filled.Help) { onActionClick("help") }
             }
         }
     }
@@ -146,7 +152,10 @@ fun ControlDashboard(
 
 @Composable
 fun DashboardStat(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.weight(1f)
+    ) {
         Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(32.dp))
         Spacer(modifier = Modifier.height(4.dp))
         Text(value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -184,8 +193,8 @@ fun GestureTrainingCenter(
         GestureTrainingItem("Right Click", Icons.Default.Menu, 70, 75, 60),
         GestureTrainingItem("Scroll Up", Icons.Default.ArrowUpward, 90, 92, 45),
         GestureTrainingItem("Scroll Down", Icons.Default.ArrowDownward, 88, 90, 42),
-        GestureTrainingItem("Swipe Left", Icons.Default.ArrowBack, 60, 65, 30),
-        GestureTrainingItem("Swipe Right", Icons.Default.ArrowForward, 55, 60, 28),
+        GestureTrainingItem("Swipe Left", Icons.AutoMirrored.Filled.ArrowBack, 60, 65, 30),
+        GestureTrainingItem("Swipe Right", Icons.AutoMirrored.Filled.ArrowForward, 55, 60, 28),
         GestureTrainingItem("Circle CW", Icons.Default.Autorenew, 40, 50, 20)
     )
 
@@ -250,9 +259,9 @@ fun GestureTrainingCard(gesture: GestureTrainingItem, onTrain: (String) -> Unit)
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Progress bar
+            // ✅ FIXED: LinearProgressIndicator with proper progress
             LinearProgressIndicator(
-                progress = gesture.progress / 100f,
+                progress = { gesture.progress / 100f },
                 modifier = Modifier.fillMaxWidth(),
                 color = when {
                     gesture.progress >= 80 -> Color(0xFF4CAF50)
@@ -299,7 +308,7 @@ fun MacroRecorder(
     var isRecording by remember { mutableStateOf(false) }
     var macroName by remember { mutableStateOf("") }
     var recordedActions by remember { mutableStateOf(listOf<MacroAction>()) }
-    var recordingTime by remember { mutableStateOf(0) }
+    var recordingTime by remember { mutableIntStateOf(0) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -409,7 +418,7 @@ fun MacroRecorder(
 }
 
 private fun formatTime(seconds: Int): String {
-    return String.format("%02d:%02d", seconds / 60, seconds % 60)
+    return String.format(Locale.US, "%02d:%02d", seconds / 60, seconds % 60)
 }
 
 // ==================== 4. GAME PROFILES MANAGER ====================
@@ -586,9 +595,9 @@ fun AnalyticsDashboard() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                StatSummary("Total Clicks", analyticsData.sumOf { it.clicks }.toString(), Icons.Default.PlayArrow)
-                StatSummary("Total Gestures", analyticsData.sumOf { it.gestures }.toString(), Icons.Default.Gesture)
-                StatSummary("Distance", "${analyticsData.sumOf { it.distance }.toInt()} units", Icons.Default.Map)
+                StatSummary("Total Clicks", analyticsData.map { it.clicks }.sum().toString(), Icons.Default.PlayArrow)
+                StatSummary("Total Gestures", analyticsData.map { it.gestures }.sum().toString(), Icons.Default.Gesture)
+                StatSummary("Distance", "${analyticsData.map { it.distance }.sum().toInt()} units", Icons.Default.Map)
             }
         }
     }
@@ -647,7 +656,6 @@ fun ActivityChart(data: List<AnalyticsData>) {
             )
         }
 
-        // Area under curve
         val path = androidx.compose.ui.graphics.Path().apply {
             moveTo(0f, height)
             points.forEach { lineTo(it.x, it.y) }
@@ -711,7 +719,6 @@ fun ExtensionStore(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Categories
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(listOf("All", "Gestures", "Themes", "Voice", "Gaming")) { category ->
                     FilterChip(
@@ -807,7 +814,6 @@ fun CommunityHub(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Search
             OutlinedTextField(
                 value = "",
                 onValueChange = {},
@@ -819,13 +825,11 @@ fun CommunityHub(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Posts
             posts.forEach { post ->
                 CommunityPostCard(post, onLike, onComment, onShare)
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Load more button
             Button(onClick = {}, modifier = Modifier.fillMaxWidth()) {
                 Text("Load More")
             }
@@ -881,6 +885,7 @@ fun CommunityPostCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
+                // ✅ FIXED: Using Icons.Outlined.Favorite and Icons.Filled.Favorite correctly
                 SocialButton(
                     icon = if (post.isLiked) Icons.Filled.Favorite else Icons.Outlined.Favorite,
                     label = "${post.likes}",
@@ -901,7 +906,10 @@ fun CommunityPostCard(
 
 @Composable
 fun SocialButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color, onClick: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onClick() }) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clickable { onClick() }
+    ) {
         Icon(icon, contentDescription = label, modifier = Modifier.size(16.dp), tint = color)
         Spacer(modifier = Modifier.width(4.dp))
         Text(label, fontSize = 11.sp, color = color)
