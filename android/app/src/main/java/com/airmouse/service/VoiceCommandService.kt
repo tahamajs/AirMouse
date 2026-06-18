@@ -1,12 +1,15 @@
 package com.airmouse.service
-import android.os.Bundle
-import android.util.Log
+
 import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
@@ -14,15 +17,15 @@ import android.os.Vibrator
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import androidx.core.app.ActivityCompat
+import android.util.Log
 import androidx.core.content.ContextCompat
-import com.airmouse.ConnectionManager
+import com.airmouse.network.ConnectionManager
+import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.abs
 
 @Singleton
 class VoiceCommandService @Inject constructor(
@@ -256,8 +259,8 @@ class VoiceCommandService @Inject constructor(
             "scroll down" -> connectionManager.sendScroll(-3)
             "stop listening" -> stopListening()
             "start listening" -> startListening()
-            "calibrate" -> connectionManager.sendCalibrationCommand()
-            "connect" -> connectionManager.connectToLastServer()
+            "calibrate" -> connectionManager.sendCalibrate()
+            "connect" -> connectionManager.reconnect()
             "disconnect" -> connectionManager.disconnect()
             "home" -> connectionManager.sendKeyPress(android.view.KeyEvent.KEYCODE_HOME)
             "back" -> connectionManager.sendKeyPress(android.view.KeyEvent.KEYCODE_BACK)
@@ -414,11 +417,7 @@ class VoiceCommandService @Inject constructor(
     }
 
     private fun hasMicrophonePermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
 
     fun isListening(): Boolean = isListening
