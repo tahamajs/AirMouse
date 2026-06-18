@@ -22,63 +22,63 @@ class NavigationActions(
             restoreState = true
         }
     }
-    
+
     // Bottom navigation screens
     fun navigateToHome() = navigateTo(Destinations.Home)
     fun navigateToStatistics() = navigateTo(Destinations.Statistics)
     fun navigateToSettings() = navigateTo(Destinations.Settings)
     fun navigateToHelp() = navigateTo(Destinations.Help)
-    
+
     // Info screens
     fun navigateToAbout() = navigateTo(Destinations.About)
-    
+
     // Calibration & Sensors
     fun navigateToCalibration() = navigateTo(Destinations.Calibration)
     fun navigateToSensorVisualizer() = navigateTo(Destinations.SensorVisualizer)
-    
+
     // Gesture & Touch
     fun navigateToGestureStudio() = navigateTo(Destinations.GestureStudio)
     fun navigateToEdgeGestures() = navigateTo(Destinations.EdgeGestures)
     fun navigateToTouchpad() = navigateTo(Destinations.Touchpad)
-    
+
     // Connectivity
     fun navigateToNetworkDiscovery() = navigateTo(Destinations.NetworkDiscovery)
     fun navigateToServerLogs() = navigateTo(Destinations.ServerLogs)
-    
+
     // Security & Privacy
     fun navigateToProximity() = navigateTo(Destinations.Proximity)
     fun navigateToVoiceCommands() = navigateTo(Destinations.VoiceCommands)
-    
+
     // Customization
     fun navigateToProfiles() = navigateTo(Destinations.Profiles)
     fun navigateToThemes() = navigateTo(Destinations.Themes)
-    
+
     // System
     fun navigateToBattery() = navigateTo(Destinations.Battery)
     fun navigateToAccessibility() = navigateTo(Destinations.Accessibility)
     fun navigateToTouchpadSettings() = navigateTo(Destinations.TouchpadSettings)
-    
+
     // Onboarding
     fun navigateToOnboarding() = navigateTo(Destinations.Onboarding)
-    
+
     // Navigation utilities
     fun navigateBack() {
         navController.popBackStack()
     }
-    
+
     fun navigateUp() {
         navController.navigateUp()
     }
-    
+
     fun clearBackStack() {
         navController.popBackStack(navController.graph.findStartDestination().id, inclusive = false)
     }
-    
+
     fun navigateToHomeAndClearStack() {
-        navController.popBackStack(0, false)
+        navController.popBackStack(navController.graph.findStartDestination().id, inclusive = false)
         navigateToHome()
     }
-    
+
     fun canGoBack(): Boolean = navController.previousBackStackEntry != null
 }
 

@@ -1,20 +1,20 @@
-package com.airmouse.ui.components
+package com.airmouse.presentation.ui.components
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
+/**
+ * Glassmorphism Card - Frosted glass effect card
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
@@ -26,7 +26,6 @@ fun GlassCard(
 
     Card(
         modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
             .background(
                 Brush.verticalGradient(
                     colors = if (isDarkTheme) listOf(
@@ -39,7 +38,7 @@ fun GlassCard(
                 )
             ),
         shape = RoundedCornerShape(24.dp),
-        onClick = onClick,
+        onClick = onClick ?: {},
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
         ),
@@ -59,87 +58,5 @@ fun GlassCard(
         ) {
             content()
         }
-    }
-}
-
-@Composable
-fun AnimatedGlowCard(
-    modifier: Modifier = Modifier,
-    glowColor: Color = MaterialTheme.colorScheme.primary,
-    glowIntensity: Float = 0.5f,
-    content: @Composable () -> Unit
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "glow")
-    val animatedIntensity by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "intensity"
-    )
-    
-    val finalGlow = if (glowIntensity > 0) glowIntensity else animatedIntensity
-
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        glowColor.copy(alpha = finalGlow * 0.15f),
-                        glowColor.copy(alpha = finalGlow * 0.05f)
-                    )
-                )
-            ),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = (finalGlow * 16).dp
-        )
-    ) {
-        content()
-    }
-}
-
-@Composable
-fun HolographicCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "holographic")
-    val hue by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "hue"
-    )
-    
-    val colors = listOf(
-        Color.hsv(hue, 0.8f, 1f).copy(alpha = 0.15f),
-        Color.hsv((hue + 120) % 360, 0.8f, 1f).copy(alpha = 0.1f),
-        Color.hsv((hue + 240) % 360, 0.8f, 1f).copy(alpha = 0.15f)
-    )
-
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                Brush.horizontalGradient(
-                    colors = colors
-                )
-            ),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        )
-    ) {
-        content()
     }
 }

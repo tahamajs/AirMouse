@@ -3,6 +3,7 @@ package com.airmouse.presentation.ui.help
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -10,24 +11,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.ContactSupport
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.presentation.ui.components.*
-
+import com.airmouse.presentation.ui.components.ParticleBackground
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpScreen(
@@ -36,16 +41,16 @@ fun HelpScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val filteredSections = viewModel.getFilteredSections()
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "SearchScale")
     val searchBarScale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.02f,
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ), label = "Scale"
     )
-    
+
     var showContactDialog by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
 
@@ -54,18 +59,17 @@ fun HelpScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Help & Support",
+                        text = "Help & Support",
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    // Favorites filter
                     IconButton(onClick = { viewModel.toggleShowFavoritesOnly() }) {
                         Icon(
                             imageVector = if (uiState.showFavoritesOnly) Icons.Filled.Star else Icons.Outlined.Star,
@@ -73,11 +77,9 @@ fun HelpScreen(
                             tint = if (uiState.showFavoritesOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    // Contact button
                     IconButton(onClick = { showContactDialog = true }) {
-                        Icon(Icons.Default.ContactSupport, contentDescription = "Contact")
+                        Icon(Icons.AutoMirrored.Filled.ContactSupport, contentDescription = "Contact")
                     }
-                    // Feedback button
                     IconButton(onClick = { showFeedbackDialog = true }) {
                         Icon(Icons.Default.Feedback, contentDescription = "Feedback")
                     }
@@ -102,13 +104,12 @@ fun HelpScreen(
                 )
         ) {
             ParticleBackground(particleCount = 15)
-            
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Animated Search Bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -137,14 +138,13 @@ fun HelpScreen(
                     )
                 }
 
-                // Category Chips
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(HelpCategory.values()) { category ->
+                    items(HelpCategory.entries.toTypedArray()) { category ->
                         val isSelected = uiState.selectedCategory == category
                         FilterChip(
                             selected = isSelected,
@@ -170,7 +170,6 @@ fun HelpScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Results count
                 if (uiState.searchQuery.isNotEmpty() || uiState.selectedCategory != HelpCategory.ALL) {
                     Row(
                         modifier = Modifier
@@ -193,7 +192,6 @@ fun HelpScreen(
                     }
                 }
 
-                // Help Sections
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
@@ -205,7 +203,7 @@ fun HelpScreen(
                                 onClearFilters = {
                                     viewModel.updateSearchQuery("")
                                     viewModel.selectCategory(HelpCategory.ALL)
-                                    viewModel.toggleShowFavoritesOnly()
+                                    if (uiState.showFavoritesOnly) viewModel.toggleShowFavoritesOnly()
                                 }
                             )
                         }
@@ -228,13 +226,11 @@ fun HelpScreen(
             }
         }
     }
-    
-    // Contact Dialog
+
     if (showContactDialog) {
         ContactDialog(onDismiss = { showContactDialog = false })
     }
-    
-    // Feedback Dialog
+
     if (showFeedbackDialog) {
         FeedbackDialog(onDismiss = { showFeedbackDialog = false })
     }
@@ -248,8 +244,6 @@ fun HelpSectionCard(
     onToggle: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
-    var showFullContent by remember { mutableStateOf(false) }
-    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -261,7 +255,6 @@ fun HelpSectionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -320,7 +313,6 @@ fun HelpSectionCard(
                 }
             }
 
-            // Expanded Content
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically() + fadeIn(),
@@ -332,7 +324,6 @@ fun HelpSectionCard(
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp)
                 ) {
-                    // Steps Section
                     if (section.steps.isNotEmpty()) {
                         Text(
                             text = "📋 Steps",
@@ -360,7 +351,6 @@ fun HelpSectionCard(
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    // Tips Section
                     if (section.tips.isNotEmpty()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -393,8 +383,7 @@ fun HelpSectionCard(
                             }
                         }
                     }
-                    
-                    // Related links
+
                     if (section.relatedTopics.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
@@ -412,10 +401,9 @@ fun HelpSectionCard(
                             }
                         }
                     }
-                    
-                    // Was this helpful?
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    Divider()
+                    HorizontalDivider()
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -460,7 +448,7 @@ fun EmptyHelpState(onClearFilters: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = Icons.Default.Help,
+                imageVector = Icons.AutoMirrored.Filled.Help,
                 contentDescription = "No results",
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -476,7 +464,7 @@ fun EmptyHelpState(onClearFilters: () -> Unit) {
                 text = "Try adjusting your search or filters",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedButton(onClick = onClearFilters) {
@@ -498,34 +486,27 @@ fun ContactDialog(onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
                 ContactOption(
                     icon = Icons.Default.Email,
                     title = "Email Support",
                     description = "support@airmouse.io",
                     onClick = { /* Open email */ }
                 )
-                
                 Spacer(modifier = Modifier.height(8.dp))
-                
                 ContactOption(
-                    icon = Icons.Default.Chat,
+                    icon = Icons.AutoMirrored.Filled.Chat,
                     title = "Discord Community",
                     description = "Join our Discord server",
                     onClick = { /* Open Discord */ }
                 )
-                
                 Spacer(modifier = Modifier.height(8.dp))
-                
                 ContactOption(
                     icon = Icons.Default.Code,
                     title = "GitHub Issues",
                     description = "Report bugs on GitHub",
                     onClick = { /* Open GitHub */ }
                 )
-                
                 Spacer(modifier = Modifier.height(8.dp))
-                
                 ContactOption(
                     icon = Icons.Default.Language,
                     title = "Website",
@@ -569,9 +550,9 @@ fun ContactOption(icon: androidx.compose.ui.graphics.vector.ImageVector, title: 
 
 @Composable
 fun FeedbackDialog(onDismiss: () -> Unit) {
-    var rating by remember { mutableStateOf(0) }
+    var rating by remember { mutableIntStateOf(0) }
     var feedbackText by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Send Feedback") },
@@ -579,7 +560,6 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
             Column {
                 Text("How would you rate your experience?", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(8.dp))
-                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -594,9 +574,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
-                
                 Spacer(modifier = Modifier.height(16.dp))
-                
                 OutlinedTextField(
                     value = feedbackText,
                     onValueChange = { feedbackText = it },
@@ -608,10 +586,7 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    // Submit feedback
-                    onDismiss()
-                }
+                onClick = { onDismiss() }
             ) {
                 Text("Submit")
             }

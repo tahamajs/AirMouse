@@ -1,9 +1,9 @@
 package com.airmouse.presentation.ui.help
 
 data class HelpUiState(
-    val expandedSections: Set<String> = emptySet(),
     val searchQuery: String = "",
     val selectedCategory: HelpCategory = HelpCategory.ALL,
+    val expandedSections: Set<String> = emptySet(),
     val favoriteSections: Set<String> = emptySet(),
     val showFavoritesOnly: Boolean = false
 )
@@ -15,7 +15,7 @@ enum class HelpCategory(val displayName: String) {
     GESTURES("Gestures"),
     CALIBRATION("Calibration"),
     TROUBLESHOOTING("Troubleshooting"),
-    ADVANCED("Advanced Features"),
+    ADVANCED("Advanced"),
     ACCESSIBILITY("Accessibility"),
     FAQ("FAQ")
 }
@@ -27,7 +27,5 @@ data class HelpSection(
     val category: HelpCategory,
     val steps: List<String> = emptyList(),
     val tips: List<String> = emptyList(),
-    val imageRes: Int? = null,
-    val videoUrl: String? = null,
-    val isFavorite: Boolean = false
+    val relatedTopics: List<String> = emptyList()
 )

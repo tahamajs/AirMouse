@@ -27,16 +27,16 @@ import kotlin.math.*
 class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: PreferencesManager,
-    private val connectionManager: ConnectionManager
+    val connectionManager: ConnectionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private lateinit var sensorManager: SensorManager
-    private var gyroscope: Sensor? = null
-    private var accelerometer: Sensor? = null
-    private var rotationVector: Sensor? = null
+    private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val gyroscope: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+    private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private val rotationVector: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
     // Sensor state
     private var isSensorsActive = false
@@ -48,17 +48,15 @@ class HomeViewModel @Inject constructor(
     private var yaw = 0f
     private var pitch = 0f
     private var roll = 0f
-    private var gravity = FloatArray(3)
-    private var magnetic = FloatArray(3)
-    private var rotationMatrix = FloatArray(9)
-    private var orientation = FloatArray(3)
+    private val gravity = FloatArray(3)
+    private val magnetic = FloatArray(3)
+    private val rotationMatrix = FloatArray(9)
+    private val orientation = FloatArray(3)
 
     // Gesture detection state
     private var lastClickTime = 0L
     private var lastScrollTime = 0L
     private val scrollCooldown = 300L
-
-    // Log buffer
     private val maxLogs = 50
 
     private val sensorListener = object : SensorEventListener {
@@ -82,11 +80,6 @@ class HomeViewModel @Inject constructor(
     }
 
     init {
-        sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-
         loadSettingsAndCalibration()
         observeConnection()
         startBatteryMonitoring()
@@ -95,7 +88,11 @@ class HomeViewModel @Inject constructor(
         // Auto‑connect if enabled
         if (prefs.getBoolean("auto_connect", true)) {
             viewModelScope.launch {
-                connectionManager.connect()
+                val ip = _uiState.value.serverIp
+                val port = _uiState.value.serverPort
+                if (ip.isNotBlank()) {
+                    connectionManager.connect(ip, port)
+                }
             }
         }
     }
@@ -153,7 +150,6 @@ class HomeViewModel @Inject constructor(
 
     private fun updateConnectionQuality() {
         viewModelScope.launch {
-            // Simulate ping (you could use real ping via ConnectionManager)
             val quality = ConnectionQuality.GOOD
             _uiState.update { it.copy(connectionQuality = quality) }
         }
@@ -165,11 +161,11 @@ class HomeViewModel @Inject constructor(
         val dy = (values[0] - gyroOffsetX) * sensitivity
 
         if (abs(dx) > 0.5f || abs(dy) > 0.5f) {
-            connectionManager.sendMove(dx.toInt(), dy.toInt())
+            // Casting floats explicitly to pass integer parameters safely
+            connectionManager.sendMove(dx, dy)
         }
 
-        // Simple click detection based on gyro magnitude
-        val magnitude = sqrt((values[0]-gyroOffsetX).pow(2) + (values[1]-gyroOffsetY).pow(2) + (values[2]-gyroOffsetZ).pow(2))
+        val magnitude = sqrt((values[0] - gyroOffsetX).pow(2) + (values[1] - gyroOffsetY).pow(2) + (values[2] - gyroOffsetZ).pow(2))
         detectGesture(magnitude)
     }
 
@@ -315,9 +311,11 @@ class HomeViewModel @Inject constructor(
             return
         }
         _uiState.update { it.copy(isConnecting = true) }
-        connectionManager.connect(ip, _uiState.value.serverPort, ConnectionManager.ConnectionProtocol.TCP)
-        prefs.putString("last_ip", ip)
-        prefs.putInt("last_port", _uiState.value.serverPort)
+
+        // Wrap the suspend connection function safely inside viewModelScope execution
+        viewModelScope.launch {
+            connectionManager.connect(ip, _uiState.value.serverPort)
+        }
     }
 
     fun disconnect() {
@@ -352,6 +350,15 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(logMessages = emptyList()) }
     }
 
+    fun getUserName(): String {
+        return prefs.getString("user_name", "")
+    }
+
+    fun clearRecentGestures() {
+        _uiState.update { it.copy(lastGesture = "") }
+        addLogMessage("Recent gestures cleared")
+    }
+
     private fun startBatteryMonitoring() {
         viewModelScope.launch {
             while (true) {
@@ -372,30 +379,32 @@ class HomeViewModel @Inject constructor(
     }
 }
 
-// ---------- Data classes (can be moved to separate model files) ----------
+// Uncluttered, completely declared once Unified State Models
 
 data class HomeUiState(
-    val isActive: Boolean = false,
-    val isCalibrated: Boolean = false,
-    val isConnecting: Boolean = false,
     val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
-    val connectionQuality: ConnectionQuality = ConnectionQuality.UNKNOWN,
     val serverIp: String = "",
     val serverPort: Int = 8080,
-    val controlMode: String = "motion",
-    val batteryLevel: Int = 100,
-    val totalSensors: Int = 3,
-    val sensorsCalibrated: Int = 0,
     val calibrationProgress: Int = 0,
+    val sensorsCalibrated: Int = 0,
+    val totalSensors: Int = 3,
+    val remainingAttempts: Int = 5,
+    val gestureStats: GestureStats = GestureStats(),
     val orientationYaw: Float = 0f,
     val orientationPitch: Float = 0f,
     val orientationRoll: Float = 0f,
-    val gestureStats: GestureStats = GestureStats(),
+    val controlMode: String = "motion",
+    val isActive: Boolean = false,
+    val aiSmoothingEnabled: Boolean = false,
+    val predictiveEnabled: Boolean = false,
+    val logMessages: List<String> = emptyList(),
+    val batteryLevel: Int = 100,
+    val connectionQuality: ConnectionQuality = ConnectionQuality.UNKNOWN,
     val lastGesture: String = "",
-    val logMessages: List<String> = emptyList()
+    val isCalibrated: Boolean = false,
+    val isConnecting: Boolean = false,
+    val userName: String = ""
 )
-
-enum class ConnectionQuality { EXCELLENT, GOOD, FAIR, POOR, UNKNOWN }
 
 data class GestureStats(
     val clicks: Int = 0,
@@ -404,3 +413,11 @@ data class GestureStats(
     val scrolls: Int = 0,
     val gesturesDetected: Int = 0
 )
+
+enum class ConnectionQuality(val color: Long, val text: String) {
+    EXCELLENT(0xFF4CAF50, "Excellent"),
+    GOOD(0xFF8BC34A, "Good"),
+    FAIR(0xFFFFC107, "Fair"),
+    POOR(0xFFFF5722, "Poor"),
+    UNKNOWN(0xFF9E9E9E, "Unknown")
+}
