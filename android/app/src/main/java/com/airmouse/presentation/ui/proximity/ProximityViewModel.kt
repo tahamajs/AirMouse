@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
@@ -45,7 +46,12 @@ class ProximityViewModel @Inject constructor(
             val action = intent.action
             when (action) {
                 BluetoothDevice.ACTION_FOUND -> {
-                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                    val device = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    }
                     val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE).toInt()
 
                     device?.let {
@@ -486,3 +492,39 @@ class ProximityViewModel @Inject constructor(
         }
     }
 }
+
+data class ProximityUiState(
+    val isEnabled: Boolean = false,
+    val isServiceRunning: Boolean = false,
+    val deviceMac: String = "",
+    val connectedDevice: String? = null,
+    val currentDistance: Float? = null,
+    val rssi: Int = 0,
+    val signalStrength: SignalStrength = SignalStrength.NONE,
+    val isNear: Boolean = false,
+    val status: String = "Service stopped",
+    val statusColor: Long = 0xFF9E9E9E,
+    val nearThreshold: Float = 1.5f,
+    val farThreshold: Float = 3.0f,
+    val lockActionEnabled: Boolean = true,
+    val unlockActionEnabled: Boolean = true,
+    val lockScreenTimeout: Int = 0,
+    val vibrationOnLock: Boolean = true,
+    val notificationOnLock: Boolean = true,
+    val isCalibrating: Boolean = false,
+    val calibrationProgress: Int = 0,
+    val calibrationStatus: String = "",
+    val history: List<ProximityHistoryEntry> = emptyList(),
+    val errorMessage: String? = null
+)
+
+enum class SignalStrength {
+    NONE, POOR, FAIR, GOOD, EXCELLENT
+}
+
+data class ProximityHistoryEntry(
+    val timestamp: Long,
+    val distance: Float,
+    val isNear: Boolean,
+    val rssi: Int
+)

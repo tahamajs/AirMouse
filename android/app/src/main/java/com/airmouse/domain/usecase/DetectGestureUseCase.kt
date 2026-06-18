@@ -4,6 +4,7 @@ package com.airmouse.domain.usecase
 import com.airmouse.domain.model.Gesture
 import com.airmouse.domain.model.GestureType
 import com.airmouse.domain.repository.IGestureRepository
+import com.airmouse.domain.repository.ISettingsRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import kotlin.math.abs
