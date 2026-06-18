@@ -10,8 +10,9 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
-import com.airmouse.ConnectionManager
+import com.airmouse.network.ConnectionManager
 import com.airmouse.R
+import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import javax.inject.Inject
@@ -65,7 +66,6 @@ class EdgeGestureService : Service() {
         isActive = true
 
         createFloatingView()
-        updateNotification()
     }
 
     fun stopEdgeGestures() {
@@ -89,9 +89,7 @@ class EdgeGestureService : Service() {
             else
                 WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            androidx.core.view.ViewCompat.getWindowInsetsController(floatingView)?.let {
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-            } ?: 0
+            android.graphics.PixelFormat.TRANSLUCENT
         )
 
         params.gravity = Gravity.TOP or Gravity.START
@@ -103,7 +101,6 @@ class EdgeGestureService : Service() {
         setupTouchListener()
         setupActionButtons()
 
-        // Auto-hide after 3 seconds
         scheduleHide()
     }
 
@@ -115,25 +112,19 @@ class EdgeGestureService : Service() {
                     startY = event.rawY
                     initialX = (view.layoutParams as WindowManager.LayoutParams).x
                     initialY = (view.layoutParams as WindowManager.LayoutParams).y
-
-                    // Show expanded view
                     expandView()
-
                     true
                 }
                 android.view.MotionEvent.ACTION_MOVE -> {
                     val dx = event.rawX - startX
                     val dy = event.rawY - startY
-
                     val params = view.layoutParams as WindowManager.LayoutParams
                     params.x = initialX + dx.toInt()
                     params.y = initialY + dy.toInt()
                     windowManager.updateViewLayout(view, params)
-
                     true
                 }
                 android.view.MotionEvent.ACTION_UP -> {
-                    // Schedule hide after delay
                     scheduleHide()
                     true
                 }
@@ -184,7 +175,6 @@ class EdgeGestureService : Service() {
             params.height = dpToPx(EXPANDED_SIZE)
             windowManager.updateViewLayout(view, params)
 
-            // Show action buttons
             val container = view.findViewById<FrameLayout>(R.id.edge_gesture_container)
             container?.alpha = 1f
         }
@@ -200,7 +190,6 @@ class EdgeGestureService : Service() {
             params.height = dpToPx(COLLAPSED_SIZE)
             windowManager.updateViewLayout(view, params)
 
-            // Hide action buttons
             val container = view.findViewById<FrameLayout>(R.id.edge_gesture_container)
             container?.alpha = 0f
         }
@@ -224,10 +213,6 @@ class EdgeGestureService : Service() {
                 collapseView()
             }
         }
-    }
-
-    private fun updateNotification() {
-        // Update notification if needed
     }
 
     private fun dpToPx(dp: Int): Int {
