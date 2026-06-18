@@ -1,14 +1,18 @@
+// app/src/main/java/com/airmouse/presentation/ui/edge/EdgeGesturesUiState.kt
 package com.airmouse.presentation.ui.edge
 
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 
 data class EdgeGesturesUiState(
     val isEnabled: Boolean = false,
     val volumeUpAction: EdgeAction = EdgeAction.LEFT_CLICK,
     val volumeDownAction: EdgeAction = EdgeAction.RIGHT_CLICK,
-    val longPressAction: EdgeAction = EdgeAction.SCROLL,
+    // FIXED: Changed from SCROLL to SCROLL_UP to match existing enum values
+    val longPressAction: EdgeAction = EdgeAction.SCROLL_UP,
     val doublePressAction: EdgeAction = EdgeAction.DOUBLE_CLICK,
     val vibrationFeedback: Boolean = true,
     val screenEdgeSensitivity: Float = 0.2f,
@@ -28,8 +32,9 @@ enum class EdgeAction(
     DOUBLE_CLICK("Double Click", "Simulate double click", Icons.Default.Cached),
     SCROLL_UP("Scroll Up", "Scroll up", Icons.Default.ArrowUpward),
     SCROLL_DOWN("Scroll Down", "Scroll down", Icons.Default.ArrowDownward),
-    VOLUME_UP("Volume Up", "Increase system volume", Icons.Default.VolumeUp),
-    VOLUME_DOWN("Volume Down", "Decrease system volume", Icons.Default.VolumeDown),
+    // FIXED: Swapped to non-deprecated AutoMirrored assets
+    VOLUME_UP("Volume Up", "Increase system volume", Icons.AutoMirrored.Filled.VolumeUp),
+    VOLUME_DOWN("Volume Down", "Decrease system volume", Icons.AutoMirrored.Filled.VolumeDown),
     PREV_TRACK("Previous Track", "Previous media track", Icons.Default.SkipPrevious),
     NEXT_TRACK("Next Track", "Next media track", Icons.Default.SkipNext),
     PLAY_PAUSE("Play/Pause", "Play or pause media", Icons.Default.PlayArrow),

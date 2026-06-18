@@ -12,8 +12,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import androidx.core.app.ActivityCompat
-import com.airmouse.utils.LogManager
+import androidx.core.content.ContextCompat
 
 /**
  * Bluetooth utilities for device discovery and connection management.
@@ -26,7 +25,7 @@ class BluetoothUtils(private val context: Context) {
     }
 
     private val bluetoothManager: BluetoothManager by lazy {
-        context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        context.getSystemService(BluetoothManager::class.java)
     }
 
     private val bluetoothAdapter: BluetoothAdapter? by lazy {
@@ -43,24 +42,43 @@ class BluetoothUtils(private val context: Context) {
         return bluetoothAdapter?.isEnabled == true
     }
 
+    @Suppress("DEPRECATION")
     fun enableBluetooth(): Boolean {
-        return bluetoothAdapter?.enable() == true
+        // Enforced explicit permission check to satisfy lint security guards
+        if (!hasBluetoothPermission()) return false
+        return try {
+            bluetoothAdapter?.enable() == true
+        } catch (e: SecurityException) {
+            LogManager.warn("SecurityException: Failed to programmatically enable bluetooth: ${e.message}", TAG)
+            false
+        }
     }
 
+    @Suppress("DEPRECATION")
     fun disableBluetooth(): Boolean {
-        return bluetoothAdapter?.disable() == true
+        if (!hasBluetoothPermission()) return false
+        return try {
+            bluetoothAdapter?.disable() == true
+        } catch (e: SecurityException) {
+            LogManager.warn("SecurityException: Failed to programmatically disable bluetooth: ${e.message}", TAG)
+            false
+        }
     }
 
-    @Suppress("MissingPermission")
     fun getBondedDevices(): List<BluetoothDevice> {
         if (!hasBluetoothPermission()) return emptyList()
-        return bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
+        return try {
+            bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
+        } catch (e: SecurityException) {
+            emptyList()
+        }
     }
 
-    fun getDeviceName(address: String): String? {
+    fun getDeviceName(device: BluetoothDevice): String? {
+        if (!hasBluetoothPermission()) return null
         return try {
-            bluetoothAdapter?.getRemoteDevice(address)?.name
-        } catch (e: Exception) {
+            device.name
+        } catch (e: SecurityException) {
             null
         }
     }
@@ -69,22 +87,19 @@ class BluetoothUtils(private val context: Context) {
         return context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
     }
 
+    @Suppress("DEPRECATION")
     fun getBluetoothAddress(): String? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (hasBluetoothPermission()) {
-                @Suppress("DEPRECATION")
-                bluetoothAdapter?.address
-            } else null
-        } else {
-            @Suppress("DEPRECATION")
+        if (!hasBluetoothPermission()) return null
+        return try {
             bluetoothAdapter?.address
+        } catch (e: SecurityException) {
+            null
         }
     }
 
     /**
      * Start scanning for Bluetooth devices
      */
-    @Suppress("MissingPermission")
     fun startScanning(
         onDeviceFound: (BluetoothDevice, Int) -> Unit,
         onComplete: () -> Unit
@@ -109,23 +124,23 @@ class BluetoothUtils(private val context: Context) {
         onScanCompleteListener = onComplete
         isScanning = true
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            startLeScan()
-        } else {
-            startClassicScan()
-        }
+        // Cleaned up obsolete legacy SDK checks since SDK_INT is always modern
+        startLeScan()
 
-        // Stop scanning after duration
         handler.postDelayed({
             stopScanning()
         }, SCAN_DURATION_MS)
     }
 
-    @Suppress("MissingPermission")
     private fun startLeScan() {
-        val scanner = bluetoothAdapter?.bluetoothLeScanner
+        val scanner = try {
+            bluetoothAdapter?.bluetoothLeScanner
+        } catch (e: SecurityException) {
+            null
+        }
+
         if (scanner == null) {
-            LogManager.warn("BLE scanner not available", TAG)
+            LogManager.warn("BLE scanner not available or restricted", TAG)
             stopScanning()
             return
         }
@@ -134,14 +149,16 @@ class BluetoothUtils(private val context: Context) {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 val device = result.device
                 val rssi = result.rssi
-                device.name?.let {
+                val name = try { device.name } catch (e: SecurityException) { null }
+                name?.let {
                     onDeviceFoundListener?.invoke(device, rssi)
                 }
             }
 
             override fun onBatchScanResults(results: List<ScanResult>) {
                 results.forEach { result ->
-                    result.device.name?.let {
+                    val name = try { result.device.name } catch (e: SecurityException) { null }
+                    name?.let {
                         onDeviceFoundListener?.invoke(result.device, result.rssi)
                     }
                 }
@@ -153,24 +170,23 @@ class BluetoothUtils(private val context: Context) {
             }
         }
 
-        scanner.startScan(scanCallback)
+        try {
+            scanner.startScan(scanCallback)
+        } catch (e: SecurityException) {
+            LogManager.warn("Failed to initiate BLE scanning: ${e.message}", TAG)
+            stopScanning()
+        }
     }
 
-    @Suppress("MissingPermission")
-    private fun startClassicScan() {
-        bluetoothAdapter?.startDiscovery()
-    }
-
-    @Suppress("MissingPermission")
     fun stopScanning() {
         if (!isScanning) return
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        try {
             scanCallback?.let {
                 bluetoothAdapter?.bluetoothLeScanner?.stopScan(it)
             }
-        } else {
-            bluetoothAdapter?.cancelDiscovery()
+        } catch (e: SecurityException) {
+            LogManager.warn("Security restriction encountered while terminating scanning infrastructure: ${e.message}", TAG)
         }
 
         isScanning = false
@@ -181,22 +197,18 @@ class BluetoothUtils(private val context: Context) {
     }
 
     fun getDeviceMacAddress(device: BluetoothDevice): String {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ requires permission
-            if (hasBluetoothPermission()) device.address else "Unknown"
-        } else {
-            device.address
-        }
+        if (!hasBluetoothPermission()) return "Unknown"
+        return device.address
     }
 
     fun isScanning(): Boolean = isScanning
 
     private fun hasBluetoothPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
-                    ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
         } else {
-            ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH) == PackageManager.PERMISSION_GRANTED
         }
     }
 

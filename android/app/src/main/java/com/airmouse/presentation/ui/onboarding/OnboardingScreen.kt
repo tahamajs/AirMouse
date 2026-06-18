@@ -3,6 +3,7 @@ package com.airmouse.presentation.ui.onboarding
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -20,11 +21,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,7 +48,6 @@ fun OnboardingScreen(
     val onboardingItems = viewModel.getOnboardingItems()
     val pagerState = rememberPagerState(pageCount = { onboardingItems.size })
     val coroutineScope = rememberCoroutineScope()
-    val configuration = LocalConfiguration.current
 
     // Auto-advance animation for welcome page
     LaunchedEffect(uiState.currentPage, uiState.showWelcomeAnimation) {
@@ -86,7 +88,6 @@ fun OnboardingScreen(
                     )
                 )
         ) {
-            // Animated background particles
             AnimatedBackground(uiState.currentPage)
 
             Column(
@@ -102,7 +103,6 @@ fun OnboardingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Progress indicator
                     Row(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -146,12 +146,13 @@ fun OnboardingScreen(
                         targetState = page,
                         transitionSpec = {
                             fadeIn(animationSpec = tween(400, easing = FastOutSlowInEasing)) +
-                                    slideInHorizontally { it } togetherWith
+                                    slideInHorizontally { width -> width } togetherWith
                                     fadeOut(animationSpec = tween(300)) +
-                                    slideOutHorizontally { -it }
-                        }
-                    ) {
-                        when (page) {
+                                    slideOutHorizontally { width -> -width }
+                        },
+                        label = "pager_transition"
+                    ) { targetPage ->
+                        when (targetPage) {
                             0 -> WelcomePage(item, animationProgress, viewModel)
                             1 -> FeaturesPage(item, viewModel)
                             2 -> ConnectPage(item, viewModel)
@@ -169,7 +170,6 @@ fun OnboardingScreen(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Page indicators
                     Row(
                         modifier = Modifier.padding(bottom = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -191,7 +191,6 @@ fun OnboardingScreen(
                         }
                     }
 
-                    // Navigation Buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -206,7 +205,7 @@ fun OnboardingScreen(
                                 },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedButtonDefaults.colors(
+                                colors = ButtonDefaults.outlinedButtonColors(
                                     containerColor = Color.White.copy(alpha = 0.1f),
                                     contentColor = Color.White
                                 )
@@ -230,7 +229,7 @@ fun OnboardingScreen(
                                 }
                             },
                             modifier = Modifier
-                                .weight(if (pagerState.currentPage > 0) 1f else 1f)
+                                .weight(1f)
                                 .height(52.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
@@ -257,13 +256,14 @@ fun OnboardingScreen(
 
 @Composable
 fun AnimatedBackground(currentPage: Int) {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "bg_transition")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(20000, easing = LinearEasing)
-        )
+        ),
+        label = "rotation"
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -297,7 +297,6 @@ fun WelcomePage(item: OnboardingItem, animationProgress: Float, viewModel: Onboa
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Animated Logo
         Surface(
             modifier = Modifier
                 .size(140.dp)
@@ -318,7 +317,6 @@ fun WelcomePage(item: OnboardingItem, animationProgress: Float, viewModel: Onboa
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Title with fade-in
         AnimatedText(
             text = item.title,
             fontSize = 32.sp,
@@ -330,7 +328,6 @@ fun WelcomePage(item: OnboardingItem, animationProgress: Float, viewModel: Onboa
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Description with fade-in
         AnimatedText(
             text = item.description,
             fontSize = 16.sp,
@@ -551,7 +548,6 @@ fun VoicePage(item: OnboardingItem, viewModel: OnboardingViewModel) {
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        // Animated voice wave
         VoiceWaveAnimation(accentColor = item.accentColor)
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -566,7 +562,7 @@ fun VoicePage(item: OnboardingItem, viewModel: OnboardingViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
 
         val commands = listOf("click", "double click", "right click", "scroll up", "scroll down", "next slide", "previous slide", "lock screen")
-        
+
         commands.chunked(2).forEach { rowCommands ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -597,7 +593,7 @@ fun VoicePage(item: OnboardingItem, viewModel: OnboardingViewModel) {
 
 @Composable
 fun VoiceWaveAnimation(accentColor: Color) {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "voice_wave_transition")
     val waveHeights = List(5) { index ->
         infiniteTransition.animateFloat(
             initialValue = 20f,
@@ -653,22 +649,21 @@ fun ProximityPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        // Proximity circle animation
         Box(
             modifier = Modifier.size(200.dp),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val radius = size.width / 2 * (0.5f + distance * 0.3f)
+                val radius = (size.width / 2f) * (0.5f + distance * 0.3f)
                 drawCircle(
                     color = item.accentColor.copy(alpha = 0.3f),
                     radius = radius,
-                    center = Offset(size.width / 2, size.height / 2)
+                    center = Offset(size.width / 2f, size.height / 2f)
                 )
                 drawCircle(
                     color = item.accentColor,
                     radius = 40f,
-                    center = Offset(size.width / 2, size.height / 2)
+                    center = Offset(size.width / 2f, size.height / 2f)
                 )
             }
             Icon(
@@ -710,7 +705,6 @@ fun FinalPage(item: OnboardingItem, viewModel: OnboardingViewModel, navigationAc
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Success animation
         Surface(
             modifier = Modifier.size(120.dp),
             shape = CircleShape,
@@ -747,7 +741,6 @@ fun FinalPage(item: OnboardingItem, viewModel: OnboardingViewModel, navigationAc
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Preferences summary
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -779,7 +772,14 @@ fun PreferenceRow(label: String, value: String, accentColor: Color) {
 }
 
 @Composable
-fun AnimatedText(text: String, fontSize: Int, fontWeight: FontWeight = FontWeight.Normal, color: Color, textAlign: TextAlign, delay: Long) {
+fun AnimatedText(
+    text: String,
+    fontSize: TextUnit,
+    fontWeight: FontWeight = FontWeight.Normal,
+    color: Color,
+    textAlign: TextAlign,
+    delay: Long
+) {
     var isVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -789,70 +789,14 @@ fun AnimatedText(text: String, fontSize: Int, fontWeight: FontWeight = FontWeigh
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(animationSpec = tween(600)) + slideInVertically { it / 2 }
+        enter = fadeIn(animationSpec = tween(600)) + slideInVertically { boxHeight -> boxHeight / 2 }
     ) {
         Text(
             text = text,
-            fontSize = fontSize.sp,
+            fontSize = fontSize,
             fontWeight = fontWeight,
             color = color,
             textAlign = textAlign
         )
     }
-}
-
-// OnboardingScreen.kt - Use these components:
-@Composable
-fun OnboardingScreen() {
-    // Animated gradient background
-    AnimatedGradientBackground(
-        colors = listOf(Color(0xFF1A1D24), Color(0xFF0F1115))
-    )
-    
-    // Floating particles effect
-    FloatingParticles(count = 50)
-    
-    // Typewriter text for intro
-    TypewriterText(
-        text = "Welcome to Air Mouse Pro",
-        style = MaterialTheme.typography.headlineLarge
-    )
-    
-    // Holographic text for branding
-    HolographicText(text = "Air Mouse")
-    
-    // Interactive tutorial cards
-    InteractiveTutorialCard(
-        title = "Motion Control",
-        description = "Move your phone to control the cursor",
-        icon = Icons.Default.Mouse,
-        currentStep = 1,
-        totalSteps = 4,
-        onNext = { /* next */ },
-        onSkip = { /* skip */ }
-    )
-    
-    InteractiveTutorialCard(
-        title = "Gesture Recognition",
-        description = "Quick flips for clicks and scrolls",
-        icon = Icons.Default.Gesture,
-        currentStep = 2,
-        totalSteps = 4,
-        onNext = { /* next */ },
-        onSkip = { /* skip */ }
-    )
-    
-    // Animated checkbox for agreements
-    AnimatedCheckbox(
-        checked = agreed,
-        onCheckedChange = { /* agree */ },
-        label = "I agree to the terms"
-    )
-    
-    // Gradient button to proceed
-    GradientTextButton(
-        onClick = { /* start */ },
-        text = "Get Started",
-        gradient = listOf(Color(0xFF00BCD4), Color(0xFF4CAF50))
-    )
 }

@@ -4,7 +4,6 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,10 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +28,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.abs
+import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +44,7 @@ fun GestureStudioScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         "Gesture Studio",
                         fontWeight = FontWeight.Bold
@@ -82,7 +81,6 @@ fun GestureStudioScreen(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Recording Card
                 item {
                     RecordingCard(
                         uiState = uiState,
@@ -95,7 +93,6 @@ fun GestureStudioScreen(
                     )
                 }
 
-                // Training progress card
                 if (uiState.isTraining) {
                     item {
                         TrainingProgressCard(
@@ -106,7 +103,6 @@ fun GestureStudioScreen(
                     }
                 }
 
-                // Gesture recognition result
                 if (uiState.lastRecognizedGesture != null && uiState.lastRecognizedGesture != "none") {
                     item {
                         RecognitionResultCard(
@@ -117,7 +113,6 @@ fun GestureStudioScreen(
                     }
                 }
 
-                // Gestures list header
                 item {
                     Text(
                         text = "🎯 Your Custom Gestures",
@@ -154,7 +149,6 @@ fun GestureStudioScreen(
                 }
             }
 
-            // Dialogs
             if (uiState.showDeleteDialog && uiState.selectedGesture != null) {
                 DeleteGestureDialog(
                     gestureName = uiState.selectedGesture?.name ?: "",
@@ -203,7 +197,6 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Error/Success Snackbar
             if (uiState.errorMessage != null) {
                 Snackbar(
                     modifier = Modifier
@@ -264,12 +257,11 @@ fun RecordingCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Sensor type selector
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                SensorType.values().forEach { sensor ->
+                SensorType.entries.forEach { sensor ->
                     FilterChip(
                         selected = uiState.selectedSensor == sensor,
                         onClick = { onSensorSelected(sensor) },
@@ -284,7 +276,6 @@ fun RecordingCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Waveform visualization
             if (uiState.showWaveform && waveformData.samples.isNotEmpty()) {
                 WaveformVisualizer(
                     data = waveformData,
@@ -296,7 +287,6 @@ fun RecordingCard(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Recording button
             Button(
                 onClick = {
                     if (uiState.isRecording) onStopRecording()
@@ -319,11 +309,10 @@ fun RecordingCard(
                 Text(if (uiState.isRecording) "Stop Recording" else "Start Recording")
             }
 
-            // Progress and quality indicators
             if (uiState.progress > 0 && uiState.progress < 100) {
                 Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
-                    progress = uiState.progress / 100f,
+                    progress = { uiState.progress / 100f },
                     modifier = Modifier.fillMaxWidth(),
                     color = when (uiState.recordingQuality) {
                         RecordingQuality.EXCELLENT -> Color(0xFF4CAF50)
@@ -359,45 +348,45 @@ fun RecordingCard(
 
 @Composable
 fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifier: Modifier = Modifier) {
-    val animatedAlpha by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
-    
+    val animatedAlpha by animateFloatAsState(targetValue = 1f, animationSpec = tween(500), label = "Alpha")
+
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
         val centerY = height / 2
-        
+
         if (data.samples.isEmpty()) return@Canvas
-        
+
         val stepX = width / data.samples.size
         val maxAbs = max(abs(data.maxValue), abs(data.minValue)).coerceAtLeast(0.1f)
-        
+
         val colors = listOf(
-            Color(0xFFFF5722), // Gyro X
-            Color(0xFF4CAF50), // Gyro Y
-            Color(0xFF2196F3), // Gyro Z
-            Color(0xFFFFC107), // Accel X
-            Color(0xFF9C27B0), // Accel Y
-            Color(0xFF00BCD4)  // Accel Z
+            Color(0xFFFF5722),
+            Color(0xFF4CAF50),
+            Color(0xFF2196F3),
+            Color(0xFFFFC107),
+            Color(0xFF9C27B0),
+            Color(0xFF00BCD4)
         )
-        
+
         val indices = when (sensorType) {
             SensorType.GYROSCOPE -> 0..2
             SensorType.ACCELEROMETER -> 3..5
             SensorType.MAGNETOMETER -> 6..8
             SensorType.ALL -> 0..5
         }
-        
+
         for (channel in indices) {
             if (channel >= data.samples.size) continue
-            
+
             val path = Path()
             var isFirst = true
-            
+
             for (i in data.samples.indices) {
                 val x = i * stepX
                 val normalizedY = (data.samples[i] / maxAbs).coerceIn(-1f, 1f)
                 val y = centerY - (normalizedY * centerY)
-                
+
                 if (isFirst) {
                     path.moveTo(x, y)
                     isFirst = false
@@ -405,15 +394,14 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
                     path.lineTo(x, y)
                 }
             }
-            
+
             drawPath(
                 path = path,
                 color = colors[channel % colors.size].copy(alpha = animatedAlpha),
                 style = Stroke(width = 2f, cap = StrokeCap.Round)
             )
         }
-        
-        // Draw zero line
+
         drawLine(
             color = Color.White.copy(alpha = 0.2f),
             start = Offset(0f, centerY),
@@ -426,16 +414,17 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
 
 @Composable
 fun AnimatedRecordingIndicator() {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "Pulse")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.5f,
         animationSpec = infiniteRepeatable(
             animation = tween(500, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ),
+        label = "IndicatorScale"
     )
-    
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -474,7 +463,7 @@ fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: I
             }
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = progress / 100f,
+                progress = { progress / 100f },
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.primary
             )
@@ -485,13 +474,15 @@ fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: I
 
 @Composable
 fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition()
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
+    var isTargetReached by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { isTargetReached = true }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isTargetReached) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "EntranceScale"
     )
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -611,7 +602,7 @@ fun GestureCard(
                         }
                     ) {
                         Text(
-                            gesture.quality.takeIf { it.isNotEmpty() } ?: "UNKNOWN",
+                            gesture.quality.ifEmpty { "UNKNOWN" },
                             fontSize = 10.sp,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             color = when (gesture.quality) {
@@ -677,7 +668,7 @@ fun TrainAllDialog(gestureCount: Int, onConfirm: () -> Unit, onDismiss: () -> Un
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Train All Gestures") },
-        text = { 
+        text = {
             Text("Train the classifier with all $gestureCount saved gestures. This will improve recognition accuracy and may take a few seconds.")
         },
         confirmButton = {
@@ -707,7 +698,7 @@ fun ExportDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 fun ImportDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit, isImporting: Boolean, importProgress: Int) {
     var filePath by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Import Gestures") },
@@ -726,7 +717,7 @@ fun ImportDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit, isImporting
                 )
                 if (isImporting) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(progress = importProgress / 100f, modifier = Modifier.fillMaxWidth())
+                    LinearProgressIndicator(progress = { importProgress / 100f }, modifier = Modifier.fillMaxWidth())
                     Text("Importing... $importProgress%", fontSize = 11.sp)
                 }
             }
@@ -761,66 +752,16 @@ fun GestureDetailsDialog(gesture: CustomGestureTemplate, onDismiss: () -> Unit) 
                 if (gesture.features != null) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text("Features:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    gesture.features?.forEach { (key, value) ->
-                        DetailsRow(key, String.format("%.3f", value))
+                    gesture.features.forEach { (key, value) ->
+                        DetailsRow(key, String.format(Locale.getDefault(), "%.3f", value))
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
-        }
-    )
-}
-
-@Composable
-fun PlaybackDialog(gesture: CustomGestureTemplate, speed: Float, onSpeedChange: (Float) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Playback: ${gesture.name.replace("_", " ")}") },
-        text = {
-            Column {
-                Text("Speed: ${speed}x", fontSize = 12.sp)
-                Slider(
-                    value = speed,
-                    onValueChange = onSpeedChange,
-                    valueRange = 0.5f..2f,
-                    steps = 3
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("Samples: ${gesture.sampleCount}", fontSize = 12.sp)
-                Text("Duration: ${gesture.duration}s", fontSize = 12.sp)
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Mini waveform preview
-                if (gesture.samples.isNotEmpty()) {
-                    val previewData = gesture.samples.take(50).map { it[0] }
-                    Canvas(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.3f))
-                    ) {
-                        val width = size.width
-                        val height = size.height
-                        val centerY = height / 2
-                        val stepX = width / previewData.size
-                        val maxVal = previewData.maxOrNull()?.let { maxOf(abs(it), 0.1f) } ?: 0.1f
-                        
-                        val path = Path()
-                        previewData.forEachIndexed { i, value ->
-                            val x = i * stepX
-                            val y = centerY - (value / maxVal) * centerY
-                            if (i == 0) path.moveTo(x, y)
-                            else path.lineTo(x, y)
-                        }
-                        drawPath(path, Color(0xFFFF5722), style = Stroke(width = 2f))
-                    }
-                }
+            TextButton(onClick = onDismiss) {
+                Text("Close")
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
         }
     )
 }
@@ -828,55 +769,45 @@ fun PlaybackDialog(gesture: CustomGestureTemplate, speed: Float, onSpeedChange: 
 @Composable
 fun DetailsRow(label: String, value: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.Monospace)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+        Text(value, fontWeight = FontWeight.Medium, fontSize = 13.sp)
     }
 }
 
-
-// GestureStudioScreen.kt - Use these components:
 @Composable
-fun GestureStudioScreen() {
-    Column {
-        // Gesture waveform visualization
-        GestureWaveform(
-            dataPoints = gestureData,
-            color = Color(0xFF00BCD4),
-            animated = true,
-            showPeaks = true
-        )
-        
-        // Voice wave for voice commands
-        VoiceWaveAnimation(isActive = isListening)
-        
-        // 3D sensor visualizer
-        SensorVisualizer(
-            roll = currentRoll,
-            pitch = currentPitch,
-            yaw = currentYaw,
-            size = VisualizerSize.LARGE
-        )
-        
-        // Tutorial cards for new gestures
-        InteractiveTutorialCard(
-            title = "Record New Gesture",
-            description = "Move your phone in a smooth motion",
-            icon = Icons.Default.Gesture,
-            currentStep = 1,
-            totalSteps = 3,
-            onNext = { /* next step */ },
-            onSkip = { /* skip */ }
-        )
-        
-        // Progress indicator
-        CircularProgressWithLabel(progress = trainingProgress)
-        
-        // Animated counter for samples
-        AnimatedCounter(targetValue = sampleCount, suffix = " samples collected")
-    }
+fun PlaybackDialog(gesture: CustomGestureTemplate, speed: Float, onSpeedChange: (Float) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Gesture Playback: ${gesture.name}") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Simulating raw gesture sample playback vector mapping.")
+                Spacer(modifier = Modifier.height(16.dp))
+                Slider(
+                    value = speed,
+                    onValueChange = onSpeedChange,
+                    valueRange = 0.5f..2.0f
+                )
+                Text("Speed: ${String.format(Locale.getDefault(), "%.1fx", speed)}", fontSize = 12.sp)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Done") }
+        }
+    )
 }
+
+// Placeholder Data Classes to satisfy data types if omitted elsewhere
+data class CustomGestureTemplate(
+    val id: String,
+    val name: String,
+    val isTrained: Boolean,
+    val quality: String,
+    val createdAt: Long,
+    val sampleCount: Int,
+    val duration: Float,
+    val features: Map<String, Float>? = null
+)

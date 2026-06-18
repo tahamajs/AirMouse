@@ -32,39 +32,6 @@ import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ==================== DATA CLASSES ====================
-
-data class BatteryUiState(
-    val level: Int = 0,
-    val isCharging: Boolean = false,
-    val temperature: Float = 0f,
-    val voltage: Float = 0f,
-    val current: Float = 0f,
-    val health: String = "Unknown",
-    val status: String = "Unknown",
-    val technology: String = "Unknown",
-    val plugged: String = "Unknown",
-    val chargeCounter: Int = 0,
-    val energyCounter: Long = 0,
-    val isPresent: Boolean = true,
-    val batterySaverEnabled: Boolean = false,
-    val capacity: Int = 100,
-    val history: List<BatteryHistoryEntry> = emptyList()
-)
-
-data class BatteryHistoryEntry(
-    val timestamp: Long,
-    val level: Int,
-    val temperature: Float,
-    val isCharging: Boolean
-)
-
-data class BatteryAppUsage(
-    val name: String,
-    val usagePercent: Float,
-    val icon: ImageVector? = null
-)
-
 // ==================== HELPER FUNCTIONS ====================
 
 fun getBatteryColor(level: Int): Color {
@@ -121,7 +88,7 @@ fun BatteryLevelIndicator(
                 sweepAngle = sweepAngle,
                 useCenter = false,
                 topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                size = Size(width - strokeWidth, height - strokeWidth),
+                size = androidx.compose.ui.geometry.Size(width - strokeWidth, height - strokeWidth),
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
 
@@ -133,11 +100,19 @@ fun BatteryLevelIndicator(
                     center = Offset(width / 2, height / 2),
                     style = Stroke(width = 2f)
                 )
-                // Lightning bolt
-                drawText(
-                    text = "⚡",
-                    topLeft = Offset(width / 2 - 30f, height / 2 - 30f),
-                    fontSize = 60f
+                // Draw lightning bolt using lines
+                val boltSize = 30f
+                drawLine(
+                    color = Color.White,
+                    start = Offset(width / 2 - boltSize / 2, height / 2 - boltSize / 2),
+                    end = Offset(width / 2 + boltSize / 2, height / 2 + boltSize / 2),
+                    strokeWidth = 4f
+                )
+                drawLine(
+                    color = Color.White,
+                    start = Offset(width / 2 + boltSize / 2, height / 2 - boltSize / 2),
+                    end = Offset(width / 2 - boltSize / 2, height / 2 + boltSize / 2),
+                    strokeWidth = 4f
                 )
             }
         }
@@ -150,16 +125,6 @@ fun BatteryLevelIndicator(
             color = if (isCharging) Color.White else color
         )
     }
-}
-
-// drawText extension for Canvas
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawText(
-    text: String,
-    topLeft: Offset,
-    fontSize: Float
-) {
-    // Simple text drawing - in production use proper text rendering
-    // This is a placeholder
 }
 
 @Composable
@@ -333,7 +298,7 @@ fun AnimatedBatteryCard(
     isCharging: Boolean,
     temperature: Float,
     voltage: Float,
-    pulse: Float
+    pulse: Float // Kept for API compatibility but used for animation
 ) {
     GlassCard {
         Column(

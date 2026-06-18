@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.domain.model.CustomGestureTemplate
@@ -32,18 +33,17 @@ class GestureStudioViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(GestureStudioUiState())
     val uiState: StateFlow<GestureStudioUiState> = _uiState.asStateFlow()
 
-    private lateinit var sensorManager: SensorManager
-    private var gyroscope: Sensor? = null
-    private var accelerometer: Sensor? = null
-    private var magnetometer: Sensor? = null
-    private var recordingSamples = mutableListOf<FloatArray>()
+    private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private var gyroscope: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+    private var accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private var magnetometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+    private val recordingSamples = mutableListOf<FloatArray>()
     private var recordingJob: kotlinx.coroutines.Job? = null
     private var recordingTime = 0
     private val targetSamples = 200 // 4 seconds at 50Hz
     private var isCollecting = false
     private var startTime = 0L
-    
-    // Waveform data for visualization
+
     private val _waveformData = MutableStateFlow(GestureWaveformData(emptyList(), 0f, 0f))
     val waveformData: StateFlow<GestureWaveformData> = _waveformData.asStateFlow()
 
@@ -66,10 +66,12 @@ class GestureStudioViewModel @Inject constructor(
                             recordingSamples[lastIdx][3] = event.values[0]
                             recordingSamples[lastIdx][4] = event.values[1]
                             recordingSamples[lastIdx][5] = event.values[2]
+                            updateWaveform(recordingSamples[lastIdx], SensorType.ACCELEROMETER)
                         } else {
-                            recordingSamples.add(floatArrayOf(0f,0f,0f, event.values[0], event.values[1], event.values[2], 0f,0f,0f, timestamp.toFloat()))
+                            val sample = floatArrayOf(0f,0f,0f, event.values[0], event.values[1], event.values[2], 0f,0f,0f, timestamp.toFloat())
+                            recordingSamples.add(sample)
+                            updateWaveform(sample, SensorType.ACCELEROMETER)
                         }
-                        updateWaveform(recordingSamples[lastIdx], SensorType.ACCELEROMETER)
                     }
                     Sensor.TYPE_MAGNETIC_FIELD -> {
                         val lastIdx = recordingSamples.lastIndex
@@ -82,18 +84,19 @@ class GestureStudioViewModel @Inject constructor(
                 }
                 val progress = (recordingSamples.size * 100 / targetSamples).coerceIn(0, 100)
                 val quality = calculateRecordingQuality()
-                _uiState.update { 
+                recordingTime = ((System.currentTimeMillis() - startTime) / 1000).toInt()
+                _uiState.update {
                     it.copy(
                         progress = progress,
                         recordingQuality = quality,
-                        recordingTime = ((System.currentTimeMillis() - startTime) / 1000).toInt()
+                        recordingTime = recordingTime
                     )
                 }
             }
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
     }
-    
+
     private fun updateWaveform(sample: FloatArray, sensorType: SensorType) {
         val values = when (sensorType) {
             SensorType.GYROSCOPE -> listOf(sample[0], sample[1], sample[2])
@@ -110,10 +113,9 @@ class GestureStudioViewModel @Inject constructor(
             samplingRate = 50
         )
     }
-    
+
     private fun calculateRecordingQuality(): RecordingQuality {
         if (recordingSamples.size < 10) return RecordingQuality.UNKNOWN
-        // Calculate variance of recent samples
         val recentSamples = recordingSamples.takeLast(10)
         val variances = mutableListOf<Float>()
         for (i in 0 until 3) {
@@ -132,10 +134,6 @@ class GestureStudioViewModel @Inject constructor(
     }
 
     init {
-        sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         loadGestures()
     }
 
@@ -162,7 +160,7 @@ class GestureStudioViewModel @Inject constructor(
             }
             return
         }
-        
+
         if (gyroscope == null || accelerometer == null) {
             _uiState.update {
                 it.copy(
@@ -173,16 +171,16 @@ class GestureStudioViewModel @Inject constructor(
             }
             return
         }
-        
+
         recordingSamples.clear()
         isCollecting = true
         startTime = System.currentTimeMillis()
         recordingTime = 0
-        
-        sensorManager.registerListener(sensorListener, gyroscope, 20000) // 50Hz
+
+        sensorManager.registerListener(sensorListener, gyroscope, 20000)
         sensorManager.registerListener(sensorListener, accelerometer, 20000)
         magnetometer?.let { sensorManager.registerListener(sensorListener, it, 20000) }
-        
+
         _uiState.update {
             it.copy(
                 isRecording = true,
@@ -194,14 +192,12 @@ class GestureStudioViewModel @Inject constructor(
                 recordingQuality = RecordingQuality.UNKNOWN
             )
         }
-        
+
         recordingJob = viewModelScope.launch {
             while (isCollecting && recordingSamples.size < targetSamples) {
                 delay(50)
             }
-            if (recordingSamples.size >= targetSamples) {
-                stopRecording()
-            } else if (recordingTime >= 10) {
+            if (recordingSamples.size >= targetSamples || recordingTime >= 10) {
                 stopRecording()
             }
         }
@@ -229,25 +225,20 @@ class GestureStudioViewModel @Inject constructor(
     private fun saveGesture() {
         viewModelScope.launch {
             val id = UUID.randomUUID().toString()
-            // Normalize sampling to fixed length
             val normalized = resampleSamples(recordingSamples, targetSamples)
-            
-            // Extract features for better recognition
             val features = extractFeatures(normalized)
-            
+
             val gesture = CustomGestureTemplate(
                 id = id,
                 name = _uiState.value.gestureName,
-                samples = normalized,
-                features = features,
-                createdAt = System.currentTimeMillis(),
-                modifiedAt = System.currentTimeMillis(),
                 isTrained = false,
+                quality = _uiState.value.recordingQuality.name,
+                createdAt = System.currentTimeMillis(),
                 sampleCount = normalized.size,
-                duration = recordingTime,
-                quality = _uiState.value.recordingQuality.name
+                duration = recordingTime.toFloat(),
+                features = features
             )
-            
+
             gestureRepo.saveCustomGesture(gesture)
             _uiState.update {
                 it.copy(
@@ -259,21 +250,20 @@ class GestureStudioViewModel @Inject constructor(
                     recordingTime = 0
                 )
             }
-            // Train this gesture immediately
             trainGesture(id)
         }
     }
-    
+
     private fun extractFeatures(samples: List<FloatArray>): Map<String, Float> {
         if (samples.isEmpty()) return emptyMap()
-        
+
         val gyroX = samples.map { it[0] }
         val gyroY = samples.map { it[1] }
         val gyroZ = samples.map { it[2] }
         val accelX = samples.map { it[3] }
         val accelY = samples.map { it[4] }
         val accelZ = samples.map { it[5] }
-        
+
         return mapOf(
             "gyro_mean" to (gyroX.average() + gyroY.average() + gyroZ.average()).toFloat() / 3,
             "gyro_std" to (stdDev(gyroX) + stdDev(gyroY) + stdDev(gyroZ)) / 3,
@@ -281,10 +271,10 @@ class GestureStudioViewModel @Inject constructor(
             "accel_mean" to (accelX.average() + accelY.average() + accelZ.average()).toFloat() / 3,
             "accel_std" to (stdDev(accelX) + stdDev(accelY) + stdDev(accelZ)) / 3,
             "duration" to samples.size.toFloat(),
-            "energy" to (gyroX.sumOf { it * it } + gyroY.sumOf { it * it } + gyroZ.sumOf { it * it }).toFloat()
+            "energy" to (gyroX.sumOf { (it * it).toDouble() } + gyroY.sumOf { (it * it).toDouble() } + gyroZ.sumOf { (it * it).toDouble() }).toFloat()
         )
     }
-    
+
     private fun stdDev(values: List<Float>): Float {
         if (values.isEmpty()) return 0f
         val mean = values.average().toFloat()
@@ -295,10 +285,10 @@ class GestureStudioViewModel @Inject constructor(
     private fun resampleSamples(samples: List<FloatArray>, targetLen: Int): List<FloatArray> {
         if (samples.isEmpty()) return emptyList()
         if (samples.size == targetLen) return samples
-        
+
         val result = mutableListOf<FloatArray>()
         val step = (samples.size - 1).toFloat() / (targetLen - 1)
-        
+
         for (i in 0 until targetLen) {
             val idx = (i * step).toInt().coerceIn(0, samples.lastIndex)
             result.add(samples[idx].copyOf())
@@ -309,8 +299,7 @@ class GestureStudioViewModel @Inject constructor(
     fun trainGesture(gestureId: String) {
         viewModelScope.launch {
             val totalGestures = _uiState.value.savedGestures.size
-            var trainedCount = 0
-            
+
             _uiState.update {
                 it.copy(
                     isTraining = true,
@@ -321,16 +310,14 @@ class GestureStudioViewModel @Inject constructor(
                     statusColor = Color(0xFFFF9800)
                 )
             }
-            
-            // Simulate progress with realistic timing
+
             for (i in 1..100 step 5) {
                 delay(25)
                 _uiState.update { it.copy(trainingProgress = i) }
             }
-            
+
             val success = gestureRepo.trainGesture(gestureId)
-            trainedCount++
-            
+
             _uiState.update {
                 it.copy(
                     isTraining = false,
@@ -355,7 +342,7 @@ class GestureStudioViewModel @Inject constructor(
                 }
                 return@launch
             }
-            
+
             _uiState.update {
                 it.copy(
                     isTraining = true,
@@ -364,21 +351,21 @@ class GestureStudioViewModel @Inject constructor(
                     statusColor = Color(0xFFFF9800)
                 )
             }
-            
+
             var trainedCount = 0
             for (gesture in gestures) {
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         trainingCurrentGesture = gesture.name,
                         trainingProgress = (trainedCount * 100 / gestures.size)
                     )
                 }
-                
+
                 val success = gestureRepo.trainGesture(gesture.id)
                 if (success) trainedCount++
                 delay(500)
             }
-            
+
             _uiState.update {
                 it.copy(
                     isTraining = false,
@@ -410,19 +397,18 @@ class GestureStudioViewModel @Inject constructor(
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                 val fileName = "gesture_export_$timestamp.csv"
                 val file = File(context.getExternalFilesDir(null), fileName)
-                
+
                 val allGestures = _uiState.value.savedGestures
                 file.bufferedWriter().use { writer ->
-                    // Write header
                     writer.write("id,name,created_at,duration,sample_count,quality,is_trained")
                     writer.newLine()
-                    
+
                     for (gesture in allGestures) {
                         writer.write("${gesture.id},${gesture.name},${gesture.createdAt},${gesture.duration},${gesture.sampleCount},${gesture.quality},${gesture.isTrained}")
                         writer.newLine()
                     }
                 }
-                
+
                 _uiState.update {
                     it.copy(
                         showExportDialog = false,
@@ -447,17 +433,17 @@ class GestureStudioViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isImporting = true, importProgress = 0) }
-                
+
                 val file = File(filePath)
                 if (!file.exists()) {
                     throw Exception("File not found")
                 }
-                
+
                 val lines = file.readLines()
                 if (lines.size <= 1) {
                     throw Exception("No data found")
                 }
-                
+
                 var importedCount = 0
                 for ((index, line) in lines.drop(1).withIndex()) {
                     val parts = line.split(",")
@@ -465,19 +451,19 @@ class GestureStudioViewModel @Inject constructor(
                         val gesture = CustomGestureTemplate(
                             id = UUID.randomUUID().toString(),
                             name = parts[1],
-                            createdAt = parts[2].toLongOrNull() ?: System.currentTimeMillis(),
-                            duration = parts[3].toIntOrNull() ?: 0,
-                            sampleCount = parts[4].toIntOrNull() ?: 0,
-                            quality = parts[5],
                             isTrained = false,
-                            samples = emptyList()
+                            quality = parts[5],
+                            createdAt = parts[2].toLongOrNull() ?: System.currentTimeMillis(),
+                            sampleCount = parts[4].toIntOrNull() ?: 0,
+                            duration = parts[3].toFloatOrNull() ?: 0f,
+                            features = emptyMap()
                         )
                         gestureRepo.saveCustomGesture(gesture)
                         importedCount++
                     }
                     _uiState.update { it.copy(importProgress = (index + 1) * 100 / (lines.size - 1)) }
                 }
-                
+
                 _uiState.update {
                     it.copy(
                         isImporting = false,
@@ -501,33 +487,32 @@ class GestureStudioViewModel @Inject constructor(
     }
 
     fun recognizeGesture(samples: List<FloatArray>): Pair<String, Float> {
-        // Simplified recognition logic
         if (samples.isEmpty()) return Pair("none", 0f)
-        
+
         val features = extractFeatures(samples)
         var bestMatch = "none"
         var bestConfidence = 0f
-        
+
         for (gesture in _uiState.value.savedGestures.filter { it.isTrained }) {
             val gestureFeatures = gesture.features ?: continue
             var similarity = 0f
             var count = 0
-            
-            for ((key, value) in features) {
+
+            for ((key, featValue) in features) {
                 val gestureValue = gestureFeatures[key] ?: continue
-                val diff = abs(value - gestureValue)
-                val confidence = (1f - (diff / max(value, gestureValue))).coerceIn(0f, 1f)
+                val diff = abs(featValue - gestureValue)
+                val confidence = (1f - (diff / max(featValue, gestureValue))).coerceIn(0f, 1f)
                 similarity += confidence
                 count++
             }
-            
+
             val avgConfidence = if (count > 0) similarity / count else 0f
             if (avgConfidence > bestConfidence && avgConfidence > 0.6f) {
                 bestConfidence = avgConfidence
                 bestMatch = gesture.name
             }
         }
-        
+
         return Pair(bestMatch, bestConfidence)
     }
 
@@ -576,7 +561,7 @@ class GestureStudioViewModel @Inject constructor(
     }
 
     fun resetRecognition() {
-        _uiState.update { 
+        _uiState.update {
             it.copy(
                 lastRecognizedGesture = null,
                 lastRecognitionConfidence = 0f,

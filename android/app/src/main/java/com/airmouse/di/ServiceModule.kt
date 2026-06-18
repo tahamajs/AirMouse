@@ -1,10 +1,10 @@
+// app/src/main/java/com/airmouse/di/ServiceModule.kt
 package com.airmouse.di
 
 import android.content.Context
 import com.airmouse.sensors.SensorService
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.EnhancedGestureDetector
-import com.airmouse.utils.BatterySaver
 import com.airmouse.utils.PreferencesManager
 import dagger.Module
 import dagger.Provides
@@ -23,9 +23,9 @@ object ServiceModule {
         @ApplicationContext context: Context,
         calibrationHelper: CalibrationHelper,
         gestureDetector: EnhancedGestureDetector,
-        preferencesManager: PreferencesManager,
-        batterySaver: BatterySaver
+        preferencesManager: PreferencesManager
     ): SensorService {
-        return SensorService(context, calibrationHelper, gestureDetector, preferencesManager, batterySaver)
+        // Removed batterySaver to exactly match the 4-argument constructor expected by SensorService
+        return SensorService(context, calibrationHelper, gestureDetector, preferencesManager)
     }
 }

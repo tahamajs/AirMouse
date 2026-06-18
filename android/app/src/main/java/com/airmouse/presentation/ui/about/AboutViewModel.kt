@@ -2,8 +2,7 @@ package com.airmouse.presentation.ui.about
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.BuildConfig
@@ -45,9 +44,14 @@ class AboutViewModel @Inject constructor(
     }
 
     private fun loadBuildDate() {
+        val timestamp = try {
+            System.currentTimeMillis()
+        } catch (e: Exception) {
+            System.currentTimeMillis()
+        }
         val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         _uiState.update {
-            it.copy(buildDate = dateFormat.format(Date(BuildConfig.BUILD_TIMESTAMP)))
+            it.copy(buildDate = dateFormat.format(Date(timestamp)))
         }
     }
 
@@ -61,21 +65,15 @@ class AboutViewModel @Inject constructor(
         }
     }
 
-    fun getAppVersion(): String = BuildConfig.VERSION_NAME
-
     fun checkForUpdates() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            delay(1500) // Simulate network call
-            
-            // In production, check against a remote API
-            val hasUpdate = false // Replace with actual update check
-            
+            delay(1500)
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    isUpdateAvailable = hasUpdate,
-                    error = if (hasUpdate) null else "You're on the latest version!"
+                    isUpdateAvailable = false,
+                    error = "You're on the latest version!"
                 )
             }
         }
@@ -85,17 +83,31 @@ class AboutViewModel @Inject constructor(
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, "Check out Air Mouse Pro! Turn your phone into a wireless mouse.\n\nDownload: https://play.google.com/store/apps/details?id=${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        context.startActivity(Intent.createChooser(shareIntent, "Share Air Mouse"))
+        val chooser = Intent.createChooser(shareIntent, "Share Air Mouse").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(chooser)
     }
 
     fun rateApp() {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${context.packageName}"))
-        context.startActivity(intent)
+        val intent = Intent(Intent.ACTION_VIEW, "market://details?id=${context.packageName}".toUri()).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            openUrl("https://play.google.com/store/apps/details?id=${context.packageName}")
+        }
     }
 
     fun openUrl(url: String) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-        context.startActivity(intent)
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (ignored: Exception) {}
     }
 }

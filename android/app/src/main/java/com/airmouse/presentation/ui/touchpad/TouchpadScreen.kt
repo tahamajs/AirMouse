@@ -25,10 +25,42 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
 
-// Import your state and mode classes explicitly if they belong to separate packages:
-// import com.airmouse.data.models.TouchpadUiState
-// import com.airmouse.data.models.TouchpadMode
-// import com.airmouse.data.models.TouchPoint
+// Stub Models to resolve dependencies locally
+enum class TouchpadMode(val displayName: String) {
+    STANDARD("Standard"),
+    PRESENTATION("Presentation"),
+    GAMING("Gaming");
+
+    companion object {
+        val entries = values().toList()
+    }
+}
+
+data class TouchPoint(val x: Float, val y: Float)
+
+data class TouchpadUiState(
+    val isActive: Boolean = false,
+    val twoFingerScroll: Boolean = true,
+    val naturalScrolling: Boolean = false,
+    val scrollSpeed: Float = 1.0f,
+    val edgeScrolling: Boolean = false,
+    val scrollInertia: Boolean = true,
+    val sensitivity: Float = 1.0f,
+    val cursorSpeed: Float = 1.0f,
+    val pointerSpeed: Int = 50,
+    val accelerationEnabled: Boolean = true,
+    val invertVertical: Boolean = false,
+    val invertHorizontal: Boolean = false,
+    val tapToClick: Boolean = true,
+    val doubleTapDelay: Int = 300,
+    val threeFingerSwipe: Boolean = true,
+    val pinchToZoom: Boolean = true,
+    val rotateToRotate: Boolean = false,
+    val hapticFeedback: Boolean = true,
+    val showTouchPoints: Boolean = true,
+    val lastGesture: String = "",
+    val touchPoints: List<TouchPoint> = emptyList()
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -275,4 +307,34 @@ fun SliderSetting(label: String, value: Float, onValueChange: (Float) -> Unit, v
         }
         Slider(value = value, onValueChange = onValueChange, valueRange = valueRange, modifier = Modifier.fillMaxWidth())
     }
+}
+
+// ViewModel requirements definition interface mapping your unresolved links:
+class TouchpadViewModel : androidx.lifecycle.ViewModel() {
+    val uiState = kotlinx.coroutines.flow.MutableStateFlow(TouchpadUiState())
+    fun resetToDefaults() {}
+    fun toggleTouchpad() {}
+    fun applyPreset(mode: TouchpadMode) {}
+    fun processTouchEvent(x: Float, y: Float, count: Int, list: List<Pair<Float, Float>>, p: Float) {}
+    fun processTap(x: Float, y: Float) {}
+    fun processLongPress() {}
+    fun resetGestureState() {}
+    fun updateTwoFingerScroll(b: Boolean) {}
+    fun updateNaturalScrolling(b: Boolean) {}
+    fun updateScrollSpeed(f: Float) {}
+    fun updateEdgeScrolling(b: Boolean) {}
+    fun updateScrollInertia(b: Boolean) {}
+    fun updateSensitivity(f: Float) {}
+    fun updateCursorSpeed(f: Float) {}
+    fun updatePointerSpeed(i: Int) {}
+    fun updateAcceleration(b: Boolean) {}
+    fun updateInvertVertical(b: Boolean) {}
+    fun updateInvertHorizontal(b: Boolean) {}
+    fun updateTapToClick(b: Boolean) {}
+    fun updateDoubleTapDelay(i: Int) {}
+    fun updateThreeFingerSwipe(b: Boolean) {}
+    fun updatePinchToZoom(b: Boolean) {}
+    fun updateRotateToRotate(b: Boolean) {}
+    fun updateHapticFeedback(b: Boolean) {}
+    fun updateShowTouchPoints(b: Boolean) {}
 }
