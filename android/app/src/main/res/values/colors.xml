@@ -11,7 +11,9 @@
     <color name="deep_orange_700">#D84315</color>
     <color name="deep_orange_800">#BF360C</color>
     <color name="deep_orange_900">#A52A0A</color>
-
+    <color name="colorPrimary">#6366F1</color>
+    <color name="white_alpha_70">#B3FFFFFF</color>
+    <color name="white_alpha_30">#4DFFFFFF</color>
     <!-- ==================== AMBER (Secondary Brand) ==================== -->
     <color name="amber_100">#FFE082</color>
     <color name="amber_200">#FFD54F</color>

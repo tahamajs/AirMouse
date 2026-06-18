@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@color/background_dark">
+    android:background="@android:color/transparent">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,18 +13,6 @@
         android:gravity="center"
         android:padding="32dp">
 
-        <!-- Step indicator (shows current step) -->
-        <TextView
-            android:id="@+id/step_indicator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="1 / 3"
-            android:textColor="@color/accent_blue"
-            android:textSize="14sp"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone" />
-
-        <!-- Onboarding image / animation -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -34,62 +22,29 @@
                 android:id="@+id/onboarding_image"
                 android:layout_width="200dp"
                 android:layout_height="200dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_air_mouse_pro_ultra" />
-
-            <!-- Optional animated badge (e.g., "NEW") -->
-            <View
-                android:id="@+id/badge_new"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="top|end"
-                android:background="@drawable/badge_new"
-                android:visibility="gone" />
+                android:layout_gravity="center" />
         </FrameLayout>
 
-        <!-- Title -->
         <TextView
             android:id="@+id/onboarding_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceHeadline2"
-            android:textColor="@color/text_primary"
+            android:textColor="@android:color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
             android:gravity="center"
             android:layout_marginBottom="16dp" />
 
-        <!-- Description -->
         <TextView
             android:id="@+id/onboarding_description"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodyLarge"
-            android:textColor="@color/text_secondary"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:alpha="0.8"
             android:gravity="center"
             android:lineSpacingExtra="4dp"
             android:layout_marginBottom="24dp" />
-
-        <!-- Optional action hint (e.g., "Swipe to continue") -->
-        <TextView
-            android:id="@+id/hint_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="👈 Swipe to continue"
-            android:textColor="@color/accent_blue"
-            android:textSize="12sp"
-            android:visibility="gone" />
-
-        <!-- Progress dots (optional alternative to step indicator) -->
-        <LinearLayout
-            android:id="@+id/progress_dots"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="16dp"
-            android:visibility="gone">
-
-            <!-- This will be dynamically populated by adapter -->
-        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>
