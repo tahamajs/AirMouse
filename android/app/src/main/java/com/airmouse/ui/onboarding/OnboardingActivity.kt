@@ -3,10 +3,9 @@ package com.airmouse.ui.onboarding
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.view.animation.AccelerateDecelerateInterpolator
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -36,7 +35,6 @@ class OnboardingActivity : AppCompatActivity() {
 
         prefs = PreferencesManager(this)
 
-        // If onboarding already completed, skip directly to main activity
         if (prefs.isOnboardingCompleted()) {
             startMainActivity()
             return
@@ -46,6 +44,7 @@ class OnboardingActivity : AppCompatActivity() {
         setupClickListeners()
         setupPageChangeListener()
         setupWindowInsets()
+        setupBackPressedHandler()
     }
 
     private fun setupViewPager() {
@@ -81,7 +80,6 @@ class OnboardingActivity : AppCompatActivity() {
         binding.viewPager.offscreenPageLimit = 3
         binding.viewPager.setPageTransformer(ParallaxPageTransformer())
 
-        // Attach TabLayout to ViewPager2
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { _, _ -> }.attach()
     }
 
@@ -111,7 +109,6 @@ class OnboardingActivity : AppCompatActivity() {
                 currentPosition = position
                 updateUIForPosition(position)
                 updateButtonVisibility(position)
-                animatePageTransition(position)
             }
         })
     }
@@ -137,14 +134,6 @@ class OnboardingActivity : AppCompatActivity() {
         binding.btnNext.visibility = if (isLastPage) View.GONE else View.VISIBLE
         binding.btnSkip.visibility = if (isLastPage) View.GONE else View.VISIBLE
         binding.btnGetStarted.visibility = if (isLastPage) View.VISIBLE else View.GONE
-
-        if (isLastPage) {
-            animateButton(binding.btnGetStarted)
-        }
-    }
-
-    private fun animatePageTransition(position: Int) {
-        // Optional: animate the current page's content – handled in adapter
     }
 
     private fun animateButton(button: MaterialButton) {
@@ -170,6 +159,18 @@ class OnboardingActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupBackPressedHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (currentPosition > 0) {
+                    binding.viewPager.currentItem = currentPosition - 1
+                } else {
+                    finishOnboarding()
+                }
+            }
+        })
+    }
+
     private fun finishOnboarding() {
         prefs.setOnboardingCompleted(true)
         startMainActivity()
@@ -182,17 +183,8 @@ class OnboardingActivity : AppCompatActivity() {
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         finish()
     }
-
-    override fun onBackPressed() {
-        if (currentPosition > 0) {
-            binding.viewPager.currentItem = currentPosition - 1
-        } else {
-            finishOnboarding()
-        }
-    }
 }
 
-// Parallax effect for ViewPager2
 class ParallaxPageTransformer : ViewPager2.PageTransformer {
     override fun transformPage(page: View, position: Float) {
         page.apply {
@@ -201,16 +193,9 @@ class ParallaxPageTransformer : ViewPager2.PageTransformer {
             scaleX = 0.95f + (1f - absPos.coerceIn(0f, 1f)) * 0.05f
             scaleY = scaleX
 
-            // Parallax effect for the image
-            val imageView = page.findViewById<android.widget.ImageView>(R.id.iv_onboarding_image)
+            // 🛠️ FIXED ID HERE MATCHING YOUR XML:
+            val imageView = page.findViewById<android.widget.ImageView>(R.id.onboarding_image)
             imageView?.translationX = -position * width * 0.3f
         }
     }
 }
-
-data class OnboardingItem(
-    @androidx.annotation.DrawableRes val imageRes: Int,
-    val title: String,
-    val description: String,
-    @androidx.annotation.ColorRes val bgColor: Int = R.color.onboarding_1_bg
-)
