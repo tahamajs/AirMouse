@@ -1,6 +1,6 @@
-<!-- res/values/calibration_strings.xml -->
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- res/values/calibration_strings.xml -->
     <string name="calibration_title">Calibrate Your Device</string>
     <string name="calibration_subtitle">Follow the instructions to calibrate your sensors</string>
     
