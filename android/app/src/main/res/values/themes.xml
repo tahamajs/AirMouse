@@ -1,53 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Splash Screen Theme -->
+    <!-- ==================== SPLASH SCREEN ==================== -->
     <style name="Theme.AirMouse.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/deep_orange_700</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_calibrate</item>
         <item name="windowSplashScreenAnimationDuration">1000</item>
         <item name="postSplashScreenTheme">@style/Theme.AirMouse</item>
     </style>
-    <!-- Base application theme -->
-    <style name="Theme.AirMouse" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowBackground">@color/background_dark</item>
-    </style>
-    
-    <!-- Light theme -->
-    <style name="Theme.AirMouse.Light" parent="Theme.AirMouse">
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowBackground">@color/background_light</item>
-    </style>
-    
-    <!-- Pure Black theme (OLED) -->
-    <style name="Theme.AirMouse.PureBlack" parent="Theme.AirMouse">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowBackground">@android:color/black</item>
-    </style>
-    
-    <!-- High Contrast theme -->
-    <style name="Theme.AirMouse.HighContrast" parent="Theme.AirMouse.Light">
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowBackground">@android:color/white</item>
-    </style>
 
-    <!-- Base App Theme (Material 3) -->
-    <style name="Theme.AirMouse" parent="Theme.Material3.DayNight.NoActionBar">
+    <!-- ==================== BASE THEMES ==================== -->
+
+    <!-- Base App Theme (AppCompat) -->
+    <style name="Theme.AirMouse" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_700</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/background_primary</item>
+
         <item name="colorPrimary">@color/deep_orange_500</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/deep_orange_100</item>
-        <item name="colorOnPrimaryContainer">@color/deep_orange_900</item>
+        <item name="colorPrimaryVariant">@color/deep_orange_700</item>
         <item name="colorSecondary">@color/amber_500</item>
         <item name="colorOnSecondary">@color/black</item>
-        <item name="colorSecondaryContainer">@color/amber_200</item>
-        <item name="colorOnSecondaryContainer">@color/amber_900</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="android:windowBackground">@color/background_primary</item>
@@ -55,29 +28,33 @@
         <item name="colorOnError">@color/white</item>
     </style>
 
-    <!-- Explicit Light Theme -->
-    <style name="Theme.AirMouse.Light" parent="Theme.Material3.Light.NoActionBar">
+    <!-- Light Theme -->
+    <style name="Theme.AirMouse.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_700</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@color/background_primary</item>
+
         <item name="colorPrimary">@color/deep_orange_500</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/deep_orange_100</item>
-        <item name="colorOnPrimaryContainer">@color/deep_orange_900</item>
+        <item name="colorPrimaryVariant">@color/deep_orange_700</item>
+        <item name="colorSecondary">@color/amber_500</item>
+        <item name="colorOnSecondary">@color/black</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="android:windowBackground">@color/background_primary</item>
     </style>
 
-    <!-- Explicit Dark Theme -->
-    <style name="Theme.AirMouse.Dark" parent="Theme.Material3.Dark.NoActionBar">
+    <!-- Dark Theme -->
+    <style name="Theme.AirMouse.Dark" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_800</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/background_primary</item>
+
         <item name="colorPrimary">@color/deep_orange_500</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/primary_container</item>
-        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
+        <item name="colorPrimaryVariant">@color/deep_orange_800</item>
+        <item name="colorSecondary">@color/amber_500</item>
+        <item name="colorOnSecondary">@color/black</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="android:windowBackground">@color/background_primary</item>
@@ -85,12 +62,14 @@
 
     <!-- Pure Black (AMOLED) Theme -->
     <style name="Theme.AirMouse.PureBlack" parent="Theme.AirMouse.Dark">
+        <item name="android:statusBarColor">@color/black_pure</item>
         <item name="android:windowBackground">@color/black_pure</item>
         <item name="colorSurface">@color/black_pure</item>
+        <item name="colorPrimary">@color/deep_orange_400</item>
     </style>
 
     <!-- High Contrast Theme -->
-    <style name="Theme.AirMouse.HighContrast" parent="Theme.AirMouse">
+    <style name="Theme.AirMouse.HighContrast" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/deep_orange_800</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/amber_700</item>
@@ -98,10 +77,14 @@
         <item name="android:windowBackground">@color/white</item>
         <item name="colorSurface">@color/white</item>
         <item name="colorOnSurface">@color/black_pure</item>
+        <item name="android:statusBarColor">@color/black_pure</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
+    <!-- ==================== DIALOG & OVERLAY THEMES ==================== -->
+
     <!-- Dialog Theme -->
-    <style name="Theme.AirMouse.Dialog" parent="Theme.Material3.DayNight.Dialog">
+    <style name="Theme.AirMouse.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
         <item name="android:windowMinWidthMajor">90%</item>
         <item name="android:windowMinWidthMinor">90%</item>
         <item name="android:windowBackground">@android:color/transparent</item>
@@ -116,26 +99,13 @@
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <!-- Shape Appearances -->
+    <!-- ==================== SHAPE APPEARANCES ==================== -->
+
     <style name="ShapeAppearanceOverlay.App.CornerSize50Percent" parent="">
         <item name="cornerSize">50%</item>
-    </style>
-
-    <!-- Legacy / Modern support -->
-    <style name="Theme.AirMouse.Modern" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#007acc</item>
-        <item name="colorPrimaryVariant">#005f99</item>
-        <item name="colorOnPrimary">#ffffff</item>
-        <item name="colorSecondary">#4CAF50</item>
-        <item name="colorSecondaryVariant">#388E3C</item>
-        <item name="colorOnSecondary">#ffffff</item>
-        <item name="android:colorBackground">#0f1115</item>
-        <item name="colorSurface">#171b22</item>
-        <item name="colorOnSurface">#e5e7eb</item>
-        <item name="colorError">#ef5b5b</item>
-        <item name="android:statusBarColor">#0f1115</item>
-        <item name="android:navigationBarColor">#0f1115</item>
     </style>
 </resources>
