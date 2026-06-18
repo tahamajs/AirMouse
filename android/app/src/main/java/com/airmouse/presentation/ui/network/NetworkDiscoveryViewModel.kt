@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.network.ConnectionManager
@@ -28,23 +29,23 @@ class NetworkDiscoveryViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(NetworkDiscoveryUiState())
     val uiState: StateFlow<NetworkDiscoveryUiState> = _uiState.asStateFlow()
-    
+
     val filteredServers: StateFlow<List<DiscoveredServer>> = combine(
         _uiState.map { it.discoveredServers },
         _uiState.map { it.filterText },
         _uiState.map { it.sortBy }
     ) { servers, filter, sortBy ->
         var result = servers
-        
+
         if (filter.isNotEmpty()) {
-            result = result.filter { 
+            result = result.filter {
                 it.ip.contains(filter, ignoreCase = true) ||
-                it.name.contains(filter, ignoreCase = true) ||
-                it.port.toString().contains(filter) ||
-                it.deviceType.displayName.contains(filter, ignoreCase = true)
+                        it.name.contains(filter, ignoreCase = true) ||
+                        it.port.toString().contains(filter) ||
+                        it.deviceType.displayName.contains(filter, ignoreCase = true)
             }
         }
-        
+
         when (sortBy) {
             SortBy.IP -> result.sortedBy { it.ip }
             SortBy.NAME -> result.sortedBy { it.name }
@@ -54,7 +55,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
             SortBy.LAST_SEEN -> result.sortedByDescending { it.lastSeen }
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    
+
     val filteredSavedServers: StateFlow<List<DiscoveredServer>> = combine(
         _uiState.map { it.savedServers },
         _uiState.map { it.filterText }
@@ -62,8 +63,8 @@ class NetworkDiscoveryViewModel @Inject constructor(
         if (filter.isEmpty()) servers
         else servers.filter {
             it.ip.contains(filter, ignoreCase = true) ||
-            it.name.contains(filter, ignoreCase = true) ||
-            it.notes.contains(filter, ignoreCase = true)
+                    it.name.contains(filter, ignoreCase = true) ||
+                    it.notes.contains(filter, ignoreCase = true)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -141,12 +142,18 @@ class NetworkDiscoveryViewModel @Inject constructor(
                             version = json.optString("version", "3.0.0"),
                             isFavorite = json.optBoolean("isFavorite", false),
                             notes = json.optString("notes", ""),
-                            deviceType = try { DeviceType.valueOf(json.optString("deviceType", "UNKNOWN")) } catch (e: Exception) { DeviceType.UNKNOWN }
+                            deviceType = try {
+                                DeviceType.valueOf(json.optString("deviceType", "UNKNOWN"))
+                            } catch (_: Exception) {
+                                DeviceType.UNKNOWN
+                            }
                         )
                     )
                 }
                 _uiState.update { it.copy(savedServers = servers) }
-            } catch (e: Exception) { /* ignore */ }
+            } catch (_: Exception) {
+                // Ignore parse errors
+            }
         }
     }
 
@@ -190,7 +197,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
                     )
                 }
                 _uiState.update { it.copy(connectionHistory = history.sortedByDescending { it.timestamp }) }
-            } catch (e: Exception) { /* ignore */ }
+            } catch (_: Exception) {
+                // Ignore parse errors
+            }
         }
     }
 
@@ -198,7 +207,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
         val currentHistory = _uiState.value.connectionHistory.toMutableList()
         currentHistory.add(0, history)
         if (currentHistory.size > 50) currentHistory.removeAt(currentHistory.lastIndex)
-        
+
         val jsonArray = JSONArray()
         currentHistory.forEach { record ->
             val json = JSONObject().apply {
@@ -230,12 +239,12 @@ class NetworkDiscoveryViewModel @Inject constructor(
 
     fun scanNetwork() {
         if (isScanning) return
-        
+
         scanJob?.cancel()
         scanJob = viewModelScope.launch {
             isScanning = true
             discoveredServersMap.clear()
-            
+
             _uiState.update {
                 it.copy(
                     isScanning = true,
@@ -245,7 +254,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                     discoveredServers = emptyList()
                 )
             }
-            
+
             if (!isWifiConnected()) {
                 _uiState.update {
                     it.copy(
@@ -257,7 +266,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 isScanning = false
                 return@launch
             }
-            
+
             val localIp = getLocalIpAddress()
             if (localIp == null) {
                 _uiState.update {
@@ -270,18 +279,18 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 isScanning = false
                 return@launch
             }
-            
+
             _uiState.update { it.copy(status = "Broadcasting UDP discovery...") }
-            startUdpDiscovery(localIp)
-            
+            startUdpDiscovery()
+
             _uiState.update { it.copy(status = "Scanning IP range...") }
             scanIpRange(localIp)
-            
+
             delay(SCAN_DURATION_MS)
-            
+
             val servers = discoveredServersMap.values.toList()
             val sortedServers = sortServers(servers, _uiState.value.sortBy)
-            
+
             _uiState.update {
                 it.copy(
                     isScanning = false,
@@ -294,59 +303,63 @@ class NetworkDiscoveryViewModel @Inject constructor(
                     lastScanTime = System.currentTimeMillis()
                 )
             }
-            
+
             isScanning = false
         }
     }
 
-    private suspend fun startUdpDiscovery(localIp: String) {
-        val socket = DatagramSocket()
-        socket.soTimeout = TIMEOUT_MS.toInt()
-        socket.broadcast = true
-        
-        try {
-            val sendData = DISCOVERY_MESSAGE.toByteArray()
-            val broadcastAddress = getBroadcastAddress()
-            val packet = DatagramPacket(sendData, sendData.size, broadcastAddress, DISCOVERY_PORT)
-            socket.send(packet)
-            
-            val receiveBuffer = ByteArray(1024)
-            val startTime = System.currentTimeMillis()
-            
-            while (System.currentTimeMillis() - startTime < SCAN_DURATION_MS && isScanning) {
-                try {
-                    val receivePacket = DatagramPacket(receiveBuffer, receiveBuffer.size)
-                    socket.receive(receivePacket)
-                    
-                    val message = String(receivePacket.data, 0, receivePacket.length)
-                    if (message.startsWith(RESPONSE_MESSAGE)) {
-                        val parts = message.split(":")
-                        val serverIp = receivePacket.address.hostAddress ?: continue
-                        val port = parts.getOrNull(1)?.toIntOrNull() ?: 8080
-                        val name = parts.getOrNull(2) ?: "Air Mouse Server"
-                        val version = parts.getOrNull(3) ?: "3.0.0"
-                        
-                        val key = "$serverIp:$port"
-                        if (!discoveredServersMap.containsKey(key)) {
-                            val ping = calculatePing(serverIp)
-                            discoveredServersMap[key] = DiscoveredServer(
-                                ip = serverIp,
-                                port = port,
-                                name = name,
-                                version = version,
-                                ping = ping,
-                                signalStrength = calculateSignalStrength(ping),
-                                deviceType = detectDeviceType(name, version)
-                            )
-                            updateDiscoveredServers()
+    private suspend fun startUdpDiscovery() {
+        withContext(Dispatchers.IO) {
+            val socket = DatagramSocket()
+            socket.soTimeout = TIMEOUT_MS.toInt()
+            socket.broadcast = true
+
+            try {
+                val sendData = DISCOVERY_MESSAGE.toByteArray()
+                val broadcastAddress = getBroadcastAddress()
+                val packet = DatagramPacket(sendData, sendData.size, broadcastAddress, DISCOVERY_PORT)
+                socket.send(packet)
+
+                val receiveBuffer = ByteArray(1024)
+                val startTime = System.currentTimeMillis()
+
+                while (System.currentTimeMillis() - startTime < SCAN_DURATION_MS && isScanning) {
+                    try {
+                        val receivePacket = DatagramPacket(receiveBuffer, receiveBuffer.size)
+                        socket.receive(receivePacket)
+
+                        val message = String(receivePacket.data, 0, receivePacket.length)
+                        if (message.startsWith(RESPONSE_MESSAGE)) {
+                            val parts = message.split(":")
+                            val serverIp = receivePacket.address.hostAddress ?: continue
+                            val port = parts.getOrNull(1)?.toIntOrNull() ?: 8080
+                            val name = parts.getOrNull(2) ?: "Air Mouse Server"
+                            val version = parts.getOrNull(3) ?: "3.0.0"
+
+                            val key = "$serverIp:$port"
+                            if (!discoveredServersMap.containsKey(key)) {
+                                val ping = calculatePing(serverIp)
+                                discoveredServersMap[key] = DiscoveredServer(
+                                    ip = serverIp,
+                                    port = port,
+                                    name = name,
+                                    version = version,
+                                    ping = ping,
+                                    signalStrength = calculateSignalStrength(ping),
+                                    deviceType = detectDeviceType(name, version)
+                                )
+                                updateDiscoveredServers()
+                            }
                         }
+                    } catch (_: SocketTimeoutException) {
+                        // Continue scanning
                     }
-                } catch (e: SocketTimeoutException) { /* continue */ }
+                }
+            } catch (_: Exception) {
+                // Ignore errors
+            } finally {
+                socket.close()
             }
-        } catch (e: Exception) {
-            _uiState.update { it.copy(errorMessage = "Discovery error: ${e.message}") }
-        } finally {
-            socket.close()
         }
     }
 
@@ -354,23 +367,23 @@ class NetworkDiscoveryViewModel @Inject constructor(
         val ipPrefix = getNetworkPrefix(localIp)
         val ports = _uiState.value.scanPorts
         val timeout = _uiState.value.scanTimeout
-        
+
         var scanned = 0
         val totalHosts = 254
-        
+
         for (i in 1..254) {
             if (!isScanning) break
-            
+
             val testIp = "$ipPrefix.$i"
             if (testIp == localIp) continue
-            
+
             withContext(Dispatchers.IO) {
                 for (port in ports) {
                     try {
                         val socket = Socket()
                         socket.connect(InetSocketAddress(testIp, port), timeout)
                         socket.close()
-                        
+
                         val key = "$testIp:$port"
                         if (!discoveredServersMap.containsKey(key)) {
                             val ping = calculatePing(testIp)
@@ -383,10 +396,12 @@ class NetworkDiscoveryViewModel @Inject constructor(
                             )
                             updateDiscoveredServers()
                         }
-                    } catch (e: IOException) { /* port not open */ }
+                    } catch (_: IOException) {
+                        // Port not open
+                    }
                 }
             }
-            
+
             scanned++
             updateScanProgress(scanned, totalHosts)
         }
@@ -397,7 +412,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
             val start = System.currentTimeMillis()
             val reachable = InetAddress.getByName(ip).isReachable(1000)
             if (reachable) (System.currentTimeMillis() - start).toInt() else -1
-        } catch (e: Exception) { -1 }
+        } catch (_: Exception) {
+            -1
+        }
     }
 
     private fun calculateSignalStrength(ping: Int): Int {
@@ -425,9 +442,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
 
     private fun getBroadcastAddress(): InetAddress {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val dhcp = wifiManager.dhcpInfo
-        val broadcast = (dhcp.ipAddress and dhcp.netmask) or dhcp.netmask.inv()
-        return InetAddress.getByAddress(intToByteArray(broadcast.toInt()))
+        val dhcpInfo = wifiManager.dhcpInfo
+        val broadcast = (dhcpInfo.ipAddress.toInt() and dhcpInfo.netmask.toInt()) or dhcpInfo.netmask.toInt().inv()
+        return InetAddress.getByAddress(intToByteArray(broadcast))
     }
 
     private fun intToByteArray(value: Int): ByteArray {
@@ -441,14 +458,16 @@ class NetworkDiscoveryViewModel @Inject constructor(
 
     fun getLocalIpAddress(): String? {
         try {
-            NetworkInterface.getNetworkInterfaces()?.toList()?.forEach { intf ->
-                intf.inetAddresses.toList().forEach { addr ->
+            NetworkInterface.getNetworkInterfaces()?.toList()?.forEach { networkInterface ->
+                networkInterface.inetAddresses.toList().forEach { addr ->
                     if (!addr.isLoopbackAddress && addr is Inet4Address) {
                         return addr.hostAddress
                     }
                 }
             }
-        } catch (e: Exception) { /* ignore */ }
+        } catch (_: Exception) {
+            // Ignore
+        }
         return null
     }
 
@@ -509,36 +528,34 @@ class NetworkDiscoveryViewModel @Inject constructor(
         saveServersToPrefs(updated)
     }
 
-    fun connectToServer(server: DiscoveredServer) {
-        viewModelScope.launch {
-            val startTime = System.currentTimeMillis()
-            _uiState.update { it.copy(isConnecting = true, selectedServerId = server.id, connectionProgress = 0) }
-            
-            val success = connectionManager.connect(server.ip, server.port)
-            
-            val duration = System.currentTimeMillis() - startTime
-            val history = ConnectionHistory(
-                serverId = server.id,
-                ip = server.ip,
-                port = server.port,
-                duration = duration,
-                success = success,
-                errorMessage = if (!success) "Connection timeout" else null
-            )
-            saveConnectionHistory(history)
-            
-            if (success) {
-                addServerToSaved(server)
-                _uiState.update { it.copy(isConnecting = false, connectionProgress = 100) }
-            } else {
-                _uiState.update { 
-                    it.copy(isConnecting = false, errorMessage = "Failed to connect to ${server.ip}:${server.port}") 
-                }
+    suspend fun connectToServer(server: DiscoveredServer) {
+        val startTime = System.currentTimeMillis()
+        _uiState.update { it.copy(isConnecting = true, selectedServerId = server.id, connectionProgress = 0) }
+
+        val success = connectionManager.connect(server.ip, server.port)
+
+        val duration = System.currentTimeMillis() - startTime
+        val history = ConnectionHistory(
+            serverId = server.id,
+            ip = server.ip,
+            port = server.port,
+            duration = duration,
+            success = success,
+            errorMessage = if (!success) "Connection timeout" else null
+        )
+        saveConnectionHistory(history)
+
+        if (success) {
+            addServerToSaved(server)
+            _uiState.update { it.copy(isConnecting = false, connectionProgress = 100) }
+        } else {
+            _uiState.update {
+                it.copy(isConnecting = false, errorMessage = "Failed to connect to ${server.ip}:${server.port}")
             }
         }
     }
 
-    fun connectManual(ip: String, port: Int) {
+    suspend fun connectManual(ip: String, port: Int) {
         val server = DiscoveredServer(ip = ip, port = port, name = "Manual Entry")
         connectToServer(server)
     }
@@ -580,31 +597,6 @@ class NetworkDiscoveryViewModel @Inject constructor(
         _uiState.update { it.copy(activeTab = tab) }
     }
 
-    fun toggleAdvancedOptions() {
-        _uiState.update { it.copy(showAdvancedOptions = !it.showAdvancedOptions) }
-    }
-
-    fun updateCustomPort(port: String) {
-        _uiState.update { it.copy(customPort = port) }
-    }
-
-    fun updateManualIp(ip: String) {
-        _uiState.update { it.copy(manualIp = ip) }
-    }
-
-    fun updateScanSubnet(subnet: String) {
-        _uiState.update { it.copy(scanSubnet = subnet) }
-    }
-
-    fun updateScanTimeout(timeout: Int) {
-        _uiState.update { it.copy(scanTimeout = timeout) }
-    }
-
-    fun clearConnectionHistory() {
-        _uiState.update { it.copy(connectionHistory = emptyList()) }
-        prefs.putString(CONNECTION_HISTORY_KEY, "")
-    }
-
     private fun updateDiscoveredServers() {
         val servers = discoveredServersMap.values.toList()
         val sorted = sortServers(servers, _uiState.value.sortBy)
@@ -614,22 +606,6 @@ class NetworkDiscoveryViewModel @Inject constructor(
     private fun updateScanProgress(current: Int, total: Int) {
         val progress = (current * 100 / total).coerceIn(0, 99)
         _uiState.update { it.copy(scanProgress = progress) }
-    }
-
-    fun getConnectionStats(): Map<String, Any> {
-        val history = _uiState.value.connectionHistory
-        val successful = history.count { it.success }
-        val failed = history.count { !it.success }
-        val avgPing = _uiState.value.discoveredServers.filter { it.ping > 0 }.map { it.ping }.average()
-        
-        return mapOf(
-            "total_connections" to history.size,
-            "successful_connections" to successful,
-            "failed_connections" to failed,
-            "success_rate" to if (history.isEmpty()) 0.0 else (successful.toDouble() / history.size) * 100,
-            "average_ping_ms" to avgPing,
-            "last_connection" to history.firstOrNull()?.timestamp ?: 0
-        )
     }
 
     override fun onCleared() {
