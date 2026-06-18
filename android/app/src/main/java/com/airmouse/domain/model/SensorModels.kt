@@ -1,9 +1,7 @@
-// app/src/main/java/com/airmouse/domain/model/SensorModels.kt
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
-import java.util.Date
 
 /**
  * Raw sensor reading from accelerometer, gyroscope, or magnetometer.
@@ -33,10 +31,6 @@ data class SensorReading(
         result = 31 * result + timestamp.hashCode()
         return result
     }
-
-    override fun toString(): String {
-        return "SensorReading(type=$type, values=[${values.joinToString()}], accuracy=$accuracy, timestamp=$timestamp)"
-    }
 }
 
 /**
@@ -60,15 +54,69 @@ enum class SensorType(val displayName: String) {
 }
 
 /**
+ * Sensor Sampling Rates.
+ */
+enum class SensorRate {
+    FASTEST, GAME, UI, NORMAL
+}
+
+/**
  * Orientation (roll, pitch, yaw) derived from sensor fusion.
  */
 @Parcelize
 data class Orientation(
-    val roll: Float,   // rotation around X axis (degrees) - used for vertical cursor movement
-    val pitch: Float,  // rotation around Y axis (degrees) - not directly used
-    val yaw: Float,    // rotation around Z axis (degrees) - used for horizontal cursor movement
+    val roll: Float,   // degrees
+    val pitch: Float,  // degrees
+    val yaw: Float,    // degrees
     val confidence: Float = 1.0f,
     val timestamp: Long = System.currentTimeMillis()
+) : Parcelable
+
+/**
+ * Consolidated Sensor Data for UI and Repository.
+ */
+@Parcelize
+data class SensorData(
+    val gyroscope: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
+    val accelerometer: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
+    val magnetometer: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
+    val orientation: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
+    val timestamp: Long = System.currentTimeMillis()
+) : Parcelable
+
+/**
+ * Status of the sensors.
+ */
+@Parcelize
+data class SensorStatus(
+    val isActive: Boolean = false,
+    val isCalibrated: Boolean = false,
+    val batteryLevel: Int = 100,
+    val temperature: Float = 25.0f
+) : Parcelable
+
+/**
+ * Calibration status for sensors.
+ */
+@Parcelize
+data class CalibrationStatus(
+    val gyroCalibrated: Boolean = false,
+    val accelCalibrated: Boolean = false,
+    val magCalibrated: Boolean = false,
+    val allCalibrated: Boolean = false,
+    val progress: Int = 0,
+    val confidence: Float = 0f
+) : Parcelable
+
+/**
+ * Sensor Information.
+ */
+@Parcelize
+data class SensorInfo(
+    val name: String,
+    val type: Int,
+    val vendor: String,
+    val isAvailable: Boolean
 ) : Parcelable
 
 /**

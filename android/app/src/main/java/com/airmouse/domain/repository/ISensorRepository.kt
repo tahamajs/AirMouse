@@ -1,7 +1,6 @@
 package com.airmouse.domain.repository
 
-import com.airmouse.domain.model.SensorData
-import com.airmouse.domain.model.SensorStatus
+import com.airmouse.domain.model.*
 import kotlinx.coroutines.flow.Flow
 
 interface ISensorRepository {
@@ -16,41 +15,3 @@ interface ISensorRepository {
     suspend fun calibrateMagnetometer(): Boolean
     suspend fun getCalibrationStatus(): CalibrationStatus
 }
-
-data class SensorData(
-    val gyroscope: Triple<Float, Float, Float>,
-    val accelerometer: Triple<Float, Float, Float>,
-    val magnetometer: Triple<Float, Float, Float>,
-    val orientation: Triple<Float, Float, Float>,
-    val timestamp: Long
-)
-
-data class SensorStatus(
-    val isActive: Boolean,
-    val isCalibrated: Boolean,
-    val batteryLevel: Int,
-    val temperature: Float
-)
-
-data class SensorInfo(
-    val name: String,
-    val type: Int,
-    val vendor: String,
-    val isAvailable: Boolean
-)
-
-enum class SensorRate {
-    FASTEST, GAME, UI, NORMAL
-}
-
-/**
- * Calibration status for sensors.
- */
-data class CalibrationStatus(
-    val gyroCalibrated: Boolean,
-    val accelCalibrated: Boolean,
-    val magCalibrated: Boolean,
-    val allCalibrated: Boolean,
-    val progress: Int,          // 0-100
-    val confidence: Float       // 0.0-1.0
-)
