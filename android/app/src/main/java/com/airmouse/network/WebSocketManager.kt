@@ -17,7 +17,6 @@ object WebSocketManager {
 
     private const val TAG = "WebSocketManager"
     private const val NORMAL_CLOSURE_STATUS = 1000
-    private const val RECONNECT_DELAY_MS = 3000L
     private const val MAX_RECONNECT_ATTEMPTS = 10
 
     private var webSocket: WebSocket? = null
@@ -83,7 +82,7 @@ object WebSocketManager {
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                Log.d(TAG, "Received binary: ${bytes.size()} bytes")
+                Log.d(TAG, "Received binary: ${bytes.size} bytes")
                 onBinaryMessage?.invoke(bytes.toByteArray())
             }
 

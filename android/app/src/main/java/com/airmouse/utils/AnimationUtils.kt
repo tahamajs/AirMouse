@@ -6,13 +6,15 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
+import kotlin.math.sin
 
 object AnimationUtils {
 
@@ -76,7 +78,7 @@ object AnimationUtils {
         animator.interpolator = LinearInterpolator()
         animator.addUpdateListener { animation ->
             val progress = animation.animatedValue as Float
-            val shakeX = Math.sin(progress * Math.PI * 4).toFloat() * intensity * (1 - progress)
+            val shakeX = sin(progress.toDouble() * PI * 4).toFloat() * intensity * (1 - progress)
             view.translationX = shakeX
         }
         animator.addListener(object : AnimatorListenerAdapter() {
@@ -102,22 +104,24 @@ object AnimationUtils {
 
     @Composable
     fun fadeInAnimation(targetState: Boolean): Float {
-        return animateFloatAsState(
+        val alpha by animateFloatAsState(
             targetValue = if (targetState) 1f else 0f,
             animationSpec = tween(durationMillis = 300),
             label = "fadeIn"
-        ).value
+        )
+        return alpha
     }
 
     @Composable
     fun slideInAnimation(targetState: Boolean): Dp {
-        return animateDpAsState(
+        val offset by animateDpAsState(
             targetValue = if (targetState) 0.dp else 100.dp,
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioMediumBouncy,
                 stiffness = Spring.StiffnessLow
             ),
             label = "slideIn"
-        ).value
+        )
+        return offset
     }
 }
