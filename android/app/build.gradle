@@ -2,9 +2,11 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
+
     id 'com.google.dagger.hilt.android'
     id 'kotlin-parcelize'
-    id 'com.google.devtools.ksp' // For better annotation processing
+    id 'com.google.devtools.ksp' // For annotation processing (Room, etc.)
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.0.0' // Compose compiler plugin for Kotlin 2.0
 }
 
 android {
@@ -13,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId "com.airmouse"
-        minSdk 26
+        minSdk 29
         targetSdk 34
         versionCode 100
         versionName "3.0.0"
@@ -24,8 +26,8 @@ android {
         buildConfigField "String", "BUILD_TIME", "\"${new Date().format("yyyy-MM-dd HH:mm:ss")}\""
         buildConfigField "String", "GIT_HASH", "\"${System.getenv("GIT_COMMIT") ?: "unknown"}\""
 
-        // Resource configurations
-        resConfigs "en", "fa" // Add your supported languages
+        // Resource configurations (language support)
+        resConfigs "en", "fa"
     }
 
     buildFeatures {
@@ -42,8 +44,10 @@ android {
 
     kotlinOptions {
         jvmTarget = '17'
+        languageVersion = '1.9'
+        apiVersion = '1.9'
         freeCompilerArgs += [
-                '-Xjvm-default=enable',
+                '-Xjvm-default=all',
                 '-opt-in=kotlin.RequiresOptIn',
                 '-opt-in=androidx.compose.material3.ExperimentalMaterial3Api',
                 '-opt-in=androidx.compose.animation.ExperimentalAnimationApi',
@@ -53,12 +57,6 @@ android {
                 '-opt-in=kotlinx.serialization.ExperimentalSerializationApi',
                 '-Xskip-metadata-version-check'
         ]
-        // Enable explicit API mode for better code quality
-        // freeCompilerArgs += ['-Xexplicit-api=warning']
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     signingConfigs {
@@ -82,24 +80,14 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
-
-            // Build config for release
             buildConfigField "boolean", "IS_DEBUG", "false"
             buildConfigField "boolean", "ENABLE_LOGGING", "false"
-
-            // Enable R8 full mode for better optimization
-            // -keep class com.airmouse.** { *; }
         }
-
         debug {
             debuggable true
             signingConfig signingConfigs.debug
-
-            // Build config for debug
             buildConfigField "boolean", "IS_DEBUG", "true"
             buildConfigField "boolean", "ENABLE_LOGGING", "true"
-
-            // Enable R8 for debug to catch issues early
             minifyEnabled false
         }
     }
@@ -125,16 +113,17 @@ android {
             returnDefaultValues = true
         }
     }
+    configurations.all {
+        exclude group: 'org.tensorflow', module: 'tensorflow-lite-api'
+    }
 
     lint {
         abortOnError = false
         checkReleaseBuilds = false
-        disable 'MissingTranslation'
-        disable 'ExtraTranslation'
+        disable 'MissingTranslation', 'ExtraTranslation'
         baseline file("lint-baseline.xml")
     }
 
-    // Ensure source directories exist
     sourceSets {
         main {
             java.srcDirs += 'src/main/kotlin'
@@ -148,7 +137,7 @@ android {
 }
 
 dependencies {
-    // Local modules
+    // Local module
     implementation project(':network')
 
     // ==================== COMPOSE BOM ====================
@@ -164,8 +153,9 @@ dependencies {
     implementation 'androidx.compose.animation:animation-graphics'
     implementation 'androidx.compose.runtime:runtime-livedata'
     implementation 'androidx.compose.runtime:runtime-rxjava2'
+    ksp 'com.google.dagger:hilt-compiler:2.52'
 
-    // ==================== COMPOSE NAVIGATION ====================
+    // ==================== COMPOSE NAVIGATION & HILT ====================
     implementation 'androidx.navigation:navigation-compose:2.7.7'
     implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
 
@@ -189,7 +179,7 @@ dependencies {
     // ==================== MATERIAL DESIGN ====================
     implementation 'com.google.android.material:material:1.12.0'
 
-    // ==================== DATASTORE (Preferences) ====================
+    // ==================== DATASTORE ====================
     implementation 'androidx.datastore:datastore-preferences:1.1.1'
     implementation 'androidx.datastore:datastore-preferences-core:1.1.1'
 
@@ -208,8 +198,6 @@ dependencies {
     implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
     implementation 'com.squareup.okhttp3:okhttp-sse:4.12.0'
     implementation 'com.google.code.gson:gson:2.11.0'
-
-    // Retrofit (optional, but recommended for REST APIs)
     implementation 'com.squareup.retrofit2:retrofit:2.11.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
     implementation 'com.squareup.okhttp3:okhttp-tls:4.12.0'
@@ -220,10 +208,13 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.7.1'
 
     // ==================== TENSORFLOW LITE ====================
+    // Use consistent versions - 2.17.0 is fine (removed duplicate 2.14.0)
     implementation 'org.tensorflow:tensorflow-lite:2.17.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
     implementation 'org.tensorflow:tensorflow-lite-gpu:2.17.0'
-    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.17.0'
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
 
     // ==================== QR CODE SCANNING ====================
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
@@ -237,31 +228,30 @@ dependencies {
     implementation 'com.google.accompanist:accompanist-swiperefresh:0.35.0-alpha'
     implementation 'com.google.accompanist:accompanist-navigation-animation:0.35.0-alpha'
 
-    // ==================== UTILITIES ====================
+    // ==================== UTILITIES & CHARTS ====================
     implementation 'com.opencsv:opencsv:5.9'
-    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'   // JitPack - ensure repo added
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     kapt 'com.github.bumptech.glide:compiler:4.16.0'
     implementation 'com.jakewharton.timber:timber:5.0.1'
     implementation 'com.elvishew:xlog:1.11.0'
     implementation 'com.blankj:utilcodex:1.31.1'
 
-    // ==================== BLUETOOTH & PERIPHERALS ====================
-    implementation 'com.github.mik3y:usb-serial-for-android:3.8.1'
+    // ==================== BLUETOOTH & USB SERIAL ====================
+    implementation 'com.github.mik3y:usb-serial-for-android:3.8.1'  // JitPack
     implementation 'no.nordicsemi.android:ble-common:2.7.0'
     implementation 'no.nordicsemi.android:ble-livedata:2.7.0'
     implementation 'no.nordicsemi.android:ble-ktx:2.7.0'
 
-    // ==================== AUDIO & VOICE ====================
-    implementation 'com.karumi:dexter:6.2.3' // Permission handling
+    // ==================== PERMISSION HANDLING ====================
+    implementation 'com.karumi:dexter:6.2.3'
 
-    // ==================== IMAGE LOADING ====================
+    // ==================== IMAGE LOADING (Coil) ====================
     implementation 'io.coil-kt:coil-compose:2.7.0'
     implementation 'io.coil-kt:coil-gif:2.7.0'
     implementation 'io.coil-kt:coil-svg:2.7.0'
 
     // ==================== TESTING ====================
-    // Unit Tests
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'io.mockk:mockk:1.13.12'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'
@@ -271,7 +261,6 @@ dependencies {
     testImplementation 'com.google.truth:truth:1.4.4'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
 
-    // Android Tests
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.6.1'
@@ -282,12 +271,10 @@ dependencies {
     androidTestImplementation 'io.mockk:mockk-android:1.13.12'
     androidTestImplementation 'androidx.navigation:navigation-testing:2.7.7'
 
-    // Debug Implementation
+    // ==================== DEBUG / RELEASE IMPLEMENTATIONS ====================
     debugImplementation "androidx.compose.ui:ui-tooling"
     debugImplementation "androidx.compose.ui:ui-test-manifest"
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.14'
-
-    // Release Implementation
     releaseImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:2.14'
 }
 
@@ -298,7 +285,6 @@ kapt {
     includeCompileClasspath = false
     mapDiagnosticLocations = true
 
-    // For better Hilt compatibility
     arguments {
         arg("room.schemaLocation", "$projectDir/schemas")
         arg("room.incremental", "true")
@@ -306,20 +292,20 @@ kapt {
     }
 }
 
-// KSP configuration (if using KSP instead of kapt for some processors)
+// KSP configuration (optional, if you use KSP for Room)
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
     arg("room.incremental", "true")
 }
 
-// Explicit Kotlin compiler configuration
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlinOptions {
         jvmTarget = '17'
+        // Explicitly force Kotlin 1.9 to avoid module loading issues with kapt
         languageVersion = '1.9'
         apiVersion = '1.9'
         freeCompilerArgs += [
-                '-Xjvm-default=enable',
+                '-Xjvm-default=all',
                 '-opt-in=kotlin.RequiresOptIn',
                 '-opt-in=androidx.compose.material3.ExperimentalMaterial3Api',
                 '-opt-in=androidx.compose.animation.ExperimentalAnimationApi',
@@ -346,10 +332,9 @@ task ensureDirectories {
 
 preBuild.dependsOn ensureDirectories
 
-// Clean task with additional cleanup
+// Clean additional artifacts
 task cleanExtra(type: Delete) {
     delete 'build'
-    delete 'src/main/kotlin/com/airmouse' // Only if you want to force regeneration
     delete 'schemas'
 }
 
@@ -360,7 +345,7 @@ task generateLintBaseline(type: Exec) {
     commandLine './gradlew', 'lint', '--baseline', 'lint-baseline.xml'
 }
 
-// Build information
+// Build information generation
 task generateBuildInfo {
     doLast {
         def buildInfoFile = file("src/main/kotlin/com/airmouse/BuildInfo.kt")
@@ -373,7 +358,7 @@ task generateBuildInfo {
                 const val VERSION_NAME = "${android.defaultConfig.versionName}"
                 const val VERSION_CODE = ${android.defaultConfig.versionCode}
                 const val BUILD_TIME = "${new Date().format("yyyy-MM-dd HH:mm:ss")}"
-                const val BUILD_TYPE = "${project.gradle.startParameter.taskNames.joinToString()}"
+                const val BUILD_TYPE = "${project.gradle.startParameter.taskNames.join()}"
             }
         """.stripIndent()
     }
