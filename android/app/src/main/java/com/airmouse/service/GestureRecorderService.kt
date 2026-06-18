@@ -20,6 +20,17 @@ import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 
+/**
+ * Gesture Recorder Service - Records sensor data for AI gesture training
+ *
+ * Features:
+ * - Records gyroscope, accelerometer, and magnetometer data
+ * - Auto-stops after specified duration
+ * - Saves data to CSV format
+ * - Exports combined dataset from all recordings
+ * - Foreground service with notifications
+ * - Hilt dependency injection
+ */
 @AndroidEntryPoint
 class GestureRecorderService : Service(), SensorEventListener {
 
@@ -40,12 +51,22 @@ class GestureRecorderService : Service(), SensorEventListener {
     companion object {
         private const val NOTIFICATION_ID = 2001
         private const val CHANNEL_ID = "gesture_recorder"
+
+        // Action constants
         const val ACTION_START_RECORDING = "START_RECORDING"
         const val ACTION_STOP_RECORDING = "STOP_RECORDING"
         const val ACTION_EXPORT_DATASET = "EXPORT_DATASET"
+
+        // Extra constants
         const val EXTRA_GESTURE_NAME = "gesture_name"
         const val EXTRA_DURATION = "duration"
 
+        /**
+         * Start recording a gesture
+         * @param context Application context
+         * @param gestureName Name of the gesture being recorded
+         * @param duration Duration in seconds (default 5)
+         */
         fun start(context: Context, gestureName: String, duration: Int = 5) {
             val intent = Intent(context, GestureRecorderService::class.java).apply {
                 action = ACTION_START_RECORDING
@@ -59,10 +80,16 @@ class GestureRecorderService : Service(), SensorEventListener {
             }
         }
 
+        /**
+         * Stop recording and save data
+         */
         fun stop(context: Context) {
             context.stopService(Intent(context, GestureRecorderService::class.java))
         }
 
+        /**
+         * Export all recorded gestures as a single dataset
+         */
         fun export(context: Context) {
             val intent = Intent(context, GestureRecorderService::class.java).apply {
                 action = ACTION_EXPORT_DATASET
@@ -81,6 +108,11 @@ class GestureRecorderService : Service(), SensorEventListener {
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+
+        // Log sensor availability
+        android.util.Log.i("GestureRecorder", "Gyroscope: ${gyroscope != null}")
+        android.util.Log.i("GestureRecorder", "Accelerometer: ${accelerometer != null}")
+        android.util.Log.i("GestureRecorder", "Magnetometer: ${magnetometer != null}")
     }
 
     private fun createNotificationChannel() {
@@ -91,6 +123,8 @@ class GestureRecorderService : Service(), SensorEventListener {
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Records gesture data for AI training"
+                setSound(null, null)
+                setShowBadge(false)
             }
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
@@ -100,13 +134,29 @@ class GestureRecorderService : Service(), SensorEventListener {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(content)
-            .setSmallIcon(R.drawable.ic_gesture)
+            .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(title.contains("Recording"))
             .build()
     }
 
+    /**
+     * Start recording gesture data
+     * @param gestureName Name of the gesture
+     * @param durationSeconds Recording duration in seconds
+     */
     fun startRecording(gestureName: String, durationSeconds: Int) {
-        if (isRecording) return
+        if (isRecording) {
+            android.util.Log.w("GestureRecorder", "Already recording")
+            return
+        }
+
+        // Validate sensors
+        if (gyroscope == null || accelerometer == null) {
+            updateNotification("Error", "Required sensors not available")
+            stopSelf()
+            return
+        }
 
         currentGestureName = gestureName
         sensorData.clear()
@@ -114,9 +164,18 @@ class GestureRecorderService : Service(), SensorEventListener {
         isRecording = true
 
         // Register sensors
-        gyroscope?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST) }
-        accelerometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST) }
-        magnetometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST) }
+        gyroscope?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+            android.util.Log.d("GestureRecorder", "Gyroscope registered")
+        }
+        accelerometer?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+            android.util.Log.d("GestureRecorder", "Accelerometer registered")
+        }
+        magnetometer?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+            android.util.Log.d("GestureRecorder", "Magnetometer registered")
+        }
 
         startForeground(NOTIFICATION_ID, createNotification("Recording", "Recording: $gestureName"))
 
@@ -124,6 +183,7 @@ class GestureRecorderService : Service(), SensorEventListener {
         recordingJob = serviceScope.launch {
             delay(durationSeconds * 1000L)
             if (isRecording) {
+                android.util.Log.i("GestureRecorder", "Auto-stopping recording after $durationSeconds seconds")
                 stopRecording()
             }
         }
@@ -138,17 +198,27 @@ class GestureRecorderService : Service(), SensorEventListener {
         }
     }
 
+    /**
+     * Stop recording and save data
+     */
     fun stopRecording() {
-        if (!isRecording) return
+        if (!isRecording) {
+            android.util.Log.w("GestureRecorder", "Not recording")
+            return
+        }
 
+        android.util.Log.i("GestureRecorder", "Stopping recording...")
         isRecording = false
         recordingJob?.cancel()
         sensorManager.unregisterListener(this)
 
         // Save recorded data
-        saveRecording()
-
-        updateNotification("Saved", "Gesture saved: $currentGestureName")
+        if (sensorData.isNotEmpty()) {
+            saveRecording()
+            updateNotification("Saved", "Gesture saved: $currentGestureName (${sensorData.size} samples)")
+        } else {
+            updateNotification("No Data", "No data recorded for: $currentGestureName")
+        }
 
         // Auto-stop service after saving
         serviceScope.launch {
@@ -157,14 +227,20 @@ class GestureRecorderService : Service(), SensorEventListener {
         }
     }
 
+    /**
+     * Save recorded data to CSV file
+     */
     private fun saveRecording() {
-        if (sensorData.isEmpty()) return
-
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val fileName = "gesture_${currentGestureName}_$timestamp.csv"
-        val file = File(getExternalFilesDir(null), fileName)
+        if (sensorData.isEmpty()) {
+            android.util.Log.w("GestureRecorder", "No data to save")
+            return
+        }
 
         try {
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val fileName = "gesture_${currentGestureName}_$timestamp.csv"
+            val file = File(getExternalFilesDir(null), fileName)
+
             FileWriter(file).use { writer ->
                 // Write header
                 writer.write("timestamp_ms,gyro_x,gyro_y,gyro_z,accel_x,accel_y,accel_z,mag_x,mag_y,mag_z\n")
@@ -182,41 +258,64 @@ class GestureRecorderService : Service(), SensorEventListener {
             prefs.putString("recorded_gestures", newEntry)
 
             android.util.Log.i("GestureRecorder", "Saved gesture to: ${file.absolutePath}")
+            android.util.Log.i("GestureRecorder", "Samples: ${sensorData.size}")
         } catch (e: Exception) {
             android.util.Log.e("GestureRecorder", "Failed to save recording", e)
+            updateNotification("Error", "Failed to save: ${e.message}")
         }
     }
 
+    /**
+     * Export all recorded gestures as a single dataset
+     */
     fun exportDataset() {
         serviceScope.launch(Dispatchers.IO) {
-            val recordedGestures = prefs.getString("recorded_gestures", "").split(",")
-            if (recordedGestures.isEmpty() || recordedGestures.first().isEmpty()) {
-                updateNotification("No Data", "No recorded gestures to export")
-                return@launch
-            }
+            try {
+                val recordedGestures = prefs.getString("recorded_gestures", "").split(",")
+                if (recordedGestures.isEmpty() || recordedGestures.first().isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        updateNotification("No Data", "No recorded gestures to export")
+                    }
+                    return@launch
+                }
 
-            val exportFile = File(getExternalFilesDir(null), "gesture_dataset_${System.currentTimeMillis()}.csv")
+                val exportFile = File(getExternalFilesDir(null), "gesture_dataset_${System.currentTimeMillis()}.csv")
+                var totalSamples = 0
 
-            FileWriter(exportFile).use { writer ->
-                // Header
-                writer.write("gesture_name,timestamp_ms,gyro_x,gyro_y,gyro_z,accel_x,accel_y,accel_z,mag_x,mag_y,mag_z\n")
+                FileWriter(exportFile).use { writer ->
+                    // Header
+                    writer.write("gesture_name,timestamp_ms,gyro_x,gyro_y,gyro_z,accel_x,accel_y,accel_z,mag_x,mag_y,mag_z\n")
 
-                // Combine all gesture files
-                recordedGestures.forEach { fileName ->
-                    if (fileName.isNotEmpty()) {
-                        val gestureFile = File(getExternalFilesDir(null), fileName)
-                        if (gestureFile.exists()) {
-                            val gestureName = fileName.substringAfter("gesture_").substringBefore("_")
-                            gestureFile.readLines().drop(1).forEach { line ->
-                                writer.write("$gestureName,$line\n")
+                    // Combine all gesture files
+                    recordedGestures.forEach { fileName ->
+                        if (fileName.isNotEmpty()) {
+                            val gestureFile = File(getExternalFilesDir(null), fileName)
+                            if (gestureFile.exists()) {
+                                val gestureName = fileName.substringAfter("gesture_").substringBefore("_")
+                                val lines = gestureFile.readLines()
+                                if (lines.size > 1) {
+                                    lines.drop(1).forEach { line ->
+                                        writer.write("$gestureName,$line\n")
+                                        totalSamples++
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            updateNotification("Exported", "Dataset exported to: ${exportFile.name}")
-            android.util.Log.i("GestureRecorder", "Dataset exported to: ${exportFile.absolutePath}")
+                val finalMessage = "Exported ${totalSamples} samples to: ${exportFile.name}"
+                withContext(Dispatchers.Main) {
+                    updateNotification("Exported", finalMessage)
+                }
+                android.util.Log.i("GestureRecorder", "Dataset exported to: ${exportFile.absolutePath}")
+                android.util.Log.i("GestureRecorder", "Total samples: $totalSamples")
+            } catch (e: Exception) {
+                android.util.Log.e("GestureRecorder", "Failed to export dataset", e)
+                withContext(Dispatchers.Main) {
+                    updateNotification("Export Failed", "Error: ${e.message}")
+                }
+            }
         }
     }
 
@@ -224,7 +323,9 @@ class GestureRecorderService : Service(), SensorEventListener {
         val notification = createNotification(title, content)
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, notification)
-        startForeground(NOTIFICATION_ID, notification)
+        if (title.contains("Recording")) {
+            startForeground(NOTIFICATION_ID, notification)
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -287,7 +388,9 @@ class GestureRecorderService : Service(), SensorEventListener {
         }
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        // Not used
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -306,11 +409,15 @@ class GestureRecorderService : Service(), SensorEventListener {
         super.onDestroy()
         if (isRecording) stopRecording()
         serviceScope.cancel()
+        android.util.Log.i("GestureRecorder", "Service destroyed")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 }
 
+/**
+ * Data class for sensor data points
+ */
 data class SensorDataPoint(
     val timestamp: Long,
     val gyroX: Float = 0f,

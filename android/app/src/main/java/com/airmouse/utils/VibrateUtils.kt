@@ -1,16 +1,16 @@
-// app/src/main/java/com/airmouse/utils/VibrateUtils.kt (Update)
 package com.airmouse.utils
 
 import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class VibrateUtils @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) {
 
     private val vibrator: Vibrator by lazy {
@@ -36,15 +36,18 @@ class VibrateUtils @Inject constructor(
     }
 
     fun vibrateDoubleClick() {
-        vibrate(arrayOf(20L, 50L, 20L))
+        // FIXED: Using longArrayOf() instead of arrayOf()
+        vibrate(longArrayOf(20L, 50L, 20L))
     }
 
     fun vibrateError() {
-        vibrate(arrayOf(100L, 50L, 100L))
+        // FIXED: Using longArrayOf() instead of arrayOf()
+        vibrate(longArrayOf(100L, 50L, 100L))
     }
 
     fun vibrateSuccess() {
-        vibrate(arrayOf(20L, 30L, 50L))
+        // FIXED: Using longArrayOf() instead of arrayOf()
+        vibrate(longArrayOf(20L, 30L, 50L))
     }
 
     private fun vibrate(duration: Long) {
