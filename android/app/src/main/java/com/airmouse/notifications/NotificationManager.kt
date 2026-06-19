@@ -1,6 +1,7 @@
 // app/src/main/java/com/airmouse/notifications/NotificationManager.kt
 package com.airmouse.notifications
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -558,7 +559,7 @@ class NotificationManager @Inject constructor(
             val activeNotifications = getActiveNotifications()
             activeNotifications?.forEach { notification ->
                 val extras = notification.notification.extras
-                val notificationGroupKey = extras.getString(NotificationCompat.EXTRA_GROUP_KEY)
+                val notificationGroupKey = extras.getString(Notification.EXTRA_GROUP_KEY)
                 if (notificationGroupKey == groupKey) {
                     notificationManagerCompat.cancel(notification.id)
                 }

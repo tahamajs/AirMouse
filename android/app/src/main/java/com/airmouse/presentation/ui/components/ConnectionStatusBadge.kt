@@ -177,9 +177,10 @@ fun ConnectionStatusBadge(
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
-                            }
                         }
+                        else -> {}
                     }
+                }
                     
                     IconButton(
                         onClick = { onDismiss() },
