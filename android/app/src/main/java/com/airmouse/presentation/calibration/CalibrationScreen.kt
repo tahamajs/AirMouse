@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationResultScreen.kt
+// app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationScreen.kt
 package com.airmouse.presentation.ui.calibration
 
 import androidx.compose.animation.*
@@ -17,17 +17,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
+import com.airmouse.domain.model.CalibrationData
+import com.airmouse.domain.model.SensorCalibrationData
+import com.airmouse.presentation.navigation.NavigationActions
+import java.util.Locale
 import kotlinx.coroutines.delay
 
 @Composable
-fun CalibrationResultScreen(
-    quality: String,
-    onContinue: () -> Unit,
-    onRecalibrate: () -> Unit,
+fun CalibrationScreen(
+    navigationActions: NavigationActions? = null,
+    onComplete: () -> Unit = {},
+    quality: String = "GOOD",
+    onContinue: () -> Unit = {},
+    onRecalibrate: () -> Unit = {},
     onShare: (() -> Unit)? = null,
     onViewDetails: (() -> Unit)? = null,
     calibrationData: CalibrationData? = null,
@@ -64,34 +72,42 @@ fun CalibrationResultScreen(
     )
 
     // Quality colors and icons
-    val (qualityColor, qualityEmoji, qualityTitle, qualityDescription, qualitySubtext) = when (quality.uppercase()) {
-        "EXCELLENT" -> Pair(
-            Color(0xFF10B981),
-            "🌟",
-            "Excellent",
-            "Perfect calibration!",
-            "Your device is performing at its best."
+    val qualityConfig = when (quality.uppercase()) {
+        "EXCELLENT" -> CalibrationQualityConfig(
+            color = Color(0xFF10B981),
+            emoji = "🌟",
+            title = "Excellent",
+            description = "Perfect calibration!",
+            subtext = "Your device is performing at its best.",
+            score = "95%",
+            status = "✅ Ready"
         )
-        "GOOD" -> Pair(
-            Color(0xFF3B82F6),
-            "👍",
-            "Good",
-            "Calibration successful.",
-            "Device is calibrated with good accuracy."
+        "GOOD" -> CalibrationQualityConfig(
+            color = Color(0xFF3B82F6),
+            emoji = "👍",
+            title = "Good",
+            description = "Calibration successful.",
+            subtext = "Device is calibrated with good accuracy.",
+            score = "80%",
+            status = "✅ Ready"
         )
-        "FAIR" -> Pair(
-            Color(0xFFF59E0B),
-            "⚠️",
-            "Fair",
-            "Calibration complete.",
-            "Consider recalibrating for best results."
+        "FAIR" -> CalibrationQualityConfig(
+            color = Color(0xFFF59E0B),
+            emoji = "⚠️",
+            title = "Fair",
+            description = "Calibration complete.",
+            subtext = "Consider recalibrating for best results.",
+            score = "60%",
+            status = "⚠️ Review"
         )
-        else -> Pair(
-            Color(0xFF64748B),
-            "❓",
-            "Unknown",
-            "Calibration completed.",
-            "Quality could not be determined."
+        else -> CalibrationQualityConfig(
+            color = Color(0xFF64748B),
+            emoji = "❓",
+            title = "Unknown",
+            description = "Calibration completed.",
+            subtext = "Quality could not be determined.",
+            score = "50%",
+            status = "Unknown"
         )
     }
 
@@ -143,8 +159,8 @@ fun CalibrationResultScreen(
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
-                                qualityColor.copy(alpha = 0.3f),
-                                qualityColor.copy(alpha = 0.1f)
+                                qualityConfig.color.copy(alpha = 0.3f),
+                                qualityConfig.color.copy(alpha = 0.1f)
                             )
                         )
                     ),
@@ -158,7 +174,7 @@ fun CalibrationResultScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = qualityEmoji,
+                        text = qualityConfig.emoji,
                         fontSize = 48.sp,
                         modifier = Modifier.scale(
                             if (animationTriggered) 1f else 0.5f
@@ -182,10 +198,10 @@ fun CalibrationResultScreen(
 
             // Subtitle
             Text(
-                text = qualityTitle,
+                text = qualityConfig.title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
-                color = qualityColor,
+                color = qualityConfig.color,
                 textAlign = TextAlign.Center
             )
 
@@ -193,7 +209,7 @@ fun CalibrationResultScreen(
 
             // Description
             Text(
-                text = qualityDescription,
+                text = qualityConfig.description,
                 fontSize = 16.sp,
                 color = Color.White.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center,
@@ -203,7 +219,7 @@ fun CalibrationResultScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = qualitySubtext,
+                text = qualityConfig.subtext,
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
@@ -223,7 +239,7 @@ fun CalibrationResultScreen(
                 ),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
-                    qualityColor.copy(alpha = 0.3f)
+                    qualityConfig.color.copy(alpha = 0.3f)
                 )
             ) {
                 Column(
@@ -237,22 +253,17 @@ fun CalibrationResultScreen(
                         QualityMetric(
                             label = "Quality",
                             value = quality.uppercase(),
-                            color = qualityColor
+                            color = qualityConfig.color
                         )
                         QualityMetric(
                             label = "Score",
-                            value = when (quality.uppercase()) {
-                                "EXCELLENT" -> "95%"
-                                "GOOD" -> "80%"
-                                "FAIR" -> "60%"
-                                else -> "50%"
-                            },
-                            color = qualityColor
+                            value = qualityConfig.score,
+                            color = qualityConfig.color
                         )
                         QualityMetric(
                             label = "Status",
-                            value = if (quality.uppercase() in listOf("EXCELLENT", "GOOD")) "✅ Ready" else "⚠️ Review",
-                            color = qualityColor
+                            value = qualityConfig.status,
+                            color = qualityConfig.color
                         )
                     }
 
@@ -305,7 +316,7 @@ fun CalibrationResultScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = qualityColor
+                        containerColor = qualityConfig.color
                     )
                 ) {
                     Icon(
@@ -437,14 +448,14 @@ fun CalibrationDetails(
         // Accelerometer
         DetailRow(
             label = "Accelerometer",
-            value = formatBias(calibrationData.accelBias),
+            value = formatBias(calibrationData.accelOffset),
             color = Color(0xFF3B82F6)
         )
 
         // Magnetometer
         DetailRow(
             label = "Magnetometer",
-            value = formatBias(calibrationData.magBias),
+            value = formatBias(calibrationData.magOffset),
             color = Color(0xFF10B981)
         )
 
@@ -493,11 +504,14 @@ fun DetailRow(
     }
 }
 
-@Composable
-fun formatBias(bias: Triple<Float, Float, Float>): String {
-    return "(${bias.first.formatCalibrationValue()}, " +
-            "${bias.second.formatCalibrationValue()}, " +
-            "${bias.third.formatCalibrationValue()})"
+fun formatBias(data: SensorCalibrationData): String {
+    return "(${data.offsetX.formatCalibrationValue()}, " +
+            "${data.offsetY.formatCalibrationValue()}, " +
+            "${data.offsetZ.formatCalibrationValue()})"
+}
+
+private fun Float.formatCalibrationValue(): String {
+    return String.format(Locale.US, "%.2f", this)
 }
 
 @Composable
@@ -523,7 +537,7 @@ fun AnimatedBackgroundParticles() {
                     .size(size.dp)
                     .graphicsLayer {
                         rotationZ = rotation * (1f + i * 0.1f)
-                        alpha = alpha.coerceAtLeast(0.005f)
+                        this.alpha = alpha.coerceAtLeast(0.005f)
                     }
                     .background(
                         Brush.radialGradient(
@@ -586,10 +600,20 @@ fun ConfettiEffect() {
 // Preview for development
 @Preview(showBackground = true)
 @Composable
-fun CalibrationResultScreenPreview() {
-    CalibrationResultScreen(
+fun CalibrationScreenPreview() {
+    CalibrationScreen(
         quality = "EXCELLENT",
         onContinue = {},
         onRecalibrate = {}
     )
 }
+
+private data class CalibrationQualityConfig(
+    val color: Color,
+    val emoji: String,
+    val title: String,
+    val description: String,
+    val subtext: String,
+    val score: String,
+    val status: String
+)

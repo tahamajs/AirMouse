@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
 import com.airmouse.presentation.navigation.NavigationActions
 import com.airmouse.presentation.theme.AirMouseTheme
 import com.airmouse.presentation.ui.settings.SettingsScreen
@@ -33,8 +34,9 @@ class SettingsActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    val navController = rememberNavController()
                     SettingsScreen(
-                        navigationActions = NavigationActions(null),
+                        navigationActions = NavigationActions(navController),
                         onBack = { finish() }
                     )
                 }

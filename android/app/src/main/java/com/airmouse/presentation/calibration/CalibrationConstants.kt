@@ -1,6 +1,8 @@
 // app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationConstants.kt
 package com.airmouse.presentation.ui.calibration
 
+import androidx.compose.ui.graphics.Color
+
 object CalibrationConstants {
     // Calibration steps
     const val STEP_GYROSCOPE = 1
