@@ -486,7 +486,7 @@ fun JSONObject.getGestureName(): String? {
  * Extension function to get gesture confidence
  */
 fun JSONObject.getGestureConfidence(): Float {
-    return getPayload()?.optFloat("confidence") ?: 0f
+    return getPayload()?.optDouble("confidence")?.toFloat() ?: 0f
 }
 
 /**
@@ -500,7 +500,7 @@ fun JSONObject.isProximity(): Boolean {
  * Extension function to get proximity distance
  */
 fun JSONObject.getProximityDistance(): Float {
-    return getPayload()?.optFloat("distance") ?: 0f
+    return getPayload()?.optDouble("distance")?.toFloat() ?: 0f
 }
 
 /**
