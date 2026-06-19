@@ -2,6 +2,10 @@ package com.airmouse.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.TrendingDown
+import androidx.compose.material.icons.filled.TrendingFlat
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,17 +23,11 @@ fun AnimatedCounter(
     suffix: String = "",
     duration: Int = 1000
 ) {
-    var animatedValue by remember { mutableIntStateOf(0) }
-    
-    LaunchedEffect(targetValue) {
-        animate(
-            initialValue = animatedValue,
-            targetValue = targetValue,
-            animationSpec = tween(duration, easing = FastOutSlowInEasing)
-        ) { value, _ ->
-            animatedValue = value
-        }
-    }
+    val animatedValue by animateIntAsState(
+        targetValue = targetValue,
+        animationSpec = tween(duration, easing = FastOutSlowInEasing),
+        label = "animated_counter"
+    )
     
     Text(
         text = "$prefix$animatedValue$suffix",
@@ -46,17 +44,11 @@ fun AnimatedPercentage(
     modifier: Modifier = Modifier,
     showIcon: Boolean = true
 ) {
-    var currentPercentage by remember { mutableIntStateOf(0) }
-    
-    LaunchedEffect(targetPercentage) {
-        animate(
-            initialValue = 0,
-            targetValue = targetPercentage,
-            animationSpec = tween(800, easing = FastOutSlowInEasing)
-        ) { value, _ ->
-            currentPercentage = value
-        }
-    }
+    val currentPercentage by animateIntAsState(
+        targetValue = targetPercentage,
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
+        label = "animated_percentage"
+    )
     
     Row(
         modifier = modifier,
@@ -64,11 +56,11 @@ fun AnimatedPercentage(
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         if (showIcon) {
-            Icon(
-                when {
-                    targetPercentage >= 80 -> androidx.compose.material.icons.Icons.Default.TrendingUp
-                    targetPercentage >= 50 -> androidx.compose.material.icons.Icons.Default.TrendingFlat
-                    else -> androidx.compose.material.icons.Icons.Default.TrendingDown
+                Icon(
+                    when {
+                    targetPercentage >= 80 -> Icons.Default.TrendingUp
+                    targetPercentage >= 50 -> Icons.Default.TrendingFlat
+                    else -> Icons.Default.TrendingDown
                 },
                 contentDescription = null,
                 tint = when {

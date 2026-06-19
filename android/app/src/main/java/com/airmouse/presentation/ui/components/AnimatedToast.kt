@@ -5,6 +5,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -64,10 +70,10 @@ fun AnimatedToast(
             ) {
                 Icon(
                     when (type) {
-                        ToastType.SUCCESS -> androidx.compose.material.icons.Icons.Default.CheckCircle
-                        ToastType.ERROR -> androidx.compose.material.icons.Icons.Default.Error
-                        ToastType.WARNING -> androidx.compose.material.icons.Icons.Default.Warning
-                        ToastType.INFO -> androidx.compose.material.icons.Icons.Default.Info
+                        ToastType.SUCCESS -> Icons.Default.CheckCircle
+                        ToastType.ERROR -> Icons.Default.Error
+                        ToastType.WARNING -> Icons.Default.Warning
+                        ToastType.INFO -> Icons.Default.Info
                     },
                     contentDescription = null,
                     tint = Color.White
@@ -82,7 +88,7 @@ fun AnimatedToast(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        androidx.compose.material.icons.Icons.Default.Close,
+                        Icons.Default.Close,
                         contentDescription = "Dismiss",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
