@@ -180,6 +180,14 @@ class GestureStudioViewModel @Inject constructor(
         _uiState.update { it.copy(gestureName = name, errorMessage = null) }
     }
 
+    fun updateNewGestureName(name: String) {
+        _uiState.update { it.copy(newGestureName = name, errorMessage = null) }
+    }
+
+    fun updateNewGestureAction(action: String) {
+        _uiState.update { it.copy(newGestureAction = action, errorMessage = null) }
+    }
+
     fun setSelectedSensor(sensor: SensorType) {
         _uiState.update { it.copy(selectedSensor = sensor) }
     }
@@ -351,6 +359,22 @@ class GestureStudioViewModel @Inject constructor(
                 selectedGesture = gesture,
                 errorMessage = null
             )
+        }
+    }
+
+    fun trainGesture(id: String) {
+        viewModelScope.launch {
+            try {
+                val gesture = gestureRepository.getCustomGesture(id)
+                if (gesture != null) {
+                    gestureRepository.trainGesture(gesture.name, emptyList())
+                    loadData()
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(errorMessage = e.message ?: "Failed to train gesture")
+                }
+            }
         }
     }
 

@@ -28,6 +28,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.domain.model.CustomGestureTemplate
 import com.airmouse.domain.model.GestureTrainingStats
+import com.airmouse.domain.model.duration
+import com.airmouse.domain.model.isFavorite
 import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
