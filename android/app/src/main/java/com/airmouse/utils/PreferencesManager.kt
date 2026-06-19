@@ -3,6 +3,7 @@ package com.airmouse.utils
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.airmouse.domain.model.StatisticsSummary
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,44 +17,6 @@ import javax.inject.Singleton
 class PreferencesManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    class PreferencesManager @Inject constructor(
-        @ApplicationContext private val context: Context
-    ) {
-        // ... existing code ...
-
-        // ==================== Statistics ====================
-        fun getSessionStats(): StatisticsSummary {
-            return StatisticsSummary(
-                totalClicks = getInt("session_clicks", 0),
-                totalDoubleClicks = getInt("session_double_clicks", 0),
-                totalRightClicks = getInt("session_right_clicks", 0),
-                totalScrolls = getInt("session_scrolls", 0),
-                totalMovements = getInt("session_movements", 0),
-                totalDistance = getFloat("session_distance", 0f),
-                averageSpeed = getFloat("session_avg_speed", 0f),
-                maxSpeed = getFloat("session_max_speed", 0f),
-                sessionDuration = System.currentTimeMillis() - getLong("session_start", System.currentTimeMillis())
-            )
-        }
-
-        fun clearAllStatistics() {
-            remove("session_clicks")
-            remove("session_double_clicks")
-            remove("session_right_clicks")
-            remove("session_scrolls")
-            remove("session_movements")
-            remove("session_distance")
-            remove("session_avg_speed")
-            remove("session_max_speed")
-            remove("session_start")
-            remove("historical_stats")
-            remove("gesture_stats")
-            remove("connection_attempts")
-            remove("connection_successful")
-            remove("connection_failed")
-            remove("connection_total_latency")
-        }
-    }
     private val prefs: SharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
     companion object {
@@ -432,10 +395,6 @@ class PreferencesManager @Inject constructor(
     fun isClearDataOnExit(): Boolean = getBoolean("clear_data_on_exit", false)
     fun setClearDataOnExit(enabled: Boolean) = putBoolean("clear_data_on_exit", enabled)
 
-    // ==================== Onboarding ====================
-    fun isOnboardingCompleted(): Boolean = getBoolean("onboarding_completed", false)
-    fun setOnboardingCompleted(completed: Boolean) = putBoolean("onboarding_completed", completed)
-
     fun getUserName(): String = getString("user_name", "")
     fun setUserName(name: String) = putString("user_name", name)
 
@@ -446,6 +405,38 @@ class PreferencesManager @Inject constructor(
     fun setAppVersion(version: Int) = putInt("app_version", version)
 
     // ==================== Statistics ====================
+    fun getSessionStats(): StatisticsSummary {
+        return StatisticsSummary(
+            totalClicks = getInt("session_clicks", 0),
+            totalDoubleClicks = getInt("session_double_clicks", 0),
+            totalRightClicks = getInt("session_right_clicks", 0),
+            totalScrolls = getInt("session_scrolls", 0),
+            totalMovements = getInt("session_movements", 0),
+            totalDistance = getFloat("session_distance", 0f),
+            averageSpeed = getFloat("session_avg_speed", 0f),
+            maxSpeed = getFloat("session_max_speed", 0f),
+            sessionDuration = System.currentTimeMillis() - getLong("session_start", System.currentTimeMillis())
+        )
+    }
+
+    fun clearAllStatistics() {
+        remove("session_clicks")
+        remove("session_double_clicks")
+        remove("session_right_clicks")
+        remove("session_scrolls")
+        remove("session_movements")
+        remove("session_distance")
+        remove("session_avg_speed")
+        remove("session_max_speed")
+        remove("session_start")
+        remove("historical_stats")
+        remove("gesture_stats")
+        remove("connection_attempts")
+        remove("connection_successful")
+        remove("connection_failed")
+        remove("connection_total_latency")
+    }
+
     fun incrementStat(key: String) {
         val current = getInt("stat_$key", 0)
         putInt("stat_$key", current + 1)
