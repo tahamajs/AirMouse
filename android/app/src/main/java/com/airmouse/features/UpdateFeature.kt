@@ -34,19 +34,19 @@ class UpdateFeature @Inject constructor(
 
     init {
         loadCurrentVersion()
-        observeUpdateStatus()
-        observeDownloadProgress()
+        observeUpdateStatusInternal()
+        observeDownloadProgressInternal()
     }
 
     private fun loadCurrentVersion() {
         // Load current version from build config
     }
 
-    private fun observeUpdateStatus() {
+    private fun observeUpdateStatusInternal() {
         // Observe update status
     }
 
-    private fun observeDownloadProgress() {
+    private fun observeDownloadProgressInternal() {
         // Observe download progress
     }
 

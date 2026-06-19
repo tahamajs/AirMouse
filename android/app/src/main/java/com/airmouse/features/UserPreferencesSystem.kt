@@ -292,7 +292,8 @@ class UserPreferencesSystem @Inject constructor(
             // Restore current preferences
             val prefsObj = obj.getJSONObject("preferences")
             val restored = CompleteUserPreferences().apply { /* parse prefsObj */ }
-            updatePreference { copy(restored) }
+            _currentPrefs.value = restored
+            saveToSharedPreferences(restored)
             // Restore profiles (optional)
             val profilesArray = obj.getJSONArray("profiles")
             val newProfiles = mutableListOf<UserProfile>()
