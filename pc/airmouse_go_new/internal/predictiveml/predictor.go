@@ -1,3 +1,5 @@
+//go:build ml
+
 package predictiveml
 
 import (

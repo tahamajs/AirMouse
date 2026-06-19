@@ -42,7 +42,7 @@ func PauseForDuration(duration time.Duration) {
 // ClearPause clears any pause state
 func ClearPause() {
     movementPausedMu.Lock()
-    movementPoused = false
+    movementPaused = false
     movementPausedMu.Unlock()
     
     pauseMu.Lock()
