@@ -288,7 +288,7 @@ func (a *App) createToolbar() fyne.CanvasObject {
 
 func (a *App) onTabSelected(ti *container.TabItem) {
     // Log tab selection
-    utils.LogDebug(fmt.Sprintf("Selected tab: %s", ti.Text))
+    utils.LogDebug("Selected tab: %s", ti.Text)
     
     // Refresh content when tab is selected
     switch ti.Text {
@@ -325,7 +325,7 @@ func (a *App) onWindowClose() {
             
             // Save configuration
             if err := a.cfg.Save(); err != nil {
-                utils.LogError(fmt.Sprintf("Failed to save config: %v", err))
+                utils.LogError("Failed to save config: %v", err)
             }
             
             // Stop status bar updates

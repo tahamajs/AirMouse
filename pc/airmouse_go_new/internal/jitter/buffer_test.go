@@ -9,6 +9,7 @@ func TestJitterBufferBasic(t *testing.T) {
     cfg := DefaultJitterBufferConfig()
     jb := NewJitterBuffer(cfg)
     now := time.Now()
+    _ = now
     
     for i := 0; i < 10; i++ {
         smDx, smDy := jb.AddMovement(10.0, 5.0, now)
@@ -155,6 +156,7 @@ func TestJitterBufferAdaptiveBlend(t *testing.T) {
     cfg.AdaptiveBlend = true
     jb := NewJitterBuffer(cfg)
     now := time.Now()
+    _ = now
     
     // Test with varying latencies
     latencies := []time.Duration{10, 50, 100, 200}

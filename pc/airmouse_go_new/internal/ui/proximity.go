@@ -296,8 +296,8 @@ func (t *ProximityTab) startCalibration() {
                     expected := steps[i].distance
                     correction := expected / m
                     totalCorrection += correction
-                    utils.LogInfo(fmt.Sprintf("Step %d: expected=%.1fm, measured=%.2fm, correction=%.2f", 
-                        i+1, expected, m, correction))
+                    utils.LogInfo("Step %d: expected=%.1fm, measured=%.2fm, correction=%.2f", 
+                        i+1, expected, m, correction)
                 }
                 avgCorrection := totalCorrection / float64(len(measurements))
                 

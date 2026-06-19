@@ -1,10 +1,17 @@
 package websocket
 
 import (
+    "time"
 	"sync"
 
+	"airmouse-go/internal/domain/entity"
 	"airmouse-go/internal/domain/service"
 )
+
+type HubStats struct {
+    StartTime time.Time `json:"start_time"`
+    Clients   int       `json:"clients"`
+}
 
 type Hub struct {
 	clients        map[*Client]bool
@@ -15,6 +22,7 @@ type Hub struct {
 	mouseService   service.MouseService
 	gestureService service.GestureService
 	connService    service.ConnectionService
+	startTime      time.Time
 }
 
 func NewHub(mouseSvc service.MouseService, gestureSvc service.GestureService, connSvc service.ConnectionService) *Hub {
@@ -26,6 +34,7 @@ func NewHub(mouseSvc service.MouseService, gestureSvc service.GestureService, co
 		mouseService:   mouseSvc,
 		gestureService: gestureSvc,
 		connService:    connSvc,
+		startTime:      time.Now(),
 	}
 }
 
@@ -58,4 +67,23 @@ func (h *Hub) Run() {
 			h.mu.RUnlock()
 		}
 	}
+}
+
+func (h *Hub) GetStats() HubStats {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return HubStats{
+		StartTime: h.startTime,
+		Clients:   len(h.clients),
+	}
+}
+
+func (h *Hub) GetConnectedClients() []*entity.Client {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	clients := make([]*entity.Client, 0, len(h.clients))
+	for client := range h.clients {
+		clients = append(clients, client.entity)
+	}
+	return clients
 }

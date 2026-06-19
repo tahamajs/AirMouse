@@ -2,12 +2,12 @@ package http
 
 import (
     "encoding/json"
+    "fmt"
     "net/http"
     "runtime"
     "time"
 
     "airmouse-go/internal/handler/websocket"
-    "airmouse-go/internal/infra/logger"
 )
 
 func NewRouter(hub *websocket.Hub) *http.ServeMux {
@@ -57,11 +57,11 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
     
     w.Write([]byte("# HELP airmouse_goroutines Number of goroutines\n"))
     w.Write([]byte("# TYPE airmouse_goroutines gauge\n"))
-    w.Write([]byte("airmouse_goroutines " + string(runtime.NumGoroutine()) + "\n\n"))
+    w.Write([]byte(fmt.Sprintf("airmouse_goroutines %d\n\n", runtime.NumGoroutine())))
     
     w.Write([]byte("# HELP airmouse_memory_alloc_bytes Memory allocated\n"))
     w.Write([]byte("# TYPE airmouse_memory_alloc_bytes gauge\n"))
-    w.Write([]byte("airmouse_memory_alloc_bytes " + string(memStats.Alloc) + "\n"))
+    w.Write([]byte(fmt.Sprintf("airmouse_memory_alloc_bytes %d\n", memStats.Alloc)))
 }
 
 func statusHandler(hub *websocket.Hub) http.HandlerFunc {
