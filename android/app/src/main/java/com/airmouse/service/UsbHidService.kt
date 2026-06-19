@@ -265,7 +265,7 @@ class UsbHidService : Service() {
 
         try {
             val result = usbConnection?.controlTransfer(
-                UsbConstants.USB_DIR_OUT or UsbConstants.USB_TYPE_CLASS or UsbConstants.USB_RECIP_INTERFACE,
+                UsbConstants.USB_DIR_OUT or UsbConstants.USB_TYPE_CLASS or 0x01,
                 0x09,      // SET_REPORT request
                 (0x0200 or REPORT_ID_MOUSE),  // Report Type: Output
                 0,
@@ -278,7 +278,7 @@ class UsbHidService : Service() {
             val now = System.currentTimeMillis()
             if (reportsSent % performanceWindow == 0) {
                 val elapsed = now - lastReportTime
-                frameRate = (performanceWindow * 1000 / elapsed).coerceAtMost(125)
+                frameRate = ((performanceWindow * 1000L) / elapsed).toInt().coerceAtMost(125)
                 lastReportTime = now
             }
         } catch (e: Exception) {
@@ -356,7 +356,7 @@ class UsbHidService : Service() {
 
         try {
             usbConnection?.controlTransfer(
-                UsbConstants.USB_DIR_OUT or UsbConstants.USB_TYPE_CLASS or UsbConstants.USB_RECIP_INTERFACE,
+                UsbConstants.USB_DIR_OUT or UsbConstants.USB_TYPE_CLASS or 0x01,
                 0x09,
                 (0x0200 or REPORT_ID_MOUSE),
                 0,
@@ -380,7 +380,7 @@ class UsbHidService : Service() {
 
         try {
             usbConnection?.controlTransfer(
-                UsbConstants.USB_DIR_OUT or UsbConstants.USB_TYPE_CLASS or UsbConstants.USB_RECIP_INTERFACE,
+                UsbConstants.USB_DIR_OUT or UsbConstants.USB_TYPE_CLASS or 0x01,
                 0x09,
                 (0x0200 or REPORT_ID_CONSUMER),
                 0,

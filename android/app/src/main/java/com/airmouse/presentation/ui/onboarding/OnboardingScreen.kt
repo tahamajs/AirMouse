@@ -544,7 +544,7 @@ fun ConnectPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
 fun ConnectionMethod(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, description: String, accentColor: Color) {
     Column(
         modifier = Modifier
-            .weight(1f)
+            .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(Color.White.copy(alpha = 0.1f))
             .padding(12.dp),

@@ -12,7 +12,6 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.airmouse.R
-import com.airmouse.data.model.GestureResult
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*

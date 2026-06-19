@@ -788,7 +788,7 @@ fun ProximityScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
 
                                 // Fixed: items with explicit receiver
-                                androidx.compose.foundation.lazy.items(
+                                items(
                                     items = uiState.history.take(5),
                                     key = { it.timestamp }
                                 ) { entry ->

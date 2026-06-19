@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.PowerManager
 import android.util.Log
+import com.airmouse.domain.model.CalibrationStatus
 import kotlinx.coroutines.*
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -110,7 +111,7 @@ class SensorService(
     }
 
     private fun loadCalibrationStatus() {
-        isCalibrated = calibrationHelper.loadCalibrationStatus()
+        isCalibrated = calibrationHelper.loadCalibrationStatus() == CalibrationStatus.COMPLETED
     }
 
     /**
