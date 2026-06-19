@@ -4,6 +4,7 @@ package com.airmouse.utils
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
+import android.util.DisplayMetrics
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -58,7 +59,7 @@ class ResourceHelper @Inject constructor(
         return context.theme
     }
 
-    fun getDisplayMetrics(): Resources.DisplayMetrics {
+    fun getDisplayMetrics(): DisplayMetrics {
         return context.resources.displayMetrics
     }
 

@@ -4,6 +4,7 @@ package com.airmouse.data.datasource.local
 import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
+import com.airmouse.domain.model.SensorCalibrationData
 import com.airmouse.utils.PreferencesManager
 import javax.inject.Inject
 import javax.inject.Singleton
