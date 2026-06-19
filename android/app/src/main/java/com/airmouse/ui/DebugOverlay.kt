@@ -9,6 +9,7 @@ import android.widget.TextView
 import com.airmouse.R
 import com.airmouse.sensors.SensorService
 import kotlinx.coroutines.*
+import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -152,13 +153,13 @@ class DebugOverlay(private val context: Context) {
         val service = sensorService ?: return
 
         val gyro = service.getRawGyro()
-        gyroTextView.text = String.format("Gyro: X:%.2f Y:%.2f Z:%.2f", gyro.first, gyro.second, gyro.third)
+        gyroTextView.text = String.format(Locale.US, "Gyro: X:%.2f Y:%.2f Z:%.2f", gyro.first, gyro.second, gyro.third)
 
         val accel = service.getRawAccel()
-        accelTextView.text = String.format("Accel: X:%.2f Y:%.2f Z:%.2f", accel.first, accel.second, accel.third)
+        accelTextView.text = String.format(Locale.US, "Accel: X:%.2f Y:%.2f Z:%.2f", accel.first, accel.second, accel.third)
 
         val orientation = service.getCurrentOrientation()
-        orientationTextView.text = String.format("Roll:%.1f° Yaw:%.1f°", orientation.first, orientation.second)
+        orientationTextView.text = String.format(Locale.US, "Roll:%.1f° Yaw:%.1f°", orientation.first, orientation.second)
 
         val status = if (service.isCalibrated()) "Calibrated" else "Not Calibrated"
         gestureTextView.text = "Status: $status"

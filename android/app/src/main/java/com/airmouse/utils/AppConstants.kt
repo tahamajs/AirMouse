@@ -72,7 +72,7 @@ fun String.toValidFileName(): String {
 
 // 2.3 Number Extensions
 fun Float.format(digits: Int = 2): String {
-    return String.format("%.${digits}f", this)
+    return String.format(Locale.US, "%.${digits}f", this)
 }
 
 // 2.4 Date Extensions
@@ -97,9 +97,9 @@ fun Long.formatDuration(): String {
     val minutes = (seconds % 3600) / 60
     val secs = seconds % 60
     return when {
-        hours > 0 -> String.format("%02d:%02d:%02d", hours, minutes, secs)
-        minutes > 0 -> String.format("%02d:%02d", minutes, secs)
-        else -> String.format("%02ds", secs)
+        hours > 0 -> String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, secs)
+        minutes > 0 -> String.format(Locale.US, "%02d:%02d", minutes, secs)
+        else -> String.format(Locale.US, "%02ds", secs)
     }
 }
 

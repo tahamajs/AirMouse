@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -18,7 +19,7 @@ fun AnimatedCounter(
     suffix: String = "",
     duration: Int = 1000
 ) {
-    var animatedValue by remember { mutableStateOf(0) }
+    var animatedValue by remember { mutableIntStateOf(0) }
     
     LaunchedEffect(targetValue) {
         animate(
@@ -45,7 +46,7 @@ fun AnimatedPercentage(
     modifier: Modifier = Modifier,
     showIcon: Boolean = true
 ) {
-    var currentPercentage by remember { mutableStateOf(0) }
+    var currentPercentage by remember { mutableIntStateOf(0) }
     
     LaunchedEffect(targetPercentage) {
         animate(

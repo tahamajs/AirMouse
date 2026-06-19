@@ -34,6 +34,7 @@ import androidx.core.content.ContextCompat
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActions
 import com.airmouse.presentation.ui.components.AnimatedConnectionStatus
+import java.util.Locale
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,10 +48,10 @@ fun HomeScreen(
     var isConnected by remember { mutableStateOf(false) }
     var isConnecting by remember { mutableStateOf(false) }
     var serverIp by remember { mutableStateOf("192.168.1.100") }
-    var serverPort by remember { mutableStateOf(8080) }
+    var serverPort by remember { mutableIntStateOf(8080) }
     var serverName by remember { mutableStateOf("My Desktop PC") }
     var userName by remember { mutableStateOf("User") }
-    var ping by remember { mutableStateOf(14) }
+    var ping by remember { mutableIntStateOf(14) }
     var recentGestures by remember { mutableStateOf(listOf("Swipe Left - Next Slide", "Swipe Right - Prev Slide")) }
     var showGreeting by remember { mutableStateOf(false) }
     var showQrPermissionDialog by remember { mutableStateOf(false) }
@@ -545,9 +546,9 @@ fun SensorPreviewCard(roll: Float, yaw: Float, pitch: Float) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Roll: ${String.format("%.1f", roll)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                Text("Yaw: ${String.format("%.1f", yaw)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                Text("Pitch: ${String.format("%.1f", pitch)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("Roll: ${String.format(Locale.US, "%.1f", roll)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("Yaw: ${String.format(Locale.US, "%.1f", yaw)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("Pitch: ${String.format(Locale.US, "%.1f", pitch)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
         }
     }

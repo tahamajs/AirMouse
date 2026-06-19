@@ -178,7 +178,7 @@ class UIControlFeatures {
         onDismiss: () -> Unit,
         modifier: Modifier = Modifier
     ) {
-        var selectedIndex by remember { mutableStateOf(-1) }
+        var selectedIndex by remember { mutableIntStateOf(-1) }
         val angleStep = (2 * PI / config.items.size).toFloat()
 
         Box(modifier = modifier.fillMaxSize().pointerInput(Unit) {
@@ -263,11 +263,11 @@ class UIControlFeatures {
         onComplete: () -> Unit,
         onCancel: () -> Unit
     ) {
-        var attempts by remember { mutableStateOf(0) }
+        var attempts by remember { mutableIntStateOf(0) }
         var bestConfidence by remember { mutableStateOf(0f) }
         var currentConfidence by remember { mutableStateOf(0f) }
         var isRecording by remember { mutableStateOf(false) }
-        var recordingTime by remember { mutableStateOf(0) }
+        var recordingTime by remember { mutableIntStateOf(0) }
 
         LaunchedEffect(isRecording) {
             if (isRecording) {
@@ -361,7 +361,7 @@ class UIControlFeatures {
         onDismiss: () -> Unit
     ) {
         var points by remember { mutableStateOf(initialPoints.sortedBy { it.x }) }
-        var selectedPointIndex by remember { mutableStateOf(-1) }
+        var selectedPointIndex by remember { mutableIntStateOf(-1) }
 
         AlertDialog(
             onDismissRequest = onDismiss,

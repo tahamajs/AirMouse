@@ -21,8 +21,8 @@ object DateUtils {
         val minutes = (seconds % 3600) / 60
         val secs = seconds % 60
         return when {
-            hours > 0 -> String.format("%02d:%02d:%02d", hours, minutes, secs)
-            else -> String.format("%02d:%02d", minutes, secs)
+            hours > 0 -> String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, secs)
+            else -> String.format(Locale.US, "%02d:%02d", minutes, secs)
         }
     }
 

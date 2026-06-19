@@ -397,8 +397,8 @@ class SettingsViewModel @Inject constructor(
                 SettingsEvent.OpenLicense -> openUrl("https://airmouse.io/license")
                 SettingsEvent.OpenGitHub -> openUrl("https://github.com/airmouse/airmouse-android")
                 SettingsEvent.OpenSupport -> openUrl("mailto:support@airmouse.io")
-                SettingsEvent.ShowToast -> showToast(event.message)
-                SettingsEvent.ShowError -> _uiState.update { it.copy(error = event.message) }
+                is SettingsEvent.ShowToast -> showToast(event.message)
+                is SettingsEvent.ShowError -> _uiState.update { it.copy(error = event.message) }
             }
         }
     }

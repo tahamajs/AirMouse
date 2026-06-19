@@ -411,7 +411,7 @@ fun RecordingCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        "Peak: ${String.format("%.2f", uiState.waveformData.maxValue)}",
+                        "Peak: ${String.format(Locale.US, "%.2f", uiState.waveformData.maxValue)}",
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1212,10 +1212,10 @@ fun PlaybackDialog(
                     valueRange = 0.5f..2.0f,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text("${String.format("%.1f", speed)}x", fontSize = 12.sp)
+                Text("${String.format(Locale.US, "%.1f", speed)}x", fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Duration: ~${String.format("%.1f", gesture.duration)}s",
+                    "Duration: ~${String.format(Locale.US, "%.1f", gesture.duration)}s",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1233,5 +1233,5 @@ private fun formatTime(millis: Int): String {
     val seconds = millis / 1000
     val minutes = seconds / 60
     val remainingSeconds = seconds % 60
-    return String.format("%02d:%02d", minutes, remainingSeconds)
+    return String.format(Locale.US, "%02d:%02d", minutes, remainingSeconds)
 }

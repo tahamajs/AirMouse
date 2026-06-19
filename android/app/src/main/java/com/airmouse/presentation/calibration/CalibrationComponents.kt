@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -199,7 +200,7 @@ fun AnimatedCheckmark(
             "✓",
             fontSize = 32.sp,
             color = Color(0xFF10B981),
-            alpha = alpha
+            modifier = Modifier.graphicsLayer { this.alpha = alpha }
         )
     }
 }
