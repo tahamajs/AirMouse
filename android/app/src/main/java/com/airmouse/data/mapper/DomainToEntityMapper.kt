@@ -17,9 +17,9 @@ object DomainToEntityMapper {
             gyroBiasX = data.gyroBias.offsetX,
             gyroBiasY = data.gyroBias.offsetY,
             gyroBiasZ = data.gyroBias.offsetZ,
-            gyroVarianceX = data.gyroBias.variance,
-            gyroVarianceY = data.gyroBias.variance,
-            gyroVarianceZ = data.gyroBias.variance,
+            gyroVarianceX = 0f,
+            gyroVarianceY = 0f,
+            gyroVarianceZ = 0f,
             accelOffsetX = data.accelOffset.offsetX,
             accelOffsetY = data.accelOffset.offsetY,
             accelOffsetZ = data.accelOffset.offsetZ,
@@ -33,8 +33,7 @@ object DomainToEntityMapper {
             magScaleY = data.magOffset.scaleY,
             magScaleZ = data.magOffset.scaleZ,
             isCalibrated = data.isCalibrated,
-            calibrationQuality = data.quality.name,
-            timestamp = data.timestamp
+            calibrationQuality = data.quality.name
         )
     }
 
@@ -197,7 +196,6 @@ object EntityToDomainMapper {
                 offsetX = entity.gyroBiasX,
                 offsetY = entity.gyroBiasY,
                 offsetZ = entity.gyroBiasZ,
-                variance = entity.gyroVarianceX
             ),
             accelOffset = SensorCalibrationData(
                 offsetX = entity.accelOffsetX,
