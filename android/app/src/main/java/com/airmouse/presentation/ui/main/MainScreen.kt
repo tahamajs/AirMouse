@@ -132,7 +132,7 @@ fun MainScreen(
                         }
                         else -> {
                             AnimatedFAB(
-                                onClick = { navController.navigate(Destinations.Calibration.route) },
+                                onClick = { navController.navigate(Destinations.CalibrationResult.route) },
                                 icon = Icons.Default.Build,
                                 text = "Calibrate",
                                 gradient = listOf(Color(0xFFFF5722), Color(0xFFFF9800))

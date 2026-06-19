@@ -2,7 +2,6 @@ package usb
 
 import (
     "bufio"
-    "encoding/binary"
     "encoding/json"
     "fmt"
     "os"

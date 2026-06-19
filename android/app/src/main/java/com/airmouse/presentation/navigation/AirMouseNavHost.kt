@@ -87,6 +87,13 @@ fun AirMouseNavHost(
                 onRecalibrate = { /* Add implementation if required */ }
             )
         }
+        composable(Destinations.CalibrationResult.route) {
+            CalibrationScreen(
+                navigationActions = navActions,
+                onComplete = { navController.popBackStack() },
+                onRecalibrate = { navActions.navigateToCalibration() }
+            )
+        }
 
         composable(Destinations.SensorVisualizer.route) {
             SensorVisualizerScreen(navigationActions = navActions)

@@ -56,6 +56,7 @@ class NavigationActions(
     fun navigateToAccessibility() = navigateTo(Destinations.Accessibility)
     fun navigateToTouchpadSettings() = navigateTo(Destinations.TouchpadSettings)
     fun navigateToOnboarding() = navigateTo(Destinations.Onboarding)
+    fun navigateToCalibrationResult() = navigateTo(Destinations.CalibrationResult)
 
     fun navigateBack() {
         navController.popBackStack()

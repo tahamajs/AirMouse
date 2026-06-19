@@ -167,7 +167,7 @@ fun HomeScreen(
                 // Quick Actions
                 item {
                     QuickActionsRow(
-                        onCalibrate = { navigationActions.navigateTo(Destinations.Calibration) },
+                        onCalibrate = { navigationActions.navigateToCalibrationResult() },
                         onGestureStudio = { navigationActions.navigateTo(Destinations.GestureStudio) },
                         onVoiceCommands = { navigationActions.navigateTo(Destinations.VoiceCommands) },
                         onNetworkDiscovery = { navigationActions.navigateTo(Destinations.NetworkDiscovery) }

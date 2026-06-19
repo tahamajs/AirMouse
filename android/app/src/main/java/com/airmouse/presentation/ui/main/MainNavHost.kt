@@ -93,6 +93,13 @@ fun MainNavHost(
                 }
             )
         }
+        composable(Destinations.CalibrationResult.route) {
+            CalibrationScreen(
+                navigationActions = navigationActions,
+                onComplete = { navigationActions.navigateToHome() },
+                onRecalibrate = { navigationActions.navigateToCalibration() }
+            )
+        }
         composable(Destinations.SensorVisualizer.route) {
             SensorVisualizerScreen(navigationActions = navigationActions)
         }
