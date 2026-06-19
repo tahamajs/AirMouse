@@ -2,6 +2,7 @@ package com.airmouse.presentation
 
 import android.content.Intent
 import android.graphics.Color
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -28,7 +29,7 @@ import com.airmouse.presentation.navigation.AirMouseNavHost
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.rememberNavigationActions
 import com.airmouse.presentation.theme.AirMouseTheme
-import com.airmouse.presentation.ui.onboarding.OnboardingActivity
+import com.airmouse.ui.onboarding.OnboardingActivity
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -111,7 +112,7 @@ class MainActivity : ComponentActivity() {
             "pure_black" -> true
             "light" -> false
             "high_contrast" -> false
-            else -> isSystemInDarkTheme()
+            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         }
 
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
