@@ -39,5 +39,6 @@ data class CalibrationData(
     val accelOffset: SensorCalibrationData = SensorCalibrationData(),
     val magOffset: SensorCalibrationData = SensorCalibrationData(),
     val isCalibrated: Boolean = false,
-    val quality: CalibrationQuality = CalibrationQuality.UNKNOWN
+    val quality: CalibrationQuality = CalibrationQuality.UNKNOWN,
+    val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable
