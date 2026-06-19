@@ -3,6 +3,7 @@ package com.airmouse.presentation.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -18,6 +19,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.Typography
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import com.airmouse.R
@@ -106,12 +109,7 @@ val LightColorScheme = lightColorScheme(
 
 // ==================== Typography ====================
 
-private val InterFontFamily = FontFamily(
-    Font(R.font.inter_regular, FontWeight.Normal),
-    Font(R.font.inter_medium, FontWeight.Medium),
-    Font(R.font.inter_semibold, FontWeight.SemiBold),
-    Font(R.font.inter_bold, FontWeight.Bold)
-)
+private val InterFontFamily = FontFamily.SansSerif
 
 // Base typography definitions without copying MaterialTheme.typography directly outside context
 val AirMouseTypography = Typography(
