@@ -14,6 +14,7 @@ import (
 type clientRepositoryImpl struct {
     mu        sync.RWMutex
     clients   map[string]*entity.Client
+    blocked   map[string]bool
     callbacks []func(event ClientEvent)
 }
 
@@ -27,6 +28,7 @@ type ClientEvent struct {
 func NewClientRepository() repository.ClientRepository {
     repo := &clientRepositoryImpl{
         clients:   make(map[string]*entity.Client),
+        blocked:   make(map[string]bool),
         callbacks: make([]func(event ClientEvent), 0),
     }
     
@@ -50,6 +52,9 @@ func (r *clientRepositoryImpl) Add(client *entity.Client) error {
     // Check for duplicate ID
     if _, exists := r.clients[client.ID]; exists {
         return fmt.Errorf("client with ID %s already exists", client.ID)
+    }
+    if r.blocked[client.ID] {
+        return fmt.Errorf("client with ID %s is blocked", client.ID)
     }
     
     // Set timestamps
@@ -147,10 +152,31 @@ func (r *clientRepositoryImpl) ListByStatus(status entity.ClientStatus) ([]*enti
     return list, nil
 }
 
+func (r *clientRepositoryImpl) ListActive() ([]*entity.Client, error) {
+    r.mu.RLock()
+    defer r.mu.RUnlock()
+
+    active := make([]*entity.Client, 0)
+    for _, c := range r.clients {
+        if c.Status == entity.StatusConnected && time.Since(c.LastActive) < 30*time.Second {
+            active = append(active, c)
+        }
+    }
+    return active, nil
+}
+
 func (r *clientRepositoryImpl) Count() (int, error) {
     r.mu.RLock()
     defer r.mu.RUnlock()
     return len(r.clients), nil
+}
+
+func (r *clientRepositoryImpl) CountActive() (int, error) {
+    active, err := r.ListActive()
+    if err != nil {
+        return 0, err
+    }
+    return len(active), nil
 }
 
 func (r *clientRepositoryImpl) UpdateLastActive(id string) error {
@@ -203,6 +229,33 @@ func (r *clientRepositoryImpl) UpdateStatus(id string, status entity.ClientStatu
         return nil
     }
     return fmt.Errorf("client with ID %s not found", id)
+}
+
+func (r *clientRepositoryImpl) UpdateCapabilities(id string, caps entity.ClientCapabilities) error {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+
+    if c, ok := r.clients[id]; ok {
+        c.SetCapabilities(caps)
+        return nil
+    }
+    return fmt.Errorf("client with ID %s not found", id)
+}
+
+func (r *clientRepositoryImpl) BlockDevice(id string) error {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    r.blocked[id] = true
+    if c, ok := r.clients[id]; ok {
+        c.SetStatus(entity.StatusDisconnected)
+    }
+    return nil
+}
+
+func (r *clientRepositoryImpl) IsBlocked(id string) bool {
+    r.mu.RLock()
+    defer r.mu.RUnlock()
+    return r.blocked[id]
 }
 
 func (r *clientRepositoryImpl) PruneInactive(maxIdle time.Duration) (int, error) {

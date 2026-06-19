@@ -20,14 +20,20 @@ type ClientRepository interface {
 	// GetByName returns a client by its display name (case‑insensitive).
 	GetByName(name string) (*entity.Client, error)
 
-	// List returns all currently connected clients.
-	List() ([]*entity.Client, error)
+    // List returns all currently connected clients.
+    List() ([]*entity.Client, error)
+
+    // ListActive returns clients that are still considered active.
+    ListActive() ([]*entity.Client, error)
 
 	// ListByStatus returns clients with a given status.
 	ListByStatus(status entity.ClientStatus) ([]*entity.Client, error)
 
-	// Count returns the total number of stored clients.
-	Count() (int, error)
+    // Count returns the total number of stored clients.
+    Count() (int, error)
+
+    // CountActive returns the number of active clients.
+    CountActive() (int, error)
 
 	// UpdateLastActive refreshes the last activity timestamp.
 	UpdateLastActive(id string) error
@@ -38,8 +44,17 @@ type ClientRepository interface {
 	// UpdateBytes increments sent/received byte counters.
 	UpdateBytes(id string, sent, recv int64) error
 
-	// UpdateStatus changes the client's status.
-	UpdateStatus(id string, status entity.ClientStatus) error
+    // UpdateStatus changes the client's status.
+    UpdateStatus(id string, status entity.ClientStatus) error
+
+    // UpdateCapabilities stores the latest advertised capabilities.
+    UpdateCapabilities(id string, caps entity.ClientCapabilities) error
+
+    // BlockDevice blocks the client from reconnecting.
+    BlockDevice(id string) error
+
+    // IsBlocked checks whether the client is blocked.
+    IsBlocked(id string) bool
 
 	// PruneInactive removes clients that have been idle for longer than the given duration.
 	PruneInactive(maxIdle time.Duration) (int, error)
