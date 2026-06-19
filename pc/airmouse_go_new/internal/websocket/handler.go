@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "net/http"
     "strings"
+    "sync/atomic"
     "time"
 
     "github.com/gorilla/websocket"
@@ -258,8 +259,10 @@ func (h *Handler) handleGesture(client *Client, root map[string]json.RawMessage)
     }
     
     if gesture != "" && confidence > 0.7 {
-        if err := h.hub.gestureService.ProcessGesture(gesture, confidence); err != nil {
-            logger.Error("Gesture processing failed: %v", err)
+        if h.hub.gestureService != nil {
+            if err := h.hub.gestureService.ExecuteGesture(entity.NewGesture(entity.GestureType(gesture), confidence)); err != nil {
+                logger.Error("Gesture processing failed: %v", err)
+            }
         }
         logger.Info("Gesture detected: %s (confidence: %.2f)", gesture, confidence)
     }
