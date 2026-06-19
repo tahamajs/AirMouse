@@ -40,10 +40,10 @@ class ProximityFeature @Inject constructor(
     val lockHistory: StateFlow<List<Pair<Boolean, Long>>> = _lockHistory.asStateFlow()
 
     init {
-        observeProximityState()
+        startObservingProximityState()
     }
 
-    private fun observeProximityState() {
+    private fun startObservingProximityState() {
         // In production, observe proximity state
     }
 
