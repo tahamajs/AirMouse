@@ -320,7 +320,7 @@ func (t *LogsTab) createStatsCard() fyne.CanvasObject {
                 }
             }
             
-            fyne.Do(func() {
+            RunOnMain(func() {
                 debugCount.SetText(fmt.Sprintf("🔍 DEBUG: %d", debug))
                 infoCount.SetText(fmt.Sprintf("ℹ️ INFO: %d", info))
                 warnCount.SetText(fmt.Sprintf("⚠️ WARN: %d", warn))

@@ -210,8 +210,13 @@ func (t *GesturesTab) refreshList() {
 
 func (t *GesturesTab) updateButtons() {
     hasSelection := t.selected >= 0 && t.selected < len(t.getFilteredTemplates())
-    t.editBtn.SetEnabled(hasSelection)
-    t.deleteBtn.SetEnabled(hasSelection)
+    if hasSelection {
+        t.editBtn.Enable()
+        t.deleteBtn.Enable()
+    } else {
+        t.editBtn.Disable()
+        t.deleteBtn.Disable()
+    }
 }
 
 func (t *GesturesTab) showAddGestureDialog() {
@@ -368,7 +373,7 @@ func (t *GesturesTab) createStatsCard() fyne.CanvasObject {
                 }
             }
             
-            fyne.Do(func() {
+            RunOnMain(func() {
                 totalLabel.SetText(fmt.Sprintf("📊 Total: %d", len(t.templates)))
                 handLabel.SetText(fmt.Sprintf("✋ Hand: %d", handCount))
                 swipeLabel.SetText(fmt.Sprintf("👆 Swipe: %d", swipeCount))

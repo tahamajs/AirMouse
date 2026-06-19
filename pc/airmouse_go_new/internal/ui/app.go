@@ -1,15 +1,19 @@
 package ui
 
 import (
+    "bytes"
     "fmt"
+    "image/png"
     "time"
 
     "fyne.io/fyne/v2"
     "fyne.io/fyne/v2/app"
+    "fyne.io/fyne/v2/canvas"
     "fyne.io/fyne/v2/container"
     "fyne.io/fyne/v2/dialog"
     "fyne.io/fyne/v2/theme"
     "fyne.io/fyne/v2/widget"
+    "github.com/skip2/go-qrcode"
 
     "airmouse-go/internal/config"
     "airmouse-go/internal/control"
@@ -53,7 +57,7 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.M
     // Initialize personalization collector if enabled
     var collector *personalization.DataCollector
     if cfg.EnablePersonalization {
-        collector = personalization.NewDataCollector(cfg)
+        collector = personalization.NewDataCollector()
     }
     
     return &App{
@@ -90,7 +94,7 @@ func (a *App) Run() error {
     tabs := container.NewAppTabs(
         container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
         container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
-        container.NewTabItemWithIcon("Network", theme.NetworkIcon(), a.networkTab),
+        container.NewTabItemWithIcon("Network", theme.ComputerIcon(), a.networkTab),
         container.NewTabItemWithIcon("Gestures", theme.ContentCopyIcon(), a.gesturesTab),
         container.NewTabItemWithIcon("Proximity", theme.VisibilityIcon(), a.proximityTab),
         container.NewTabItemWithIcon("Analytics", theme.InfoIcon(), a.analyticsTab),
@@ -192,18 +196,16 @@ func (a *App) createMenuBar() *fyne.MainMenu {
             a.window.CenterOnScreen()
         }),
         fyne.NewMenuItemSeparator(),
-        fyne.NewMenuItem("Themes", nil,
-            fyne.NewMenuItem("Dark", func() { 
-                a.fyneApp.Settings().SetTheme(theme.DarkTheme())
-                a.cfg.Theme = "dark"
-                a.cfg.Save()
-            }),
-            fyne.NewMenuItem("Light", func() { 
-                a.fyneApp.Settings().SetTheme(theme.LightTheme())
-                a.cfg.Theme = "light"
-                a.cfg.Save()
-            }),
-        ),
+        fyne.NewMenuItem("Dark Theme", func() { 
+            a.fyneApp.Settings().SetTheme(theme.DarkTheme())
+            a.cfg.Theme = "dark"
+            a.cfg.Save()
+        }),
+        fyne.NewMenuItem("Light Theme", func() { 
+            a.fyneApp.Settings().SetTheme(theme.LightTheme())
+            a.cfg.Theme = "light"
+            a.cfg.Save()
+        }),
     )
     
     // Tools Menu
@@ -239,7 +241,7 @@ func (a *App) createMenuBar() *fyne.MainMenu {
         }),
         fyne.NewMenuItemSeparator(),
         fyne.NewMenuItem("About", func() { 
-            showAboutDialog(a.window)
+            ShowAboutDialog(a.window)
         }),
     )
     
@@ -305,7 +307,7 @@ func (a *App) connectionStatusUpdater() {
     
     for range ticker.C {
         deviceCount := len(a.deviceMgr.GetAllDevices())
-        fyne.Do(func() {
+        RunOnMain(func() {
             if deviceCount > 0 {
                 a.connectionStatus.SetText(fmt.Sprintf("🟢 Connected: %d device(s)", deviceCount))
             } else {

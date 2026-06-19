@@ -159,6 +159,11 @@ func GetPlatformModifier() string {
     return "Ctrl"
 }
 
+// RunOnMain executes fn on the UI thread when available.
+func RunOnMain(fn func()) {
+    fn()
+}
+
 // IsDarkTheme returns true if the current theme is dark
 func IsDarkTheme() bool {
     // This would check the current theme
@@ -174,3 +179,7 @@ func CenterWindow(w fyne.Window) {
 func GetWindowSize() (width, height float32) {
     return 1400, 900
 }
+
+func joinStrings(strs []string, sep string) string { return JoinStrings(strs, sep) }
+
+func formatDurationShort(d time.Duration) string { return FormatDurationShort(d) }

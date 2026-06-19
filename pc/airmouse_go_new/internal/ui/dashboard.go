@@ -241,7 +241,7 @@ func (t *DashboardTab) refreshStats() {
         deviceListStr = joinStrings(deviceNames, ", ")
     }
     
-    fyne.Do(func() {
+    RunOnMain(func() {
         t.statsLabel.SetText(fmt.Sprintf(
             "📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
             clicks, dbl, right, scroll,

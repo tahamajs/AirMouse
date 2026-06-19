@@ -139,7 +139,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
         tab.statusLabel.Importance = widget.MediumImportance
         
         time.AfterFunc(2*time.Second, func() {
-            fyne.Do(func() {
+            RunOnMain(func() {
                 tab.statusLabel.SetText("✅ Ready")
                 tab.statusLabel.Importance = widget.SuccessImportance
             })
@@ -263,7 +263,7 @@ func (t *NetworkTab) testConnection() {
         // Test TCP connection
         conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", ip, port), 3*time.Second)
         
-        fyne.Do(func() {
+        RunOnMain(func() {
             if err != nil {
                 t.statusLabel.SetText(fmt.Sprintf("❌ Connection failed: %v", err))
                 t.statusLabel.Importance = widget.DangerImportance

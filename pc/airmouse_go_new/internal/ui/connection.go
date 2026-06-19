@@ -3,6 +3,7 @@ package ui
 import (
     "fmt"
     "image/color"
+    "image"
     "sync"
     "time"
 
@@ -197,7 +198,7 @@ func (w *ConnectionQualityWidget) updateIcon(rssi int) {
     // Create a simple colored circle as icon
     circle := canvas.NewCircle(col)
     circle.Resize(fyne.NewSize(24, 24))
-    w.icon.Image = circle.Image
+    w.icon.Image = image.NewUniform(col)
     w.icon.Refresh()
 }
 
