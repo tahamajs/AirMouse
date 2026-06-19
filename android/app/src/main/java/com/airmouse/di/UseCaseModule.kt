@@ -8,6 +8,7 @@ import com.airmouse.domain.usecase.CalibrationUseCase
 import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.repository.ISettingsRepository
+import com.airmouse.domain.repository.IMouseRepository
 import com.airmouse.utils.PreferencesManager
 import dagger.Module
 import dagger.Provides
@@ -31,21 +32,17 @@ object UseCaseModule {
     @Provides
     @Singleton
     fun provideSendMovementUseCase(
-        connectionRepo: IConnectionRepository,
-        settingsRepo: ISettingsRepository
+        mouseRepository: IMouseRepository
     ): SendMovementUseCase {
-        return SendMovementUseCase(connectionRepo, settingsRepo)
+        return SendMovementUseCase(mouseRepository)
     }
 
     @Provides
     @Singleton
     fun provideCalibrationUseCase(
-        @ApplicationContext context: Context,
-        calibrationRepo: ICalibrationRepository,
-        preferencesManager: PreferencesManager
+        calibrationRepo: ICalibrationRepository
     ): CalibrationUseCase {
-        // Aligned parameters to match the signature: (Context, ICalibrationRepository, PreferencesManager)
-        return CalibrationUseCase(context, calibrationRepo, preferencesManager)
+        return CalibrationUseCase(calibrationRepo)
     }
 }
 // app/src/main/java/com/airmouse/di/UseCaseModule.kt

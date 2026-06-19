@@ -2,6 +2,7 @@
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.ConnectionQuality
+import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.ConnectionStatus
 import com.airmouse.domain.repository.IConnectionRepository
 import kotlinx.coroutines.flow.Flow

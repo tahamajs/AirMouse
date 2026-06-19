@@ -1,8 +1,7 @@
 package com.airmouse.domain.usecase
 
-import com.airmouse.domain.model.GestureStatistics
+import com.airmouse.domain.model.GestureTrainingStats
 import com.airmouse.domain.repository.IGestureRepository
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 /**
@@ -12,14 +11,14 @@ class GetGestureStatisticsUseCase @Inject constructor(
     private val gestureRepository: IGestureRepository
 ) {
     /**
-     * Returns a flow of gesture statistics for all gestures.
+     * Returns aggregate gesture training statistics.
      */
-    operator fun invoke(): Flow<List<GestureStatistics>> =
-        gestureRepository.getGestureStatistics()
+    suspend operator fun invoke(): GestureTrainingStats =
+        gestureRepository.getGestureStats()
 
     /**
-     * Returns statistics for a specific gesture.
+     * Returns statistics for a specific gesture from the aggregate snapshot when available.
      */
-    suspend fun getForGesture(gestureName: String): GestureStatistics? =
-        gestureRepository.getGestureStatistics(gestureName)
+    suspend fun getForGesture(gestureName: String): GestureTrainingStats =
+        gestureRepository.getGestureStats()
 }
