@@ -69,7 +69,10 @@ fun MainNavHost(
             StatisticsScreen(navigationActions = navigationActions)
         }
         composable(Destinations.Settings.route) {
-            SettingsScreen(navigationActions = navigationActions)
+            SettingsScreen(
+                navigationActions = navigationActions,
+                onBack = { navigationActions.navigateBack() }
+            )
         }
         composable(Destinations.Help.route) {
             HelpScreen(navigationActions = navigationActions)
@@ -107,9 +110,7 @@ fun MainNavHost(
 
         // Connectivity
         composable(Destinations.NetworkDiscovery.route) {
-            NetworkDiscoveryScreen(
-                navigationActions = navigationActions
-            )
+            NetworkDiscoveryScreen(navigationActions = navigationActions)
         }
         composable(Destinations.ServerLogs.route) {
             ServerLogsScreen(navigationActions = navigationActions)

@@ -2,6 +2,7 @@
 package com.airmouse.presentation.ui.statistics
 
 import java.util.Date
+import java.util.Locale
 
 /**
  * Complete UI state for the statistics screen.
@@ -72,11 +73,11 @@ data class StatisticsUiState(
     }
 
     fun getAverageSpeedFormatted(): String {
-        return String.format("%.1f", averageSpeed)
+        return String.format(Locale.US, "%.1f", averageSpeed)
     }
 
     fun getDistanceFormatted(): String {
-        return String.format("%.1f", totalDistanceMoved)
+        return String.format(Locale.US, "%.1f", totalDistanceMoved)
     }
 
     fun getSessionTimeFormatted(): String {
@@ -84,8 +85,8 @@ data class StatisticsUiState(
         val minutes = (sessionTime % 3600) / 60
         val seconds = sessionTime % 60
         return when {
-            hours > 0 -> String.format("%02d:%02d:%02d", hours, minutes, seconds)
-            else -> String.format("%02d:%02d", minutes, seconds)
+            hours > 0 -> String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+            else -> String.format(Locale.US, "%02d:%02d", minutes, seconds)
         }
     }
 }
@@ -164,11 +165,11 @@ data class StatisticsSummary(
     val totalClicksAll: Int get() = totalClicks + totalDoubleClicks + totalRightClicks
 
     fun getAverageSpeedFormatted(): String {
-        return String.format("%.1f", averageSpeed)
+        return String.format(Locale.US, "%.1f", averageSpeed)
     }
 
     fun getTotalDistanceFormatted(): String {
-        return String.format("%.1f", totalDistance)
+        return String.format(Locale.US, "%.1f", totalDistance)
     }
 
     fun getSessionDurationFormatted(): String {
@@ -176,8 +177,8 @@ data class StatisticsSummary(
         val minutes = (sessionDuration % 3600) / 60
         val seconds = sessionDuration % 60
         return when {
-            hours > 0 -> String.format("%02d:%02d:%02d", hours, minutes, seconds)
-            else -> String.format("%02d:%02d", minutes, seconds)
+            hours > 0 -> String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+            else -> String.format(Locale.US, "%02d:%02d", minutes, seconds)
         }
     }
 }
@@ -213,7 +214,7 @@ data class GestureStatistics(
     val isConfident: Boolean get() = confidencePercentage >= 0.7f
 
     fun getConfidenceFormatted(): String {
-        return String.format("%.1f%%", confidencePercentage * 100)
+        return String.format(Locale.US, "%.1f%%", confidencePercentage * 100)
     }
 }
 

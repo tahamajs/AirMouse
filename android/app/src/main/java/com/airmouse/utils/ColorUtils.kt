@@ -1,6 +1,7 @@
 package com.airmouse.utils
 
 import android.graphics.Color
+import java.util.Locale
 
 object ColorUtils {
 
@@ -42,7 +43,7 @@ object ColorUtils {
         return Color.rgb(r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
     }
 
-    fun intToHex(color: Int): String = String.format("#%06X", 0xFFFFFF and color)
+    fun intToHex(color: Int): String = String.format(Locale.US, "#%06X", 0xFFFFFF and color)
 
     fun hexToInt(hex: String): Int {
         return try {

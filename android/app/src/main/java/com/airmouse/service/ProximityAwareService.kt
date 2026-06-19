@@ -139,7 +139,7 @@ class ProximityAwareService : Service() {
 
                 updateNotification(
                     if (isNear) "Near" else "Far",
-                    String.format("Distance: %.1fm", distance)
+                    String.format(java.util.Locale.US, "Distance: %.1fm", distance)
                 )
 
                 delay(1000)

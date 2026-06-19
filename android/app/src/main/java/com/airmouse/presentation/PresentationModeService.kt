@@ -163,7 +163,7 @@ class PresentationModeService(
     private var currentColor = 0xFFFF0000.toInt()
     private var currentStrokeWidth = 3f
     private var shapeStart: Pair<Float, Float>? = null
-    private var annotationHistory = mutableListOf<Annotation>()
+    private var annotationHistory: MutableList<Annotation> = mutableListOf()
     private var annotationHistoryIndex = -1
     private var isRecording = false
     private var recordingStartTime = 0L
@@ -477,13 +477,13 @@ class PresentationModeService(
         )
 
         // Add to history
-        annotationHistory = annotationHistory.take(annotationHistoryIndex + 1)
+        annotationHistory = annotationHistory.take(annotationHistoryIndex + 1).toMutableList()
         annotationHistory.add(annotation)
         annotationHistoryIndex = annotationHistory.lastIndex
 
         // Trim history if needed
         if (annotationHistory.size > MAX_ANNOTATIONS) {
-            annotationHistory = annotationHistory.drop(annotationHistory.size - MAX_ANNOTATIONS)
+            annotationHistory = annotationHistory.drop(annotationHistory.size - MAX_ANNOTATIONS).toMutableList()
             annotationHistoryIndex = annotationHistory.lastIndex
         }
 

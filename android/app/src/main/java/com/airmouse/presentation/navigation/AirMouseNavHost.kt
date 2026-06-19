@@ -72,7 +72,10 @@ fun AirMouseNavHost(
         }
 
         composable(Destinations.Settings.route) {
-            SettingsScreen(navigationActions = navActions)
+            SettingsScreen(
+                navigationActions = navActions,
+                onBack = { navActions.navigateBack() }
+            )
         }
 
         composable(Destinations.Help.route) {
@@ -115,12 +118,7 @@ fun AirMouseNavHost(
         // ==================== CONNECTIVITY ====================
 
         composable(Destinations.NetworkDiscovery.route) {
-            // Forwarded the top-level callback and supplied the required onBack lambda parameter
-            NetworkDiscoveryScreen(
-                navigationActions = navActions,
-                onBack = { navActions.navigateBack() },
-                onServerSelected = onServerSelected
-            )
+            NetworkDiscoveryScreen(navigationActions = navActions)
         }
 
         composable(Destinations.ServerLogs.route) {

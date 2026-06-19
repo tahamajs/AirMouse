@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -257,8 +258,8 @@ class GestureRepositoryImpl @Inject constructor(
             EnhancedGestureDetector.Gesture.CLICK -> GestureType.CLICK
             EnhancedGestureDetector.Gesture.DOUBLE_CLICK -> GestureType.DOUBLE_CLICK
             EnhancedGestureDetector.Gesture.RIGHT_CLICK -> GestureType.RIGHT_CLICK
-            EnhancedGestureDetector.Gesture.SCROLL_UP -> GestureType.SCROLL_UP
-            EnhancedGestureDetector.Gesture.SCROLL_DOWN -> GestureType.SCROLL_DOWN
+            EnhancedGestureDetector.Gesture.SCROLL_UP -> GestureType.SWIPE_UP
+            EnhancedGestureDetector.Gesture.SCROLL_DOWN -> GestureType.SWIPE_DOWN
             EnhancedGestureDetector.Gesture.SWIPE_LEFT -> GestureType.SWIPE_LEFT
             EnhancedGestureDetector.Gesture.SWIPE_RIGHT -> GestureType.SWIPE_RIGHT
             EnhancedGestureDetector.Gesture.SWIPE_UP -> GestureType.SWIPE_UP

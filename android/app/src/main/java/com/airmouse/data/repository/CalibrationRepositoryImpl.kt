@@ -54,7 +54,11 @@ class CalibrationRepositoryImpl @Inject constructor(
 
     override suspend fun getGyroBias(): GyroBias {
         val bias = calibrationHelper.getGyroBias()
-        return GyroBias(bias[0], bias[1], bias[2])
+        return GyroBias(
+            offsetX = bias[0],
+            offsetY = bias[1],
+            offsetZ = bias[2]
+        )
     }
 
     override suspend fun saveGyroBias(bias: GyroBias) {

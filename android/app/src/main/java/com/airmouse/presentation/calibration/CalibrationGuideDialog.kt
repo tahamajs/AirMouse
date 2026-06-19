@@ -26,7 +26,7 @@ fun CalibrationGuideDialog(
     step: Int,
     onDismiss: () -> Unit
 ) {
-    var currentImageIndex by remember { mutableStateOf(0) }
+    var currentImageIndex by remember { mutableIntStateOf(0) }
     val totalImages = when (step) {
         0 -> 3
         1 -> 4

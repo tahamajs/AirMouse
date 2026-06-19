@@ -590,7 +590,7 @@ fun ConfigurationOverlay(
     onCancel: () -> Unit,
     onGestureDetected: (GestureType) -> Unit
 ) {
-    var timeLeft by remember { mutableStateOf(5) }
+    var timeLeft by remember { mutableIntStateOf(5) }
 
     LaunchedEffect(Unit) {
         while (timeLeft > 0) {
@@ -723,7 +723,7 @@ fun StatisticsDialog(
                     (stats.successfulExecutions * 100f / (stats.successfulExecutions + stats.failedExecutions))
                 } else 0f
 
-                StatisticsRow("Success Rate", String.format("%.1f%%", successRate))
+                StatisticsRow("Success Rate", String.format(java.util.Locale.US, "%.1f%%", successRate))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -759,6 +759,7 @@ fun StatisticsRow(label: String, value: String) {
 
 // ==================== CUSTOM ADDED COMPONENTS TO RESOLVE COMPILATION ERRORS ====================
 
+@Suppress("unused")
 @Composable
 fun RadarAnimation(isActive: Boolean, size: Int) {
     val transition = rememberInfiniteTransition(label = "Radar")
@@ -802,6 +803,7 @@ fun RadarAnimation(isActive: Boolean, size: Int) {
     }
 }
 
+@Suppress("unused")
 @Composable
 fun GestureWaveform(
     dataPoints: List<Float>,
@@ -816,6 +818,7 @@ fun GestureWaveform(
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
     ) {
         if (dataPoints.isEmpty()) return@Canvas
+        val waveformColor = if (animated) color else color.copy(alpha = 0.7f)
         val path = Path()
         val widthStep = size.width / (dataPoints.size - 1).coerceAtLeast(1)
         val midY = size.height / 2
@@ -828,12 +831,13 @@ fun GestureWaveform(
 
         drawPath(
             path = path,
-            color = color,
+            color = waveformColor,
             style = Stroke(width = strokeWidth.toPx())
         )
     }
 }
 
+@Suppress("unused")
 @Composable
 fun AnimatedSwitch(
     checked: Boolean,
@@ -852,6 +856,7 @@ fun AnimatedSwitch(
     }
 }
 
+@Suppress("unused")
 @Composable
 fun NotificationBadge(count: Int) {
     if (count > 0) {
@@ -864,6 +869,7 @@ fun NotificationBadge(count: Int) {
     }
 }
 
+@Suppress("unused")
 @Composable
 fun SlideUpPanel(
     isVisible: Boolean,
@@ -880,7 +886,7 @@ fun SlideUpPanel(
                 .fillMaxWidth()
                 .wrapContentHeight(),
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceElevation() ?: MaterialTheme.colorScheme.surface)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Box(
@@ -896,6 +902,3 @@ fun SlideUpPanel(
         }
     }
 }
-
-@Composable
-private fun MaterialTheme.colorScheme.surfaceElevation(): Color? = this.surfaceVariant

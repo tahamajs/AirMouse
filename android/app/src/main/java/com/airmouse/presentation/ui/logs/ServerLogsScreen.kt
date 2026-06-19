@@ -600,7 +600,7 @@ fun StatisticsDialog(statistics: LogStatistics, onDismiss: () -> Unit) {
                 StatisticRow("Unique Tags", statistics.uniqueTags.toString())
                 StatisticRow("Oldest Log", statistics.formattedOldest)
                 StatisticRow("Newest Log", statistics.formattedNewest)
-                StatisticRow("Average Logs/Hour", String.format("%.1f", statistics.averageLogsPerHour))
+                StatisticRow("Average Logs/Hour", String.format(java.util.Locale.US, "%.1f", statistics.averageLogsPerHour))
             }
         },
         confirmButton = {
