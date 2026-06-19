@@ -4,10 +4,13 @@ package com.airmouse.features
 import com.airmouse.domain.model.ProfileSettings
 import com.airmouse.domain.model.UserProfile
 import com.airmouse.domain.usecase.ManageProfileUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,9 +30,10 @@ class ProfileFeature @Inject constructor(
 
     private val _state = MutableStateFlow(ProfileFeatureState())
     val state: StateFlow<ProfileFeatureState> = _state.asStateFlow()
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     init {
-        refreshProfiles()
+        scope.launch { refreshProfiles() }
     }
 
     suspend fun createProfile(profile: UserProfile): Result<String> {
