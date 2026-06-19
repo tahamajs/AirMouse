@@ -32,6 +32,33 @@ class ConnectionManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: PreferencesManager
 ) {
+    class ConnectionManager @Inject constructor(
+        @ApplicationContext private val context: Context,
+        private val prefs: PreferencesManager
+    ) {
+        // ... existing code ...
+
+        // ==================== System Commands ====================
+
+        fun sendKeyPress(keyCode: Int): Boolean {
+            val keyMap = mapOf(
+                android.view.KeyEvent.KEYCODE_HOME to "home",
+                android.view.KeyEvent.KEYCODE_BACK to "back",
+                android.view.KeyEvent.KEYCODE_VOLUME_UP to "volume_up",
+                android.view.KeyEvent.KEYCODE_VOLUME_DOWN to "volume_down",
+                android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE to "play_pause",
+                android.view.KeyEvent.KEYCODE_MEDIA_NEXT to "next_track",
+                android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS to "prev_track"
+            )
+            val command = keyMap[keyCode] ?: return false
+            return sendControl(command)
+        }
+
+        fun sendWindowCommand(action: String): Boolean {
+            val validActions = listOf("maximize", "minimize", "close", "fullscreen")
+            return if (action in validActions) sendControl("window_$action") else false
+        }
+    }
     companion object {
         private const val TAG = "ConnectionManager"
         private const val DEFAULT_PORT = 8080

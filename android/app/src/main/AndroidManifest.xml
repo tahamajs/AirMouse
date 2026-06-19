@@ -60,6 +60,9 @@
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Boot Completed -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- ==================== FEATURE DECLARATIONS ==================== -->
 
     <uses-feature
@@ -104,6 +107,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:appCategory="game"
+        android:requestLegacyExternalStorage="true"
         tools:targetApi="34">
 
         <!-- ==================== ACTIVITIES ==================== -->
@@ -144,7 +148,111 @@
 
         <!-- Settings Activity -->
         <activity
-            android:name=".ui.SettingsActivity"
+            android:name=".presentation.ui.settings.SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Onboarding Activity -->
+        <activity
+            android:name=".presentation.ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AirMouse.Splash"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Gesture Studio Activity -->
+        <activity
+            android:name=".presentation.ui.gesture.GestureStudioActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Proximity Activity -->
+        <activity
+            android:name=".presentation.ui.proximity.ProximityActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Statistics Activity -->
+        <activity
+            android:name=".presentation.ui.statistics.StatisticsActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Profiles Activity -->
+        <activity
+            android:name=".presentation.ui.profiles.ProfilesActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Voice Commands Activity -->
+        <activity
+            android:name=".presentation.ui.voice.VoiceCommandsActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Edge Gestures Activity -->
+        <activity
+            android:name=".presentation.ui.edge.EdgeGesturesActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Themes Activity -->
+        <activity
+            android:name=".presentation.ui.themes.ThemesActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Logs Activity -->
+        <activity
+            android:name=".presentation.ui.logs.ServerLogsActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Network Discovery Activity -->
+        <activity
+            android:name=".presentation.ui.network.NetworkDiscoveryActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Touchpad Activity -->
+        <activity
+            android:name=".presentation.ui.touchpad.TouchpadActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- About Activity -->
+        <activity
+            android:name=".presentation.ui.about.AboutActivity"
+            android:exported="false"
+            android:parentActivityName=".presentation.MainActivity"
+            android:theme="@style/Theme.AirMouse"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- Update Activity -->
+        <activity
+            android:name=".presentation.ui.update.UpdateActivity"
             android:exported="false"
             android:parentActivityName=".presentation.MainActivity"
             android:theme="@style/Theme.AirMouse"
@@ -238,7 +346,26 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- Foreground Service Manager -->
+        <service
+            android:name=".service.ForegroundServiceManager"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- ==================== RECEIVERS ==================== -->
+
+        <!-- Boot Completed Receiver -->
+        <receiver
+            android:name=".receivers.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- USB Device Attached Receiver -->
         <receiver
@@ -252,6 +379,34 @@
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </receiver>
+
+        <!-- Bluetooth Receiver -->
+        <receiver
+            android:name=".receivers.BluetoothReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.adapter.action.STATE_CHANGED" />
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Network Receiver -->
+        <receiver
+            android:name=".receivers.NetworkReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Notification Receiver -->
+        <receiver
+            android:name=".receivers.NotificationReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
         <!-- ==================== PROVIDERS ==================== -->
 
@@ -272,6 +427,11 @@
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
+
+        <!-- Firebase -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id" />
 
     </application>
 

@@ -114,3 +114,5 @@ abstract class ViewModelModule {
     @ViewModelKey(OnboardingViewModel::class)
     abstract fun bindOnboardingViewModel(viewModel: OnboardingViewModel): ViewModel
 }
+
+// app/src/main/java/com/airmouse/di/ViewModelModule.kt

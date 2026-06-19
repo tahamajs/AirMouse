@@ -8,7 +8,9 @@ import com.airmouse.network.UdpDiscovery
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,7 +21,17 @@ class ConnectionRepositoryImpl @Inject constructor(
     private val udpDiscovery: UdpDiscovery,
     private val prefs: PreferencesManager
 ) : IConnectionRepository {
+    override suspend fun sendKeyPress(keyCode: Int): Boolean {
+        return connectionManager.sendKeyPress(keyCode)
+    }
 
+    override suspend fun sendWindowCommand(action: String): Boolean {
+        return connectionManager.sendWindowCommand(action)
+    }
+
+    override suspend fun sendCalibrate(): Boolean {
+        return connectionManager.sendControl("calibrate")
+    }
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _status = MutableStateFlow(ConnectionStatus.DISCONNECTED)

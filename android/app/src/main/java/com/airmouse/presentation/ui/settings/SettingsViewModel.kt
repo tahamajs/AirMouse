@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/settings/SettingsViewModel.kt
 package com.airmouse.presentation.ui.settings
 
 import android.content.Context
@@ -17,7 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
@@ -31,9 +31,6 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    private val _isSaving = MutableStateFlow(false)
-    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
-
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
@@ -44,67 +41,65 @@ class SettingsViewModel @Inject constructor(
     // ==================== LOAD SETTINGS ====================
 
     private fun loadAllSettings() {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    // Cursor Settings
-                    sensitivity = prefs.getFloat("sensitivity", 0.5f),
-                    accelerationEnabled = prefs.getBoolean("acceleration_enabled", false),
-                    accelerationFactor = prefs.getFloat("acceleration_factor", 1.5f),
-                    invertX = prefs.getBoolean("invert_x", false),
-                    invertY = prefs.getBoolean("invert_y", false),
-                    smoothingEnabled = prefs.getBoolean("smoothing_enabled", true),
-                    smoothingFactor = prefs.getFloat("smoothing_factor", 0.5f),
+        _uiState.update {
+            it.copy(
+                // Cursor Settings
+                sensitivity = prefs.getFloat("sensitivity", 0.5f),
+                accelerationEnabled = prefs.getBoolean("acceleration_enabled", false),
+                accelerationFactor = prefs.getFloat("acceleration_factor", 1.5f),
+                invertX = prefs.getBoolean("invert_x", false),
+                invertY = prefs.getBoolean("invert_y", false),
+                smoothingEnabled = prefs.getBoolean("smoothing_enabled", true),
+                smoothingFactor = prefs.getFloat("smoothing_factor", 0.5f),
 
-                    // Gesture Settings
-                    clickThreshold = prefs.getFloat("click_threshold", 10f),
-                    doubleClickInterval = prefs.getLong("double_click_interval", 300L),
-                    scrollThreshold = prefs.getFloat("scroll_threshold", 5f),
-                    rightClickTilt = prefs.getFloat("right_click_tilt", 15f),
-                    rightClickDuration = prefs.getLong("right_click_duration", 500L),
-                    gestureDebounce = prefs.getLong("gesture_debounce", 100L),
+                // Gesture Settings
+                clickThreshold = prefs.getFloat("click_threshold", 10f),
+                doubleClickInterval = prefs.getLong("double_click_interval", 300L),
+                scrollThreshold = prefs.getFloat("scroll_threshold", 5f),
+                rightClickTilt = prefs.getFloat("right_click_tilt", 15f),
+                rightClickDuration = prefs.getLong("right_click_duration", 500L),
+                gestureDebounce = prefs.getLong("gesture_debounce", 100L),
 
-                    // AI & Predictive Settings
-                    aiSmoothing = prefs.getBoolean("ai_smoothing", false),
-                    aiBlendFactor = prefs.getFloat("ai_blend_factor", 0.7f),
-                    predictive = prefs.getBoolean("predictive_movement", true),
-                    predictionStrength = prefs.getFloat("prediction_strength", 0.5f),
-                    kalmanEnabled = prefs.getBoolean("kalman_enabled", true),
+                // AI & Predictive Settings
+                aiSmoothing = prefs.getBoolean("ai_smoothing", false),
+                aiBlendFactor = prefs.getFloat("ai_blend_factor", 0.7f),
+                predictive = prefs.getBoolean("predictive_movement", true),
+                predictionStrength = prefs.getFloat("prediction_strength", 0.5f),
+                kalmanEnabled = prefs.getBoolean("kalman_enabled", true),
 
-                    // Haptic & Feedback
-                    hapticEnabled = prefs.getBoolean("haptic_enabled", true),
-                    hapticStrength = getHapticStrength(prefs.getString("haptic_strength", "MEDIUM")),
-                    soundEnabled = prefs.getBoolean("sound_enabled", false),
-                    visualFeedback = prefs.getBoolean("visual_feedback", true),
-                    notificationOnGesture = prefs.getBoolean("notification_on_gesture", false),
+                // Haptic & Feedback
+                hapticEnabled = prefs.getBoolean("haptic_enabled", true),
+                hapticStrength = getHapticStrength(prefs.getString("haptic_strength", "MEDIUM")),
+                soundEnabled = prefs.getBoolean("sound_enabled", false),
+                visualFeedback = prefs.getBoolean("visual_feedback", true),
+                notificationOnGesture = prefs.getBoolean("notification_on_gesture", false),
 
-                    // Display Settings
-                    theme = prefs.getString("theme", "system"),
-                    useDynamicColors = prefs.getBoolean("dynamic_colors", true),
-                    fontSize = prefs.getFloat("font_size", 16f),
-                    showDebugInfo = prefs.getBoolean("show_debug_info", false),
-                    keepScreenOn = prefs.getBoolean("keep_screen_on", false),
-                    showFps = prefs.getBoolean("show_fps", false),
+                // Display Settings
+                theme = prefs.getString("theme", "system"),
+                useDynamicColors = prefs.getBoolean("dynamic_colors", true),
+                fontSize = prefs.getFloat("font_size", 16f),
+                showDebugInfo = prefs.getBoolean("show_debug_info", false),
+                keepScreenOn = prefs.getBoolean("keep_screen_on", false),
+                showFps = prefs.getBoolean("show_fps", false),
 
-                    // Connection Settings
-                    autoConnect = prefs.getBoolean("auto_connect", true),
-                    reconnectAttempts = prefs.getInt("reconnect_attempts", 5),
-                    connectionTimeout = prefs.getInt("connection_timeout", 5000),
-                    useWebSocket = prefs.getBoolean("use_websocket", true),
-                    useUdpDiscovery = prefs.getBoolean("use_udp_discovery", true),
+                // Connection Settings
+                autoConnect = prefs.getBoolean("auto_connect", true),
+                reconnectAttempts = prefs.getInt("reconnect_attempts", 5),
+                connectionTimeout = prefs.getInt("connection_timeout", 5000),
+                useWebSocket = prefs.getBoolean("use_websocket", true),
+                useUdpDiscovery = prefs.getBoolean("use_udp_discovery", true),
 
-                    // Privacy & Data
-                    anonymousStats = prefs.getBoolean("anonymous_stats", true),
-                    crashReporting = prefs.getBoolean("crash_reporting", true),
-                    clearDataOnExit = prefs.getBoolean("clear_data_on_exit", false),
+                // Privacy & Data
+                anonymousStats = prefs.getBoolean("anonymous_stats", true),
+                crashReporting = prefs.getBoolean("crash_reporting", true),
+                clearDataOnExit = prefs.getBoolean("clear_data_on_exit", false),
 
-                    // Presentation Settings
-                    presentationModeEnabled = prefs.getBoolean("presentation_mode_enabled", false),
-                    laserPointerSpeed = prefs.getFloat("laser_pointer_speed", 1.0f),
-                    showPresentationTimer = prefs.getBoolean("show_presentation_timer", true),
-                    autoHideLaser = prefs.getBoolean("auto_hide_laser", true)
-                )
-            }
+                // Presentation Settings
+                presentationModeEnabled = prefs.getBoolean("presentation_mode_enabled", false),
+                laserPointerSpeed = prefs.getFloat("laser_pointer_speed", 1.0f),
+                showPresentationTimer = prefs.getBoolean("show_presentation_timer", true),
+                autoHideLaser = prefs.getBoolean("auto_hide_laser", true)
+            )
         }
     }
 
@@ -114,486 +109,572 @@ class SettingsViewModel @Inject constructor(
         else -> HapticStrength.MEDIUM
     }
 
+    // ==================== TOAST HELPER ====================
+
+    private suspend fun showToast(message: String) {
+        _toastMessage.value = message
+        delay(3000)
+        _toastMessage.value = null
+    }
+
     // ==================== SAVE HELPERS ====================
 
-    private fun saveAndUpdate(block: () -> Unit, successMessage: String? = null) {
-        viewModelScope.launch {
-            try {
-                _isSaving.value = true
-                block()
-                successMessage?.let { showToast(it) }
-            } catch (e: Exception) {
-                showToast("Error: ${e.message}")
-            } finally {
-                _isSaving.value = false
-            }
-        }
-    }
-
-    private suspend fun saveAndUpdateSuspend(block: suspend () -> Unit, successMessage: String? = null) {
+    private suspend fun saveAndUpdate(block: suspend () -> Unit, successMessage: String? = null) {
         try {
-            _isSaving.value = true
+            _uiState.update { it.copy(isSaving = true) }
             block()
             successMessage?.let { showToast(it) }
+            _uiState.update { it.copy(isSaving = false, error = null) }
         } catch (e: Exception) {
+            _uiState.update {
+                it.copy(isSaving = false, error = e.message ?: "An error occurred")
+            }
             showToast("Error: ${e.message}")
-        } finally {
-            _isSaving.value = false
-        }
-    }
-
-    private fun showToast(message: String) {
-        viewModelScope.launch {
-            _toastMessage.value = message
-            delay(3000)
-            _toastMessage.value = null
         }
     }
 
     // ==================== CURSOR SETTINGS ====================
 
     fun updateSensitivity(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("sensitivity", value)
-            _uiState.update { it.copy(sensitivity = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("sensitivity", value)
+                _uiState.update { it.copy(sensitivity = value) }
+            })
+        }
     }
 
-    fun updateAccelerationEnabled(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("acceleration_enabled", enabled)
-            _uiState.update { it.copy(accelerationEnabled = enabled) }
-        }, "Mouse acceleration ${if (enabled) "enabled" else "disabled"}")
+    fun toggleAcceleration() {
+        viewModelScope.launch {
+            val current = _uiState.value.accelerationEnabled
+            saveAndUpdate({
+                prefs.putBoolean("acceleration_enabled", !current)
+                _uiState.update { it.copy(accelerationEnabled = !current) }
+            }, "Acceleration ${if (!current) "enabled" else "disabled"}")
+        }
     }
 
     fun updateAccelerationFactor(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("acceleration_factor", value)
-            _uiState.update { it.copy(accelerationFactor = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("acceleration_factor", value)
+                _uiState.update { it.copy(accelerationFactor = value) }
+            })
+        }
     }
 
-    fun updateInvertX(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("invert_x", enabled)
-            _uiState.update { it.copy(invertX = enabled) }
-        }, "X-axis ${if (enabled) "inverted" else "normalized"}")
+    fun toggleInvertX() {
+        viewModelScope.launch {
+            val current = _uiState.value.invertX
+            saveAndUpdate({
+                prefs.putBoolean("invert_x", !current)
+                _uiState.update { it.copy(invertX = !current) }
+            }, "X-axis ${if (!current) "inverted" else "normalized"}")
+        }
     }
 
-    fun updateInvertY(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("invert_y", enabled)
-            _uiState.update { it.copy(invertY = enabled) }
-        }, "Y-axis ${if (enabled) "inverted" else "normalized"}")
+    fun toggleInvertY() {
+        viewModelScope.launch {
+            val current = _uiState.value.invertY
+            saveAndUpdate({
+                prefs.putBoolean("invert_y", !current)
+                _uiState.update { it.copy(invertY = !current) }
+            }, "Y-axis ${if (!current) "inverted" else "normalized"}")
+        }
     }
 
-    fun updateSmoothingEnabled(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("smoothing_enabled", enabled)
-            _uiState.update { it.copy(smoothingEnabled = enabled) }
-        })
+    fun toggleSmoothing() {
+        viewModelScope.launch {
+            val current = _uiState.value.smoothingEnabled
+            saveAndUpdate({
+                prefs.putBoolean("smoothing_enabled", !current)
+                _uiState.update { it.copy(smoothingEnabled = !current) }
+            })
+        }
     }
 
     fun updateSmoothingFactor(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("smoothing_factor", value)
-            _uiState.update { it.copy(smoothingFactor = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("smoothing_factor", value)
+                _uiState.update { it.copy(smoothingFactor = value) }
+            })
+        }
     }
 
     // ==================== GESTURE SETTINGS ====================
 
     fun updateClickThreshold(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("click_threshold", value)
-            _uiState.update { it.copy(clickThreshold = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("click_threshold", value)
+                _uiState.update { it.copy(clickThreshold = value) }
+            })
+        }
     }
 
     fun updateDoubleClickInterval(value: Long) {
-        saveAndUpdate({
-            prefs.putLong("double_click_interval", value)
-            _uiState.update { it.copy(doubleClickInterval = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putLong("double_click_interval", value)
+                _uiState.update { it.copy(doubleClickInterval = value) }
+            })
+        }
     }
 
     fun updateScrollThreshold(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("scroll_threshold", value)
-            _uiState.update { it.copy(scrollThreshold = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("scroll_threshold", value)
+                _uiState.update { it.copy(scrollThreshold = value) }
+            })
+        }
     }
 
     fun updateRightClickTilt(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("right_click_tilt", value)
-            _uiState.update { it.copy(rightClickTilt = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("right_click_tilt", value)
+                _uiState.update { it.copy(rightClickTilt = value) }
+            })
+        }
     }
 
     fun updateRightClickDuration(value: Long) {
-        saveAndUpdate({
-            prefs.putLong("right_click_duration", value)
-            _uiState.update { it.copy(rightClickDuration = value) }
-        })
-    }
-
-    fun updateGestureDebounce(value: Long) {
-        saveAndUpdate({
-            prefs.putLong("gesture_debounce", value)
-            _uiState.update { it.copy(gestureDebounce = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putLong("right_click_duration", value)
+                _uiState.update { it.copy(rightClickDuration = value) }
+            })
+        }
     }
 
     // ==================== AI & PREDICTIVE SETTINGS ====================
 
-    fun updateAiSmoothing(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("ai_smoothing", enabled)
-            _uiState.update { it.copy(aiSmoothing = enabled) }
-        }, "AI Smoothing ${if (enabled) "enabled" else "disabled"}")
+    fun toggleAiSmoothing() {
+        viewModelScope.launch {
+            val current = _uiState.value.aiSmoothing
+            saveAndUpdate({
+                prefs.putBoolean("ai_smoothing", !current)
+                _uiState.update { it.copy(aiSmoothing = !current) }
+            }, "AI Smoothing ${if (!current) "enabled" else "disabled"}")
+        }
     }
 
     fun updateAiBlendFactor(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("ai_blend_factor", value)
-            _uiState.update { it.copy(aiBlendFactor = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("ai_blend_factor", value)
+                _uiState.update { it.copy(aiBlendFactor = value) }
+            })
+        }
     }
 
-    fun updatePredictive(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("predictive_movement", enabled)
-            _uiState.update { it.copy(predictive = enabled) }
-        }, "Predictive movement ${if (enabled) "enabled" else "disabled"}")
+    fun togglePredictive() {
+        viewModelScope.launch {
+            val current = _uiState.value.predictive
+            saveAndUpdate({
+                prefs.putBoolean("predictive_movement", !current)
+                _uiState.update { it.copy(predictive = !current) }
+            }, "Predictive ${if (!current) "enabled" else "disabled"}")
+        }
     }
 
     fun updatePredictionStrength(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("prediction_strength", value)
-            _uiState.update { it.copy(predictionStrength = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("prediction_strength", value)
+                _uiState.update { it.copy(predictionStrength = value) }
+            })
+        }
     }
 
-    fun updateKalmanEnabled(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("kalman_enabled", enabled)
-            _uiState.update { it.copy(kalmanEnabled = enabled) }
-        })
+    fun toggleKalman() {
+        viewModelScope.launch {
+            val current = _uiState.value.kalmanEnabled
+            saveAndUpdate({
+                prefs.putBoolean("kalman_enabled", !current)
+                _uiState.update { it.copy(kalmanEnabled = !current) }
+            })
+        }
     }
 
-    // ==================== HAPTIC & FEEDBACK ====================
+    // ==================== HAPTIC & FEEDBACK SETTINGS ====================
 
-    fun updateHaptic(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("haptic_enabled", enabled)
-            _uiState.update { it.copy(hapticEnabled = enabled) }
-        }, "Haptic ${if (enabled) "enabled" else "disabled"}")
+    fun toggleHaptic() {
+        viewModelScope.launch {
+            val current = _uiState.value.hapticEnabled
+            saveAndUpdate({
+                prefs.putBoolean("haptic_enabled", !current)
+                _uiState.update { it.copy(hapticEnabled = !current) }
+            }, "Haptic ${if (!current) "enabled" else "disabled"}")
+        }
     }
 
     fun updateHapticStrength(strength: HapticStrength) {
-        saveAndUpdate({
-            prefs.putString("haptic_strength", strength.name)
-            _uiState.update { it.copy(hapticStrength = strength) }
-        }, "Haptic strength: ${strength.displayName}")
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putString("haptic_strength", strength.name)
+                _uiState.update { it.copy(hapticStrength = strength) }
+            }, "Haptic strength: ${strength.displayName}")
+        }
     }
 
-    fun updateSoundEnabled(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("sound_enabled", enabled)
-            _uiState.update { it.copy(soundEnabled = enabled) }
-        }, "Sound ${if (enabled) "enabled" else "disabled"}")
+    fun toggleSound() {
+        viewModelScope.launch {
+            val current = _uiState.value.soundEnabled
+            saveAndUpdate({
+                prefs.putBoolean("sound_enabled", !current)
+                _uiState.update { it.copy(soundEnabled = !current) }
+            }, "Sound ${if (!current) "enabled" else "disabled"}")
+        }
     }
 
-    fun updateVisualFeedback(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("visual_feedback", enabled)
-            _uiState.update { it.copy(visualFeedback = enabled) }
-        })
+    fun toggleVisualFeedback() {
+        viewModelScope.launch {
+            val current = _uiState.value.visualFeedback
+            saveAndUpdate({
+                prefs.putBoolean("visual_feedback", !current)
+                _uiState.update { it.copy(visualFeedback = !current) }
+            })
+        }
     }
 
-    fun updateNotificationOnGesture(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("notification_on_gesture", enabled)
-            _uiState.update { it.copy(notificationOnGesture = enabled) }
-        })
+    fun toggleNotificationOnGesture() {
+        viewModelScope.launch {
+            val current = _uiState.value.notificationOnGesture
+            saveAndUpdate({
+                prefs.putBoolean("notification_on_gesture", !current)
+                _uiState.update { it.copy(notificationOnGesture = !current) }
+            })
+        }
     }
 
     // ==================== DISPLAY SETTINGS ====================
 
     fun updateTheme(theme: String) {
-        saveAndUpdate({
-            prefs.putString("theme", theme)
-            _uiState.update { it.copy(theme = theme) }
-        }, "Theme changed to $theme")
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putString("theme", theme)
+                _uiState.update { it.copy(theme = theme) }
+            }, "Theme: $theme")
+        }
     }
 
-    fun updateUseDynamicColors(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("dynamic_colors", enabled)
-            _uiState.update { it.copy(useDynamicColors = enabled) }
-        })
+    fun toggleDynamicColors() {
+        viewModelScope.launch {
+            val current = _uiState.value.useDynamicColors
+            saveAndUpdate({
+                prefs.putBoolean("dynamic_colors", !current)
+                _uiState.update { it.copy(useDynamicColors = !current) }
+            })
+        }
     }
 
     fun updateFontSize(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("font_size", value)
-            _uiState.update { it.copy(fontSize = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("font_size", value)
+                _uiState.update { it.copy(fontSize = value) }
+            })
+        }
     }
 
-    fun updateShowDebugInfo(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("show_debug_info", enabled)
-            _uiState.update { it.copy(showDebugInfo = enabled) }
-        })
+    fun toggleDebugInfo() {
+        viewModelScope.launch {
+            val current = _uiState.value.showDebugInfo
+            saveAndUpdate({
+                prefs.putBoolean("show_debug_info", !current)
+                _uiState.update { it.copy(showDebugInfo = !current) }
+            })
+        }
     }
 
-    fun updateKeepScreenOn(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("keep_screen_on", enabled)
-            _uiState.update { it.copy(keepScreenOn = enabled) }
-        })
+    fun toggleKeepScreenOn() {
+        viewModelScope.launch {
+            val current = _uiState.value.keepScreenOn
+            saveAndUpdate({
+                prefs.putBoolean("keep_screen_on", !current)
+                _uiState.update { it.copy(keepScreenOn = !current) }
+            })
+        }
     }
 
-    fun updateShowFps(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("show_fps", enabled)
-            _uiState.update { it.copy(showFps = enabled) }
-        })
+    fun toggleShowFps() {
+        viewModelScope.launch {
+            val current = _uiState.value.showFps
+            saveAndUpdate({
+                prefs.putBoolean("show_fps", !current)
+                _uiState.update { it.copy(showFps = !current) }
+            })
+        }
     }
 
     // ==================== CONNECTION SETTINGS ====================
 
-    fun updateAutoConnect(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("auto_connect", enabled)
-            _uiState.update { it.copy(autoConnect = enabled) }
-        })
+    fun toggleAutoConnect() {
+        viewModelScope.launch {
+            val current = _uiState.value.autoConnect
+            saveAndUpdate({
+                prefs.putBoolean("auto_connect", !current)
+                _uiState.update { it.copy(autoConnect = !current) }
+            })
+        }
     }
 
     fun updateReconnectAttempts(value: Int) {
-        saveAndUpdate({
-            prefs.putInt("reconnect_attempts", value)
-            _uiState.update { it.copy(reconnectAttempts = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putInt("reconnect_attempts", value)
+                _uiState.update { it.copy(reconnectAttempts = value) }
+            })
+        }
     }
 
     fun updateConnectionTimeout(value: Int) {
-        saveAndUpdate({
-            prefs.putInt("connection_timeout", value)
-            _uiState.update { it.copy(connectionTimeout = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putInt("connection_timeout", value)
+                _uiState.update { it.copy(connectionTimeout = value) }
+            })
+        }
     }
 
-    fun updateUseWebSocket(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("use_websocket", enabled)
-            _uiState.update { it.copy(useWebSocket = enabled) }
-        })
+    fun toggleUseWebSocket() {
+        viewModelScope.launch {
+            val current = _uiState.value.useWebSocket
+            saveAndUpdate({
+                prefs.putBoolean("use_websocket", !current)
+                _uiState.update { it.copy(useWebSocket = !current) }
+            })
+        }
     }
 
-    fun updateUseUdpDiscovery(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("use_udp_discovery", enabled)
-            _uiState.update { it.copy(useUdpDiscovery = enabled) }
-        })
+    fun toggleUdpDiscovery() {
+        viewModelScope.launch {
+            val current = _uiState.value.useUdpDiscovery
+            saveAndUpdate({
+                prefs.putBoolean("use_udp_discovery", !current)
+                _uiState.update { it.copy(useUdpDiscovery = !current) }
+            })
+        }
     }
 
-    // ==================== PRIVACY & DATA ====================
+    // ==================== PRIVACY & DATA SETTINGS ====================
 
-    fun updateAnonymousStats(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("anonymous_stats", enabled)
-            _uiState.update { it.copy(anonymousStats = enabled) }
-        })
+    fun toggleAnonymousStats() {
+        viewModelScope.launch {
+            val current = _uiState.value.anonymousStats
+            saveAndUpdate({
+                prefs.putBoolean("anonymous_stats", !current)
+                _uiState.update { it.copy(anonymousStats = !current) }
+            })
+        }
     }
 
-    fun updateCrashReporting(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("crash_reporting", enabled)
-            _uiState.update { it.copy(crashReporting = enabled) }
-        })
+    fun toggleCrashReporting() {
+        viewModelScope.launch {
+            val current = _uiState.value.crashReporting
+            saveAndUpdate({
+                prefs.putBoolean("crash_reporting", !current)
+                _uiState.update { it.copy(crashReporting = !current) }
+            })
+        }
     }
 
-    fun updateClearDataOnExit(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("clear_data_on_exit", enabled)
-            _uiState.update { it.copy(clearDataOnExit = enabled) }
-        })
+    fun toggleClearDataOnExit() {
+        viewModelScope.launch {
+            val current = _uiState.value.clearDataOnExit
+            saveAndUpdate({
+                prefs.putBoolean("clear_data_on_exit", !current)
+                _uiState.update { it.copy(clearDataOnExit = !current) }
+            })
+        }
     }
 
     // ==================== PRESENTATION SETTINGS ====================
 
-    fun updatePresentationModeEnabled(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("presentation_mode_enabled", enabled)
-            _uiState.update { it.copy(presentationModeEnabled = enabled) }
-        }, "Presentation mode ${if (enabled) "enabled" else "disabled"}")
+    fun togglePresentationMode() {
+        viewModelScope.launch {
+            val current = _uiState.value.presentationModeEnabled
+            saveAndUpdate({
+                prefs.putBoolean("presentation_mode_enabled", !current)
+                _uiState.update { it.copy(presentationModeEnabled = !current) }
+            }, "Presentation mode ${if (!current) "enabled" else "disabled"}")
+        }
     }
 
     fun updateLaserPointerSpeed(value: Float) {
-        saveAndUpdate({
-            prefs.putFloat("laser_pointer_speed", value)
-            _uiState.update { it.copy(laserPointerSpeed = value) }
-        })
+        viewModelScope.launch {
+            saveAndUpdate({
+                prefs.putFloat("laser_pointer_speed", value)
+                _uiState.update { it.copy(laserPointerSpeed = value) }
+            })
+        }
     }
 
-    fun updateShowPresentationTimer(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("show_presentation_timer", enabled)
-            _uiState.update { it.copy(showPresentationTimer = enabled) }
-        })
+    fun toggleShowPresentationTimer() {
+        viewModelScope.launch {
+            val current = _uiState.value.showPresentationTimer
+            saveAndUpdate({
+                prefs.putBoolean("show_presentation_timer", !current)
+                _uiState.update { it.copy(showPresentationTimer = !current) }
+            })
+        }
     }
 
-    fun updateAutoHideLaser(enabled: Boolean) {
-        saveAndUpdate({
-            prefs.putBoolean("auto_hide_laser", enabled)
-            _uiState.update { it.copy(autoHideLaser = enabled) }
-        })
+    fun toggleAutoHideLaser() {
+        viewModelScope.launch {
+            val current = _uiState.value.autoHideLaser
+            saveAndUpdate({
+                prefs.putBoolean("auto_hide_laser", !current)
+                _uiState.update { it.copy(autoHideLaser = !current) }
+            })
+        }
     }
 
-    // ==================== RESET & EXPORT ====================
+    // ==================== ACTIONS ====================
+
+    fun saveAllSettings() {
+        viewModelScope.launch {
+            saveAndUpdate({
+                showToast("All settings saved successfully!")
+            })
+        }
+    }
 
     fun resetToDefaults() {
         viewModelScope.launch {
-            try {
-                _isSaving.value = true
-
-                // Reset all settings
-                updateSensitivity(0.5f)
-                updateAccelerationEnabled(false)
-                updateAccelerationFactor(1.5f)
-                updateInvertX(false)
-                updateInvertY(false)
-                updateSmoothingEnabled(true)
-                updateSmoothingFactor(0.5f)
-                updateClickThreshold(10f)
-                updateDoubleClickInterval(300L)
-                updateScrollThreshold(5f)
-                updateRightClickTilt(15f)
-                updateRightClickDuration(500L)
-                updateGestureDebounce(100L)
-                updateAiSmoothing(false)
-                updateAiBlendFactor(0.7f)
-                updatePredictive(true)
-                updatePredictionStrength(0.5f)
-                updateKalmanEnabled(true)
-                updateHaptic(true)
-                updateHapticStrength(HapticStrength.MEDIUM)
-                updateSoundEnabled(false)
-                updateVisualFeedback(true)
-                updateNotificationOnGesture(false)
-                updateTheme("system")
-                updateUseDynamicColors(true)
-                updateFontSize(16f)
-                updateShowDebugInfo(false)
-                updateKeepScreenOn(false)
-                updateShowFps(false)
-                updateAutoConnect(true)
-                updateReconnectAttempts(5)
-                updateConnectionTimeout(5000)
-                updateUseWebSocket(true)
-                updateUseUdpDiscovery(true)
-                updateAnonymousStats(true)
-                updateCrashReporting(true)
-                updateClearDataOnExit(false)
-                updatePresentationModeEnabled(false)
-                updateLaserPointerSpeed(1.0f)
-                updateShowPresentationTimer(true)
-                updateAutoHideLaser(true)
-
-                delay(500)
-                showToast("All settings reset to defaults")
-            } catch (e: Exception) {
-                showToast("Error resetting: ${e.message}")
-            } finally {
-                _isSaving.value = false
-            }
+            saveAndUpdate({
+                val defaultState = SettingsUiState()
+                _uiState.value = defaultState
+                // Reset all preferences
+                prefs.clear()
+                // Save default values
+                prefs.putFloat("sensitivity", defaultState.sensitivity)
+                prefs.putBoolean("acceleration_enabled", defaultState.accelerationEnabled)
+                prefs.putFloat("acceleration_factor", defaultState.accelerationFactor)
+                prefs.putBoolean("invert_x", defaultState.invertX)
+                prefs.putBoolean("invert_y", defaultState.invertY)
+                prefs.putBoolean("smoothing_enabled", defaultState.smoothingEnabled)
+                prefs.putFloat("smoothing_factor", defaultState.smoothingFactor)
+                prefs.putFloat("click_threshold", defaultState.clickThreshold)
+                prefs.putLong("double_click_interval", defaultState.doubleClickInterval)
+                prefs.putFloat("scroll_threshold", defaultState.scrollThreshold)
+                prefs.putFloat("right_click_tilt", defaultState.rightClickTilt)
+                prefs.putLong("right_click_duration", defaultState.rightClickDuration)
+                prefs.putBoolean("ai_smoothing", defaultState.aiSmoothing)
+                prefs.putFloat("ai_blend_factor", defaultState.aiBlendFactor)
+                prefs.putBoolean("predictive_movement", defaultState.predictive)
+                prefs.putFloat("prediction_strength", defaultState.predictionStrength)
+                prefs.putBoolean("kalman_enabled", defaultState.kalmanEnabled)
+                prefs.putBoolean("haptic_enabled", defaultState.hapticEnabled)
+                prefs.putString("haptic_strength", defaultState.hapticStrength.name)
+                prefs.putBoolean("sound_enabled", defaultState.soundEnabled)
+                prefs.putBoolean("visual_feedback", defaultState.visualFeedback)
+                prefs.putBoolean("notification_on_gesture", defaultState.notificationOnGesture)
+                prefs.putString("theme", defaultState.theme)
+                prefs.putBoolean("dynamic_colors", defaultState.useDynamicColors)
+                prefs.putFloat("font_size", defaultState.fontSize)
+                prefs.putBoolean("show_debug_info", defaultState.showDebugInfo)
+                prefs.putBoolean("keep_screen_on", defaultState.keepScreenOn)
+                prefs.putBoolean("show_fps", defaultState.showFps)
+                prefs.putBoolean("auto_connect", defaultState.autoConnect)
+                prefs.putInt("reconnect_attempts", defaultState.reconnectAttempts)
+                prefs.putInt("connection_timeout", defaultState.connectionTimeout)
+                prefs.putBoolean("use_websocket", defaultState.useWebSocket)
+                prefs.putBoolean("use_udp_discovery", defaultState.useUdpDiscovery)
+                prefs.putBoolean("anonymous_stats", defaultState.anonymousStats)
+                prefs.putBoolean("crash_reporting", defaultState.crashReporting)
+                prefs.putBoolean("clear_data_on_exit", defaultState.clearDataOnExit)
+                prefs.putBoolean("presentation_mode_enabled", defaultState.presentationModeEnabled)
+                prefs.putFloat("laser_pointer_speed", defaultState.laserPointerSpeed)
+                prefs.putBoolean("show_presentation_timer", defaultState.showPresentationTimer)
+                prefs.putBoolean("auto_hide_laser", defaultState.autoHideLaser)
+                showToast("All settings reset to defaults!")
+            })
         }
     }
 
     fun exportSettings() {
         viewModelScope.launch {
-            try {
+            saveAndUpdate({
+                val state = _uiState.value
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                 val fileName = "airmouse_settings_$timestamp.txt"
-                val file = File(context.getExternalFilesDir(null), fileName)
+                val file = File(context.filesDir, fileName)
 
-                val settings = buildString {
-                    appendLine("Air Mouse Pro Settings Export")
-                    appendLine("=============================")
-                    appendLine("Export Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}")
+                val content = buildString {
+                    appendLine("=== Air Mouse Pro Settings Export ===")
+                    appendLine("Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}")
                     appendLine()
-                    appendLine("=== CURSOR SETTINGS ===")
-                    appendLine("Sensitivity: ${_uiState.value.sensitivity}")
-                    appendLine("Acceleration: ${_uiState.value.accelerationEnabled}")
-                    appendLine("Acceleration Factor: ${_uiState.value.accelerationFactor}")
-                    appendLine("Invert X: ${_uiState.value.invertX}")
-                    appendLine("Invert Y: ${_uiState.value.invertY}")
-                    appendLine("Smoothing: ${_uiState.value.smoothingEnabled}")
-                    appendLine("Smoothing Factor: ${_uiState.value.smoothingFactor}")
+                    appendLine("=== Cursor Settings ===")
+                    appendLine("Sensitivity: ${state.sensitivity}")
+                    appendLine("Acceleration: ${state.accelerationEnabled}")
+                    appendLine("Acceleration Factor: ${state.accelerationFactor}")
+                    appendLine("Invert X: ${state.invertX}")
+                    appendLine("Invert Y: ${state.invertY}")
+                    appendLine("Smoothing: ${state.smoothingEnabled}")
+                    appendLine("Smoothing Factor: ${state.smoothingFactor}")
                     appendLine()
-                    appendLine("=== GESTURE SETTINGS ===")
-                    appendLine("Click Threshold: ${_uiState.value.clickThreshold}")
-                    appendLine("Double Click Interval: ${_uiState.value.doubleClickInterval}")
-                    appendLine("Scroll Threshold: ${_uiState.value.scrollThreshold}")
-                    appendLine("Right Click Tilt: ${_uiState.value.rightClickTilt}")
-                    appendLine("Right Click Duration: ${_uiState.value.rightClickDuration}")
-                    appendLine("Gesture Debounce: ${_uiState.value.gestureDebounce}")
+                    appendLine("=== Gesture Settings ===")
+                    appendLine("Click Threshold: ${state.clickThreshold}")
+                    appendLine("Double Click Interval: ${state.doubleClickInterval}")
+                    appendLine("Scroll Threshold: ${state.scrollThreshold}")
+                    appendLine("Right Click Tilt: ${state.rightClickTilt}")
+                    appendLine("Right Click Duration: ${state.rightClickDuration}")
                     appendLine()
-                    appendLine("=== AI & PREDICTIVE ===")
-                    appendLine("AI Smoothing: ${_uiState.value.aiSmoothing}")
-                    appendLine("AI Blend Factor: ${_uiState.value.aiBlendFactor}")
-                    appendLine("Predictive: ${_uiState.value.predictive}")
-                    appendLine("Prediction Strength: ${_uiState.value.predictionStrength}")
-                    appendLine("Kalman Filter: ${_uiState.value.kalmanEnabled}")
+                    appendLine("=== AI & Predictive ===")
+                    appendLine("AI Smoothing: ${state.aiSmoothing}")
+                    appendLine("AI Blend Factor: ${state.aiBlendFactor}")
+                    appendLine("Predictive: ${state.predictive}")
+                    appendLine("Prediction Strength: ${state.predictionStrength}")
+                    appendLine("Kalman Filter: ${state.kalmanEnabled}")
                     appendLine()
-                    appendLine("=== HAPTIC & FEEDBACK ===")
-                    appendLine("Haptic: ${_uiState.value.hapticEnabled}")
-                    appendLine("Haptic Strength: ${_uiState.value.hapticStrength.displayName}")
-                    appendLine("Sound: ${_uiState.value.soundEnabled}")
-                    appendLine("Visual Feedback: ${_uiState.value.visualFeedback}")
-                    appendLine("Notification on Gesture: ${_uiState.value.notificationOnGesture}")
+                    appendLine("=== Haptic & Feedback ===")
+                    appendLine("Haptic: ${state.hapticEnabled}")
+                    appendLine("Haptic Strength: ${state.hapticStrength.displayName}")
+                    appendLine("Sound: ${state.soundEnabled}")
+                    appendLine("Visual Feedback: ${state.visualFeedback}")
+                    appendLine("Notification on Gesture: ${state.notificationOnGesture}")
                     appendLine()
-                    appendLine("=== DISPLAY SETTINGS ===")
-                    appendLine("Theme: ${_uiState.value.theme}")
-                    appendLine("Dynamic Colors: ${_uiState.value.useDynamicColors}")
-                    appendLine("Font Size: ${_uiState.value.fontSize}")
-                    appendLine("Debug Info: ${_uiState.value.showDebugInfo}")
-                    appendLine("Keep Screen On: ${_uiState.value.keepScreenOn}")
-                    appendLine("Show FPS: ${_uiState.value.showFps}")
+                    appendLine("=== Display Settings ===")
+                    appendLine("Theme: ${state.theme}")
+                    appendLine("Dynamic Colors: ${state.useDynamicColors}")
+                    appendLine("Font Size: ${state.fontSize}")
+                    appendLine("Debug Info: ${state.showDebugInfo}")
+                    appendLine("Keep Screen On: ${state.keepScreenOn}")
+                    appendLine("Show FPS: ${state.showFps}")
                     appendLine()
-                    appendLine("=== CONNECTION SETTINGS ===")
-                    appendLine("Auto Connect: ${_uiState.value.autoConnect}")
-                    appendLine("Reconnect Attempts: ${_uiState.value.reconnectAttempts}")
-                    appendLine("Connection Timeout: ${_uiState.value.connectionTimeout}")
-                    appendLine("Use WebSocket: ${_uiState.value.useWebSocket}")
-                    appendLine("UDP Discovery: ${_uiState.value.useUdpDiscovery}")
+                    appendLine("=== Connection Settings ===")
+                    appendLine("Auto Connect: ${state.autoConnect}")
+                    appendLine("Reconnect Attempts: ${state.reconnectAttempts}")
+                    appendLine("Connection Timeout: ${state.connectionTimeout}")
+                    appendLine("Use WebSocket: ${state.useWebSocket}")
+                    appendLine("UDP Discovery: ${state.useUdpDiscovery}")
                     appendLine()
-                    appendLine("=== PRIVACY & DATA ===")
-                    appendLine("Anonymous Stats: ${_uiState.value.anonymousStats}")
-                    appendLine("Crash Reporting: ${_uiState.value.crashReporting}")
-                    appendLine("Clear Data on Exit: ${_uiState.value.clearDataOnExit}")
+                    appendLine("=== Privacy & Data ===")
+                    appendLine("Anonymous Stats: ${state.anonymousStats}")
+                    appendLine("Crash Reporting: ${state.crashReporting}")
+                    appendLine("Clear Data on Exit: ${state.clearDataOnExit}")
                     appendLine()
-                    appendLine("=== PRESENTATION SETTINGS ===")
-                    appendLine("Presentation Mode: ${_uiState.value.presentationModeEnabled}")
-                    appendLine("Laser Pointer Speed: ${_uiState.value.laserPointerSpeed}")
-                    appendLine("Show Timer: ${_uiState.value.showPresentationTimer}")
-                    appendLine("Auto Hide Laser: ${_uiState.value.autoHideLaser}")
+                    appendLine("=== Presentation Settings ===")
+                    appendLine("Presentation Mode: ${state.presentationModeEnabled}")
+                    appendLine("Laser Pointer Speed: ${state.laserPointerSpeed}")
+                    appendLine("Show Timer: ${state.showPresentationTimer}")
+                    appendLine("Auto Hide Laser: ${state.autoHideLaser}")
                 }
 
-                file.writeText(settings)
+                file.writeText(content)
                 showToast("Settings exported to: $fileName")
-            } catch (e: Exception) {
-                showToast("Error exporting: ${e.message}")
-            }
+            })
         }
     }
 
     fun importSettings() {
-        // In production, implement file picker and parse settings
-        showToast("Import settings - select a settings file")
+        viewModelScope.launch {
+            showToast("Import settings - select a settings file")
+        }
     }
 
     // ==================== URL OPENING ====================
@@ -611,7 +692,9 @@ class SettingsViewModel @Inject constructor(
             }
             context.startActivity(intent)
         } catch (e: Exception) {
-            showToast("Cannot open URL: ${e.message}")
+            viewModelScope.launch {
+                showToast("Cannot open URL: ${e.message}")
+            }
         }
     }
 
@@ -619,21 +702,27 @@ class SettingsViewModel @Inject constructor(
 
     fun openSystemSettings() {
         try {
-            val intent = Intent(Settings.ACTION_SETTINGS)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
             context.startActivity(intent)
         } catch (e: Exception) {
-            showToast("Cannot open system settings")
+            viewModelScope.launch {
+                showToast("Cannot open system settings")
+            }
         }
     }
 
     fun openAccessibilitySettings() {
         try {
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
             context.startActivity(intent)
         } catch (e: Exception) {
-            showToast("Cannot open accessibility settings")
+            viewModelScope.launch {
+                showToast("Cannot open accessibility settings")
+            }
         }
     }
 
@@ -654,14 +743,9 @@ class SettingsViewModel @Inject constructor(
     fun clearAllData() {
         viewModelScope.launch {
             try {
-                // Clear preferences
                 prefs.clear()
-
-                // Clear files
                 val filesDir = context.filesDir
                 filesDir.deleteRecursively()
-
-                // Reset UI state
                 loadAllSettings()
                 showToast("All data cleared")
             } catch (e: Exception) {
@@ -691,23 +775,6 @@ class SettingsViewModel @Inject constructor(
             "SDK" to Build.VERSION.SDK_INT.toString(),
             "App Version" to "3.0.0"
         )
-    }
-    fun saveAllSettings() {
-        viewModelScope.launch {
-            _isSaving.value = true
-            try {
-                val state = _uiState.value
-                // Save all settings...
-                prefs.putFloat("sensitivity", state.sensitivity)
-                prefs.putBoolean("acceleration_enabled", state.accelerationEnabled)
-                // ... save all other settings
-                showToast("Settings saved successfully")
-            } catch (e: Exception) {
-                showToast("Error saving: ${e.message}")
-            } finally {
-                _isSaving.value = false
-            }
-        }
     }
 
     fun updateUiState(update: SettingsUiState) {

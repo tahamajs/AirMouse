@@ -28,4 +28,4 @@ object ServiceModule {
         // Removed batterySaver to exactly match the 4-argument constructor expected by SensorService
         return SensorService(context, calibrationHelper, gestureDetector, preferencesManager)
     }
-}
+}// app/src/main/java/com/airmouse/di/ServiceModule.kt

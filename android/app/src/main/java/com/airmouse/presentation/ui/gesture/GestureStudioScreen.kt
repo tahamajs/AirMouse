@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/gesture/GestureStudioScreen.kt
 package com.airmouse.presentation.ui.gesture
 
 import androidx.compose.animation.*
@@ -25,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.airmouse.domain.model.CustomGestureTemplate
+import com.airmouse.domain.model.GestureTrainingStats
 import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
@@ -38,7 +41,6 @@ fun GestureStudioScreen(
     viewModel: GestureStudioViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val waveformData by viewModel.waveformData.collectAsStateWithLifecycle()
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     Scaffold(
@@ -46,7 +48,7 @@ fun GestureStudioScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Gesture Studio",
+                        "🎯 Gesture Studio",
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -56,20 +58,32 @@ fun GestureStudioScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.showExportDialog(true) }) {
+                    IconButton(onClick = { viewModel.showExportDialog() }) {
                         Icon(Icons.Default.Share, contentDescription = "Export")
                     }
-                    IconButton(onClick = { viewModel.showImportDialog(true) }) {
+                    IconButton(onClick = { viewModel.showImportDialog() }) {
                         Icon(Icons.Default.FileUpload, contentDescription = "Import")
                     }
-                    IconButton(onClick = { viewModel.showTrainDialog(true) }) {
+                    IconButton(onClick = { viewModel.showTrainDialog() }) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = "Train All")
+                    }
+                    IconButton(onClick = { viewModel.showAddDialog() }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Gesture")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
+        },
+        floatingActionButton = {
+            if (uiState.savedGestures.isNotEmpty()) {
+                ExtendedFloatingActionButton(
+                    onClick = { viewModel.showAddDialog() },
+                    icon = { Icon(Icons.Default.Add, contentDescription = "Add") },
+                    text = { Text("New Gesture") }
+                )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -81,11 +95,11 @@ fun GestureStudioScreen(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Recording Section
                 item {
                     RecordingCard(
                         uiState = uiState,
-                        waveformData = waveformData,
-                        onNameChange = viewModel::updateGestureName,
+                        onNameChange = { viewModel.updateGestureName(it) },
                         onStartRecording = { viewModel.startRecording() },
                         onStopRecording = { viewModel.stopRecording() },
                         onToggleWaveform = { viewModel.toggleWaveform() },
@@ -93,6 +107,7 @@ fun GestureStudioScreen(
                     )
                 }
 
+                // Training Progress
                 if (uiState.isTraining) {
                     item {
                         TrainingProgressCard(
@@ -103,28 +118,50 @@ fun GestureStudioScreen(
                     }
                 }
 
+                // Recognition Result
                 if (uiState.lastRecognizedGesture != null && uiState.lastRecognizedGesture != "none") {
                     item {
                         RecognitionResultCard(
                             gesture = uiState.lastRecognizedGesture!!,
                             confidence = uiState.lastRecognitionConfidence,
-                            onDismiss = { viewModel.resetRecognition() }
+                            onDismiss = { viewModel.clearRecognition() }
                         )
                     }
                 }
 
-                item {
-                    Text(
-                        text = "🎯 Your Custom Gestures",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                // Statistics Header
+                if (uiState.savedGestures.isNotEmpty()) {
+                    item {
+                        StatisticsHeader(stats = uiState.trainingStats ?: GestureTrainingStats())
+                    }
                 }
 
+                // Gesture List Header
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "📋 Your Gestures (${uiState.savedGestures.size})",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (uiState.savedGestures.isNotEmpty()) {
+                            TextButton(onClick = { viewModel.showTrainDialog() }) {
+                                Text("Train All")
+                            }
+                        }
+                    }
+                }
+
+                // Gesture List
                 if (uiState.savedGestures.isEmpty()) {
                     item {
-                        EmptyGesturesCard()
+                        EmptyGesturesCard(
+                            onAddClick = { viewModel.showAddDialog() }
+                        )
                     }
                 } else {
                     items(uiState.savedGestures) { gesture ->
@@ -132,71 +169,121 @@ fun GestureStudioScreen(
                             gesture = gesture,
                             dateFormat = dateFormat,
                             onTrain = { viewModel.trainGesture(gesture.id) },
-                            onDelete = {
-                                viewModel.selectGesture(gesture)
-                                viewModel.showDeleteDialog(true)
-                            },
-                            onDetails = {
-                                viewModel.selectGesture(gesture)
-                                viewModel.showDetailsDialog(true)
-                            },
-                            onPlayback = {
-                                viewModel.selectGesture(gesture)
-                                viewModel.showPlaybackDialog(true)
-                            }
+                            onDelete = { viewModel.showDeleteDialog(gesture.id) },
+                            onDetails = { viewModel.showDetailsDialog(gesture) },
+                            onPlayback = { viewModel.showPlaybackDialog(gesture) },
+                            onToggleFavorite = { viewModel.toggleFavorite(gesture.id) },
+                            onToggleEnabled = { viewModel.toggleGesture(gesture.id) }
                         )
                     }
                 }
             }
 
-            if (uiState.showDeleteDialog && uiState.selectedGesture != null) {
-                DeleteGestureDialog(
-                    gestureName = uiState.selectedGesture?.name ?: "",
-                    onConfirm = { viewModel.deleteGesture(uiState.selectedGesture!!.id) },
-                    onDismiss = { viewModel.showDeleteDialog(false) }
+            // ==================== Dialogs ====================
+
+            // Add Gesture Dialog
+            if (uiState.showAddGestureDialog) {
+                AddGestureDialog(
+                    name = uiState.newGestureName,
+                    action = uiState.newGestureAction,
+                    onNameChange = { viewModel.updateNewGestureName(it) },
+                    onActionChange = { viewModel.updateNewGestureAction(it) },
+                    onConfirm = {
+                        viewModel.addGesture()
+                    },
+                    onDismiss = { viewModel.closeAllDialogs() },
+                    isAdding = uiState.isLoading
                 )
             }
 
+            // Edit Gesture Dialog
+            if (uiState.showEditGestureDialog && uiState.editGesture != null) {
+                EditGestureDialog(
+                    gesture = uiState.editGesture!!,
+                    name = uiState.newGestureName,
+                    action = uiState.newGestureAction,
+                    onNameChange = { viewModel.updateNewGestureName(it) },
+                    onActionChange = { viewModel.updateNewGestureAction(it) },
+                    onConfirm = {
+                        viewModel.updateGesture(
+                            uiState.editGesture!!.copy(
+                                name = uiState.newGestureName,
+                                action = uiState.newGestureAction
+                            )
+                        )
+                    },
+                    onDismiss = { viewModel.closeAllDialogs() },
+                    isUpdating = uiState.isLoading
+                )
+            }
+
+            // Delete Dialog
+            if (uiState.showDeleteDialog && uiState.deleteGestureId != null) {
+                val gesture = uiState.savedGestures.find { it.id == uiState.deleteGestureId }
+                DeleteGestureDialog(
+                    gestureName = gesture?.name ?: "Gesture",
+                    onConfirm = {
+                        viewModel.deleteGesture(uiState.deleteGestureId!!)
+                    },
+                    onDismiss = { viewModel.closeAllDialogs() }
+                )
+            }
+
+            // Train All Dialog
             if (uiState.showTrainDialog) {
                 TrainAllDialog(
-                    gestureCount = uiState.savedGestures.filter { !it.isTrained }.size,
-                    onConfirm = { viewModel.trainAllGestures() },
-                    onDismiss = { viewModel.showTrainDialog(false) }
+                    gestureCount = uiState.savedGestures.size,
+                    onConfirm = {
+                        viewModel.startTraining()
+                        viewModel.closeAllDialogs()
+                    },
+                    onDismiss = { viewModel.closeAllDialogs() }
                 )
             }
 
+            // Export Dialog
             if (uiState.showExportDialog) {
                 ExportDialog(
-                    onConfirm = { viewModel.exportDataset() },
-                    onDismiss = { viewModel.showExportDialog(false) }
+                    onConfirm = {
+                        viewModel.exportGestures(uiState.exportFormat)
+                        viewModel.closeAllDialogs()
+                    },
+                    onDismiss = { viewModel.closeAllDialogs() }
                 )
             }
 
+            // Import Dialog
             if (uiState.showImportDialog) {
                 ImportDialog(
-                    onConfirm = { path -> viewModel.importGestures(path) },
-                    onDismiss = { viewModel.showImportDialog(false) },
+                    onConfirm = { path ->
+                        viewModel.importGestures(path)
+                        viewModel.closeAllDialogs()
+                    },
+                    onDismiss = { viewModel.closeAllDialogs() },
                     isImporting = uiState.isImporting,
                     importProgress = uiState.importProgress
                 )
             }
 
+            // Details Dialog
             if (uiState.showDetailsDialog && uiState.selectedGesture != null) {
                 GestureDetailsDialog(
                     gesture = uiState.selectedGesture!!,
-                    onDismiss = { viewModel.showDetailsDialog(false) }
+                    onDismiss = { viewModel.closeAllDialogs() }
                 )
             }
 
+            // Playback Dialog
             if (uiState.showPlaybackDialog && uiState.selectedGesture != null) {
                 PlaybackDialog(
                     gesture = uiState.selectedGesture!!,
                     speed = uiState.playbackSpeed,
                     onSpeedChange = { viewModel.setPlaybackSpeed(it) },
-                    onDismiss = { viewModel.showPlaybackDialog(false) }
+                    onDismiss = { viewModel.closeAllDialogs() }
                 )
             }
 
+            // Error/Success Messages
             if (uiState.errorMessage != null) {
                 Snackbar(
                     modifier = Modifier
@@ -211,14 +298,31 @@ fun GestureStudioScreen(
                     Text(uiState.errorMessage!!)
                 }
             }
+
+            if (uiState.successMessage != null) {
+                Snackbar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    action = {
+                        TextButton(onClick = { viewModel.clearMessages() }) {
+                            Text("OK")
+                        }
+                    }
+                ) {
+                    Text(uiState.successMessage!!)
+                }
+            }
         }
     }
 }
 
+// ==================== Recording Card ====================
+
 @Composable
 fun RecordingCard(
     uiState: GestureStudioUiState,
-    waveformData: GestureWaveformData,
     onNameChange: (String) -> Unit,
     onStartRecording: () -> Unit,
     onStopRecording: () -> Unit,
@@ -242,6 +346,21 @@ fun RecordingCard(
             if (uiState.isRecording) {
                 AnimatedRecordingIndicator()
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // Recording timer
+                Text(
+                    text = formatTime(uiState.recordingTime),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${uiState.samplesCollected} samples collected",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             OutlinedTextField(
@@ -276,15 +395,32 @@ fun RecordingCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (uiState.showWaveform && waveformData.samples.isNotEmpty()) {
+            // Waveform Preview
+            if (uiState.showWaveform && uiState.waveformData.samples.isNotEmpty()) {
                 WaveformVisualizer(
-                    data = waveformData,
+                    data = uiState.waveformData,
                     sensorType = uiState.selectedSensor,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp)
+                        .height(80.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Peak: ${String.format("%.2f", uiState.waveformData.maxValue)}",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Rate: ${uiState.waveformData.samplingRate}Hz",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Button(
@@ -299,7 +435,8 @@ fun RecordingCard(
                     else
                         MaterialTheme.colorScheme.primary
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                enabled = if (uiState.isRecording) true else uiState.gestureName.isNotBlank()
             ) {
                 Icon(
                     if (uiState.isRecording) Icons.Default.Stop else Icons.Default.FiberManualRecord,
@@ -346,9 +483,15 @@ fun RecordingCard(
     }
 }
 
+// ==================== Waveform Visualizer ====================
+
 @Composable
 fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifier: Modifier = Modifier) {
-    val animatedAlpha by animateFloatAsState(targetValue = 1f, animationSpec = tween(500), label = "Alpha")
+    val animatedAlpha by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(500),
+        label = "Alpha"
+    )
 
     Canvas(modifier = modifier) {
         val width = size.width
@@ -369,38 +512,62 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
             Color(0xFF00BCD4)
         )
 
-        val indices = when (sensorType) {
-            SensorType.GYROSCOPE -> 0..2
-            SensorType.ACCELEROMETER -> 3..5
-            SensorType.MAGNETOMETER -> 6..8
-            SensorType.ALL -> 0..5
+        // Draw grid lines
+        for (i in 1..3) {
+            val y = (height / 4) * i
+            drawLine(
+                color = Color.White.copy(alpha = 0.05f),
+                start = Offset(0f, y.toFloat()),
+                end = Offset(width, y.toFloat()),
+                strokeWidth = 1f
+            )
         }
 
-        for (channel in indices) {
-            if (channel >= data.samples.size) continue
+        // Draw waveform
+        val path = Path()
+        var isFirst = true
 
-            val path = Path()
-            var isFirst = true
+        for (i in data.samples.indices) {
+            val x = i * stepX
+            val normalizedY = (data.samples[i] / maxAbs).coerceIn(-1f, 1f)
+            val y = centerY - (normalizedY * centerY * 0.8f)
+
+            if (isFirst) {
+                path.moveTo(x, y)
+                isFirst = false
+            } else {
+                path.lineTo(x, y)
+            }
+        }
+
+        drawPath(
+            path = path,
+            color = colors[0].copy(alpha = animatedAlpha),
+            style = Stroke(width = 2.5f, cap = StrokeCap.Round)
+        )
+
+        // Fill under curve
+        val fillPath = Path().apply {
+            val firstX = 0f
+            val lastX = width
+            moveTo(firstX, centerY)
 
             for (i in data.samples.indices) {
                 val x = i * stepX
                 val normalizedY = (data.samples[i] / maxAbs).coerceIn(-1f, 1f)
-                val y = centerY - (normalizedY * centerY)
-
-                if (isFirst) {
-                    path.moveTo(x, y)
-                    isFirst = false
-                } else {
-                    path.lineTo(x, y)
-                }
+                val y = centerY - (normalizedY * centerY * 0.8f)
+                lineTo(x, y)
             }
 
-            drawPath(
-                path = path,
-                color = colors[channel % colors.size].copy(alpha = animatedAlpha),
-                style = Stroke(width = 2f, cap = StrokeCap.Round)
-            )
+            lineTo(lastX, centerY)
+            close()
         }
+
+        drawPath(
+            path = fillPath,
+            color = colors[0].copy(alpha = 0.15f),
+            style = Stroke(width = 1f)
+        )
 
         drawLine(
             color = Color.White.copy(alpha = 0.2f),
@@ -411,6 +578,8 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
         )
     }
 }
+
+// ==================== Animated Recording Indicator ====================
 
 @Composable
 fun AnimatedRecordingIndicator() {
@@ -437,8 +606,49 @@ fun AnimatedRecordingIndicator() {
                 .background(Color.Red)
         )
         Text("RECORDING", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text(
+            text = "●",
+            color = Color.Red,
+            fontSize = 8.sp,
+            modifier = Modifier.animateContentSize()
+        )
     }
 }
+
+// ==================== Statistics Header ====================
+
+@Composable
+fun StatisticsHeader(stats: GestureTrainingStats) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            StatItem("Total", stats.totalGestures.toString(), "🎯")
+            StatItem("Custom", stats.customGestureUsage.size.toString(), "✋")
+            StatItem("Best", stats.mostUsedGesture.ifEmpty { "—" }, "🏆")
+            StatItem("Confidence", "${(stats.averageConfidence * 100).toInt()}%", "📊")
+        }
+    }
+}
+
+@Composable
+fun StatItem(label: String, value: String, icon: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(icon, fontSize = 20.sp)
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+// ==================== Training Progress Card ====================
 
 @Composable
 fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: Int) {
@@ -449,12 +659,12 @@ fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: I
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("Training Model...", fontWeight = FontWeight.Bold)
+                    Text("🧠 Training Model...", fontWeight = FontWeight.Bold)
                     if (currentGesture.isNotEmpty()) {
                         Text("Current: $currentGesture", fontSize = 12.sp)
                         Text("${totalGestures} gestures total", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -467,10 +677,18 @@ fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: I
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.primary
             )
-            Text("$progress%", fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("$progress%", fontSize = 12.sp)
+                Text("${progress / 10}/10 epochs", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
+
+// ==================== Recognition Result Card ====================
 
 @Composable
 fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> Unit) {
@@ -509,7 +727,7 @@ fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> U
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("Gesture Recognized!", fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+                    Text("🎯 Gesture Recognized!", fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
                     Text(gesture.replace("_", " "), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text("Confidence: ${(confidence * 100).toInt()}%", fontSize = 12.sp)
                 }
@@ -521,8 +739,10 @@ fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> U
     }
 }
 
+// ==================== Empty Gestures Card ====================
+
 @Composable
-fun EmptyGesturesCard() {
+fun EmptyGesturesCard(onAddClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -549,9 +769,20 @@ fun EmptyGesturesCard() {
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onAddClick,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Create First Gesture")
+            }
         }
     }
 }
+
+// ==================== Gesture Card ====================
 
 @Composable
 fun GestureCard(
@@ -560,12 +791,17 @@ fun GestureCard(
     onTrain: () -> Unit,
     onDelete: () -> Unit,
     onDetails: () -> Unit,
-    onPlayback: () -> Unit
+    onPlayback: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onToggleEnabled: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (gesture.isEnabled)
+                MaterialTheme.colorScheme.surfaceVariant
+            else
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(20.dp)
     ) {
@@ -582,65 +818,205 @@ fun GestureCard(
                     Text(
                         gesture.name.replace("_", " "),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = if (gesture.isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (gesture.isTrained) {
+                    if (gesture.usageCount > 0) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = MaterialTheme.colorScheme.primaryContainer
                         ) {
-                            Text("Trained", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            Text(
+                                "Used ${gesture.usageCount}x",
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
                         }
                     }
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = when (gesture.quality) {
-                            "EXCELLENT" -> Color(0xFF4CAF50).copy(alpha = 0.2f)
-                            "GOOD" -> Color(0xFF8BC34A).copy(alpha = 0.2f)
-                            "FAIR" -> Color(0xFFFFC107).copy(alpha = 0.2f)
-                            else -> Color(0xFFF44336).copy(alpha = 0.2f)
+                    if (!gesture.isEnabled) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Text(
+                                "Disabled",
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
-                    ) {
-                        Text(
-                            gesture.quality.ifEmpty { "UNKNOWN" },
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            color = when (gesture.quality) {
-                                "EXCELLENT" -> Color(0xFF4CAF50)
-                                "GOOD" -> Color(0xFF8BC34A)
-                                "FAIR" -> Color(0xFFFFC107)
-                                else -> Color(0xFFF44336)
-                            }
-                        )
                     }
                 }
+                Text(
+                    "Action: ${gesture.action}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(
                     "Created: ${dateFormat.format(Date(gesture.createdAt))}",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "${gesture.sampleCount} samples • ${gesture.duration}s duration",
+                    "Confidence: ${(gesture.confidence * 100).toInt()}% • ${gesture.type.name}",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Row {
-                IconButton(onClick = onPlayback) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = "Playback", modifier = Modifier.size(22.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Row {
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            if (gesture.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            modifier = Modifier.size(18.dp),
+                            tint = if (gesture.isFavorite) Color(0xFFFF5722) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(
+                        onClick = onToggleEnabled,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            if (gesture.isEnabled) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = "Toggle",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
-                IconButton(onClick = onTrain) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = "Train", modifier = Modifier.size(22.dp))
-                }
-                IconButton(onClick = onDetails) {
-                    Icon(Icons.Default.Info, contentDescription = "Details", modifier = Modifier.size(22.dp))
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.error)
+                Row {
+                    IconButton(onClick = onPlayback, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Playback", modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(onClick = onTrain, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = "Train", modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(onClick = onDetails, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Info, contentDescription = "Details", modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         }
     }
+}
+
+// ==================== Dialogs ====================
+
+@Composable
+fun AddGestureDialog(
+    name: String,
+    action: String,
+    onNameChange: (String) -> Unit,
+    onActionChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    isAdding: Boolean
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("✋ Add New Gesture") },
+        text = {
+            Column {
+                Text("Create a custom gesture that will be recognized by the system.")
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text("Gesture Name") },
+                    placeholder = { Text("e.g., ThumbsUp") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = !isAdding
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = action,
+                    onValueChange = onActionChange,
+                    label = { Text("Action") },
+                    placeholder = { Text("e.g., play_pause") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = !isAdding
+                )
+                if (isAdding) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = name.isNotBlank() && action.isNotBlank() && !isAdding
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isAdding) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+fun EditGestureDialog(
+    gesture: CustomGestureTemplate,
+    name: String,
+    action: String,
+    onNameChange: (String) -> Unit,
+    onActionChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    isUpdating: Boolean
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("✏️ Edit Gesture") },
+        text = {
+            Column {
+                Text("Update the name and action for this gesture.")
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text("Gesture Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = !isUpdating
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = action,
+                    onValueChange = onActionChange,
+                    label = { Text("Action") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = !isUpdating
+                )
+                if (isUpdating) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = name.isNotBlank() && action.isNotBlank() && !isUpdating
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isUpdating) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -667,9 +1043,17 @@ fun DeleteGestureDialog(gestureName: String, onConfirm: () -> Unit, onDismiss: (
 fun TrainAllDialog(gestureCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Train All Gestures") },
+        title = { Text("🧠 Train All Gestures") },
         text = {
-            Text("Train the classifier with all $gestureCount saved gestures. This will improve recognition accuracy and may take a few seconds.")
+            Column {
+                Text("Train the classifier with all $gestureCount saved gestures.")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "This will improve recognition accuracy and may take a few seconds.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text("Train All") }
@@ -684,8 +1068,18 @@ fun TrainAllDialog(gestureCount: Int, onConfirm: () -> Unit, onDismiss: () -> Un
 fun ExportDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Export Dataset") },
-        text = { Text("Export all gesture data to a CSV file. The file will be saved to your device storage.") },
+        title = { Text("📤 Export Dataset") },
+        text = {
+            Column {
+                Text("Export all gesture data to a CSV file.")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "The file will be saved to your Downloads folder.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text("Export") }
         },
@@ -696,12 +1090,17 @@ fun ExportDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun ImportDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit, isImporting: Boolean, importProgress: Int) {
+fun ImportDialog(
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+    isImporting: Boolean,
+    importProgress: Int
+) {
     var filePath by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Import Gestures") },
+        title = { Text("📥 Import Gestures") },
         text = {
             Column {
                 Text("Import gestures from a CSV file.")
@@ -717,7 +1116,10 @@ fun ImportDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit, isImporting
                 )
                 if (isImporting) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(progress = { importProgress / 100f }, modifier = Modifier.fillMaxWidth())
+                    LinearProgressIndicator(
+                        progress = { importProgress / 100f },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Text("Importing... $importProgress%", fontSize = 11.sp)
                 }
             }
@@ -744,24 +1146,18 @@ fun GestureDetailsDialog(gesture: CustomGestureTemplate, onDismiss: () -> Unit) 
         text = {
             Column {
                 DetailsRow("ID", gesture.id.take(8))
+                DetailsRow("Type", gesture.type.name)
+                DetailsRow("Action", gesture.action)
+                DetailsRow("Confidence", "${(gesture.confidence * 100).toInt()}%")
                 DetailsRow("Created", SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault()).format(Date(gesture.createdAt)))
-                DetailsRow("Samples", "${gesture.sampleCount}")
-                DetailsRow("Duration", "${gesture.duration}s")
-                DetailsRow("Quality", gesture.quality)
-                DetailsRow("Trained", if (gesture.isTrained) "Yes" else "No")
-                if (gesture.features != null) {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text("Features:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    gesture.features.forEach { (key, value) ->
-                        DetailsRow(key, String.format(Locale.getDefault(), "%.3f", value))
-                    }
-                }
+                DetailsRow("Updated", SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault()).format(Date(gesture.updatedAt)))
+                DetailsRow("Usage", "${gesture.usageCount} times")
+                DetailsRow("Enabled", if (gesture.isEnabled) "✅ Yes" else "❌ No")
+                DetailsRow("Favorite", if (gesture.isFavorite) "⭐ Yes" else "No")
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
+            TextButton(onClick = onDismiss) { Text("Close") }
         }
     )
 }
@@ -778,20 +1174,51 @@ fun DetailsRow(label: String, value: String) {
 }
 
 @Composable
-fun PlaybackDialog(gesture: CustomGestureTemplate, speed: Float, onSpeedChange: (Float) -> Unit, onDismiss: () -> Unit) {
+fun PlaybackDialog(
+    gesture: CustomGestureTemplate,
+    speed: Float,
+    onSpeedChange: (Float) -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Gesture Playback: ${gesture.name}") },
+        title = { Text("▶️ Playback: ${gesture.name}") },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Simulating raw gesture sample playback vector mapping.")
+                Text("Simulating gesture motion playback...")
                 Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🔄", fontSize = 32.sp)
+                        Text("X", fontSize = 12.sp)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("↕️", fontSize = 32.sp)
+                        Text("Y", fontSize = 12.sp)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🔄", fontSize = 32.sp)
+                        Text("Z", fontSize = 12.sp)
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Speed", fontSize = 12.sp)
                 Slider(
                     value = speed,
                     onValueChange = onSpeedChange,
-                    valueRange = 0.5f..2.0f
+                    valueRange = 0.5f..2.0f,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Text("Speed: ${String.format(Locale.getDefault(), "%.1fx", speed)}", fontSize = 12.sp)
+                Text("${String.format("%.1f", speed)}x", fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Duration: ~${String.format("%.1f", gesture.duration)}s",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         confirmButton = {
@@ -800,14 +1227,11 @@ fun PlaybackDialog(gesture: CustomGestureTemplate, speed: Float, onSpeedChange: 
     )
 }
 
-// Placeholder Data Classes to satisfy data types if omitted elsewhere
-data class CustomGestureTemplate(
-    val id: String,
-    val name: String,
-    val isTrained: Boolean,
-    val quality: String,
-    val createdAt: Long,
-    val sampleCount: Int,
-    val duration: Float,
-    val features: Map<String, Float>? = null
-)
+// ==================== Helper Functions ====================
+
+private fun formatTime(millis: Int): String {
+    val seconds = millis / 1000
+    val minutes = seconds / 60
+    val remainingSeconds = seconds % 60
+    return String.format("%02d:%02d", minutes, remainingSeconds)
+}

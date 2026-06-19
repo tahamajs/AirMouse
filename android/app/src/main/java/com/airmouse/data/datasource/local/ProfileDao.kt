@@ -62,4 +62,4 @@ interface ProfileDao {
     // Check existence
     @Query("SELECT EXISTS(SELECT 1 FROM profiles WHERE name = :name)")
     suspend fun profileNameExists(name: String): Boolean
-}
+}// app/src/main/java/com/airmouse/data/datasource/local/ProfileDao.kt

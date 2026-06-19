@@ -16,6 +16,44 @@ import javax.inject.Singleton
 class PreferencesManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    class PreferencesManager @Inject constructor(
+        @ApplicationContext private val context: Context
+    ) {
+        // ... existing code ...
+
+        // ==================== Statistics ====================
+        fun getSessionStats(): StatisticsSummary {
+            return StatisticsSummary(
+                totalClicks = getInt("session_clicks", 0),
+                totalDoubleClicks = getInt("session_double_clicks", 0),
+                totalRightClicks = getInt("session_right_clicks", 0),
+                totalScrolls = getInt("session_scrolls", 0),
+                totalMovements = getInt("session_movements", 0),
+                totalDistance = getFloat("session_distance", 0f),
+                averageSpeed = getFloat("session_avg_speed", 0f),
+                maxSpeed = getFloat("session_max_speed", 0f),
+                sessionDuration = System.currentTimeMillis() - getLong("session_start", System.currentTimeMillis())
+            )
+        }
+
+        fun clearAllStatistics() {
+            remove("session_clicks")
+            remove("session_double_clicks")
+            remove("session_right_clicks")
+            remove("session_scrolls")
+            remove("session_movements")
+            remove("session_distance")
+            remove("session_avg_speed")
+            remove("session_max_speed")
+            remove("session_start")
+            remove("historical_stats")
+            remove("gesture_stats")
+            remove("connection_attempts")
+            remove("connection_successful")
+            remove("connection_failed")
+            remove("connection_total_latency")
+        }
+    }
     private val prefs: SharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
     companion object {

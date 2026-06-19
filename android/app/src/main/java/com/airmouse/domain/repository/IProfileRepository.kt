@@ -6,7 +6,9 @@ import com.airmouse.domain.model.UserProfile
 import kotlinx.coroutines.flow.Flow
 
 interface IProfileRepository {
-    // CRUD
+
+    // ==================== CRUD Operations ====================
+
     suspend fun createProfile(profile: UserProfile): String
     suspend fun getProfile(id: String): UserProfile?
     suspend fun updateProfile(profile: UserProfile)
@@ -14,22 +16,33 @@ interface IProfileRepository {
     suspend fun getAllProfiles(): List<UserProfile>
     fun observeProfiles(): Flow<List<UserProfile>>
 
-    // Default
+    // ==================== Default Profile ====================
+
     suspend fun getDefaultProfile(): UserProfile?
     suspend fun setDefaultProfile(id: String)
 
-    // Favorites
+    // ==================== Favorites ====================
+
     suspend fun toggleFavorite(id: String)
     suspend fun getFavoriteProfiles(): List<UserProfile>
+    fun observeFavoriteProfiles(): Flow<List<UserProfile>>
 
-    // Settings
+    // ==================== Settings ====================
+
     suspend fun getSettings(profileId: String): ProfileSettings?
     suspend fun updateSettings(profileId: String, settings: ProfileSettings)
 
-    // Search
+    // ==================== Search ====================
+
     suspend fun searchProfiles(query: String): List<UserProfile>
 
-    // Export/Import
+    // ==================== Export/Import ====================
+
     suspend fun exportProfile(id: String): String
     suspend fun importProfile(json: String): Boolean
+
+    // ==================== Statistics ====================
+
+    suspend fun getProfileCount(): Int
+    suspend fun getProfileUsageStats(): Map<String, Int>
 }

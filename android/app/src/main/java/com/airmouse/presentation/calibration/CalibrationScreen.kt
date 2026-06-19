@@ -1,13 +1,14 @@
+// app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationResultScreen.kt
 package com.airmouse.presentation.ui.calibration
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,366 +21,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-// ==========================================
-// 1. ARCHITECTURE MODELS & STATE DATA
-// ==========================================
-
-data class CalibrationData(
-    val gyroBias: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
-    val accelBias: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
-    val magBias: Triple<Float, Float, Float> = Triple(0f, 0f, 0f)
-)
-
-data class CalibrationUiState(
-    val message: String = "Keep your device steady",
-    val errorMessage: String? = null,
-    val isComplete: Boolean = false,
-    val progress: Int = 0,
-    val samplesCollected: Int = 0,
-    val totalSamples: Int = 100,
-    val currentStep: Int = 1,
-    val currentPosition: Int = 0,
-    val totalPositions: Int = 4,
-    val quality: String = "GOOD",
-    val calibrationData: CalibrationData = CalibrationData(),
-    val gyroData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
-    val accelData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
-    val magData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
-    val roll: Float = 0f,
-    val pitch: Float = 0f,
-    val yaw: Float = 0f
-)
-
-enum class VisualizerSize {
-    SMALL, MEDIUM, LARGE
-}
-
-val positionsList = listOf(
-    "Flat on Table",
-    "Tilted Left",
-    "Tilted Right",
-    "Vertical Stand"
-)
-
-// Dummy ViewModel interface to make compilation succeed
-class CalibrationViewModel {
-    val uiState: StateFlow<CalibrationUiState> = MutableStateFlow(CalibrationUiState())
-    fun startCalibration() {}
-    fun selectPosition(index: Int) {}
-}
-
-interface NavigationActions {
-    fun navigateBack()
-}
-
-// ==========================================
-// 2. MAIN CALIBRATION SCREEN
-// ==========================================
-
-@Composable
-fun CalibrationScreen(
-    navigationActions: NavigationActions,
-    viewModel: CalibrationViewModel = CalibrationViewModel(),
-    onComplete: () -> Unit = {}
-) {
-    val uiState by viewModel.uiState.collectAsState()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Sensor Calibration",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 16.dp)
-        )
-
-        AnimatedInstructionIcon(uiState = uiState)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ProgressCard(
-            progress = uiState.progress,
-            samplesCollected = uiState.samplesCollected,
-            totalSamples = uiState.totalSamples,
-            currentStep = uiState.currentStep,
-            currentPosition = uiState.currentPosition,
-            totalPositions = uiState.totalPositions
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        SensorVisualizer(
-            roll = uiState.roll,
-            pitch = uiState.pitch,
-            yaw = uiState.yaw,
-            size = VisualizerSize.MEDIUM
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        SensorDataCard(
-            gyroData = uiState.gyroData,
-            accelData = uiState.accelData,
-            magData = uiState.magData
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PositionGuideCard(
-            currentPosition = uiState.currentPosition,
-            positions = positionsList,
-            onPositionClick = { viewModel.selectPosition(it) }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        StatusCard(
-            message = uiState.message,
-            errorMessage = uiState.errorMessage,
-            isComplete = uiState.isComplete
-        )
-
-        if (uiState.isComplete) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CalibrationResultsCard(
-                calibrationData = uiState.calibrationData,
-                quality = uiState.quality
-            )
-        }
-    }
-}
-
-// ==========================================
-// 3. SUB-COMPONENTS & LAYOUT PARTS
-// ==========================================
-
-@Composable
-fun GlassCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit // Fixed @Composable wrapper syntax block
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        content()
-    }
-}
-
-@Composable
-fun AnimatedInstructionIcon(uiState: CalibrationUiState) {
-    Box(
-        modifier = Modifier.size(80.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator(
-            progress = { uiState.progress / 100f },
-            modifier = Modifier.fillMaxSize(),
-        )
-        Text(text = "${uiState.progress}%", fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun ProgressCard(
-    progress: Int,
-    samplesCollected: Int,
-    totalSamples: Int,
-    currentStep: Int,
-    currentPosition: Int,
-    totalPositions: Int
-) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Step $currentStep: Position ${currentPosition + 1}/$totalPositions", fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-            AnimatedProgressBar(progress = progress / 100f)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Samples: $samplesCollected / $totalSamples",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-fun AnimatedProgressBar(progress: Float) {
-    LinearProgressIndicator(
-        progress = { progress },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(8.dp)
-            .clip(RoundedCornerShape(4.dp))
-    )
-}
-
-@Composable
-fun SensorDataCard(
-    gyroData: Triple<Float, Float, Float>,
-    accelData: Triple<Float, Float, Float>,
-    magData: Triple<Float, Float, Float>
-) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            SensorRow("Gyroscope", gyroData.first, gyroData.second, gyroData.third, Color(0xFFEF4444))
-            Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.2f))
-            SensorRow("Accelerometer", accelData.first, accelData.second, accelData.third, Color(0xFF3B82F6))
-            Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.2f))
-            SensorRow("Magnetometer", magData.first, magData.second, magData.third, Color(0xFF10B981))
-        }
-    }
-}
-
-@Composable
-fun SensorRow(title: String, x: Float, y: Float, z: Float, color: Color) {
-    Column {
-        Text(title, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            SensorValue("X", x, color)
-            SensorValue("Y", y, color)
-            SensorValue("Z", z, color)
-        }
-    }
-}
-
-@Composable
-fun RowScope.SensorValue(label: String, value: Float, color: Color) { // Added RowScope restriction
-    Row(
-        modifier = Modifier.weight(1f), // weight functions inside RowScope safely now
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(String.format("%.2f", value), fontSize = 12.sp)
-    }
-}
-
-@Composable
-fun PositionGuideCard(
-    currentPosition: Int,
-    positions: List<String>,
-    onPositionClick: (Int) -> Unit
-) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Calibration Positions", fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-            positions.forEachIndexed { index, title ->
-                TextButton(
-                    onClick = { onPositionClick(index) },
-                    colors = ButtonDefaults.textButtonColors(
-                        containerColor = if (index == currentPosition) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = title, textAlign = TextAlign.Start, modifier = Modifier.fillMaxWidth())
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun StatusCard(message: String, errorMessage: String?, isComplete: Boolean) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = errorMessage ?: message,
-                color = if (errorMessage != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium
-            )
-            if (isComplete) {
-                Text("Ready to finalize", color = Color(0xFF10B981), fontSize = 12.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun CalibrationResultsCard(calibrationData: CalibrationData, quality: String) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text("Calibration Step Matrix", fontWeight = FontWeight.Bold)
-                Text("Offsets applied successfully", fontSize = 12.sp)
-            }
-            QualityBadge(quality = quality)
-        }
-    }
-}
-
-@Composable
-fun QualityBadge(quality: String) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF10B981).copy(alpha = 0.2f))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(quality, color = Color(0xFF10B981), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-    }
-}
-
-@Composable
-fun SensorVisualizer(roll: Float, pitch: Float, yaw: Float, size: VisualizerSize) {
-    val dimensions = when (size) {
-        VisualizerSize.SMALL -> 60.dp
-        VisualizerSize.MEDIUM -> 100.dp
-        VisualizerSize.LARGE -> 140.dp
-    }
-    Box(
-        modifier = Modifier
-            .size(dimensions)
-            .background(Color.Gray.copy(alpha = 0.1f), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        GyroscopeVisualizer(x = roll, y = pitch, z = yaw)
-    }
-}
-
-@Composable
-fun GyroscopeVisualizer(x: Float, y: Float, z: Float) {
-    Text(
-        text = "R:${x.toInt()} P:${y.toInt()}",
-        fontSize = 11.sp,
-        style = MaterialTheme.typography.labelSmall
-    )
-}
-
-// ==========================================
-// 4. CALIBRATION RESULT SCREEN
-// ==========================================
+import kotlinx.coroutines.delay
 
 @Composable
 fun CalibrationResultScreen(
     quality: String,
     onContinue: () -> Unit,
-    onRecalibrate: () -> Unit
+    onRecalibrate: () -> Unit,
+    onShare: (() -> Unit)? = null,
+    onViewDetails: (() -> Unit)? = null,
+    calibrationData: CalibrationData? = null,
+    stats: Map<String, Any>? = null
 ) {
+    // Animation states
     var animationTriggered by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
+    var confettiActive by remember { mutableStateOf(false) }
 
+    // Animations
     val scale by animateFloatAsState(
         targetValue = if (animationTriggered) 1f else 0f,
         animationSpec = spring(
@@ -389,8 +48,59 @@ fun CalibrationResultScreen(
         label = "success_pop_animation"
     )
 
+    val fadeIn by animateFloatAsState(
+        targetValue = if (animationTriggered) 1f else 0f,
+        animationSpec = tween(durationMillis = 500, delayMillis = 300),
+        label = "fade_in_animation"
+    )
+
+    val translateY by animateFloatAsState(
+        targetValue = if (animationTriggered) 0f else 50f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "translate_y_animation"
+    )
+
+    // Quality colors and icons
+    val (qualityColor, qualityEmoji, qualityTitle, qualityDescription, qualitySubtext) = when (quality.uppercase()) {
+        "EXCELLENT" -> Pair(
+            Color(0xFF10B981),
+            "🌟",
+            "Excellent",
+            "Perfect calibration!",
+            "Your device is performing at its best."
+        )
+        "GOOD" -> Pair(
+            Color(0xFF3B82F6),
+            "👍",
+            "Good",
+            "Calibration successful.",
+            "Device is calibrated with good accuracy."
+        )
+        "FAIR" -> Pair(
+            Color(0xFFF59E0B),
+            "⚠️",
+            "Fair",
+            "Calibration complete.",
+            "Consider recalibrating for best results."
+        )
+        else -> Pair(
+            Color(0xFF64748B),
+            "❓",
+            "Unknown",
+            "Calibration completed.",
+            "Quality could not be determined."
+        )
+    }
+
     LaunchedEffect(Unit) {
         animationTriggered = true
+        delay(500)
+        confettiActive = true
+        delay(3000)
+        confettiActive = false
     }
 
     Box(
@@ -399,32 +109,67 @@ fun CalibrationResultScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF059669),
-                        Color(0xFF10B981)
+                        Color(0xFF0F172A),
+                        Color(0xFF1E1B4B)
                     )
                 )
             )
     ) {
+        // Animated background particles
+        AnimatedBackgroundParticles()
+
+        // Confetti effect
+        if (confettiActive) {
+            ConfettiEffect()
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
+                .padding(24.dp)
+                .graphicsLayer {
+                    alpha = fadeIn
+                    translationY = translateY
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Success animation circle
             Box(
                 modifier = Modifier
                     .size(120.dp)
                     .scale(scale)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                qualityColor.copy(alpha = 0.3f),
+                                qualityColor.copy(alpha = 0.1f)
+                            )
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Text("✓", fontSize = 64.sp, color = Color(0xFF059669))
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .clip(CircleShape)
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = qualityEmoji,
+                        fontSize = 48.sp,
+                        modifier = Modifier.scale(
+                            if (animationTriggered) 1f else 0.5f
+                        )
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
+            // Title
             Text(
                 text = "Calibration Complete!",
                 fontSize = 28.sp,
@@ -433,90 +178,418 @@ fun CalibrationResultScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            // Subtitle
             Text(
-                text = when (quality.uppercase()) {
-                    "EXCELLENT" -> "Your device is perfectly calibrated!"
-                    "GOOD" -> "Your device is calibrated with good accuracy"
-                    "FAIR" -> "Calibration complete, but consider recalibrating for best results"
-                    else -> "Your device is ready to use"
-                },
-                fontSize = 16.sp,
-                color = Color.White.copy(alpha = 0.9f),
+                text = qualityTitle,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                color = qualityColor,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Description
+            Text(
+                text = qualityDescription,
+                fontSize = 16.sp,
+                color = Color.White.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = qualitySubtext,
+                fontSize = 14.sp,
+                color = Color.White.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Quality metrics card
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White.copy(alpha = 0.2f)
+                    containerColor = Color.White.copy(alpha = 0.1f)
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    qualityColor.copy(alpha = 0.3f)
                 )
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "Calibration Quality",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.7f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        QualityMetric(
+                            label = "Quality",
+                            value = quality.uppercase(),
+                            color = qualityColor
+                        )
+                        QualityMetric(
+                            label = "Score",
+                            value = when (quality.uppercase()) {
+                                "EXCELLENT" -> "95%"
+                                "GOOD" -> "80%"
+                                "FAIR" -> "60%"
+                                else -> "50%"
+                            },
+                            color = qualityColor
+                        )
+                        QualityMetric(
+                            label = "Status",
+                            value = if (quality.uppercase() in listOf("EXCELLENT", "GOOD")) "✅ Ready" else "⚠️ Review",
+                            color = qualityColor
+                        )
+                    }
+
+                    if (calibrationData != null && showDetails) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Divider(color = Color.White.copy(alpha = 0.1f))
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        CalibrationDetails(
+                            calibrationData = calibrationData,
+                            stats = stats
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Show details toggle
+            if (calibrationData != null) {
+                TextButton(
+                    onClick = { showDetails = !showDetails },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.6f)
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = quality,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        if (showDetails) "Hide Details" else "Show Details",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 14.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = onContinue,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White
-                )
+            // Action buttons
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    "Start Using Air Mouse",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF059669)
-                )
+                Button(
+                    onClick = onContinue,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = qualityColor
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Start Using Air Mouse",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Recalibrate button
+                    OutlinedButton(
+                        onClick = onRecalibrate,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White.copy(alpha = 0.7f)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            Color.White.copy(alpha = 0.2f)
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Recalibrate", fontSize = 14.sp)
+                    }
+
+                    // Share button (if provided)
+                    if (onShare != null) {
+                        OutlinedButton(
+                            onClick = onShare,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.White.copy(alpha = 0.7f)
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                Color.White.copy(alpha = 0.2f)
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Share", fontSize = 14.sp)
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            TextButton(
-                onClick = onRecalibrate,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            // Version info
+            Text(
+                text = "Air Mouse v3.0.0",
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.3f)
+            )
+        }
+    }
+}
+
+// ==========================================
+// SUB-COMPONENTS
+// ==========================================
+
+@Composable
+fun QualityMetric(
+    label: String,
+    value: String,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = Color.White.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+fun CalibrationDetails(
+    calibrationData: CalibrationData,
+    stats: Map<String, Any>?
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Calibration Details",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.White.copy(alpha = 0.8f)
+        )
+
+        // Gyroscope
+        DetailRow(
+            label = "Gyroscope",
+            value = formatBias(calibrationData.gyroBias),
+            color = Color(0xFFEF4444)
+        )
+
+        // Accelerometer
+        DetailRow(
+            label = "Accelerometer",
+            value = formatBias(calibrationData.accelBias),
+            color = Color(0xFF3B82F6)
+        )
+
+        // Magnetometer
+        DetailRow(
+            label = "Magnetometer",
+            value = formatBias(calibrationData.magBias),
+            color = Color(0xFF10B981)
+        )
+
+        // Additional stats if available
+        stats?.let {
+            if (it.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Recalibrate",
-                    color = Color.White.copy(alpha = 0.7f)
+                    text = "Additional Stats",
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.5f)
                 )
+                stats.forEach { (key, value) ->
+                    Text(
+                        text = "$key: $value",
+                        fontSize = 11.sp,
+                        color = Color.White.copy(alpha = 0.4f)
+                    )
+                }
             }
         }
     }
 }
 
-// Simple types required for standard Flow emissions compilation wrappers
-interface StateFlow<out T> { val value: T }
-interface MutableStateFlow<T> : StateFlow<T> { override var value: T }
-fun <T> MutableStateFlow(value: T): MutableStateFlow<T> = object : MutableStateFlow<T> {
-    override var value: T = value
-}
 @Composable
-fun <T> StateFlow<T>.collectAsState(): State<T> = remember { mutableStateOf(this.value) }
+fun DetailRow(
+    label: String,
+    value: String,
+    color: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = Color.White.copy(alpha = 0.6f)
+        )
+        Text(
+            text = value,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = color
+        )
+    }
+}
+
+@Composable
+fun formatBias(bias: Triple<Float, Float, Float>): String {
+    return "(${bias.first.formatCalibrationValue()}, " +
+            "${bias.second.formatCalibrationValue()}, " +
+            "${bias.third.formatCalibrationValue()})"
+}
+
+@Composable
+fun AnimatedBackgroundParticles() {
+    val infiniteTransition = rememberInfiniteTransition(label = "particles")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 30000, easing = LinearEasing)
+        ),
+        label = "particle_rotation"
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        for (i in 0..5) {
+            val delay = i * 2000L
+            val size = 50 + i * 20
+            val alpha = 0.03f - i * 0.003f
+
+            Box(
+                modifier = Modifier
+                    .size(size.dp)
+                    .graphicsLayer {
+                        rotationZ = rotation * (1f + i * 0.1f)
+                        alpha = alpha.coerceAtLeast(0.005f)
+                    }
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFF6366F1).copy(alpha = alpha),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+                    .align(Alignment.Center)
+            )
+        }
+    }
+}
+
+@Composable
+fun ConfettiEffect() {
+    val colors = listOf(
+        Color(0xFF6366F1),
+        Color(0xFF10B981),
+        Color(0xFFF59E0B),
+        Color(0xFFEF4444),
+        Color(0xFF3B82F6),
+        Color(0xFFEC4899)
+    )
+
+    val infiniteTransition = rememberInfiniteTransition(label = "confetti")
+    val progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "confetti_progress"
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        for (i in 0..20) {
+            val index = (i + progress * 20).toInt() % colors.size
+            val x = (i * 37 + progress * 150) % 360
+            val y = (i * 53 + progress * 200) % 400
+            val size = 6 + (i % 4) * 2
+
+            Box(
+                modifier = Modifier
+                    .offset(
+                        x = x.dp,
+                        y = (y - 100).dp
+                    )
+                    .size(size.dp)
+                    .clip(CircleShape)
+                    .background(colors[index].copy(alpha = 0.6f))
+            )
+        }
+    }
+}
+
+// Preview for development
+@Preview(showBackground = true)
+@Composable
+fun CalibrationResultScreenPreview() {
+    CalibrationResultScreen(
+        quality = "EXCELLENT",
+        onContinue = {},
+        onRecalibrate = {}
+    )
+}

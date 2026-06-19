@@ -48,3 +48,4 @@ object UseCaseModule {
         return CalibrationUseCase(context, calibrationRepo, preferencesManager)
     }
 }
+// app/src/main/java/com/airmouse/di/UseCaseModule.kt
