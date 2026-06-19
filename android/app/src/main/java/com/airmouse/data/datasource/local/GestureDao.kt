@@ -144,7 +144,7 @@ interface GestureDao {
     // ==================== Type Distribution ====================
 
     @Query("SELECT type, COUNT(*) as count FROM gesture_templates GROUP BY type")
-    suspend fun getTypeDistribution(): Map<String, Int>
+    suspend fun getTypeDistribution(): List<GestureTypeCount>
 
     // ==================== Statistics ====================
 

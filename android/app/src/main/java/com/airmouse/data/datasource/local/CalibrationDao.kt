@@ -1,36 +1,22 @@
 package com.airmouse.data.datasource.local
 
-import androidx.room.*
-import com.airmouse.domain.model.AccelCalibration
-import com.airmouse.domain.model.GyroBias
-import com.airmouse.domain.model.MagCalibration
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 
 @Dao
 interface CalibrationDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertGyroBias(bias: GyroBias)
-
-    @Query("SELECT * FROM gyro_bias LIMIT 1")
-    suspend fun getGyroBias(): GyroBias?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAccelCalibration(calibration: AccelCalibration)
+    suspend fun insertCalibration(calibration: CalibrationEntity)
 
-    @Query("SELECT * FROM accel_calibration LIMIT 1")
-    suspend fun getAccelCalibration(): AccelCalibration?
+    @Query("SELECT * FROM calibration WHERE id = 'default'")
+    suspend fun getCalibration(): CalibrationEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMagCalibration(calibration: MagCalibration)
+    @Query("DELETE FROM calibration")
+    suspend fun deleteAll()
 
-    @Query("SELECT * FROM mag_calibration LIMIT 1")
-    suspend fun getMagCalibration(): MagCalibration?
-
-    @Query("DELETE FROM gyro_bias")
-    suspend fun clearGyroBias()
-
-    @Query("DELETE FROM accel_calibration")
-    suspend fun clearAccelCalibration()
-
-    @Query("DELETE FROM mag_calibration")
-    suspend fun clearMagCalibration()
-}// app/src/main/java/com/airmouse/data/datasource/local/CalibrationDao.kt
+    @Query("SELECT EXISTS(SELECT 1 FROM calibration WHERE id = 'default')")
+    suspend fun exists(): Boolean
+}
