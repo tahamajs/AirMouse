@@ -149,6 +149,9 @@ class PreferencesManager @Inject constructor(
     fun isAutoConnect(): Boolean = getBoolean("auto_connect", DEFAULT_AUTO_CONNECT)
     fun setAutoConnect(enabled: Boolean) = putBoolean("auto_connect", enabled)
 
+    fun isAutoStartServer(): Boolean = getBoolean("auto_start_server", false)
+    fun setAutoStartServer(enabled: Boolean) = putBoolean("auto_start_server", enabled)
+
     fun getReconnectAttempts(): Int = getInt("reconnect_attempts", DEFAULT_RECONNECT_ATTEMPTS)
     fun setReconnectAttempts(attempts: Int) = putInt("reconnect_attempts", attempts.coerceIn(1, 20))
 
@@ -166,6 +169,9 @@ class PreferencesManager @Inject constructor(
     // ==================== Theme / Appearance ====================
     fun getTheme(): String = getString("theme", DEFAULT_THEME)
     fun setTheme(theme: String) = putString("theme", theme)
+
+    fun getLanguage(): String = getString("language", "en")
+    fun setLanguage(language: String) = putString("language", language)
 
     fun isDynamicColorsEnabled(): Boolean = getBoolean("dynamic_colors", true)
     fun setDynamicColorsEnabled(enabled: Boolean) = putBoolean("dynamic_colors", enabled)

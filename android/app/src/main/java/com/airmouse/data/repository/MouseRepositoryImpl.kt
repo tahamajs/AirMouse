@@ -225,7 +225,7 @@ class MouseRepositoryImpl @Inject constructor(
     }
 
     override suspend fun clearEvents() {
-        _events.value = emptyList()
+        // SharedFlow does not retain history; clearing is a no-op.
     }
 
     private fun updateStatistics(distance: Float) {
