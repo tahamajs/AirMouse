@@ -33,7 +33,7 @@ func (dp *DarwinProximity) PreventSleep(durationSec int) error {
 
 func (dp *DarwinProximity) IsDisplaySleeping() (bool, error) {
     cmd := exec.Command("pmset", "-g", "powerstate")
-    output, err := cmd.Output()
+    _, err := cmd.Output()
     if err != nil {
         return false, err
     }

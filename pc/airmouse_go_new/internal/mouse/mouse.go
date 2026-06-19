@@ -2,7 +2,6 @@ package mouse
 
 import (
     "sync"
-    "time"
 )
 
 type MouseController interface {

@@ -58,4 +58,4 @@ type MouseRepository interface {
     SetMovementProfile(profile *entity.MovementProfile) error
     GetStatistics() (*entity.Statistics, error)
     ResetStatistics() error
-}v
+}

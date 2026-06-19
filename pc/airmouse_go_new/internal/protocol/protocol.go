@@ -99,9 +99,9 @@ func (s *ProtocolServer) Start() error {
         s.tcpServer = tcp.NewServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr)
         if err := s.tcpServer.Start(); err != nil {
             errors = append(errors, fmt.Errorf("TCP: %w", err))
-            utils.LogError("TCP server start failed", "error", err)
+            utils.LogError("TCP server start failed: %v", err)
         } else {
-            utils.LogInfo("TCP server started", "port", cfg.Port)
+            utils.LogInfo("TCP server started on port %d", cfg.Port)
         }
     }
 
@@ -110,9 +110,9 @@ func (s *ProtocolServer) Start() error {
         s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
         if err := s.wsServer.Start(); err != nil {
             errors = append(errors, fmt.Errorf("WebSocket: %w", err))
-            utils.LogError("WebSocket server start failed", "error", err)
+            utils.LogError("WebSocket server start failed: %v", err)
         } else {
-            utils.LogInfo("WebSocket server started", "port", cfg.WebSocketPort)
+            utils.LogInfo("WebSocket server started on port %d", cfg.WebSocketPort)
         }
     }
 
@@ -121,9 +121,9 @@ func (s *ProtocolServer) Start() error {
         s.udpServer = udp.NewServer(cfg.UDPPort, s.deviceMgr)
         if err := s.udpServer.Start(); err != nil {
             errors = append(errors, fmt.Errorf("UDP: %w", err))
-            utils.LogError("UDP server start failed", "error", err)
+            utils.LogError("UDP server start failed: %v", err)
         } else {
-            utils.LogInfo("UDP discovery started", "port", cfg.UDPPort)
+            utils.LogInfo("UDP discovery started on port %d", cfg.UDPPort)
         }
     }
 
@@ -132,7 +132,7 @@ func (s *ProtocolServer) Start() error {
         s.bluetoothMgr = bluetooth.NewManager(cfg.BluetoothAdapter, s.mouseCtrl, s.deviceMgr)
         if err := s.bluetoothMgr.Start(); err != nil {
             errors = append(errors, fmt.Errorf("Bluetooth: %w", err))
-            utils.LogError("Bluetooth manager start failed", "error", err)
+            utils.LogError("Bluetooth manager start failed: %v", err)
         } else {
             utils.LogInfo("Bluetooth manager started")
         }
@@ -143,7 +143,7 @@ func (s *ProtocolServer) Start() error {
         s.usbServer = usb.NewServer(s.mouseCtrl, s.deviceMgr)
         if err := s.usbServer.Start(); err != nil {
             errors = append(errors, fmt.Errorf("USB: %w", err))
-            utils.LogError("USB server start failed", "error", err)
+            utils.LogError("USB server start failed: %v", err)
         } else {
             utils.LogInfo("USB server started")
         }
@@ -175,7 +175,7 @@ func (s *ProtocolServer) Stop() {
     }
     if s.wsServer != nil {
         if err := s.wsServer.Stop(); err != nil {
-            utils.LogError("WebSocket stop error", "error", err)
+            utils.LogError("WebSocket stop error: %v", err)
         } else {
             utils.LogInfo("WebSocket server stopped")
         }

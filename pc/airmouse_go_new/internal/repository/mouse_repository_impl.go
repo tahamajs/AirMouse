@@ -307,7 +307,7 @@ func (r *mouseRepositoryImpl) applySmoothing(dx, dy float64) (float64, float64) 
     
     // Simple EMA smoothing
     const alpha = 0.3
-    static lastDx, lastDy float64
+    var lastDx, lastDy float64
     
     smoothedDx := alpha*dx + (1-alpha)*lastDx
     smoothedDy := alpha*dy + (1-alpha)*lastDy
