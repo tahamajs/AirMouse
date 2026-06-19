@@ -124,7 +124,7 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
         container.NewTabItemWithIcon("AI", theme.ComputerIcon(), aiSection),
         container.NewTabItemWithIcon("Personalization", theme.SettingsIcon(), personalizationSection),
         container.NewTabItemWithIcon("Proximity", theme.VisibilityIcon(), proximitySection),
-        container.NewTabItemWithIcon("Network", theme.NetworkIcon(), networkSection),
+        container.NewTabItemWithIcon("Network", theme.ComputerIcon(), networkSection),
         container.NewTabItemWithIcon("Appearance", theme.ComputerIcon(), appearanceSection),
         container.NewTabItemWithIcon("Advanced", theme.SettingsIcon(), advancedSection),
     )

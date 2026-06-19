@@ -248,7 +248,7 @@ func (t *ProximityTab) updateDistance(distance float64) {
     shouldLock := distance > t.cfg.ProximityFarThreshold
     shouldUnlock := distance < t.cfg.ProximityNearThreshold
     
-    fyne.Do(func() {
+    RunOnMain(func() {
         t.distanceLabel.SetText(fmt.Sprintf("📏 Current distance: %.2f m", distance))
         t.historyChart.SetText(historyText)
         

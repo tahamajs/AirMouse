@@ -120,10 +120,3 @@ func ShowMouseShortcuts(parent fyne.Window) {
 func GetShortcutText(modifier, key string) string {
     return modifier + " + " + key
 }
-
-// GetPlatformModifier returns the appropriate modifier key for the platform
-func GetPlatformModifier() string {
-    // Detect platform
-    // For macOS use "⌘", for Windows/Linux use "Ctrl"
-    return "Ctrl"
-}

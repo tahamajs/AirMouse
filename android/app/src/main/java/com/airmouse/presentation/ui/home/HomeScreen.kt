@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -33,7 +34,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActions
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.ui.components.AnimatedConnectionStatus
+import com.airmouse.presentation.ui.home.HomeViewModel
 import java.util.Locale
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -44,6 +48,8 @@ fun HomeScreen(
     navigationActions: NavigationActions
 ) {
     val context = LocalContext.current
+    val homeViewModel: HomeViewModel = hiltViewModel()
+    val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     // UI State
@@ -52,13 +58,26 @@ fun HomeScreen(
     var serverIp by remember { mutableStateOf("192.168.1.100") }
     var serverPort by remember { mutableIntStateOf(8080) }
     var serverName by remember { mutableStateOf("My Desktop PC") }
-    var userName by remember { mutableStateOf("User") }
     var ping by remember { mutableIntStateOf(14) }
     var recentGestures by remember { mutableStateOf(listOf("Swipe Left - Next Slide", "Swipe Right - Prev Slide")) }
     var showGreeting by remember { mutableStateOf(false) }
     var showQrPermissionDialog by remember { mutableStateOf(false) }
+    var pendingUserName by rememberSaveable { mutableStateOf(homeUiState.userName) }
+    var showRegistrationDialog by rememberSaveable {
+        mutableStateOf(homeUiState.userName.isBlank() && !homeViewModel.hasRegisteredUser())
+    }
 
-    val greetingText = if (userName.isNotEmpty()) "Welcome back, $userName!" else "Welcome to Air Mouse Pro!"
+    val userName = homeUiState.userName.ifBlank { pendingUserName }
+    val greetingText = if (userName.isNotBlank()) "Welcome back, $userName!" else "Welcome to Air Mouse Pro!"
+
+    LaunchedEffect(homeUiState.userName) {
+        if (homeUiState.userName.isNotBlank()) {
+            pendingUserName = homeUiState.userName
+            showRegistrationDialog = false
+        } else if (!homeViewModel.hasRegisteredUser()) {
+            showRegistrationDialog = true
+        }
+    }
 
     // Permission launcher
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -241,6 +260,35 @@ fun HomeScreen(
                     dismissButton = {
                         TextButton(onClick = { showQrPermissionDialog = false }) {
                             Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            if (showRegistrationDialog) {
+                AlertDialog(
+                    onDismissRequest = { /* keep the prompt visible until a name is saved */ },
+                    title = { Text("Register your name") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Enter the name you want to see on the welcome screen.")
+                            OutlinedTextField(
+                                value = pendingUserName,
+                                onValueChange = { pendingUserName = it },
+                                label = { Text("Your name") },
+                                singleLine = true
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val trimmed = pendingUserName.trim()
+                            if (trimmed.isNotBlank()) {
+                                homeViewModel.saveUserName(trimmed)
+                                showRegistrationDialog = false
+                            }
+                        }) {
+                            Text("Save")
                         }
                     }
                 )

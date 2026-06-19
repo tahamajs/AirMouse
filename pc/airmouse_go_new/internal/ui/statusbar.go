@@ -92,7 +92,7 @@ func (sb *StatusBar) updater() {
                     rxSpeed := float64(metrics.NetworkRx-lastRx) / elapsed
                     txSpeed := float64(metrics.NetworkTx-lastTx) / elapsed
                     
-                    fyne.Do(func() {
+                    RunOnMain(func() {
                         sb.networkLabel.SetText(fmt.Sprintf("📡 ↓%.0f KB/s ↑%.0f KB/s",
                             rxSpeed/1024, txSpeed/1024))
                     })
@@ -103,7 +103,7 @@ func (sb *StatusBar) updater() {
             lastNetworkTime = now
             
             // Update UI
-            fyne.Do(func() {
+            RunOnMain(func() {
                 sb.cpuLabel.SetText(fmt.Sprintf("💻 CPU: %.0f%%", metrics.CPUPercent))
                 sb.memLabel.SetText(fmt.Sprintf("🧠 MEM: %.0f%% (%.0f/%.0f MB)",
                     metrics.MemoryPercent,

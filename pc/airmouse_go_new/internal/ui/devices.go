@@ -176,7 +176,7 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
     go func() {
         for {
             time.Sleep(2 * time.Second)
-            fyne.Do(func() {
+            RunOnMain(func() {
                 tab.refresh()
             })
         }
@@ -281,9 +281,15 @@ func (t *DevicesTab) getStatusText(d *device.DeviceInfo) string {
 }
 
 func (t *DevicesTab) updateButtons(enabled bool) {
-    t.disconnectBtn.SetEnabled(enabled)
-    t.blockBtn.SetEnabled(enabled)
-    t.renameBtn.SetEnabled(enabled)
+    if enabled {
+        t.disconnectBtn.Enable()
+        t.blockBtn.Enable()
+        t.renameBtn.Enable()
+    } else {
+        t.disconnectBtn.Disable()
+        t.blockBtn.Disable()
+        t.renameBtn.Disable()
+    }
 }
 
 func (t *DevicesTab) disconnectDevice() {
@@ -373,7 +379,7 @@ func (t *DevicesTab) createStatsPanel() fyne.CanvasObject {
                 totalTraffic += d.BytesSent + d.BytesRecv
             }
             
-            fyne.Do(func() {
+            RunOnMain(func() {
                 totalLabel.SetText(fmt.Sprintf("📊 Total: %d", total))
                 activeLabel.SetText(fmt.Sprintf("🟢 Active: %d", active))
                 idleLabel.SetText(fmt.Sprintf("🟡 Idle: %d", idle))

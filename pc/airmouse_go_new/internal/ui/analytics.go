@@ -115,7 +115,7 @@ func NewAnalyticsTab(collector *personalization.DataCollector) fyne.CanvasObject
     go func() {
         for {
             time.Sleep(5 * time.Second)
-            fyne.Do(refresh)
+            RunOnMain(refresh)
         }
     }()
     
@@ -281,7 +281,7 @@ func (t *AnalyticsTab) startTraining() {
         // Simulate training progress
         for i := 0; i <= 100; i += 10 {
             time.Sleep(200 * time.Millisecond)
-            fyne.Do(func() {
+            RunOnMain(func() {
                 t.progressBar.SetValue(float64(i) / 100)
             })
         }
@@ -289,7 +289,7 @@ func (t *AnalyticsTab) startTraining() {
         // Perform actual training
         err := t.collector.ForceFineTune()
         
-        fyne.Do(func() {
+        RunOnMain(func() {
             t.progressBar.Hidden = true
             t.statusLabel.Hidden = true
             t.forceBtn.Enable()

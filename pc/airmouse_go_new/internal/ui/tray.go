@@ -2,6 +2,7 @@ package ui
 
 import (
     "airmouse-go/internal/config"
+    "airmouse-go/internal/control"
     "airmouse-go/internal/device"
     "airmouse-go/internal/protocol"
     "airmouse-go/internal/utils"
@@ -28,20 +29,6 @@ import (
     "github.com/gorilla/websocket"
     "github.com/skip2/go-qrcode"
 )
-
-// Icon data (PNG 16x16 minimal placeholder)
-var IconData = []byte{
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-}
-
-var RunningIconData = []byte{
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-}
-
-var StoppedIconData = []byte{
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-}
 
 type TrayApp struct {
     config       *config.Config

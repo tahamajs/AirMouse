@@ -158,7 +158,7 @@ class HomeViewModel @Inject constructor(
                 isCalibrated = prefs.getBoolean("calibration_complete", false),
                 aiSmoothingEnabled = prefs.getBoolean("ai_smoothing_enabled", false),
                 predictiveEnabled = prefs.getBoolean("predictive_enabled", true),
-                userName = prefs.getString("user_name", "User"),
+                userName = prefs.getUserName(),
                 theme = prefs.getString("theme", "dark")
             )
         }
@@ -630,7 +630,18 @@ class HomeViewModel @Inject constructor(
 
     // ==================== UTILITY FUNCTIONS ====================
 
-    fun getUserName(): String = prefs.getString("user_name", "User")
+    fun getUserName(): String = prefs.getUserName()
+
+    fun hasRegisteredUser(): Boolean = !prefs.isFirstLaunch() && prefs.getUserName().isNotBlank()
+
+    fun saveUserName(name: String) {
+        val cleanedName = name.trim()
+        if (cleanedName.isBlank()) return
+        prefs.setUserName(cleanedName)
+        prefs.setFirstLaunchComplete()
+        _uiState.update { it.copy(userName = cleanedName) }
+        addLogMessage("Welcome, $cleanedName")
+    }
 
     fun getServerName(): String = prefs.getString("server_name", "Air Mouse Pro")
 
