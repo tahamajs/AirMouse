@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -1044,7 +1045,7 @@ fun ProfileAvatar(
             text = name.take(2).uppercase(),
             color = Color.White,
             fontWeight = FontWeight.Bold,
-            fontSize = size.value / 2.5.sp
+            fontSize = (size.value / 2.5f).sp
         )
     }
 }

@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import com.airmouse.R
 import com.airmouse.network.WebSocketManager
 import com.hoho.android.usbserial.driver.UsbSerialDriver
+import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
@@ -43,6 +44,7 @@ class UsbSerialService : Service() {
     @Inject lateinit var usbManager: UsbManager
 
     private var serialDriver: UsbSerialDriver? = null
+    private var serialPort: UsbSerialPort? = null
     private var isConnected = false
     private var isReconnecting = false
     private var reconnectAttempts = 0
@@ -178,8 +180,9 @@ class UsbSerialService : Service() {
 
         serialDriver = driver
         try {
-            serialDriver?.open()
-            serialDriver?.setParameters(currentBaudRate, currentDataBits, currentStopBits, currentParity)
+            serialPort = driver.ports.firstOrNull()
+            serialPort?.open(connection)
+            serialPort?.setParameters(currentBaudRate, currentDataBits, currentStopBits, currentParity)
             isConnected = true
             reconnectAttempts = 0
             isReconnecting = false
@@ -240,7 +243,7 @@ class UsbSerialService : Service() {
             val buffer = ByteArray(4096)
             while (isConnected) {
                 try {
-                    val len = serialDriver?.read(buffer, 1000) ?: 0
+                        val len = serialPort?.read(buffer, 1000) ?: 0
                     if (len > 0) {
                         bytesReceived += len
                         messagesReceived++
@@ -314,7 +317,7 @@ class UsbSerialService : Service() {
 
         return try {
             val bytes = data.toByteArray()
-            val result = serialDriver?.write(bytes, 1000) ?: 0
+            val result = serialPort?.write(bytes, 1000) ?: 0
             if (result > 0) {
                 android.util.Log.d("UsbSerialService", "Sent ${result} bytes")
                 updateNotification("Connected", "📤 Sent: ${data.take(30)}...", true)
@@ -341,7 +344,7 @@ class UsbSerialService : Service() {
         if (!isConnected || serialDriver == null) return false
 
         return try {
-            val result = serialDriver?.write(data, 1000) ?: 0
+            val result = serialPort?.write(data, 1000) ?: 0
             result > 0
         } catch (e: IOException) {
             android.util.Log.e("UsbSerialService", "Binary write error: ${e.message}")
@@ -363,7 +366,7 @@ class UsbSerialService : Service() {
         currentBaudRate = baudRate
         if (isConnected && serialDriver != null) {
             return try {
-                serialDriver?.setParameters(currentBaudRate, currentDataBits, currentStopBits, currentParity)
+                serialPort?.setParameters(currentBaudRate, currentDataBits, currentStopBits, currentParity)
                 updateNotification("Connected", "Baud rate changed to $baudRate", true)
                 android.util.Log.i("UsbSerialService", "Baud rate changed to $baudRate")
                 true
@@ -416,11 +419,13 @@ class UsbSerialService : Service() {
         reconnectAttempts = 0
 
         try {
+            serialPort?.close()
             serialDriver?.close()
         } catch (e: IOException) {
             android.util.Log.e("UsbSerialService", "Error during disconnect: ${e.message}")
         }
 
+        serialPort = null
         serialDriver = null
         updateNotification("Disconnected", "USB Serial device disconnected", false)
         android.util.Log.i("UsbSerialService", "USB Serial device disconnected")

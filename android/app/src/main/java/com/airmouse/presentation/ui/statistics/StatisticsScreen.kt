@@ -35,6 +35,7 @@ fun StatisticsScreen(
     viewModel: StatisticsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
     Scaffold(
         topBar = {
@@ -78,10 +79,7 @@ fun StatisticsScreen(
             ) {
                 // Time Range Selector
                 item {
-                    AnimatedContent(
-                        targetState = uiState.timeRange,
-                        transitionSpec = { fadeIn() + slideInHorizontally() }
-                    ) { _ ->
+                    AnimatedContent(targetState = uiState.timeRange) { _ ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
@@ -314,7 +312,7 @@ fun StatisticsScreen(
 
                                     // Center hole for donut chart
                                     drawCircle(
-                                        color = MaterialTheme.colorScheme.surface,
+                                        color = surfaceColor,
                                         radius = radius * 0.5f,
                                         center = Offset(centerX, centerY)
                                     )
