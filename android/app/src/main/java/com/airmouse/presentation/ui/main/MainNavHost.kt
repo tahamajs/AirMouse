@@ -126,7 +126,7 @@ fun MainNavHost(
 
         // Customization
         composable(Destinations.Profiles.route) {
-            ProfilesScreen(navigationActions = navigationActions)
+            ProfilesScreen()
         }
         composable(Destinations.Themes.route) {
             ThemesScreen(navigationActions = navigationActions)
