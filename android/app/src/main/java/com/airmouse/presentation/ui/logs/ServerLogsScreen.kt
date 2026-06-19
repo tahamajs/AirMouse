@@ -2,6 +2,7 @@ package com.airmouse.presentation.ui.logs
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +10,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.CheckBox
+import androidx.compose.material.icons.outlined.VerticalAlignBottom
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -87,14 +90,14 @@ fun ServerLogsScreen(
                     // Selection mode toggle
                     IconButton(onClick = { viewModel.toggleSelectionMode() }) {
                         Icon(
-                            if (uiState.isSelectionMode) Icons.Filled.CheckBox else Icons.Outlined.CheckBox,
+                            if (uiState.isSelectionMode) Icons.Outlined.CheckBox else Icons.Outlined.CheckBox,
                             contentDescription = "Select"
                         )
                     }
                     // Auto-scroll toggle
                     IconButton(onClick = { viewModel.toggleAutoScroll() }) {
                         Icon(
-                            if (uiState.isAutoScroll) Icons.Filled.VerticalAlignBottom else Icons.Outlined.VerticalAlignBottom,
+                            if (uiState.isAutoScroll) Icons.Outlined.VerticalAlignBottom else Icons.Outlined.VerticalAlignBottom,
                             contentDescription = "Auto-scroll"
                         )
                     }

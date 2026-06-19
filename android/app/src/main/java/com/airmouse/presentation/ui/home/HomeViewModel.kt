@@ -112,7 +112,7 @@ class HomeViewModel @Inject constructor(
 
             samplesProcessed++
             if (samplesProcessed % 60 == 0) {
-                val fps = (samplesProcessed * 1000 / (System.currentTimeMillis() - lastSampleTime)).coerceAtMost(120)
+                val fps = ((samplesProcessed * 1000L) / (System.currentTimeMillis() - lastSampleTime)).coerceAtMost(120L).toInt()
                 _sensorState.update { it.copy(fps = fps) }
                 samplesProcessed = 0
             }
