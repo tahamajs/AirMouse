@@ -202,5 +202,5 @@ fun ConnectionStatusBadge(
                 }
             }
         }
-    }
+}
 }
