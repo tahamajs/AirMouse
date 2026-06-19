@@ -269,10 +269,7 @@ object WebSocketManager {
     @Deprecated("Use ConnectionManager.sendProximity() instead", ReplaceWith("connectionManager.sendProximity(isNear, distance)"))
     fun sendProximity(isNear: Boolean, distance: Float): Boolean {
         Log.w(TAG, DEPRECATION_WARNING)
-        val deviceId = android.provider.Settings.Secure.getString(
-            android.content.ContentResolver(),
-            android.provider.Settings.Secure.ANDROID_ID
-        ) ?: "unknown"
+        val deviceId = "unknown"
         return sendText(JSONObject().putProximity(isNear, distance, deviceId).toString())
     }
 
