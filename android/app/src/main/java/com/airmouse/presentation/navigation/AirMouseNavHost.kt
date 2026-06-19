@@ -82,8 +82,8 @@ fun AirMouseNavHost(
 
         composable(Destinations.Calibration.route) {
             CalibrationScreen(
-                navigationActions = navActions
-                // onComplete removed – use navActions.navigateBack() inside the screen
+                onComplete = { navController.popBackStack() },
+                onSkip = { navController.popBackStack() }
             )
         }
 
@@ -104,10 +104,7 @@ fun AirMouseNavHost(
         }
 
         composable(Destinations.NetworkDiscovery.route) {
-            NetworkDiscoveryScreen(
-                navigationActions = navActions
-                // onServerSelected removed – screen should handle its own logic
-            )
+            NetworkDiscoveryScreen(navigationActions = navActions)
         }
 
         composable(Destinations.ServerLogs.route) {
@@ -144,8 +141,16 @@ fun AirMouseNavHost(
 
         composable(Destinations.Onboarding.route) {
             OnboardingScreen(
-                navigationActions = navActions
-                // onComplete removed – the screen should navigate using navActions
+                onComplete = {
+                    navController.navigate(Destinations.Home.route) {
+                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
+                    }
+                },
+                onSkip = {
+                    navController.navigate(Destinations.Home.route) {
+                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
+                    }
+                }
             )
         }
     }
