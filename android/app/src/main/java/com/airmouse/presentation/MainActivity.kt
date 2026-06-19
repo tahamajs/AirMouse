@@ -1,8 +1,8 @@
 package com.airmouse.presentation
 
 import android.content.Intent
-import android.graphics.Color
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -18,18 +18,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.airmouse.AirMouseApplication
 import com.airmouse.presentation.navigation.AirMouseBottomBar
 import com.airmouse.presentation.navigation.AirMouseNavHost
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.rememberNavigationActions
 import com.airmouse.presentation.theme.AirMouseTheme
-import com.airmouse.ui.onboarding.OnboardingActivity
+import com.airmouse.presentation.ui.onboarding.OnboardingActivity
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -85,7 +83,8 @@ class MainActivity : ComponentActivity() {
                         keepSplashOnScreen = false
                     }
 
-                    MainAppContent()
+                    // Pass prefs directly to MainAppContent
+                    MainAppContent(prefs = prefs)
                 }
             }
         }
@@ -138,13 +137,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Main app content with navigation.
+ * Receives PreferencesManager directly from the Activity.
+ */
 @Composable
-fun MainAppContent() {
-    val context = LocalContext.current
-    val application = context.applicationContext as? AirMouseApplication
-    val prefs = application?.prefsManager
-
-    val startDestination = if (prefs?.isOnboardingCompleted() == true) {
+fun MainAppContent(prefs: PreferencesManager) {
+    val startDestination = if (prefs.isOnboardingCompleted()) {
         Destinations.Home.route
     } else {
         Destinations.Onboarding.route

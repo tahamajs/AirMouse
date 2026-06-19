@@ -35,11 +35,7 @@ abstract class RepositoryModule {
         impl: ConnectionRepositoryImpl
     ): IConnectionRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindGestureRepository(
-        impl: GestureRepositoryImpl
-    ): IGestureRepository
+    // ❌ REMOVED DUPLICATE: IGestureRepository is now bound ONLY in GestureRepositoryModule
 
     @Binds
     @Singleton
@@ -157,5 +153,4 @@ object RepositoryProvidersModule {
     ): StatisticsRepositoryImpl {
         return StatisticsRepositoryImpl(preferencesManager)
     }
-
-}// app/src/main/java/com/airmouse/di/RepositoryModule.kt
+}

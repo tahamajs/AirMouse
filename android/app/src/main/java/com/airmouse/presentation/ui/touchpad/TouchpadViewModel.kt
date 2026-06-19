@@ -35,6 +35,58 @@ class TouchpadViewModel @Inject constructor(
 
     init { loadSettings() }
 
+    fun resetToDefaults() {
+        _uiState.value = TouchpadUiState()
+        loadSettings()
+    }
+
+    fun processTap(x: Float, y: Float) {
+        connectionManager.send("""{"type":"touchpad","action":"tap","x":$x,"y":$y}""")
+        _uiState.update { it.copy(lastGesture = "Tap") }
+        vibrate(30)
+    }
+
+    fun processLongPress() {
+        connectionManager.send("""{"type":"touchpad","action":"long_press"}""")
+        _uiState.update { it.copy(lastGesture = "Long Press") }
+        vibrate(60)
+    }
+
+    fun applyPreset(name: String) {
+        when (name.lowercase()) {
+            "sensitive" -> {
+                updateSensitivity(1.4f)
+                updateCursorSpeed(1.3f)
+                updateScrollSpeed(1.2f)
+            }
+            "precision" -> {
+                updateSensitivity(0.8f)
+                updateCursorSpeed(0.8f)
+                updateScrollSpeed(0.8f)
+            }
+            else -> resetToDefaults()
+        }
+    }
+
+    fun updateTwoFingerScroll(enabled: Boolean) = prefs.putBoolean("touchpad_two_finger_scroll", enabled).also { _uiState.update { it.copy(twoFingerScroll = enabled) } }
+    fun updateNaturalScrolling(enabled: Boolean) = prefs.putBoolean("touchpad_natural_scrolling", enabled).also { _uiState.update { it.copy(naturalScrolling = enabled) } }
+    fun updateScrollSpeed(speed: Float) = prefs.putFloat("touchpad_scroll_speed", speed).also { _uiState.update { it.copy(scrollSpeed = speed) } }
+    fun updateEdgeScrolling(enabled: Boolean) = prefs.putBoolean("touchpad_edge_scrolling", enabled).also { _uiState.update { it.copy(edgeScrolling = enabled) } }
+    fun updateScrollInertia(enabled: Boolean) = prefs.putBoolean("touchpad_scroll_inertia", enabled).also { _uiState.update { it.copy(scrollInertia = enabled) } }
+    fun updateSensitivity(value: Float) = prefs.putFloat("touchpad_sensitivity", value).also { _uiState.update { it.copy(sensitivity = value) } }
+    fun updateCursorSpeed(value: Float) = prefs.putFloat("touchpad_cursor_speed", value).also { _uiState.update { it.copy(cursorSpeed = value) } }
+    fun updatePointerSpeed(value: Int) = prefs.putInt("touchpad_pointer_speed", value).also { _uiState.update { it.copy(pointerSpeed = value) } }
+    fun updateAcceleration(enabled: Boolean) = prefs.putBoolean("touchpad_acceleration", enabled).also { _uiState.update { it.copy(accelerationEnabled = enabled) } }
+    fun updateInvertVertical(enabled: Boolean) = prefs.putBoolean("touchpad_invert_vertical", enabled).also { _uiState.update { it.copy(invertVertical = enabled) } }
+    fun updateInvertHorizontal(enabled: Boolean) = prefs.putBoolean("touchpad_invert_horizontal", enabled).also { _uiState.update { it.copy(invertHorizontal = enabled) } }
+    fun updateTapToClick(enabled: Boolean) = prefs.putBoolean("touchpad_tap_to_click", enabled).also { _uiState.update { it.copy(tapToClick = enabled) } }
+    fun updateDoubleTapDelay(delayMs: Int) = prefs.putInt("touchpad_double_tap_delay", delayMs).also { _uiState.update { it.copy(doubleTapDelay = delayMs) } }
+    fun updateThreeFingerSwipe(enabled: Boolean) = prefs.putBoolean("touchpad_three_finger_swipe", enabled).also { _uiState.update { it.copy(threeFingerSwipe = enabled) } }
+    fun updatePinchToZoom(enabled: Boolean) = prefs.putBoolean("touchpad_pinch_to_zoom", enabled).also { _uiState.update { it.copy(pinchToZoom = enabled) } }
+    fun updateRotateToRotate(enabled: Boolean) = prefs.putBoolean("touchpad_rotate_to_rotate", enabled).also { _uiState.update { it.copy(rotateToRotate = enabled) } }
+    fun updateHapticFeedback(enabled: Boolean) = prefs.putBoolean("touchpad_haptic_feedback", enabled).also { _uiState.update { it.copy(hapticFeedback = enabled) } }
+    fun updateShowTouchPoints(enabled: Boolean) = prefs.putBoolean("touchpad_show_touch_points", enabled).also { _uiState.update { it.copy(showTouchPoints = enabled) } }
+
     private fun loadSettings() {
         _uiState.update {
             it.copy(

@@ -20,7 +20,6 @@ android {
         versionName "3.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // Build config declarations
         buildConfigField "String", "APP_NAME", '"Air Mouse Pro"'
         buildConfigField "String", "BUILD_TIME", "\"${new Date().format("yyyy-MM-dd HH:mm:ss")}\""
         buildConfigField "String", "GIT_HASH", "\"${System.getenv("GIT_COMMIT") ?: "unknown"}\""
@@ -243,6 +242,7 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:5.0.1'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+    implementation 'com.github.PhilJay:MPAndroidChart:3.1.0'
 
     // ==================== WORK MANAGER ====================
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
@@ -260,7 +260,6 @@ dependencies {
 
 kapt {
     correctErrorTypes = true
-    useBuildCache = true
 }
 
 ksp {
