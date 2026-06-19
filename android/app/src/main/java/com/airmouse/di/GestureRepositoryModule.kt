@@ -1,8 +1,12 @@
 // app/src/main/java/com/airmouse/di/GestureRepositoryModule.kt
 package com.airmouse.di
 
+import android.content.Context
 import com.airmouse.data.repository.GestureRepositoryImpl
+import com.airmouse.domain.repository.IGestureDataSource
 import com.airmouse.domain.repository.IGestureRepository
+import com.airmouse.sensors.EnhancedGestureDetector
+import com.airmouse.utils.PreferencesManager
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

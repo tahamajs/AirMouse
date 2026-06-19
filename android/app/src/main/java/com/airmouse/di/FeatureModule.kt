@@ -2,6 +2,8 @@
 package com.airmouse.di
 
 import com.airmouse.features.*
+import com.airmouse.domain.repository.*
+import com.airmouse.domain.usecase.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
