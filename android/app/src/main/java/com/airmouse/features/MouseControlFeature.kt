@@ -135,7 +135,7 @@ class MouseControlFeature @Inject constructor(
         return mouseRepository.getStatistics()
     }
 
-    fun observeMouseEvents(): Flow<List<MouseEvent>> {
+    fun observeMouseEvents(): Flow<MouseEvent> {
         return mouseRepository.observeMouseEvents()
     }
 

@@ -30,6 +30,10 @@ class GetStatisticsUseCase @Inject constructor(
         return statisticsRepository.observeCurrentSession()
     }
 
+    suspend fun getSessionStats(): StatisticsSummary {
+        return statisticsRepository.getCurrentSession()
+    }
+
     /**
      * Get historical statistics
      */
@@ -63,6 +67,10 @@ class GetStatisticsUseCase @Inject constructor(
      */
     suspend fun getGestureStats(): List<GestureStatistics> {
         return statisticsRepository.getGestureStats()
+    }
+
+    suspend fun isTracking(): Boolean {
+        return statisticsRepository.isTracking()
     }
 
     /**
