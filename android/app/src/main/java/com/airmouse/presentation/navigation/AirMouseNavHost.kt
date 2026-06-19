@@ -82,8 +82,9 @@ fun AirMouseNavHost(
 
         composable(Destinations.Calibration.route) {
             CalibrationScreen(
+                navigationActions = navActions,
                 onComplete = { navController.popBackStack() },
-                onSkip = { navController.popBackStack() }
+                onRecalibrate = { /* Add implementation if required */ }
             )
         }
 
@@ -140,17 +141,9 @@ fun AirMouseNavHost(
         }
 
         composable(Destinations.Onboarding.route) {
+            // Updated to match OnboardingScreen parameter constraints
             OnboardingScreen(
-                onComplete = {
-                    navController.navigate(Destinations.Home.route) {
-                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
-                    }
-                },
-                onSkip = {
-                    navController.navigate(Destinations.Home.route) {
-                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
-                    }
-                }
+                navigationActions = navActions
             )
         }
     }

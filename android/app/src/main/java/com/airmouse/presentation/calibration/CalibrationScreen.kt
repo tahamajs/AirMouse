@@ -20,24 +20,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.SensorCalibrationData
 import com.airmouse.presentation.navigation.NavigationActions
-import java.util.Locale
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @Composable
 fun CalibrationScreen(
     navigationActions: NavigationActions? = null,
+    // For navigation host compatibility (both sets)
     onComplete: () -> Unit = {},
-    quality: String = "GOOD",
-    onContinue: () -> Unit = {},
-    onRecalibrate: () -> Unit = {},
+    onSkip: () -> Unit = {},
+    // Main action callbacks (aliased)
+    onContinue: () -> Unit = onComplete,
+    onRecalibrate: () -> Unit = onSkip,
+    // Additional optional callbacks
     onShare: (() -> Unit)? = null,
     onViewDetails: (() -> Unit)? = null,
+    // Display data
+    quality: String = "GOOD",
     calibrationData: CalibrationData? = null,
     stats: Map<String, Any>? = null
 ) {
@@ -309,8 +314,13 @@ fun CalibrationScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Primary action (Continue / Start)
                 Button(
-                    onClick = onContinue,
+                    onClick = {
+                        navigationActions?.navigateToHome()
+                        onContinue()
+                        onComplete()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -338,7 +348,10 @@ fun CalibrationScreen(
                 ) {
                     // Recalibrate button
                     OutlinedButton(
-                        onClick = onRecalibrate,
+                        onClick = {
+                            onRecalibrate()
+                            onSkip()
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
@@ -468,7 +481,7 @@ fun CalibrationDetails(
                     fontSize = 12.sp,
                     color = Color.White.copy(alpha = 0.5f)
                 )
-                stats.forEach { (key, value) ->
+                it.forEach { (key, value) ->
                     Text(
                         text = "$key: $value",
                         fontSize = 11.sp,
@@ -528,7 +541,6 @@ fun AnimatedBackgroundParticles() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         for (i in 0..5) {
-            val delay = i * 2000L
             val size = 50 + i * 20
             val alpha = 0.03f - i * 0.003f
 

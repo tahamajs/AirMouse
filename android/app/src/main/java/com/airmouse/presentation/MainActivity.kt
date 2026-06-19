@@ -17,7 +17,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
@@ -48,6 +47,7 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
+        // Route directly to native onboarding activity if not completed
         if (!prefs.isOnboardingCompleted()) {
             keepSplashOnScreen = false
             startOnboarding()
@@ -76,7 +76,8 @@ class MainActivity : ComponentActivity() {
                         keepSplashOnScreen = false
                     }
 
-                    MainAppContent(prefs = prefs)
+                    // Onboarding is guaranteed to be complete here, route straight home
+                    MainScreen(startDestination = Destinations.Home.route)
                 }
             }
         }
@@ -118,16 +119,6 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         updateSystemBarsColor()
     }
-}
-
-@Composable
-fun MainAppContent(prefs: PreferencesManager) {
-    val startDestination = if (prefs.isOnboardingCompleted()) {
-        Destinations.Home.route
-    } else {
-        Destinations.Onboarding.route
-    }
-    MainScreen(startDestination = startDestination)
 }
 
 @Composable
