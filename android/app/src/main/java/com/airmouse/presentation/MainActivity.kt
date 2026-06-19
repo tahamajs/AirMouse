@@ -17,9 +17,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.airmouse.presentation.navigation.AirMouseBottomBar
@@ -31,6 +33,7 @@ import com.airmouse.ui.onboarding.OnboardingActivity
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -161,7 +164,8 @@ fun MainScreen(startDestination: String) {
 
     Scaffold(
         bottomBar = {
-            if (currentRoute != null && Destinations.isBottomNavScreen(currentRoute)) {
+            // Destinations.isBottomNavScreen now handles null safely
+            if (Destinations.isBottomNavScreen(currentRoute)) {
                 AirMouseBottomBar(
                     currentRoute = currentRoute,
                     onItemSelected = { destination ->

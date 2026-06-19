@@ -1,7 +1,22 @@
+// app/src/main/java/com/airmouse/presentation/navigation/AirMouseNavHost.kt
 package com.airmouse.presentation.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Laptop
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -164,3 +179,4 @@ fun AirMouseNavHost(
         }
     }
 }
+

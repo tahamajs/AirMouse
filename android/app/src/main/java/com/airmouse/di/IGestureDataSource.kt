@@ -6,25 +6,45 @@ import com.airmouse.domain.model.GestureTrainingStats
 
 interface IGestureDataSource {
 
-    // Gesture templates
+    // ==================== Gesture Templates ====================
+
     suspend fun saveGestureTemplate(template: CustomGestureTemplate)
     suspend fun getGestureTemplate(id: String): CustomGestureTemplate?
     suspend fun getAllGestureTemplates(): List<CustomGestureTemplate>
     suspend fun deleteGestureTemplate(id: String)
     suspend fun updateGestureTemplate(template: CustomGestureTemplate)
 
-    // Training data
+    // ==================== Favorite Gestures ====================
+
+    suspend fun toggleFavorite(id: String)
+    suspend fun getFavoriteTemplates(): List<CustomGestureTemplate>
+
+    // ==================== Training Data ====================
+
     suspend fun saveTrainingSamples(gestureName: String, samples: List<FloatArray>)
     suspend fun getTrainingSamples(gestureName: String): List<FloatArray>
     suspend fun clearTrainingData(gestureName: String)
 
-    // Statistics
+    // ==================== Statistics ====================
+
     suspend fun updateGestureStats(stats: GestureTrainingStats)
     suspend fun getGestureStats(): GestureTrainingStats
 
-    // Configuration
+    // ==================== Detection Tracking ====================
+
+    suspend fun incrementGestureCount(gestureName: String, confidence: Float)
+    suspend fun getGestureCount(): Int
+    suspend fun getTotalDetections(): Int
+    suspend fun getMostUsedGestures(limit: Int): List<CustomGestureTemplate>
+
+    // ==================== Configuration ====================
+
     suspend fun setConfidenceThreshold(threshold: Float)
     suspend fun getConfidenceThreshold(): Float
     suspend fun setCooldownMs(cooldown: Long)
     suspend fun getCooldownMs(): Long
+
+    // ==================== Reset ====================
+
+    suspend fun resetAllStats()
 }

@@ -15,6 +15,10 @@ object PreferencesHelper {
     // Preference Keys
     private const val KEY_AUTO_PAUSE_ENABLED = "auto_pause_enabled"
     private const val KEY_LAST_USED_IP = "last_used_ip"
+    fun getAllKeys(): Set<String> {
+        return prefs.all.keys
+    }
+
     private const val KEY_LAST_USED_PORT = "last_used_port"
     private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
     private const val KEY_FIRST_LAUNCH = "first_launch"

@@ -1,11 +1,10 @@
+// app/src/main/java/com/airmouse/presentation/navigation/AirMouseBottomBar.kt
 package com.airmouse.presentation.navigation
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Circle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,10 +18,8 @@ fun AirMouseBottomBar(
     onItemSelected: (Destinations) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Matches your exact companion property name
     val items = Destinations.bottomNavDestinations
 
-    // Finds index dynamically by looking up the active route string
     val selectedIndex = items.indexOfFirst { it.route == currentRoute }
 
     NavigationBar(
@@ -40,7 +37,7 @@ fun AirMouseBottomBar(
                 onClick = { onItemSelected(destination) },
                 icon = {
                     Icon(
-                        imageVector = destination.icon ?: Icons.Default.Circle,
+                        imageVector = destination.icon,
                         contentDescription = destination.title,
                         modifier = Modifier.size(24.dp)
                     )
