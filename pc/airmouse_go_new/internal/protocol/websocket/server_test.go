@@ -83,7 +83,11 @@ func TestWebSocketProximityMessages(t *testing.T) {
     }
     
     for _, tc := range testCases {
-        t.Run("near="+string(rune(tc.isNear)), func(t *testing.T) {
+        label := "false"
+        if tc.isNear {
+            label = "true"
+        }
+        t.Run("near="+label, func(t *testing.T) {
             msg := map[string]interface{}{
                 "type": "proximity",
                 "payload": map[string]interface{}{

@@ -10,7 +10,7 @@ func TestMadgwick(t *testing.T) {
 	gyro := []float64{0.1, 0, 0}
 	accel := []float64{0, 0, 9.81}
 	for i := 0; i < 1000; i++ {
-		f.Update(gyro, accel, nil)
+        f.Update(gyro, accel)
 	}
 	e := f.GetEuler()
 	if math.Abs(e.Roll) < 0.1 {
@@ -23,7 +23,7 @@ func TestMahony(t *testing.T) {
 	gyro := []float64{0, 0.1, 0}
 	accel := []float64{0, 0, 9.81}
 	for i := 0; i < 1000; i++ {
-		f.Update(gyro, accel, nil)
+        f.Update(gyro, accel)
 	}
 	e := f.GetEuler()
 	if math.Abs(e.Pitch) < 0.1 {

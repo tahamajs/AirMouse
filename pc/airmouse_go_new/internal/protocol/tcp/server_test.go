@@ -2,9 +2,7 @@ package tcp
 
 import (
     "encoding/json"
-    "net"
     "testing"
-    "time"
 )
 
 func TestTCPMessageParsing(t *testing.T) {
