@@ -59,6 +59,7 @@
     <!-- Action strings -->
     <string name="action_search">Search</string>
     <string name="action_notifications">Notifications</string>
+    <string name="default_notification_channel_id">airmouse_default_channel</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_reset">Reset</string>
     <string name="action_help">Help</string>
