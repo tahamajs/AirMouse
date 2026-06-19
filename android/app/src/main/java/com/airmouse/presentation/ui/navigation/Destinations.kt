@@ -26,7 +26,7 @@ sealed class Destinations(
     object Statistics : Destinations(
         route = "statistics",
         title = "Statistics",
-        icon = Icons.Default.BarChart,
+        icon = Icons.Default.Assessment,
         isBottomNav = true
     )
 

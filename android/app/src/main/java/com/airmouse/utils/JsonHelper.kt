@@ -7,7 +7,8 @@ import com.google.gson.reflect.TypeToken
 
 object JsonHelper {
 
-    private val gson: Gson = GsonBuilder()
+    @PublishedApi
+    internal val gson: Gson = GsonBuilder()
         .setPrettyPrinting()
         .create()
 

@@ -437,6 +437,8 @@ class PreferencesManager @Inject constructor(
         remove("connection_total_latency")
     }
 
+    fun getAllKeys(): Set<String> = prefs.all.keys
+
     fun incrementStat(key: String) {
         val current = getInt("stat_$key", 0)
         putInt("stat_$key", current + 1)

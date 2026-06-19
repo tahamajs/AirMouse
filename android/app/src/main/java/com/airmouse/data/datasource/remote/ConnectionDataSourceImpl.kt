@@ -129,11 +129,12 @@ class ConnectionDataSourceImpl @Inject constructor(
     }
 
     override suspend fun startDiscovery(onServerFound: (DiscoveredServer) -> Unit) {
-        udpDiscovery.onServerFound = { ip, port, name ->
+        udpDiscovery.onServerFound = { ip, port, name, version ->
             val server = DiscoveredServer(
                 ip = ip,
                 port = port,
                 name = name,
+                version = version,
                 lastSeen = System.currentTimeMillis()
             )
             if (_discoveredServers.none { it.ip == ip && it.port == port }) {

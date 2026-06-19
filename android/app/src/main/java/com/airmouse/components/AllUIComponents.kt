@@ -146,7 +146,7 @@ fun ControlDashboard(
             ) {
                 QuickActionButton("Calibrate", Icons.Default.Tune, modifier = Modifier.weight(1f)) { onActionClick("calibrate") }
                 QuickActionButton("Settings", Icons.Default.Settings, modifier = Modifier.weight(1f)) { onActionClick("settings") }
-                QuickActionButton("Statistics", Icons.Default.BarChart, modifier = Modifier.weight(1f)) { onActionClick("stats") }
+                QuickActionButton("Statistics", Icons.Default.Assessment, modifier = Modifier.weight(1f)) { onActionClick("stats") }
                 QuickActionButton("Help", Icons.AutoMirrored.Filled.Help, modifier = Modifier.weight(1f)) { onActionClick("help") }
             }
         }

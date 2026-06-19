@@ -42,7 +42,7 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem(Destinations.Home.route, "Home", Icons.Default.Home),
-    BottomNavItem(Destinations.Statistics.route, "Statistics", Icons.Default.BarChart),
+    BottomNavItem(Destinations.Statistics.route, "Statistics", Icons.Default.Assessment),
     BottomNavItem(Destinations.Settings.route, "Settings", Icons.Default.Settings),
     BottomNavItem(Destinations.Help.route, "Help", Icons.AutoMirrored.Filled.Help)
 )
@@ -293,7 +293,7 @@ fun ModernDrawerContent(
             title = "Main",
             items = listOf(
                 DrawerItem(Destinations.Home.route, "Home", Icons.Default.Home),
-                DrawerItem(Destinations.Statistics.route, "Statistics", Icons.Default.BarChart),
+                DrawerItem(Destinations.Statistics.route, "Statistics", Icons.Default.Assessment),
                 DrawerItem(Destinations.Settings.route, "Settings", Icons.Default.Settings),
                 DrawerItem(Destinations.Help.route, "Help", Icons.AutoMirrored.Filled.Help),
                 DrawerItem(Destinations.About.route, "About", Icons.Default.Info)
