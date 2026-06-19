@@ -12,7 +12,8 @@ interface ICalibrationRepository {
     // Calibration status
     suspend fun getCalibrationStatus(): CalibrationStatus
     fun observeCalibrationStatus(): Flow<CalibrationStatus>
-
+    suspend fun getCalibrationProgress(): Int
+    fun observeCalibrationProgress(): Flow<Int>
     // Gyroscope calibration
     suspend fun calibrateGyroscope(onProgress: (Int) -> Unit): Boolean
     suspend fun getGyroBias(): GyroBias

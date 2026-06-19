@@ -13,6 +13,10 @@ interface IConnectionRepository {
     // Connection management
     suspend fun connect(config: ConnectionConfig): Boolean
     suspend fun disconnect()
+    suspend fun sendKeyPress(keyCode: Int): Boolean
+    suspend fun sendWindowCommand(action: String): Boolean
+    suspend fun sendCalibrate(): Boolean
+
     suspend fun reconnect(): Boolean
 
     // Status

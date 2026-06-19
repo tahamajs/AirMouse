@@ -17,7 +17,13 @@ class CalibrationRepositoryImpl @Inject constructor(
     private val calibrationHelper: CalibrationHelper,
     private val prefs: PreferencesManager
 ) : ICalibrationRepository {
+    override suspend fun getCalibrationProgress(): Int {
+        return prefs.getInt("calibration_progress", 0)
+    }
 
+    override fun observeCalibrationProgress(): Flow<Int> {
+        return MutableStateFlow(prefs.getInt("calibration_progress", 0)).asStateFlow()
+    }
     private val _calibrationStatus = MutableStateFlow(CalibrationStatus.NOT_STARTED)
     override fun observeCalibrationStatus(): Flow<CalibrationStatus> = _calibrationStatus.asStateFlow()
 

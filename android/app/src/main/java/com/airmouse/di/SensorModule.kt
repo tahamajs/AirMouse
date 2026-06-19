@@ -21,4 +21,4 @@ object SensorModule {
     ): SensorManager {
         return context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
-}
+}// app/src/main/java/com/airmouse/di/SensorModule.kt

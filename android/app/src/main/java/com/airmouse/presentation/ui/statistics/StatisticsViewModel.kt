@@ -1,455 +1,763 @@
+// app/src/main/java/com/airmouse/presentation/ui/statistics/StatisticsScreen.kt
 package com.airmouse.presentation.ui.statistics
 
-import android.content.Context
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.airmouse.utils.PreferencesManager
-import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import java.io.File
+import androidx.compose.animation.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
-import javax.inject.Inject
 
-@HiltViewModel
-class StatisticsViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val prefs: PreferencesManager
-) : ViewModel() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StatisticsScreen(
+    navigationActions: NavigationActions,
+    viewModel: StatisticsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    private val _uiState = MutableStateFlow(StatisticsUiState())
-    val uiState: StateFlow<StatisticsUiState> = _uiState.asStateFlow()
-
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private var sessionTimerJob: kotlinx.coroutines.Job? = null
-    private var performanceJob: kotlinx.coroutines.Job? = null
-
-    init {
-        loadAllStatistics()
-        startSessionTimer()
-        startPerformanceMonitoring()
-    }
-
-    // ==================== LOAD ====================
-
-    private fun loadAllStatistics() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            loadGestureStats()
-            loadMovementStats()
-            loadConnectionStats()
-            loadCalibrationStats()
-            loadDailyStats()
-            loadGestureBreakdown()
-            loadSessionStartTime()
-            calculateSuccessRates()
-            updateLastActivity()
-
-            _uiState.update { it.copy(isLoading = false) }
-        }
-    }
-
-    private fun loadGestureStats() {
-        val clicks = prefs.getClickCount()
-        val doubleClicks = prefs.getDoubleClickCount()
-        val rightClicks = prefs.getRightClickCount()
-        val scrolls = prefs.getScrollCount()
-        val gestures = clicks + doubleClicks + rightClicks + scrolls
-        val custom = prefs.getInt("stat_custom_gestures", 0)
-
-        _uiState.update {
-            it.copy(
-                clicks = clicks,
-                doubleClicks = doubleClicks,
-                rightClicks = rightClicks,
-                scrolls = scrolls,
-                gesturesDetected = gestures,
-                customGesturesUsed = custom
-            )
-        }
-    }
-
-    private fun loadMovementStats() {
-        val distance = prefs.getFloat("stat_total_distance", 0f)
-        val movements = prefs.getInt("stat_total_movements", 0)
-        val avgSpeed = if (movements > 0) distance / movements else 0f
-        val peakSpeed = prefs.getFloat("stat_peak_speed", 0f)
-
-        _uiState.update {
-            it.copy(
-                totalDistanceMoved = distance,
-                totalMovements = movements,
-                averageSpeed = avgSpeed,
-                peakSpeed = peakSpeed
-            )
-        }
-    }
-
-    private fun loadConnectionStats() {
-        val attempts = prefs.getInt("stat_connection_attempts", 0)
-        val successful = prefs.getInt("stat_successful_connections", 0)
-        val failed = prefs.getInt("stat_failed_connections", 0)
-        val avgPing = prefs.getInt("stat_avg_ping", 0)
-
-        _uiState.update {
-            it.copy(
-                connectionAttempts = attempts,
-                successfulConnections = successful,
-                failedConnections = failed,
-                averagePing = avgPing
-            )
-        }
-    }
-
-    private fun loadCalibrationStats() {
-        val count = prefs.getInt("stat_calibration_count", 0)
-        val lastTime = prefs.getLong("stat_last_calibration", 0)
-
-        _uiState.update {
-            it.copy(
-                calibrationCount = count,
-                lastCalibrationTime = lastTime
-            )
-        }
-    }
-
-    private fun loadDailyStats() {
-        val stats = mutableListOf<DailyStats>()
-        val calendar = Calendar.getInstance()
-
-        for (i in 0..29) {
-            calendar.time = Date()
-            calendar.add(Calendar.DAY_OF_YEAR, -i)
-            val date = calendar.time
-            val dateKey = dateFormat.format(date)
-
-            stats.add(
-                DailyStats(
-                    date = date,
-                    clicks = prefs.getInt("stat_${dateKey}_clicks", 0),
-                    doubleClicks = prefs.getInt("stat_${dateKey}_double_clicks", 0),
-                    rightClicks = prefs.getInt("stat_${dateKey}_right_clicks", 0),
-                    scrolls = prefs.getInt("stat_${dateKey}_scrolls", 0),
-                    distance = prefs.getFloat("stat_${dateKey}_distance", 0f)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "📊 Statistics",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navigationActions.navigateBack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.showExportDialog(true) }) {
+                        Icon(Icons.Default.Share, contentDescription = "Export")
+                    }
+                    IconButton(onClick = { viewModel.showResetDialog(true) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Reset")
+                    }
+                    IconButton(onClick = { viewModel.refreshData() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
         }
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Time Range Selector
+                item {
+                    AnimatedContent(
+                        targetState = uiState.timeRange,
+                        transitionSpec = { fadeIn() + slideInHorizontally() }
+                    ) { _ ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                TimeRange.entries.forEach { range ->
+                                    FilterChip(
+                                        selected = uiState.timeRange == range,
+                                        onClick = { viewModel.updateTimeRange(range) },
+                                        label = {
+                                            Text(
+                                                range.displayName,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (uiState.timeRange == range) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
-        _uiState.update { it.copy(dailyStats = stats.reversed()) }
-    }
+                // Loading State
+                if (uiState.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
 
-    private fun loadGestureBreakdown() {
-        val breakdown = mapOf(
-            "Click" to _uiState.value.clicks,
-            "Double Click" to _uiState.value.doubleClicks,
-            "Right Click" to _uiState.value.rightClicks,
-            "Scroll" to _uiState.value.scrolls
-        ).filter { it.value > 0 }
+                // Error State
+                uiState.error?.let { error ->
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = error,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = { viewModel.clearError() }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Dismiss")
+                                }
+                            }
+                        }
+                    }
+                }
 
-        _uiState.update { it.copy(gestureBreakdown = breakdown) }
-    }
+                // Success State
+                uiState.success?.let { message ->
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = message,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = { viewModel.clearError() }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Dismiss")
+                                }
+                            }
+                        }
+                    }
+                }
 
-    private fun loadSessionStartTime() {
-        val start = prefs.getLong("stat_session_start", System.currentTimeMillis())
-        _uiState.update { it.copy(sessionStartTime = start) }
-    }
+                // Overview Stats
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "📈 Session Overview",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                StatCircle(
+                                    value = formatDuration(uiState.sessionTime),
+                                    label = "Session Time",
+                                    color = Color(0xFF2196F3)
+                                )
+                                StatCircle(
+                                    value = uiState.gesturesDetected.toString(),
+                                    label = "Total Gestures",
+                                    color = Color(0xFF4CAF50)
+                                )
+                                StatCircle(
+                                    value = String.format(Locale.getDefault(), "%.1f%%", uiState.calibrationSuccessRate),
+                                    label = "Calibration Rate",
+                                    color = Color(0xFFFF9800)
+                                )
+                            }
+                        }
+                    }
+                }
 
-    private fun calculateSuccessRates() {
-        val total = _uiState.value.connectionAttempts
-        val successful = _uiState.value.successfulConnections
-        val successRate = if (total > 0) (successful.toFloat() / total) * 100 else 0f
+                // Gesture Distribution
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "🎯 Gesture Distribution",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (uiState.gestureBreakdown.isNotEmpty()) {
+                                    Text(
+                                        text = "${uiState.gestureBreakdown.size} types",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
 
-        val calTotal = _uiState.value.calibrationCount
-        val calSuccess = prefs.getInt("stat_calibration_success", 0)
-        val calRate = if (calTotal > 0) (calSuccess.toFloat() / calTotal) * 100 else 0f
+                            if (uiState.gestureBreakdown.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "No gesture data yet",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                ) {
+                                    uiState.gestureBreakdown.forEach { (gesture, count) ->
+                                        GestureStatItem(
+                                            label = gesture,
+                                            value = count,
+                                            color = getGestureColor(gesture)
+                                        )
+                                    }
+                                }
 
-        _uiState.update {
-            it.copy(calibrationSuccessRate = calRate)
-        }
-    }
+                                Spacer(modifier = Modifier.height(12.dp))
 
-    private fun updateLastActivity() {
-        _uiState.update { it.copy(lastActivityTime = System.currentTimeMillis()) }
-    }
+                                // Pie Chart
+                                Canvas(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp)
+                                ) {
+                                    val total = uiState.gestureBreakdown.values.sum().toFloat()
+                                    if (total == 0f) return@Canvas
 
-    // ==================== REAL-TIME UPDATES ====================
+                                    val colors = listOf(
+                                        Color(0xFF4CAF50),
+                                        Color(0xFF2196F3),
+                                        Color(0xFFFF9800),
+                                        Color(0xFF9C27B0),
+                                        Color(0xFFE91E63),
+                                        Color(0xFF00BCD4)
+                                    )
 
-    private fun startSessionTimer() {
-        sessionTimerJob = viewModelScope.launch {
-            while (true) {
-                delay(1000)
-                _uiState.update {
-                    it.copy(sessionTime = (System.currentTimeMillis() - it.sessionStartTime) / 1000)
+                                    var startAngle = -90f
+                                    val centerX = size.width / 2
+                                    val centerY = size.height / 2
+                                    val radius = minOf(size.width, size.height) * 0.4f
+
+                                    uiState.gestureBreakdown.values.forEachIndexed { index, count ->
+                                        val sweepAngle = (count / total) * 360f
+                                        drawArc(
+                                            color = colors[index % colors.size],
+                                            startAngle = startAngle,
+                                            sweepAngle = sweepAngle,
+                                            useCenter = true,
+                                            topLeft = Offset(centerX - radius, centerY - radius),
+                                            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                                        )
+                                        startAngle += sweepAngle
+                                    }
+
+                                    // Center hole for donut chart
+                                    drawCircle(
+                                        color = MaterialTheme.colorScheme.surface,
+                                        radius = radius * 0.5f,
+                                        center = Offset(centerX, centerY)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Movement Stats
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "🏃 Movement Statistics",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                StatBox(
+                                    "Distance",
+                                    String.format(Locale.getDefault(), "%.1f", uiState.totalDistanceMoved),
+                                    Color(0xFF2196F3)
+                                )
+                                StatBox(
+                                    "Avg Speed",
+                                    String.format(Locale.getDefault(), "%.1f", uiState.averageSpeed),
+                                    Color(0xFF4CAF50)
+                                )
+                                StatBox(
+                                    "Peak Speed",
+                                    String.format(Locale.getDefault(), "%.1f", uiState.peakSpeed),
+                                    Color(0xFFFF9800)
+                                )
+                                StatBox(
+                                    "Movements",
+                                    uiState.totalMovements.toString(),
+                                    Color(0xFF9C27B0)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Connection Stats
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "🔌 Connection Statistics",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                StatBox("Attempts", uiState.connectionAttempts.toString(), Color(0xFF2196F3))
+                                StatBox("Successful", uiState.successfulConnections.toString(), Color(0xFF4CAF50))
+                                StatBox("Failed", uiState.failedConnections.toString(), Color(0xFFF44336))
+                                StatBox("Avg Ping", "${uiState.averagePing}ms", Color(0xFFFF9800))
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            val progressValue = if (uiState.connectionAttempts > 0)
+                                uiState.successfulConnections.toFloat() / uiState.connectionAttempts
+                            else 0f
+
+                            LinearProgressIndicator(
+                                progress = { progressValue },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = if (progressValue > 0.7f) Color(0xFF4CAF50) else Color(0xFFFF9800)
+                            )
+                            Text(
+                                text = "Success Rate: ${String.format(Locale.getDefault(), "%.1f%%", progressValue * 100)}",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.align(Alignment.End)
+                            )
+                        }
+                    }
+                }
+
+                // Daily Activity Chart
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "📊 Daily Activity (Clicks)",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            if (uiState.dailyStats.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "No daily data",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                val maxClicks = uiState.dailyStats.maxOfOrNull { it.clicks } ?: 1
+
+                                Canvas(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(150.dp)
+                                ) {
+                                    val width = size.width
+                                    val height = size.height
+                                    val stepX = width / (uiState.dailyStats.size - 1).coerceAtLeast(1)
+
+                                    val points = uiState.dailyStats.mapIndexed { i, stat ->
+                                        Offset(
+                                            x = i * stepX,
+                                            y = height - (stat.clicks.toFloat() / maxClicks) * height * 0.9f
+                                        )
+                                    }
+
+                                    // Draw line
+                                    for (i in 0 until points.size - 1) {
+                                        drawLine(
+                                            color = Color(0xFF00BCD4),
+                                            start = points[i],
+                                            end = points[i + 1],
+                                            strokeWidth = 3f
+                                        )
+                                    }
+
+                                    // Fill area
+                                    val path = Path().apply {
+                                        moveTo(0f, height)
+                                        points.forEach { lineTo(it.x, it.y) }
+                                        lineTo(width, height)
+                                        close()
+                                    }
+                                    drawPath(path, Color(0xFF00BCD4).copy(alpha = 0.2f))
+
+                                    // Draw points
+                                    points.forEach { point ->
+                                        drawCircle(
+                                            color = Color(0xFF00BCD4),
+                                            radius = 4f,
+                                            center = point
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Performance Metrics
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "⚡ Performance Metrics",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                StatBox("Battery", "${uiState.batteryUsage}%", Color(0xFF4CAF50))
+                                StatBox("CPU", String.format(Locale.getDefault(), "%.1f%%", uiState.cpuUsage), Color(0xFF2196F3))
+                                StatBox("Memory", String.format(Locale.getDefault(), "%.1f%%", uiState.memoryUsage), Color(0xFFFF9800))
+                                StatBox("Temp", String.format(Locale.getDefault(), "%.1f°C", uiState.temperature), Color(0xFFF44336))
+                            }
+                        }
+                    }
+                }
+
+                // Session Info
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "📋 Session Information",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text("Session Start", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
+                                            .format(Date(uiState.sessionStartTime)),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Column {
+                                    Text("Last Calibration", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        if (uiState.lastCalibrationTime > 0)
+                                            SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
+                                                .format(Date(uiState.lastCalibrationTime))
+                                        else "Never",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Column {
+                                    Text("Calibrations", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${uiState.calibrationCount} times", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Footer spacing
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
 
-    private fun startPerformanceMonitoring() {
-        performanceJob = viewModelScope.launch {
-            while (true) {
-                // Simulate – replace with real readings from system
-                val cpu = (5..60).random().toFloat()
-                val mem = (20..80).random().toFloat()
-                val temp = (25..45).random().toFloat()
+    // ==================== DIALOGS ====================
 
-                _uiState.update {
-                    it.copy(
-                        cpuUsage = cpu,
-                        memoryUsage = mem,
-                        temperature = temp
+    // Reset Dialog
+    if (uiState.showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.showResetDialog(false) },
+            title = {
+                Text(
+                    "Reset Statistics",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Are you sure you want to reset all statistics? This action cannot be undone."
+                )
+            },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.resetStatistics() },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Reset All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.showResetDialog(false) }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    }
+
+    // Export Dialog
+    if (uiState.showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.showExportDialog(false) },
+            title = {
+                Text(
+                    "📤 Export Statistics",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text("Export your statistics to a file.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Format: Text file (.txt)",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Location: Downloads folder",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                delay(5000)
-            }
-        }
+            },
+            icon = {
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = null
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.exportStatistics() }
+                ) {
+                    Text("Export")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.showExportDialog(false) }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     }
+}
 
-    // ==================== RECORD METHODS (called from outside) ====================
+// ==================== UI COMPONENTS ====================
 
-    fun recordGesture(gesture: String) {
-        viewModelScope.launch {
-            val today = dateFormat.format(Date())
-            when (gesture) {
-                "click" -> {
-                    prefs.incrementClickCount()
-                    prefs.putInt("stat_${today}_clicks", prefs.getInt("stat_${today}_clicks", 0) + 1)
-                    _uiState.update { it.copy(clicks = it.clicks + 1) }
-                }
-                "doubleclick" -> {
-                    prefs.incrementDoubleClickCount()
-                    prefs.putInt("stat_${today}_double_clicks", prefs.getInt("stat_${today}_double_clicks", 0) + 1)
-                    _uiState.update { it.copy(doubleClicks = it.doubleClicks + 1) }
-                }
-                "rightclick" -> {
-                    prefs.incrementRightClickCount()
-                    prefs.putInt("stat_${today}_right_clicks", prefs.getInt("stat_${today}_right_clicks", 0) + 1)
-                    _uiState.update { it.copy(rightClicks = it.rightClicks + 1) }
-                }
-                "scroll" -> {
-                    prefs.incrementScrollCount()
-                    prefs.putInt("stat_${today}_scrolls", prefs.getInt("stat_${today}_scrolls", 0) + 1)
-                    _uiState.update { it.copy(scrolls = it.scrolls + 1) }
-                }
-                "custom" -> {
-                    prefs.incrementStat("custom_gestures")
-                    _uiState.update { it.copy(customGesturesUsed = it.customGesturesUsed + 1) }
-                }
-            }
-            loadGestureBreakdown()
-        }
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        content()
     }
+}
 
-    fun recordMovement(distance: Float, speed: Float) {
-        viewModelScope.launch {
-            val today = dateFormat.format(Date())
-            val newDistance = _uiState.value.totalDistanceMoved + distance
-            val newMovements = _uiState.value.totalMovements + 1
-            val avgSpeed = if (newMovements > 0) newDistance / newMovements else 0f
-            val peakSpeed = maxOf(_uiState.value.peakSpeed, speed)
-
-            prefs.putFloat("stat_total_distance", newDistance)
-            prefs.putInt("stat_total_movements", newMovements)
-            prefs.putFloat("stat_peak_speed", peakSpeed)
-            prefs.putFloat("stat_${today}_distance", prefs.getFloat("stat_${today}_distance", 0f) + distance)
-
-            _uiState.update {
-                it.copy(
-                    totalDistanceMoved = newDistance,
-                    totalMovements = newMovements,
-                    averageSpeed = avgSpeed,
-                    peakSpeed = peakSpeed
+@Composable
+fun StatCircle(value: String, label: String, color: Color) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(80.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(72.dp),
+            shape = CircleShape,
+            color = color.copy(alpha = 0.15f),
+            shadowElevation = 4.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    value,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = color,
+                    maxLines = 2,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            label,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
+}
 
-    fun recordConnectionAttempt(success: Boolean, ping: Int) {
-        viewModelScope.launch {
-            val attempts = _uiState.value.connectionAttempts + 1
-            val successful = if (success) _uiState.value.successfulConnections + 1 else _uiState.value.successfulConnections
-            val failed = if (!success) _uiState.value.failedConnections + 1 else _uiState.value.failedConnections
-
-            prefs.putInt("stat_connection_attempts", attempts)
-            prefs.putInt("stat_successful_connections", successful)
-            prefs.putInt("stat_failed_connections", failed)
-
-            val currentAvg = _uiState.value.averagePing
-            val newAvg = if (currentAvg == 0) ping else (currentAvg + ping) / 2
-            prefs.putInt("stat_avg_ping", newAvg)
-
-            _uiState.update {
-                it.copy(
-                    connectionAttempts = attempts,
-                    successfulConnections = successful,
-                    failedConnections = failed,
-                    averagePing = newAvg
-                )
-            }
-        }
+@Composable
+fun StatBox(label: String, value: String, color: Color) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(70.dp)
+    ) {
+        Text(
+            value,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            label,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
+}
 
-    fun recordCalibration(success: Boolean) {
-        viewModelScope.launch {
-            val count = _uiState.value.calibrationCount + 1
-            prefs.putInt("stat_calibration_count", count)
-            prefs.putLong("stat_last_calibration", System.currentTimeMillis())
-
-            if (success) {
-                val successes = prefs.getInt("stat_calibration_success", 0) + 1
-                prefs.putInt("stat_calibration_success", successes)
-            }
-
-            _uiState.update {
-                it.copy(
-                    calibrationCount = count,
-                    lastCalibrationTime = System.currentTimeMillis()
-                )
-            }
-            calculateSuccessRates()
-        }
+@Composable
+fun GestureStatItem(label: String, value: Int, color: Color) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(70.dp)
+    ) {
+        Text(
+            value.toString(),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            label,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
+}
 
-    // ==================== UI ACTIONS ====================
-
-    fun updateTimeRange(range: TimeRange) {
-        _uiState.update { it.copy(timeRange = range) }
-        filterStatsByTimeRange()
+private fun getGestureColor(gesture: String): Color {
+    return when (gesture.lowercase(Locale.getDefault())) {
+        "click" -> Color(0xFF4CAF50)
+        "double click" -> Color(0xFF2196F3)
+        "right click" -> Color(0xFFFF9800)
+        "scroll" -> Color(0xFF9C27B0)
+        else -> Color(0xFFE91E63)
     }
+}
 
-    private fun filterStatsByTimeRange() {
-        val range = _uiState.value.timeRange
-        if (range.days > 0) {
-            val cutoff = Calendar.getInstance().apply {
-                add(Calendar.DAY_OF_YEAR, -range.days)
-            }.time
-
-            val filtered = _uiState.value.dailyStats.filter { it.date.after(cutoff) }
-            _uiState.update { it.copy(dailyStats = filtered) }
-        }
-    }
-
-    fun updateChartType(type: ChartType) {
-        _uiState.update { it.copy(selectedChart = type) }
-    }
-
-    fun showResetDialog(show: Boolean) {
-        _uiState.update { it.copy(showResetDialog = show) }
-    }
-
-    fun showExportDialog(show: Boolean) {
-        _uiState.update { it.copy(showExportDialog = show) }
-    }
-
-    fun resetStatistics() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            prefs.resetStatistics()
-            // Also clear daily stats – in production you would iterate and clear all stat_* keys
-            // For simplicity we reload everything.
-            loadAllStatistics()
-
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    showResetDialog = false,
-                    success = "Statistics reset successfully"
-                )
-            }
-            clearMessages()
-        }
-    }
-
-    fun exportStatistics() {
-        viewModelScope.launch {
-            try {
-                val exportData = buildString {
-                    appendLine("Air Mouse Pro - Statistics Export")
-                    appendLine("Exported: ${Date()}")
-                    appendLine("=".repeat(50))
-                    appendLine()
-                    appendLine("Gesture Statistics:")
-                    appendLine("  Total Clicks: ${_uiState.value.clicks}")
-                    appendLine("  Double Clicks: ${_uiState.value.doubleClicks}")
-                    appendLine("  Right Clicks: ${_uiState.value.rightClicks}")
-                    appendLine("  Scrolls: ${_uiState.value.scrolls}")
-                    appendLine("  Custom Gestures: ${_uiState.value.customGesturesUsed}")
-                    appendLine()
-                    appendLine("Movement Statistics:")
-                    appendLine("  Total Distance: ${String.format("%.2f", _uiState.value.totalDistanceMoved)} units")
-                    appendLine("  Average Speed: ${String.format("%.2f", _uiState.value.averageSpeed)} units/s")
-                    appendLine("  Peak Speed: ${String.format("%.2f", _uiState.value.peakSpeed)} units/s")
-                    appendLine("  Total Movements: ${_uiState.value.totalMovements}")
-                    appendLine()
-                    appendLine("Connection Statistics:")
-                    appendLine("  Connection Attempts: ${_uiState.value.connectionAttempts}")
-                    appendLine("  Successful: ${_uiState.value.successfulConnections}")
-                    appendLine("  Failed: ${_uiState.value.failedConnections}")
-                    appendLine("  Average Ping: ${_uiState.value.averagePing}ms")
-                    appendLine()
-                    appendLine("Calibration Statistics:")
-                    appendLine("  Last Calibration: ${if (_uiState.value.lastCalibrationTime > 0) Date(_uiState.value.lastCalibrationTime) else "Never"}")
-                    appendLine("  Calibration Count: ${_uiState.value.calibrationCount}")
-                    appendLine("  Success Rate: ${String.format("%.1f", _uiState.value.calibrationSuccessRate)}%")
-                    appendLine()
-                    appendLine("Session:")
-                    appendLine("  Session Time: ${formatDuration(_uiState.value.sessionTime)}")
-                    appendLine("  Battery Usage: ${_uiState.value.batteryUsage}%")
-                    appendLine()
-                    appendLine("Performance (current):")
-                    appendLine("  CPU: ${String.format("%.1f", _uiState.value.cpuUsage)}%")
-                    appendLine("  Memory: ${String.format("%.1f", _uiState.value.memoryUsage)}%")
-                    appendLine("  Temperature: ${String.format("%.1f", _uiState.value.temperature)}°C")
-                }
-
-                val fileName = "airmouse_stats_${System.currentTimeMillis()}.txt"
-                val file = File(context.getExternalFilesDir(null), fileName)
-                file.writeText(exportData)
-
-                _uiState.update {
-                    it.copy(
-                        showExportDialog = false,
-                        success = "Statistics exported to $fileName"
-                    )
-                }
-                clearMessages()
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Export failed: ${e.message}") }
-            }
-        }
-    }
-
-    fun clearError() {
-        _uiState.update { it.copy(error = null) }
-    }
-
-    private fun clearMessages() {
-        viewModelScope.launch {
-            delay(3000)
-            _uiState.update { it.copy(error = null, success = null) }
-        }
-    }
-
-    private fun formatDuration(seconds: Long): String {
-        val hours = seconds / 3600
-        val minutes = (seconds % 3600) / 60
-        val secs = seconds % 60
-        return if (hours > 0) String.format("%02d:%02d:%02d", hours, minutes, secs)
-        else String.format("%02d:%02d", minutes, secs)
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        sessionTimerJob?.cancel()
-        performanceJob?.cancel()
-        prefs.putLong("stat_session_start", System.currentTimeMillis())
-    }
+private fun formatDuration(seconds: Long): String {
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val secs = seconds % 60
+    return if (hours > 0) String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, secs)
+    else String.format(Locale.getDefault(), "%02d:%02d", minutes, secs)
 }

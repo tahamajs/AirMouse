@@ -1,239 +1,331 @@
+// app/src/main/java/com/airmouse/data/repository/ProximityRepositoryImpl.kt
 package com.airmouse.data.repository
 
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
-import com.airmouse.domain.model.ProximityCalibration
-import com.airmouse.domain.model.ProximityCalibrationStatus
-import com.airmouse.domain.model.ProximityState
+import com.airmouse.domain.model.*
 import com.airmouse.domain.repository.IProximityRepository
+import com.airmouse.network.ConnectionManager
 import com.airmouse.utils.PreferencesManager
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.pow
 
 @Singleton
 class ProximityRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val context: Context,
     private val prefs: PreferencesManager,
-    private val bluetoothAdapter: BluetoothAdapter
+    private val connectionManager: ConnectionManager
 ) : IProximityRepository {
 
-    private val _proximityState = MutableStateFlow(ProximityState.UNKNOWN)
-    override fun getProximityState(): StateFlow<ProximityState> = _proximityState.asStateFlow()
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _distance = MutableStateFlow(5.0f)
-    override fun getDistance(): StateFlow<Float> = _distance.asStateFlow()
+    private val _state = MutableStateFlow(ProximityState())
+    override fun observeProximityState(): Flow<ProximityState> = _state.asStateFlow()
 
+    private val _config = MutableStateFlow(ProximityConfig())
     private val _isMonitoring = MutableStateFlow(false)
-    override fun isMonitoring(): StateFlow<Boolean> = _isMonitoring.asStateFlow()
+    private val _isCalibrating = MutableStateFlow(false)
+    private val _calibrationProgress = MutableStateFlow(0)
 
-    private val _calibration = MutableStateFlow(ProximityCalibration.DEFAULT)
-    override fun getCalibration(): StateFlow<ProximityCalibration> = _calibration.asStateFlow()
-
-    private var scanJob = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var targetDevice: BluetoothDevice? = null
-    private var currentRssi = -100
+    private var bluetoothAdapter: BluetoothAdapter? = null
+    private var lastRssi = -100
+    private var rssiHistory = mutableListOf<Int>()
+    private val maxHistorySize = 10
 
     init {
-        loadCalibration()
+        initBluetooth()
+        loadConfig()
+        loadCalibrationData()
+        startMonitoringIfEnabled()
     }
 
-    private fun loadCalibration() {
-        _calibration.value = ProximityCalibration(
-            isCalibrated = prefs.getBoolean("proximity_calibrated", false),
-            referenceRssi = prefs.getInt("proximity_reference_rssi", -59),
-            pathLossExponent = prefs.getFloat("proximity_path_loss", 2.5f),
+    private fun initBluetooth() {
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
+    }
+
+    private fun loadConfig() {
+        _config.value = ProximityConfig(
+            enabled = prefs.getBoolean("proximity_enabled", false),
             nearThreshold = prefs.getFloat("proximity_near_threshold", 1.5f),
             farThreshold = prefs.getFloat("proximity_far_threshold", 3.0f),
-            accuracy = prefs.getFloat("proximity_accuracy", 0.7f),
-            calibrationTime = prefs.getLong("proximity_calibration_time", 0)
+            scanInterval = prefs.getLong("proximity_scan_interval", 1000L),
+            vibrationEnabled = prefs.getBoolean("proximity_vibration", true),
+            autoLockEnabled = prefs.getBoolean("proximity_auto_lock", true),
+            autoUnlockEnabled = prefs.getBoolean("proximity_auto_unlock", true),
+            deviceAddress = prefs.getString("proximity_device_address", "")
         )
     }
 
-    private fun saveCalibration() {
-        val cal = _calibration.value
-        prefs.putBoolean("proximity_calibrated", cal.isCalibrated)
-        prefs.putInt("proximity_reference_rssi", cal.referenceRssi)
-        prefs.putFloat("proximity_path_loss", cal.pathLossExponent)
-        prefs.putFloat("proximity_near_threshold", cal.nearThreshold)
-        prefs.putFloat("proximity_far_threshold", cal.farThreshold)
-        prefs.putFloat("proximity_accuracy", cal.accuracy)
-        prefs.putLong("proximity_calibration_time", cal.calibrationTime)
+    private fun loadCalibrationData() {
+        val txPower = prefs.getInt("proximity_tx_power", -59)
+        val pathLoss = prefs.getFloat("proximity_path_loss", 2.5f)
+        // Store for later use
     }
 
-    override suspend fun calibrate(): Unit = calibrate(
-        referenceRssi = _calibration.value.referenceRssi,
-        pathLossExponent = _calibration.value.pathLossExponent,
-        nearThreshold = _calibration.value.nearThreshold,
-        farThreshold = _calibration.value.farThreshold
-    )
-
-    override suspend fun calibrate(
-        referenceRssi: Int,
-        pathLossExponent: Float,
-        nearThreshold: Float,
-        farThreshold: Float
-    ) {
-        _calibration.value = ProximityCalibration(
-            isCalibrated = true,
-            referenceRssi = referenceRssi,
-            pathLossExponent = pathLossExponent,
-            nearThreshold = nearThreshold,
-            farThreshold = farThreshold,
-            accuracy = 0.8f,
-            calibrationTime = System.currentTimeMillis()
-        )
-        saveCalibration()
-    }
-
-    override suspend fun startMonitoring(deviceAddress: String) {
-        if (_isMonitoring.value) return
-
-        try {
-            targetDevice = bluetoothAdapter?.getRemoteDevice(deviceAddress)
-            if (targetDevice == null) {
-                _isMonitoring.value = false
-                return
-            }
-
-            _isMonitoring.value = true
-            startRssiScanning()
-        } catch (e: Exception) {
-            _isMonitoring.value = false
+    private fun startMonitoringIfEnabled() {
+        if (_config.value.enabled && _config.value.deviceAddress.isNotEmpty()) {
+            scope.launch { startMonitoring() }
         }
     }
 
-    private fun startRssiScanning() {
-        scanJob.cancel()
-        scanJob = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    override suspend fun getProximityState(): ProximityState = _state.value
 
-        scanJob.launch {
+    override suspend fun startMonitoring() {
+        if (_isMonitoring.value) return
+        if (_config.value.deviceAddress.isEmpty()) {
+            return
+        }
+
+        _isMonitoring.value = true
+        scope.launch {
             while (_isMonitoring.value) {
                 try {
-                    // In production, use BluetoothGatt to read RSSI
-                    // For now, simulate RSSI changes
-                    val rssi = simulateRssi()
-                    currentRssi = rssi
-                    updateProximity(rssi, targetDevice?.address ?: "", targetDevice?.name)
-                    delay(500)
+                    val distance = estimateDistance()
+                    val isNear = checkProximity(distance)
+                    val rssi = getCurrentRssi()
+
+                    _state.value = ProximityState(
+                        isNear = isNear,
+                        distance = distance,
+                        rssi = rssi,
+                        deviceAddress = _config.value.deviceAddress,
+                        deviceName = getDeviceName(),
+                        lastUpdated = System.currentTimeMillis()
+                    )
+
+                    // Send to server via ConnectionManager
+                    connectionManager.sendProximity(isNear, distance)
+
+                    // Auto lock/unlock based on proximity
+                    if (_config.value.autoLockEnabled || _config.value.autoUnlockEnabled) {
+                        handleAutoLock(isNear)
+                    }
+
+                    delay(_config.value.scanInterval)
                 } catch (e: Exception) {
-                    delay(1000)
+                    // Handle error
                 }
             }
         }
     }
 
-    private fun simulateRssi(): Int {
-        // Simulate realistic RSSI fluctuation
-        val baseRssi = -65
-        val variation = (Math.random() * 20 - 10).toInt()
-        return baseRssi + variation
-    }
-
-    private suspend fun updateProximity(rssi: Int, deviceAddress: String, deviceName: String?) {
-        val calibration = _calibration.value
-        val distance = calibration.calculateDistance(rssi)
-
-        val isNear = if (_proximityState.value.isNear) {
-            distance < calibration.farThreshold
-        } else {
-            distance < calibration.nearThreshold
-        }
-
-        val confidence = calculateConfidence(rssi, distance)
-
-        _distance.value = distance
-        _proximityState.value = ProximityState(
-            isNear = isNear,
-            distance = distance,
-            signalStrength = rssi,
-            deviceAddress = deviceAddress,
-            deviceName = deviceName,
-            confidence = confidence
-        )
-    }
-
-    private fun calculateConfidence(rssi: Int, distance: Float): Float {
-        val signalConfidence = when {
-            rssi > -50 -> 0.95f
-            rssi > -60 -> 0.85f
-            rssi > -70 -> 0.7f
-            rssi > -80 -> 0.5f
-            else -> 0.3f
-        }
-
-        val distanceConfidence = when {
-            distance < 1.0f -> 0.95f
-            distance < 2.0f -> 0.85f
-            distance < 3.0f -> 0.7f
-            else -> 0.5f
-        }
-
-        return (signalConfidence * 0.6f + distanceConfidence * 0.4f)
-    }
-
     override suspend fun stopMonitoring() {
         _isMonitoring.value = false
-        scanJob.cancel()
-        scanJob = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        _proximityState.value = ProximityState.UNKNOWN
-        _distance.value = 5.0f
+        _state.value = _state.value.copy(lastUpdated = System.currentTimeMillis())
     }
 
-    override suspend fun setThresholds(near: Float, far: Float) {
-        val cal = _calibration.value
-        _calibration.value = cal.copy(
-            nearThreshold = near.coerceIn(0.3f, 5.0f),
-            farThreshold = far.coerceIn(1.0f, 10.0f)
-        )
-        saveCalibration()
+    override suspend fun isMonitoring(): Boolean = _isMonitoring.value
+
+    override suspend fun getConfig(): ProximityConfig = _config.value
+
+    override suspend fun updateConfig(config: ProximityConfig) {
+        _config.value = config
+        prefs.putBoolean("proximity_enabled", config.enabled)
+        prefs.putFloat("proximity_near_threshold", config.nearThreshold)
+        prefs.putFloat("proximity_far_threshold", config.farThreshold)
+        prefs.putLong("proximity_scan_interval", config.scanInterval)
+        prefs.putBoolean("proximity_vibration", config.vibrationEnabled)
+        prefs.putBoolean("proximity_auto_lock", config.autoLockEnabled)
+        prefs.putBoolean("proximity_auto_unlock", config.autoUnlockEnabled)
+        prefs.putString("proximity_device_address", config.deviceAddress)
+
+        if (config.enabled && config.deviceAddress.isNotEmpty()) {
+            startMonitoring()
+        } else {
+            stopMonitoring()
+        }
+    }
+
+    override suspend fun calibrate(): Boolean {
+        if (_isCalibrating.value) return false
+        _isCalibrating.value = true
+        _calibrationProgress.value = 0
+
+        try {
+            val samples = mutableListOf<Pair<Int, Float>>()
+            val distances = listOf(0.5f, 1.0f, 2.0f, 3.0f, 5.0f)
+
+            for ((index, distance) in distances.withIndex()) {
+                // Wait for user to place device at distance
+                delay(3000)
+                val rssi = getAverageRssi()
+                if (rssi != -100) {
+                    samples.add(Pair(rssi, distance))
+                }
+                _calibrationProgress.value = ((index + 1) * 100 / distances.size)
+            }
+
+            if (samples.size >= 3) {
+                calculateCalibrationParameters(samples)
+                prefs.putBoolean("proximity_calibrated", true)
+                return true
+            }
+            return false
+        } finally {
+            _isCalibrating.value = false
+            _calibrationProgress.value = 0
+        }
+    }
+
+    private fun calculateCalibrationParameters(samples: List<Pair<Int, Float>>) {
+        // Linear regression to find txPower and path loss exponent
+        val n = samples.size
+        var sumRssi = 0.0
+        var sumDist = 0.0
+        var sumRssiLog = 0.0
+        var sumLogDist = 0.0
+        var sumLogDistSq = 0.0
+
+        samples.forEach { (rssi, distance) ->
+            val logDist = Math.log10(distance.toDouble())
+            sumRssi += rssi
+            sumDist += distance
+            sumRssiLog += rssi * logDist
+            sumLogDist += logDist
+            sumLogDistSq += logDist * logDist
+        }
+
+        val numerator = n * sumRssiLog - sumRssi * sumLogDist
+        val denominator = n * sumLogDistSq - sumLogDist * sumLogDist
+        val pathLoss = if (denominator != 0.0) -10 * numerator / denominator else 2.5
+
+        // Calculate txPower (RSSI at 1 meter)
+        val avgRssiAt1m = samples.filter { it.second == 1.0 }.map { it.first }.average()
+        val txPower = if (avgRssiAt1m > 0) avgRssiAt1m else -59.0
+
+        prefs.putInt("proximity_tx_power", txPower.toInt())
+        prefs.putFloat("proximity_path_loss", pathLoss.toFloat())
     }
 
     override suspend fun getCalibrationStatus(): ProximityCalibrationStatus {
-        val cal = _calibration.value
-        return ProximityCalibrationStatus(
-            isCalibrated = cal.isCalibrated,
-            accuracy = cal.accuracy,
-            nearThreshold = cal.nearThreshold,
-            farThreshold = cal.farThreshold,
-            referenceRssi = cal.referenceRssi,
-            pathLossExponent = cal.pathLossExponent,
-            qualityScore = cal.qualityScore,
-            qualityColor = cal.qualityColor,
-            confidenceDescription = cal.confidenceDescription
-        )
+        return if (prefs.getBoolean("proximity_calibrated", false)) {
+            ProximityCalibrationStatus.CALIBRATED
+        } else {
+            ProximityCalibrationStatus.NOT_CALIBRATED
+        }
     }
 
     override suspend fun resetCalibration() {
-        _calibration.value = ProximityCalibration.DEFAULT
         prefs.putBoolean("proximity_calibrated", false)
+        prefs.remove("proximity_tx_power")
+        prefs.remove("proximity_path_loss")
+        _state.value = _state.value.copy(
+            isNear = false,
+            distance = 0f,
+            rssi = 0
+        )
+    }
+
+    override suspend fun setDeviceAddress(address: String) {
+        val config = _config.value.copy(deviceAddress = address)
+        updateConfig(config)
+    }
+
+    override suspend fun getDeviceAddress(): String = _config.value.deviceAddress
+
+    override suspend fun getDeviceName(): String {
+        val address = _config.value.deviceAddress
+        return if (address.isNotEmpty() && bluetoothAdapter != null) {
+            try {
+                val device = bluetoothAdapter!!.getRemoteDevice(address)
+                device.name ?: address
+            } catch (e: Exception) {
+                address
+            }
+        } else {
+            "Unknown"
+        }
     }
 
     override suspend fun isBluetoothEnabled(): Boolean {
-        return bluetoothAdapter?.isEnabled ?: false
+        return bluetoothAdapter?.isEnabled == true
     }
 
-    override suspend fun getDeviceAddress(): String? {
-        return bluetoothAdapter?.address
+    override suspend fun lockScreen() {
+        connectionManager.sendLockScreen()
+        _state.value = _state.value.copy(isNear = false)
+    }
+
+    override suspend fun unlockScreen() {
+        connectionManager.sendUnlockScreen()
+        _state.value = _state.value.copy(isNear = true)
     }
 
     override suspend fun disconnect() {
         stopMonitoring()
+        _config.value = _config.value.copy(enabled = false)
+        updateConfig(_config.value)
     }
 
-    fun destroy() {
-        scanJob.cancel()
+    override suspend fun getCalibrationProgress(): Int = _calibrationProgress.value
+
+    override suspend fun isCalibrating(): Boolean = _isCalibrating.value
+
+    private suspend fun estimateDistance(): Float {
+        val rssi = getCurrentRssi()
+        return calculateDistanceFromRssi(rssi)
+    }
+
+    private fun getCurrentRssi(): Int {
+        // In real implementation, read from BluetoothDevice
+        // For now, return simulated value
+        return (-80..-30).random()
+    }
+
+    private suspend fun getAverageRssi(): Int {
+        var sum = 0
+        var count = 0
+        repeat(10) {
+            val rssi = getCurrentRssi()
+            if (rssi != -100) {
+                sum += rssi
+                count++
+            }
+            delay(100)
+        }
+        return if (count > 0) sum / count else -100
+    }
+
+    private fun calculateDistanceFromRssi(rssi: Int): Float {
+        val txPower = prefs.getInt("proximity_tx_power", -59)
+        val pathLoss = prefs.getFloat("proximity_path_loss", 2.5f)
+        val ratio = (txPower - rssi) / (10.0 * pathLoss)
+        val distance = 10.0.pow(ratio)
+        return distance.toFloat().coerceIn(0.3f, 15.0f)
+    }
+
+    private fun checkProximity(distance: Float): Boolean {
+        val wasNear = _state.value.isNear
+        val nearThreshold = _config.value.nearThreshold
+        val farThreshold = _config.value.farThreshold
+
+        return if (wasNear) {
+            distance < farThreshold
+        } else {
+            distance < nearThreshold
+        }
+    }
+
+    private suspend fun handleAutoLock(isNear: Boolean) {
+        val wasNear = _state.value.isNear
+        if (isNear != wasNear) {
+            if (isNear && _config.value.autoUnlockEnabled) {
+                unlockScreen()
+            } else if (!isNear && _config.value.autoLockEnabled) {
+                lockScreen()
+            }
+        }
     }
 }

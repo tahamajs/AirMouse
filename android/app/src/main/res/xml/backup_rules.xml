@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <include domain="sharedpref" path="." />
-    <include domain="database" path="." />
-    <exclude domain="file" path="cache" />
+    <include domain="database" path="airmouse_database" />
+    <include domain="file" path="." />
+    <exclude domain="file" path="cache/" />
+    <exclude domain="file" path="code_cache/" />
 </full-backup-content>

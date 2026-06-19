@@ -12,7 +12,6 @@ interface IUpdateRepository {
     suspend fun checkForUpdates(): UpdateResult
     suspend fun checkForUpdatesManually(): UpdateResult
     fun observeUpdateStatus(): Flow<UpdateResult>
-
     // Download
     suspend fun downloadUpdate(version: String): Boolean
     suspend fun downloadUpdate(version: String, onProgress: (Float) -> Unit): Boolean
@@ -35,4 +34,5 @@ interface IUpdateRepository {
     // Cancel
     suspend fun cancelDownload()
     suspend fun cancelInstall()
+    suspend fun downloadAndInstallUpdate(version: String): Boolean
 }

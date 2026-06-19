@@ -39,7 +39,34 @@ data class GestureEvent(
     val velocity: Float = 0f,
     val duration: Long = 0,
     val isCustom: Boolean = false
-)
+) {
+    fun isHighConfidence(threshold: Float = 0.7f): Boolean = confidence >= threshold
+    fun getAction(): String = GestureActionMap.getAction(type)
+}
+
+/**
+ * Gesture action mapping
+ */
+object GestureActionMap {
+    private val actions = mapOf(
+        GestureType.THUMBS_UP to "play_pause",
+        GestureType.THUMBS_DOWN to "stop",
+        GestureType.SWIPE_LEFT to "prev_track",
+        GestureType.SWIPE_RIGHT to "next_track",
+        GestureType.SWIPE_UP to "volume_up",
+        GestureType.SWIPE_DOWN to "volume_down",
+        GestureType.CIRCLE_CW to "volume_up",
+        GestureType.CIRCLE_CCW to "volume_down",
+        GestureType.PEACE to "lock_screen",
+        GestureType.FIST to "mute",
+        GestureType.DOUBLE_CLICK to "play_pause",
+        GestureType.ZOOM_IN to "zoom_in",
+        GestureType.ZOOM_OUT to "zoom_out",
+        GestureType.SHAKE to "undo"
+    )
+
+    fun getAction(type: GestureType): String = actions[type] ?: "none"
+}
 
 /**
  * Custom gesture template
@@ -55,7 +82,15 @@ data class CustomGestureTemplate(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val usageCount: Int = 0
-) : Parcelable
+) : Parcelable {
+    fun isValid(): Boolean = name.isNotEmpty() && action.isNotEmpty()
+    fun toGestureEvent(): GestureEvent = GestureEvent(
+        type = type,
+        name = name,
+        confidence = confidence,
+        isCustom = true
+    )
+}
 
 /**
  * Gesture training statistics
@@ -67,7 +102,10 @@ data class GestureTrainingStats(
     val lastGestureTime: Long = 0,
     val customGestureUsage: Map<String, Int> = emptyMap(),
     val averageConfidence: Float = 0f
-)
+) {
+    fun getTotalCustomGestures(): Int = customGestureUsage.values.sum()
+    fun getMostUsedCustomGesture(): String = customGestureUsage.maxByOrNull { it.value }?.key ?: ""
+}
 
 /**
  * Gesture detection result
@@ -77,4 +115,7 @@ data class GestureDetectionResult(
     val confidence: Float,
     val rawData: List<FloatArray>? = null,
     val matchedTemplate: String? = null
-)
+) {
+    fun isGesture(): Boolean = gesture != GestureType.NONE
+    fun isHighConfidence(threshold: Float = 0.7f): Boolean = confidence >= threshold
+}

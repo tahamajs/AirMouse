@@ -1,6 +1,6 @@
-package com.airmouse.presentation.calibration
+// app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationGuideDialog.kt
+package com.airmouse.presentation.ui.calibration
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,20 +28,19 @@ fun CalibrationGuideDialog(
 ) {
     var currentImageIndex by remember { mutableStateOf(0) }
     val totalImages = when (step) {
-        0 -> 3 // Gyro: device flat images
-        1 -> 4 // Magnetometer: figure-8 animation frames
-        2 -> 6 // Accelerometer: 6 orientations
+        0 -> 3
+        1 -> 4
+        2 -> 6
         else -> 1
     }
-    
-    // Auto-rotate through instruction images
+
     LaunchedEffect(step) {
         while (true) {
             delay(2000)
             currentImageIndex = (currentImageIndex + 1) % totalImages
         }
     }
-    
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -74,9 +72,9 @@ fun CalibrationGuideDialog(
                         else -> Image(painterResource(R.drawable.ic_check), contentDescription = null)
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Text(
                     text = when (step) {
                         0 -> "Place device on a flat, stationary surface"
@@ -89,9 +87,9 @@ fun CalibrationGuideDialog(
                     color = Color.White,
                     textAlign = TextAlign.Center
                 )
-                
+
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 Text(
                     text = when (step) {
                         0 -> "Keep the device perfectly still during calibration"
@@ -103,9 +101,9 @@ fun CalibrationGuideDialog(
                     color = Color(0xFF94A3B8),
                     textAlign = TextAlign.Center
                 )
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
@@ -128,7 +126,7 @@ fun GyroInstructionAnimation(frame: Int) {
         1 -> 5f
         else -> -5f
     }
-    
+
     Box(
         modifier = Modifier
             .size(120.dp)
@@ -146,7 +144,7 @@ fun GyroInstructionAnimation(frame: Int) {
 @Composable
 fun MagnetometerInstructionAnimation(frame: Int) {
     val angle = (frame * 45f) % 360f
-    
+
     Box(
         modifier = Modifier
             .size(120.dp)
@@ -164,7 +162,7 @@ fun MagnetometerInstructionAnimation(frame: Int) {
 fun AccelerometerInstructionAnimation(frame: Int) {
     val orientations = listOf("⬆️", "⬇️", "⬅️", "➡️", "🔄", "↩️")
     val currentOrientation = orientations[frame % orientations.size]
-    
+
     Box(
         modifier = Modifier
             .size(120.dp)

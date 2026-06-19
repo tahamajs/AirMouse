@@ -40,4 +40,4 @@ object CoroutineModule {
     @MainDispatcher
     @Provides
     fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
-}
+}// app/src/main/java/com/airmouse/di/CoroutineModule.kt

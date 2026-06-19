@@ -725,3 +725,5 @@ class HomeViewModel @Inject constructor(
         UNKNOWN(0xFF9E9E9E, "Unknown")
     }
 }
+
+// app/src/main/java/com/airmouse/presentation/ui/home/HomeViewModel.kt

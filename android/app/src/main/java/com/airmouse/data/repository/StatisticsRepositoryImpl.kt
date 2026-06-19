@@ -60,7 +60,6 @@ class StatisticsRepositoryImpl @Inject constructor(
                 mostUsedGesture = obj.optString("mostUsedGesture", ""),
                 lastGestureTime = obj.optLong("lastGestureTime", 0)
             )
-            // Parse gestures by type
             val byTypeJson = obj.optJSONObject("gesturesByType")
             if (byTypeJson != null) {
                 val byType = mutableMapOf<String, Int>()
@@ -104,7 +103,6 @@ class StatisticsRepositoryImpl @Inject constructor(
 
     override suspend fun stopTracking() {
         _isTracking.value = false
-        // Save session stats to historical
         saveSessionToHistory()
     }
 
@@ -190,33 +188,48 @@ class StatisticsRepositoryImpl @Inject constructor(
 
     override suspend fun recordMovement(distance: Float, duration: Long) {
         val speed = if (duration > 0) distance / duration * 1000 else 0f
-        updateSessionStats { stats ->
-            stats.copy(
-                totalMovements = stats.totalMovements + 1,
-                totalDistance = stats.totalDistance + distance,
-                averageSpeed = (stats.averageSpeed * stats.totalMovements + speed) / (stats.totalMovements + 1),
-                maxSpeed = maxOf(stats.maxSpeed, speed)
+        val currentStats = _sessionStats.value
+        val newMovements = currentStats.totalMovements + 1
+        val newDistance = currentStats.totalDistance + distance
+        val newAvgSpeed = if (newMovements > 0) {
+            (currentStats.averageSpeed * currentStats.totalMovements + speed) / newMovements
+        } else 0f
+        val newMaxSpeed = maxOf(currentStats.maxSpeed, speed)
+
+        updateSessionStats {
+            it.copy(
+                totalMovements = newMovements,
+                totalDistance = newDistance,
+                averageSpeed = newAvgSpeed,
+                maxSpeed = newMaxSpeed
             )
         }
-        updateDailyStats { it.copy(
-            movements = it.movements + 1,
-            distance = it.distance + distance
-        )}
+
+        updateDailyStats { daily ->
+            daily.copy(
+                movements = daily.movements + 1,
+                distance = daily.distance + distance
+            )
+        }
+
         prefs.putInt("session_movements", prefs.getInt("session_movements", 0) + 1)
         prefs.putFloat("session_distance", prefs.getFloat("session_distance", 0f) + distance)
+        prefs.putFloat("session_avg_speed", newAvgSpeed)
+        prefs.putFloat("session_max_speed", newMaxSpeed)
     }
 
     override suspend fun recordGesture(gesture: String, confidence: Float) {
         updateHistoricalStats(gesture)
 
-        // Update gesture-specific stats
         val currentStats = _gestureStats.value.toMutableList()
         val existing = currentStats.find { it.gestureName == gesture }
         if (existing != null) {
             val index = currentStats.indexOf(existing)
+            val newCount = existing.detectionCount + 1
+            val newConfidence = (existing.confidencePercentage * existing.detectionCount + confidence) / newCount
             currentStats[index] = existing.copy(
-                detectionCount = existing.detectionCount + 1,
-                confidencePercentage = (existing.confidencePercentage * existing.detectionCount + confidence) / (existing.detectionCount + 1),
+                detectionCount = newCount,
+                confidencePercentage = newConfidence,
                 lastDetected = System.currentTimeMillis()
             )
         } else {
@@ -232,14 +245,22 @@ class StatisticsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun recordConnectionAttempt(success: Boolean, latencyMs: Long) {
-        // Track connection attempts
-    }
+        val totalAttempts = prefs.getInt("connection_attempts", 0) + 1
+        prefs.putInt("connection_attempts", totalAttempts)
 
-    override suspend fun getSessionStats(): StatisticsSummary = _sessionStats.value
+        if (success) {
+            val successful = prefs.getInt("connection_successful", 0) + 1
+            prefs.putInt("connection_successful", successful)
+            val totalLatency = prefs.getLong("connection_total_latency", 0) + latencyMs
+            prefs.putLong("connection_total_latency", totalLatency)
+        } else {
+            val failed = prefs.getInt("connection_failed", 0) + 1
+            prefs.putInt("connection_failed", failed)
+        }
+    }
 
     override suspend fun resetStats() {
         resetSession()
-        // Reset all stats
         prefs.remove("session_clicks")
         prefs.remove("session_double_clicks")
         prefs.remove("session_right_clicks")
@@ -250,8 +271,13 @@ class StatisticsRepositoryImpl @Inject constructor(
         prefs.remove("session_max_speed")
         prefs.remove("historical_stats")
         prefs.remove("gesture_stats")
+        prefs.remove("connection_attempts")
+        prefs.remove("connection_successful")
+        prefs.remove("connection_failed")
+        prefs.remove("connection_total_latency")
         _gestureStats.value = emptyList()
         _historicalStats.value = HistoricalStatistics()
+        loadSessionStats()
     }
 
     override suspend fun resetSession() {
@@ -273,42 +299,6 @@ class StatisticsRepositoryImpl @Inject constructor(
             "csv" -> exportCsv()
             else -> exportJson()
         }
-    }
-
-    private fun exportJson(): String {
-        val obj = JSONObject()
-        obj.put("session", JSONObject().apply {
-            put("totalClicks", _sessionStats.value.totalClicks)
-            put("totalMovements", _sessionStats.value.totalMovements)
-            put("totalDistance", _sessionStats.value.totalDistance)
-            put("averageSpeed", _sessionStats.value.averageSpeed)
-        })
-        obj.put("historical", JSONObject().apply {
-            put("totalGestures", _historicalStats.value.totalGestures)
-            put("mostUsedGesture", _historicalStats.value.mostUsedGesture)
-        })
-        obj.put("gestures", JSONArray().apply {
-            _gestureStats.value.forEach { stats ->
-                put(JSONObject().apply {
-                    put("gestureName", stats.gestureName)
-                    put("detectionCount", stats.detectionCount)
-                    put("confidencePercentage", stats.confidencePercentage)
-                })
-            }
-        })
-        return obj.toString()
-    }
-
-    private fun exportCsv(): String {
-        val sb = StringBuilder()
-        sb.append("Metric,Value\n")
-        sb.append("Total Clicks,${_sessionStats.value.totalClicks}\n")
-        sb.append("Total Movements,${_sessionStats.value.totalMovements}\n")
-        sb.append("Total Distance,${_sessionStats.value.totalDistance}\n")
-        sb.append("Average Speed,${_sessionStats.value.averageSpeed}\n")
-        sb.append("Total Gestures,${_historicalStats.value.totalGestures}\n")
-        sb.append("Most Used Gesture,${_historicalStats.value.mostUsedGesture}\n")
-        return sb.toString()
     }
 
     private suspend fun updateSessionStats(update: (StatisticsSummary) -> StatisticsSummary) {
@@ -375,12 +365,53 @@ class StatisticsRepositoryImpl @Inject constructor(
     }
 
     private suspend fun saveSessionToHistory() {
-        // Save current session stats to historical
         val session = _sessionStats.value
-        val historical = _historicalStats.value
-        _historicalStats.value = historical.copy(
-            totalGestures = historical.totalGestures + session.totalClicks + session.totalDoubleClicks + session.totalRightClicks
+        val totalGestures = session.totalClicks + session.totalDoubleClicks + session.totalRightClicks + session.totalScrolls
+        val current = _historicalStats.value
+        _historicalStats.value = current.copy(
+            totalGestures = current.totalGestures + totalGestures
         )
         saveHistoricalStats()
+    }
+
+    private fun exportJson(): String {
+        val obj = JSONObject()
+        obj.put("session", JSONObject().apply {
+            put("totalClicks", _sessionStats.value.totalClicks)
+            put("totalMovements", _sessionStats.value.totalMovements)
+            put("totalDistance", _sessionStats.value.totalDistance)
+            put("averageSpeed", _sessionStats.value.averageSpeed)
+        })
+        obj.put("historical", JSONObject().apply {
+            put("totalGestures", _historicalStats.value.totalGestures)
+            put("mostUsedGesture", _historicalStats.value.mostUsedGesture)
+        })
+        obj.put("gestures", JSONArray().apply {
+            _gestureStats.value.forEach { stats ->
+                put(JSONObject().apply {
+                    put("gestureName", stats.gestureName)
+                    put("detectionCount", stats.detectionCount)
+                    put("confidencePercentage", stats.confidencePercentage)
+                })
+            }
+        })
+        return obj.toString()
+    }
+
+    private fun exportCsv(): String {
+        val sb = StringBuilder()
+        sb.append("Metric,Value\n")
+        sb.append("Total Clicks,${_sessionStats.value.totalClicks}\n")
+        sb.append("Total Movements,${_sessionStats.value.totalMovements}\n")
+        sb.append("Total Distance,${_sessionStats.value.totalDistance}\n")
+        sb.append("Average Speed,${_sessionStats.value.averageSpeed}\n")
+        sb.append("Total Gestures,${_historicalStats.value.totalGestures}\n")
+        sb.append("Most Used Gesture,${_historicalStats.value.mostUsedGesture}\n")
+        sb.append("\nGesture Statistics\n")
+        sb.append("Gesture,Detections,Confidence\n")
+        _gestureStats.value.forEach { stats ->
+            sb.append("${stats.gestureName},${stats.detectionCount},${stats.confidencePercentage}\n")
+        }
+        return sb.toString()
     }
 }

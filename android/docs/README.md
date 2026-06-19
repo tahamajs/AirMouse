@@ -5,7 +5,7 @@
 
 [![Android](https://img.shields.io/badge/Android-8.0+-3DDC84?logo=android)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9+-7F52FF?logo=kotlin)](https://kotlinlang.org)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 [![Hilt](https://img.shields.io/badge/Hilt-Dependency_Injection-2A6DB6)](https://dagger.dev/hilt/)
 [![Compose](https://img.shields.io/badge/Jetpack_Compose-UI_Toolkit-4285F4)](https://developer.android.com/jetpack/compose)
 
@@ -523,7 +523,7 @@ cd airmouse-android
 ## License
 
 MIT License – Copyright (c) 2025 University of Tehran, Embedded Systems Laboratory.  
-See [LICENSE](LICENSE) for full text.
+See [LICENSE](../LICENSE) for full text.
 
 ---
 

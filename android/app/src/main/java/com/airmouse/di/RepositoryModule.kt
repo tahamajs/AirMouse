@@ -186,4 +186,4 @@ object RepositoryProvidersModule {
     ): UpdateRepositoryImpl {
         return UpdateRepositoryImpl(preferencesManager, appDatabase)
     }
-}
+}// app/src/main/java/com/airmouse/di/RepositoryModule.kt

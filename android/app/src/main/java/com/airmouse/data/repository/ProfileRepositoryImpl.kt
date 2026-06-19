@@ -1,233 +1,272 @@
-// app/src/main/java/com/airmouse/data/repository/ProximityRepositoryImpl.kt
+// app/src/main/java/com/airmouse/data/repository/ProfileRepositoryImpl.kt
 package com.airmouse.data.repository
 
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
-import android.content.Context
-import com.airmouse.domain.model.*
-import com.airmouse.domain.repository.IProximityRepository
-import com.airmouse.network.ConnectionManager
+import com.airmouse.data.datasource.local.ProfileDao
+import com.airmouse.data.datasource.local.ProfileEntity
+import com.airmouse.domain.model.ProfileSettings
+import com.airmouse.domain.model.UserProfile
+import com.airmouse.domain.repository.IProfileRepository
 import com.airmouse.utils.PreferencesManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ProximityRepositoryImpl @Inject constructor(
-    private val context: Context,
-    private val prefs: PreferencesManager,
-    private val connectionManager: ConnectionManager
-) : IProximityRepository {
+class ProfileRepositoryImpl @Inject constructor(
+    private val profileDao: ProfileDao,
+    private val prefs: PreferencesManager
+) : IProfileRepository {
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    // ==================== CRUD Operations ====================
 
-    private val _state = MutableStateFlow(ProximityState())
-    override fun observeProximityState(): Flow<ProximityState> = _state.asStateFlow()
-
-    private val _config = MutableStateFlow(ProximityConfig())
-    private val _isMonitoring = MutableStateFlow(false)
-
-    private var bluetoothAdapter: BluetoothAdapter? = null
-
-    init {
-        initBluetooth()
-        loadConfig()
-        startMonitoringIfEnabled()
+    override suspend fun createProfile(profile: UserProfile): String {
+        val id = profile.id.ifEmpty { UUID.randomUUID().toString() }
+        val newProfile = profile.copy(id = id)
+        val entity = mapToEntity(newProfile)
+        profileDao.insertProfile(entity)
+        return id
     }
 
-    private fun initBluetooth() {
-        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bluetoothManager.adapter
+    override suspend fun getProfile(id: String): UserProfile? {
+        val entity = profileDao.getProfileById(id)
+        return entity?.let { mapToDomain(it) }
     }
 
-    private fun loadConfig() {
-        _config.value = ProximityConfig(
-            enabled = prefs.getBoolean("proximity_enabled", false),
-            nearThreshold = prefs.getFloat("proximity_near_threshold", 1.5f),
-            farThreshold = prefs.getFloat("proximity_far_threshold", 3.0f),
-            scanInterval = prefs.getLong("proximity_scan_interval", 1000L),
-            vibrationEnabled = prefs.getBoolean("proximity_vibration", true),
-            autoLockEnabled = prefs.getBoolean("proximity_auto_lock", true),
-            autoUnlockEnabled = prefs.getBoolean("proximity_auto_unlock", true),
-            deviceAddress = prefs.getString("proximity_device_address", "")
+    override suspend fun updateProfile(profile: UserProfile) {
+        val entity = mapToEntity(profile)
+        profileDao.updateProfile(entity)
+        profileDao.updateLastUsed(profile.id, System.currentTimeMillis())
+    }
+
+    override suspend fun deleteProfile(id: String) {
+        // Don't delete default profile
+        val default = getDefaultProfile()
+        if (default?.id == id) {
+            return
+        }
+        profileDao.deleteProfile(id)
+    }
+
+    override suspend fun getAllProfiles(): List<UserProfile> {
+        return profileDao.getAllProfiles().map { mapToDomain(it) }
+    }
+
+    override fun observeProfiles(): Flow<List<UserProfile>> {
+        return profileDao.observeAllProfiles().map { entities ->
+            entities.map { mapToDomain(it) }
+        }
+    }
+
+    // ==================== Default Profile ====================
+
+    override suspend fun getDefaultProfile(): UserProfile? {
+        val entity = profileDao.getDefaultProfile()
+        return entity?.let { mapToDomain(it) }
+    }
+
+    override suspend fun setDefaultProfile(id: String) {
+        profileDao.clearDefaultFlag()
+        profileDao.setDefaultProfile(id)
+        prefs.putString("default_profile_id", id)
+    }
+
+    // ==================== Favorites ====================
+
+    override suspend fun toggleFavorite(id: String) {
+        val profile = profileDao.getProfileById(id)
+        profile?.let {
+            profileDao.setFavorite(id, !it.isFavorite)
+        }
+    }
+
+    override suspend fun getFavoriteProfiles(): List<UserProfile> {
+        return profileDao.getFavoriteProfiles().map { mapToDomain(it) }
+    }
+
+    override fun observeFavoriteProfiles(): Flow<List<UserProfile>> {
+        return profileDao.observeAllProfiles().map { entities ->
+            entities.filter { it.isFavorite }.map { mapToDomain(it) }
+        }
+    }
+
+    // ==================== Settings ====================
+
+    override suspend fun getSettings(profileId: String): ProfileSettings? {
+        val profile = getProfile(profileId)
+        return profile?.settings
+    }
+
+    override suspend fun updateSettings(profileId: String, settings: ProfileSettings) {
+        val profile = getProfile(profileId)
+        profile?.let {
+            val updated = profile.copy(settings = settings)
+            updateProfile(updated)
+        }
+    }
+
+    // ==================== Search ====================
+
+    override suspend fun searchProfiles(query: String): List<UserProfile> {
+        return profileDao.searchProfiles(query).map { mapToDomain(it) }
+    }
+
+    // ==================== Export/Import ====================
+
+    override suspend fun exportProfile(id: String): String {
+        val profile = getProfile(id) ?: return ""
+        val obj = JSONObject()
+        obj.put("id", profile.id)
+        obj.put("name", profile.name)
+        obj.put("email", profile.email)
+        obj.put("avatarUri", profile.avatarUri ?: "")
+
+        val settingsObj = JSONObject()
+        settingsObj.put("sensitivity", profile.settings.sensitivity)
+        settingsObj.put("clickThreshold", profile.settings.clickThreshold)
+        settingsObj.put("doubleClickInterval", profile.settings.doubleClickInterval)
+        settingsObj.put("scrollThreshold", profile.settings.scrollThreshold)
+        settingsObj.put("rightClickTilt", profile.settings.rightClickTilt)
+        settingsObj.put("hapticEnabled", profile.settings.hapticEnabled)
+        settingsObj.put("theme", profile.settings.theme)
+        settingsObj.put("aiSmoothing", profile.settings.aiSmoothing)
+        settingsObj.put("predictiveMovement", profile.settings.predictiveMovement)
+        settingsObj.put("invertX", profile.settings.invertX)
+        settingsObj.put("invertY", profile.settings.invertY)
+        settingsObj.put("accelerationEnabled", profile.settings.accelerationEnabled)
+        settingsObj.put("smoothingEnabled", profile.settings.smoothingEnabled)
+        settingsObj.put("edgeGesturesEnabled", profile.settings.edgeGesturesEnabled)
+        settingsObj.put("voiceCommandsEnabled", profile.settings.voiceCommandsEnabled)
+        obj.put("settings", settingsObj)
+
+        obj.put("tags", JSONArray(profile.tags))
+        obj.put("iconRes", profile.iconRes)
+        obj.put("createdAt", profile.createdAt)
+        obj.put("updatedAt", profile.updatedAt)
+        obj.put("isDefault", profile.isDefault)
+        obj.put("isFavorite", profile.isFavorite)
+
+        return obj.toString()
+    }
+
+    override suspend fun importProfile(json: String): Boolean {
+        return try {
+            val obj = JSONObject(json)
+            val settings = ProfileSettings(
+                sensitivity = obj.getJSONObject("settings").optDouble("sensitivity", 1.0).toFloat(),
+                clickThreshold = obj.getJSONObject("settings").optDouble("clickThreshold", 5.0).toFloat(),
+                doubleClickInterval = obj.getJSONObject("settings").optLong("doubleClickInterval", 400),
+                scrollThreshold = obj.getJSONObject("settings").optDouble("scrollThreshold", 8.0).toFloat(),
+                rightClickTilt = obj.getJSONObject("settings").optDouble("rightClickTilt", 45.0).toFloat(),
+                hapticEnabled = obj.getJSONObject("settings").optBoolean("hapticEnabled", true),
+                theme = obj.getJSONObject("settings").optString("theme", "dark"),
+                aiSmoothing = obj.getJSONObject("settings").optBoolean("aiSmoothing", false),
+                predictiveMovement = obj.getJSONObject("settings").optBoolean("predictiveMovement", true),
+                invertX = obj.getJSONObject("settings").optBoolean("invertX", false),
+                invertY = obj.getJSONObject("settings").optBoolean("invertY", false),
+                accelerationEnabled = obj.getJSONObject("settings").optBoolean("accelerationEnabled", true),
+                smoothingEnabled = obj.getJSONObject("settings").optBoolean("smoothingEnabled", true),
+                edgeGesturesEnabled = obj.getJSONObject("settings").optBoolean("edgeGesturesEnabled", false),
+                voiceCommandsEnabled = obj.getJSONObject("settings").optBoolean("voiceCommandsEnabled", false)
+            )
+
+            val profile = UserProfile(
+                id = obj.optString("id", UUID.randomUUID().toString()),
+                name = obj.getString("name"),
+                email = obj.optString("email", ""),
+                avatarUri = obj.optString("avatarUri", ""),
+                settings = settings,
+                tags = obj.optJSONArray("tags")?.let { arr ->
+                    (0 until arr.length()).map { arr.getString(it) }
+                } ?: emptyList(),
+                iconRes = obj.optInt("iconRes", 0),
+                isDefault = false,
+                isFavorite = false
+            )
+
+            createProfile(profile)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // ==================== Statistics ====================
+
+    override suspend fun getProfileCount(): Int {
+        return profileDao.getProfileCount()
+    }
+
+    override suspend fun getProfileUsageStats(): Map<String, Int> {
+        val profiles = getAllProfiles()
+        return profiles.associate { it.name to it.usageCount }
+    }
+
+    // ==================== Mapping Functions ====================
+
+    private fun mapToEntity(domain: UserProfile): ProfileEntity {
+        return ProfileEntity(
+            id = domain.id,
+            name = domain.name,
+            email = domain.email,
+            avatarUri = domain.avatarUri,
+            sensitivity = domain.settings.sensitivity,
+            clickThreshold = domain.settings.clickThreshold,
+            doubleClickInterval = domain.settings.doubleClickInterval,
+            scrollThreshold = domain.settings.scrollThreshold,
+            rightClickTilt = domain.settings.rightClickTilt,
+            hapticEnabled = domain.settings.hapticEnabled,
+            theme = domain.settings.theme,
+            aiSmoothing = domain.settings.aiSmoothing,
+            predictiveMovement = domain.settings.predictiveMovement,
+            invertX = domain.settings.invertX,
+            invertY = domain.settings.invertY,
+            accelerationEnabled = domain.settings.accelerationEnabled,
+            smoothingEnabled = domain.settings.smoothingEnabled,
+            edgeGesturesEnabled = domain.settings.edgeGesturesEnabled,
+            voiceCommandsEnabled = domain.settings.voiceCommandsEnabled,
+            isDefault = domain.isDefault,
+            isFavorite = domain.isFavorite,
+            tags = domain.tags.joinToString(","),
+            iconRes = domain.iconRes,
+            createdAt = domain.createdAt,
+            lastUsed = domain.updatedAt
         )
     }
 
-    private fun startMonitoringIfEnabled() {
-        if (_config.value.enabled && _config.value.deviceAddress.isNotEmpty()) {
-            scope.launch { startMonitoring() }
-        }
-    }
-
-    override suspend fun getProximityState(): ProximityState = _state.value
-
-    override suspend fun startMonitoring() {
-        if (_isMonitoring.value) return
-
-        _isMonitoring.value = true
-        scope.launch {
-            while (_isMonitoring.value) {
-                val distance = estimateDistance()
-                val isNear = checkProximity(distance)
-
-                _state.value = ProximityState(
-                    isNear = isNear,
-                    distance = distance,
-                    rssi = getCurrentRssi(),
-                    deviceAddress = _config.value.deviceAddress,
-                    deviceName = getDeviceName(),
-                    lastUpdated = System.currentTimeMillis()
-                )
-
-                // Send to server via ConnectionManager
-                connectionManager.sendProximity(isNear, distance)
-
-                delay(_config.value.scanInterval)
-            }
-        }
-    }
-
-    override suspend fun stopMonitoring() {
-        _isMonitoring.value = false
-        _state.value = _state.value.copy(lastUpdated = System.currentTimeMillis())
-    }
-
-    override suspend fun isMonitoring(): Boolean = _isMonitoring.value
-
-    override suspend fun getConfig(): ProximityConfig = _config.value
-
-    override suspend fun updateConfig(config: ProximityConfig) {
-        _config.value = config
-        prefs.putBoolean("proximity_enabled", config.enabled)
-        prefs.putFloat("proximity_near_threshold", config.nearThreshold)
-        prefs.putFloat("proximity_far_threshold", config.farThreshold)
-        prefs.putLong("proximity_scan_interval", config.scanInterval)
-        prefs.putBoolean("proximity_vibration", config.vibrationEnabled)
-        prefs.putBoolean("proximity_auto_lock", config.autoLockEnabled)
-        prefs.putBoolean("proximity_auto_unlock", config.autoUnlockEnabled)
-        prefs.putString("proximity_device_address", config.deviceAddress)
-
-        if (config.enabled && config.deviceAddress.isNotEmpty()) {
-            startMonitoring()
-        } else {
-            stopMonitoring()
-        }
-    }
-
-    override suspend fun calibrate(): Boolean {
-        // Calibrate RSSI to distance mapping
-        // Collect samples at known distances
-        val samples = mutableListOf<Pair<Int, Float>>()
-        val distances = listOf(1f, 2f, 3f, 4f, 5f)
-
-        for (distance in distances) {
-            // Wait for user to place device at distance
-            delay(3000)
-            val rssi = getCurrentRssi()
-            if (rssi != -100) {
-                samples.add(Pair(rssi, distance))
-            }
-        }
-
-        if (samples.size >= 3) {
-            // Calculate txPower and path loss exponent
-            // Using linear regression
-            prefs.putBoolean("proximity_calibrated", true)
-            return true
-        }
-        return false
-    }
-
-    override suspend fun getCalibrationStatus(): ProximityCalibrationStatus {
-        return if (prefs.getBoolean("proximity_calibrated", false)) {
-            ProximityCalibrationStatus.CALIBRATED
-        } else {
-            ProximityCalibrationStatus.NOT_CALIBRATED
-        }
-    }
-
-    override suspend fun resetCalibration() {
-        prefs.putBoolean("proximity_calibrated", false)
-        prefs.remove("proximity_tx_power")
-        prefs.remove("proximity_path_loss")
-    }
-
-    override suspend fun setDeviceAddress(address: String) {
-        val config = _config.value.copy(deviceAddress = address)
-        updateConfig(config)
-    }
-
-    override suspend fun getDeviceAddress(): String = _config.value.deviceAddress
-
-    override suspend fun getDeviceName(): String {
-        val address = _config.value.deviceAddress
-        return if (address.isNotEmpty() && bluetoothAdapter != null) {
-            try {
-                val device = bluetoothAdapter!!.getRemoteDevice(address)
-                device.name ?: address
-            } catch (e: Exception) {
-                address
-            }
-        } else {
-            "Unknown"
-        }
-    }
-
-    override suspend fun isBluetoothEnabled(): Boolean {
-        return bluetoothAdapter?.isEnabled == true
-    }
-
-    override suspend fun lockScreen() {
-        connectionManager.sendLockScreen()
-        _state.value = _state.value.copy(isNear = false)
-    }
-
-    override suspend fun unlockScreen() {
-        connectionManager.sendUnlockScreen()
-        _state.value = _state.value.copy(isNear = true)
-    }
-
-    override suspend fun disconnect() {
-        stopMonitoring()
-        _config.value = _config.value.copy(enabled = false)
-        updateConfig(_config.value)
-    }
-
-    private suspend fun estimateDistance(): Float {
-        val rssi = getCurrentRssi()
-        return calculateDistanceFromRssi(rssi)
-    }
-
-    private fun getCurrentRssi(): Int {
-        // In real implementation, read from BluetoothDevice
-        // For now, return simulated value
-        return (-80..-30).random()
-    }
-
-    private fun calculateDistanceFromRssi(rssi: Int): Float {
-        val txPower = prefs.getInt("proximity_tx_power", -59)
-        val pathLoss = prefs.getFloat("proximity_path_loss", 2.5f)
-        val ratio = (txPower - rssi) / (10.0 * pathLoss)
-        val distance = 10.0.pow(ratio)
-        return distance.toFloat().coerceIn(0.3f, 15.0f)
-    }
-
-    private fun checkProximity(distance: Float): Boolean {
-        val wasNear = _state.value.isNear
-        val nearThreshold = _config.value.nearThreshold
-        val farThreshold = _config.value.farThreshold
-
-        return if (wasNear) {
-            distance < farThreshold
-        } else {
-            distance < nearThreshold
-        }
+    private fun mapToDomain(entity: ProfileEntity): UserProfile {
+        return UserProfile(
+            id = entity.id,
+            name = entity.name,
+            email = entity.email,
+            avatarUri = entity.avatarUri,
+            settings = ProfileSettings(
+                sensitivity = entity.sensitivity,
+                clickThreshold = entity.clickThreshold,
+                doubleClickInterval = entity.doubleClickInterval,
+                scrollThreshold = entity.scrollThreshold,
+                rightClickTilt = entity.rightClickTilt,
+                hapticEnabled = entity.hapticEnabled,
+                theme = entity.theme,
+                aiSmoothing = entity.aiSmoothing,
+                predictiveMovement = entity.predictiveMovement,
+                invertX = entity.invertX,
+                invertY = entity.invertY,
+                accelerationEnabled = entity.accelerationEnabled,
+                smoothingEnabled = entity.smoothingEnabled,
+                edgeGesturesEnabled = entity.edgeGesturesEnabled,
+                voiceCommandsEnabled = entity.voiceCommandsEnabled
+            ),
+            isDefault = entity.isDefault,
+            isFavorite = entity.isFavorite,
+            tags = entity.tags?.split(",")?.filter { it.isNotEmpty() } ?: emptyList(),
+            iconRes = entity.iconRes,
+            createdAt = entity.createdAt,
+            updatedAt = entity.lastUsed,
+            usageCount = 0
+        )
     }
 }
