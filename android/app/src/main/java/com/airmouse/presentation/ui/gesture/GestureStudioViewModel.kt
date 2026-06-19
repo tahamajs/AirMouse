@@ -3,10 +3,13 @@ package com.airmouse.presentation.ui.gesture
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.ui.graphics.Color
 import com.airmouse.domain.model.*
 import com.airmouse.domain.repository.IGestureRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -173,6 +176,24 @@ class GestureStudioViewModel @Inject constructor(
         }
     }
 
+    fun updateGestureName(name: String) {
+        _uiState.update { it.copy(gestureName = name, errorMessage = null) }
+    }
+
+    fun setSelectedSensor(sensor: SensorType) {
+        _uiState.update { it.copy(selectedSensor = sensor) }
+    }
+
+    fun clearRecognition() {
+        _uiState.update {
+            it.copy(
+                lastRecognizedGesture = null,
+                lastRecognitionConfidence = 0f,
+                lastRecognitionTime = null
+            )
+        }
+    }
+
     fun stopRecording() {
         _uiState.update {
             it.copy(
@@ -235,6 +256,10 @@ class GestureStudioViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun addGesture() {
+        addGesture(_uiState.value.newGestureName, _uiState.value.newGestureAction)
     }
 
     fun updateGesture(gesture: CustomGestureTemplate) {
@@ -317,6 +342,20 @@ class GestureStudioViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun showPlaybackDialog(gesture: CustomGestureTemplate) {
+        _uiState.update {
+            it.copy(
+                showPlaybackDialog = true,
+                selectedGesture = gesture,
+                errorMessage = null
+            )
+        }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        _uiState.update { it.copy(playbackSpeed = speed) }
     }
 
     // ==================== Training ====================
@@ -482,6 +521,11 @@ class GestureStudioViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun importGestures(path: String) {
+        _uiState.update { it.copy(exportPath = path) }
+        importGestures()
     }
 
     // ==================== UI State Management ====================
