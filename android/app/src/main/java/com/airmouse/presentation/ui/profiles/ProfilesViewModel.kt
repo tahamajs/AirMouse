@@ -1127,8 +1127,8 @@ fun ProfileStatItem(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            color = Color.White
-                    fontWeight = FontWeight.Bold,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
             fontSize = 14.sp
         )
         Text(
