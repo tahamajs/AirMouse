@@ -265,7 +265,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_GESTURE,
             title = "🎯 Training Gesture",
             message = "Recording $gestureName",
-            icon = R.drawable.ic_gesture_training,
+            icon = R.drawable.ic_gesture,
             priority = PRIORITY_LOW
         ).apply {
             setProgress(100, progress, false)
@@ -279,7 +279,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_GESTURE,
             title = "✅ Gesture Training Complete",
             message = "$gestureName trained successfully",
-            icon = R.drawable.ic_gesture_trained,
+            icon = R.drawable.ic_check,
             priority = PRIORITY_DEFAULT
         ).build()
 
@@ -299,7 +299,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_PROXIMITY,
             title = title,
             message = message,
-            icon = if (isNear) R.drawable.ic_unlock else R.drawable.ic_lock,
+            icon = if (isNear) R.drawable.ic_connected else R.drawable.ic_disconnected,
             priority = PRIORITY_HIGH
         ).build()
 
@@ -331,7 +331,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_PROXIMITY,
             title = "✅ Proximity Calibrated",
             message = "Proximity detection is now optimized",
-            icon = R.drawable.ic_calibrated,
+            icon = R.drawable.ic_check,
             priority = PRIORITY_DEFAULT
         ).build()
 
@@ -350,18 +350,18 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_UPDATE,
             title = "📦 Update Available",
             message = "Version $version",
-            icon = R.drawable.ic_update,
+            icon = R.drawable.ic_save,
             priority = PRIORITY_DEFAULT,
             intent = intent
         ).apply {
             setStyle(NotificationCompat.BigTextStyle().bigText(message))
             addAction(
-                R.drawable.ic_download,
+                R.drawable.ic_export,
                 "Download",
                 getUpdatePendingIntent("download")
             )
             addAction(
-                R.drawable.ic_install,
+                R.drawable.ic_check,
                 "Install Now",
                 getUpdatePendingIntent("install")
             )
@@ -375,7 +375,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_UPDATE,
             title = "📥 Downloading Update",
             message = "Version $version - ${progress}%",
-            icon = R.drawable.ic_downloading,
+            icon = R.drawable.ic_load,
             priority = PRIORITY_LOW
         ).apply {
             setProgress(100, progress, false)
@@ -391,7 +391,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_UPDATE,
             title = "✅ Update Installed",
             message = "Version $version is ready to use",
-            icon = R.drawable.ic_installed,
+            icon = R.drawable.ic_check,
             priority = PRIORITY_DEFAULT,
             intent = intent
         ).build()
@@ -411,7 +411,7 @@ class NotificationManager @Inject constructor(
         val notification = NotificationCompat.Builder(context, CHANNEL_FOREGROUND)
             .setContentTitle(title)
             .setContentText(message)
-            .setSmallIcon(R.drawable.ic_service)
+            .setSmallIcon(R.drawable.ic_air_mouse)
             .setPriority(PRIORITY_LOW)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
@@ -424,7 +424,7 @@ class NotificationManager @Inject constructor(
         val notification = NotificationCompat.Builder(context, CHANNEL_FOREGROUND)
             .setContentTitle("Air Mouse Active")
             .setContentText("$connectionStatus | $deviceCount device(s)")
-            .setSmallIcon(R.drawable.ic_service)
+            .setSmallIcon(R.drawable.ic_air_mouse)
             .setPriority(PRIORITY_LOW)
             .setOngoing(true)
             .build()
@@ -451,7 +451,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_GENERAL,
             title = "⚠️ $title",
             message = message,
-            icon = R.drawable.ic_warning,
+            icon = R.drawable.ic_info,
             priority = PRIORITY_DEFAULT
         ).build()
 
@@ -463,7 +463,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_GENERAL,
             title = "✅ $title",
             message = message,
-            icon = R.drawable.ic_success,
+            icon = R.drawable.ic_check,
             priority = PRIORITY_DEFAULT
         ).build()
 

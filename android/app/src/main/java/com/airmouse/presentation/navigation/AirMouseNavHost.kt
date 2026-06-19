@@ -138,7 +138,7 @@ fun AirMouseNavHost(
         // ==================== CUSTOMIZATION ====================
 
         composable(Destinations.Profiles.route) {
-            ProfilesScreen(navigationActions = navActions)
+            ProfilesScreen()
         }
 
         composable(Destinations.Themes.route) {
