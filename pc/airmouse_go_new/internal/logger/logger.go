@@ -3,7 +3,6 @@ package logger
 import (
     "fmt"
     "io"
-    "log"
     "os"
     "path/filepath"
     "runtime"
@@ -101,7 +100,7 @@ func Init(cfg Config) {
     })
 }
 
-func log(level Level, format string, args ...interface{}) {
+func emit(level Level, format string, args ...interface{}) {
     if defaultLogger == nil || level < defaultLogger.level {
         return
     }
@@ -154,11 +153,11 @@ func log(level Level, format string, args ...interface{}) {
     }
 }
 
-func Debug(format string, args ...interface{}) { log(LevelDebug, format, args...) }
-func Info(format string, args ...interface{})  { log(LevelInfo, format, args...) }
-func Warn(format string, args ...interface{})  { log(LevelWarn, format, args...) }
-func Error(format string, args ...interface{}) { log(LevelError, format, args...) }
-func Fatal(format string, args ...interface{}) { log(LevelFatal, format, args...) }
+func Debug(format string, args ...interface{}) { emit(LevelDebug, format, args...) }
+func Info(format string, args ...interface{})  { emit(LevelInfo, format, args...) }
+func Warn(format string, args ...interface{})  { emit(LevelWarn, format, args...) }
+func Error(format string, args ...interface{}) { emit(LevelError, format, args...) }
+func Fatal(format string, args ...interface{}) { emit(LevelFatal, format, args...) }
 
 func SetLevel(level Level) {
     if defaultLogger != nil {

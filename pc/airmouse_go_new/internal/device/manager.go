@@ -61,6 +61,9 @@ type DeviceManager struct {
     maxDevices int
 }
 
+// Manager preserves the older name used by several packages in this tree.
+type Manager = DeviceManager
+
 // Simple logger functions to avoid external dependency
 func logInfo(msg string, args ...interface{}) {
     fmt.Printf("[INFO] "+msg+"\n", args...)
