@@ -2,12 +2,10 @@ package main
 
 import (
     "context"
-    "fmt"
     "os"
     "os/signal"
     "runtime"
     "syscall"
-    "time"
 
     "fyne.io/fyne/v2"
     "fyne.io/fyne/v2/app"
@@ -16,12 +14,9 @@ import (
     "airmouse-go/internal/config"
     "airmouse-go/internal/control"
     "airmouse-go/internal/device"
-    "airmouse-go/internal/domain/repository"
-    "airmouse-go/internal/domain/service"
     "airmouse-go/internal/infra/logger"
     "airmouse-go/internal/protocol"
     "airmouse-go/internal/ui"
-    "airmouse-go/internal/utils"
 )
 
 var (
@@ -33,12 +28,7 @@ var (
 func main() {
     // Initialize logger
     cfg := config.Get()
-    logger.Init(logger.Config{
-        Level:     cfg.LogLevel,
-        LogFile:   cfg.LogFile,
-        UseColor:  cfg.LogColor,
-        Timestamp: true,
-    })
+    logger.Init(cfg.LogLevel, cfg.LogFile)
     
     printBanner()
     
@@ -51,25 +41,8 @@ func main() {
     logger.Info("  Build Time: %s", buildTime)
     logger.Info("  Git Commit: %s", gitCommit)
     
-    // Initialize repositories
-    clientRepo := repository.NewClientRepository()
-    gestureRepo := repository.NewGestureRepository()
-    
-    // Initialize services
-    connectionService := service.NewConnectionService(clientRepo)
-    gestureService := service.NewGestureService(gestureRepo, cfg.GestureConfidenceThreshold)
-    
     // Initialize mouse controller
-    mouseController, err := control.NewMouseController(cfg.Sensitivity)
-    if err != nil {
-        logger.Fatal("Failed to create mouse controller: %v", err)
-    }
-    
-    // Initialize mouse repository
-    mouseRepo := repository.NewMouseRepository(mouseController)
-    
-    // Initialize mouse service
-    mouseService := service.NewMouseService(mouseRepo, nil)
+    mouseController := control.NewMouseController(cfg.Sensitivity)
     
     // Initialize device manager
     deviceManager := device.NewManager()
@@ -78,7 +51,7 @@ func main() {
     authManager := auth.NewManager(cfg.AuthSecret)
     if cfg.AuthEnabled {
         for _, token := range cfg.AuthTokens {
-            authManager.GenerateAuthToken("", "")
+            _, _ = authManager.GenerateAuthToken(token, "")
         }
         logger.Info("Authentication enabled with %d tokens", len(cfg.AuthTokens))
     } else {
@@ -108,7 +81,8 @@ func main() {
     logger.Info("UDP discovery will listen on port %d", cfg.UDPPort)
     
     if err := appUI.Run(); err != nil {
-        logger.Fatal("Application error: %v", err)
+        logger.Error("Application error: %v", err)
+        os.Exit(1)
     }
     
     // Cleanup
@@ -129,10 +103,10 @@ func printBanner() {
 
 func loadAppIcon() fyne.Resource {
     // Try to load embedded icon, fallback to default
-    if len(AppIconData) > 0 {
+    if len(ui.AppIconData) > 0 {
         return &fyne.StaticResource{
             StaticName:    "app_icon.png",
-            StaticContent: AppIconData,
+            StaticContent: ui.AppIconData,
         }
     }
     return nil
