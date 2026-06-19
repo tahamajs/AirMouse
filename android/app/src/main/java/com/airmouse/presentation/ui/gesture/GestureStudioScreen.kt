@@ -627,9 +627,10 @@ fun StatisticsHeader(stats: GestureTrainingStats) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             StatItem("Total", stats.totalGestures.toString(), "🎯")
             StatItem("Custom", stats.customGestureUsage.size.toString(), "✋")
