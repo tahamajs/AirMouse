@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -46,18 +45,16 @@ import androidx.lifecycle.viewModelScope
 import com.airmouse.domain.model.ProfileSettings as DomainProfileSettings
 import com.airmouse.domain.model.UserProfile as DomainUserProfile
 import com.airmouse.domain.repository.IProfileRepository
+import com.airmouse.presentation.navigation.NavigationActions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.set
 
 // ==========================================
-// DATA MODELS
+// UI DATA MODELS (no conflict with domain)
 // ==========================================
 
 data class UserProfile(
@@ -194,8 +191,8 @@ class ProfilesViewModel @Inject constructor(
 
                 val default = entities.find { it.isDefault }
                 val favorites = entities.filter { it.isFavorite }
-                val totalUsage = entities.sumOf { it.usageCount }
-                val mostUsed = entities.maxByOrNull { it.usageCount }
+                val totalUsage = allProfiles.sumOf { it.usageCount }
+                val mostUsed = allProfiles.maxByOrNull { it.usageCount }
 
                 _stats.value = ProfileStats(
                     totalProfiles = entities.size,
@@ -259,7 +256,6 @@ class ProfilesViewModel @Inject constructor(
                 val domainProfile = mapToDomainProfile(profile)
                 val id = profileRepository.createProfile(domainProfile)
 
-                // If first profile, make it default
                 if (allProfiles.isEmpty()) {
                     profileRepository.setDefaultProfile(id)
                 }
@@ -385,10 +381,6 @@ class ProfilesViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(successMessage = null)
     }
 
-    // ==========================================
-    // MAPPING FUNCTIONS
-    // ==========================================
-
     private fun mapToUiProfile(domainProfile: DomainUserProfile): UserProfile {
         return UserProfile(
             id = domainProfile.id,
@@ -396,7 +388,7 @@ class ProfilesViewModel @Inject constructor(
             color = "#6366F1",
             isDefault = domainProfile.isDefault,
             isFavorite = domainProfile.isFavorite,
-            usageCount = domainProfile.usageCount,
+            usageCount = domainProfile.usageCount,  // Ensure domain model has this
             createdAt = domainProfile.createdAt,
             lastUsedAt = domainProfile.updatedAt,
             tags = domainProfile.tags
@@ -428,8 +420,10 @@ class ProfilesViewModel @Inject constructor(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ProfilesScreen(
+    navigationActions: NavigationActions? = null,
     viewModel: ProfilesViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateBack: () -> Unit = { navigationActions?.navigateBack() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filteredProfiles by viewModel.filteredProfiles.collectAsState()
@@ -461,7 +455,7 @@ fun ProfilesScreen(
                 onSortChange = { viewModel.setSortBy(it) },
                 onViewModeChange = { viewModel.setViewMode(it) },
                 onSearch = { viewModel.setSearchQuery(it) },
-                onNavigateBack = { /* Navigate back */ }
+                onNavigateBack = onNavigateBack
             )
         },
         floatingActionButton = {
@@ -514,7 +508,7 @@ fun ProfilesScreen(
                         viewMode = uiState.viewMode,
                         onProfileSelect = { viewModel.selectProfile(it.id) },
                         onToggleFavorite = { viewModel.toggleFavorite(it.id) },
-                        onDelete = { viewModel.showDeleteDialog(true) }
+                        onDelete = { viewModel.showDeleteDialog(true); viewModel.selectProfile(it.id) }
                     )
                 }
             }
