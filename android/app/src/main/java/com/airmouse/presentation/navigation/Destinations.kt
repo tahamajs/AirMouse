@@ -11,35 +11,55 @@ sealed class Destinations(
     val title: String,
     val icon: ImageVector
 ) {
-    object Home : Destinations("home", "Home", Icons.Filled.Home)
-    object Statistics : Destinations("statistics", "Stats", Icons.Filled.BarChart)
-    object Settings : Destinations("settings", "Settings", Icons.Filled.Settings)
-    object Help : Destinations("help", "Help", Icons.AutoMirrored.Filled.Help)
-    object About : Destinations("about", "About", Icons.Filled.Info)
-    object Calibration : Destinations("calibration", "Calibrate", Icons.Filled.Tune)
-    object SensorVisualizer : Destinations("sensor_visualizer", "Sensors", Icons.Filled.Sensors)
-    object GestureStudio : Destinations("gesture_studio", "Gestures", Icons.Filled.Gesture)
-    object EdgeGestures : Destinations("edge_gestures", "Edge", Icons.Filled.Swipe)
-    object Touchpad : Destinations("touchpad", "Touchpad", Icons.Filled.TouchApp)
-    object NetworkDiscovery : Destinations("network_discovery", "Network", Icons.Filled.Wifi)
-    object ServerLogs : Destinations("server_logs", "Logs", Icons.AutoMirrored.Filled.ListAlt)
-    object Proximity : Destinations("proximity", "Proximity", Icons.Filled.NearMe)
-    object VoiceCommands : Destinations("voice_commands", "Voice", Icons.Filled.Mic)
-    object Profiles : Destinations("profiles", "Profiles", Icons.Filled.Person)
-    object Themes : Destinations("themes", "Themes", Icons.Filled.Palette)
-    object Battery : Destinations("battery", "Battery", Icons.Filled.BatteryFull)
-    object Accessibility : Destinations("accessibility", "Access", Icons.Filled.Accessibility)
-    object TouchpadSettings : Destinations("touchpad_settings", "Touchpad Settings", Icons.Filled.Settings)
-    object Onboarding : Destinations("onboarding", "Onboarding", Icons.Filled.Apps)
+    object Home : Destinations(ROUTE_HOME, "Home", Icons.Filled.Home)
+    object Statistics : Destinations(ROUTE_STATISTICS, "Stats", Icons.Filled.BarChart)
+    object Settings : Destinations(ROUTE_SETTINGS, "Settings", Icons.Filled.Settings)
+    object Help : Destinations(ROUTE_HELP, "Help", Icons.AutoMirrored.Filled.Help)
+    object About : Destinations(ROUTE_ABOUT, "About", Icons.Filled.Info)
+    object Calibration : Destinations(ROUTE_CALIBRATION, "Calibrate", Icons.Filled.Tune)
+    object SensorVisualizer : Destinations(ROUTE_SENSOR_VISUALIZER, "Sensors", Icons.Filled.Sensors)
+    object GestureStudio : Destinations(ROUTE_GESTURE_STUDIO, "Gestures", Icons.Filled.Gesture)
+    object EdgeGestures : Destinations(ROUTE_EDGE_GESTURES, "Edge", Icons.Filled.Swipe)
+    object Touchpad : Destinations(ROUTE_TOUCHPAD, "Touchpad", Icons.Filled.TouchApp)
+    object NetworkDiscovery : Destinations(ROUTE_NETWORK_DISCOVERY, "Network", Icons.Filled.Wifi)
+    object ServerLogs : Destinations(ROUTE_SERVER_LOGS, "Logs", Icons.AutoMirrored.Filled.ListAlt)
+    object Proximity : Destinations(ROUTE_PROXIMITY, "Proximity", Icons.Filled.NearMe)
+    object VoiceCommands : Destinations(ROUTE_VOICE_COMMANDS, "Voice", Icons.Filled.Mic)
+    object Profiles : Destinations(ROUTE_PROFILES, "Profiles", Icons.Filled.Person)
+    object Themes : Destinations(ROUTE_THEMES, "Themes", Icons.Filled.Palette)
+    object Battery : Destinations(ROUTE_BATTERY, "Battery", Icons.Filled.BatteryFull)
+    object Accessibility : Destinations(ROUTE_ACCESSIBILITY, "Access", Icons.Filled.Accessibility)
+    object TouchpadSettings : Destinations(ROUTE_TOUCHPAD_SETTINGS, "Touchpad Settings", Icons.Filled.Settings)
+    object Onboarding : Destinations(ROUTE_ONBOARDING, "Onboarding", Icons.Filled.Apps)
 
     companion object {
-        private val bottomNavRoutes = setOf(
-            Home.route,
-            Statistics.route,
-            Settings.route,
-            Help.route
-        )
+        const val ROUTE_HOME = "home"
+        const val ROUTE_STATISTICS = "statistics"
+        const val ROUTE_SETTINGS = "settings"
+        const val ROUTE_HELP = "help"
+        const val ROUTE_ABOUT = "about"
+        const val ROUTE_CALIBRATION = "calibration"
+        const val ROUTE_SENSOR_VISUALIZER = "sensor_visualizer"
+        const val ROUTE_GESTURE_STUDIO = "gesture_studio"
+        const val ROUTE_EDGE_GESTURES = "edge_gestures"
+        const val ROUTE_TOUCHPAD = "touchpad"
+        const val ROUTE_NETWORK_DISCOVERY = "network_discovery"
+        const val ROUTE_SERVER_LOGS = "server_logs"
+        const val ROUTE_PROXIMITY = "proximity"
+        const val ROUTE_VOICE_COMMANDS = "voice_commands"
+        const val ROUTE_PROFILES = "profiles"
+        const val ROUTE_THEMES = "themes"
+        const val ROUTE_BATTERY = "battery"
+        const val ROUTE_ACCESSIBILITY = "accessibility"
+        const val ROUTE_TOUCHPAD_SETTINGS = "touchpad_settings"
+        const val ROUTE_ONBOARDING = "onboarding"
 
+        private val bottomNavRoutes = setOf(
+            ROUTE_HOME,
+            ROUTE_STATISTICS,
+            ROUTE_SETTINGS,
+            ROUTE_HELP
+        )
         val bottomNavDestinations = listOf(Home, Statistics, Settings, Help)
 
         fun isBottomNavScreen(route: String?): Boolean {
@@ -48,26 +68,26 @@ sealed class Destinations(
 
         fun fromRoute(route: String): Destinations? {
             return when (route) {
-                Home.route -> Home
-                Statistics.route -> Statistics
-                Settings.route -> Settings
-                Help.route -> Help
-                About.route -> About
-                Calibration.route -> Calibration
-                SensorVisualizer.route -> SensorVisualizer
-                GestureStudio.route -> GestureStudio
-                EdgeGestures.route -> EdgeGestures
-                Touchpad.route -> Touchpad
-                NetworkDiscovery.route -> NetworkDiscovery
-                ServerLogs.route -> ServerLogs
-                Proximity.route -> Proximity
-                VoiceCommands.route -> VoiceCommands
-                Profiles.route -> Profiles
-                Themes.route -> Themes
-                Battery.route -> Battery
-                Accessibility.route -> Accessibility
-                TouchpadSettings.route -> TouchpadSettings
-                Onboarding.route -> Onboarding
+                ROUTE_HOME -> Home
+                ROUTE_STATISTICS -> Statistics
+                ROUTE_SETTINGS -> Settings
+                ROUTE_HELP -> Help
+                ROUTE_ABOUT -> About
+                ROUTE_CALIBRATION -> Calibration
+                ROUTE_SENSOR_VISUALIZER -> SensorVisualizer
+                ROUTE_GESTURE_STUDIO -> GestureStudio
+                ROUTE_EDGE_GESTURES -> EdgeGestures
+                ROUTE_TOUCHPAD -> Touchpad
+                ROUTE_NETWORK_DISCOVERY -> NetworkDiscovery
+                ROUTE_SERVER_LOGS -> ServerLogs
+                ROUTE_PROXIMITY -> Proximity
+                ROUTE_VOICE_COMMANDS -> VoiceCommands
+                ROUTE_PROFILES -> Profiles
+                ROUTE_THEMES -> Themes
+                ROUTE_BATTERY -> Battery
+                ROUTE_ACCESSIBILITY -> Accessibility
+                ROUTE_TOUCHPAD_SETTINGS -> TouchpadSettings
+                ROUTE_ONBOARDING -> Onboarding
                 else -> null
             }
         }
