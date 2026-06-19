@@ -30,7 +30,7 @@ class ProximityRepositoryImpl @Inject constructor(
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _state = MutableStateFlow(ProximityState())
+    private val _state = MutableStateFlow(ProximityState.UNKNOWN)
     override fun observeProximityState(): Flow<ProximityState> = _state.asStateFlow()
 
     private val _config = MutableStateFlow(ProximityConfig())
