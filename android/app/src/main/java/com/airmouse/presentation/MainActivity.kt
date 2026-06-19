@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/MainActivity.kt
 package com.airmouse.presentation
 
 import android.content.Intent
@@ -17,11 +18,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.airmouse.presentation.navigation.AirMouseBottomBar
@@ -33,7 +32,6 @@ import com.airmouse.ui.onboarding.OnboardingActivity
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -45,30 +43,23 @@ class MainActivity : ComponentActivity() {
     private var keepSplashOnScreen = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Install splash screen
         val splashScreen = installSplashScreen()
-        splashScreen.setKeepOnScreenCondition {
-            keepSplashOnScreen
-        }
+        splashScreen.setKeepOnScreenCondition { keepSplashOnScreen }
 
         super.onCreate(savedInstanceState)
 
-        // Check if we need to show onboarding
         if (!prefs.isOnboardingCompleted()) {
             keepSplashOnScreen = false
             startOnboarding()
             return
         }
 
-        // Setup window for edge-to-edge display
         setupWindow()
 
         setContent {
             val isDarkTheme = when (prefs.getString("theme", "system")) {
-                "dark" -> true
-                "light" -> false
-                "pure_black" -> true
-                "high_contrast" -> false
+                "dark", "pure_black" -> true
+                "light", "high_contrast" -> false
                 else -> isSystemInDarkTheme()
             }
 
@@ -80,13 +71,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Dismiss splash screen after a short delay
                     LaunchedEffect(Unit) {
                         delay(500)
                         keepSplashOnScreen = false
                     }
 
-                    // Pass prefs directly to MainAppContent
                     MainAppContent(prefs = prefs)
                 }
             }
@@ -94,42 +83,33 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupWindow() {
-        // Enable edge-to-edge display
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Make status and navigation bars transparent
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
             window.statusBarColor = Color.TRANSPARENT
             window.navigationBarColor = Color.TRANSPARENT
         }
-
-        // Update system bar colors based on theme
         updateSystemBarsColor()
     }
 
     private fun updateSystemBarsColor() {
         val isDarkTheme = when (prefs.getString("theme", "system")) {
-            "dark" -> true
-            "pure_black" -> true
-            "light" -> false
-            "high_contrast" -> false
+            "dark", "pure_black" -> true
+            "light", "high_contrast" -> false
             else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         }
 
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController?.let {
-            it.isAppearanceLightStatusBars = !isDarkTheme
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                it.isAppearanceLightNavigationBars = !isDarkTheme
-            }
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller?.isAppearanceLightStatusBars = !isDarkTheme
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            controller.isAppearanceLightNavigationBars = !isDarkTheme
         }
     }
 
     private fun startOnboarding() {
-        val intent = Intent(this, OnboardingActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
+        startActivity(Intent(this, OnboardingActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        })
         finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
@@ -140,10 +120,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Main app content with navigation.
- * Receives PreferencesManager directly from the Activity.
- */
 @Composable
 fun MainAppContent(prefs: PreferencesManager) {
     val startDestination = if (prefs.isOnboardingCompleted()) {
@@ -151,7 +127,6 @@ fun MainAppContent(prefs: PreferencesManager) {
     } else {
         Destinations.Onboarding.route
     }
-
     MainScreen(startDestination = startDestination)
 }
 
@@ -164,7 +139,6 @@ fun MainScreen(startDestination: String) {
 
     Scaffold(
         bottomBar = {
-            // Destinations.isBottomNavScreen now handles null safely
             if (Destinations.isBottomNavScreen(currentRoute)) {
                 AirMouseBottomBar(
                     currentRoute = currentRoute,

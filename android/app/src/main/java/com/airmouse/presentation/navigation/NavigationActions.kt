@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/navigation/NavigationActions.kt
 package com.airmouse.presentation.navigation
 
 import androidx.compose.runtime.Composable
@@ -6,14 +7,9 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.rememberNavController
 
-/**
- * Navigation actions handler - manages all screen transitions
- */
 class NavigationActions(
     val navController: NavController
 ) {
-    // ==================== MAIN NAVIGATION ====================
-
     fun navigateTo(destination: Destinations) {
         navController.navigate(destination.route) {
             popUpTo(navController.graph.findStartDestination().id) {
@@ -39,54 +35,27 @@ class NavigationActions(
         }
     }
 
-    // ==================== BOTTOM NAVIGATION SCREENS ====================
-
     fun navigateToHome() = navigateTo(Destinations.Home)
     fun navigateToStatistics() = navigateTo(Destinations.Statistics)
     fun navigateToSettings() = navigateTo(Destinations.Settings)
     fun navigateToHelp() = navigateTo(Destinations.Help)
 
-    // ==================== INFO SCREENS ====================
-
     fun navigateToAbout() = navigateTo(Destinations.About)
-
-    // ==================== CALIBRATION & SENSORS ====================
-
     fun navigateToCalibration() = navigateTo(Destinations.Calibration)
     fun navigateToSensorVisualizer() = navigateTo(Destinations.SensorVisualizer)
-
-    // ==================== GESTURE & TOUCH ====================
-
     fun navigateToGestureStudio() = navigateTo(Destinations.GestureStudio)
     fun navigateToEdgeGestures() = navigateTo(Destinations.EdgeGestures)
     fun navigateToTouchpad() = navigateTo(Destinations.Touchpad)
-
-    // ==================== CONNECTIVITY ====================
-
     fun navigateToNetworkDiscovery() = navigateTo(Destinations.NetworkDiscovery)
     fun navigateToServerLogs() = navigateTo(Destinations.ServerLogs)
-
-    // ==================== SECURITY & PRIVACY ====================
-
     fun navigateToProximity() = navigateTo(Destinations.Proximity)
     fun navigateToVoiceCommands() = navigateTo(Destinations.VoiceCommands)
-
-    // ==================== CUSTOMIZATION ====================
-
     fun navigateToProfiles() = navigateTo(Destinations.Profiles)
     fun navigateToThemes() = navigateTo(Destinations.Themes)
-
-    // ==================== SYSTEM ====================
-
     fun navigateToBattery() = navigateTo(Destinations.Battery)
     fun navigateToAccessibility() = navigateTo(Destinations.Accessibility)
     fun navigateToTouchpadSettings() = navigateTo(Destinations.TouchpadSettings)
-
-    // ==================== ONBOARDING ====================
-
     fun navigateToOnboarding() = navigateTo(Destinations.Onboarding)
-
-    // ==================== NAVIGATION UTILITIES ====================
 
     fun navigateBack() {
         navController.popBackStack()
@@ -112,12 +81,9 @@ class NavigationActions(
     }
 
     fun canGoBack(): Boolean = navController.previousBackStackEntry != null
-
     fun getCurrentRoute(): String? = navController.currentDestination?.route
-
-    fun isCurrentDestination(destination: Destinations): Boolean {
-        return navController.currentDestination?.route == destination.route
-    }
+    fun isCurrentDestination(destination: Destinations): Boolean =
+        navController.currentDestination?.route == destination.route
 }
 
 @Composable

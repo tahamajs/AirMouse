@@ -19,7 +19,6 @@ fun AirMouseBottomBar(
     modifier: Modifier = Modifier
 ) {
     val items = Destinations.bottomNavDestinations
-
     val selectedIndex = items.indexOfFirst { it.route == currentRoute }
 
     NavigationBar(

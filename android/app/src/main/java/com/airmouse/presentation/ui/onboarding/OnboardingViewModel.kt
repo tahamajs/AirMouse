@@ -16,16 +16,6 @@ class OnboardingViewModel @Inject constructor(
     private val prefs: PreferencesManager
 ) : ViewModel() {
 
-    data class OnboardingUiState(
-        val currentPage: Int = 0,
-        val showWelcomeAnimation: Boolean = true,
-        val selectedTheme: String = "dark",
-        val hapticEnabled: Boolean = true,
-        val autoConnect: Boolean = true,
-        val allowAnalytics: Boolean = true,
-        val hasCompleted: Boolean = false
-    )
-
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
@@ -35,7 +25,7 @@ class OnboardingViewModel @Inject constructor(
     private val onboardingItems = OnboardingItem.getDefaultItems()
 
     init {
-        // Check if user has already completed onboarding
+        // If onboarding already completed, set flag
         if (prefs.isOnboardingCompleted()) {
             _uiState.update { it.copy(hasCompleted = true) }
         }
@@ -75,15 +65,15 @@ class OnboardingViewModel @Inject constructor(
 
     fun completeOnboarding() {
         val state = _uiState.value
-        // Save user preferences
+        // Save preferences
         prefs.setTheme(state.selectedTheme)
         prefs.setHapticEnabled(state.hapticEnabled)
         prefs.setAutoConnect(state.autoConnect)
         prefs.putBoolean("allow_analytics", state.allowAnalytics)
 
-        // Mark onboarding as completed
         prefs.setOnboardingCompleted(true)
-        prefs.setOnboardingVersion(1)
+        // Optional: store onboarding version
+        prefs.putInt("onboarding_version", 1)
 
         _uiState.update { it.copy(hasCompleted = true) }
     }
