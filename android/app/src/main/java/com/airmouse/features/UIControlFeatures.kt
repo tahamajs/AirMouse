@@ -181,6 +181,10 @@ class UIControlFeatures {
     ) {
         var selectedIndex by remember { mutableIntStateOf(-1) }
         val angleStep = (2 * PI / config.items.size).toFloat()
+        val surfaceColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+        val primaryColor = MaterialTheme.colorScheme.primary
+        val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+        val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
         Box(modifier = modifier.fillMaxSize().pointerInput(Unit) {
             detectDragGestures { change, _ ->
@@ -211,23 +215,14 @@ class UIControlFeatures {
             }
         }) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                    radius = config.radius,
-                    center = Offset(config.centerX, config.centerY)
-                )
-                drawCircle(
-                    color = MaterialTheme.colorScheme.primary,
-                    radius = config.radius,
-                    center = Offset(config.centerX, config.centerY),
-                    style = Stroke(width = 2f)
-                )
+                drawCircle(color = surfaceColor, radius = config.radius, center = Offset(config.centerX, config.centerY))
+                drawCircle(color = primaryColor, radius = config.radius, center = Offset(config.centerX, config.centerY), style = Stroke(width = 2f))
                 for (i in config.items.indices) {
                     val angle = i * angleStep
                     val x = config.centerX + config.radius * 0.7f * cos(angle)
                     val y = config.centerY + config.radius * 0.7f * sin(angle)
                     drawCircle(
-                        color = if (selectedIndex == i) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        color = if (selectedIndex == i) primaryColor else surfaceVariantColor,
                         radius = 28f,
                         center = Offset(x, y)
                     )
@@ -237,16 +232,16 @@ class UIControlFeatures {
                 val angle = i * angleStep
                 val x = config.centerX + config.radius * 0.7f * cos(angle)
                 val y = config.centerY + config.radius * 0.7f * sin(angle)
-                Box(
-                    modifier = Modifier.offset(
-                        x = (x - 24).dp,
-                        y = (y - 24).dp
-                    )
-                ) {
-                    Icon(item.icon, contentDescription = item.label, tint = if (selectedIndex == i) Color.White else MaterialTheme.colorScheme.onSurface)
+                    Box(
+                        modifier = Modifier.offset(
+                            x = (x - 24).dp,
+                            y = (y - 24).dp
+                        )
+                    ) {
+                    Icon(item.icon, contentDescription = item.label, tint = if (selectedIndex == i) Color.White else onSurfaceColor)
+                    }
                 }
             }
-        }
     }
 
     // ==================== 3. Gesture training UI ====================
@@ -363,6 +358,8 @@ class UIControlFeatures {
     ) {
         var points by remember { mutableStateOf(initialPoints.sortedBy { it.x }) }
         var selectedPointIndex by remember { mutableIntStateOf(-1) }
+        val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+        val primaryColor = MaterialTheme.colorScheme.primary
 
         AlertDialog(
             onDismissRequest = onDismiss,
@@ -373,7 +370,7 @@ class UIControlFeatures {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(surfaceVariantColor)
                             .pointerInput(Unit) {
                                 detectDragGestures(
                                     onDragStart = { offset ->
@@ -417,7 +414,7 @@ class UIControlFeatures {
                                 val x = point.x * viewWidth
                                 val y = (1f - point.y) * viewHeight
                                 drawCircle(
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = primaryColor,
                                     radius = 8f,
                                     center = Offset(x, y)
                                 )
@@ -431,7 +428,7 @@ class UIControlFeatures {
                                     if (i == 0) path.moveTo(x, y)
                                     else path.lineTo(x, y)
                                 }
-                                drawPath(path, MaterialTheme.colorScheme.primary, style = Stroke(width = 3f))
+                                drawPath(path, primaryColor, style = Stroke(width = 3f))
                             }
                         }
                     }
