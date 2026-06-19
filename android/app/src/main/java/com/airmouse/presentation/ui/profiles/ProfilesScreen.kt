@@ -41,7 +41,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.airmouse.domain.model.ProfileEntity
+import com.airmouse.domain.model.ProfileSettings as DomainProfileSettings
+import com.airmouse.domain.model.UserProfile as DomainUserProfile
 import com.airmouse.domain.repository.IProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -191,8 +192,8 @@ class ProfilesViewModel @Inject constructor(
 
                 val default = entities.find { it.isDefault }
                 val favorites = entities.filter { it.isFavorite }
-                val totalUsage = entities.sumOf { it.usageCount ?: 0 }
-                val mostUsed = entities.maxByOrNull { it.usageCount ?: 0 }
+                val totalUsage = entities.sumOf { it.usageCount }
+                val mostUsed = entities.maxByOrNull { it.usageCount }
 
                 _stats.value = ProfileStats(
                     totalProfiles = entities.size,
@@ -253,8 +254,8 @@ class ProfilesViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val profile = UserProfile(name = name)
-                val entity = mapToEntity(profile)
-                val id = profileRepository.createProfile(entity)
+                val domainProfile = mapToDomainProfile(profile)
+                val id = profileRepository.createProfile(domainProfile)
 
                 // If first profile, make it default
                 if (allProfiles.isEmpty()) {
@@ -276,8 +277,8 @@ class ProfilesViewModel @Inject constructor(
     fun updateProfile(profile: UserProfile) {
         viewModelScope.launch {
             try {
-                val entity = mapToEntity(profile)
-                profileRepository.updateProfile(entity)
+                val domainProfile = mapToDomainProfile(profile)
+                profileRepository.updateProfile(domainProfile)
                 loadProfiles()
                 _uiState.value = _uiState.value.copy(
                     successMessage = "Profile updated successfully"
@@ -386,47 +387,34 @@ class ProfilesViewModel @Inject constructor(
     // MAPPING FUNCTIONS
     // ==========================================
 
-    private fun mapToUiProfile(entity: ProfileEntity): UserProfile {
+    private fun mapToUiProfile(domainProfile: DomainUserProfile): UserProfile {
         return UserProfile(
-            id = entity.id,
-            name = entity.name,
+            id = domainProfile.id,
+            name = domainProfile.name,
             color = "#6366F1",
-            isDefault = entity.isDefault,
-            isFavorite = entity.isFavorite,
-            usageCount = 0,
-            createdAt = entity.createdAt,
-            lastUsedAt = entity.lastUsed,
-            tags = entity.tags?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+            isDefault = domainProfile.isDefault,
+            isFavorite = domainProfile.isFavorite,
+            usageCount = domainProfile.usageCount,
+            createdAt = domainProfile.createdAt,
+            lastUsedAt = domainProfile.updatedAt,
+            tags = domainProfile.tags
         )
     }
 
-    private fun mapToEntity(profile: UserProfile): ProfileEntity {
-        return ProfileEntity(
+    private fun mapToDomainProfile(profile: UserProfile): DomainUserProfile {
+        return DomainUserProfile(
             id = profile.id,
             name = profile.name,
             email = "",
             avatarUri = null,
-            sensitivity = 1.0f,
-            clickThreshold = 5.0f,
-            doubleClickInterval = 400L,
-            scrollThreshold = 8.0f,
-            rightClickTilt = 45f,
-            hapticEnabled = true,
-            theme = "dark",
-            aiSmoothing = false,
-            predictiveMovement = true,
-            invertX = false,
-            invertY = false,
-            accelerationEnabled = true,
-            smoothingEnabled = true,
-            edgeGesturesEnabled = false,
-            voiceCommandsEnabled = false,
+            settings = DomainProfileSettings(),
             isDefault = profile.isDefault,
             isFavorite = profile.isFavorite,
-            tags = profile.tags.joinToString(","),
+            tags = profile.tags,
             iconRes = 0,
             createdAt = profile.createdAt,
-            lastUsed = profile.lastUsedAt
+            updatedAt = profile.lastUsedAt,
+            usageCount = profile.usageCount
         )
     }
 }
