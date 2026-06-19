@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CompletableDeferred
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.ByteString
@@ -115,6 +116,7 @@ class ConnectionManager @Inject constructor(
     private var heartbeatJob: Job? = null
     private var reconnectJob: Job? = null
     private var retransmitJob: Job? = null
+    private var welcomeDeferred: CompletableDeferred<Boolean>? = null
 
     private var messageIdCounter = 0
     private val pendingAcks = ConcurrentHashMap<String, ReliableMessage>()
@@ -225,13 +227,22 @@ class ConnectionManager @Inject constructor(
                 _lastError.value = null
                 onStatusChanged?.invoke(ConnectionStatus.CONNECTING)
                 onError?.invoke("Connecting to $ip...")
+                val serverWelcome = CompletableDeferred<Boolean>()
+                welcomeDeferred = serverWelcome
 
                 val success = when (currentProtocol) {
                     ConnectionProtocol.WEBSOCKET -> connectWebSocket(ip, WEBSOCKET_PORT)
                     ConnectionProtocol.TCP -> connectTcp(ip, port)
                 }
 
-                if (success) {
+                val accepted = if (success) {
+                    withTimeoutOrNull(5000L) { serverWelcome.await() } == true
+                } else {
+                    false
+                }
+
+                if (accepted) {
+                    welcomeDeferred = null
                     startHeartbeat()
                     startRetransmissionLoop()
                     _connectionStatus.value = ConnectionStatus.CONNECTED
@@ -245,16 +256,21 @@ class ConnectionManager @Inject constructor(
                     Log.i(TAG, "Connected to $ip:$port via ${currentProtocol.name}")
                     true
                 } else {
+                    welcomeDeferred?.complete(false)
+                    welcomeDeferred = null
+                    disconnect()
                     _connectionStatus.value = ConnectionStatus.ERROR
-                    _lastError.value = "Connection failed"
+                    _lastError.value = "Connection not accepted by server"
                     playErrorSound()
                     onStatusChanged?.invoke(ConnectionStatus.ERROR)
-                    onError?.invoke("Connection failed")
+                    onError?.invoke("Connection not accepted by server")
                     scheduleReconnect()
                     false
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Connection failed", e)
+                welcomeDeferred?.complete(false)
+                welcomeDeferred = null
                 _connectionStatus.value = ConnectionStatus.ERROR
                 _lastError.value = e.message ?: "Connection failed"
                 onStatusChanged?.invoke(ConnectionStatus.ERROR)
@@ -370,6 +386,7 @@ class ConnectionManager @Inject constructor(
                     val payload = json.optJSONObject("payload")
                     _serverName.value = payload?.optString("server") ?: "Air Mouse"
                     _serverVersion.value = payload?.optString("version") ?: "3.0"
+                    welcomeDeferred?.complete(true)
                     Log.i(TAG, "Server: ${_serverName.value} v${_serverVersion.value}")
                 }
                 "pong" -> {
@@ -688,6 +705,8 @@ class ConnectionManager @Inject constructor(
         heartbeatJob?.cancel()
         reconnectJob?.cancel()
         retransmitJob?.cancel()
+        welcomeDeferred?.complete(false)
+        welcomeDeferred = null
         pendingAcks.clear()
 
         try {
