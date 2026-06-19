@@ -1,24 +1,27 @@
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.GestureTrainingStats
-import com.airmouse.domain.repository.IGestureRepository
+import com.airmouse.domain.repository.IStatisticsRepository
 import javax.inject.Inject
 
 /**
  * Use case to retrieve gesture statistics.
  */
 class GetGestureStatisticsUseCase @Inject constructor(
-    private val gestureRepository: IGestureRepository
+    private val statisticsRepository: IStatisticsRepository
 ) {
     /**
      * Returns aggregate gesture training statistics.
      */
     suspend operator fun invoke(): GestureTrainingStats =
-        gestureRepository.getGestureStats()
+        GestureTrainingStats(
+            totalGestures = statisticsRepository.getGestureStats().sumOf { it.detectionCount },
+            customGestureUsage = statisticsRepository.getGestureStats().associate { it.gestureName to it.detectionCount }
+        )
 
     /**
      * Returns statistics for a specific gesture from the aggregate snapshot when available.
      */
     suspend fun getForGesture(gestureName: String): GestureTrainingStats =
-        gestureRepository.getGestureStats()
+        invoke()
 }

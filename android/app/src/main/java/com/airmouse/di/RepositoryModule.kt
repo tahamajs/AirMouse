@@ -9,6 +9,7 @@ import com.airmouse.data.repository.*
 import com.airmouse.domain.repository.*
 import com.airmouse.network.ConnectionManager
 import com.airmouse.network.UdpDiscovery
+import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.utils.PreferencesManager
 import dagger.Binds
 import dagger.Module
@@ -114,28 +115,30 @@ object RepositoryProvidersModule {
     @Provides
     @Singleton
     fun provideMouseRepositoryImpl(
-        @ApplicationContext context: Context,
+        connectionManager: ConnectionManager,
         preferencesManager: PreferencesManager
     ): MouseRepositoryImpl {
-        return MouseRepositoryImpl(context, preferencesManager)
+        return MouseRepositoryImpl(connectionManager, preferencesManager)
     }
 
     @Provides
     @Singleton
     fun provideSensorRepositoryImpl(
         sensorManager: SensorManager,
-        preferencesManager: PreferencesManager
+        preferencesManager: PreferencesManager,
+        calibrationHelper: CalibrationHelper
     ): SensorRepositoryImpl {
-        return SensorRepositoryImpl(sensorManager, preferencesManager)
+        return SensorRepositoryImpl(sensorManager, preferencesManager, calibrationHelper)
     }
 
     @Provides
     @Singleton
     fun provideProximityRepositoryImpl(
         @ApplicationContext context: Context,
-        preferencesManager: PreferencesManager
+        preferencesManager: PreferencesManager,
+        connectionManager: ConnectionManager
     ): ProximityRepositoryImpl {
-        return ProximityRepositoryImpl(context, preferencesManager)
+        return ProximityRepositoryImpl(context, preferencesManager, connectionManager)
     }
 
     @Provides
