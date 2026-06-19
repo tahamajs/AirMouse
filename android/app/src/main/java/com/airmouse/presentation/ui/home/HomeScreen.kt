@@ -33,8 +33,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.presentation.ui.components.AnimatedConnectionStatus
+import com.airmouse.ui.components.AnimatedConnectionStatus
 import java.util.Locale
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,6 +44,7 @@ fun HomeScreen(
     navigationActions: NavigationActions
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // UI State
     var isConnected by remember { mutableStateOf(false) }
@@ -129,7 +131,7 @@ fun HomeScreen(
                         onReconnect = {
                             isConnecting = true
                             // Simulate connection
-                            kotlinx.coroutines.GlobalScope.launch {
+                            scope.launch {
                                 delay(2000)
                                 isConnected = true
                                 isConnecting = false
@@ -511,7 +513,8 @@ fun QuickActionsRow(
 }
 
 @Composable
-fun QuickActionButton(onClick: () -> Unit, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color) {
+@Composable
+fun RowScope.QuickActionButton(onClick: () -> Unit, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color) {
     Card(
         modifier = Modifier
             .weight(1f)
