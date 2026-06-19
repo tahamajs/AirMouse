@@ -7,8 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.VibrationEffect
 import android.os.Vibrator
-// Ensure this import matches the actual location of your PreferencesManager
-// import com.airmouse.utils.PreferencesManager
+import com.airmouse.utils.PreferencesManager
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.MadgwickAHRS
 import kotlinx.coroutines.channels.awaitClose
