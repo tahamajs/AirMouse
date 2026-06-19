@@ -58,9 +58,9 @@ class CalibrationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveGyroBias(bias: GyroBias) {
-        prefs.putFloat("gyro_bias_x", bias.x)
-        prefs.putFloat("gyro_bias_y", bias.y)
-        prefs.putFloat("gyro_bias_z", bias.z)
+        prefs.putFloat("gyro_bias_x", bias.offsetX)
+        prefs.putFloat("gyro_bias_y", bias.offsetY)
+        prefs.putFloat("gyro_bias_z", bias.offsetZ)
         calibrationHelper.saveCalibrationData()
     }
 
@@ -140,7 +140,13 @@ class CalibrationRepositoryImpl @Inject constructor(
 
     override suspend fun getCalibrationData(): CalibrationData {
         return CalibrationData(
-            gyroBias = getGyroBias().let { SensorCalibrationData(it.x, it.y, it.z) },
+            gyroBias = getGyroBias().let {
+                SensorCalibrationData(
+                    offsetX = it.offsetX,
+                    offsetY = it.offsetY,
+                    offsetZ = it.offsetZ
+                )
+            },
             accelOffset = getAccelOffset(),
             magOffset = getMagOffset(),
             isCalibrated = prefs.isCalibrated(),
@@ -149,7 +155,13 @@ class CalibrationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveCalibrationData(data: CalibrationData) {
-        saveGyroBias(GyroBias(data.gyroBias.offsetX, data.gyroBias.offsetY, data.gyroBias.offsetZ))
+        saveGyroBias(
+            GyroBias(
+                offsetX = data.gyroBias.offsetX,
+                offsetY = data.gyroBias.offsetY,
+                offsetZ = data.gyroBias.offsetZ
+            )
+        )
         saveAccelOffset(data.accelOffset)
         saveMagOffset(data.magOffset)
         prefs.putBoolean("calibration_complete", data.isCalibrated)
