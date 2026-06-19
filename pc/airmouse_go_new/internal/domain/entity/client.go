@@ -25,10 +25,11 @@ type ClientCapabilities struct {
 
 // Client represents a connected device (phone, tablet, etc.).
 type Client struct {
-	ID           string             `json:"id"`   // Unique identifier
-	Name         string             `json:"name"` // Friendly name
-	Status       ClientStatus       `json:"status"`
-	Capabilities ClientCapabilities `json:"capabilities"`
+    ID           string             `json:"id"`   // Unique identifier
+    Name         string             `json:"name"` // Friendly name
+    Status       ClientStatus       `json:"status"`
+    Capabilities ClientCapabilities `json:"capabilities"`
+    Version      string             `json:"version,omitempty"`
 
 	// Connection details
 	Transport   string    `json:"transport"`   // "websocket", "tcp", "udp", "bluetooth", "usb"
@@ -43,9 +44,11 @@ type Client struct {
 	MessagesRecv int64 `json:"messages_recv"`
 
 	// Runtime
-	PingLatency   time.Duration `json:"ping_latency"` // current round‑trip
-	Jitter        float64       `json:"jitter"`       // network jitter in ms
-	LastHeartbeat time.Time     `json:"last_heartbeat"`
+    PingLatency   time.Duration `json:"ping_latency"` // current round‑trip
+    Jitter        float64       `json:"jitter"`       // network jitter in ms
+    PacketLoss    float64       `json:"packet_loss,omitempty"`
+    Errors        int64         `json:"errors,omitempty"`
+    LastHeartbeat time.Time     `json:"last_heartbeat"`
 }
 
 // NewClient creates a new client with defaults.
@@ -88,7 +91,21 @@ func (c *Client) AddTraffic(sent, recv int64) {
 
 // IsActive returns true if the client has been active within the last 30 seconds.
 func (c *Client) IsActive() bool {
-	return time.Since(c.LastActive) < 30*time.Second
+    return time.Since(c.LastActive) < 30*time.Second
+}
+
+// IsHealthy reports whether the client is considered healthy by basic heuristics.
+func (c *Client) IsHealthy() bool {
+    if c.Status != StatusConnected {
+        return false
+    }
+    if c.PacketLoss > 0.2 {
+        return false
+    }
+    if c.Errors > 10 {
+        return false
+    }
+    return true
 }
 
 // SetCapabilities updates the client’s feature set.
