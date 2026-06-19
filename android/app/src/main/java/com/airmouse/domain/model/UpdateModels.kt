@@ -1,41 +1,50 @@
+// app/src/main/java/com/airmouse/domain/model/UpdateModels.kt
 package com.airmouse.domain.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
 /**
- * Version information for the app.
+ * Update result
+ */
+data class UpdateResult(
+    val isAvailable: Boolean = false,
+    val version: String? = null,
+    val releaseNotes: String? = null,
+    val fileSize: Long = 0,
+    val downloadUrl: String? = null
+)
+
+/**
+ * Version info
  */
 @Parcelize
 data class VersionInfo(
-    val versionName: String,
-    val versionCode: Int,
-    val buildDate: Long,
-    val minSdkVersion: Int,
-    val targetSdkVersion: Int,
-    val releaseNotes: String = ""
+    val versionName: String = "1.0.0",
+    val versionCode: Int = 1,
+    val buildDate: Long = System.currentTimeMillis(),
+    val minSupportedVersion: String = "1.0.0"
 ) : Parcelable
 
 /**
- * Update check result.
+ * Update info
  */
 @Parcelize
-data class UpdateResult(
-    val isAvailable: Boolean,
-    val version: String? = null,
-    val versionCode: Int = 0,
-    val releaseNotes: String? = null,
-    val fileSize: Long = 0,
-    val downloadUrl: String? = null,
-    val isMandatory: Boolean = false
+data class UpdateInfo(
+    val version: String = "",
+    val date: Long = System.currentTimeMillis(),
+    val isInstalled: Boolean = false,
+    val isAvailable: Boolean = false
 ) : Parcelable
 
 /**
- * Update download progress.
+ * Update progress
  */
-@Parcelize
 data class UpdateProgress(
-    val bytesDownloaded: Long,
-    val totalBytes: Long,
-    val progress: Int,
+    val progress: Float = 0f,
+    val bytesDownloaded: Long = 0,
+    val totalBytes: Long = 0,
     val isComplete: Boolean = false,
-    val error: String? = null
-) : Parcelable
+    val isError: Boolean = false,
+    val errorMessage: String? = null
+)

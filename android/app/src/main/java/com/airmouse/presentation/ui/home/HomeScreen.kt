@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.presentation.ui.components.AnimatedConnectionStatus
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,7 +43,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
 
-    // UI State Holders (Internal Mock Variables to guarantee successful builds without viewmodel bugs)
+    // UI State
     var isConnected by remember { mutableStateOf(false) }
     var isConnecting by remember { mutableStateOf(false) }
     var serverIp by remember { mutableStateOf("192.168.1.100") }
@@ -50,14 +51,11 @@ fun HomeScreen(
     var serverName by remember { mutableStateOf("My Desktop PC") }
     var userName by remember { mutableStateOf("User") }
     var ping by remember { mutableStateOf(14) }
-
     var recentGestures by remember { mutableStateOf(listOf("Swipe Left - Next Slide", "Swipe Right - Prev Slide")) }
-
-    // Animation states
     var showGreeting by remember { mutableStateOf(false) }
-    val greetingText = if (userName.isNotEmpty()) "Welcome back, $userName!" else "Welcome to Air Mouse Pro!"
-
     var showQrPermissionDialog by remember { mutableStateOf(false) }
+
+    val greetingText = if (userName.isNotEmpty()) "Welcome back, $userName!" else "Welcome to Air Mouse Pro!"
 
     // Permission launcher
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -70,7 +68,7 @@ fun HomeScreen(
         }
     }
 
-    // Animated greeting execution
+    // Animated greeting
     LaunchedEffect(Unit) {
         delay(500)
         showGreeting = true
@@ -119,7 +117,7 @@ fun HomeScreen(
                     }
                 }
 
-                // Connection Status Management Display
+                // Connection Status
                 item {
                     ConnectionStatusCard(
                         isConnected = isConnected,
@@ -129,13 +127,17 @@ fun HomeScreen(
                         onDisconnect = { isConnected = false },
                         onReconnect = {
                             isConnecting = true
-                            isConnected = true
-                            isConnecting = false
+                            // Simulate connection
+                            kotlinx.coroutines.GlobalScope.launch {
+                                delay(2000)
+                                isConnected = true
+                                isConnecting = false
+                            }
                         }
                     )
                 }
 
-                // Network Interaction Controls Configuration
+                // Connection Controls
                 item {
                     ConnectionControlsCard(
                         ip = serverIp,
@@ -149,7 +151,7 @@ fun HomeScreen(
                                     Manifest.permission.CAMERA
                                 ) == PackageManager.PERMISSION_GRANTED
                             ) {
-                                // Start scanning operation
+                                // Start scanning
                             } else {
                                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                             }
@@ -159,7 +161,7 @@ fun HomeScreen(
                     )
                 }
 
-                // Quick Core Features Routing Options
+                // Quick Actions
                 item {
                     QuickActionsRow(
                         onCalibrate = { navigationActions.navigateTo(Destinations.Calibration) },
@@ -169,22 +171,22 @@ fun HomeScreen(
                     )
                 }
 
-                // Sensor Readouts Mock Layout Block
+                // Sensor Preview
                 item {
                     SensorPreviewCard(roll = 12f, yaw = -45f, pitch = 3f)
                 }
 
-                // User Stats Accumulation Summary
+                // Stats
                 item {
                     StatsRow(clicks = 124, scrolls = 42, sessionDuration = "00:14:23")
                 }
 
-                // Hardware Health Metrics Tracker Card
+                // Performance
                 item {
                     PerformanceCard(batteryLevel = 88, isCharging = false, cpuUsage = 14, memoryUsage = 45, frameRate = 60)
                 }
 
-                // Historical Pattern Processing Stack
+                // Recent Gestures
                 if (recentGestures.isNotEmpty()) {
                     item {
                         RecentGesturesCard(
@@ -194,13 +196,13 @@ fun HomeScreen(
                     }
                 }
 
-                // System Optimization Help Banner
+                // Tips
                 item {
                     TipsCard()
                 }
             }
 
-            // Floating Status Identifier Layout Element
+            // Status indicator
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -219,7 +221,7 @@ fun HomeScreen(
                 )
             }
 
-            // Dynamic Dialog Validation Handler
+            // Permission dialog
             if (showQrPermissionDialog) {
                 AlertDialog(
                     onDismissRequest = { showQrPermissionDialog = false },
@@ -300,7 +302,9 @@ fun GreetingCard(text: String, userName: String, onEditProfile: () -> Unit) {
         shape = RoundedCornerShape(24.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -352,7 +356,9 @@ fun ConnectionStatusCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier.size(64.dp).scale(if (isConnected) pulse else 1f),
+                modifier = Modifier
+                    .size(64.dp)
+                    .scale(if (isConnected) pulse else 1f),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -455,7 +461,9 @@ fun ConnectionControlsCard(
                 Button(
                     onClick = onConnect,
                     enabled = !isConnecting,
-                    modifier = Modifier.weight(1f).height(56.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     if (isConnecting) {
@@ -469,7 +477,9 @@ fun ConnectionControlsCard(
 
                 OutlinedButton(
                     onClick = onScanQr,
-                    modifier = Modifier.weight(1f).height(56.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null)
@@ -502,7 +512,9 @@ fun QuickActionsRow(
 @Composable
 fun QuickActionButton(onClick: () -> Unit, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color) {
     Card(
-        modifier = Modifier.weight(1f).aspectRatio(1f),
+        modifier = Modifier
+            .weight(1f)
+            .aspectRatio(1f),
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
         shape = RoundedCornerShape(16.dp),
         onClick = onClick
@@ -529,10 +541,13 @@ fun SensorPreviewCard(roll: Float, yaw: Float, pitch: Float) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("🎛️ IMU Gyro Tracking", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Roll: ${roll}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                Text("Yaw: ${yaw}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                Text("Pitch: ${pitch}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Roll: ${String.format("%.1f", roll)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("Yaw: ${String.format("%.1f", yaw)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("Pitch: ${String.format("%.1f", pitch)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
         }
     }
@@ -558,7 +573,9 @@ fun StatsCard(title: String, value: String, icon: androidx.compose.ui.graphics.v
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(24.dp))
@@ -580,7 +597,10 @@ fun PerformanceCard(batteryLevel: Int, isCharging: Boolean, cpuUsage: Int, memor
             Text(text = "📊 System Performance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                     Icon(if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull, contentDescription = null, tint = Color(0xFF4CAF50))
                     Text("$batteryLevel%", fontSize = 12.sp, fontWeight = FontWeight.Bold)

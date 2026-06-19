@@ -1,4 +1,5 @@
 package com.airmouse.presentation.ui.main
+import androidx.compose.ui.graphics.graphicsLayer
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -377,7 +378,6 @@ fun ModernDrawerContent(
                 colors = NavigationDrawerItemDefaults.colors(
                     selectedContainerColor = Color(0xFF00BCD4).copy(alpha = 0.1f)
                 ),
-                // Fixed broken padding syntax mixing vertical/start/end incorrectly
                 modifier = Modifier.padding(start = 32.dp, end = 16.dp, top = 2.dp, bottom = 2.dp)
             )
         }
@@ -447,13 +447,13 @@ fun AnimatedFAB(
         elevation = FloatingActionButtonDefaults.elevation(
             defaultElevation = if (isActive) 8.dp else 4.dp
         ),
-        // Applied the requested pulse animation parameter safely to the graphics layout modifier
-        modifier = Modifier.graphicsLayer {
-            if (isActive) {
-                scaleX = pulse
-                scaleY = pulse
+        modifier = Modifier
+            .graphicsLayer {
+                if (isActive) {
+                    scaleX = pulse
+                    scaleY = pulse
+                }
             }
-        }
     ) {
         Box(
             modifier = Modifier

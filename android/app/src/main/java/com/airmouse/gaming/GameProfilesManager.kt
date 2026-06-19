@@ -341,7 +341,7 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
     private fun startGameDetection() {
         detectionJob?.cancel()
         detectionJob = scope.launch {
-            while (true) {
+            while (isActive) {
                 val detectedGame = detectCurrentGame()
                 val currentPackage = detectedGame?.packageName
                 val now = System.currentTimeMillis()
@@ -349,7 +349,7 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
                 if (currentPackage != null && currentPackage == lastForegroundPackage) {
                     // Same game still in foreground → accumulate play time
                     val elapsed = now - gameStartTime
-                    if (elapsed > 0 && detectedGame != null) {
+                    if (elapsed > 0) {
                         val updatedProfile = detectedGame.copy(
                             playTime = detectedGame.playTime + elapsed,
                             lastPlayed = now
@@ -361,18 +361,14 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
                         }
                     }
                     gameStartTime = now
-                } else if (currentPackage != null) {
-                    // New game detected
+                } else if (detectedGame != null) {
+                    // New supported game detected
                     gameStartTime = now
                     lastForegroundPackage = currentPackage
                     _currentGame.value = detectedGame
-                    if (detectedGame != null) {
-                        applyGameSettings(detectedGame)
-                    } else {
-                        resetToDefaultSettings()
-                    }
+                    applyGameSettings(detectedGame)
                 } else {
-                    // No game detected
+                    // No supported game detected
                     if (lastForegroundPackage != null) {
                         lastForegroundPackage = null
                         _currentGame.value = null
@@ -433,56 +429,12 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
      * Returns the game action associated with a gesture for the currently active game.
      */
     fun getActionForGesture(gesture: String): GameAction? {
-        return _currentGame.value?.gestureMappings?.find { it.gesture == gesture && it.enabled }?.action
+        val mappings = _currentGame.value?.gestureMappings ?: return null
+        return mappings.find { it.gesture == gesture && it.enabled }?.action
     }
 
     /**
-     * Exports all profiles to a single JSON file.
-     */
-    fun exportProfiles(): File {
-        val exportFile = File(context.getExternalFilesDir(null), "game_profiles_export.json")
-        val jsonArray = JSONArray()
-        _profiles.value.forEach { profile ->
-            jsonArray.put(JSONObject().apply {
-                put("id", profile.id)
-                put("gameName", profile.gameName)
-                put("packageName", profile.packageName)
-                put("settings", JSONObject().apply {
-                    put("sensitivity", profile.settings.sensitivity)
-                    put("aimAssist", profile.settings.aimAssist)
-                })
-            })
-        }
-        exportFile.writeText(jsonArray.toString())
-        return exportFile
-    }
-
-    /**
-     * Imports profiles from a JSON file.
-     */
-    fun importProfiles(file: File) {
-        try {
-            val jsonArray = JSONArray(file.readText())
-            for (i in 0 until jsonArray.length()) {
-                val json = jsonArray.getJSONObject(i)
-                val profile = GameProfile(
-                    id = json.getString("id"),
-                    gameName = json.getString("gameName"),
-                    packageName = json.getString("packageName"),
-                    settings = GameSettings().apply {
-                        sensitivity = json.getJSONObject("settings").optDouble("sensitivity", 1.0).toFloat()
-                        aimAssist = json.getJSONObject("settings").optBoolean("aimAssist", true)
-                    }
-                )
-                saveProfile(profile)
-            }
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to import profiles", e)
-        }
-    }
-
-    /**
-     * Stops the detection coroutine – call when the service is destroyed.
+     * Stops the detection coroutine and cleans up resources.
      */
     fun stopDetection() {
         detectionJob?.cancel()

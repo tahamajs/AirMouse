@@ -27,6 +27,10 @@ import com.airmouse.presentation.ui.themes.ThemesScreen
 import com.airmouse.presentation.ui.touchpad.TouchpadScreen
 import com.airmouse.presentation.ui.voice.VoiceCommandsScreen
 
+/**
+ * Main Navigation Host for the Air Mouse application.
+ * Handles all navigation between screens with smooth animations.
+ */
 @Composable
 fun AirMouseNavHost(
     navController: NavHostController,
@@ -41,71 +45,124 @@ fun AirMouseNavHost(
         startDestination = startDestination,
         modifier = modifier,
         enterTransition = {
-            fadeIn(animationSpec = tween(300)) + slideInHorizontally(animationSpec = tween(300)) { it }
+            fadeIn(animationSpec = tween(300)) +
+                    slideInHorizontally(animationSpec = tween(300)) { it }
         },
         exitTransition = {
-            fadeOut(animationSpec = tween(300)) + slideOutHorizontally(animationSpec = tween(300)) { -it }
+            fadeOut(animationSpec = tween(300)) +
+                    slideOutHorizontally(animationSpec = tween(300)) { -it }
         },
         popEnterTransition = {
-            fadeIn(animationSpec = tween(300)) + slideInHorizontally(animationSpec = tween(300)) { -it }
+            fadeIn(animationSpec = tween(300)) +
+                    slideInHorizontally(animationSpec = tween(300)) { -it }
         },
         popExitTransition = {
-            fadeOut(animationSpec = tween(300)) + slideOutHorizontally(animationSpec = tween(300)) { it }
+            fadeOut(animationSpec = tween(300)) +
+                    slideOutHorizontally(animationSpec = tween(300)) { it }
         }
     ) {
-        // Bottom Navigation Screens
-        composable(Destinations.Home.route) { HomeScreen(navigationActions = navActions) }
-        composable(Destinations.Statistics.route) { StatisticsScreen(navigationActions = navActions) }
-        composable(Destinations.Settings.route) { SettingsScreen(navigationActions = navActions) }
-        composable(Destinations.Help.route) { HelpScreen(navigationActions = navActions) }
+        // ==================== BOTTOM NAVIGATION SCREENS ====================
 
-        // Info Screens
-        composable(Destinations.About.route) { AboutScreen(navigationActions = navActions) }
+        composable(Destinations.Home.route) {
+            HomeScreen(navigationActions = navActions)
+        }
 
-        // Calibration & Sensors
+        composable(Destinations.Statistics.route) {
+            StatisticsScreen(navigationActions = navActions)
+        }
+
+        composable(Destinations.Settings.route) {
+            SettingsScreen(navigationActions = navActions)
+        }
+
+        composable(Destinations.Help.route) {
+            HelpScreen(navigationActions = navActions)
+        }
+
+        // ==================== INFO SCREENS ====================
+
+        composable(Destinations.About.route) {
+            AboutScreen(navigationActions = navActions)
+        }
+
+        // ==================== CALIBRATION & SENSORS ====================
+
         composable(Destinations.Calibration.route) {
             CalibrationScreen(
                 navigationActions = navActions,
                 onComplete = { navController.popBackStack() }
             )
         }
-        composable(Destinations.SensorVisualizer.route) { SensorVisualizerScreen(navigationActions = navActions) }
 
-        // Gesture & Touch
-        composable(Destinations.GestureStudio.route) { GestureStudioScreen(navigationActions = navActions) }
-        composable(Destinations.EdgeGestures.route) { EdgeGesturesScreen(navigationActions = navActions) }
-        composable(Destinations.Touchpad.route) { TouchpadScreen(navigationActions = navActions) }
+        composable(Destinations.SensorVisualizer.route) {
+            SensorVisualizerScreen(navigationActions = navActions)
+        }
 
-        // Connectivity
+        // ==================== GESTURE & TOUCH ====================
+
+        composable(Destinations.GestureStudio.route) {
+            GestureStudioScreen(navigationActions = navActions)
+        }
+
+        composable(Destinations.EdgeGestures.route) {
+            EdgeGesturesScreen(navigationActions = navActions)
+        }
+
+        composable(Destinations.Touchpad.route) {
+            TouchpadScreen(navigationActions = navActions)
+        }
+
+        // ==================== CONNECTIVITY ====================
+
         composable(Destinations.NetworkDiscovery.route) {
+            // Forwarded the top-level callback and supplied the required onBack lambda parameter
             NetworkDiscoveryScreen(
                 navigationActions = navActions,
-                onServerSelected = { ip, port ->
-                    onServerSelected(ip, port)
-                    navController.popBackStack()
-                    navActions.navigateToHome()
-                }
+                onBack = { navActions.navigateBack() },
+                onServerSelected = onServerSelected
             )
         }
-        composable(Destinations.ServerLogs.route) { ServerLogsScreen(navigationActions = navActions) }
 
-        // Security & Privacy
-        composable(Destinations.Proximity.route) { ProximityScreen(navigationActions = navActions) }
-        composable(Destinations.VoiceCommands.route) { VoiceCommandsScreen(navigationActions = navActions) }
+        composable(Destinations.ServerLogs.route) {
+            ServerLogsScreen(navigationActions = navActions)
+        }
 
-        // Customization
-        composable(Destinations.Profiles.route) { ProfilesScreen(navigationActions = navActions) }
-        composable(Destinations.Themes.route) { ThemesScreen(navigationActions = navActions) }
+        // ==================== SECURITY & PRIVACY ====================
 
-        // System
-        composable(Destinations.Battery.route) { BatteryScreen(navigationActions = navActions) }
-        composable(Destinations.Accessibility.route) { AccessibilityScreen(navigationActions = navActions) }
-        composable(Destinations.TouchpadSettings.route) { TouchpadScreen(navigationActions = navActions) }
+        composable(Destinations.Proximity.route) {
+            ProximityScreen(navigationActions = navActions)
+        }
 
-        // Onboarding
+        composable(Destinations.VoiceCommands.route) {
+            VoiceCommandsScreen(navigationActions = navActions)
+        }
+
+        // ==================== CUSTOMIZATION ====================
+
+        composable(Destinations.Profiles.route) {
+            ProfilesScreen(navigationActions = navActions)
+        }
+
+        composable(Destinations.Themes.route) {
+            ThemesScreen(navigationActions = navActions)
+        }
+
+        // ==================== SYSTEM ====================
+
+        composable(Destinations.Battery.route) {
+            BatteryScreen(navigationActions = navActions)
+        }
+
+        composable(Destinations.Accessibility.route) {
+            AccessibilityScreen(navigationActions = navActions)
+        }
+
+        // ==================== ONBOARDING ====================
+
         composable(Destinations.Onboarding.route) {
-            // FIXED: Removed invalid onComplete trailing lambda to perfectly match your implementation signature
-            OnboardingScreen(navigationActions = navActions)
+            OnboardingScreen(
+                navigationActions = navActions
+            )
         }
     }
 }

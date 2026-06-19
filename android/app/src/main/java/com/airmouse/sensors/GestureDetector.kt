@@ -1,11 +1,14 @@
 package com.airmouse.sensors
 
+import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.content.Context
+import com.airmouse.utils.PreferencesManager
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Gesture detector for click, double click, right click, and scroll gestures.
@@ -140,7 +143,7 @@ class GestureDetector(
     private fun vibrate(duration: Long) {
         if (prefs.getBoolean("haptic_enabled", true)) {
             val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
                 @Suppress("DEPRECATION")
@@ -148,6 +151,4 @@ class GestureDetector(
             }
         }
     }
-
-    private fun sqrt(value: Float): Float = kotlin.math.sqrt(value.toDouble()).toFloat()
 }

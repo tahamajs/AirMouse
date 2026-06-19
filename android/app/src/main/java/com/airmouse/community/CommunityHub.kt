@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/community/CommunityHub.kt
 package com.airmouse.community
 
 import android.content.Context
@@ -11,7 +12,6 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.*
 
 /**
  * Community hub for sharing gestures, profiles, and macros
@@ -70,6 +70,9 @@ class CommunityHub(private val context: Context, private val prefs: PreferencesM
     private val _myUploads = MutableStateFlow<List<SharedItem>>(emptyList())
     val myUploads: StateFlow<List<SharedItem>> = _myUploads.asStateFlow()
 
+    private val _searchResults = MutableStateFlow<List<SharedItem>>(emptyList())
+    val searchResults: StateFlow<List<SharedItem>> = _searchResults.asStateFlow()
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val cacheDir = File(context.cacheDir, CACHE_DIR)
 
@@ -95,7 +98,6 @@ class CommunityHub(private val context: Context, private val prefs: PreferencesM
                 }
                 connection.disconnect()
             } catch (e: Exception) {
-                // Load from cache
                 loadCachedTrending()
             }
         }
@@ -112,11 +114,11 @@ class CommunityHub(private val context: Context, private val prefs: PreferencesM
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                     val response = connection.inputStream.bufferedReader().readText()
                     val items = parseItems(JSONArray(response))
-                    // Update search results
+                    _searchResults.value = items
                 }
                 connection.disconnect()
             } catch (e: Exception) {
-                // Handle error
+                _searchResults.value = emptyList()
             }
         }
     }
@@ -171,33 +173,33 @@ class CommunityHub(private val context: Context, private val prefs: PreferencesM
         }
     }
 
-    fun downloadItem(itemId: String): SharedItem? {
-        var result: SharedItem? = null
-        scope.launch {
-            try {
-                val url = URL("$API_BASE_URL/items/$itemId/download")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connect()
+    suspend fun downloadItem(itemId: String): SharedItem? = withContext(Dispatchers.IO) {
+        try {
+            val url = URL("$API_BASE_URL/items/$itemId/download")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connect()
 
-                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    val content = connection.inputStream.bufferedReader().readText()
-                    result = parseItem(JSONObject(content))
-                    // Import to local storage
-                    when (result?.type) {
-                        ItemType.GESTURE -> importGesture(result)
-                        ItemType.PROFILE -> importProfile(result)
-                        ItemType.MACRO -> importMacro(result)
-                        ItemType.THEME -> importTheme(result)
-                        else -> {}
-                    }
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                val content = connection.inputStream.bufferedReader().readText()
+                val downloadedItem = parseItem(JSONObject(content))
+
+                // Import to local storage using clean immutable reference
+                when (downloadedItem.type) {
+                    ItemType.GESTURE -> importGesture(downloadedItem)
+                    ItemType.PROFILE -> importProfile(downloadedItem)
+                    ItemType.MACRO -> importMacro(downloadedItem)
+                    ItemType.THEME -> importTheme(downloadedItem)
+                    else -> {}
                 }
                 connection.disconnect()
-            } catch (e: Exception) {
-                // Handle error
+                return@withContext downloadedItem
             }
+            connection.disconnect()
+        } catch (e: Exception) {
+            // Handle error
         }
-        return result
+        return@withContext null
     }
 
     fun addToFavorites(item: SharedItem) {
@@ -295,22 +297,18 @@ class CommunityHub(private val context: Context, private val prefs: PreferencesM
     }
 
     private fun importGesture(item: SharedItem) {
-        // Save gesture to local storage
         prefs.putString("imported_gesture_${item.id}", item.content)
     }
 
     private fun importProfile(item: SharedItem) {
-        // Save profile to local storage
         prefs.putString("imported_profile_${item.id}", item.content)
     }
 
     private fun importMacro(item: SharedItem) {
-        // Save macro to local storage
         prefs.putString("imported_macro_${item.id}", item.content)
     }
 
     private fun importTheme(item: SharedItem) {
-        // Save theme to local storage
         prefs.putString("imported_theme_${item.id}", item.content)
     }
 

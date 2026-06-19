@@ -32,45 +32,6 @@ import java.util.Locale
 
 // --- Target Data Models to satisfy your UI Architecture requirements ---
 
-data class VoiceCommand(
-    val keyword: String,
-    val description: String,
-    val action: String,
-    val icon: String
-)
-
-data class CustomVoiceCommand(
-    val id: String,
-    val phrase: String,
-    val action: String,
-    val enabled: Boolean
-)
-
-data class VoiceCommandHistory(
-    val id: String,
-    val command: String,
-    val timestamp: Long,
-    val confidence: Float,
-    val success: Boolean
-)
-
-data class VoiceCommandsUiState(
-    val microphonePermissionGranted: Boolean = false,
-    val isListening: Boolean = false,
-    val wakeWordEnabled: Boolean = true,
-    val wakeWord: String = "Hey AirMouse",
-    val continuousListening: Boolean = false,
-    val voiceFeedback: Boolean = true,
-    val soundEffects: Boolean = true,
-    val sensitivity: Float = 0.5f,
-    val status: String = "Ready to listen",
-    val statusColor: Int = Color(0xFF4CAF50).toArgb(),
-    val lastCommand: String? = null,
-    val lastConfidence: Float = 0.0f,
-    val availableCommands: List<VoiceCommand> = emptyList(),
-    val customCommands: List<CustomVoiceCommand> = emptyList(),
-    val commandHistory: List<VoiceCommandHistory> = emptyList()
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -679,20 +640,3 @@ fun SliderSetting(
     }
 }
 
-// --- Target ViewModel Interface definition to process layout callbacks ---
-class VoiceCommandsViewModel : androidx.lifecycle.ViewModel() {
-    val uiState = kotlinx.coroutines.flow.MutableStateFlow(VoiceCommandsUiState())
-    fun clearHistory() {}
-    fun requestMicrophonePermission() {}
-    fun startListening() {}
-    fun stopListening() {}
-    fun addCustomCommand(phrase: String, action: String) {}
-    fun updateCustomCommand(id: String, enabled: Boolean) {}
-    fun removeCustomCommand(id: String) {}
-    fun updateWakeWordEnabled(b: Boolean) {}
-    fun updateWakeWord(s: String) {}
-    fun updateContinuousListening(b: Boolean) {}
-    fun updateVoiceFeedback(b: Boolean) {}
-    fun updateSoundEffects(b: Boolean) {}
-    fun updateSensitivity(f: Float) {}
-}

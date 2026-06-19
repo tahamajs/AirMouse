@@ -12,9 +12,10 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.airmouse.R
-import com.airmouse.network.WebSocketManager
+import com.airmouse.network.ConnectionManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import timber.log.Timber
 import javax.inject.Inject
 import kotlin.math.*
 
@@ -22,6 +23,7 @@ import kotlin.math.*
 class OrientationMonitorService : Service(), SensorEventListener {
 
     @Inject lateinit var sensorManager: SensorManager
+    @Inject lateinit var connectionManager: ConnectionManager
 
     private var isActive = false
     private lateinit var wakeLock: PowerManager.WakeLock
@@ -140,15 +142,14 @@ class OrientationMonitorService : Service(), SensorEventListener {
                 SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
                 SensorManager.getOrientation(rotationMatrix, orientation)
 
-                yaw = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                pitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
-                roll = Math.toDegrees(orientation[2].toDouble()).toFloat()
+                yaw = toDegrees(orientation[0])
+                pitch = toDegrees(orientation[1])
+                roll = toDegrees(orientation[2])
 
                 sendOrientationData()
             }
         }
 
-        // Complementary filter for smooth orientation
         updateOrientationWithFusion()
     }
 
@@ -157,9 +158,9 @@ class OrientationMonitorService : Service(), SensorEventListener {
         if (success) {
             SensorManager.getOrientation(rotationMatrix, orientation)
 
-            val fusedYaw = Math.toDegrees(orientation[0].toDouble()).toFloat()
-            val fusedPitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
-            val fusedRoll = Math.toDegrees(orientation[2].toDouble()).toFloat()
+            val fusedYaw = toDegrees(orientation[0])
+            val fusedPitch = toDegrees(orientation[1])
+            val fusedRoll = toDegrees(orientation[2])
 
             // Complementary filter
             val alpha = 0.96f
@@ -176,8 +177,12 @@ class OrientationMonitorService : Service(), SensorEventListener {
         if (now - lastSendTime < sendIntervalMs) return
         lastSendTime = now
 
-        // Send via WebSocket
-        WebSocketManager.sendOrientation(yaw, pitch, roll)
+        // ✅ FIXED: Send as move commands via ConnectionManager
+        // Map orientation to cursor movement
+        val sensitivity = 0.5f
+        val dx = roll * sensitivity
+        val dy = pitch * sensitivity
+        connectionManager.sendMove(dx, dy)
 
         // Broadcast for UI
         val intent = Intent(BROADCAST_ORIENTATION).apply {
@@ -186,6 +191,11 @@ class OrientationMonitorService : Service(), SensorEventListener {
             putExtra(EXTRA_ROLL, roll)
         }
         sendBroadcast(intent)
+    }
+
+    // ✅ Helper to convert radians to degrees
+    private fun toDegrees(rad: Float): Float {
+        return rad * 180f / PI.toFloat()
     }
 
     fun getCurrentOrientation(): Triple<Float, Float, Float> = Triple(yaw, pitch, roll)
@@ -211,6 +221,7 @@ class OrientationMonitorService : Service(), SensorEventListener {
         super.onDestroy()
         stopMonitoring()
         serviceScope.cancel()
+        Timber.i("OrientationMonitorService destroyed")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

@@ -1,31 +1,45 @@
+// app/src/main/java/com/airmouse/domain/repository/IStatisticsRepository.kt
 package com.airmouse.domain.repository
 
+import com.airmouse.domain.model.DailyStats
+import com.airmouse.domain.model.GestureStatistics
+import com.airmouse.domain.model.HistoricalStatistics
+import com.airmouse.domain.model.StatisticsSummary
 import kotlinx.coroutines.flow.Flow
 
 interface IStatisticsRepository {
-    suspend fun incrementClickCount()
-    suspend fun incrementDoubleClickCount()
-    suspend fun incrementRightClickCount()
-    suspend fun incrementScrollCount()
-    suspend fun incrementGestureCount(gestureName: String)
+    // Recording
+    suspend fun recordClick()
+    suspend fun recordDoubleClick()
+    suspend fun recordRightClick()
+    suspend fun recordScroll(delta: Int)
     suspend fun recordMovement(distance: Float, duration: Long)
-    suspend fun getStatistics(timeRange: TimeRange): Flow<AppStatistics>
-    suspend fun resetStatistics()
-    suspend fun exportStatistics(): String
-}
+    suspend fun recordGesture(gesture: String, confidence: Float)
+    suspend fun recordConnectionAttempt(success: Boolean, latencyMs: Long)
 
-data class AppStatistics(
-    val clicks: Int,
-    val doubleClicks: Int,
-    val rightClicks: Int,
-    val scrolls: Int,
-    val gestures: Map<String, Int>,
-    val totalDistance: Float,
-    val averageSpeed: Float,
-    val sessionTime: Long,
-    val lastResetTime: Long
-)
+    // Session
+    suspend fun getCurrentSession(): StatisticsSummary
+    fun observeCurrentSession(): Flow<StatisticsSummary>
+    suspend fun startTracking()
+    suspend fun stopTracking()
+    suspend fun isTracking(): Boolean
 
-enum class TimeRange {
-    TODAY, WEEK, MONTH, ALL_TIME
+    // Historical
+    suspend fun getDailyStats(date: String): DailyStats
+    suspend fun getHistoricalStats(): HistoricalStatistics
+    fun observeHistoricalStats(): Flow<HistoricalStatistics>
+    suspend fun getTodayStats(): DailyStats
+    suspend fun getWeekStats(): List<DailyStats>
+    suspend fun getMonthStats(): List<DailyStats>
+
+    // Gesture stats
+    suspend fun getGestureStats(): List<GestureStatistics>
+    fun observeGestureStats(): Flow<List<GestureStatistics>>
+
+    // Reset
+    suspend fun resetStats()
+    suspend fun resetSession()
+
+    // Export
+    suspend fun exportStats(format: String): String
 }

@@ -1,231 +1,181 @@
 // app/src/main/java/com/airmouse/data/repository/ConnectionRepositoryImpl.kt
 package com.airmouse.data.repository
 
-import com.airmouse.domain.model.ConnectionConfig
-import com.airmouse.domain.model.ConnectionProtocol
-import com.airmouse.domain.model.ConnectionStatus
-import com.airmouse.domain.model.MouseEvent
-import com.airmouse.domain.model.TestResult
-import com.airmouse.domain.repository.ConnectionStats
+import com.airmouse.domain.model.*
 import com.airmouse.domain.repository.IConnectionRepository
-import com.airmouse.network.WebSocketManager
+import com.airmouse.network.ConnectionManager
+import com.airmouse.network.UdpDiscovery
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.net.InetSocketAddress
-import java.net.Socket
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ConnectionRepositoryImpl @Inject constructor(
+    private val connectionManager: ConnectionManager,
+    private val udpDiscovery: UdpDiscovery,
     private val prefs: PreferencesManager
 ) : IConnectionRepository {
 
-    private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
-    override fun connectionStatus(): StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
-
-    private val _connectionStats = MutableStateFlow(ConnectionStats())
-    override fun getConnectionStats(): StateFlow<ConnectionStats> = _connectionStats.asStateFlow()
-
-    private var currentConfig: ConnectionConfig? = null
-    private var reconnectAttempts = 0
-    private val maxReconnectAttempts = 5
-    private val reconnectDelayMs = 2000L
-
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    private val _status = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+    override fun observeConnectionStatus(): Flow<ConnectionStatus> = _status.asStateFlow()
+
+    private val _quality = MutableStateFlow(ConnectionQuality())
+    override fun observeConnectionQuality(): Flow<ConnectionQuality> = _quality.asStateFlow()
+
+    private val _config = MutableStateFlow(ConnectionConfig())
+    private val _discoveredServers = MutableStateFlow<List<DiscoveredServer>>(emptyList())
+
     init {
-        setupWebSocketCallbacks()
-        loadConnectionStats()
+        loadConfig()
+        observeConnectionManagerStatus()
     }
 
-    private fun setupWebSocketCallbacks() {
-        WebSocketManager.onConnected = {
-            scope.launch {
-                _connectionStatus.value = ConnectionStatus.CONNECTED
-                reconnectAttempts = 0
-                updateConnectionStats(success = true)
-                saveCurrentConfig()
-            }
+    private fun loadConfig() {
+        val ip = prefs.getString("last_ip", "")
+        val port = prefs.getInt("last_port", 8080)
+        val protocol = prefs.getString("connection_protocol", "WEBSOCKET")
+        val protocolEnum = try {
+            ConnectionProtocol.valueOf(protocol)
+        } catch (e: IllegalArgumentException) {
+            ConnectionProtocol.WEBSOCKET
         }
+        _config.value = ConnectionConfig(ip = ip, port = port, protocol = protocolEnum)
+    }
 
-        WebSocketManager.onDisconnected = {
-            scope.launch {
-                _connectionStatus.value = ConnectionStatus.DISCONNECTED
-                if (currentConfig?.autoReconnect == true && reconnectAttempts < maxReconnectAttempts) {
-                    startReconnection()
+    private fun observeConnectionManagerStatus() {
+        scope.launch {
+            connectionManager.connectionStatus.collect { status ->
+                _status.value = when (status) {
+                    ConnectionManager.ConnectionStatus.CONNECTED -> ConnectionStatus.CONNECTED
+                    ConnectionManager.ConnectionStatus.CONNECTING -> ConnectionStatus.CONNECTING
+                    ConnectionManager.ConnectionStatus.DISCONNECTED -> ConnectionStatus.DISCONNECTED
+                    ConnectionManager.ConnectionStatus.RECONNECTING -> ConnectionStatus.RECONNECTING
+                    ConnectionManager.ConnectionStatus.ERROR -> ConnectionStatus.ERROR
                 }
             }
         }
-
-        WebSocketManager.onError = { error ->
-            scope.launch {
-                _connectionStatus.value = ConnectionStatus.ERROR
-                updateConnectionStats(success = false)
+        scope.launch {
+            connectionManager.connectionQuality.collect { quality ->
+                _quality.value = ConnectionQuality(
+                    ping = quality.ping,
+                    rssi = quality.rssi,
+                    jitter = quality.jitter,
+                    signalStrength = when (quality.signalStrength) {
+                        ConnectionManager.ConnectionQuality.SignalStrength.EXCELLENT ->
+                            ConnectionQuality.SignalStrength.EXCELLENT
+                        ConnectionManager.ConnectionQuality.SignalStrength.GOOD ->
+                            ConnectionQuality.SignalStrength.GOOD
+                        ConnectionManager.ConnectionQuality.SignalStrength.FAIR ->
+                            ConnectionQuality.SignalStrength.FAIR
+                        ConnectionManager.ConnectionQuality.SignalStrength.POOR ->
+                            ConnectionQuality.SignalStrength.POOR
+                        ConnectionManager.ConnectionQuality.SignalStrength.UNKNOWN ->
+                            ConnectionQuality.SignalStrength.UNKNOWN
+                    }
+                )
             }
         }
     }
 
-    private fun startReconnection() {
-        scope.launch {
-            _connectionStatus.value = ConnectionStatus.RECONNECTING
-            reconnectAttempts++
-            delay(reconnectDelayMs * reconnectAttempts)
-            currentConfig?.let { connect(it) }
-        }
-    }
-
-    override suspend fun connect(config: ConnectionConfig) {
-        currentConfig = config
-        _connectionStatus.value = ConnectionStatus.CONNECTING
-
-        val url = when (config.protocol) {
-            ConnectionProtocol.WEBSOCKET -> "ws://${config.serverIp}:${config.serverPort}/ws"
-            else -> "ws://${config.serverIp}:${config.serverPort}/ws"
-        }
-
-        WebSocketManager.connect(url)
-        saveConfig(config)
+    override suspend fun connect(config: ConnectionConfig): Boolean {
+        _config.value = config
+        saveConnectionConfig(config)
+        return connectionManager.connect(config.ip, config.port)
     }
 
     override suspend fun disconnect() {
-        reconnectAttempts = maxReconnectAttempts // Disable auto-reconnect
-        WebSocketManager.disconnect()
-        _connectionStatus.value = ConnectionStatus.DISCONNECTED
-        currentConfig = null
+        connectionManager.disconnect()
     }
 
-    override suspend fun sendEvent(event: MouseEvent) {
-        if (_connectionStatus.value != ConnectionStatus.CONNECTED) return
-
-        when (event) {
-            is MouseEvent.Move -> WebSocketManager.sendMove(event.dx.toFloat(), event.dy.toFloat())
-            is MouseEvent.Click -> WebSocketManager.sendClick(event.button)
-            is MouseEvent.DoubleClick -> WebSocketManager.sendDoubleClick()
-            is MouseEvent.RightClick -> WebSocketManager.sendRightClick()
-            is MouseEvent.Scroll -> WebSocketManager.sendScroll(event.delta)
-            is MouseEvent.Gesture -> WebSocketManager.sendGesture(event.name, event.confidence)
-            is MouseEvent.Proximity -> WebSocketManager.sendProximity(event.isNear, event.distance)
-            is MouseEvent.Control -> WebSocketManager.send(event.command)
-        }
-
-        _connectionStats.update { stats ->
-            stats.copy(totalDataSent = stats.totalDataSent + 1)
-        }
-        saveConnectionStats()
+    override suspend fun reconnect(): Boolean {
+        return connectionManager.reconnect()
     }
 
-    override suspend fun getLastConfig(): ConnectionConfig? {
-        val lastIp = prefs.getString("last_ip", "")
-        if (lastIp.isEmpty()) return null
+    override suspend fun getConnectionStatus(): ConnectionStatus = _status.value
 
-        return ConnectionConfig(
-            serverIp = lastIp,
-            serverPort = prefs.getInt("last_port", 8080),
-            protocol = ConnectionProtocol.values().getOrElse(prefs.getInt("last_protocol", 0)) { ConnectionProtocol.TCP },
-            useAuth = prefs.getBoolean("use_auth", false),
-            authToken = prefs.getString("auth_token", null),
-            timeoutMs = prefs.getInt("connection_timeout", 5000),
-            autoReconnect = prefs.getBoolean("auto_reconnect", true),
-            lastConnected = prefs.getLong("last_connected", 0)
-        )
-    }
+    override suspend fun getConnectionConfig(): ConnectionConfig = _config.value
 
-    override suspend fun saveConfig(config: ConnectionConfig) {
-        prefs.putString("last_ip", config.serverIp)
-        prefs.putInt("last_port", config.serverPort)
-        prefs.putInt("last_protocol", config.protocol.ordinal)
-        prefs.putBoolean("use_auth", config.useAuth)
-        config.authToken?.let { prefs.putString("auth_token", it) }
-        prefs.putInt("connection_timeout", config.timeoutMs)
-        prefs.putBoolean("auto_reconnect", config.autoReconnect)
-    }
-
-    private suspend fun saveCurrentConfig() {
-        currentConfig?.let { config ->
-            prefs.putLong("last_connected", System.currentTimeMillis())
-            config.copy(lastConnected = System.currentTimeMillis()).let { saveConfig(it) }
+    override suspend fun saveConnectionConfig(config: ConnectionConfig) {
+        _config.value = config
+        prefs.putString("last_ip", config.ip)
+        prefs.putInt("last_port", config.port)
+        prefs.putString("connection_protocol", config.protocol.name)
+        prefs.putBoolean("use_ssl", config.useSSL)
+        if (config.authToken != null) {
+            prefs.putString("auth_token", config.authToken)
         }
     }
 
-    private fun updateConnectionStats(success: Boolean) {
-        _connectionStats.update { stats ->
-            stats.copy(
-                totalConnections = stats.totalConnections + 1,
-                successfulConnections = if (success) stats.successfulConnections + 1 else stats.successfulConnections,
-                failedConnections = if (!success) stats.failedConnections + 1 else stats.failedConnections,
-                lastConnectionTime = System.currentTimeMillis()
-            )
+    override suspend fun getConnectionQuality(): ConnectionQuality = _quality.value
+
+    override suspend fun discoverServers(): List<DiscoveredServer> {
+        return _discoveredServers.value
+    }
+
+    override suspend fun startDiscovery(onServerFound: (DiscoveredServer) -> Unit) {
+        udpDiscovery.onServerFound = { ip, port, name ->
+            val server = DiscoveredServer(ip = ip, port = port, name = name)
+            val currentServers = _discoveredServers.value.toMutableList()
+            if (currentServers.none { it.ip == ip && it.port == port }) {
+                currentServers.add(server)
+                _discoveredServers.value = currentServers
+                onServerFound(server)
+            }
         }
-        saveConnectionStats()
+        udpDiscovery.startDiscovery()
     }
 
-    private fun loadConnectionStats() {
-        _connectionStats.update {
-            ConnectionStats(
-                totalConnections = prefs.getInt("stat_total_connections", 0),
-                successfulConnections = prefs.getInt("stat_successful_connections", 0),
-                failedConnections = prefs.getInt("stat_failed_connections", 0),
-                averageLatency = prefs.getInt("stat_avg_latency", 0),
-                lastConnectionTime = prefs.getLong("stat_last_connection", 0),
-                totalDataSent = prefs.getLong("stat_data_sent", 0),
-                totalDataReceived = prefs.getLong("stat_data_received", 0)
-            )
-        }
+    override suspend fun stopDiscovery() {
+        udpDiscovery.stopDiscovery()
     }
 
-    private fun saveConnectionStats() {
-        val stats = _connectionStats.value
-        prefs.putInt("stat_total_connections", stats.totalConnections)
-        prefs.putInt("stat_successful_connections", stats.successfulConnections)
-        prefs.putInt("stat_failed_connections", stats.failedConnections)
-        prefs.putInt("stat_avg_latency", stats.averageLatency)
-        prefs.putLong("stat_last_connection", stats.lastConnectionTime)
-        prefs.putLong("stat_data_sent", stats.totalDataSent)
-        prefs.putLong("stat_data_received", stats.totalDataReceived)
+    override suspend fun sendMessage(message: String): Boolean {
+        return connectionManager.send(message)
     }
 
-    override suspend fun clearHistory() {
-        _connectionStats.update { ConnectionStats() }
-        saveConnectionStats()
+    override suspend fun sendMessage(message: ByteArray): Boolean {
+        return connectionManager.sendBinary(message)
     }
 
     override suspend fun testConnection(ip: String, port: Int): TestResult {
         return try {
             val startTime = System.currentTimeMillis()
-            val socket = Socket()
-            socket.connect(InetSocketAddress(ip, port), 3000)
-            val latency = (System.currentTimeMillis() - startTime).toInt()
-            socket.close()
-            TestResult(success = true, latency = latency)
+            connectionManager.connect(ip, port)
+            val latency = System.currentTimeMillis() - startTime
+            connectionManager.disconnect()
+            TestResult(success = true, message = "Connection successful", latency = latency)
         } catch (e: Exception) {
-            TestResult(success = false, latency = -1, error = e.message)
+            TestResult(success = false, message = e.message ?: "Connection failed")
         }
     }
 
-    override suspend fun reconnect() {
-        if (currentConfig != null) {
-            disconnect()
-            delay(500)
-            connect(currentConfig!!)
-        } else {
-            val lastConfig = getLastConfig()
-            if (lastConfig != null) {
-                connect(lastConfig)
-            }
-        }
+    override suspend fun ping(): Long {
+        val startTime = System.currentTimeMillis()
+        connectionManager.sendPing()
+        // Wait for pong
+        delay(1000)
+        return System.currentTimeMillis() - startTime
     }
 
-    fun destroy() {
-        scope.cancel()
+    override fun setOnMessageListener(listener: (String) -> Unit) {
+        connectionManager.onMessage = listener
+    }
+
+    override fun setOnBinaryMessageListener(listener: (ByteArray) -> Unit) {
+        connectionManager.onBinaryMessage = listener
+    }
+
+    override fun setOnDisconnectedListener(listener: () -> Unit) {
+        connectionManager.onDisconnected = listener
+    }
+
+    override fun setOnConnectedListener(listener: () -> Unit) {
+        connectionManager.onConnected = listener
     }
 }

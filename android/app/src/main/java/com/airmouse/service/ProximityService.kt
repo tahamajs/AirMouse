@@ -8,12 +8,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.airmouse.R
 import com.airmouse.network.ConnectionManager
 import com.airmouse.utils.PreferencesManager
@@ -22,7 +24,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import timber.log.Timber
+import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.log10
 import kotlin.math.pow
 
 @AndroidEntryPoint
@@ -39,22 +44,17 @@ class ProximityService : Service() {
     private var targetDevice: BluetoothDevice? = null
     private var targetAddress = ""
     private var currentRssi = -100
-    private var rssiHistory = mutableListOf<Int>()
+    private val rssiHistory = mutableListOf<Int>()
     private val historySize = 10
     private var currentDistance = 3.0f
     private var isNear = false
     private var lastLockState = false
-    private var calibrationSamples = mutableListOf<Pair<Int, Float>>()
+    private val calibrationSamples = mutableListOf<Pair<Int, Double>>()
 
-    // Signal smoothing
     private val smoothingFactor = 0.7f
-
-    // Thresholds
     private var nearThreshold = 1.5f
     private var farThreshold = 3.0f
-
-    // Calibration parameters
-    private var txPower = -59 // RSSI at 1 meter
+    private var txPower = -59
     private var pathLossExponent = 2.5
 
     // State flows for UI observation
@@ -63,12 +63,6 @@ class ProximityService : Service() {
 
     private val _rssi = MutableStateFlow(-100)
     val rssi: StateFlow<Int> = _rssi.asStateFlow()
-
-    private val _isNearDevice = MutableStateFlow(false)
-    val isNearDevice: StateFlow<Boolean> = _isNearDevice.asStateFlow()
-
-    private val _isLocked = MutableStateFlow(false)
-    val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
 
     companion object {
         private const val NOTIFICATION_ID = 1003
@@ -168,8 +162,7 @@ class ProximityService : Service() {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
-            android.util.Log.w(TAG, "Bluetooth not available or disabled")
-            // Don't stop self, just log warning - service can still run
+            Timber.w("Bluetooth not available or disabled")
         }
     }
 
@@ -180,11 +173,11 @@ class ProximityService : Service() {
         txPower = prefs.getInt("proximity_tx_power", -59)
         pathLossExponent = prefs.getFloat("proximity_path_loss", 2.5f)
 
-        if (targetAddress.isNotEmpty() && bluetoothAdapter != null) {
+        if (targetAddress.isNotEmpty() && ::bluetoothAdapter.isInitialized) {
             try {
                 targetDevice = bluetoothAdapter.getRemoteDevice(targetAddress)
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "Failed to get remote device", e)
+                Timber.e(e, "Failed to get remote device")
             }
         }
     }
@@ -231,7 +224,7 @@ class ProximityService : Service() {
     private fun acquireWakeLock() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ProximityService::WakeLock")
-        wakeLock.acquire(10 * 60 * 1000L) // 10 minutes timeout
+        wakeLock.acquire(10 * 60 * 1000L)
     }
 
     @android.annotation.SuppressLint("MissingPermission")
@@ -239,20 +232,20 @@ class ProximityService : Service() {
         if (isRunning) return
         if (targetAddress.isEmpty()) {
             updateNotification("No Device", "Please select a device first")
-            android.util.Log.w(TAG, "No target device configured")
+            Timber.w("No target device configured")
             return
         }
 
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
             updateNotification("Bluetooth Off", "Please enable Bluetooth")
-            android.util.Log.w(TAG, "Bluetooth is disabled")
+            Timber.w("Bluetooth is disabled")
             return
         }
 
         isRunning = true
         startScanning()
         updateNotification("Active", "Monitoring distance to device")
-        android.util.Log.i(TAG, "Proximity monitoring started for $targetAddress")
+        Timber.i("Proximity monitoring started for $targetAddress")
     }
 
     @android.annotation.SuppressLint("MissingPermission")
@@ -267,9 +260,9 @@ class ProximityService : Service() {
 
             isScanning = true
             bluetoothAdapter.startDiscovery()
-            android.util.Log.d(TAG, "Bluetooth discovery started")
+            Timber.d("Bluetooth discovery started")
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to start discovery", e)
+            Timber.e(e, "Failed to start discovery")
             isScanning = false
         }
     }
@@ -278,44 +271,40 @@ class ProximityService : Service() {
         currentRssi = rssi
         _rssi.value = rssi
 
-        // Add to history for smoothing
         rssiHistory.add(rssi)
         while (rssiHistory.size > historySize) {
             rssiHistory.removeAt(0)
         }
 
-        // Calculate smoothed RSSI
         val smoothedRssi = getSmoothedRssi()
-        val distance = calculateDistance(smoothedRssi)
+
+        // ✅ FIX: Convert to Double for calculation, then back to Float
+        val distanceDouble = calculateDistance(smoothedRssi.toDouble())
+        val distance = distanceDouble.toFloat()
+
         currentDistance = distance
         _distance.value = distance
 
-        // Check proximity state
         val previousNear = isNear
         checkProximityState(distance)
 
-        // Broadcast update
         broadcastUpdate(distance, isNear, rssi)
 
-        // Update notification
         updateNotification(
             if (isNear) "Near" else "Far",
-            String.format("Distance: %.1fm | Signal: %d dBm", distance, rssi)
+            String.format(Locale.US, "Distance: %.1fm | Signal: %d dBm", distance, rssi)
         )
 
-        // Send to server via ConnectionManager
         sendProximityToServer(distance, isNear)
 
-        // Log state change
         if (previousNear != isNear) {
-            android.util.Log.i(TAG, "Proximity changed: near=$isNear, distance=${distance}m")
+            Timber.i("Proximity changed: near=$isNear, distance=${distance}m")
         }
     }
 
     private fun getSmoothedRssi(): Int {
         if (rssiHistory.isEmpty()) return -100
 
-        // Exponential moving average
         var smoothed = rssiHistory.first().toFloat()
         for (i in 1 until rssiHistory.size) {
             smoothed = smoothingFactor * rssiHistory[i] + (1 - smoothingFactor) * smoothed
@@ -323,13 +312,13 @@ class ProximityService : Service() {
         return smoothed.toInt()
     }
 
-    private fun calculateDistance(rssi: Int): Float {
-        // Path loss model: distance = 10^((TxPower - RSSI) / (10 * n))
+    // ✅ FIX: Takes Double, returns Double
+    private fun calculateDistance(rssi: Double): Double {
         val ratio = (txPower - rssi) / (10.0 * pathLossExponent)
-        val distance = 10.0.pow(ratio)
-        return distance.toFloat().coerceIn(0.3f, 15.0f)
+        return 10.0.pow(ratio).coerceIn(0.3, 15.0)
     }
 
+    // ✅ FIX: Takes Float for comparison
     private fun checkProximityState(distance: Float) {
         val wasNear = isNear
         isNear = if (wasNear) {
@@ -341,60 +330,44 @@ class ProximityService : Service() {
         if (wasNear != isNear) {
             onProximityChanged(isNear, distance)
         }
-
-        _isNearDevice.value = isNear
     }
 
     private fun onProximityChanged(near: Boolean, distance: Float) {
-        // Vibrate on state change
         vibrate(if (near) 100 else 200)
 
-        // Send lock/unlock command via ConnectionManager
         if (near) {
             unlockComputer()
         } else {
             lockComputer()
         }
 
-        // Log state change
-        android.util.Log.i(TAG, "Proximity changed: near=$near, distance=${distance}m")
+        Timber.i("Proximity changed: near=$near, distance=${distance}m")
     }
 
     private fun lockComputer() {
-        if (lastLockState == true) return // Already locked
+        if (lastLockState) return
 
-        // Send lock command via ConnectionManager
-        connectionManager.sendControl("lock")
-
-        // Also try system lock if available
+        connectionManager.sendLockScreen()
         sendBroadcast(Intent("com.airmouse.LOCK_SCREEN"))
 
         lastLockState = true
-        _isLocked.value = true
 
         updateNotification("Locked", "Device locked - you walked away")
-        android.util.Log.i(TAG, "Lock command sent")
+        Timber.i("Lock command sent")
     }
 
     private fun unlockComputer() {
-        if (lastLockState == false) return // Already unlocked
+        if (!lastLockState) return
 
-        // Send unlock command via ConnectionManager
-        connectionManager.sendControl("unlock")
+        connectionManager.sendUnlockScreen()
 
         lastLockState = false
-        _isLocked.value = false
 
         updateNotification("Unlocked", "Device unlocked - you returned")
-        android.util.Log.i(TAG, "Unlock command sent")
+        Timber.i("Unlock command sent")
     }
 
     private fun sendProximityToServer(distance: Float, isNear: Boolean) {
-        val deviceId = android.provider.Settings.Secure.getString(
-            contentResolver,
-            android.provider.Settings.Secure.ANDROID_ID
-        ) ?: "unknown"
-
         connectionManager.sendProximity(isNear, distance)
     }
 
@@ -430,20 +403,20 @@ class ProximityService : Service() {
                 bluetoothAdapter.cancelDiscovery()
             }
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Error stopping discovery", e)
+            Timber.e(e, "Error stopping discovery")
         }
 
         updateNotification("Stopped", "Proximity monitoring stopped")
-        android.util.Log.i(TAG, "Proximity monitoring stopped")
+        Timber.i("Proximity monitoring stopped")
     }
 
     fun setTargetDevice(deviceAddress: String) {
         targetAddress = deviceAddress
-        targetDevice = if (deviceAddress.isNotEmpty() && bluetoothAdapter != null) {
+        targetDevice = if (deviceAddress.isNotEmpty() && ::bluetoothAdapter.isInitialized) {
             try {
                 bluetoothAdapter.getRemoteDevice(deviceAddress)
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "Failed to get remote device", e)
+                Timber.e(e, "Failed to get remote device")
                 null
             }
         } else null
@@ -460,7 +433,6 @@ class ProximityService : Service() {
             calibrationSamples.clear()
             updateNotification("Calibrating", "Move 1 meter away from device...")
 
-            // Collect samples at different distances
             val distances = listOf(1f, 2f, 3f, 4f, 5f)
             for (i in distances.indices) {
                 val distance = distances[i]
@@ -469,21 +441,20 @@ class ProximityService : Service() {
 
                 val avgRssi = getAverageRssi()
                 if (avgRssi != -100) {
-                    calibrationSamples.add(Pair(avgRssi, distance))
-                    android.util.Log.d(TAG, "Calibration sample: distance=${distance}m, RSSI=$avgRssi")
+                    calibrationSamples.add(Pair(avgRssi, distance.toDouble()))
+                    Timber.d("Calibration sample: distance=${distance}m, RSSI=$avgRssi")
                 }
             }
 
-            // Calculate optimal TxPower and path loss exponent
             if (calibrationSamples.size >= 3) {
                 calculateCalibrationParameters()
                 saveSettings()
                 updateNotification("Calibrated", "Calibration complete! Proximity detection improved.")
                 vibrate(200)
-                android.util.Log.i(TAG, "Calibration completed successfully")
+                Timber.i("Calibration completed successfully")
             } else {
                 updateNotification("Calibration Failed", "Insufficient data. Please try again.")
-                android.util.Log.w(TAG, "Calibration failed: insufficient samples")
+                Timber.w("Calibration failed: insufficient samples")
             }
         }
     }
@@ -492,7 +463,6 @@ class ProximityService : Service() {
         var samples = 0
         var sum = 0
 
-        // Collect 10 RSSI samples
         repeat(10) {
             delay(100)
             if (currentRssi != -100) {
@@ -505,45 +475,39 @@ class ProximityService : Service() {
     }
 
     private fun calculateCalibrationParameters() {
-        // Linear regression to find optimal txPower and path loss exponent
         val rssiValues = calibrationSamples.map { it.first.toDouble() }
-        val distanceValues = calibrationSamples.map { it.second.toDouble() }
+        val distanceValues = calibrationSamples.map { it.second }
 
         val n = calibrationSamples.size
         val sumRssi = rssiValues.sum()
-        val sumDist = distanceValues.sum()
         val sumRssiLog = rssiValues.zip(distanceValues).sumOf { it.first * log10(it.second) }
         val sumLogDist = distanceValues.sumOf { log10(it) }
         val sumLogDistSq = distanceValues.sumOf { log10(it) * log10(it) }
 
-        // Calculate path loss exponent
         val numerator = n * sumRssiLog - sumRssi * sumLogDist
         val denominator = n * sumLogDistSq - sumLogDist * sumLogDist
         val pathLoss = if (denominator != 0.0) -10 * numerator / denominator else 2.5
 
-        // Calculate TxPower (RSSI at 1 meter)
         val avgRssiAt1m = calibrationSamples.filter { it.second == 1.0 }.map { it.first }.average()
         val calculatedTxPower = if (avgRssiAt1m > 0) avgRssiAt1m else -59.0
 
         pathLossExponent = pathLoss.coerceIn(1.5, 4.0).toFloat()
         txPower = calculatedTxPower.toInt()
 
-        android.util.Log.i(TAG, "Calibration: TxPower=$txPower, PathLoss=$pathLossExponent")
+        Timber.i("Calibration: TxPower=$txPower, PathLoss=$pathLossExponent")
     }
 
     fun updateThresholds(near: Float, far: Float) {
         nearThreshold = near.coerceIn(0.5f, 3.0f)
         farThreshold = far.coerceIn(1.0f, 5.0f)
         saveSettings()
-        android.util.Log.d(TAG, "Thresholds updated: near=$nearThreshold, far=$farThreshold")
+        Timber.d("Thresholds updated: near=$nearThreshold, far=$farThreshold")
     }
 
     private fun updateNotification(title: String, content: String) {
         val notification = createNotification(title, content)
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
-
-        // Update foreground notification
         startForeground(NOTIFICATION_ID, notification)
     }
 
@@ -584,11 +548,8 @@ class ProximityService : Service() {
             // Receiver already unregistered
         }
 
-        android.util.Log.i(TAG, "Service destroyed")
+        Timber.i("Service destroyed")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 }
-
-// Helper extension function for log10
-private fun log10(value: Double): Double = kotlin.math.log10(value)

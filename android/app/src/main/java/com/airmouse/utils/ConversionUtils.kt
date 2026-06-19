@@ -1,4 +1,3 @@
-// app/src/main/java/com/airmouse/utils/ConversionUtils.kt
 package com.airmouse.utils
 
 import java.util.Locale
@@ -74,8 +73,7 @@ object ConversionUtils {
     fun bpsToKbps(bps: Long): Float = bps / 1000f
     fun mbpsToBps(mbps: Float): Long = (mbps * 1_000_000).toLong()
 
-    fun bpsMbpsFromBytes(bytesPerSecond: Long): Float {
-        // Fixed: Mapped computation target to match input argument parameter naming structure
+    fun bpsToMbpsFromBytes(bytesPerSecond: Long): Float {
         return (bytesPerSecond * 8) / 1_000_000f
     }
 
@@ -91,8 +89,8 @@ object ConversionUtils {
 
     fun radToDeg(rad: Double): Double = rad * 180.0 / Math.PI
     fun degToRad(deg: Double): Double = deg * Math.PI / 180.0
-    fun radToDeg(rad: Float): Float = rad * 180f / Math.PI.toFloat()
-    fun degToRad(deg: Float): Float = deg * Math.PI.toFloat() / 180f
+    fun radToDegF(rad: Float): Float = rad * 180f / PI_FLOAT
+    fun degToRadF(deg: Float): Float = deg * PI_FLOAT / 180f
 
     fun normalizeDeg(angle: Double): Double {
         var a = angle % 360
@@ -110,20 +108,20 @@ object ConversionUtils {
 
     // ==================== Sensor Data Conversions ====================
 
-    fun mps2ToG(ms2: Float): Float = ms2 / 9.81f
-    fun gToMps2(g: Float): Float = g * 9.81f
-    fun radsToDegs(rads: Float): Float = rads * 180f / Math.PI.toFloat()
-    fun degsToRads(degs: Float): Float = degs * Math.PI.toFloat() / 180f
-    fun vectorMagnitude(x: Float, y: Float, z: Float): Float = sqrt(x * x + y * y + z * z)
-    fun vectorMagnitude(x: Float, y: Float): Float = sqrt(x * x + y * y)
+    fun mps2ToG(ms2: Float): Float = ms2 / GRAVITY
+    fun gToMps2(g: Float): Float = g * GRAVITY
+    fun radsToDegs(rads: Float): Float = rads * 180f / PI_FLOAT
+    fun degsToRads(degs: Float): Float = degs * PI_FLOAT / 180f
+    fun vectorMagnitude3D(x: Float, y: Float, z: Float): Float = sqrt(x * x + y * y + z * z)
+    fun vectorMagnitude2D(x: Float, y: Float): Float = sqrt(x * x + y * y)
 
     // ==================== Coordinate Conversions ====================
 
     fun rotationVectorToEuler(rotationVector: FloatArray): Triple<Double, Double, Double> {
-        val q0 = rotationVector[3]
-        val q1 = rotationVector[0]
-        val q2 = rotationVector[1]
-        val q3 = rotationVector[2]
+        val q0 = rotationVector[3].toDouble()
+        val q1 = rotationVector[0].toDouble()
+        val q2 = rotationVector[1].toDouble()
+        val q3 = rotationVector[2].toDouble()
 
         val roll = atan2(2.0 * (q0 * q1 + q2 * q3), 1.0 - 2.0 * (q1 * q1 + q2 * q2))
         val pitch = asin(2.0 * (q0 * q2 - q3 * q1).coerceIn(-1.0, 1.0))
@@ -133,13 +131,12 @@ object ConversionUtils {
     }
 
     fun eulerToRotationMatrix(roll: Float, pitch: Float, yaw: Float): FloatArray {
-        // Fixed: Adjusted calculations to handle Float expressions directly to match mathematical models
-        val cr = cos(roll)
-        val sr = sin(roll)
-        val cp = cos(pitch)
-        val sp = sin(pitch)
-        val cy = cos(yaw)
-        val sy = sin(yaw)
+        val cr = cos(roll.toDouble()).toFloat()
+        val sr = sin(roll.toDouble()).toFloat()
+        val cp = cos(pitch.toDouble()).toFloat()
+        val sp = sin(pitch.toDouble()).toFloat()
+        val cy = cos(yaw.toDouble()).toFloat()
+        val sy = sin(yaw.toDouble()).toFloat()
 
         return floatArrayOf(
             cy * cp, sy * cp, -sp,
@@ -171,10 +168,10 @@ object ConversionUtils {
 
     // ==================== Constants ====================
 
-    const val GRAVITY = 9.80665f
-    const val PI_FLOAT = 3.1415927f
-    const val SPEED_OF_LIGHT = 299792458f
-    const val STANDARD_ATMOSPHERE = 1013.25f
+    const val GRAVITY: Float = 9.80665f
+    const val PI_FLOAT: Float = 3.1415927f
+    const val SPEED_OF_LIGHT: Float = 299792458f
+    const val STANDARD_ATMOSPHERE: Float = 1013.25f
 
     // ==================== Android / Sensor Helpers ====================
 
@@ -192,6 +189,7 @@ object ConversionUtils {
 
     fun clamp(value: Float, min: Float, max: Float): Float = max(min, min(value, max))
     fun clamp(value: Int, min: Int, max: Int): Int = max(min, min(value, max))
+
     fun map(value: Float, fromMin: Float, fromMax: Float, toMin: Float, toMax: Float): Float {
         val normalized = (value - fromMin) / (fromMax - fromMin)
         return toMin + normalized * (toMax - toMin)
@@ -202,7 +200,7 @@ object ConversionUtils {
     }
 
     fun roundTo(value: Float, places: Int): Float {
-        val factor = 10.0f.pow(places)
+        val factor = 10f.pow(places.toFloat())
         return (value * factor).roundToInt() / factor
     }
 

@@ -1,116 +1,122 @@
 // app/src/main/java/com/airmouse/domain/usecase/SendMovementUseCase.kt
 package com.airmouse.domain.usecase
 
-import com.airmouse.domain.model.MouseEvent
 import com.airmouse.domain.model.MouseButton
-import com.airmouse.domain.repository.IConnectionRepository
-import com.airmouse.domain.repository.ISettingsRepository
-import kotlinx.coroutines.flow.first
+import com.airmouse.domain.repository.IMouseRepository
 import javax.inject.Inject
 
+/**
+ * Use case for sending mouse movements and clicks
+ */
 class SendMovementUseCase @Inject constructor(
-    private val connectionRepo: IConnectionRepository,
-    private val settingsRepo: ISettingsRepository
+    private val mouseRepository: IMouseRepository
 ) {
 
-    private var lastMoveTime = 0L
-    private val moveThrottleMs = 10L // Throttle to ~100Hz
-
     /**
-     * Send cursor movement with sensitivity and acceleration applied
+     * Send cursor movement
      */
-    suspend fun sendMove(dx: Float, dy: Float) {
-        val now = System.currentTimeMillis()
-        if (now - lastMoveTime < moveThrottleMs) return
-        lastMoveTime = now
-
-        val prefs = settingsRepo.getPreferences().first()
-
-        // Apply sensitivity
-        var finalDx = dx * prefs.cursorSensitivity
-        var finalDy = dy * prefs.cursorSensitivity
-
-        // Apply inversion
-        if (prefs.invertX) finalDx = -finalDx
-        if (prefs.invertY) finalDy = -finalDy
-
-        // Apply acceleration
-        if (prefs.accelerationEnabled) {
-            val speed = kotlin.math.sqrt(finalDx * finalDx + finalDy * finalDy)
-            val acceleration = 1 + (speed / 100f)
-            finalDx *= acceleration
-            finalDy *= acceleration
+    suspend operator fun invoke(dx: Float, dy: Float): Result<Boolean> {
+        return try {
+            val result = mouseRepository.move(dx, dy)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
-
-        // Apply smoothing
-        if (prefs.smoothingEnabled) {
-            finalDx = finalDx * prefs.smoothingFactor + (1 - prefs.smoothingFactor) * lastDx
-            finalDy = finalDy * prefs.smoothingFactor + (1 - prefs.smoothingFactor) * lastDy
-            lastDx = finalDx
-            lastDy = finalDy
-        }
-
-        connectionRepo.sendEvent(MouseEvent.Move(finalDx, finalDy))
     }
 
     /**
-     * Send left click
+     * Send smooth cursor movement
      */
-    suspend fun sendClick() {
-        connectionRepo.sendEvent(MouseEvent.Click(MouseButton.LEFT))
+    suspend fun sendSmoothMovement(points: List<Pair<Float, Float>>, durationMs: Int = 100): Result<Boolean> {
+        return try {
+            val result = mouseRepository.moveSmooth(points, durationMs)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Send click
+     */
+    suspend fun sendClick(button: MouseButton = MouseButton.LEFT): Result<Boolean> {
+        return try {
+            val result = mouseRepository.click(button)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     /**
      * Send double click
      */
-    suspend fun sendDoubleClick() {
-        connectionRepo.sendEvent(MouseEvent.DoubleClick)
+    suspend fun sendDoubleClick(): Result<Boolean> {
+        return try {
+            val result = mouseRepository.doubleClick()
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     /**
      * Send right click
      */
-    suspend fun sendRightClick() {
-        connectionRepo.sendEvent(MouseEvent.RightClick)
+    suspend fun sendRightClick(): Result<Boolean> {
+        return try {
+            val result = mouseRepository.rightClick()
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     /**
-     * Send scroll with configurable delta
+     * Send scroll
      */
-    suspend fun sendScroll(delta: Int) {
-        val prefs = settingsRepo.getPreferences().first()
-        val scaledDelta = (delta * prefs.cursorSpeed).toInt()
-        connectionRepo.sendEvent(MouseEvent.Scroll(scaledDelta))
+    suspend fun sendScroll(delta: Int): Result<Boolean> {
+        return try {
+            val result = mouseRepository.scroll(delta)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     /**
-     * Send gesture event
+     * Send gesture
      */
-    suspend fun sendGesture(name: String, confidence: Float) {
-        connectionRepo.sendEvent(MouseEvent.Gesture(name, confidence))
+    suspend fun sendGesture(gesture: String, confidence: Float): Result<Boolean> {
+        return try {
+            val result = mouseRepository.sendGesture(gesture, confidence)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     /**
-     * Send proximity event
+     * Pause movement
      */
-    suspend fun sendProximity(isNear: Boolean, distance: Float) {
-        connectionRepo.sendEvent(MouseEvent.Proximity(isNear, distance))
+    suspend fun pauseMovement(): Result<Boolean> {
+        return try {
+            mouseRepository.stopMovement()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     /**
-     * Send control command
+     * Resume movement
      */
-    suspend fun sendControl(command: String) {
-        connectionRepo.sendEvent(MouseEvent.Control(command))
+    suspend fun resumeMovement(): Result<Boolean> {
+        return try {
+            mouseRepository.resumeMovement()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
-
-    /**
-     * Send key press
-     */
-    suspend fun sendKeyPress(keyCode: Int, keyChar: Char? = null) {
-        connectionRepo.sendEvent(MouseEvent.KeyPress(keyCode, keyChar))
-    }
-
-    private var lastDx = 0f
-    private var lastDy = 0f
 }

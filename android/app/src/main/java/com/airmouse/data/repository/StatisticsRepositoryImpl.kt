@@ -1,15 +1,13 @@
+// app/src/main/java/com/airmouse/data/repository/StatisticsRepositoryImpl.kt
 package com.airmouse.data.repository
 
-import com.airmouse.domain.model.DailyStatistics
-import com.airmouse.domain.model.GestureStatistics
-import com.airmouse.domain.model.HistoricalStatistics
-import com.airmouse.domain.model.SessionStatistics
+import com.airmouse.domain.model.*
 import com.airmouse.domain.repository.IStatisticsRepository
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -22,268 +20,366 @@ class StatisticsRepositoryImpl @Inject constructor(
     private val prefs: PreferencesManager
 ) : IStatisticsRepository {
 
-    private val _currentSession = MutableStateFlow(SessionStatistics.newSession())
-    override fun getCurrentSession(): Flow<SessionStatistics> = _currentSession.asStateFlow()
+    private val _sessionStats = MutableStateFlow(StatisticsSummary())
+    override fun observeCurrentSession(): Flow<StatisticsSummary> = _sessionStats.asStateFlow()
 
     private val _historicalStats = MutableStateFlow(HistoricalStatistics())
-    override fun getHistoricalStats(): Flow<HistoricalStatistics> = _historicalStats.asStateFlow()
+    override fun observeHistoricalStats(): Flow<HistoricalStatistics> = _historicalStats.asStateFlow()
 
     private val _gestureStats = MutableStateFlow<List<GestureStatistics>>(emptyList())
-    override fun getGestureStats(): Flow<List<GestureStatistics>> = _gestureStats.asStateFlow()
+    override fun observeGestureStats(): Flow<List<GestureStatistics>> = _gestureStats.asStateFlow()
 
     private val _isTracking = MutableStateFlow(false)
-    override fun isTracking(): Flow<Boolean> = _isTracking.asStateFlow()
-
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     init {
+        loadSessionStats()
         loadHistoricalStats()
         loadGestureStats()
     }
 
+    private fun loadSessionStats() {
+        _sessionStats.value = StatisticsSummary(
+            totalClicks = prefs.getInt("session_clicks", 0),
+            totalDoubleClicks = prefs.getInt("session_double_clicks", 0),
+            totalRightClicks = prefs.getInt("session_right_clicks", 0),
+            totalScrolls = prefs.getInt("session_scrolls", 0),
+            totalMovements = prefs.getInt("session_movements", 0),
+            totalDistance = prefs.getFloat("session_distance", 0f),
+            averageSpeed = prefs.getFloat("session_avg_speed", 0f),
+            maxSpeed = prefs.getFloat("session_max_speed", 0f),
+            sessionDuration = System.currentTimeMillis() - prefs.getLong("session_start", System.currentTimeMillis())
+        )
+    }
+
     private fun loadHistoricalStats() {
-        val json = prefs.getString("historical_stats", "")
-        if (json.isNotEmpty()) {
-            try {
-                val obj = JSONObject(json)
-                val dailyArray = obj.getJSONArray("daily")
-                val dailyStats = mutableListOf<DailyStatistics>()
-                for (i in 0 until dailyArray.length()) {
-                    val d = dailyArray.getJSONObject(i)
-                    dailyStats.add(DailyStatistics(
-                        date = d.getString("date"),
-                        totalClicks = d.getInt("clicks"),
-                        totalGestures = d.getInt("gestures"),
-                        totalDistance = d.getDouble("distance").toFloat(),
-                        activeTime = d.getLong("activeTime"),
-                        connectionCount = d.getInt("connections")
-                    ))
+        val json = prefs.getString("historical_stats", "{}")
+        try {
+            val obj = JSONObject(json)
+            _historicalStats.value = HistoricalStatistics(
+                totalGestures = obj.optInt("totalGestures", 0),
+                mostUsedGesture = obj.optString("mostUsedGesture", ""),
+                lastGestureTime = obj.optLong("lastGestureTime", 0)
+            )
+            // Parse gestures by type
+            val byTypeJson = obj.optJSONObject("gesturesByType")
+            if (byTypeJson != null) {
+                val byType = mutableMapOf<String, Int>()
+                byTypeJson.keys().forEach { key ->
+                    byType[key] = byTypeJson.getInt(key)
                 }
-                _historicalStats.value = HistoricalStatistics(
-                    dailyStats = dailyStats.sortedBy { it.date },
-                    weeklyStats = dailyStats.takeLast(7),
-                    monthlyStats = dailyStats.takeLast(30)
-                )
-            } catch (e: Exception) {
-                // Use empty stats
+                _historicalStats.value = _historicalStats.value.copy(gesturesByType = byType)
             }
+        } catch (e: Exception) {
+            // Use defaults
         }
     }
 
     private fun loadGestureStats() {
-        val json = prefs.getString("gesture_stats", "")
-        if (json.isNotEmpty()) {
-            try {
-                val array = JSONArray(json)
-                val list = mutableListOf<GestureStatistics>()
-                for (i in 0 until array.length()) {
-                    val obj = array.getJSONObject(i)
-                    list.add(GestureStatistics(
-                        gestureName = obj.getString("name"),
-                        detectionCount = obj.getInt("count"),
-                        averageConfidence = obj.getDouble("confidence").toFloat(),
-                        lastDetected = obj.getLong("lastDetected"),
-                        isCustom = obj.optBoolean("isCustom", false)
-                    ))
-                }
-                _gestureStats.value = list
-            } catch (e: Exception) {
-                // Use empty list
+        val json = prefs.getString("gesture_stats", "[]")
+        try {
+            val array = JSONArray(json)
+            val stats = mutableListOf<GestureStatistics>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                stats.add(GestureStatistics(
+                    gestureName = obj.getString("gestureName"),
+                    detectionCount = obj.getInt("detectionCount"),
+                    confidencePercentage = obj.optDouble("confidencePercentage", 0.0).toFloat(),
+                    lastDetected = obj.optLong("lastDetected", 0)
+                ))
             }
+            _gestureStats.value = stats
+        } catch (e: Exception) {
+            // Use defaults
         }
+    }
+
+    override suspend fun getCurrentSession(): StatisticsSummary = _sessionStats.value
+
+    override suspend fun startTracking() {
+        _isTracking.value = true
+        prefs.putLong("session_start", System.currentTimeMillis())
+        resetSession()
+    }
+
+    override suspend fun stopTracking() {
+        _isTracking.value = false
+        // Save session stats to historical
+        saveSessionToHistory()
+    }
+
+    override suspend fun isTracking(): Boolean = _isTracking.value
+
+    override suspend fun getHistoricalStats(): HistoricalStatistics = _historicalStats.value
+
+    override suspend fun getTodayStats(): DailyStats {
+        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        return getDailyStats(date)
+    }
+
+    override suspend fun getDailyStats(date: String): DailyStats {
+        val key = "daily_stats_$date"
+        val json = prefs.getString(key, "{}")
+        return try {
+            val obj = JSONObject(json)
+            DailyStats(
+                date = date,
+                clicks = obj.optInt("clicks", 0),
+                doubleClicks = obj.optInt("doubleClicks", 0),
+                rightClicks = obj.optInt("rightClicks", 0),
+                scrolls = obj.optInt("scrolls", 0),
+                movements = obj.optInt("movements", 0),
+                distance = obj.optDouble("distance", 0.0).toFloat()
+            )
+        } catch (e: Exception) {
+            DailyStats(date = date)
+        }
+    }
+
+    override suspend fun getWeekStats(): List<DailyStats> {
+        val stats = mutableListOf<DailyStats>()
+        val calendar = Calendar.getInstance()
+        for (i in 6 downTo 0) {
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+            stats.add(getDailyStats(date))
+        }
+        return stats
+    }
+
+    override suspend fun getMonthStats(): List<DailyStats> {
+        val stats = mutableListOf<DailyStats>()
+        val calendar = Calendar.getInstance()
+        for (i in 29 downTo 0) {
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+            stats.add(getDailyStats(date))
+        }
+        return stats
+    }
+
+    override suspend fun getGestureStats(): List<GestureStatistics> = _gestureStats.value
+
+    override suspend fun recordClick() {
+        updateSessionStats { it.copy(totalClicks = it.totalClicks + 1) }
+        updateDailyStats { it.copy(clicks = it.clicks + 1) }
+        updateHistoricalStats("click")
+        prefs.putInt("session_clicks", prefs.getInt("session_clicks", 0) + 1)
+    }
+
+    override suspend fun recordDoubleClick() {
+        updateSessionStats { it.copy(totalDoubleClicks = it.totalDoubleClicks + 1) }
+        updateDailyStats { it.copy(doubleClicks = it.doubleClicks + 1) }
+        updateHistoricalStats("double_click")
+        prefs.putInt("session_double_clicks", prefs.getInt("session_double_clicks", 0) + 1)
+    }
+
+    override suspend fun recordRightClick() {
+        updateSessionStats { it.copy(totalRightClicks = it.totalRightClicks + 1) }
+        updateDailyStats { it.copy(rightClicks = it.rightClicks + 1) }
+        updateHistoricalStats("right_click")
+        prefs.putInt("session_right_clicks", prefs.getInt("session_right_clicks", 0) + 1)
+    }
+
+    override suspend fun recordScroll(delta: Int) {
+        updateSessionStats { it.copy(totalScrolls = it.totalScrolls + 1) }
+        updateDailyStats { it.copy(scrolls = it.scrolls + 1) }
+        updateHistoricalStats("scroll")
+        prefs.putInt("session_scrolls", prefs.getInt("session_scrolls", 0) + 1)
+    }
+
+    override suspend fun recordMovement(distance: Float, duration: Long) {
+        val speed = if (duration > 0) distance / duration * 1000 else 0f
+        updateSessionStats { stats ->
+            stats.copy(
+                totalMovements = stats.totalMovements + 1,
+                totalDistance = stats.totalDistance + distance,
+                averageSpeed = (stats.averageSpeed * stats.totalMovements + speed) / (stats.totalMovements + 1),
+                maxSpeed = maxOf(stats.maxSpeed, speed)
+            )
+        }
+        updateDailyStats { it.copy(
+            movements = it.movements + 1,
+            distance = it.distance + distance
+        )}
+        prefs.putInt("session_movements", prefs.getInt("session_movements", 0) + 1)
+        prefs.putFloat("session_distance", prefs.getFloat("session_distance", 0f) + distance)
+    }
+
+    override suspend fun recordGesture(gesture: String, confidence: Float) {
+        updateHistoricalStats(gesture)
+
+        // Update gesture-specific stats
+        val currentStats = _gestureStats.value.toMutableList()
+        val existing = currentStats.find { it.gestureName == gesture }
+        if (existing != null) {
+            val index = currentStats.indexOf(existing)
+            currentStats[index] = existing.copy(
+                detectionCount = existing.detectionCount + 1,
+                confidencePercentage = (existing.confidencePercentage * existing.detectionCount + confidence) / (existing.detectionCount + 1),
+                lastDetected = System.currentTimeMillis()
+            )
+        } else {
+            currentStats.add(GestureStatistics(
+                gestureName = gesture,
+                detectionCount = 1,
+                confidencePercentage = confidence,
+                lastDetected = System.currentTimeMillis()
+            ))
+        }
+        _gestureStats.value = currentStats
+        saveGestureStats()
+    }
+
+    override suspend fun recordConnectionAttempt(success: Boolean, latencyMs: Long) {
+        // Track connection attempts
+    }
+
+    override suspend fun getSessionStats(): StatisticsSummary = _sessionStats.value
+
+    override suspend fun resetStats() {
+        resetSession()
+        // Reset all stats
+        prefs.remove("session_clicks")
+        prefs.remove("session_double_clicks")
+        prefs.remove("session_right_clicks")
+        prefs.remove("session_scrolls")
+        prefs.remove("session_movements")
+        prefs.remove("session_distance")
+        prefs.remove("session_avg_speed")
+        prefs.remove("session_max_speed")
+        prefs.remove("historical_stats")
+        prefs.remove("gesture_stats")
+        _gestureStats.value = emptyList()
+        _historicalStats.value = HistoricalStatistics()
+    }
+
+    override suspend fun resetSession() {
+        _sessionStats.value = StatisticsSummary()
+        prefs.remove("session_clicks")
+        prefs.remove("session_double_clicks")
+        prefs.remove("session_right_clicks")
+        prefs.remove("session_scrolls")
+        prefs.remove("session_movements")
+        prefs.remove("session_distance")
+        prefs.remove("session_avg_speed")
+        prefs.remove("session_max_speed")
+        prefs.putLong("session_start", System.currentTimeMillis())
+    }
+
+    override suspend fun exportStats(format: String): String {
+        return when (format.lowercase()) {
+            "json" -> exportJson()
+            "csv" -> exportCsv()
+            else -> exportJson()
+        }
+    }
+
+    private fun exportJson(): String {
+        val obj = JSONObject()
+        obj.put("session", JSONObject().apply {
+            put("totalClicks", _sessionStats.value.totalClicks)
+            put("totalMovements", _sessionStats.value.totalMovements)
+            put("totalDistance", _sessionStats.value.totalDistance)
+            put("averageSpeed", _sessionStats.value.averageSpeed)
+        })
+        obj.put("historical", JSONObject().apply {
+            put("totalGestures", _historicalStats.value.totalGestures)
+            put("mostUsedGesture", _historicalStats.value.mostUsedGesture)
+        })
+        obj.put("gestures", JSONArray().apply {
+            _gestureStats.value.forEach { stats ->
+                put(JSONObject().apply {
+                    put("gestureName", stats.gestureName)
+                    put("detectionCount", stats.detectionCount)
+                    put("confidencePercentage", stats.confidencePercentage)
+                })
+            }
+        })
+        return obj.toString()
+    }
+
+    private fun exportCsv(): String {
+        val sb = StringBuilder()
+        sb.append("Metric,Value\n")
+        sb.append("Total Clicks,${_sessionStats.value.totalClicks}\n")
+        sb.append("Total Movements,${_sessionStats.value.totalMovements}\n")
+        sb.append("Total Distance,${_sessionStats.value.totalDistance}\n")
+        sb.append("Average Speed,${_sessionStats.value.averageSpeed}\n")
+        sb.append("Total Gestures,${_historicalStats.value.totalGestures}\n")
+        sb.append("Most Used Gesture,${_historicalStats.value.mostUsedGesture}\n")
+        return sb.toString()
+    }
+
+    private suspend fun updateSessionStats(update: (StatisticsSummary) -> StatisticsSummary) {
+        _sessionStats.value = update(_sessionStats.value)
+    }
+
+    private suspend fun updateDailyStats(update: (DailyStats) -> DailyStats) {
+        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val current = getDailyStats(date)
+        val updated = update(current)
+        val key = "daily_stats_$date"
+        val obj = JSONObject()
+        obj.put("clicks", updated.clicks)
+        obj.put("doubleClicks", updated.doubleClicks)
+        obj.put("rightClicks", updated.rightClicks)
+        obj.put("scrolls", updated.scrolls)
+        obj.put("movements", updated.movements)
+        obj.put("distance", updated.distance)
+        prefs.putString(key, obj.toString())
+    }
+
+    private suspend fun updateHistoricalStats(gesture: String) {
+        val current = _historicalStats.value
+        val byType = current.gesturesByType.toMutableMap()
+        byType[gesture] = (byType[gesture] ?: 0) + 1
+
+        val mostUsed = byType.maxByOrNull { it.value }?.key ?: gesture
+
+        _historicalStats.value = current.copy(
+            totalGestures = current.totalGestures + 1,
+            gesturesByType = byType,
+            mostUsedGesture = mostUsed,
+            lastGestureTime = System.currentTimeMillis()
+        )
+        saveHistoricalStats()
     }
 
     private fun saveHistoricalStats() {
         val obj = JSONObject()
-        val dailyArray = JSONArray()
-        _historicalStats.value.dailyStats.forEach { d ->
-            val day = JSONObject().apply {
-                put("date", d.date)
-                put("clicks", d.totalClicks)
-                put("gestures", d.totalGestures)
-                put("distance", d.totalDistance)
-                put("activeTime", d.activeTime)
-                put("connections", d.connectionCount)
-            }
-            dailyArray.put(day)
+        obj.put("totalGestures", _historicalStats.value.totalGestures)
+        obj.put("mostUsedGesture", _historicalStats.value.mostUsedGesture)
+        obj.put("lastGestureTime", _historicalStats.value.lastGestureTime)
+
+        val byType = JSONObject()
+        _historicalStats.value.gesturesByType.forEach { (key, value) ->
+            byType.put(key, value)
         }
-        obj.put("daily", dailyArray)
+        obj.put("gesturesByType", byType)
+
         prefs.putString("historical_stats", obj.toString())
     }
 
     private fun saveGestureStats() {
         val array = JSONArray()
-        _gestureStats.value.forEach { g ->
-            val obj = JSONObject().apply {
-                put("name", g.gestureName)
-                put("count", g.detectionCount)
-                put("confidence", g.averageConfidence)
-                put("lastDetected", g.lastDetected)
-                put("isCustom", g.isCustom)
-            }
+        _gestureStats.value.forEach { stats ->
+            val obj = JSONObject()
+            obj.put("gestureName", stats.gestureName)
+            obj.put("detectionCount", stats.detectionCount)
+            obj.put("confidencePercentage", stats.confidencePercentage)
+            obj.put("lastDetected", stats.lastDetected)
             array.put(obj)
         }
         prefs.putString("gesture_stats", array.toString())
     }
 
-    override suspend fun startTracking() {
-        _isTracking.value = true
-        _currentSession.value = SessionStatistics.newSession()
-    }
-
-    override suspend fun stopTracking() {
-        _isTracking.value = false
-        val session = _currentSession.value
-        if (session.endTime == 0L) {
-            _currentSession.value = session.copy(endTime = System.currentTimeMillis())
-            updateDailyStats(session)
-        }
-    }
-
-    override suspend fun recordClick() {
-        if (!_isTracking.value) return
-        _currentSession.update { it.copy(clicks = it.clicks + 1) }
-    }
-
-    override suspend fun recordDoubleClick() {
-        if (!_isTracking.value) return
-        _currentSession.update { it.copy(doubleClicks = it.doubleClicks + 1) }
-    }
-
-    override suspend fun recordRightClick() {
-        if (!_isTracking.value) return
-        _currentSession.update { it.copy(rightClicks = it.rightClicks + 1) }
-    }
-
-    override suspend fun recordScroll() {
-        if (!_isTracking.value) return
-        _currentSession.update { it.copy(scrolls = it.scrolls + 1) }
-    }
-
-    override suspend fun recordGesture(name: String, confidence: Float) {
-        if (!_isTracking.value) return
-        _currentSession.update { it.copy(gestures = it.gestures + name) }
-
-        // Update gesture stats
-        val existing = _gestureStats.value.find { it.gestureName == name }
-        if (existing != null) {
-            val updated = existing.copy(
-                detectionCount = existing.detectionCount + 1,
-                averageConfidence = (existing.averageConfidence * existing.detectionCount + confidence) / (existing.detectionCount + 1),
-                lastDetected = System.currentTimeMillis()
-            )
-            _gestureStats.update { list ->
-                list.map { if (it.gestureName == name) updated else it }
-            }
-        } else {
-            _gestureStats.update { it + GestureStatistics(
-                gestureName = name,
-                detectionCount = 1,
-                averageConfidence = confidence,
-                lastDetected = System.currentTimeMillis()
-            ) }
-        }
-        saveGestureStats()
-    }
-
-    override suspend fun recordMovement(distance: Float) {
-        if (!_isTracking.value) return
-        _currentSession.update { it.copy(totalDistance = it.totalDistance + distance) }
-    }
-
-    override suspend fun recordConnectionAttempt(success: Boolean) {
-        if (!_isTracking.value) return
-        _currentSession.update { session ->
-            session.copy(
-                connectionAttempts = session.connectionAttempts + 1,
-                connectionSuccesses = if (success) session.connectionSuccesses + 1 else session.connectionSuccesses
-            )
-        }
-    }
-
-    override suspend fun getSessionStats(): SessionStatistics = _currentSession.value
-
-    override suspend fun getHistoricalStats(): HistoricalStatistics = _historicalStats.value
-
-    override suspend fun getTodayStats(): DailyStatistics {
-        val today = dateFormat.format(Date())
-        return _historicalStats.value.dailyStats.find { it.date == today } ?: DailyStatistics.today()
-    }
-
-    override suspend fun getWeekStats(): List<DailyStatistics> {
-        return _historicalStats.value.weeklyStats
-    }
-
-    override suspend fun getMonthStats(): List<DailyStatistics> {
-        return _historicalStats.value.monthlyStats
-    }
-
-    override suspend fun getGestureStats(): List<GestureStatistics> = _gestureStats.value
-
-    override suspend fun resetStats() {
-        _currentSession.value = SessionStatistics.newSession()
-        _historicalStats.value = HistoricalStatistics()
-        _gestureStats.value = emptyList()
-        prefs.putString("historical_stats", "")
-        prefs.putString("gesture_stats", "")
-    }
-
-    override suspend fun exportStats(): String {
-        val stats = _historicalStats.value
-        return buildString {
-            appendLine("AIRMOUSE_STATS_EXPORT")
-            appendLine("export_time=${System.currentTimeMillis()}")
-            appendLine("total_clicks=${stats.totalClicks}")
-            appendLine("total_gestures=${stats.totalGestures}")
-            appendLine("total_distance=${stats.totalDistance}")
-            appendLine("active_days=${stats.activeDays}")
-            appendLine("average_daily_clicks=${stats.averageDailyClicks}")
-            appendLine("---DAILY---")
-            stats.dailyStats.forEach { day ->
-                appendLine("${day.date}: clicks=${day.totalClicks}, gestures=${day.totalGestures}, distance=${day.totalDistance}")
-            }
-            appendLine("---GESTURES---")
-            _gestureStats.value.forEach { g ->
-                appendLine("${g.gestureName}: ${g.detectionCount} (${g.confidencePercentage}%)")
-            }
-        }
-    }
-
-    private suspend fun updateDailyStats(session: SessionStatistics) {
-        val today = dateFormat.format(Date())
-        val currentDaily = _historicalStats.value.dailyStats.find { it.date == today }
-
-        val updatedDaily = if (currentDaily != null) {
-            currentDaily.copy(
-                totalClicks = currentDaily.totalClicks + session.totalClicks,
-                totalGestures = currentDaily.totalGestures + session.gestureCount,
-                totalDistance = currentDaily.totalDistance + session.totalDistance,
-                activeTime = currentDaily.activeTime + session.duration,
-                connectionCount = currentDaily.connectionCount + session.connectionAttempts
-            )
-        } else {
-            DailyStatistics(
-                date = today,
-                totalClicks = session.totalClicks,
-                totalGestures = session.gestureCount,
-                totalDistance = session.totalDistance,
-                activeTime = session.duration,
-                connectionCount = session.connectionAttempts
-            )
-        }
-
-        val dailyList = _historicalStats.value.dailyStats.toMutableList()
-        val index = dailyList.indexOfFirst { it.date == today }
-        if (index >= 0) {
-            dailyList[index] = updatedDaily
-        } else {
-            dailyList.add(updatedDaily)
-        }
-
-        _historicalStats.value = HistoricalStatistics(
-            dailyStats = dailyList.sortedBy { it.date },
-            weeklyStats = dailyList.takeLast(7),
-            monthlyStats = dailyList.takeLast(30)
+    private suspend fun saveSessionToHistory() {
+        // Save current session stats to historical
+        val session = _sessionStats.value
+        val historical = _historicalStats.value
+        _historicalStats.value = historical.copy(
+            totalGestures = historical.totalGestures + session.totalClicks + session.totalDoubleClicks + session.totalRightClicks
         )
         saveHistoricalStats()
     }

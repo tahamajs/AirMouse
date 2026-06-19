@@ -6,10 +6,9 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
-import android.util.Log
+import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
-import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.*
@@ -31,9 +30,9 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
         ACCELEROMETER("accel"),
         GYROSCOPE("gyro"),
         MAGNETOMETER("mag"),
-        ROTATION_VECTOR("rotvec"),
+        ROTATION_VECTOR("rotation_vector"),
         GRAVITY("gravity"),
-        LINEAR_ACCELERATION("linaccel"),
+        LINEAR_ACCELERATION("linear_accel"),
         PRESSURE("pressure"),
         TEMPERATURE("temp"),
         PROXIMITY("prox"),
@@ -57,10 +56,8 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
     private var activeSensors = mutableSetOf<Int>()
     private var logStartTime = 0L
 
-    // Filter to choose which sensors to log
-    private var enabledSensors = SensorType.values().toSet()
+    private var enabledSensors = SensorType.entries.toSet()
 
-    // Optional callback for progress updates
     var onProgressUpdate: ((sampleCount: Int, fileSize: Long) -> Unit)? = null
     var onLogComplete: ((File) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
@@ -68,17 +65,10 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
     private val writeJob = SupervisorJob()
     private val ioScope = CoroutineScope(Dispatchers.IO + writeJob)
 
-    /**
-     * Start logging sensor data with default settings (all sensors)
-     */
     fun startLogging() {
         startLogging(enabledSensors)
     }
 
-    /**
-     * Start logging sensor data for specific sensor types
-     * @param sensors Set of SensorType to log
-     */
     fun startLogging(sensors: Set<SensorType>) {
         if (isLogging) {
             onError?.invoke("Already logging")
@@ -92,12 +82,12 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
         sampleCount = 0
         logStartTime = System.currentTimeMillis()
 
-        // Register listeners for selected sensors
+        // ✅ FIXED: Use proper delay constants
         if (enabledSensors.contains(SensorType.ACCELEROMETER)) {
             sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered accelerometer")
+                Timber.i("Registered accelerometer")
             }
         }
 
@@ -105,7 +95,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered gyroscope")
+                Timber.i("Registered gyroscope")
             }
         }
 
@@ -113,7 +103,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered magnetometer")
+                Timber.i("Registered magnetometer")
             }
         }
 
@@ -121,7 +111,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered rotation vector")
+                Timber.i("Registered rotation vector")
             }
         }
 
@@ -129,7 +119,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered gravity sensor")
+                Timber.i("Registered gravity sensor")
             }
         }
 
@@ -137,7 +127,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered linear acceleration")
+                Timber.i("Registered linear acceleration")
             }
         }
 
@@ -145,25 +135,24 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered pressure sensor")
+                Timber.i("Registered pressure sensor")
             }
         }
 
         if (enabledSensors.contains(SensorType.TEMPERATURE)) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)?.let {
-                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
-                    activeSensors.add(it.type)
-                    Log.i(TAG, "Registered temperature sensor")
-                }
+            sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)?.let {
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+                activeSensors.add(it.type)
+                Timber.i("Registered temperature sensor")
             }
         }
 
         if (enabledSensors.contains(SensorType.PROXIMITY)) {
             sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)?.let {
-                sensorManager.registerListener(this, it, SensorManager.SENSELESS_DELAY_NORMAL)
+                // ✅ FIXED: Use SENSOR_DELAY_NORMAL instead of SENSELESS_DELAY_NORMAL
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered proximity sensor")
+                Timber.i("Registered proximity sensor")
             }
         }
 
@@ -171,7 +160,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
                 activeSensors.add(it.type)
-                Log.i(TAG, "Registered light sensor")
+                Timber.i("Registered light sensor")
             }
         }
 
@@ -180,7 +169,6 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             return
         }
 
-        // Create log file
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         logFile = File(context.getExternalFilesDir(null), "$LOG_PREFIX$timestamp$LOG_EXTENSION")
 
@@ -188,11 +176,11 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             outputStream = FileOutputStream(logFile)
             writeHeader()
             isLogging = true
-            Log.i(TAG, "Started logging to ${logFile?.absolutePath}")
+            Timber.i("Started logging to ${logFile?.absolutePath}")
             onProgressUpdate?.invoke(0, 0)
         } catch (e: Exception) {
             onError?.invoke("Failed to create log file: ${e.message}")
-            Log.e(TAG, "Failed to create log file", e)
+            Timber.e(e, "Failed to create log file")
         }
     }
 
@@ -264,7 +252,6 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
                 values.add(event.values[0].toString())
                 values.add(event.values[1].toString())
                 values.add(event.values[2].toString())
-                // Add empty placeholders for other sensors
                 addEmptyPlaceholders(values, event.sensor.type)
             }
             Sensor.TYPE_GYROSCOPE -> {
@@ -323,12 +310,10 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
         buffer.add(values.joinToString(",") + "\n")
         sampleCount++
 
-        // Write to file when buffer is full
         if (buffer.size >= BUFFER_SIZE) {
             flushBuffer()
         }
 
-        // Check file size and rotate if needed
         logFile?.let { file ->
             if (file.length() > MAX_FILE_SIZE_BYTES) {
                 rotateLogFile()
@@ -341,19 +326,13 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
     private fun addEmptyPlaceholders(values: MutableList<String>, currentSensorType: Int) {
         when {
             activeSensors.contains(Sensor.TYPE_ACCELEROMETER) && currentSensorType != Sensor.TYPE_ACCELEROMETER -> {
-                values.add("")
-                values.add("")
-                values.add("")
+                values.add(""); values.add(""); values.add("")
             }
             activeSensors.contains(Sensor.TYPE_GYROSCOPE) && currentSensorType != Sensor.TYPE_GYROSCOPE -> {
-                values.add("")
-                values.add("")
-                values.add("")
+                values.add(""); values.add(""); values.add("")
             }
             activeSensors.contains(Sensor.TYPE_MAGNETIC_FIELD) && currentSensorType != Sensor.TYPE_MAGNETIC_FIELD -> {
-                values.add("")
-                values.add("")
-                values.add("")
+                values.add(""); values.add(""); values.add("")
             }
         }
     }
@@ -389,7 +368,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
                 outputStream?.flush()
                 buffer.clear()
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to write to file", e)
+                Timber.e(e, "Failed to write to file")
             }
         }
     }
@@ -405,9 +384,9 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
             outputStream = FileOutputStream(newFile)
             writeHeader()
             logFile = newFile
-            Log.i(TAG, "Rotated log file to ${newFile.absolutePath}")
+            Timber.i("Rotated log file to ${newFile.absolutePath}")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to rotate log file", e)
+            Timber.e(e, "Failed to rotate log file")
         }
     }
 
@@ -420,9 +399,9 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
         isLogging = false
 
         logFile?.let { file ->
-            Log.i(TAG, "Stopped logging. File saved to ${file.absolutePath}")
-            Log.i(TAG, "Total samples: $sampleCount")
-            Log.i(TAG, "File size: ${file.length()} bytes")
+            Timber.i("Stopped logging. File saved to ${file.absolutePath}")
+            Timber.i("Total samples: $sampleCount")
+            Timber.i("File size: ${file.length()} bytes")
             onLogComplete?.invoke(file)
         }
 
@@ -430,17 +409,13 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
     }
 
     fun getLogFile(): File? = logFile
-
     fun getSampleCount(): Int = sampleCount
-
     fun isLogging(): Boolean = isLogging
-
     fun getActiveSensors(): Set<SensorType> = enabledSensors
-
     fun getLogDuration(): Long = if (isLogging) System.currentTimeMillis() - logStartTime else 0
 
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
-        Log.d(TAG, "Accuracy changed for ${sensor.name}: $accuracy")
+        Timber.d("Accuracy changed for ${sensor.name}: $accuracy")
     }
 
     fun cleanup() {
@@ -455,7 +430,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
  * Builder class for easy configuration of SensorDataLogger
  */
 class SensorDataLoggerBuilder(private val context: Context) {
-    private var sensors: Set<SensorDataLogger.SensorType> = SensorDataLogger.SensorType.values().toSet()
+    private var sensors: Set<SensorDataLogger.SensorType> = SensorDataLogger.SensorType.entries.toSet()
     private var autoFlushInterval: Long = 1000L
     private var maxFileSizeMB: Int = 10
 

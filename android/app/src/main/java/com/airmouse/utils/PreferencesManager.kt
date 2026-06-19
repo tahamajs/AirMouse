@@ -153,6 +153,8 @@ class PreferencesManager @Inject constructor(
 
     fun getConnectionTimeout(): Int = getInt("connection_timeout", DEFAULT_CONNECTION_TIMEOUT)
     fun setConnectionTimeout(timeout: Int) = putInt("connection_timeout", timeout.coerceIn(1000, 30000))
+    fun isOnboardingCompleted(): Boolean = getBoolean("onboarding_completed", false)
+    fun setOnboardingCompleted(completed: Boolean) = putBoolean("onboarding_completed", completed)
 
     fun isWebSocketEnabled(): Boolean = getBoolean("use_websocket", DEFAULT_USE_WEBSOCKET)
     fun setWebSocketEnabled(enabled: Boolean) = putBoolean("use_websocket", enabled)

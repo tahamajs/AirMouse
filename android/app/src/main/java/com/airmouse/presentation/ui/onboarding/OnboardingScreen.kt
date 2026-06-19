@@ -96,44 +96,15 @@ fun OnboardingScreen(
                     .padding(paddingValues)
             ) {
                 // Top bar with skip button and progress
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        repeat(onboardingItems.size) { index ->
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(3.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(
-                                        if (index <= uiState.currentPage)
-                                            onboardingItems[uiState.currentPage].accentColor
-                                        else
-                                            Color.White.copy(alpha = 0.3f)
-                                    )
-                            )
-                        }
+                TopBar(
+                    currentPage = uiState.currentPage,
+                    totalPages = onboardingItems.size,
+                    accentColor = onboardingItems[uiState.currentPage].accentColor,
+                    onSkip = {
+                        viewModel.skipOnboarding()
+                        navigationActions.navigateToHome()
                     }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    TextButton(
-                        onClick = {
-                            viewModel.skipOnboarding()
-                            navigationActions.navigateToHome()
-                        }
-                    ) {
-                        Text("Skip", color = Color.White.copy(alpha = 0.7f))
-                    }
-                }
+                )
 
                 // Horizontal Pager
                 HorizontalPager(
@@ -153,7 +124,7 @@ fun OnboardingScreen(
                         label = "pager_transition"
                     ) { targetPage ->
                         when (targetPage) {
-                            0 -> WelcomePage(item, animationProgress, viewModel)
+                            0 -> WelcomePage(item, animationProgress)
                             1 -> FeaturesPage(item, viewModel)
                             2 -> ConnectPage(item, viewModel)
                             3 -> VoicePage(item, viewModel)
@@ -164,90 +135,145 @@ fun OnboardingScreen(
                 }
 
                 // Bottom Navigation
-                Column(
+                BottomNavigation(
+                    currentPage = uiState.currentPage,
+                    totalPages = onboardingItems.size,
+                    accentColor = onboardingItems[uiState.currentPage].accentColor,
+                    onPrevious = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                            viewModel.previousPage()
+                        }
+                    },
+                    onNext = {
+                        coroutineScope.launch {
+                            if (pagerState.currentPage == onboardingItems.size - 1) {
+                                viewModel.completeOnboarding()
+                                navigationActions.navigateToHome()
+                            } else {
+                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                viewModel.nextPage()
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TopBar(
+    currentPage: Int,
+    totalPages: Int,
+    accentColor: Color,
+    onSkip: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            repeat(totalPages) { index ->
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .weight(1f)
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            if (index <= currentPage) accentColor
+                            else Color.White.copy(alpha = 0.3f)
+                        )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        TextButton(onClick = onSkip) {
+            Text("Skip", color = Color.White.copy(alpha = 0.7f))
+        }
+    }
+}
+
+@Composable
+fun BottomNavigation(
+    currentPage: Int,
+    totalPages: Int,
+    accentColor: Color,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier.padding(bottom = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            repeat(totalPages) { page ->
+                val isSelected = page == currentPage
+                Box(
+                    modifier = Modifier
+                        .size(if (isSelected) 24.dp else 8.dp, 8.dp)
+                        .clip(CircleShape)
+                        .animateContentSize()
+                        .background(
+                            if (isSelected) accentColor
+                            else Color.White.copy(alpha = 0.3f)
+                        )
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (currentPage > 0) {
+                OutlinedButton(
+                    onClick = onPrevious,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.White.copy(alpha = 0.1f),
+                        contentColor = Color.White
+                    )
                 ) {
-                    Row(
-                        modifier = Modifier.padding(bottom = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        repeat(onboardingItems.size) { page ->
-                            val isSelected = page == pagerState.currentPage
-                            Box(
-                                modifier = Modifier
-                                    .size(if (isSelected) 24.dp else 8.dp, 8.dp)
-                                    .clip(CircleShape)
-                                    .animateContentSize()
-                                    .background(
-                                        if (isSelected)
-                                            onboardingItems[page].accentColor
-                                        else
-                                            Color.White.copy(alpha = 0.3f)
-                                    )
-                            )
-                        }
-                    }
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Back")
+                }
+            }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        if (pagerState.currentPage > 0) {
-                            OutlinedButton(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                                        viewModel.previousPage()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = Color.White.copy(alpha = 0.1f),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Back", modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Back")
-                            }
-                        }
-
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    if (pagerState.currentPage == onboardingItems.size - 1) {
-                                        viewModel.completeOnboarding()
-                                        navigationActions.navigateToHome()
-                                    } else {
-                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                                        viewModel.nextPage()
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(52.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = onboardingItems[pagerState.currentPage].accentColor
-                            )
-                        ) {
-                            Text(
-                                if (pagerState.currentPage == onboardingItems.size - 1) "Get Started"
-                                else "Next",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            if (pagerState.currentPage != onboardingItems.size - 1) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Icon(Icons.Default.ArrowForward, contentDescription = "Next", modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
+            Button(
+                onClick = onNext,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor
+                )
+            ) {
+                Text(
+                    if (currentPage == totalPages - 1) "Get Started"
+                    else "Next",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (currentPage != totalPages - 1) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.ArrowForward, contentDescription = "Next", modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -289,7 +315,7 @@ fun AnimatedBackground(currentPage: Int) {
 }
 
 @Composable
-fun WelcomePage(item: OnboardingItem, animationProgress: Float, viewModel: OnboardingViewModel) {
+fun WelcomePage(item: OnboardingItem, animationProgress: Float) {
     Column(
         modifier = Modifier
             .fillMaxSize()
