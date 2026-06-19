@@ -3,20 +3,6 @@ package com.airmouse.presentation.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Gesture
-import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Laptop
-import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -42,16 +28,11 @@ import com.airmouse.presentation.ui.themes.ThemesScreen
 import com.airmouse.presentation.ui.touchpad.TouchpadScreen
 import com.airmouse.presentation.ui.voice.VoiceCommandsScreen
 
-/**
- * Main Navigation Host for the Air Mouse application.
- * Handles all navigation between screens with smooth animations.
- */
 @Composable
 fun AirMouseNavHost(
     navController: NavHostController,
     startDestination: String,
-    modifier: Modifier = Modifier,
-    onServerSelected: (String, Int) -> Unit = { _, _ -> }
+    modifier: Modifier = Modifier
 ) {
     val navActions = rememberNavigationActions(navController)
 
@@ -76,8 +57,6 @@ fun AirMouseNavHost(
                     slideOutHorizontally(animationSpec = tween(300)) { it }
         }
     ) {
-        // ==================== BOTTOM NAVIGATION SCREENS ====================
-
         composable(Destinations.Home.route) {
             HomeScreen(navigationActions = navActions)
         }
@@ -97,26 +76,20 @@ fun AirMouseNavHost(
             HelpScreen(navigationActions = navActions)
         }
 
-        // ==================== INFO SCREENS ====================
-
         composable(Destinations.About.route) {
             AboutScreen(navigationActions = navActions)
         }
 
-        // ==================== CALIBRATION & SENSORS ====================
-
         composable(Destinations.Calibration.route) {
             CalibrationScreen(
-                navigationActions = navActions,
-                onComplete = { navController.popBackStack() }
+                navigationActions = navActions
+                // onComplete removed – use navActions.navigateBack() inside the screen
             )
         }
 
         composable(Destinations.SensorVisualizer.route) {
             SensorVisualizerScreen(navigationActions = navActions)
         }
-
-        // ==================== GESTURE & TOUCH ====================
 
         composable(Destinations.GestureStudio.route) {
             GestureStudioScreen(navigationActions = navActions)
@@ -130,17 +103,16 @@ fun AirMouseNavHost(
             TouchpadScreen(navigationActions = navActions)
         }
 
-        // ==================== CONNECTIVITY ====================
-
         composable(Destinations.NetworkDiscovery.route) {
-            NetworkDiscoveryScreen(navigationActions = navActions)
+            NetworkDiscoveryScreen(
+                navigationActions = navActions
+                // onServerSelected removed – screen should handle its own logic
+            )
         }
 
         composable(Destinations.ServerLogs.route) {
             ServerLogsScreen(navigationActions = navActions)
         }
-
-        // ==================== SECURITY & PRIVACY ====================
 
         composable(Destinations.Proximity.route) {
             ProximityScreen(navigationActions = navActions)
@@ -150,17 +122,13 @@ fun AirMouseNavHost(
             VoiceCommandsScreen(navigationActions = navActions)
         }
 
-        // ==================== CUSTOMIZATION ====================
-
         composable(Destinations.Profiles.route) {
-            ProfilesScreen()
+            ProfilesScreen(navigationActions = navActions)
         }
 
         composable(Destinations.Themes.route) {
             ThemesScreen(navigationActions = navActions)
         }
-
-        // ==================== SYSTEM ====================
 
         composable(Destinations.Battery.route) {
             BatteryScreen(navigationActions = navActions)
@@ -170,13 +138,15 @@ fun AirMouseNavHost(
             AccessibilityScreen(navigationActions = navActions)
         }
 
-        // ==================== ONBOARDING ====================
+        composable(Destinations.TouchpadSettings.route) {
+            TouchpadScreen(navigationActions = navActions)
+        }
 
         composable(Destinations.Onboarding.route) {
             OnboardingScreen(
                 navigationActions = navActions
+                // onComplete removed – the screen should navigate using navActions
             )
         }
     }
 }
-

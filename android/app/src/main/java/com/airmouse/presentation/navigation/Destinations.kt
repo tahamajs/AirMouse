@@ -33,7 +33,6 @@ sealed class Destinations(
     object Onboarding : Destinations("onboarding", "Onboarding", Icons.Filled.Apps)
 
     companion object {
-        // Routes that show the bottom navigation bar
         private val bottomNavRoutes = setOf(
             Home.route,
             Statistics.route,
@@ -41,20 +40,12 @@ sealed class Destinations(
             Help.route
         )
 
-        // List of bottom navigation destinations (in order)
-        val bottomNavDestinations = listOf(
-            Home,
-            Statistics,
-            Settings,
-            Help
-        )
+        val bottomNavDestinations = listOf(Home, Statistics, Settings, Help)
 
         fun isBottomNavScreen(route: String?): Boolean {
-            if (route == null) return false
-            return bottomNavRoutes.contains(route)
+            return route != null && bottomNavRoutes.contains(route)
         }
 
-        @Suppress("unused")
         fun fromRoute(route: String): Destinations? {
             return when (route) {
                 Home.route -> Home
