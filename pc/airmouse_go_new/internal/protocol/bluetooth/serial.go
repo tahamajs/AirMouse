@@ -75,7 +75,7 @@ func (s *SerialConnection) Connect() error {
     s.ConnectedAt = time.Now()
     s.LastActive = time.Now()
     
-    logger.Info("Serial connection opened", "port", s.Port)
+    logger.Info("Serial connection opened: port=%s", s.Port)
     return nil
 }
 
@@ -90,7 +90,7 @@ func (s *SerialConnection) Disconnect() {
     
     close(s.stopChan)
     s.Connected = false
-    logger.Info("Serial connection closed", "port", s.Port)
+    logger.Info("Serial connection closed: port=%s", s.Port)
 }
 
 // Write writes data to the serial port
@@ -106,7 +106,7 @@ func (s *SerialConnection) Write(data []byte) (int, error) {
     s.LastActive = time.Now()
     
     // In production, write to actual serial port
-    logger.Debug("Serial write", "port", s.Port, "bytes", len(data))
+    logger.Debug("Serial write: port=%s bytes=%d", s.Port, len(data))
     return len(data), nil
 }
 

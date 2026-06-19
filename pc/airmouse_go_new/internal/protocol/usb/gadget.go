@@ -191,7 +191,7 @@ func (g *USBGadget) Setup() error {
     }
 
     g.enabled = true
-    logger.Info("USB gadget enabled as HID mouse", "udc", udc)
+    logger.Info("USB gadget enabled as HID mouse: udc=%s", udc)
     return nil
 }
 

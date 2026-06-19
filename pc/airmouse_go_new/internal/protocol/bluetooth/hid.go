@@ -112,7 +112,7 @@ func (h *HIDService) RegisterConnection(addr string) error {
     h.connections[addr] = conn
     go h.processReports(conn)
     
-    logger.Info("HID connection registered", "addr", addr)
+    logger.Info("HID connection registered: addr=%s", addr)
     return nil
 }
 
@@ -129,7 +129,7 @@ func (h *HIDService) UnregisterConnection(addr string) error {
     close(conn.StopChan)
     delete(h.connections, addr)
     
-    logger.Info("HID connection unregistered", "addr", addr)
+    logger.Info("HID connection unregistered: addr=%s", addr)
     return nil
 }
 
@@ -166,7 +166,7 @@ func (h *HIDService) processReports(conn *HIDConnection) {
 func (h *HIDService) handleReport(addr string, report HIDReport) {
     // Encode and send via BLE
     data := h.encodeReport(report)
-    logger.Debug("HID report sent", "addr", addr, "data", data)
+    logger.Debug("HID report sent: addr=%s data=%v", addr, data)
 }
 
 func (h *HIDService) encodeReport(report HIDReport) []byte {

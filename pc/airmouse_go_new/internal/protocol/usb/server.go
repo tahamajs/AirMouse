@@ -92,7 +92,7 @@ func (s *Server) SetSerialConfig(baudRate, dataBits, stopBits int, parity string
     s.dataBits = dataBits
     s.stopBits = stopBits
     s.parity = parity
-    logger.Info("USB serial config updated", "baud", baudRate, "bits", dataBits)
+    logger.Info("USB serial config updated: baud=%d bits=%d", baudRate, dataBits)
 }
 
 func (s *Server) EnableAutoDetect(enabled bool) {
@@ -114,7 +114,7 @@ func (s *Server) Start() error {
         go s.scanSerialPorts()
     }
     
-    logger.Info("USB serial server started", "baud_rate", s.baudRate, "auto_detect", s.autoDetect)
+    logger.Info("USB serial server started: baud_rate=%d auto_detect=%v", s.baudRate, s.autoDetect)
     return nil
 }
 
@@ -204,7 +204,7 @@ func (s *Server) tryConnectPort(path string) error {
     dev.ConnectedAt = time.Now()
     dev.LastActive = time.Now()
     
-    logger.Info("USB serial device connected", "path", path, "baud", dev.BaudRate)
+    logger.Info("USB serial device connected: path=%s baud=%d", path, dev.BaudRate)
     s.deviceMgr.RegisterDevice(path, device.TypeUSB, "USB Device")
     s.triggerEvent(USBEvent{
         Type:      "connected",
@@ -219,7 +219,7 @@ func (s *Server) tryConnectPort(path string) error {
 func (s *Server) configurePort(file *os.File, baudRate int) error {
     // Platform-specific serial configuration
     // In production, use appropriate syscalls or libraries
-    logger.Debug("Serial port configured", "baud", baudRate)
+    logger.Debug("Serial port configured: baud=%d", baudRate)
     return nil
 }
 
@@ -230,7 +230,7 @@ func (s *Server) handleDevice(dev *SerialDevice) {
         dev.Connected = false
         s.mu.Unlock()
         
-        logger.Info("USB serial device disconnected", "path", dev.Path)
+        logger.Info("USB serial device disconnected: path=%s", dev.Path)
         s.deviceMgr.UnregisterDevice(dev.Path)
         s.triggerEvent(USBEvent{
             Type:      "disconnected",
@@ -242,7 +242,7 @@ func (s *Server) handleDevice(dev *SerialDevice) {
     for s.running && dev.Connected {
         line, err := dev.Reader.ReadString('\n')
         if err != nil {
-            logger.Debug("USB read error", "path", dev.Path, "error", err)
+            logger.Debug("USB read error: path=%s error=%v", dev.Path, err)
             break
         }
         
@@ -256,7 +256,7 @@ func (s *Server) handleDevice(dev *SerialDevice) {
         
         var msg USBMessage
         if err := json.Unmarshal([]byte(line), &msg); err != nil {
-            logger.Debug("Invalid USB message", "error", err)
+            logger.Debug("Invalid USB message: %v", err)
             s.triggerEvent(USBEvent{
                 Type:      "error",
                 DeviceID:  dev.Path,
@@ -305,7 +305,7 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
         }
         
     case "hello":
-        logger.Info("USB device identified", "path", dev.Path)
+        logger.Info("USB device identified: path=%s", dev.Path)
         if len(msg.Payload) > 0 {
             var hello map[string]string
             if err := json.Unmarshal(msg.Payload, &hello); err == nil {
@@ -322,7 +322,7 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
         dev.File.Write([]byte(`{"type":"pong"}` + "\n"))
         
     default:
-        logger.Debug("Unknown USB message type", "type", msg.Type)
+        logger.Debug("Unknown USB message type: %s", msg.Type)
     }
     
     // Send ACK if ID present
