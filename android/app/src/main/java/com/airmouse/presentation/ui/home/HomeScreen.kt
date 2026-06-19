@@ -513,7 +513,6 @@ fun QuickActionsRow(
 }
 
 @Composable
-@Composable
 fun RowScope.QuickActionButton(onClick: () -> Unit, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color) {
     Card(
         modifier = Modifier

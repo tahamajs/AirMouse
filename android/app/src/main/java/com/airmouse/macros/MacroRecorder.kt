@@ -595,14 +595,14 @@ class MacroRecorder @Inject constructor(
     // Helper to wait for a click from the user (simulated)
     private suspend fun waitForClick(timeout: Long) {
         suspendCoroutine<Unit> { continuation ->
+            val timeoutRunnable = Runnable {
+                continuation.resume(Unit)
+            }
             val clickListener = object {
                 fun onClick() {
                     handler.removeCallbacks(timeoutRunnable)
                     continuation.resume(Unit)
                 }
-            }
-            val timeoutRunnable = Runnable {
-                continuation.resume(Unit)
             }
             handler.postDelayed(timeoutRunnable, timeout)
             // In a real implementation you would register a global click listener.
