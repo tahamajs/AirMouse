@@ -31,20 +31,20 @@ class SensorFeature @Inject constructor(
     val state: StateFlow<SensorFeatureState> = _state.asStateFlow()
 
     init {
-        observeSensorData()
-        observeOrientation()
-        observeCalibrationStatus()
+        startObservingSensorData()
+        startObservingOrientation()
+        startObservingCalibrationStatus()
     }
 
-    private fun observeSensorData() {
+    private fun startObservingSensorData() {
         // Observe sensor data
     }
 
-    private fun observeOrientation() {
+    private fun startObservingOrientation() {
         // Observe orientation
     }
 
-    private fun observeCalibrationStatus() {
+    private fun startObservingCalibrationStatus() {
         // Observe calibration status
     }
 

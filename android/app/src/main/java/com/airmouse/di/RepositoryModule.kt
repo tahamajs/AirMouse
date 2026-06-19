@@ -94,22 +94,6 @@ object RepositoryProvidersModule {
 
     @Provides
     @Singleton
-    fun provideCalibrationRepositoryImpl(
-        preferencesManager: PreferencesManager
-    ): CalibrationRepositoryImpl {
-        return CalibrationRepositoryImpl(preferencesManager)
-    }
-
-    @Provides
-    @Singleton
-    fun provideGestureRepositoryImpl(
-        preferencesManager: PreferencesManager
-    ): GestureRepositoryImpl {
-        return GestureRepositoryImpl(preferencesManager)
-    }
-
-    @Provides
-    @Singleton
     fun provideConnectionRepositoryImpl(
         connectionManager: ConnectionManager,
         preferencesManager: PreferencesManager
@@ -154,15 +138,6 @@ object RepositoryProvidersModule {
 
     @Provides
     @Singleton
-    fun provideVoiceCommandRepositoryImpl(
-        @ApplicationContext context: Context,
-        preferencesManager: PreferencesManager
-    ): VoiceCommandRepositoryImpl {
-        return VoiceCommandRepositoryImpl(context, preferencesManager)
-    }
-
-    @Provides
-    @Singleton
     fun provideProfileRepositoryImpl(
         appDatabase: AppDatabase,
         preferencesManager: PreferencesManager
@@ -178,12 +153,4 @@ object RepositoryProvidersModule {
         return StatisticsRepositoryImpl(preferencesManager)
     }
 
-    @Provides
-    @Singleton
-    fun provideUpdateRepositoryImpl(
-        preferencesManager: PreferencesManager,
-        appDatabase: AppDatabase
-    ): UpdateRepositoryImpl {
-        return UpdateRepositoryImpl(preferencesManager, appDatabase)
-    }
 }// app/src/main/java/com/airmouse/di/RepositoryModule.kt
