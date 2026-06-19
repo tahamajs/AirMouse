@@ -92,6 +92,12 @@ data class CustomGestureTemplate(
     )
 }
 
+val CustomGestureTemplate.isFavorite: Boolean
+    get() = false
+
+val CustomGestureTemplate.duration: Float
+    get() = ((updatedAt - createdAt).coerceAtLeast(0L) / 1000f)
+
 /**
  * Gesture training statistics
  */

@@ -1,6 +1,7 @@
 // UIControlFeatures.kt
 package com.airmouse.features
 
+import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -149,7 +150,7 @@ class UIControlFeatures {
                                         },
                                         onLongClick = button.longPressAction?.let { { it(); visible = false } }
                                     )
-                                    .padding(4.bindWindowPadding()),
+                                    .padding(4.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(button.icon, contentDescription = button.label, modifier = Modifier.size(32.dp))
