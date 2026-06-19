@@ -87,6 +87,8 @@ class ConnectionRepositoryImpl @Inject constructor(
                             ConnectionQuality.SignalStrength.FAIR
                         ConnectionManager.ConnectionQuality.SignalStrength.POOR ->
                             ConnectionQuality.SignalStrength.POOR
+                        ConnectionManager.ConnectionQuality.SignalStrength.VERY_POOR ->
+                            ConnectionQuality.SignalStrength.VERY_POOR
                         ConnectionManager.ConnectionQuality.SignalStrength.UNKNOWN ->
                             ConnectionQuality.SignalStrength.UNKNOWN
                     }
@@ -106,7 +108,8 @@ class ConnectionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun reconnect(): Boolean {
-        return connectionManager.reconnect()
+        connectionManager.reconnect()
+        return true
     }
 
     override suspend fun getConnectionStatus(): ConnectionStatus = _status.value

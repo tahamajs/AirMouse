@@ -1,13 +1,15 @@
-// app/src/main/java/com/airmouse/data/repository/CalibrationRepositoryImpl.kt
 package com.airmouse.data.repository
 
-import com.airmouse.domain.model.*
+import com.airmouse.domain.model.CalibrationData
+import com.airmouse.domain.model.CalibrationQuality
+import com.airmouse.domain.model.CalibrationStatus
+import com.airmouse.domain.model.GyroBias
+import com.airmouse.domain.model.SensorCalibrationData
 import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,44 +19,34 @@ class CalibrationRepositoryImpl @Inject constructor(
     private val calibrationHelper: CalibrationHelper,
     private val prefs: PreferencesManager
 ) : ICalibrationRepository {
-    override suspend fun getCalibrationProgress(): Int {
-        return prefs.getInt("calibration_progress", 0)
-    }
 
-    override fun observeCalibrationProgress(): Flow<Int> {
-        return MutableStateFlow(prefs.getInt("calibration_progress", 0)).asStateFlow()
-    }
-    private val _calibrationStatus = MutableStateFlow(CalibrationStatus.NOT_STARTED)
+    private val _calibrationStatus = MutableStateFlow(getCurrentStatus())
+    private val _calibrationProgress = MutableStateFlow(prefs.getInt("calibration_progress", 0))
+    private val _calibrationQuality = MutableStateFlow(getCurrentQuality())
+
+    override suspend fun getCalibrationStatus(): CalibrationStatus = getCurrentStatus()
+
     override fun observeCalibrationStatus(): Flow<CalibrationStatus> = _calibrationStatus.asStateFlow()
 
-    private val _calibrationProgress = MutableStateFlow(0)
+    override suspend fun getCalibrationProgress(): Int = _calibrationProgress.value
+
     override fun observeCalibrationProgress(): Flow<Int> = _calibrationProgress.asStateFlow()
 
-    private val _calibrationQuality = MutableStateFlow(CalibrationQuality.UNKNOWN)
     override fun observeCalibrationQuality(): Flow<CalibrationQuality> = _calibrationQuality.asStateFlow()
-
-    override suspend fun getCalibrationStatus(): CalibrationStatus {
-        return if (prefs.isCalibrated()) {
-            CalibrationStatus.COMPLETED
-        } else if (prefs.getBoolean("calibration_in_progress", false)) {
-            CalibrationStatus.IN_PROGRESS
-        } else {
-            CalibrationStatus.NOT_STARTED
-        }
-    }
 
     override suspend fun calibrateGyroscope(onProgress: (Int) -> Unit): Boolean {
         _calibrationStatus.value = CalibrationStatus.IN_PROGRESS
         prefs.putBoolean("calibration_in_progress", true)
-
-        val result = calibrationHelper.calibrateGyroscope { progress ->
-            onProgress(progress)
-            _calibrationProgress.value = progress
-        }
-
+        val result = calibrationHelper.calibrateGyroscope()
         if (result) {
-            _calibrationStatus.value = CalibrationStatus.GYRO_COMPLETE
             prefs.putBoolean("gyro_calibrated", true)
+            _calibrationStatus.value = CalibrationStatus.GYRO_COMPLETE
+            _calibrationQuality.value = calibrationHelper.getCalibrationStats()["calibration_quality"]
+                ?.toString()
+                ?.let { runCatching { CalibrationQuality.valueOf(it) }.getOrNull() }
+                ?: CalibrationQuality.UNKNOWN
+            _calibrationProgress.value = 33
+            onProgress(33)
         }
         prefs.putBoolean("calibration_in_progress", false)
         return result
@@ -75,15 +67,12 @@ class CalibrationRepositoryImpl @Inject constructor(
     override suspend fun calibrateMagnetometer(onProgress: (Int) -> Unit): Boolean {
         _calibrationStatus.value = CalibrationStatus.IN_PROGRESS
         prefs.putBoolean("calibration_in_progress", true)
-
-        val result = calibrationHelper.calibrateMagnetometer { progress ->
-            onProgress(progress)
-            _calibrationProgress.value = progress
-        }
-
+        val result = calibrationHelper.calibrateMagnetometer()
         if (result) {
-            _calibrationStatus.value = CalibrationStatus.MAG_COMPLETE
             prefs.putBoolean("mag_calibrated", true)
+            _calibrationStatus.value = CalibrationStatus.MAG_COMPLETE
+            _calibrationProgress.value = 66
+            onProgress(66)
         }
         prefs.putBoolean("calibration_in_progress", false)
         return result
@@ -115,36 +104,15 @@ class CalibrationRepositoryImpl @Inject constructor(
     override suspend fun calibrateAccelerometer(onInstruction: (String) -> Unit): Boolean {
         _calibrationStatus.value = CalibrationStatus.IN_PROGRESS
         prefs.putBoolean("calibration_in_progress", true)
-
-        // Perform 6-point accelerometer calibration
-        val orientations = listOf(
-            "Place device flat facing UP",
-            "Place device flat facing DOWN",
-            "Place device on LEFT side",
-            "Place device on RIGHT side",
-            "Place device standing UP",
-            "Place device standing DOWN"
-        )
-
-        var success = true
-        for (i in orientations.indices) {
-            onInstruction(orientations[i])
-            val result = calibrationHelper.calibrateAccelerometer(i) { progress ->
-                _calibrationProgress.value = progress
-            }
-            if (!result) {
-                success = false
-                break
-            }
-            _calibrationProgress.value = ((i + 1) * 100 / orientations.size)
-        }
-
-        if (success) {
-            _calibrationStatus.value = CalibrationStatus.ACCEL_COMPLETE
+        onInstruction("Place device flat facing up")
+        val result = calibrationHelper.calibrateAccelerometer()
+        if (result) {
             prefs.putBoolean("accel_calibrated", true)
+            _calibrationStatus.value = CalibrationStatus.ACCEL_COMPLETE
+            _calibrationProgress.value = 100
         }
         prefs.putBoolean("calibration_in_progress", false)
-        return success
+        return result
     }
 
     override suspend fun getAccelOffset(): SensorCalibrationData {
@@ -172,11 +140,7 @@ class CalibrationRepositoryImpl @Inject constructor(
 
     override suspend fun getCalibrationData(): CalibrationData {
         return CalibrationData(
-            gyroBias = SensorCalibrationData(
-                offsetX = prefs.getFloat("gyro_bias_x", 0f),
-                offsetY = prefs.getFloat("gyro_bias_y", 0f),
-                offsetZ = prefs.getFloat("gyro_bias_z", 0f)
-            ),
+            gyroBias = getGyroBias().let { SensorCalibrationData(it.x, it.y, it.z) },
             accelOffset = getAccelOffset(),
             magOffset = getMagOffset(),
             isCalibrated = prefs.isCalibrated(),
@@ -185,31 +149,21 @@ class CalibrationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveCalibrationData(data: CalibrationData) {
-        saveGyroBias(GyroBias(
-            data.gyroBias.offsetX,
-            data.gyroBias.offsetY,
-            data.gyroBias.offsetZ
-        ))
+        saveGyroBias(GyroBias(data.gyroBias.offsetX, data.gyroBias.offsetY, data.gyroBias.offsetZ))
         saveAccelOffset(data.accelOffset)
         saveMagOffset(data.magOffset)
         prefs.putBoolean("calibration_complete", data.isCalibrated)
-    }
-
-    override suspend fun getCalibrationQuality(): CalibrationQuality {
-        val quality = prefs.getString("calibration_quality", "UNKNOWN")
-        return try {
-            CalibrationQuality.valueOf(quality)
-        } catch (e: IllegalArgumentException) {
-            CalibrationQuality.UNKNOWN
-        }
+        prefs.putString("calibration_quality", data.quality.name)
     }
 
     override suspend fun resetCalibration() {
-        calibrationHelper.reset()
+        calibrationHelper.resetCalibration()
         _calibrationStatus.value = CalibrationStatus.NOT_STARTED
-        _calibrationQuality.value = CalibrationQuality.UNKNOWN
         _calibrationProgress.value = 0
+        _calibrationQuality.value = CalibrationQuality.UNKNOWN
     }
+
+    override suspend fun getCalibrationQuality(): CalibrationQuality = getCurrentQuality()
 
     override suspend fun resetAllCalibration() {
         resetCalibration()
@@ -218,5 +172,18 @@ class CalibrationRepositoryImpl @Inject constructor(
         prefs.putBoolean("mag_calibrated", false)
         prefs.putBoolean("accel_calibrated", false)
         prefs.putBoolean("calibration_in_progress", false)
+    }
+
+    private fun getCurrentStatus(): CalibrationStatus = when {
+        prefs.getBoolean("calibration_in_progress", false) -> CalibrationStatus.IN_PROGRESS
+        prefs.isCalibrated() -> CalibrationStatus.COMPLETED
+        prefs.getBoolean("gyro_calibrated", false) -> CalibrationStatus.GYRO_COMPLETE
+        else -> CalibrationStatus.NOT_STARTED
+    }
+
+    private fun getCurrentQuality(): CalibrationQuality {
+        return runCatching {
+            CalibrationQuality.valueOf(prefs.getString("calibration_quality", "UNKNOWN"))
+        }.getOrDefault(CalibrationQuality.UNKNOWN)
     }
 }

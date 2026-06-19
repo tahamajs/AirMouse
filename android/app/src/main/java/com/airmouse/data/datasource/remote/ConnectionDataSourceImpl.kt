@@ -65,7 +65,8 @@ class ConnectionDataSourceImpl @Inject constructor(
     }
 
     override suspend fun reconnect(): Boolean {
-        return connectionManager.reconnect()
+        connectionManager.reconnect()
+        return true
     }
 
     override suspend fun isConnected(): Boolean {
