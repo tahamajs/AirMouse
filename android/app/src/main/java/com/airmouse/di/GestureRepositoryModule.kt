@@ -2,8 +2,8 @@
 package com.airmouse.di
 
 import android.content.Context
+import com.airmouse.data.datasource.local.IGestureDataSource
 import com.airmouse.data.repository.GestureRepositoryImpl
-import com.airmouse.domain.repository.IGestureDataSource
 import com.airmouse.domain.repository.IGestureRepository
 import com.airmouse.sensors.EnhancedGestureDetector
 import com.airmouse.utils.PreferencesManager
