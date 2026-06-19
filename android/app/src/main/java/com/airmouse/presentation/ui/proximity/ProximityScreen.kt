@@ -787,12 +787,9 @@ fun ProximityScreen(
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                // Fixed: items with explicit receiver
-                                items(
-                                    items = uiState.history.take(5),
-                                    key = { it.timestamp }
-                                ) { entry ->
+                                uiState.history.take(5).forEach { entry ->
                                     HistoryEntryItem(entry)
+                                    Spacer(modifier = Modifier.height(8.dp))
                                 }
                             }
                         }

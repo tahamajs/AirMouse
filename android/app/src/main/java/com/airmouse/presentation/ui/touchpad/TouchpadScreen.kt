@@ -74,7 +74,7 @@ fun TouchpadScreen(
             }
 
             item { StatusCard(uiState, viewModel::toggleTouchpad) }
-            item { PresetsCard(viewModel::applyPreset) }
+            item { PresetsCard { mode -> viewModel.applyPreset(mode.name) } }
 
             item {
                 ExpandableSettingsCard("Touch Scrolling", Icons.Default.SwapVert) {
@@ -272,4 +272,3 @@ fun SliderSetting(label: String, value: Float, onValueChange: (Float) -> Unit, v
         Slider(value = value, onValueChange = onValueChange, valueRange = valueRange, modifier = Modifier.fillMaxWidth())
     }
 }
-

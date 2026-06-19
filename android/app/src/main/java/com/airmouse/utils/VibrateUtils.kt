@@ -17,8 +17,6 @@ class VibrateUtils @Inject constructor(
         context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     }
 
-    fun getVibrator(): Vibrator = vibrator
-
     fun vibrateShort() {
         vibrate(30)
     }

@@ -543,7 +543,7 @@ fun DiscoveredServerItem(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(server.deviceType.icon, fontSize = 20.sp)
                     Text(server.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    StatusChip(isReachable = server.isReachable, ping = server.ping)
+                    StatusChip(isReachable = server.isReachable, ping = server.ping.toLong())
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -644,7 +644,7 @@ fun SavedServerItem(
                                 modifier = Modifier.size(16.dp)
                             )
                         }
-                        StatusChip(isReachable = server.isReachable, ping = server.ping)
+                        StatusChip(isReachable = server.isReachable, ping = server.ping.toLong())
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(

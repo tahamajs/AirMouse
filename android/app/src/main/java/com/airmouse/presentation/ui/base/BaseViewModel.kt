@@ -45,8 +45,7 @@ abstract class BaseViewModel<State, Event>(initialState: State) : ViewModel() {
 data class UiState<T>(
     val status: Status = Status.IDLE,
     val data: T? = null,
-    val error: String? = null,
-    val isLoading: Boolean = false
+    val error: String? = null
 ) {
     enum class Status { IDLE, LOADING, SUCCESS, ERROR }
 

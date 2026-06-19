@@ -171,15 +171,15 @@ object DomainToEntityMapper {
 
     // ==================== Batch Mappers ====================
 
-    fun mapToEntityList(profiles: List<UserProfile>): List<ProfileEntity> {
+    fun mapUserProfilesToEntityList(profiles: List<UserProfile>): List<ProfileEntity> {
         return profiles.map { mapToEntity(it) }
     }
 
-    fun mapToEntityList(templates: List<CustomGestureTemplate>): List<GestureTemplateEntity> {
+    fun mapCustomGestureTemplatesToEntityList(templates: List<CustomGestureTemplate>): List<GestureTemplateEntity> {
         return templates.map { mapToEntity(it) }
     }
 
-    fun mapToEntityList(stats: List<GestureStatistics>): List<GestureStatsEntity> {
+    fun mapGestureStatisticsToEntityList(stats: List<GestureStatistics>): List<GestureStatsEntity> {
         return stats.map { mapToEntity(it) }
     }
 }
@@ -261,7 +261,7 @@ object EntityToDomainMapper {
         )
     }
 
-    fun mapToDomainList(entities: List<GestureStatsEntity>): List<GestureStatistics> {
+    fun mapGestureStatsEntitiesToDomainList(entities: List<GestureStatsEntity>): List<GestureStatistics> {
         return entities.map { mapToDomain(it) }
     }
 
@@ -299,7 +299,7 @@ object EntityToDomainMapper {
         )
     }
 
-    fun mapToDomainList(entities: List<ProfileEntity>): List<UserProfile> {
+    fun mapProfileEntitiesToDomainList(entities: List<ProfileEntity>): List<UserProfile> {
         return entities.map { mapToDomain(it) }
     }
 
@@ -319,7 +319,7 @@ object EntityToDomainMapper {
         )
     }
 
-    fun mapToDomainList(entities: List<GestureTemplateEntity>): List<CustomGestureTemplate> {
+    fun mapGestureTemplateEntitiesToDomainList(entities: List<GestureTemplateEntity>): List<CustomGestureTemplate> {
         return entities.map { mapToDomain(it) }
     }
 
@@ -329,7 +329,7 @@ object EntityToDomainMapper {
         return entity.sampleData.split(",").map { it.toFloat() }.toFloatArray()
     }
 
-    fun mapToDomainList(entities: List<TrainingSampleEntity>): List<FloatArray> {
+    fun mapTrainingSampleEntitiesToDomainList(entities: List<TrainingSampleEntity>): List<FloatArray> {
         return entities.map { mapToDomain(it) }
     }
 
@@ -340,8 +340,8 @@ object EntityToDomainMapper {
         stats: List<GestureStatsEntity>
     ): Map<String, Any> {
         return mapOf(
-            "templates" to mapToDomainList(entities),
-            "statistics" to mapToDomainList(stats)
+            "templates" to mapGestureTemplateEntitiesToDomainList(entities),
+            "statistics" to mapGestureStatsEntitiesToDomainList(stats)
         )
     }
 

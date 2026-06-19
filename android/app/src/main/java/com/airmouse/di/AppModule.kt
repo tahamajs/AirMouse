@@ -4,27 +4,18 @@ package com.airmouse.di
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.hardware.SensorManager
+import android.hardware.usb.UsbManager
 import android.os.Vibrator
-import com.airmouse.utils.PreferencesManager
+import com.airmouse.network.WebSocketManager
 import com.airmouse.sensors.CalibrationHelper
-import com.airmouse.sensors.GestureDetector
 import com.airmouse.sensors.EnhancedGestureDetector
-import com.airmouse.utils.BatterySaver
-import com.airmouse.utils.VibrateUtils
-import com.airmouse.utils.AudioUtils
-import com.airmouse.utils.BluetoothUtils
-import com.airmouse.utils.PermissionHelper
-import com.airmouse.utils.PreferencesHelper
-import com.airmouse.network.ConnectionManager
+import com.airmouse.sensors.GestureDetector
+import com.airmouse.utils.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -78,11 +69,7 @@ object AppModule {
 
     // ==================== Sensor Components ====================
 
-    @Provides
-    @Singleton
-    fun provideSensorManager(@ApplicationContext context: Context): SensorManager {
-        return context.getSystemService(SensorManager::class.java)
-    }
+    // ❌ REMOVED: SensorManager is provided in SensorModule – keep only there.
 
     @Provides
     @Singleton
@@ -99,7 +86,6 @@ object AppModule {
         @ApplicationContext context: Context,
         preferencesManager: PreferencesManager
     ): GestureDetector {
-        // Aligned constructor parameters to match your codebase layout requirements
         return GestureDetector(context, preferencesManager)
     }
 
@@ -130,30 +116,20 @@ object AppModule {
 
     // ==================== Network Components ====================
 
-    @Provides
-    @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-        return OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .pingInterval(30, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .addInterceptor(logging)
-            .build()
-    }
+    // ❌ REMOVED: ConnectionManager is provided in NetworkModule – keep only there.
 
     @Provides
     @Singleton
-    fun provideConnectionManager(
-        @ApplicationContext context: Context,
-        preferencesManager: PreferencesManager
-    ): ConnectionManager {
-        // Resolved Companion object return type mismatch by explicitly initializing instances
-        return ConnectionManager(context, preferencesManager)
+    fun provideWebSocketManager(): WebSocketManager {
+        return WebSocketManager  // object, just return it
+    }
+
+    // ==================== USB Manager ====================
+
+    @Provides
+    @Singleton
+    fun provideUsbManager(@ApplicationContext context: Context): UsbManager {
+        return context.getSystemService(UsbManager::class.java)
     }
 
     // ==================== Application Context ====================
@@ -164,5 +140,3 @@ object AppModule {
         return context
     }
 }
-
-// app/src/main/java/com/airmouse/di/AppModule.kt

@@ -559,7 +559,7 @@ class NotificationManager @Inject constructor(
             val activeNotifications = getActiveNotifications()
             activeNotifications?.forEach { notification ->
                 val extras = notification.notification.extras
-                val notificationGroupKey = extras.getString(android.app.Notification.EXTRA_GROUP_KEY)
+                val notificationGroupKey = extras.getString("android.support.groupKey")
                 if (notificationGroupKey == groupKey) {
                     notificationManagerCompat.cancel(notification.id)
                 }
