@@ -62,6 +62,8 @@ func TestLogHook(t *testing.T) {
     
     AddLogHook(hook)
     LogInfo("Test hook message")
+    _ = receivedMessage
+    _ = receivedLevel
     
     // Note: The hook may be called asynchronously
     t.Log("✓ Log hook added")

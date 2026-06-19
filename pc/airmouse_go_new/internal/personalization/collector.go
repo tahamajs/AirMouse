@@ -187,7 +187,7 @@ func (dc *DataCollector) performTraining(samples []MovementSample) error {
     }
     
     if err := dc.trainer.FineTune(req); err != nil {
-        utils.LogError("Training failed", "error", err)
+        utils.LogError("Training failed: %v", err)
         return err
     }
     

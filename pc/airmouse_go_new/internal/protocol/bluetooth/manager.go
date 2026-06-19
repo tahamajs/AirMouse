@@ -3,6 +3,7 @@ package bluetooth
 import (
     "encoding/binary"
     "fmt"
+    "math/rand"
     "sync"
     "time"
 

@@ -59,7 +59,7 @@ func (s *Server) Start() error {
     s.running = true
     go s.listenLoop()
     
-    utils.LogInfo("UDP discovery server started", "port", s.port)
+    utils.LogInfo("UDP discovery server started: port=%d", s.port)
     return nil
 }
 
@@ -74,7 +74,7 @@ func (s *Server) listenLoop() {
                 continue
             }
             if s.running {
-                utils.LogDebug("UDP read error", "error", err)
+                utils.LogDebug("UDP read error: %v", err)
             }
             continue
         }
@@ -104,7 +104,7 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
     switch {
     case msg == "AIRMOUSE_DISCOVER" || msg == "AIRMOUSE_DISCOVERY":
         s.sendDiscoveryResponse(clientAddr)
-        utils.LogDebug("UDP discovery request from", "ip", clientIP)
+        utils.LogDebug("UDP discovery request from ip=%s", clientIP)
         
     case msg == "AIRMOUSE_HELLO":
         s.triggerEvent(UDPEvent{
@@ -120,16 +120,16 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
             if msgType, ok := parsed["type"].(string); ok {
                 switch msgType {
                 case "proximity":
-                    utils.LogDebug("UDP proximity update", "from", clientIP)
+                    utils.LogDebug("UDP proximity update from=%s", clientIP)
                 case "ping":
                     // Respond to ping
                     s.sendPong(clientAddr)
                 default:
-                    utils.LogDebug("UDP message received", "type", msgType, "from", clientIP)
+                    utils.LogDebug("UDP message received: type=%s from=%s", msgType, clientIP)
                 }
             }
         } else {
-            utils.LogDebug("UDP unknown message", "msg", msg, "from", clientIP)
+            utils.LogDebug("UDP unknown message: msg=%s from=%s", msg, clientIP)
         }
     }
 }
@@ -146,13 +146,13 @@ func (s *Server) sendDiscoveryResponse(clientAddr *net.UDPAddr) {
     
     data, err := json.Marshal(response)
     if err != nil {
-        utils.LogError("Failed to marshal discovery response", "error", err)
+        utils.LogError("Failed to marshal discovery response: %v", err)
         return
     }
     
     _, err = s.conn.WriteToUDP(data, clientAddr)
     if err != nil {
-        utils.LogDebug("Failed to send discovery response", "error", err)
+        utils.LogDebug("Failed to send discovery response: %v", err)
     }
 }
 

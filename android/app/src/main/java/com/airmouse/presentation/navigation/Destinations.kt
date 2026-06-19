@@ -31,6 +31,7 @@ sealed class Destinations(
     object Accessibility : Destinations(ROUTE_ACCESSIBILITY, "Access", Icons.Filled.Accessibility)
     object TouchpadSettings : Destinations(ROUTE_TOUCHPAD_SETTINGS, "Touchpad Settings", Icons.Filled.Settings)
     object Onboarding : Destinations(ROUTE_ONBOARDING, "Onboarding", Icons.Filled.Apps)
+    object CalibrationResult : Destinations(ROUTE_CALIBRATION_RESULT, "Calibration Result", Icons.Filled.CheckCircle)
 
     companion object {
         const val ROUTE_HOME = "home"
@@ -53,6 +54,7 @@ sealed class Destinations(
         const val ROUTE_ACCESSIBILITY = "accessibility"
         const val ROUTE_TOUCHPAD_SETTINGS = "touchpad_settings"
         const val ROUTE_ONBOARDING = "onboarding"
+        const val ROUTE_CALIBRATION_RESULT = "calibration_result"
 
         private val bottomNavRoutes = setOf(
             ROUTE_HOME,
@@ -88,6 +90,7 @@ sealed class Destinations(
                 ROUTE_ACCESSIBILITY -> Accessibility
                 ROUTE_TOUCHPAD_SETTINGS -> TouchpadSettings
                 ROUTE_ONBOARDING -> Onboarding
+                ROUTE_CALIBRATION_RESULT -> CalibrationResult
                 else -> null
             }
         }

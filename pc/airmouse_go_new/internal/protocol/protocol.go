@@ -13,7 +13,7 @@ import (
     "airmouse-go/internal/protocol/tcp"
     "airmouse-go/internal/protocol/udp"
     "airmouse-go/internal/protocol/usb"
-    "airmouse-go/internal/protocol/websocket"
+    websocketpkg "airmouse-go/internal/protocol/websocket"
     "airmouse-go/internal/utils"
 )
 
@@ -96,7 +96,7 @@ func (s *ProtocolServer) Start() error {
 
     // Start TCP server
     if cfg.EnableTCP {
-        s.tcpServer = newTCPServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr)
+        s.tcpServer = tcp.NewServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr)
         if err := s.tcpServer.Start(); err != nil {
             errors = append(errors, fmt.Errorf("TCP: %w", err))
             utils.LogError("TCP server start failed", "error", err)
@@ -107,7 +107,7 @@ func (s *ProtocolServer) Start() error {
 
     // Start WebSocket server
     if cfg.EnableWebSocket {
-        s.wsServer = newWebSocketServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
+        s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
         if err := s.wsServer.Start(); err != nil {
             errors = append(errors, fmt.Errorf("WebSocket: %w", err))
             utils.LogError("WebSocket server start failed", "error", err)
@@ -118,7 +118,7 @@ func (s *ProtocolServer) Start() error {
 
     // Start UDP server
     if cfg.EnableUDP {
-        s.udpServer = newUDPServer(cfg.UDPPort, s.deviceMgr)
+        s.udpServer = udp.NewServer(cfg.UDPPort, s.deviceMgr)
         if err := s.udpServer.Start(); err != nil {
             errors = append(errors, fmt.Errorf("UDP: %w", err))
             utils.LogError("UDP server start failed", "error", err)
@@ -129,7 +129,7 @@ func (s *ProtocolServer) Start() error {
 
     // Start Bluetooth manager
     if cfg.EnableBluetooth {
-        s.bluetoothMgr = newBluetoothMgr(cfg.BluetoothAdapter, s.mouseCtrl, s.deviceMgr)
+        s.bluetoothMgr = bluetooth.NewManager(cfg.BluetoothAdapter, s.mouseCtrl, s.deviceMgr)
         if err := s.bluetoothMgr.Start(); err != nil {
             errors = append(errors, fmt.Errorf("Bluetooth: %w", err))
             utils.LogError("Bluetooth manager start failed", "error", err)
@@ -140,7 +140,7 @@ func (s *ProtocolServer) Start() error {
 
     // Start USB server
     if cfg.EnableSerial {
-        s.usbServer = newUSBServer(s.mouseCtrl, s.deviceMgr)
+        s.usbServer = usb.NewServer(s.mouseCtrl, s.deviceMgr)
         if err := s.usbServer.Start(); err != nil {
             errors = append(errors, fmt.Errorf("USB: %w", err))
             utils.LogError("USB server start failed", "error", err)
