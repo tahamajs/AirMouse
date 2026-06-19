@@ -38,9 +38,6 @@ interface ICalibrationRepository {
     suspend fun getCalibrationQuality(): CalibrationQuality
     fun observeCalibrationQuality(): Flow<CalibrationQuality>
 
-    // Progress
-    fun observeCalibrationProgress(): Flow<Int>
-
     // Reset
     suspend fun resetAllCalibration()
 }
