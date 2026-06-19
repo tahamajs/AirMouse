@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#10B981" android:pathData="M12,2a10,10 0,1 0,10,10A10,10 0,0 0,12,2z"/>
+</vector>
+*** Add File: /Users/tahamajs/Documents/uni/CPS/Files/ComputerAssignments/CA2/code/android/app/src/main/res/drawable/ic_notification.xml
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#4F46E5" android:pathData="M12,2a7,7 0,0 0,-7 7v4l-2,3v1h18v-1l-2,-3V9a7,7 0,0 0,-7 -7z"/>
+</vector>

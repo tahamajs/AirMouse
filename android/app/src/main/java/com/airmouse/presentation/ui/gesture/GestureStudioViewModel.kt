@@ -152,7 +152,7 @@ class GestureStudioViewModel @Inject constructor(
             while (_uiState.value.isRecording) {
                 delay(100)
                 time += 100
-                val progress = (time / 5000f * 100).coerceAtMost(100)
+                val progress = (time / 5000f * 100f).coerceAtMost(100f)
                 _uiState.update {
                     it.copy(
                         recordingTime = time,
