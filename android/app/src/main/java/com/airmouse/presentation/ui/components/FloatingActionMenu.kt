@@ -27,15 +27,15 @@ fun FloatingActionMenu(
     Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
         // Menu items
         items.forEachIndexed { index, item ->
-            val delay = index * 50L
+            val delayMillis = (index * 50L).toInt()
             AnimatedVisibility(
                 visible = expanded,
                 enter = fadeIn() + scaleIn(
                     initialScale = 0f,
-                    animationSpec = tween(300, delayMillis = delay)
+                    animationSpec = tween(300, delayMillis = delayMillis)
                 ) + slideInVertically(
                     initialOffsetY = { it },
-                    animationSpec = tween(300, delayMillis = delay)
+                    animationSpec = tween(300, delayMillis = delayMillis)
                 ),
                 exit = fadeOut() + scaleOut() + slideOutVertically()
             ) {
@@ -73,5 +73,5 @@ data class FABMenuItem(
     val id: String,
     val label: String,
     val icon: ImageVector,
-    val color: Color = MaterialTheme.colorScheme.primary
+    val color: Color = Color(0xFF4F46E5)
 )

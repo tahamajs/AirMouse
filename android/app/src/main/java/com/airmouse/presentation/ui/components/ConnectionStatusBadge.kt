@@ -163,7 +163,10 @@ fun ConnectionStatusBadge(
                                 )
                             }
                         }
-                        ConnectionManager.ConnectionStatus.ERROR -> {
+                        ConnectionManager.ConnectionStatus.ERROR,
+                        ConnectionManager.ConnectionStatus.DISCONNECTED,
+                        ConnectionManager.ConnectionStatus.CONNECTING,
+                        ConnectionManager.ConnectionStatus.RECONNECTING -> {
                             IconButton(
                                 onClick = { connectionManager.reconnect() },
                                 modifier = Modifier
@@ -177,11 +180,11 @@ fun ConnectionStatusBadge(
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
+                            }
                         }
-                        else -> {}
                     }
                 }
-                    
+            }
                     IconButton(
                         onClick = { onDismiss() },
                         modifier = Modifier
