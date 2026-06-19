@@ -27,7 +27,7 @@ import com.airmouse.presentation.navigation.AirMouseNavHost
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.rememberNavigationActions
 import com.airmouse.presentation.theme.AirMouseTheme
-import com.airmouse.presentation.ui.onboarding.OnboardingActivity
+import com.airmouse.ui.onboarding.OnboardingActivity
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay

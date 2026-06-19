@@ -172,7 +172,7 @@ class GestureDataSourceImpl @Inject constructor(
                         GestureType.CUSTOM
                     },
                     action = obj.getString("action"),
-                    confidence = obj.optDouble("confidence", 0.7f).toFloat(),
+                    confidence = obj.optDouble("confidence", 1f).toFloat(),
                     isEnabled = obj.optBoolean("isEnabled", true),
                     createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
                     updatedAt = obj.optLong("updatedAt", System.currentTimeMillis()),
