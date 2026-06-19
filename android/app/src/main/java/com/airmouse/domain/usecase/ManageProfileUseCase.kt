@@ -102,6 +102,10 @@ class ManageProfileUseCase @Inject constructor(
         }
     }
 
+    suspend fun getFavoriteProfiles(): List<UserProfile> {
+        return profileRepository.getFavoriteProfiles()
+    }
+
     /**
      * Get settings for profile
      */

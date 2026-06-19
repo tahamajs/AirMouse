@@ -94,4 +94,18 @@ class ManageGestureTemplatesUseCase @Inject constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun getGestureStats() = gestureRepository.getGestureStats()
+
+    suspend fun getConfidenceThreshold(): Float = gestureRepository.getConfidenceThreshold()
+
+    suspend fun setConfidenceThreshold(threshold: Float) {
+        gestureRepository.setConfidenceThreshold(threshold)
+    }
+
+    suspend fun getCooldownMs(): Long = gestureRepository.getCooldownMs()
+
+    suspend fun setCooldownMs(cooldown: Long) {
+        gestureRepository.setCooldownMs(cooldown)
+    }
 }
