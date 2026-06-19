@@ -123,6 +123,10 @@ class MouseRepositoryImpl @Inject constructor(
         connectionManager.sendPauseMovement()
     }
 
+    override suspend fun resumeMovement() {
+        connectionManager.sendResumeMovement()
+    }
+
     override suspend fun click(button: MouseButton): Boolean {
         val buttonName = when (button) {
             MouseButton.LEFT -> "left"
@@ -181,6 +185,10 @@ class MouseRepositoryImpl @Inject constructor(
             addEvent(MouseEvent.Scroll(delta, direction))
         }
         return result
+    }
+
+    override suspend fun sendGesture(gesture: String, confidence: Float): Boolean {
+        return connectionManager.sendGesture(gesture, confidence)
     }
 
     override suspend fun getPosition(): Pair<Int, Int> {

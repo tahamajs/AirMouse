@@ -12,6 +12,7 @@ interface IMouseRepository {
     suspend fun move(dx: Float, dy: Float): Boolean
     suspend fun moveSmooth(points: List<Pair<Float, Float>>, durationMs: Int): Boolean
     suspend fun stopMovement()
+    suspend fun resumeMovement()
 
     // Clicks
     suspend fun click(button: MouseButton): Boolean
@@ -21,6 +22,7 @@ interface IMouseRepository {
 
     // Scroll
     suspend fun scroll(delta: Int): Boolean
+    suspend fun sendGesture(gesture: String, confidence: Float): Boolean
 
     // Position
     suspend fun getPosition(): Pair<Int, Int>
