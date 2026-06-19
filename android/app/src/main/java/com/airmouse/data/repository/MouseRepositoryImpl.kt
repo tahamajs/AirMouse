@@ -10,8 +10,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -32,8 +34,8 @@ class MouseRepositoryImpl @Inject constructor(
     private val _statistics = MutableStateFlow(MouseStatistics())
     override fun observeStatistics(): Flow<MouseStatistics> = _statistics.asStateFlow()
 
-    private val _events = MutableStateFlow<List<MouseEvent>>(emptyList())
-    override fun observeMouseEvents(): Flow<List<MouseEvent>> = _events.asStateFlow()
+    private val _events = MutableSharedFlow<MouseEvent>(extraBufferCapacity = 64)
+    override fun observeMouseEvents(): Flow<MouseEvent> = _events.asSharedFlow()
 
     init {
         loadProfile()
@@ -273,11 +275,6 @@ class MouseRepositoryImpl @Inject constructor(
     }
 
     private fun addEvent(event: MouseEvent) {
-        val current = _events.value.toMutableList()
-        current.add(event)
-        if (current.size > 100) {
-            current.removeAt(0)
-        }
-        _events.value = current
+        _events.tryEmit(event)
     }
 }

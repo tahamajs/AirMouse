@@ -99,7 +99,7 @@ class ProximityRepositoryImpl @Inject constructor(
                     _state.value = ProximityState(
                         isNear = isNear,
                         distance = distance,
-                        rssi = rssi,
+                        signalStrength = rssi,
                         deviceAddress = _config.value.deviceAddress,
                         deviceName = getDeviceName(),
                         lastUpdate = System.currentTimeMillis()
@@ -220,7 +220,7 @@ class ProximityRepositoryImpl @Inject constructor(
         _state.value = _state.value.copy(
             isNear = false,
             distance = 0f,
-            rssi = 0
+            signalStrength = 0
         )
     }
 
