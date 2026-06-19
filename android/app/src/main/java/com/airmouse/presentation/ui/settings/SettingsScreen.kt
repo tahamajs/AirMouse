@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.airmouse.features.MouseControlFeature
 import com.airmouse.presentation.navigation.NavigationActions
 import com.airmouse.utils.PreferencesManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
 // ==================== ENUMS ====================
 
