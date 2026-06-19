@@ -1,93 +1,80 @@
+// app/src/main/java/com/airmouse/domain/model/GestureModels.kt
 package com.airmouse.domain.model
 
 import android.os.Parcelable
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 import kotlinx.parcelize.Parcelize
-import java.util.UUID
 
 /**
- * Types of gestures that can be detected.
+ * Gesture types
  */
-enum class GestureType(val displayName: String) {
-    NONE("None"),
-    CLICK("Click"),
-    DOUBLE_CLICK("Double Click"),
-    RIGHT_CLICK("Right Click"),
-    SCROLL_UP("Scroll Up"),
-    SCROLL_DOWN("Scroll Down"),
-    SWIPE_LEFT("Swipe Left"),
-    SWIPE_RIGHT("Swipe Right"),
-    SWIPE_UP("Swipe Up"),
-    SWIPE_DOWN("Swipe Down"),
-    CIRCLE_CW("Circle Clockwise"),
-    CIRCLE_CCW("Circle Counter-Clockwise"),
-    ZOOM_IN("Zoom In"),
-    ZOOM_OUT("Zoom Out"),
-    CUSTOM("Custom")
+enum class GestureType {
+    NONE,
+    CLICK,
+    DOUBLE_CLICK,
+    RIGHT_CLICK,
+    SWIPE_LEFT,
+    SWIPE_RIGHT,
+    SWIPE_UP,
+    SWIPE_DOWN,
+    CIRCLE_CW,
+    CIRCLE_CCW,
+    THUMBS_UP,
+    THUMBS_DOWN,
+    ZOOM_IN,
+    ZOOM_OUT,
+    SHAKE,
+    PEACE,
+    FIST,
+    CUSTOM
 }
 
 /**
- * Represents a detected gesture with confidence score.
+ * Gesture event
  */
-@Parcelize
-data class Gesture(
+data class GestureEvent(
     val type: GestureType,
-    val confidence: Float = 1.0f,
-    val customName: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
-) : Parcelable
+    val name: String = "",
+    val confidence: Float = 0f,
+    val timestamp: Long = System.currentTimeMillis(),
+    val velocity: Float = 0f,
+    val duration: Long = 0,
+    val isCustom: Boolean = false
+)
 
 /**
- * Template for a custom user-defined gesture.
+ * Custom gesture template
  */
-@Entity(tableName = "custom_gestures")
 @Parcelize
 data class CustomGestureTemplate(
-    @PrimaryKey val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val threshold: Float = 0.7f,
-    val samples: List<FloatArray> = emptyList(),
+    val id: String = "",
+    val name: String = "",
+    val type: GestureType = GestureType.CUSTOM,
+    val action: String = "",
+    val confidence: Float = 0.7f,
+    val isEnabled: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
-    val modifiedAt: Long = System.currentTimeMillis(),
-    val isTrained: Boolean = false,
-    val confidence: Float = 0f,
-    val detectionCount: Int = 0,
-    val lastDetected: Long = 0
+    val updatedAt: Long = System.currentTimeMillis(),
+    val usageCount: Int = 0
 ) : Parcelable
 
 /**
- * Individual sensor sample for gesture recording.
+ * Gesture training statistics
  */
-@Parcelize
-data class GestureSample(
-    val timestamp: Long,
-    val gyroX: Float,
-    val gyroY: Float,
-    val gyroZ: Float,
-    val accelX: Float,
-    val accelY: Float,
-    val accelZ: Float,
-    val magX: Float = 0f,
-    val magY: Float = 0f,
-    val magZ: Float = 0f
-) : Parcelable
+data class GestureTrainingStats(
+    val totalGestures: Int = 0,
+    val gesturesByType: Map<GestureType, Int> = emptyMap(),
+    val mostUsedGesture: String = "",
+    val lastGestureTime: Long = 0,
+    val customGestureUsage: Map<String, Int> = emptyMap(),
+    val averageConfidence: Float = 0f
+)
 
 /**
- * Statistics for gesture usage.
+ * Gesture detection result
  */
-@Parcelize
-data class GestureStatistics(
-    val totalGestures: Int,
-    val gesturesByType: Map<GestureType, Int>,
-    val mostUsedGesture: GestureType?,
-    val averageConfidence: Float,
-    val lastGestureTime: Long,
-    val customGestureUsage: Map<String, Int>
-) : Parcelable
-
-data class GestureTrainingResult(
-    val success: Boolean,
-    val message: String,
-    val confidence: Float = 0f
+data class GestureDetectionResult(
+    val gesture: GestureType,
+    val confidence: Float,
+    val rawData: List<FloatArray>? = null,
+    val matchedTemplate: String? = null
 )

@@ -2,16 +2,40 @@
 package com.airmouse.domain.repository
 
 import com.airmouse.domain.model.CustomGestureTemplate
+import com.airmouse.domain.model.GestureEvent
+import com.airmouse.domain.model.GestureTrainingStats
+import com.airmouse.domain.model.GestureType
 import kotlinx.coroutines.flow.Flow
 
 interface IGestureRepository {
-    suspend fun getAllCustomGestures(): List<CustomGestureTemplate>
-    suspend fun getCustomGesture(id: String): CustomGestureTemplate?
-    suspend fun saveCustomGesture(gesture: CustomGestureTemplate)
+    // Gesture detection
+    suspend fun detectGesture(sensorData: FloatArray): GestureEvent
+    suspend fun detectGestureFromMotion(dx: Float, dy: Float): GestureType
+
+    // Custom gestures
+    suspend fun addCustomGesture(gesture: CustomGestureTemplate): String
+    suspend fun updateCustomGesture(gesture: CustomGestureTemplate)
     suspend fun deleteCustomGesture(id: String)
-    suspend fun trainGesture(gestureId: String, newSamples: List<FloatArray>? = null): Boolean
-    suspend fun recognizeGesture(samples: List<FloatArray>): Pair<String?, Float> // returns (gestureName, confidence)
-    suspend fun exportGesturesToCSV(): String
-    suspend fun importGesturesFromCSV(filePath: String): Boolean
-    fun observeGestures(): Flow<List<CustomGestureTemplate>>
+    suspend fun getCustomGesture(id: String): CustomGestureTemplate?
+    suspend fun getAllCustomGestures(): List<CustomGestureTemplate>
+    fun observeCustomGestures(): Flow<List<CustomGestureTemplate>>
+
+    // Training
+    suspend fun trainGesture(gestureName: String, samples: List<FloatArray>): Boolean
+    suspend fun trainAllGestures(): Boolean
+
+    // Statistics
+    suspend fun getGestureStats(): GestureTrainingStats
+    fun observeGestureStats(): Flow<GestureTrainingStats>
+
+    // Templates
+    suspend fun loadGestureTemplates(): List<CustomGestureTemplate>
+    suspend fun saveGestureTemplate(template: CustomGestureTemplate)
+    suspend fun deleteGestureTemplate(id: String)
+
+    // Recognition configuration
+    suspend fun setConfidenceThreshold(threshold: Float)
+    suspend fun getConfidenceThreshold(): Float
+    suspend fun setCooldownMs(cooldown: Long)
+    suspend fun getCooldownMs(): Long
 }

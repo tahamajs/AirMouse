@@ -1,11 +1,14 @@
 package com.airmouse.presentation.ui.settings
 
-import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,36 +23,222 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import androidx.compose.foundation.clickable
+// ==================== MAIN SCREEN ====================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    modifier: Modifier = Modifier,
     navigationActions: NavigationActions,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var expandedSection by remember { mutableStateOf<SettingsSection?>(SettingsSection.CURSOR) }
+    var selectedSection by remember { mutableStateOf<SettingsSection?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Settings",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.resetToDefaults() }) {
-                        Icon(Icons.Default.Restore, contentDescription = "Reset")
-                    }
-                    IconButton(onClick = { viewModel.exportSettings() }) {
-                        Icon(Icons.Default.Share, contentDescription = "Export")
+                    if (uiState.isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        IconButton(onClick = { viewModel.saveAllSettings() }) {
+                            Icon(Icons.Default.Save, contentDescription = "Save")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        if (selectedSection == null) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    SettingsHeader()
+                }
+
+                items(SettingsSection.entries) { section ->
+                    SettingsCard(
+                        title = section.title,
+                        description = section.description,
+                        icon = section.icon,
+                        onClick = { selectedSection = section }
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        } else {
+            SectionDetailScreen(
+                section = selectedSection!!,
+                uiState = uiState,
+                onUpdate = { viewModel.updateUiState(it) },
+                onBack = { selectedSection = null }
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsHeader() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                "⚙️ Settings",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                "Customize your Air Mouse experience",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsCard(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = title,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Navigate",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ==================== SECTION DETAIL SCREEN ====================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SectionDetailScreen(
+    section: SettingsSection,
+    uiState: SettingsUiState,
+    onUpdate: (SettingsUiState) -> Unit,
+    onBack: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            section.icon,
+                            contentDescription = section.title,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            section.title,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -58,592 +247,730 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Success/Error messages
-            if (uiState.success != null) {
-                item {
-                    Snackbar(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        action = {
-                            TextButton(onClick = { viewModel.clearError() }) { Text("Dismiss") }
-                        }
-                    ) { Text(uiState.success!!, color = Color.White) }
-                }
+            when (section) {
+                SettingsSection.CURSOR -> item { CursorSettings(uiState, onUpdate) }
+                SettingsSection.GESTURE -> item { GestureSettings(uiState, onUpdate) }
+                SettingsSection.AI -> item { AISettings(uiState, onUpdate) }
+                SettingsSection.HAPTIC -> item { HapticSettings(uiState, onUpdate) }
+                SettingsSection.DISPLAY -> item { DisplaySettings(uiState, onUpdate) }
+                SettingsSection.CONNECTION -> item { ConnectionSettings(uiState, onUpdate) }
+                SettingsSection.PRIVACY -> item { PrivacySettings(uiState, onUpdate) }
+                SettingsSection.PRESENTATION -> item { PresentationSettings(uiState, onUpdate) }
+                SettingsSection.ABOUT -> item { AboutSection() }
             }
-
-            if (uiState.error != null) {
-                item {
-                    Snackbar(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        containerColor = MaterialTheme.colorScheme.error,
-                        action = {
-                            TextButton(onClick = { viewModel.clearError() }) { Text("Dismiss") }
-                        }
-                    ) { Text(uiState.error!!, color = Color.White) }
-                }
-            }
-
-            // Settings Sections
-            items(SettingsSection.values()) { section ->
-                AnimatedVisibility(
-                    visible = true,
-                    enter = fadeIn() + slideInVertically(),
-                    exit = fadeOut() + slideOutVertically()
-                ) {
-                    SettingsSectionCard(
-                        title = section.title,
-                        icon = section.icon,
-                        description = section.description,
-                        isExpanded = expandedSection == section,
-                        onExpand = { expandedSection = if (expandedSection == section) null else section },
-                        content = { SettingsContent(section = section, viewModel = viewModel, uiState = uiState) }
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
 
+// ==================== UI COMPONENTS ====================
+
 @Composable
-private fun SettingsContent(
-    section: SettingsSection,
-    viewModel: SettingsViewModel,
-    uiState: SettingsUiState
+fun SettingsSwitch(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        when (section) {
-            SettingsSection.CURSOR -> CursorSettingsContent(viewModel, uiState)
-            SettingsSection.GESTURE -> GestureSettingsContent(viewModel, uiState)
-            SettingsSection.AI -> AISettingsContent(viewModel, uiState)
-            SettingsSection.HAPTIC -> HapticSettingsContent(viewModel, uiState)
-            SettingsSection.DISPLAY -> DisplaySettingsContent(viewModel, uiState)
-            SettingsSection.CONNECTION -> ConnectionSettingsContent(viewModel, uiState)
-            SettingsSection.PRIVACY -> PrivacySettingsContent(viewModel, uiState)
-            SettingsSection.PRESENTATION -> PresentationSettingsContent(viewModel, uiState)
-            SettingsSection.ABOUT -> AboutSettingsContent(viewModel, uiState)
-        }
-    }
-}
-
-@Composable
-private fun CursorSettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    SliderSetting(
-        label = "Sensitivity",
-        value = uiState.sensitivity,
-        onValueChange = viewModel::updateSensitivity,
-        valueRange = 0.1f..2.0f,
-        formatValue = { String.format("%.2f", it) },
-        icon = Icons.Default.Speed
-    )
-    SwitchSetting(
-        label = "Mouse Acceleration",
-        description = "Increase cursor speed with fast movements",
-        checked = uiState.accelerationEnabled,
-        onCheckedChange = viewModel::updateAccelerationEnabled,
-        icon = Icons.Default.TrendingUp
-    )
-    if (uiState.accelerationEnabled) {
-        SliderSetting(
-            label = "Acceleration Factor",
-            value = uiState.accelerationFactor,
-            onValueChange = viewModel::updateAccelerationFactor,
-            valueRange = 1.0f..3.0f,
-            formatValue = { String.format("%.1fx", it) }
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         )
-    }
-    SwitchSetting(
-        label = "Invert X-Axis",
-        description = "Reverse horizontal movement",
-        checked = uiState.invertX,
-        onCheckedChange = viewModel::updateInvertX,
-        icon = Icons.Default.SwapHoriz
-    )
-    SwitchSetting(
-        label = "Invert Y-Axis",
-        description = "Reverse vertical movement",
-        checked = uiState.invertY,
-        onCheckedChange = viewModel::updateInvertY,
-        icon = Icons.Default.SwapVert
-    )
-    SwitchSetting(
-        label = "Cursor Smoothing",
-        description = "Smoother cursor movement",
-        checked = uiState.smoothingEnabled,
-        onCheckedChange = viewModel::updateSmoothingEnabled
-    )
-    if (uiState.smoothingEnabled) {
-        SliderSetting(
-            label = "Smoothing Factor",
-            value = uiState.smoothingFactor,
-            onValueChange = viewModel::updateSmoothingFactor,
-            valueRange = 0.1f..1.0f,
-            formatValue = { String.format("%.2f", it) }
-        )
-    }
-}
-
-@Composable
-private fun GestureSettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    SliderSetting(
-        label = "Click Threshold",
-        value = uiState.clickThreshold,
-        onValueChange = viewModel::updateClickThreshold,
-        valueRange = 5f..20f,
-        formatValue = { String.format("%.1f", it) },
-        description = "Sensitivity for click detection",
-        icon = Icons.Default.TouchApp
-    )
-    SliderSetting(
-        label = "Double Click Interval",
-        value = uiState.doubleClickInterval.toFloat(),
-        onValueChange = { viewModel.updateDoubleClickInterval(it.toLong()) },
-        valueRange = 100f..600f,
-        formatValue = { String.format("%.0f ms", it) },
-        description = "Time window for double click"
-    )
-    SliderSetting(
-        label = "Scroll Threshold",
-        value = uiState.scrollThreshold,
-        onValueChange = viewModel::updateScrollThreshold,
-        valueRange = 3f..15f,
-        formatValue = { String.format("%.1f", it) },
-        description = "Sensitivity for scroll detection",
-        icon = Icons.Default.SwapVert
-    )
-    SliderSetting(
-        label = "Right Click Tilt",
-        value = uiState.rightClickTilt,
-        onValueChange = viewModel::updateRightClickTilt,
-        valueRange = 10f..45f,
-        formatValue = { String.format("%.0f°", it) },
-        description = "Tilt angle for right click"
-    )
-    SliderSetting(
-        label = "Right Click Duration",
-        value = uiState.rightClickDuration.toFloat(),
-        onValueChange = { viewModel.updateRightClickDuration(it.toLong()) },
-        valueRange = 200f..1000f,
-        formatValue = { String.format("%.0f ms", it) }
-    )
-    SliderSetting(
-        label = "Gesture Debounce",
-        value = uiState.gestureDebounce.toFloat(),
-        onValueChange = { viewModel.updateGestureDebounce(it.toLong()) },
-        valueRange = 50f..300f,
-        formatValue = { String.format("%.0f ms", it) }
-    )
-}
-
-@Composable
-private fun AISettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    SwitchSetting(
-        label = "AI Smoothing",
-        description = "Machine learning for smoother cursor",
-        checked = uiState.aiSmoothing,
-        onCheckedChange = viewModel::updateAiSmoothing,
-        icon = Icons.Default.Psychology
-    )
-    if (uiState.aiSmoothing) {
-        SliderSetting(
-            label = "AI Blend Factor",
-            value = uiState.aiBlendFactor,
-            onValueChange = viewModel::updateAiBlendFactor,
-            valueRange = 0f..1f,
-            formatValue = { String.format("%.2f", it) },
-            description = "Balance between raw and AI movement"
-        )
-    }
-    SwitchSetting(
-        label = "Predictive Movement",
-        description = "Kalman filter for reduced lag",
-        checked = uiState.predictive,
-        onCheckedChange = viewModel::updatePredictive
-    )
-    if (uiState.predictive) {
-        SliderSetting(
-            label = "Prediction Strength",
-            value = uiState.predictionStrength,
-            onValueChange = viewModel::updatePredictionStrength,
-            valueRange = 0f..1f,
-            formatValue = { String.format("%.2f", it) }
-        )
-    }
-    SwitchSetting(
-        label = "Kalman Filter",
-        description = "Advanced noise reduction",
-        checked = uiState.kalmanEnabled,
-        onCheckedChange = viewModel::updateKalmanEnabled
-    )
-}
-
-@Composable
-private fun HapticSettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    SwitchSetting(
-        label = "Haptic Feedback",
-        description = "Vibration on gestures",
-        checked = uiState.hapticEnabled,
-        onCheckedChange = viewModel::updateHaptic,
-        icon = Icons.Default.Vibration
-    )
-    if (uiState.hapticEnabled) {
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Strength", style = MaterialTheme.typography.bodyLarge)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                HapticStrength.values().forEach { strength ->
-                    FilterChip(
-                        selected = uiState.hapticStrength == strength,
-                        onClick = { viewModel.updateHapticStrength(strength) },
-                        label = { Text(strength.displayName) },
-                        modifier = Modifier.weight(1f)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (description != null) {
+                    Text(
+                        description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-        }
-    }
-    SwitchSetting(
-        label = "Sound Effects",
-        description = "Audio feedback for actions",
-        checked = uiState.soundEnabled,
-        onCheckedChange = viewModel::updateSoundEnabled
-    )
-    SwitchSetting(
-        label = "Visual Feedback",
-        description = "Screen indicators for gestures",
-        checked = uiState.visualFeedback,
-        onCheckedChange = viewModel::updateVisualFeedback
-    )
-    SwitchSetting(
-        label = "Gesture Notifications",
-        description = "Show notification on gesture detection",
-        checked = uiState.notificationOnGesture,
-        onCheckedChange = viewModel::updateNotificationOnGesture
-    )
-}
-
-@Composable
-private fun DisplaySettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    DropdownSetting(
-        label = "Theme",
-        options = listOf("light", "dark", "pure_black", "high_contrast", "system"),
-        selected = uiState.theme,
-        onSelected = viewModel::updateTheme,
-        icon = Icons.Default.Palette
-    )
-    SwitchSetting(
-        label = "Dynamic Colors",
-        description = "Use Material You colors (Android 12+)",
-        checked = uiState.useDynamicColors,
-        onCheckedChange = viewModel::updateUseDynamicColors
-    )
-    SliderSetting(
-        label = "Font Size",
-        value = uiState.fontSize,
-        onValueChange = viewModel::updateFontSize,
-        valueRange = 12f..24f,
-        formatValue = { String.format("%.0f sp", it) },
-        icon = Icons.Default.TextFields
-    )
-    SwitchSetting(
-        label = "Debug Info",
-        description = "Show technical information",
-        checked = uiState.showDebugInfo,
-        onCheckedChange = viewModel::updateShowDebugInfo
-    )
-    SwitchSetting(
-        label = "Keep Screen On",
-        description = "Prevent screen timeout",
-        checked = uiState.keepScreenOn,
-        onCheckedChange = viewModel::updateKeepScreenOn
-    )
-    SwitchSetting(
-        label = "Show FPS Counter",
-        description = "Display frame rate",
-        checked = uiState.showFps,
-        onCheckedChange = viewModel::updateShowFps
-    )
-}
-
-@Composable
-private fun ConnectionSettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    SwitchSetting(
-        label = "Auto Connect",
-        description = "Connect to last server automatically",
-        checked = uiState.autoConnect,
-        onCheckedChange = viewModel::updateAutoConnect,
-        icon = Icons.Default.Autorenew
-    )
-    SliderSetting(
-        label = "Reconnect Attempts",
-        value = uiState.reconnectAttempts.toFloat(),
-        onValueChange = { viewModel.updateReconnectAttempts(it.toInt()) },
-        valueRange = 1f..10f,
-        formatValue = { String.format("%.0f", it) }
-    )
-    SliderSetting(
-        label = "Connection Timeout",
-        value = uiState.connectionTimeout.toFloat(),
-        onValueChange = { viewModel.updateConnectionTimeout(it.toInt()) },
-        valueRange = 1000f..10000f,
-        formatValue = { String.format("%.0f ms", it) }
-    )
-    SwitchSetting(
-        label = "Use WebSocket",
-        description = "Use WebSocket instead of TCP",
-        checked = uiState.useWebSocket,
-        onCheckedChange = viewModel::updateUseWebSocket
-    )
-    SwitchSetting(
-        label = "UDP Discovery",
-        description = "Auto-discover servers",
-        checked = uiState.useUdpDiscovery,
-        onCheckedChange = viewModel::updateUseUdpDiscovery
-    )
-}
-
-@Composable
-private fun PrivacySettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    SwitchSetting(
-        label = "Anonymous Usage Stats",
-        description = "Help improve the app",
-        checked = uiState.anonymousStats,
-        onCheckedChange = viewModel::updateAnonymousStats,
-        icon = Icons.Default.Visibility
-    )
-    SwitchSetting(
-        label = "Crash Reporting",
-        description = "Send crash reports automatically",
-        checked = uiState.crashReporting,
-        onCheckedChange = viewModel::updateCrashReporting
-    )
-    SwitchSetting(
-        label = "Clear Data on Exit",
-        description = "Remove all data when closing app",
-        checked = uiState.clearDataOnExit,
-        onCheckedChange = viewModel::updateClearDataOnExit,
-        icon = Icons.Default.Delete
-    )
-}
-
-@Composable
-private fun PresentationSettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    SwitchSetting(
-        label = "Presentation Mode",
-        description = "Enable presentation controls",
-        checked = uiState.presentationModeEnabled,
-        onCheckedChange = viewModel::updatePresentationModeEnabled,
-        icon = Icons.Default.Slideshow
-    )
-    if (uiState.presentationModeEnabled) {
-        SliderSetting(
-            label = "Laser Pointer Speed",
-            value = uiState.laserPointerSpeed,
-            onValueChange = viewModel::updateLaserPointerSpeed,
-            valueRange = 0.5f..2.0f,
-            formatValue = { String.format("%.1fx", it) }
-        )
-        SwitchSetting(
-            label = "Show Presentation Timer",
-            description = "Display timer during presentation",
-            checked = uiState.showPresentationTimer,
-            onCheckedChange = viewModel::updateShowPresentationTimer
-        )
-        SwitchSetting(
-            label = "Auto-hide Laser Pointer",
-            description = "Hide laser after inactivity",
-            checked = uiState.autoHideLaser,
-            onCheckedChange = viewModel::updateAutoHideLaser
-        )
-    }
-}
-
-@Composable
-private fun AboutSettingsContent(viewModel: SettingsViewModel, uiState: SettingsUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Air Mouse Pro", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text("Version 3.0.0", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Turn your phone into a wireless mouse", fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = { viewModel.openWebsite() }) { Text("Website") }
-                OutlinedButton(onClick = { viewModel.openPrivacyPolicy() }) { Text("Privacy") }
-                OutlinedButton(onClick = { viewModel.openLicense() }) { Text("License") }
-            }
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                )
+            )
         }
     }
 }
 
 @Composable
-fun SettingsSectionCard(
+fun SettingsSlider(
     title: String,
-    icon: ImageVector,
-    description: String,
-    isExpanded: Boolean,
-    onExpand: () -> Unit,
-    content: @Composable () -> Unit
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    steps: Int = 0,
+    formatValue: (Float) -> String = { "%.2f".format(it) },
+    description: String? = null
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp)
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onExpand() }
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon, contentDescription = title, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Icon(
-                    if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    formatValue(value),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
                 )
             }
-            if (isExpanded) {
-                Divider()
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    content()
-                }
+            if (description != null) {
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
             }
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                valueRange = valueRange,
+                steps = steps,
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary
+                )
+            )
         }
     }
 }
 
-@Composable
-fun SwitchSetting(
-    label: String,
-    description: String = "",
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    icon: ImageVector? = null
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            icon?.let {
-                Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-            Column {
-                Text(label, style = MaterialTheme.typography.bodyLarge)
-                if (description.isNotEmpty()) {
-                    Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
+// ==================== CURSOR SETTINGS ====================
 
 @Composable
-fun SliderSetting(
-    label: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>,
-    formatValue: (Float) -> String,
-    description: String = "",
-    icon: ImageVector? = null
-) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                icon?.let {
-                    Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                }
-                Text(label, style = MaterialTheme.typography.bodyMedium)
-            }
-            Text(formatValue(value), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-        }
-        if (description.isNotEmpty()) {
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = valueRange,
-            modifier = Modifier.fillMaxWidth(),
-            colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary)
+fun CursorSettings(uiState: SettingsUiState, onUpdate: (SettingsUiState) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSlider(
+            title = "Sensitivity",
+            value = uiState.sensitivity,
+            onValueChange = { onUpdate(uiState.copy(sensitivity = it)) },
+            valueRange = 0.1f..2.0f,
+            steps = 19,
+            formatValue = { "%.1fx".format(it) },
+            description = "Higher values make cursor faster"
+        )
+
+        SettingsSlider(
+            title = "Smoothing Factor",
+            value = uiState.smoothingFactor,
+            onValueChange = { onUpdate(uiState.copy(smoothingFactor = it)) },
+            valueRange = 0f..1f,
+            steps = 10,
+            formatValue = { "%.0f%%".format(it * 100) },
+            description = "Smooths cursor movement"
+        )
+
+        SettingsSwitch(
+            title = "Acceleration",
+            description = "Cursor speed increases with faster movement",
+            checked = uiState.accelerationEnabled,
+            onCheckedChange = { onUpdate(uiState.copy(accelerationEnabled = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Invert X Axis",
+            description = "Swap left/right movement direction",
+            checked = uiState.invertX,
+            onCheckedChange = { onUpdate(uiState.copy(invertX = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Invert Y Axis",
+            description = "Swap up/down movement direction",
+            checked = uiState.invertY,
+            onCheckedChange = { onUpdate(uiState.copy(invertY = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Smoothing",
+            description = "Smooth cursor movement for better control",
+            checked = uiState.smoothingEnabled,
+            onCheckedChange = { onUpdate(uiState.copy(smoothingEnabled = it)) }
         )
     }
 }
 
+// ==================== GESTURE SETTINGS ====================
+
 @Composable
-fun DropdownSetting(
-    label: String,
-    options: List<String>,
-    selected: String,
-    onSelected: (String) -> Unit,
-    icon: ImageVector? = null
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            icon?.let {
-                Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-            Text(label, style = MaterialTheme.typography.bodyLarge)
-        }
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-            OutlinedTextField(
-                value = selected.replaceFirstChar { it.uppercase() },
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().width(130.dp),
-                shape = RoundedCornerShape(12.dp),
-                textStyle = MaterialTheme.typography.bodyMedium
+fun GestureSettings(uiState: SettingsUiState, onUpdate: (SettingsUiState) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSlider(
+            title = "Click Threshold",
+            value = uiState.clickThreshold,
+            onValueChange = { onUpdate(uiState.copy(clickThreshold = it)) },
+            valueRange = 1f..20f,
+            steps = 19,
+            formatValue = { "%.1f".format(it) },
+            description = "Sensitivity for click detection"
+        )
+
+        SettingsSlider(
+            title = "Double Click Interval",
+            value = uiState.doubleClickInterval.toFloat(),
+            onValueChange = { onUpdate(uiState.copy(doubleClickInterval = it.toLong())) },
+            valueRange = 100f..800f,
+            steps = 14,
+            formatValue = { "${it.toInt()}ms" },
+            description = "Max time between clicks for double click"
+        )
+
+        SettingsSlider(
+            title = "Scroll Threshold",
+            value = uiState.scrollThreshold,
+            onValueChange = { onUpdate(uiState.copy(scrollThreshold = it)) },
+            valueRange = 1f..15f,
+            steps = 14,
+            formatValue = { "%.1f".format(it) },
+            description = "Sensitivity for scroll detection"
+        )
+
+        SettingsSlider(
+            title = "Right Click Tilt",
+            value = uiState.rightClickTilt,
+            onValueChange = { onUpdate(uiState.copy(rightClickTilt = it)) },
+            valueRange = 5f..45f,
+            steps = 8,
+            formatValue = { "${it.toInt()}°" },
+            description = "Tilt angle to trigger right click"
+        )
+
+        SettingsSlider(
+            title = "Right Click Duration",
+            value = uiState.rightClickDuration.toFloat(),
+            onValueChange = { onUpdate(uiState.copy(rightClickDuration = it.toLong())) },
+            valueRange = 100f..1000f,
+            steps = 9,
+            formatValue = { "${it.toInt()}ms" },
+            description = "How long to hold tilt for right click"
+        )
+    }
+}
+
+// ==================== AI SETTINGS ====================
+
+@Composable
+fun AISettings(uiState: SettingsUiState, onUpdate: (SettingsUiState) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSwitch(
+            title = "AI Smoothing",
+            description = "Use AI to smooth cursor movement",
+            checked = uiState.aiSmoothing,
+            onCheckedChange = { onUpdate(uiState.copy(aiSmoothing = it)) }
+        )
+
+        SettingsSlider(
+            title = "AI Blend Factor",
+            value = uiState.aiBlendFactor,
+            onValueChange = { onUpdate(uiState.copy(aiBlendFactor = it)) },
+            valueRange = 0f..1f,
+            steps = 10,
+            formatValue = { "%.0f%%".format(it * 100) },
+            description = "Balance between raw and AI-smoothed movement"
+        )
+
+        SettingsSwitch(
+            title = "Predictive Movement",
+            description = "Predict future cursor position",
+            checked = uiState.predictive,
+            onCheckedChange = { onUpdate(uiState.copy(predictive = it)) }
+        )
+
+        SettingsSlider(
+            title = "Prediction Strength",
+            value = uiState.predictionStrength,
+            onValueChange = { onUpdate(uiState.copy(predictionStrength = it)) },
+            valueRange = 0f..1f,
+            steps = 10,
+            formatValue = { "%.0f%%".format(it * 100) },
+            description = "How much prediction to apply"
+        )
+
+        SettingsSwitch(
+            title = "Kalman Filter",
+            description = "Use Kalman filter for smoother tracking",
+            checked = uiState.kalmanEnabled,
+            onCheckedChange = { onUpdate(uiState.copy(kalmanEnabled = it)) }
+        )
+    }
+}
+
+// ==================== HAPTIC SETTINGS ====================
+
+@Composable
+fun HapticSettings(uiState: SettingsUiState, onUpdate: (SettingsUiState) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSwitch(
+            title = "Haptic Feedback",
+            description = "Vibration on actions",
+            checked = uiState.hapticEnabled,
+            onCheckedChange = { onUpdate(uiState.copy(hapticEnabled = it)) }
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
             )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option.replaceFirstChar { it.uppercase() }) },
-                        onClick = { onSelected(option); expanded = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    "Haptic Strength",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "Intensity of vibration feedback",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    HapticStrength.entries.forEach { strength ->
+                        FilterChip(
+                            selected = uiState.hapticStrength == strength,
+                            onClick = { onUpdate(uiState.copy(hapticStrength = strength)) },
+                            label = { Text(strength.displayName) },
+                            modifier = Modifier.weight(1f),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        SettingsSwitch(
+            title = "Sound Feedback",
+            description = "Play sounds on actions",
+            checked = uiState.soundEnabled,
+            onCheckedChange = { onUpdate(uiState.copy(soundEnabled = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Visual Feedback",
+            description = "Show visual indicators on actions",
+            checked = uiState.visualFeedback,
+            onCheckedChange = { onUpdate(uiState.copy(visualFeedback = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Notification on Gesture",
+            description = "Show notification when gesture is detected",
+            checked = uiState.notificationOnGesture,
+            onCheckedChange = { onUpdate(uiState.copy(notificationOnGesture = it)) }
+        )
+    }
+}
+
+// ==================== DISPLAY SETTINGS ====================
+
+@Composable
+fun DisplaySettings(uiState: SettingsUiState, onUpdate: (SettingsUiState) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    "Theme",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "Choose app color scheme",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("system", "light", "dark", "pure_black").forEach { theme ->
+                        FilterChip(
+                            selected = uiState.theme == theme,
+                            onClick = { onUpdate(uiState.copy(theme = theme)) },
+                            label = {
+                                Text(
+                                    when (theme) {
+                                        "system" -> "System"
+                                        "light" -> "Light"
+                                        "dark" -> "Dark"
+                                        "pure_black" -> "Pure Black"
+                                        else -> theme
+                                    }
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        SettingsSwitch(
+            title = "Dynamic Colors",
+            description = "Use Material You color scheme",
+            checked = uiState.useDynamicColors,
+            onCheckedChange = { onUpdate(uiState.copy(useDynamicColors = it)) }
+        )
+
+        SettingsSlider(
+            title = "Font Size",
+            value = uiState.fontSize,
+            onValueChange = { onUpdate(uiState.copy(fontSize = it)) },
+            valueRange = 12f..24f,
+            steps = 6,
+            formatValue = { "${it.toInt()}sp" },
+            description = "Base font size for the app"
+        )
+
+        SettingsSwitch(
+            title = "Show Debug Info",
+            description = "Display debug information",
+            checked = uiState.showDebugInfo,
+            onCheckedChange = { onUpdate(uiState.copy(showDebugInfo = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Keep Screen On",
+            description = "Prevent screen from turning off",
+            checked = uiState.keepScreenOn,
+            onCheckedChange = { onUpdate(uiState.copy(keepScreenOn = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Show FPS",
+            description = "Display frames per second counter",
+            checked = uiState.showFps,
+            onCheckedChange = { onUpdate(uiState.copy(showFps = it)) }
+        )
+    }
+}
+
+// ==================== CONNECTION SETTINGS ====================
+
+@Composable
+fun ConnectionSettings(uiState: SettingsUiState, onUpdate: (SettingsUiState) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSwitch(
+            title = "Auto Connect",
+            description = "Auto-connect on app start",
+            checked = uiState.autoConnect,
+            onCheckedChange = { onUpdate(uiState.copy(autoConnect = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Use WebSocket",
+            description = "Use WebSocket protocol (fallback to TCP)",
+            checked = uiState.useWebSocket,
+            onCheckedChange = { onUpdate(uiState.copy(useWebSocket = it)) }
+        )
+
+        SettingsSwitch(
+            title = "UDP Discovery",
+            description = "Auto-discover servers on network",
+            checked = uiState.useUdpDiscovery,
+            onCheckedChange = { onUpdate(uiState.copy(useUdpDiscovery = it)) }
+        )
+
+        SettingsSlider(
+            title = "Reconnect Attempts",
+            value = uiState.reconnectAttempts.toFloat(),
+            onValueChange = { onUpdate(uiState.copy(reconnectAttempts = it.toInt())) },
+            valueRange = 1f..20f,
+            steps = 19,
+            formatValue = { "${it.toInt()}" },
+            description = "Number of reconnection attempts"
+        )
+
+        SettingsSlider(
+            title = "Connection Timeout",
+            value = uiState.connectionTimeout.toFloat(),
+            onValueChange = { onUpdate(uiState.copy(connectionTimeout = it.toInt())) },
+            valueRange = 1000f..15000f,
+            steps = 14,
+            formatValue = { "${it.toInt()}ms" },
+            description = "Timeout for connection attempts"
+        )
+    }
+}
+
+// ==================== PRIVACY SETTINGS ====================
+
+@Composable
+fun PrivacySettings(uiState: SettingsUiState, onUpdate: (SettingsUiState) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSwitch(
+            title = "Anonymous Statistics",
+            description = "Help improve Air Mouse by sending anonymous usage data",
+            checked = uiState.anonymousStats,
+            onCheckedChange = { onUpdate(uiState.copy(anonymousStats = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Crash Reporting",
+            description = "Automatically report crashes to help fix issues",
+            checked = uiState.crashReporting,
+            onCheckedChange = { onUpdate(uiState.copy(crashReporting = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Clear Data on Exit",
+            description = "Clear all app data when you exit",
+            checked = uiState.clearDataOnExit,
+            onCheckedChange = { onUpdate(uiState.copy(clearDataOnExit = it)) }
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    "Data Management",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { /* Clear cache */ },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Clear Cache")
+                    }
+                    OutlinedButton(
+                        onClick = { /* Export data */ },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Export Data")
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { /* Delete all data */ },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
                     )
+                ) {
+                    Text("Delete All Data", color = Color.White)
                 }
             }
         }
     }
 }
 
+// ==================== PRESENTATION SETTINGS ====================
+
+@Composable
+fun PresentationSettings(uiState: SettingsUiState, onUpdate: (SettingsUiState) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSwitch(
+            title = "Presentation Mode",
+            description = "Enable presentation controls",
+            checked = uiState.presentationModeEnabled,
+            onCheckedChange = { onUpdate(uiState.copy(presentationModeEnabled = it)) }
+        )
+
+        SettingsSlider(
+            title = "Laser Pointer Speed",
+            value = uiState.laserPointerSpeed,
+            onValueChange = { onUpdate(uiState.copy(laserPointerSpeed = it)) },
+            valueRange = 0.1f..2.0f,
+            steps = 19,
+            formatValue = { "%.1fx".format(it) },
+            description = "Speed of laser pointer movement"
+        )
+
+        SettingsSwitch(
+            title = "Show Presentation Timer",
+            description = "Display timer during presentations",
+            checked = uiState.showPresentationTimer,
+            onCheckedChange = { onUpdate(uiState.copy(showPresentationTimer = it)) }
+        )
+
+        SettingsSwitch(
+            title = "Auto-Hide Laser",
+            description = "Hide laser pointer when not in use",
+            checked = uiState.autoHideLaser,
+            onCheckedChange = { onUpdate(uiState.copy(autoHideLaser = it)) }
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    "Quick Actions",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { /* Start presentation */ },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Start")
+                    }
+                    Button(
+                        onClick = { /* Stop presentation */ },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Default.Stop, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Stop")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== ABOUT SECTION ====================
+
+@Composable
+fun AboutSection() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("🎯", fontSize = 48.sp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Air Mouse Pro",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Version 3.0.0",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Turn your phone into a wireless mouse",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("🏛️ University of Tehran", style = MaterialTheme.typography.bodyMedium)
+                Text("📱 Built with Kotlin & Compose", style = MaterialTheme.typography.bodySmall)
+                Text("🔗 github.com/airmouse", style = MaterialTheme.typography.bodySmall)
+                Text("© 2025 Air Mouse Team", style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { /* Open license */ },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Open Source Licenses")
+            }
+        }
+    }
+}

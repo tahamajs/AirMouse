@@ -50,21 +50,33 @@ class HomeActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         permissionGranted = isGranted
-        if (isGranted) proceedToMain() else showRationaleDialog()
+        if (isGranted) {
+            proceedToMain()
+        } else {
+            showRationaleDialog()
+        }
     }
 
     private val bluetoothPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         permissionGranted = permissions.values.all { it }
-        if (permissionGranted) proceedToMain() else showRationaleDialog()
+        if (permissionGranted) {
+            proceedToMain()
+        } else {
+            showRationaleDialog()
+        }
     }
 
     private val generalPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         permissionGranted = permissions.values.all { it }
-        if (permissionGranted) proceedToMain() else showRationaleDialog()
+        if (permissionGranted) {
+            proceedToMain()
+        } else {
+            showRationaleDialog()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,18 +91,20 @@ class HomeActivity : ComponentActivity() {
 
         // Simulate a short loading time for splash screen
         Handler(Looper.getMainLooper()).postDelayed({
-            if (permissionGranted) proceedToMain()
+            if (permissionGranted) {
+                proceedToMain()
+            }
         }, 1000)
     }
 
     private fun proceedToMain() {
         if (isReady) return
         isReady = true
+
         setContent {
             AirMouseTheme(
-                theme = prefs.getTheme(),
-                useDynamicColor = true,
-                darkTheme = prefs.getTheme() == "system"
+                darkTheme = isDarkTheme(),
+                useDynamicColor = prefs.getBoolean("dynamic_colors", true)
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -102,8 +116,18 @@ class HomeActivity : ComponentActivity() {
         }
     }
 
+    private fun isDarkTheme(): Boolean {
+        return when (prefs.getString("theme", "system")) {
+            "dark" -> true
+            "light" -> false
+            "pure_black" -> true
+            "high_contrast" -> false
+            else -> androidx.compose.foundation.isSystemInDarkTheme()
+        }
+    }
+
     private fun applyTheme() {
-        val theme = prefs.getTheme()
+        val theme = prefs.getString("theme", "dark")
         when (theme) {
             "light" -> setTheme(com.airmouse.R.style.Theme_AirMouse_Light)
             "dark" -> setTheme(com.airmouse.R.style.Theme_AirMouse_Dark)
@@ -117,12 +141,13 @@ class HomeActivity : ComponentActivity() {
         val missingPerms = getMissingPermissions()
         if (missingPerms.isEmpty()) {
             permissionGranted = true
+            proceedToMain()
             return
         }
 
         when {
-            missingPerms.first().startsWith("android.permission.CAMERA") -> {
-                cameraPermissionLauncher.launch(missingPerms.first())
+            missingPerms.any { it == Manifest.permission.CAMERA } -> {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
             missingPerms.any { it.startsWith("android.permission.BLUETOOTH") } -> {
                 bluetoothPermissionLauncher.launch(missingPerms.toTypedArray())
@@ -135,10 +160,14 @@ class HomeActivity : ComponentActivity() {
 
     private fun getMissingPermissions(): List<String> {
         val perms = mutableListOf<String>()
+
+        // Camera permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.CAMERA)
         }
+
+        // Bluetooth permissions (Android 12+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -148,7 +177,12 @@ class HomeActivity : ComponentActivity() {
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BLUETOOTH_CONNECT)
             }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE)
+                != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            }
         } else {
+            // Legacy Bluetooth permissions
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BLUETOOTH)
@@ -157,44 +191,61 @@ class HomeActivity : ComponentActivity() {
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BLUETOOTH_ADMIN)
             }
+            // Location is required for Bluetooth on older Android
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.ACCESS_FINE_LOCATION)
             }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            }
         }
+
+        // Microphone permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.RECORD_AUDIO)
         }
+
+        // Notifications (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+
+        // Body sensors (Android 12+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BODY_SENSORS)
             }
         }
+
         return perms
     }
 
     private fun showRationaleDialog() {
         setContent {
             AirMouseTheme(
-                theme = prefs.getTheme(),
-                useDynamicColor = true,
-                darkTheme = prefs.getTheme() == "system"
+                darkTheme = isDarkTheme(),
+                useDynamicColor = prefs.getBoolean("dynamic_colors", true)
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     PermissionRationaleScreen(
-                        onRetry = { requestPermissions() },
-                        onContinue = { proceedToMain() }
+                        onRetry = {
+                            permissionGranted = false
+                            requestPermissions()
+                        },
+                        onContinue = {
+                            permissionGranted = true
+                            proceedToMain()
+                        }
                     )
                 }
             }
@@ -204,6 +255,7 @@ class HomeActivity : ComponentActivity() {
     @Composable
     fun PermissionRationaleScreen(onRetry: () -> Unit, onContinue: () -> Unit) {
         var visible by remember { mutableStateOf(false) }
+
         LaunchedEffect(Unit) {
             delay(300)
             visible = true
@@ -233,7 +285,10 @@ class HomeActivity : ComponentActivity() {
                     enter = fadeIn(animationSpec = tween(500)) +
                             scaleIn(initialScale = 0.8f, animationSpec = spring())
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Security,
                             contentDescription = "Permissions",
@@ -242,26 +297,56 @@ class HomeActivity : ComponentActivity() {
                                 .scale(1f),
                             tint = MaterialTheme.colorScheme.primary
                         )
+
                         Spacer(modifier = Modifier.height(24.dp))
+
                         Text(
                             text = "Permissions Required",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
+
                         Spacer(modifier = Modifier.height(16.dp))
+
                         Text(
-                            text = "Air Mouse needs the following permissions to work properly:\n\n" +
-                                    "• Camera – to scan QR codes\n" +
-                                    "• Bluetooth – to detect proximity and act as a mouse\n" +
-                                    "• Microphone – for voice commands\n" +
-                                    "• Notifications – to keep you informed\n" +
-                                    "• Body Sensors – for step detection (optional)",
+                            text = "Air Mouse needs the following permissions to work properly:",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Permission list with icons
+                        PermissionItem(
+                            icon = "📷",
+                            name = "Camera",
+                            description = "Scan QR codes for quick pairing"
+                        )
+                        PermissionItem(
+                            icon = "🔵",
+                            name = "Bluetooth",
+                            description = "Detect proximity and act as a wireless mouse"
+                        )
+                        PermissionItem(
+                            icon = "🎤",
+                            name = "Microphone",
+                            description = "Voice commands for hands-free control"
+                        )
+                        PermissionItem(
+                            icon = "🔔",
+                            name = "Notifications",
+                            description = "Keep you informed about connection status"
+                        )
+                        PermissionItem(
+                            icon = "📍",
+                            name = "Location",
+                            description = "Required for Bluetooth scanning (Android < 12)"
+                        )
+
                         Spacer(modifier = Modifier.height(32.dp))
+
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             modifier = Modifier.fillMaxWidth()
@@ -272,6 +357,7 @@ class HomeActivity : ComponentActivity() {
                             ) {
                                 Text("Continue Anyway")
                             }
+
                             Button(
                                 onClick = onRetry,
                                 modifier = Modifier.weight(1f),
@@ -284,6 +370,34 @@ class HomeActivity : ComponentActivity() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @Composable
+    fun PermissionItem(icon: String, name: String, description: String) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = icon,
+                fontSize = MaterialTheme.typography.headlineSmall.fontSize
+            )
+            Column {
+                Text(
+                    text = name,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

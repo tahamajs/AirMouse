@@ -30,7 +30,6 @@ android {
     buildFeatures {
         compose true
         buildConfig true
-
         viewBinding true
         dataBinding false
     }
@@ -117,22 +116,7 @@ android {
         }
     }
 
-    dependencies {
-        // Enforce alignment across platform modules
-        constraints {
-            implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.24") {
-                because "Aligns build architecture with project compiler version"
-            }
-            implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24") {
-                because "Forces duplicate transient libraries out of project compilation"
-            }
-        }
-    }
-
-    configurations.all {
-        exclude group: 'org.tensorflow', module: 'tensorflow-lite-api'
-    }
-
+    // ✅ FIXED: Move constraints inside dependencies block
     lint {
         abortOnError = false
         checkReleaseBuilds = false
@@ -156,11 +140,59 @@ dependencies {
     // Shared Multi-Project Core Module
     implementation project(':network')
 
+    // ✅ FIXED: Only use ONE USB library (remove duplicate)
+    implementation 'com.github.mik3y:usb-serial-for-android:3.8.0'
+    // ❌ REMOVED duplicate: implementation 'com.hoho.android:usbserial:0.6.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:5.8.0'
+    testImplementation 'org.mockito:mockito-inline:5.8.0'
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:5.1.0'
+    testImplementation 'androidx.arch.core:core-testing:2.2.0'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
+    testImplementation 'com.google.truth:truth:1.1.5'
+    testImplementation 'io.mockk:mockk:1.13.8'
+
+    // Android Instrumentation Tests
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.5.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.5.1'
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    androidTestImplementation 'androidx.compose.ui:ui-test-manifest'
+    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.52'
+    kspAndroidTest 'com.google.dagger:hilt-compiler:2.52'
+
+    // Debug Testing
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
+
     // Core Kotlin Libraries
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
 
     // Compose Platform Architecture Bill of Materials
     implementation platform('androidx.compose:compose-bom:2024.10.00')
+    implementation platform('androidx.compose:compose-bom:2024.10.00')
+
+    // Compose
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.activity:activity-compose:1.9.2'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.4'
+
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+
+    // Hilt
+    implementation 'com.google.dagger:hilt-android:2.51.1'
+    kapt 'com.google.dagger:hilt-compiler:2.51.1'
+    implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
 
     // Compose Core Components
     implementation 'androidx.compose.ui:ui'
@@ -175,9 +207,7 @@ dependencies {
 
     // Machine Learning Processing
     implementation 'org.tensorflow:tensorflow-lite:2.16.1'
-
-    // USB Serial Hardware Connectors
-    implementation 'com.hoho.android:usbserial:0.6.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
 
     // Device Preferences & Jetpack Architecture Components
     implementation 'androidx.preference:preference-ktx:1.2.1'
@@ -185,7 +215,7 @@ dependencies {
     // Navigation and Dependency Graphs
     implementation 'androidx.navigation:navigation-compose:2.7.7'
     implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
-    implementation 'com.github.mik3y:usb-serial-for-android:3.8.0'
+
     // Activity & Lifecycle Observers
     implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.0'
@@ -232,7 +262,19 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'com.squareup.retrofit2:retrofit:2.11.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+    implementation 'com.google.code.gson:gson:2.11.0'
 
     // Serialization Formats
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1'
+
+    // ✅ ADDED: Test dependencies
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation platform('androidx.compose:compose-bom:2024.10.00')
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
 }

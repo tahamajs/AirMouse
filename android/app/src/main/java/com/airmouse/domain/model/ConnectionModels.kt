@@ -1,71 +1,94 @@
+// app/src/main/java/com/airmouse/domain/model/ConnectionModels.kt
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
 /**
- * Protocol used for communication with the server.
+ * Connection status enum
  */
-enum class ConnectionProtocol(val displayName: String) {
-    TCP("TCP"),
-    WEBSOCKET("WebSocket"),
-    UDP("UDP"),
-    BLUETOOTH("Bluetooth"),
-    USB("USB")
+enum class ConnectionStatus {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
+    RECONNECTING,
+    ERROR,
+    TIMEOUT
 }
 
 /**
- * Configuration for connecting to the desktop server.
+ * Connection protocol enum
  */
-@Parcelize
+enum class ConnectionProtocol {
+    TCP,
+    WEBSOCKET,
+    UDP
+}
+
+/**
+ * Connection configuration
+ */
 data class ConnectionConfig(
-    val serverIp: String,
-    val serverPort: Int,
-    val protocol: ConnectionProtocol = ConnectionProtocol.TCP,
-    val useEncryption: Boolean = false,
-    val authenticationToken: String? = null,
-    val timeoutMs: Int = 5000,
+    val ip: String = "",
+    val port: Int = 8080,
+    val protocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET,
+    val useSSL: Boolean = false,
+    val authToken: String? = null,
     val autoReconnect: Boolean = true,
-    val keepAlive: Boolean = true,
-    val lastConnected: Long = System.currentTimeMillis()
-) : Parcelable
+    val timeoutMs: Long = 10000L
+)
 
 /**
- * Status of the connection.
+ * Connection quality metrics
  */
-enum class ConnectionStatus(val displayName: String) {
-    DISCONNECTED("Disconnected"),
-    CONNECTING("Connecting..."),
-    CONNECTED("Connected"),
-    RECONNECTING("Reconnecting..."),
-    ERROR("Error")
+@Parcelize
+data class ConnectionQuality(
+    val rssi: Int = 0,
+    val ping: Int = 0,
+    val jitter: Int = 0,
+    val packetLoss: Float = 0f,
+    val dataRate: Int = 0,
+    val signalStrength: SignalStrength = SignalStrength.UNKNOWN
+) : Parcelable {
+    enum class SignalStrength {
+        EXCELLENT,
+        GOOD,
+        FAIR,
+        POOR,
+        VERY_POOR,
+        UNKNOWN
+    }
+
+    fun score(): Int = when (signalStrength) {
+        SignalStrength.EXCELLENT -> 100
+        SignalStrength.GOOD -> 75
+        SignalStrength.FAIR -> 50
+        SignalStrength.POOR -> 25
+        SignalStrength.VERY_POOR -> 10
+        SignalStrength.UNKNOWN -> 0
+    }
+
+    fun isHealthy(): Boolean = ping < 200 && packetLoss < 0.1f
 }
 
 /**
- * Connection statistics.
+ * Connection test result
  */
-@Parcelize
-data class ConnectionStatistics(
-    val totalConnections: Int = 0,
-    val successfulConnections: Int = 0,
-    val failedConnections: Int = 0,
-    val averageLatency: Int = 0,
-    val lastConnectionTime: Long = 0,
-    val totalDataSent: Long = 0,
-    val totalDataReceived: Long = 0,
-    val connectionUptime: Long = 0
-) : Parcelable
+data class TestResult(
+    val success: Boolean,
+    val message: String,
+    val latency: Long = 0,
+    val timestamp: Long = System.currentTimeMillis()
+)
 
 /**
- * Server discovery result.
+ * Server discovery result
  */
-@Parcelize
 data class DiscoveredServer(
     val ip: String,
     val port: Int,
-    val name: String = "Air Mouse Server",
-    val version: String = "3.0.0",
-    val ping: Int = 0,
-    val isReachable: Boolean = true,
+    val name: String,
+    val version: String = "3.0",
+    val rssi: Int = 0,
     val lastSeen: Long = System.currentTimeMillis()
-) : Parcelable
+)

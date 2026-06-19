@@ -19,8 +19,11 @@ fun AirMouseBottomBar(
     onItemSelected: (Destinations) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val items = Destinations.bottomNavItems
-    val selectedIndex = Destinations.getBottomNavIndex(currentRoute)
+    // Matches your exact companion property name
+    val items = Destinations.bottomNavDestinations
+
+    // Finds index dynamically by looking up the active route string
+    val selectedIndex = items.indexOfFirst { it.route == currentRoute }
 
     NavigationBar(
         modifier = modifier

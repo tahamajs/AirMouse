@@ -14,7 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.airmouse.R
 import kotlinx.coroutines.*
 import kotlin.math.abs
-
+import kotlin.math.pow
 class ProximityAwareService : Service() {
 
     private lateinit var bluetoothAdapter: BluetoothAdapter

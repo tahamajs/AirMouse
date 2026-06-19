@@ -4,25 +4,23 @@
         android:shortcutId="calibrate"
         android:enabled="true"
         android:icon="@drawable/ic_calibrate"
-        android:shortcutShortLabel="@string/calibrate"
-        android:shortcutLongLabel="@string/calibrate_sensors">
+        android:shortcutShortLabel="@string/shortcut_calibrate"
+        android:shortcutLongLabel="@string/shortcut_calibrate_long"
+        android:shortcutDisabledMessage="@string/shortcut_calibrate_disabled">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.airmouse"
-            android:targetClass="com.airmouse.ui.CalibrationActivity" />
+            android:targetPackage="${applicationId}"
+            android:targetClass=".presentation.calibration.CalibrationActivity" />
     </shortcut>
-    
     <shortcut
         android:shortcutId="settings"
         android:enabled="true"
         android:icon="@drawable/ic_settings"
-        android:shortcutShortLabel="@string/settings"
-        android:shortcutLongLabel="@string/open_settings">
+        android:shortcutShortLabel="@string/shortcut_settings"
+        android:shortcutLongLabel="@string/shortcut_settings_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.airmouse"
-            android:targetClass="com.airmouse.MainActivity">
-            <extra android:name="open_settings" android:value="true" />
-        </intent>
+            android:targetPackage="${applicationId}"
+            android:targetClass=".ui.SettingsActivity" />
     </shortcut>
 </shortcuts>

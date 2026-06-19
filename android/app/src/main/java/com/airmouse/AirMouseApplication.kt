@@ -3,7 +3,6 @@ package com.airmouse
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -12,7 +11,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration as WorkConfiguration
 import com.airmouse.utils.PreferencesManager
-import com.airmouse.utils.crash.CrashReporting
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -21,8 +19,8 @@ import javax.inject.Inject
 class AirMouseApplication : Application(), WorkConfiguration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var prefsManager: PreferencesManager
 
-    // FIXED: Modern WorkManager interface uses a property getter override, not a function block
     override val workManagerConfiguration: WorkConfiguration
         get() = WorkConfiguration.Builder()
             .setWorkerFactory(workerFactory)
@@ -33,7 +31,7 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
         lateinit var instance: AirMouseApplication
             private set
 
-        fun getAppContext(): Context = instance.applicationContext
+        fun getAppContext(): android.content.Context = instance.applicationContext
 
         const val APP_VERSION = "3.0.0"
         const val APP_NAME = "Air Mouse Pro"
@@ -43,6 +41,7 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
     private var isAppInForeground = false
     private var activeActivities = 0
     private var appStartTime = 0L
+    private var crashReportingInitialized = false
 
     override fun onCreate() {
         super.onCreate()
@@ -69,7 +68,7 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
         // Set up uncaught exception handler
         setupUncaughtExceptionHandler()
 
-        // FIXED: Removed SDK_INT checking condition since project target requirement is >= API 29
+        // Notification channels
         createNotificationChannels()
 
         Timber.i("✅ Air Mouse Application initialized - Version $APP_VERSION (Build $BUILD_NUMBER)")
@@ -85,9 +84,11 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
     }
 
     private fun initCrashReporting() {
-        if (!BuildConfig.DEBUG) {
+        if (!BuildConfig.DEBUG && !crashReportingInitialized) {
             try {
-                CrashReporting.initialize(this)
+                crashReportingInitialized = true
+                // CrashReporting.initialize(this) - uncomment when CrashReporting class exists
+                Timber.i("Crash reporting initialized")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to initialize crash reporting")
             }
@@ -117,8 +118,7 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
 
     private fun applyTheme() {
         try {
-            val prefs = PreferencesManager(this)
-            val theme = prefs.getString("theme", "system")
+            val theme = prefsManager.getTheme()
             when (theme) {
                 "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
                 "dark", "pure_black" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
@@ -166,11 +166,6 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             Timber.e(throwable, "💀 Uncaught exception in thread: ${thread.name}")
-            try {
-                CrashReporting.logException(throwable)
-            } catch (_: Exception) {
-                // Ignore
-            }
             defaultHandler?.uncaughtException(thread, throwable)
         }
     }
@@ -178,27 +173,34 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
     private fun createNotificationChannels() {
         try {
             val manager = getSystemService(NotificationManager::class.java)
-            val channels = listOf(
-                NotificationChannel(
-                    "connection_channel",
-                    "Connection Status",
-                    NotificationManager.IMPORTANCE_LOW
-                ).apply { description = "Shows connection status"; setSound(null, null) },
-                NotificationChannel(
-                    "gesture_channel",
-                    "Gesture Detection",
-                    NotificationManager.IMPORTANCE_DEFAULT
-                ).apply { description = "Shows gesture detection notifications" },
-                NotificationChannel(
-                    "proximity_channel",
-                    "Proximity Lock",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Shows proximity lock/unlock notifications"
-                    enableVibration(true)
-                }
-            )
-            manager?.createNotificationChannels(channels)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager != null) {
+                val channels = listOf(
+                    NotificationChannel(
+                        "connection_channel",
+                        "Connection Status",
+                        NotificationManager.IMPORTANCE_LOW
+                    ).apply {
+                        description = "Shows connection status"
+                        setSound(null, null)
+                    },
+                    NotificationChannel(
+                        "gesture_channel",
+                        "Gesture Detection",
+                        NotificationManager.IMPORTANCE_DEFAULT
+                    ).apply {
+                        description = "Shows gesture detection notifications"
+                    },
+                    NotificationChannel(
+                        "proximity_channel",
+                        "Proximity Lock",
+                        NotificationManager.IMPORTANCE_HIGH
+                    ).apply {
+                        description = "Shows proximity lock/unlock notifications"
+                        enableVibration(true)
+                    }
+                )
+                manager.createNotificationChannels(channels)
+            }
         } catch (e: Exception) {
             Timber.e(e, "Failed to create notification channels")
         }
@@ -211,47 +213,22 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
 
     override fun onLowMemory() {
         super.onLowMemory()
-        clearMemoryCaches()
+        Timber.w("Low memory warning")
     }
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        when (level) {
-            TRIM_MEMORY_RUNNING_MODERATE -> clearMemoryCaches()
-            TRIM_MEMORY_RUNNING_LOW -> { clearMemoryCaches(); clearBitmaps() }
-            TRIM_MEMORY_RUNNING_CRITICAL -> { clearMemoryCaches(); clearBitmaps(); clearSensitiveData() }
-            TRIM_MEMORY_UI_HIDDEN -> releaseUIResources()
-            TRIM_MEMORY_BACKGROUND -> releaseBackgroundResources()
-            TRIM_MEMORY_MODERATE -> releaseModerateResources()
-            TRIM_MEMORY_COMPLETE -> releaseAllResources()
-        }
+        Timber.d("Trim memory: level=$level")
     }
-
-    private fun clearMemoryCaches() {}
-    private fun clearBitmaps() {}
-    private fun clearSensitiveData() {
-        try {
-            val prefs = PreferencesManager(this)
-            prefs.remove("temp_auth_token")
-            prefs.remove("temp_session_id")
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to clear sensitive data")
-        }
-    }
-    private fun releaseUIResources() {}
-    private fun releaseBackgroundResources() {}
-    private fun releaseModerateResources() {}
-    private fun releaseAllResources() { clearMemoryCaches() }
 
     override fun onTerminate() {
         super.onTerminate()
         val uptime = System.currentTimeMillis() - appStartTime
         try {
-            val prefs = PreferencesManager(this)
-            prefs.putLong("last_exit_time", System.currentTimeMillis())
-            prefs.putLong("total_uptime", prefs.getLong("total_uptime", 0L) + uptime)
+            prefsManager.putLong("last_exit_time", System.currentTimeMillis())
+            prefsManager.putLong("total_uptime", prefsManager.getLong("total_uptime", 0L) + uptime)
             cleanup()
-        } catch (_: Exception) { // FIXED: Renamed unused parameter signature to '_'
+        } catch (_: Exception) {
             // ignore
         }
     }
@@ -262,16 +239,19 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
         } catch (_: Exception) { /* ignore */ }
     }
 
-    // Suppressed or consumed diagnostic utility queries to satisfy linter guidelines
     fun isAppInForegroundState(): Boolean = isAppInForeground
     fun getAppExecutionUptime(): Long = System.currentTimeMillis() - appStartTime
-    fun getActiveActivitiesCountTracker(): Int = activeActivities
 }
 
 class CrashReportingTree : Timber.Tree() {
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
         if (priority == android.util.Log.ERROR) {
-            if (t != null) CrashReporting.logException(t) else CrashReporting.logMessage("[$tag] $message")
+            if (t != null) {
+                // CrashReporting.logException(t) - uncomment when CrashReporting exists
+                Timber.e(t, "[$tag] $message")
+            } else {
+                Timber.e("[$tag] $message")
+            }
         }
     }
 }

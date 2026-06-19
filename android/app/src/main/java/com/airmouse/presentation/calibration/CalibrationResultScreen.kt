@@ -1,7 +1,8 @@
-package com.airmouse.presentation.calibration
+package com.airmouse.presentation.ui.calibration
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.Image
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,12 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.airmouse.R
 
 @Composable
 fun CalibrationResultScreen(
@@ -27,12 +26,21 @@ fun CalibrationResultScreen(
     onContinue: () -> Unit,
     onRecalibrate: () -> Unit
 ) {
-    var scale by remember { mutableStateOf(0f) }
-    
+    var animationTriggered by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (animationTriggered) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "success_pop_animation"
+    )
+
     LaunchedEffect(Unit) {
-        scale = 1f
+        animationTriggered = true
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -63,9 +71,9 @@ fun CalibrationResultScreen(
             ) {
                 Text("✓", fontSize = 64.sp, color = Color(0xFF059669))
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             Text(
                 text = "Calibration Complete!",
                 fontSize = 28.sp,
@@ -73,11 +81,11 @@ fun CalibrationResultScreen(
                 color = Color.White,
                 textAlign = TextAlign.Center
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Text(
-                text = when (quality) {
+                text = when (quality.uppercase()) {
                     "EXCELLENT" -> "Your device is perfectly calibrated!"
                     "GOOD" -> "Your device is calibrated with good accuracy"
                     "FAIR" -> "Calibration complete, but consider recalibrating for best results"
@@ -87,9 +95,9 @@ fun CalibrationResultScreen(
                 color = Color.White.copy(alpha = 0.9f),
                 textAlign = TextAlign.Center
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             // Quality indicator
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -107,9 +115,9 @@ fun CalibrationResultScreen(
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.7f)
                     )
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Text(
                         text = quality,
                         fontSize = 24.sp,
@@ -118,9 +126,9 @@ fun CalibrationResultScreen(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             Button(
                 onClick = onContinue,
                 modifier = Modifier
@@ -138,9 +146,9 @@ fun CalibrationResultScreen(
                     color = Color(0xFF059669)
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             TextButton(
                 onClick = onRecalibrate,
                 modifier = Modifier.fillMaxWidth()

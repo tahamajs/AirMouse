@@ -2,36 +2,47 @@
 package com.airmouse.domain.repository
 
 import com.airmouse.domain.model.ConnectionConfig
+import com.airmouse.domain.model.ConnectionProtocol
+import com.airmouse.domain.model.ConnectionQuality
 import com.airmouse.domain.model.ConnectionStatus
-import com.airmouse.domain.model.MouseEvent
+import com.airmouse.domain.model.DiscoveredServer
+import com.airmouse.domain.model.TestResult
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
 
 interface IConnectionRepository {
-    suspend fun connect(config: ConnectionConfig)
+    // Connection management
+    suspend fun connect(config: ConnectionConfig): Boolean
     suspend fun disconnect()
-    suspend fun sendEvent(event: MouseEvent)
-    fun connectionStatus(): StateFlow<ConnectionStatus>
-    suspend fun getLastConfig(): ConnectionConfig?
-    suspend fun saveConfig(config: ConnectionConfig)
-    fun getConnectionStats(): StateFlow<ConnectionStats>
-    suspend fun clearHistory()
+    suspend fun reconnect(): Boolean
+
+    // Status
+    suspend fun getConnectionStatus(): ConnectionStatus
+    fun observeConnectionStatus(): Flow<ConnectionStatus>
+
+    // Configuration
+    suspend fun getConnectionConfig(): ConnectionConfig
+    suspend fun saveConnectionConfig(config: ConnectionConfig)
+
+    // Quality
+    suspend fun getConnectionQuality(): ConnectionQuality
+    fun observeConnectionQuality(): Flow<ConnectionQuality>
+
+    // Discovery
+    suspend fun discoverServers(): List<DiscoveredServer>
+    suspend fun startDiscovery(onServerFound: (DiscoveredServer) -> Unit)
+    suspend fun stopDiscovery()
+
+    // Messaging
+    suspend fun sendMessage(message: String): Boolean
+    suspend fun sendMessage(message: ByteArray): Boolean
+
+    // Testing
     suspend fun testConnection(ip: String, port: Int): TestResult
-    suspend fun reconnect()
+    suspend fun ping(): Long
+
+    // Callbacks
+    fun setOnMessageListener(listener: (String) -> Unit)
+    fun setOnBinaryMessageListener(listener: (ByteArray) -> Unit)
+    fun setOnDisconnectedListener(listener: () -> Unit)
+    fun setOnConnectedListener(listener: () -> Unit)
 }
-
-data class ConnectionStats(
-    val totalConnections: Int = 0,
-    val successfulConnections: Int = 0,
-    val failedConnections: Int = 0,
-    val averageLatency: Int = 0,
-    val lastConnectionTime: Long = 0,
-    val totalDataSent: Long = 0,
-    val totalDataReceived: Long = 0
-)
-
-data class TestResult(
-    val success: Boolean,
-    val latency: Int,
-    val error: String? = null
-)

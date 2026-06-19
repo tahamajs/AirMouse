@@ -5,105 +5,90 @@ import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.ConnectionProtocol
 import com.airmouse.domain.model.ConnectionStatus
 import com.airmouse.domain.repository.IConnectionRepository
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
+/**
+ * Use case for connecting to the Air Mouse server
+ */
 class ConnectToServerUseCase @Inject constructor(
-    private val connectionRepo: IConnectionRepository
+    private val connectionRepository: IConnectionRepository
 ) {
 
     /**
-     * Connect to server with specified parameters
+     * Connect to server with configuration
      */
-    suspend operator fun invoke(
-        ip: String,
-        port: Int,
-        protocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET,
-        useEncryption: Boolean = false,
-        authToken: String? = null
-    ): Result<Unit> {
+    suspend operator fun invoke(config: ConnectionConfig): Result<Boolean> {
         return try {
-            val config = ConnectionConfig(
-                serverIp = ip,
-                serverPort = port,
-                protocol = protocol,
-                useEncryption = useEncryption,
-                authenticationToken = authToken
-            )
-            connectionRepo.connect(config)
-            Result.success(Unit)
+            val result = connectionRepository.connect(config)
+            Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     /**
-     * Disconnect from current server
+     * Connect to server with IP and port
      */
-    suspend fun disconnect(): Result<Unit> {
+    suspend fun connect(ip: String, port: Int = 8080, protocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET): Result<Boolean> {
+        val config = ConnectionConfig(
+            ip = ip,
+            port = port,
+            protocol = protocol
+        )
+        return invoke(config)
+    }
+
+    /**
+     * Connect to last used server
+     */
+    suspend fun connectToLastServer(): Result<Boolean> {
         return try {
-            connectionRepo.disconnect()
-            Result.success(Unit)
+            val config = connectionRepository.getConnectionConfig()
+            val result = connectionRepository.connect(config)
+            Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     /**
-     * Reconnect to last used server
+     * Observe connection status
      */
-    suspend fun reconnect(): Result<Unit> {
-        return try {
-            val lastConfig = connectionRepo.getLastConfig()
-            if (lastConfig != null) {
-                connectionRepo.connect(lastConfig)
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("No previous connection found"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    fun observeConnectionStatus(): Flow<ConnectionStatus> {
+        return connectionRepository.observeConnectionStatus()
     }
 
     /**
      * Get current connection status
      */
     suspend fun getConnectionStatus(): ConnectionStatus {
-        return connectionRepo.connectionStatus().first()
+        return connectionRepository.getConnectionStatus()
     }
 
     /**
-     * Check if currently connected
+     * Disconnect from server
      */
-    suspend fun isConnected(): Boolean {
-        return connectionRepo.connectionStatus().first() == ConnectionStatus.CONNECTED
+    suspend fun disconnect() {
+        connectionRepository.disconnect()
     }
 
     /**
-     * Test connection without persisting
+     * Reconnect to server
      */
-    suspend fun testConnection(ip: String, port: Int): Result<Int> {
+    suspend fun reconnect(): Result<Boolean> {
         return try {
-            val result = connectionRepo.testConnection(ip, port)
-            if (result.success) {
-                Result.success(result.latency)
-            } else {
-                Result.failure(Exception(result.error ?: "Connection failed"))
-            }
+            val result = connectionRepository.reconnect()
+            Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     /**
-     * Auto-connect to last used server if enabled
+     * Check if connected
      */
-    suspend fun autoConnectIfEnabled(): Boolean {
-        val prefs = connectionRepo.getLastConfig()
-        return if (prefs != null && prefs.autoReconnect) {
-            connect(prefs.serverIp, prefs.serverPort, prefs.protocol).isSuccess
-        } else false
+    suspend fun isConnected(): Boolean {
+        return connectionRepository.getConnectionStatus() == ConnectionStatus.CONNECTED
     }
 }

@@ -4,13 +4,16 @@ import android.app.*
 import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.airmouse.R
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import timber.log.Timber
+import java.util.concurrent.Executor
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -71,18 +74,22 @@ class BluetoothHidService : Service() {
             .build()
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     private fun initHid() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            Log.e(TAG, "HID Device requires Android 10+")
+            Timber.w("HID Device requires Android 10+")
             return
         }
+
+        // ✅ FIXED: Use the correct API with executor and callback
+        val mainExecutor = ContextCompat.getMainExecutor(this)
 
         bluetoothAdapter.getProfileProxy(this, object : BluetoothProfile.ServiceListener {
             override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
                 if (profile == BluetoothProfile.HID_DEVICE) {
                     hidDevice = proxy as BluetoothHidDevice
-                    Log.i(TAG, "HID Device service connected")
-                    registerHidApp()
+                    Timber.i("HID Device service connected")
+                    registerHidApp(mainExecutor)
                 }
             }
 
@@ -90,13 +97,14 @@ class BluetoothHidService : Service() {
                 if (profile == BluetoothProfile.HID_DEVICE) {
                     hidDevice = null
                     isRegistered = false
-                    Log.i(TAG, "HID Device service disconnected")
+                    Timber.i("HID Device service disconnected")
                 }
             }
         }, BluetoothProfile.HID_DEVICE)
     }
 
-    private fun registerHidApp() {
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun registerHidApp(executor: Executor) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
 
         val sdpSettings = BluetoothHidDeviceAppSdpSettings(
@@ -109,38 +117,46 @@ class BluetoothHidService : Service() {
 
         val qosSettings = BluetoothHidDeviceAppQosSettings(100, 100, 0, 0, 0, 0)
 
-        hidDevice?.registerApp(sdpSettings, qosSettings, null, object : BluetoothHidDevice.Callback() {
-            override fun onAppStatusChanged(registered: Boolean, appId: Int) {
-                isRegistered = registered
-                if (registered) {
-                    Log.i(TAG, "HID App registered successfully")
-                    updateNotification("Ready", "HID profile registered")
-                } else {
-                    Log.w(TAG, "HID App registration failed")
-                    updateNotification("Error", "Failed to register HID profile")
+        // ✅ FIXED: Use registerApp with executor and callback
+        hidDevice?.registerApp(
+            sdpSettings,
+            qosSettings,
+            executor,
+            object : BluetoothHidDevice.Callback() {
+                override fun onAppStatusChanged(pluggedDevice: BluetoothDevice?, registered: Boolean) {
+                    // ✅ FIXED: Correct signature - first param is BluetoothDevice
+                    isRegistered = registered
+                    if (registered) {
+                        Timber.i("HID App registered successfully")
+                        updateNotification("Ready", "HID profile registered")
+                    } else {
+                        Timber.w("HID App registration failed")
+                        updateNotification("Error", "Failed to register HID profile")
+                    }
                 }
-            }
 
-            override fun onConnectionStateChanged(device: BluetoothDevice?, state: Int) {
-                super.onConnectionStateChanged(device, state)
-                when (state) {
-                    BluetoothProfile.STATE_CONNECTED -> {
-                        isConnected = true
-                        connectedDevice = device
-                        Log.i(TAG, "Device connected: ${device?.name}")
-                        updateNotification("Connected", "Mouse connected to ${device?.name}")
-                    }
-                    BluetoothProfile.STATE_DISCONNECTED -> {
-                        isConnected = false
-                        connectedDevice = null
-                        Log.i(TAG, "Device disconnected")
-                        updateNotification("Disconnected", "Waiting for connection")
+                override fun onConnectionStateChanged(device: BluetoothDevice?, state: Int) {
+                    super.onConnectionStateChanged(device, state)
+                    when (state) {
+                        BluetoothProfile.STATE_CONNECTED -> {
+                            isConnected = true
+                            connectedDevice = device
+                            Timber.i("Device connected: ${device?.name}")
+                            updateNotification("Connected", "Mouse connected to ${device?.name}")
+                        }
+                        BluetoothProfile.STATE_DISCONNECTED -> {
+                            isConnected = false
+                            connectedDevice = null
+                            Timber.i("Device disconnected")
+                            updateNotification("Disconnected", "Waiting for connection")
+                        }
                     }
                 }
             }
-        })
+        )
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     fun sendMouseReport(dx: Int, dy: Int, buttons: Byte) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         if (!isRegistered || hidDevice == null) return
@@ -150,7 +166,7 @@ class BluetoothHidService : Service() {
         runCatching {
             hidDevice?.sendReport(connectedDevice, 1, report)
         }.onFailure {
-            Log.e(TAG, "Failed to send report: ${it.message}")
+            Timber.e(it, "Failed to send report")
         }
     }
 
@@ -179,10 +195,11 @@ class BluetoothHidService : Service() {
         runCatching {
             hidDevice?.sendReport(connectedDevice, 1, scroll)
         }.onFailure {
-            Log.e(TAG, "Failed to send scroll: ${it.message}")
+            Timber.e(it, "Failed to send scroll")
         }
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     fun disconnect() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && hidDevice != null) {
             runCatching {
@@ -192,7 +209,7 @@ class BluetoothHidService : Service() {
             isRegistered = false
             isConnected = false
             connectedDevice = null
-            Log.i(TAG, "Disconnected and unregistered")
+            Timber.i("Disconnected and unregistered")
         }
     }
 
@@ -212,7 +229,7 @@ class BluetoothHidService : Service() {
         super.onDestroy()
         disconnect()
         serviceScope.cancel()
-        Log.i(TAG, "Service destroyed")
+        Timber.i("Service destroyed")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

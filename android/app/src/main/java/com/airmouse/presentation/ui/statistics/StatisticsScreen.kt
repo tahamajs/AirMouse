@@ -27,43 +27,6 @@ import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
 
-// --- Enum definition to satisfy architecture models ---
-enum class TimeRange(val displayName: String) {
-    DAY("Day"),
-    WEEK("Week"),
-    MONTH("Month")
-}
-
-// --- Data Models to satisfy your layout configuration ---
-data class DailyStat(
-    val clicks: Int
-)
-
-data class StatisticsUiState(
-    val timeRange: TimeRange = TimeRange.DAY,
-    val sessionTime: Long = 0L,
-    val gesturesDetected: Int = 0,
-    val calibrationSuccessRate: Float = 0f,
-    val totalDistanceMoved: Float = 0f,
-    val averageSpeed: Float = 0f,
-    val peakSpeed: Float = 0f,
-    val totalMovements: Int = 0,
-    val connectionAttempts: Int = 0,
-    val successfulConnections: Int = 0,
-    val failedConnections: Int = 0,
-    val averagePing: Int = 0,
-    val batteryUsage: Int = 0,
-    val cpuUsage: Float = 0f,
-    val memoryUsage: Float = 0f,
-    val temperature: Float = 0f,
-    val sessionStartTime: Long = 0L,
-    val lastCalibrationTime: Long = 0L,
-    val calibrationCount: Int = 0,
-    val showResetDialog: Boolean = false,
-    val showExportDialog: Boolean = false,
-    val gestureBreakdown: Map<String, Int> = emptyMap(),
-    val dailyStats: List<DailyStat> = emptyList()
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -523,11 +486,3 @@ private fun formatDuration(seconds: Long): String {
 }
 
 // --- Target ViewModel interface definition for standalone compilation ---
-class StatisticsViewModel : androidx.lifecycle.ViewModel() {
-    val uiState = kotlinx.coroutines.flow.MutableStateFlow(StatisticsUiState())
-    fun updateTimeRange(range: TimeRange) {}
-    fun showResetDialog(show: Boolean) {}
-    fun showExportDialog(show: Boolean) {}
-    fun resetStatistics() {}
-    fun exportStatistics() {}
-}

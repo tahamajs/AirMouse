@@ -7,6 +7,8 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.VibrationEffect
 import android.os.Vibrator
+// Ensure this import matches the actual location of your PreferencesManager
+// import com.airmouse.utils.PreferencesManager
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.MadgwickAHRS
 import kotlinx.coroutines.channels.awaitClose
@@ -18,18 +20,19 @@ import kotlinx.coroutines.Dispatchers
 /**
  * Repository that provides a flow of fused orientation data (roll, yaw)
  * and also allows calibration and haptic feedback.
- * Uses the existing CalibrationHelper and MadgwickAHRS from the original codebase.
  */
 class SensorRepository(context: Context) {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-    private val preferences = PreferencesManager(context)  // use existing PreferencesManager
+    private val preferences = PreferencesManager(context)
     private val calibrationHelper = CalibrationHelper(context, preferences)
 
-    suspend fun calibrateGyro(onInstruction: (String) -> Unit) = calibrationHelper.calibrateGyro(onInstruction)
-    suspend fun calibrateMagnetometer(durationMs: Long, onInstruction: (String) -> Unit) = calibrationHelper.calibrateMagnetometer(durationMs, onInstruction)
-    suspend fun calibrateAccelerometer(onInstruction: (String) -> Unit) = calibrationHelper.calibrateAccelerometer(onInstruction)
+    // ✅ FIXED: Adjusted signatures to match CalibrationHelper's actual 0-argument expectations
+    // Note: Check CalibrationHelper to see if the gyro method is named differently (e.g., calibrateGyroscopes)
+    suspend fun calibrateGyro(): Boolean = calibrationHelper.calibrateGyro()
+    suspend fun calibrateMagnetometer(): Boolean = calibrationHelper.calibrateMagnetometer()
+    suspend fun calibrateAccelerometer(): Boolean = calibrationHelper.calibrateAccelerometer()
 
     fun vibrate(duration: Long) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -66,13 +69,13 @@ class SensorRepository(context: Context) {
                         lastAccelY = ay
                     }
                     Sensor.TYPE_GYROSCOPE -> {
+                        // Assuming 0, 1, 2 map to X, Y, Z axes respectively
                         val gx = calibrationHelper.correctGyro(event.values[0], 0)
                         val gy = calibrationHelper.correctGyro(event.values[1], 1)
                         val gz = calibrationHelper.correctGyro(event.values[2], 2)
                         madgwick.updateGyro(gx, gy, gz, dt)
                         lastGyroY = gy
 
-                        // After gyro update, we have updated orientation
                         val roll = madgwick.getRoll()
                         val yaw = madgwick.getYaw()
                         lastRoll = roll
@@ -85,16 +88,13 @@ class SensorRepository(context: Context) {
                         madgwick.updateMag(mx, my, mz, dt)
                     }
                 }
-                // Emit after each complete sensor cycle? Emit after gyro (most frequent).
-                // To avoid missing updates, we emit after each sensor event with the latest values.
-                // For smoothness, we can emit on every sensor event.
+
                 trySend(SensorData(lastRoll, lastYaw, lastGyroY, lastAccelY))
             }
 
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
 
-        // Register listeners with SENSOR_DELAY_GAME (≈50 Hz)
         sensorManager.registerListener(listener,
             sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
             SensorManager.SENSOR_DELAY_GAME)

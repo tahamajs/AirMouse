@@ -44,8 +44,6 @@ fun NetworkDiscoveryScreen(
     viewModel: NetworkDiscoveryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val filteredServers by viewModel.filteredServers.collectAsStateWithLifecycle()
-    val filteredSavedServers by viewModel.filteredSavedServers.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var showSortMenu by remember { mutableStateOf(false) }
     var showManualConnectDialog by remember { mutableStateOf(false) }
@@ -393,6 +391,11 @@ fun NetworkDiscoveryScreen(
             // Content Switching
             when (uiState.activeTab) {
                 DiscoveryTab.DISCOVERED -> {
+                    val filteredServers = uiState.discoveredServers.filter { server ->
+                        uiState.filterText.isEmpty() ||
+                                server.name.contains(uiState.filterText, ignoreCase = true) ||
+                                server.ip.contains(uiState.filterText, ignoreCase = true)
+                    }
                     if (filteredServers.isNotEmpty()) {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -434,6 +437,11 @@ fun NetworkDiscoveryScreen(
                 }
 
                 DiscoveryTab.SAVED -> {
+                    val filteredSavedServers = uiState.savedServers.filter { server ->
+                        uiState.filterText.isEmpty() ||
+                                server.name.contains(uiState.filterText, ignoreCase = true) ||
+                                server.ip.contains(uiState.filterText, ignoreCase = true)
+                    }
                     if (filteredSavedServers.isNotEmpty()) {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -450,9 +458,7 @@ fun NetworkDiscoveryScreen(
                                         }
                                     },
                                     onDelete = { viewModel.removeSavedServer(server.id) },
-                                    onFavorite = { viewModel.toggleFavorite(server.id) },
-                                    onEditNotes = { notes: String -> viewModel.updateServerNotes(server.id, notes) },
-                                    onEditDeviceType = { deviceType: DeviceType -> viewModel.updateDeviceType(server.id, deviceType) }
+                                    onFavorite = { viewModel.toggleFavorite(server.id) }
                                 )
                             }
                         }
@@ -551,7 +557,7 @@ fun DiscoveredServerItem(
                         Text(
                             "Ping: ${server.ping}ms",
                             fontSize = 11.sp,
-                            color = Color(server.pingColor)
+                            color = Color(server.pingColor.toInt())
                         )
                     }
                     Text(
@@ -606,13 +612,8 @@ fun SavedServerItem(
     connectionProgress: Int,
     onConnect: () -> Unit,
     onDelete: () -> Unit,
-    onFavorite: () -> Unit,
-    onEditNotes: (String) -> Unit,
-    onEditDeviceType: (DeviceType) -> Unit
+    onFavorite: () -> Unit
 ) {
-    var showNotesDialog by remember { mutableStateOf(false) }
-    var showDeviceTypeDialog by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -666,20 +667,6 @@ fun SavedServerItem(
                     }
                 }
                 Row {
-                    IconButton(onClick = { showDeviceTypeDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Devices,
-                            contentDescription = "Device Type",
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    IconButton(onClick = { showNotesDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.EditNote,
-                            contentDescription = "Edit Notes",
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
                     IconButton(onClick = onFavorite) {
                         Icon(
                             imageVector = if (server.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
@@ -717,18 +704,194 @@ fun SavedServerItem(
     }
 }
 
-// Placeholder layouts for remaining downstream structural UI dependencies
-@Composable fun StatusChip(isReachable: Boolean, ping: Long) {}
-@Composable fun SignalStrengthBar(strength: Int) {}
-@Composable fun EmptyStateCard(title: String, message: String, icon: ImageVector, onRetry: () -> Unit) {}
-@Composable fun HistoryItem(history: Any) {}
-@Composable fun ManualConnectDialog(onDismiss: () -> Unit, onConnect: (String, Int) -> Unit, initialIp: String, initialPort: Int) {}
+// ==================== PLACEHOLDER COMPONENTS ====================
 
-enum class DiscoveryTab { DISCOVERED, SAVED, HISTORY }
-enum class SortBy(val displayName: String) { NAME("Name"), IP("IP Address"), PING("Latency") }
-enum class DeviceType(val icon: String) { PC("💻"), MAC("🖥️"), LINUX("🐧") }
-data class DiscoveredServer(
-    val id: String, val name: String, val ip: String, val port: Int, val isReachable: Boolean,
-    val ping: Long, val pingColor: Long, val version: String, val signalStrength: Int,
-    val isFavorite: Boolean, val notes: String, val deviceType: DeviceType
-)
+@Composable
+fun StatusChip(isReachable: Boolean, ping: Long) {
+    val color = if (isReachable) Color(0xFF4CAF50) else Color(0xFFF44336)
+    val text = if (isReachable) "Online" else "Offline"
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = color.copy(alpha = 0.2f)
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            color = color,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
+
+@Composable
+fun SignalStrengthBar(strength: Int) {
+    Row {
+        repeat(4) { i ->
+            Box(
+                modifier = Modifier
+                    .size(4.dp, 12.dp)
+                    .padding(end = 1.dp)
+                    .background(
+                        color = if (i < strength) Color(0xFF4CAF50) else Color(0xFFE0E0E0),
+                        shape = RoundedCornerShape(1.dp)
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyStateCard(
+    title: String,
+    message: String,
+    icon: ImageVector,
+    onRetry: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onRetry) {
+                Text("Retry")
+            }
+        }
+    }
+}
+
+@Composable
+fun HistoryItem(history: ConnectionHistoryItem) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = history.serverName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "${history.ip}:${history.port}",
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = history.status,
+                    fontSize = 11.sp,
+                    color = if (history.status == "Connected") Color(0xFF4CAF50) else Color(0xFFF44336)
+                )
+                Text(
+                    text = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(history.timestamp),
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ManualConnectDialog(
+    onDismiss: () -> Unit,
+    onConnect: (String, Int) -> Unit,
+    initialIp: String,
+    initialPort: Int
+) {
+    var ip by remember { mutableStateOf(initialIp) }
+    var port by remember { mutableStateOf(initialPort.toString()) }
+    var isValidIp by remember { mutableStateOf(true) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Manual Connect", fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text("Enter the IP address and port of the Air Mouse server:")
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = ip,
+                    onValueChange = {
+                        ip = it
+                        isValidIp = android.util.Patterns.IP_ADDRESS.matcher(it).matches()
+                    },
+                    label = { Text("IP Address") },
+                    isError = !isValidIp && ip.isNotEmpty(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (!isValidIp && ip.isNotEmpty()) {
+                    Text(
+                        "Invalid IP address",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = port,
+                    onValueChange = { port = it.filter { c -> c.isDigit() } },
+                    label = { Text("Port") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val portInt = port.toIntOrNull()
+                    if (ip.isNotEmpty() && isValidIp && portInt != null && portInt in 1..65535) {
+                        onConnect(ip, portInt)
+                    }
+                },
+                enabled = isValidIp && ip.isNotEmpty() && port.toIntOrNull() in 1..65535
+            ) {
+                Text("Connect")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}

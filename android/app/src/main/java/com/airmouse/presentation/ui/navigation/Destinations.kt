@@ -5,66 +5,241 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Navigation destinations for Air Mouse Pro app
- * Contains all screens with their routes, titles, and icons
+ * Navigation destinations for the Air Mouse application.
+ * Each destination represents a screen in the app.
  */
 sealed class Destinations(
     val route: String,
     val title: String,
-    val icon: ImageVector? = null
+    val icon: ImageVector? = null,
+    val isBottomNav: Boolean = false
 ) {
-    // Main Bottom Navigation Screens (4 screens)
-    data object Home : Destinations("home", "Home", Icons.Default.Home)
-    data object Statistics : Destinations("statistics", "Statistics", Icons.Default.BarChart)
-    data object Settings : Destinations("settings", "Settings", Icons.Default.Settings)
-    data object Help : Destinations("help", "Help", Icons.Default.Help)
 
-    // Info Screens
-    data object About : Destinations("about", "About", Icons.Default.Info)
+    // ==================== BOTTOM NAVIGATION ====================
+    object Home : Destinations(
+        route = "home",
+        title = "Home",
+        icon = Icons.Default.Home,
+        isBottomNav = true
+    )
 
-    // Calibration & Sensors
-    data object Calibration : Destinations("calibration", "Calibration", Icons.Default.Build)
-    data object SensorVisualizer : Destinations("sensor_visualizer", "Sensor Visualizer", Icons.Default.GraphicEq)
+    object Statistics : Destinations(
+        route = "statistics",
+        title = "Statistics",
+        icon = Icons.Default.BarChart,
+        isBottomNav = true
+    )
 
-    // Gesture & Touch
-    data object GestureStudio : Destinations("gesture_studio", "Gesture Studio", Icons.Default.Gesture)
-    data object EdgeGestures : Destinations("edge_gestures", "Edge Gestures", Icons.Default.Swipe)
-    data object Touchpad : Destinations("touchpad", "Touchpad Mode", Icons.Default.TouchApp)
+    object Settings : Destinations(
+        route = "settings",
+        title = "Settings",
+        icon = Icons.Default.Settings,
+        isBottomNav = true
+    )
 
-    // Connectivity
-    data object NetworkDiscovery : Destinations("network_discovery", "Network Discovery", Icons.Default.Wifi)
-    data object ServerLogs : Destinations("server_logs", "Server Logs", Icons.Default.ListAlt)
+    object Help : Destinations(
+        route = "help",
+        title = "Help",
+        icon = Icons.Default.Help,
+        isBottomNav = true
+    )
 
-    // Security & Privacy
-    data object Proximity : Destinations("proximity", "Proximity Lock", Icons.Default.LocationOn)
-    data object VoiceCommands : Destinations("voice_commands", "Voice Commands", Icons.Default.Mic)
+    // ==================== INFO ====================
+    object About : Destinations(
+        route = "about",
+        title = "About",
+        icon = Icons.Default.Info
+    )
 
-    // Customization
-    data object Profiles : Destinations("profiles", "Profiles", Icons.Default.Person)
-    data object Themes : Destinations("themes", "Themes", Icons.Default.Palette)
+    // ==================== CALIBRATION & SENSORS ====================
+    object Calibration : Destinations(
+        route = "calibration",
+        title = "Calibration",
+        icon = Icons.Default.Tune
+    )
 
-    // System
-    data object Battery : Destinations("battery", "Battery Monitor", Icons.Default.BatteryFull)
-    data object Accessibility : Destinations("accessibility", "Accessibility", Icons.Default.Accessibility)
-    data object TouchpadSettings : Destinations("touchpad_settings", "Touchpad Settings", Icons.Default.Settings)
+    object SensorVisualizer : Destinations(
+        route = "sensor_visualizer",
+        title = "Sensor Visualizer",
+        icon = Icons.Default.Analytics
+    )
 
-    // Onboarding
-    data object Onboarding : Destinations("onboarding", "Onboarding")
+    // ==================== GESTURE & TOUCH ====================
+    object GestureStudio : Destinations(
+        route = "gesture_studio",
+        title = "Gesture Studio",
+        icon = Icons.Default.Gesture
+    )
+
+    object EdgeGestures : Destinations(
+        route = "edge_gestures",
+        title = "Edge Gestures",
+        icon = Icons.Default.TouchApp
+    )
+
+    object Touchpad : Destinations(
+        route = "touchpad",
+        title = "Touchpad",
+        icon = Icons.Default.Laptop
+    )
+
+    // ==================== CONNECTIVITY ====================
+    object NetworkDiscovery : Destinations(
+        route = "network_discovery",
+        title = "Network Discovery",
+        icon = Icons.Default.Wifi
+    )
+
+    object ServerLogs : Destinations(
+        route = "server_logs",
+        title = "Server Logs",
+        icon = Icons.Default.ListAlt
+    )
+
+    // ==================== SECURITY & PRIVACY ====================
+    object Proximity : Destinations(
+        route = "proximity",
+        title = "Proximity",
+        icon = Icons.Default.Bluetooth
+    )
+
+    object VoiceCommands : Destinations(
+        route = "voice_commands",
+        title = "Voice Commands",
+        icon = Icons.Default.Mic
+    )
+
+    // ==================== CUSTOMIZATION ====================
+    object Profiles : Destinations(
+        route = "profiles",
+        title = "Profiles",
+        icon = Icons.Default.Person
+    )
+
+    object Themes : Destinations(
+        route = "themes",
+        title = "Themes",
+        icon = Icons.Default.Palette
+    )
+
+    // ==================== SYSTEM ====================
+    object Battery : Destinations(
+        route = "battery",
+        title = "Battery",
+        icon = Icons.Default.BatteryFull
+    )
+
+    object Accessibility : Destinations(
+        route = "accessibility",
+        title = "Accessibility",
+        icon = Icons.Default.Accessibility
+    )
+
+    // ==================== ONBOARDING ====================
+    object Onboarding : Destinations(
+        route = "onboarding",
+        title = "Onboarding",
+        icon = null
+    )
+
+    // ==================== TOUCHPAD SETTINGS (ALIAS) ====================
+    object TouchpadSettings : Destinations(
+        route = "touchpad_settings",
+        title = "Touchpad Settings",
+        icon = Icons.Default.Laptop
+    )
 
     companion object {
-        val bottomNavItems = listOf(Home, Statistics, Settings, Help)
+        /**
+         * All bottom navigation destinations
+         */
+        val bottomNavDestinations: List<Destinations> = listOf(
+            Home, Statistics, Settings, Help
+        )
 
-        fun getBottomNavIndex(route: String?): Int = when (route) {
-            Home.route -> 0
-            Statistics.route -> 1
-            Settings.route -> 2
-            Help.route -> 3
-            else -> 0
+        /**
+         * All destinations
+         */
+        val allDestinations: List<Destinations> = listOf(
+            Home, Statistics, Settings, Help,
+            About, Calibration, SensorVisualizer,
+            GestureStudio, EdgeGestures, Touchpad,
+            NetworkDiscovery, ServerLogs,
+            Proximity, VoiceCommands,
+            Profiles, Themes,
+            Battery, Accessibility,
+            Onboarding, TouchpadSettings
+        )
+
+        /**
+         * Check if a route is a bottom navigation screen
+         */
+        fun isBottomNavScreen(route: String?): Boolean {
+            return bottomNavDestinations.any { it.route == route }
         }
 
-        fun isBottomNavScreen(route: String?): Boolean = when (route) {
-            Home.route, Statistics.route, Settings.route, Help.route -> true
-            else -> false
+        /**
+         * Get a destination by route
+         */
+        fun fromRoute(route: String?): Destinations? {
+            return allDestinations.find { it.route == route }
+        }
+
+        /**
+         * Get the title for a destination
+         */
+        fun getTitle(destination: Destinations): String = destination.title
+
+        /**
+         * Get the title by route
+         */
+        fun getTitleByRoute(route: String?): String {
+            return fromRoute(route)?.title ?: "Unknown"
+        }
+
+        /**
+         * Get the icon for a destination
+         */
+        fun getIcon(destination: Destinations): ImageVector? = destination.icon
+
+        /**
+         * Get the icon by route
+         */
+        fun getIconByRoute(route: String?): ImageVector? {
+            return fromRoute(route)?.icon
+        }
+
+        /**
+         * Check if a route is valid
+         */
+        fun isValidRoute(route: String?): Boolean {
+            return allDestinations.any { it.route == route }
+        }
+
+        /**
+         * Get the start destination (Home)
+         */
+        fun getStartDestination(): Destinations = Home
+
+        /**
+         * Get the onboarding destination
+         */
+        fun getOnboardingDestination(): Destinations = Onboarding
+
+        /**
+         * Get the parent destination for a given destination
+         */
+        fun getParent(destination: Destinations): Destinations? {
+            return when (destination) {
+                About, Calibration, SensorVisualizer,
+                GestureStudio, EdgeGestures, Touchpad,
+                NetworkDiscovery, ServerLogs,
+                Proximity, VoiceCommands,
+                Profiles, Themes,
+                Battery, Accessibility,
+                TouchpadSettings -> Home
+                else -> null
+            }
         }
     }
 }

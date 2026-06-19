@@ -14,6 +14,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +30,53 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.airmouse.presentation.navigation.NavigationActions
+import kotlinx.coroutines.launch
+
+// ==========================================
+// Data Models
+// ==========================================
+
+data class UserProfile(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String,
+    val color: String = "#6366F1",
+    val isDefault: Boolean = false,
+    val isFavorite: Boolean = false,
+    val usageCount: Int = 0,
+    val createdAt: Long = System.currentTimeMillis(),
+    val lastUsedAt: Long = System.currentTimeMillis()
+) {
+    val formattedLastUsed: String
+        get() = when {
+            lastUsedAt == 0L -> "Never"
+            System.currentTimeMillis() - lastUsedAt < 3600000 -> "Just now"
+            System.currentTimeMillis() - lastUsedAt < 86400000 -> "Today"
+            else -> java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()).format(java.util.Date(lastUsedAt))
+        }
+
+    fun incrementUsage(): UserProfile {
+        return this.copy(
+            usageCount = usageCount + 1,
+            lastUsedAt = System.currentTimeMillis()
+        )
+    }
+}
+
+enum class ProfileSort(val displayName: String) {
+    NAME("Name"),
+    DATE_CREATED("Date Created"),
+    LAST_USED("Last Used"),
+    FAVORITE("Favorite"),
+    USAGE_COUNT("Usage Count")
+}
+
+enum class ViewMode {
+    LIST, GRID, COMPACT
+}
+
+// ==========================================
+// Main Screen
+// ==========================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +84,7 @@ fun ProfilesScreen(
     navigationActions: NavigationActions,
     modifier: Modifier = Modifier
 ) {
-    // --- State Handlers (Mocking ViewModel state layers locally) ---
+    // --- State ---
     var profilesList by remember {
         mutableStateOf(
             listOf(
@@ -50,6 +100,20 @@ fun ProfilesScreen(
     var currentViewMode by remember { mutableStateOf(ViewMode.LIST) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var newProfileName by remember { mutableStateOf("") }
+    var showSortMenu by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+
+    // Sort profiles when sort changes
+    fun sortProfiles(profiles: List<UserProfile>, sort: ProfileSort): List<UserProfile> {
+        return when (sort) {
+            ProfileSort.NAME -> profiles.sortedBy { it.name.lowercase() }
+            ProfileSort.DATE_CREATED -> profiles.sortedByDescending { it.createdAt }
+            ProfileSort.LAST_USED -> profiles.sortedByDescending { it.lastUsedAt }
+            ProfileSort.FAVORITE -> profiles.sortedByDescending { it.isFavorite }
+            ProfileSort.USAGE_COUNT -> profiles.sortedByDescending { it.usageCount }
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -64,7 +128,11 @@ fun ProfilesScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateToHome() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
                     }
                 },
                 actions = {
@@ -82,7 +150,7 @@ fun ProfilesScreen(
                             imageVector = when (currentViewMode) {
                                 ViewMode.LIST -> Icons.Default.ViewModule
                                 ViewMode.GRID -> Icons.Default.ViewStream
-                                ViewMode.COMPACT -> Icons.Default.ViewList
+                                ViewMode.COMPACT -> Icons.AutoMirrored.Filled.ViewList
                             },
                             contentDescription = "Change View Mode",
                             tint = Color.White
@@ -90,34 +158,33 @@ fun ProfilesScreen(
                     }
 
                     // Sort Menu Button
-                    var showSortMenu by remember { mutableStateOf(false) }
                     IconButton(onClick = { showSortMenu = true }) {
-                        Icon(Icons.Default.Sort, contentDescription = "Sort Profiles", tint = Color.White)
+                        Icon(
+                            Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = "Sort Profiles",
+                            tint = Color.White
+                        )
                     }
                     DropdownMenu(
                         expanded = showSortMenu,
                         onDismissRequest = { showSortMenu = false },
                         modifier = Modifier.background(Color(0xFF1A1D24))
                     ) {
-                        ProfileSort.values().forEach { sortOption ->
+                        ProfileSort.entries.forEach { sortOption ->
                             DropdownMenuItem(
                                 text = { Text(sortOption.displayName, color = Color.White) },
                                 onClick = {
                                     selectedSort = sortOption
                                     showSortMenu = false
-                                    profilesList = when (sortOption) {
-                                        ProfileSort.NAME -> profilesList.sortedBy { it.name }
-                                        ProfileSort.DATE_CREATED -> profilesList.sortedByDescending { it.createdAt }
-                                        ProfileSort.LAST_USED -> profilesList.sortedByDescending { it.lastUsedAt }
-                                        ProfileSort.FAVORITE -> profilesList.sortedByDescending { it.isFavorite }
-                                        ProfileSort.USAGE_COUNT -> profilesList.sortedByDescending { it.usageCount }
-                                    }
+                                    profilesList = sortProfiles(profilesList, sortOption)
                                 }
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF1A1D24))
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF1A1D24)
+                )
             )
         },
         floatingActionButton = {
@@ -157,17 +224,26 @@ fun ProfilesScreen(
                                     ProfileListCard(
                                         profile = profile,
                                         onSelect = {
-                                            profilesList = profilesList.map {
-                                                it.copy(isDefault = it.id == profile.id).incrementUsage()
-                                            }
+                                            profilesList = sortProfiles(
+                                                profilesList.map {
+                                                    if (it.id == profile.id) it.incrementUsage() else it
+                                                },
+                                                selectedSort
+                                            )
                                         },
                                         onToggleFavorite = {
-                                            profilesList = profilesList.map {
-                                                if (it.id == profile.id) it.copy(isFavorite = !it.isFavorite) else it
-                                            }
+                                            profilesList = sortProfiles(
+                                                profilesList.map {
+                                                    if (it.id == profile.id) it.copy(isFavorite = !it.isFavorite) else it
+                                                },
+                                                selectedSort
+                                            )
                                         },
                                         onDelete = {
-                                            profilesList = profilesList.filter { it.id != profile.id }
+                                            profilesList = sortProfiles(
+                                                profilesList.filter { it.id != profile.id },
+                                                selectedSort
+                                            )
                                         }
                                     )
                                 }
@@ -184,9 +260,12 @@ fun ProfilesScreen(
                                     ProfileGridCard(
                                         profile = profile,
                                         onSelect = {
-                                            profilesList = profilesList.map {
-                                                it.copy(isDefault = it.id == profile.id).incrementUsage()
-                                            }
+                                            profilesList = sortProfiles(
+                                                profilesList.map {
+                                                    if (it.id == profile.id) it.incrementUsage() else it
+                                                },
+                                                selectedSort
+                                            )
                                         }
                                     )
                                 }
@@ -201,9 +280,12 @@ fun ProfilesScreen(
                                     ProfileCompactRow(
                                         profile = profile,
                                         onSelect = {
-                                            profilesList = profilesList.map {
-                                                it.copy(isDefault = it.id == profile.id).incrementUsage()
-                                            }
+                                            profilesList = sortProfiles(
+                                                profilesList.map {
+                                                    if (it.id == profile.id) it.incrementUsage() else it
+                                                },
+                                                selectedSort
+                                            )
                                         }
                                     )
                                 }
@@ -215,7 +297,7 @@ fun ProfilesScreen(
         }
     }
 
-    // --- Create Profile Dialog Dialog Builder ---
+    // --- Create Profile Dialog ---
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
@@ -240,10 +322,13 @@ fun ProfilesScreen(
                 Button(
                     onClick = {
                         if (newProfileName.isNotBlank()) {
-                            val colors = listOf("#6366F1", "#EC4899", "#10B981", "#F59E0B", "#3B82F6")
-                            profilesList = profilesList + UserProfile(
-                                name = newProfileName.trim(),
-                                color = colors.random()
+                            val colors = listOf("#6366F1", "#EC4899", "#10B981", "#F59E0B", "#3B82F6", "#8B5CF6")
+                            profilesList = sortProfiles(
+                                profilesList + UserProfile(
+                                    name = newProfileName.trim(),
+                                    color = colors.random()
+                                ),
+                                selectedSort
                             )
                             newProfileName = ""
                             showCreateDialog = false
@@ -264,7 +349,7 @@ fun ProfilesScreen(
 }
 
 // ==========================================
-// Sub-Components & Layout Variants
+// Sub-Components
 // ==========================================
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -420,7 +505,7 @@ fun ProfileCompactRow(
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
-            modifier = Modifier.padding(symmetric = PaddingValues(horizontal = 12.dp, vertical = 8.dp)),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -445,6 +530,3 @@ fun ProfileCompactRow(
         }
     }
 }
-
-// Extension helper function for localized compact configuration padding rules
-private fun Modifier.padding(symmetric: PaddingValues): Modifier = this.padding(symmetric)

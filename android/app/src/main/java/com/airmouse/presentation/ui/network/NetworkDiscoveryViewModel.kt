@@ -18,6 +18,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.net.*
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,44 +30,6 @@ class NetworkDiscoveryViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(NetworkDiscoveryUiState())
     val uiState: StateFlow<NetworkDiscoveryUiState> = _uiState.asStateFlow()
-
-    val filteredServers: StateFlow<List<DiscoveredServer>> = combine(
-        _uiState.map { it.discoveredServers },
-        _uiState.map { it.filterText },
-        _uiState.map { it.sortBy }
-    ) { servers, filter, sortBy ->
-        var result = servers
-
-        if (filter.isNotEmpty()) {
-            result = result.filter {
-                it.ip.contains(filter, ignoreCase = true) ||
-                        it.name.contains(filter, ignoreCase = true) ||
-                        it.port.toString().contains(filter) ||
-                        it.deviceType.displayName.contains(filter, ignoreCase = true)
-            }
-        }
-
-        when (sortBy) {
-            SortBy.IP -> result.sortedBy { it.ip }
-            SortBy.NAME -> result.sortedBy { it.name }
-            SortBy.PING -> result.sortedBy { if (it.ping == -1) Int.MAX_VALUE else it.ping }
-            SortBy.PORT -> result.sortedBy { it.port }
-            SortBy.SIGNAL -> result.sortedByDescending { it.signalStrength }
-            SortBy.LAST_SEEN -> result.sortedByDescending { it.lastSeen }
-        }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    val filteredSavedServers: StateFlow<List<DiscoveredServer>> = combine(
-        _uiState.map { it.savedServers },
-        _uiState.map { it.filterText }
-    ) { servers, filter ->
-        if (filter.isEmpty()) servers
-        else servers.filter {
-            it.ip.contains(filter, ignoreCase = true) ||
-                    it.name.contains(filter, ignoreCase = true) ||
-                    it.notes.contains(filter, ignoreCase = true)
-        }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val discoveredServersMap = mutableMapOf<String, DiscoveredServer>()
     private var isScanning = false
@@ -135,10 +98,10 @@ class NetworkDiscoveryViewModel @Inject constructor(
                     val json = jsonArray.getJSONObject(i)
                     servers.add(
                         DiscoveredServer(
-                            id = json.getString("id"),
+                            id = json.optString("id", UUID.randomUUID().toString()),
                             ip = json.getString("ip"),
                             port = json.getInt("port"),
-                            name = json.getString("name"),
+                            name = json.optString("name", "Air Mouse Server"),
                             version = json.optString("version", "3.0.0"),
                             isFavorite = json.optBoolean("isFavorite", false),
                             notes = json.optString("notes", ""),
@@ -180,19 +143,18 @@ class NetworkDiscoveryViewModel @Inject constructor(
         if (historyJson.isNotEmpty()) {
             try {
                 val jsonArray = JSONArray(historyJson)
-                val history = mutableListOf<ConnectionHistory>()
+                val history = mutableListOf<ConnectionHistoryItem>()
                 for (i in 0 until jsonArray.length()) {
                     val json = jsonArray.getJSONObject(i)
                     history.add(
-                        ConnectionHistory(
-                            id = json.getString("id"),
-                            serverId = json.getString("serverId"),
+                        ConnectionHistoryItem(
+                            id = json.optString("id", UUID.randomUUID().toString()),
+                            serverId = json.optString("serverId", ""),
                             ip = json.getString("ip"),
                             port = json.getInt("port"),
                             timestamp = json.getLong("timestamp"),
-                            duration = json.getLong("duration"),
-                            success = json.optBoolean("success", true),
-                            errorMessage = json.optString("errorMessage", null)
+                            serverName = json.optString("serverName", "Unknown"),
+                            status = json.optString("status", "Disconnected")
                         )
                     )
                 }
@@ -203,7 +165,17 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
-    private fun saveConnectionHistory(history: ConnectionHistory) {
+    private fun saveConnectionHistory(serverName: String, ip: String, port: Int, status: String) {
+        val history = ConnectionHistoryItem(
+            id = UUID.randomUUID().toString(),
+            serverId = UUID.randomUUID().toString(),
+            serverName = serverName,
+            ip = ip,
+            port = port,
+            timestamp = System.currentTimeMillis(),
+            status = status
+        )
+
         val currentHistory = _uiState.value.connectionHistory.toMutableList()
         currentHistory.add(0, history)
         if (currentHistory.size > 50) currentHistory.removeAt(currentHistory.lastIndex)
@@ -213,12 +185,11 @@ class NetworkDiscoveryViewModel @Inject constructor(
             val json = JSONObject().apply {
                 put("id", record.id)
                 put("serverId", record.serverId)
+                put("serverName", record.serverName)
                 put("ip", record.ip)
                 put("port", record.port)
                 put("timestamp", record.timestamp)
-                put("duration", record.duration)
-                put("success", record.success)
-                record.errorMessage?.let { put("errorMessage", it) }
+                put("status", record.status)
             }
             jsonArray.put(json)
         }
@@ -310,11 +281,12 @@ class NetworkDiscoveryViewModel @Inject constructor(
 
     private suspend fun startUdpDiscovery() {
         withContext(Dispatchers.IO) {
-            val socket = DatagramSocket()
-            socket.soTimeout = TIMEOUT_MS.toInt()
-            socket.broadcast = true
-
+            var socket: DatagramSocket? = null
             try {
+                socket = DatagramSocket()
+                socket.soTimeout = TIMEOUT_MS.toInt()
+                socket.broadcast = true
+
                 val sendData = DISCOVERY_MESSAGE.toByteArray()
                 val broadcastAddress = getBroadcastAddress()
                 val packet = DatagramPacket(sendData, sendData.size, broadcastAddress, DISCOVERY_PORT)
@@ -340,13 +312,14 @@ class NetworkDiscoveryViewModel @Inject constructor(
                             if (!discoveredServersMap.containsKey(key)) {
                                 val ping = calculatePing(serverIp)
                                 discoveredServersMap[key] = DiscoveredServer(
+                                    id = UUID.randomUUID().toString(),
                                     ip = serverIp,
                                     port = port,
                                     name = name,
                                     version = version,
                                     ping = ping,
                                     signalStrength = calculateSignalStrength(ping),
-                                    deviceType = detectDeviceType(name, version)
+                                    deviceType = detectDeviceType(name)
                                 )
                                 updateDiscoveredServers()
                             }
@@ -355,18 +328,18 @@ class NetworkDiscoveryViewModel @Inject constructor(
                         // Continue scanning
                     }
                 }
-            } catch (_: Exception) {
-                // Ignore errors
+            } catch (e: Exception) {
+                Log.e("NetworkDiscovery", "UDP discovery error", e)
             } finally {
-                socket.close()
+                socket?.close()
             }
         }
     }
 
     private suspend fun scanIpRange(localIp: String) {
         val ipPrefix = getNetworkPrefix(localIp)
-        val ports = _uiState.value.scanPorts
-        val timeout = _uiState.value.scanTimeout
+        val ports = listOf(8080, 8081, 8082)
+        val timeout = 2000
 
         var scanned = 0
         val totalHosts = 254
@@ -388,6 +361,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                         if (!discoveredServersMap.containsKey(key)) {
                             val ping = calculatePing(testIp)
                             discoveredServersMap[key] = DiscoveredServer(
+                                id = UUID.randomUUID().toString(),
                                 ip = testIp,
                                 port = port,
                                 ping = ping,
@@ -428,20 +402,21 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
-    private fun detectDeviceType(name: String, version: String): DeviceType {
+    private fun detectDeviceType(name: String): DeviceType {
         val lowerName = name.lowercase()
         return when {
             lowerName.contains("raspberry") || lowerName.contains("pi") -> DeviceType.RASPBERRY_PI
             lowerName.contains("mac") || lowerName.contains("apple") -> DeviceType.MAC
             lowerName.contains("laptop") -> DeviceType.LAPTOP
             lowerName.contains("server") -> DeviceType.SERVER
-            version.contains("pc") -> DeviceType.PC
             else -> DeviceType.UNKNOWN
         }
     }
 
     private fun getBroadcastAddress(): InetAddress {
+        @Suppress("DEPRECATION")
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        @Suppress("DEPRECATION")
         val dhcpInfo = wifiManager.dhcpInfo
         val broadcast = (dhcpInfo.ipAddress.toInt() and dhcpInfo.netmask.toInt()) or dhcpInfo.netmask.toInt().inv()
         return InetAddress.getByAddress(intToByteArray(broadcast))
@@ -458,8 +433,12 @@ class NetworkDiscoveryViewModel @Inject constructor(
 
     fun getLocalIpAddress(): String? {
         try {
-            NetworkInterface.getNetworkInterfaces()?.toList()?.forEach { networkInterface ->
-                networkInterface.inetAddresses.toList().forEach { addr ->
+            val interfaces = NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val networkInterface = interfaces.nextElement()
+                val addresses = networkInterface.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val addr = addresses.nextElement()
                     if (!addr.isLoopbackAddress && addr is Inet4Address) {
                         return addr.hostAddress
                     }
@@ -512,43 +491,17 @@ class NetworkDiscoveryViewModel @Inject constructor(
         saveServersToPrefs(updated)
     }
 
-    fun updateServerNotes(serverId: String, notes: String) {
-        val updated = _uiState.value.savedServers.map {
-            if (it.id == serverId) it.copy(notes = notes) else it
-        }
-        _uiState.update { it.copy(savedServers = updated) }
-        saveServersToPrefs(updated)
-    }
-
-    fun updateDeviceType(serverId: String, deviceType: DeviceType) {
-        val updated = _uiState.value.savedServers.map {
-            if (it.id == serverId) it.copy(deviceType = deviceType) else it
-        }
-        _uiState.update { it.copy(savedServers = updated) }
-        saveServersToPrefs(updated)
-    }
-
     suspend fun connectToServer(server: DiscoveredServer) {
-        val startTime = System.currentTimeMillis()
         _uiState.update { it.copy(isConnecting = true, selectedServerId = server.id, connectionProgress = 0) }
 
         val success = connectionManager.connect(server.ip, server.port)
 
-        val duration = System.currentTimeMillis() - startTime
-        val history = ConnectionHistory(
-            serverId = server.id,
-            ip = server.ip,
-            port = server.port,
-            duration = duration,
-            success = success,
-            errorMessage = if (!success) "Connection timeout" else null
-        )
-        saveConnectionHistory(history)
-
         if (success) {
+            saveConnectionHistory(server.name, server.ip, server.port, "Connected")
             addServerToSaved(server)
             _uiState.update { it.copy(isConnecting = false, connectionProgress = 100) }
         } else {
+            saveConnectionHistory(server.name, server.ip, server.port, "Failed")
             _uiState.update {
                 it.copy(isConnecting = false, errorMessage = "Failed to connect to ${server.ip}:${server.port}")
             }
@@ -556,7 +509,12 @@ class NetworkDiscoveryViewModel @Inject constructor(
     }
 
     suspend fun connectManual(ip: String, port: Int) {
-        val server = DiscoveredServer(ip = ip, port = port, name = "Manual Entry")
+        val server = DiscoveredServer(
+            id = UUID.randomUUID().toString(),
+            ip = ip,
+            port = port,
+            name = "Manual Entry"
+        )
         connectToServer(server)
     }
 
@@ -569,7 +527,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
         return when (sortBy) {
             SortBy.IP -> servers.sortedBy { it.ip }
             SortBy.NAME -> servers.sortedBy { it.name }
-            SortBy.PING -> servers.sortedBy { if (it.ping == -1) Int.MAX_VALUE else it.ping }
+            SortBy.PING -> servers.sortedBy { if (it.ping < 0) Int.MAX_VALUE else it.ping }
             SortBy.PORT -> servers.sortedBy { it.port }
             SortBy.SIGNAL -> servers.sortedByDescending { it.signalStrength }
             SortBy.LAST_SEEN -> servers.sortedByDescending { it.lastSeen }
@@ -591,6 +549,11 @@ class NetworkDiscoveryViewModel @Inject constructor(
 
     fun clearErrorMessage() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    fun clearConnectionHistory() {
+        _uiState.update { it.copy(connectionHistory = emptyList()) }
+        prefs.putString(CONNECTION_HISTORY_KEY, "")
     }
 
     fun setActiveTab(tab: DiscoveryTab) {

@@ -5,32 +5,39 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
 /**
- * Voice command detected.
+ * Voice command
  */
 @Parcelize
 data class VoiceCommand(
-    val text: String,
-    val action: String,
-    val confidence: Float,
-    val timestamp: Long = System.currentTimeMillis(),
-    val isCustom: Boolean = false
-) : Parcelable
-
-/**
- * Custom voice command defined by user.
- */
-@Parcelize
-data class CustomVoiceCommand(
-    val id: String,
-    val phrase: String,
-    val action: String,
+    val id: String = "",
+    val text: String = "",
+    val action: String = "",
+    val confidence: Float = 0f,
     val isEnabled: Boolean = true,
+    val isCustom: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 ) : Parcelable
 
 /**
- * Voice recognition status.
+ * Voice command history
  */
-enum class VoiceRecognitionStatus {
-    IDLE, LISTENING, PROCESSING, EXECUTING, ERROR
-}
+@Parcelize
+data class VoiceCommandHistory(
+    val text: String = "",
+    val action: String = "",
+    val confidence: Float = 0f,
+    val success: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
+) : Parcelable
+
+/**
+ * Voice command configuration
+ */
+data class VoiceCommandConfig(
+    val wakeWord: String = "hey air mouse",
+    val wakeWordConfidence: Float = 0.7f,
+    val isEnabled: Boolean = true,
+    val hapticFeedback: Boolean = true,
+    val silenceTimeoutMs: Long = 2000L,
+    val wakeWordTimeoutMs: Long = 10000L
+)

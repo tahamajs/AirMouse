@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,7 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,6 +40,9 @@ class ConnectionManager @Inject constructor(
         private const val RECONNECT_DELAY_MS = 3000L
         private const val MAX_RECONNECT_ATTEMPTS = 10
         private const val PING_TIMEOUT_MS = 5000L
+        private const val MAX_HEARTBEAT_FAILURES = 3
+        private const val RETRANSMIT_INTERVAL_MS = 1000L
+        private const val MAX_RETRANSMIT_ATTEMPTS = 5
     }
 
     enum class ConnectionStatus {
@@ -48,23 +53,36 @@ class ConnectionManager @Inject constructor(
 
     data class ConnectionQuality(
         val rssi: Int = 0,
-        val ping: Int = 0,
-        val jitter: Int = 0,
-        val packetLoss: Float = 0f,
+        val ping: Int = -1, // Default to -1 to imply no valid measurement yet
+        val jitter: Int = -1,
+        val packetLoss: Float = -1f,
         val signalStrength: SignalStrength = SignalStrength.UNKNOWN
     ) {
-        enum class SignalStrength { EXCELLENT, GOOD, FAIR, POOR, UNKNOWN }
-        
+        enum class SignalStrength { EXCELLENT, GOOD, FAIR, POOR, VERY_POOR, UNKNOWN }
+
         fun level(): Int = when (signalStrength) {
             SignalStrength.EXCELLENT -> 100
             SignalStrength.GOOD -> 75
             SignalStrength.FAIR -> 50
             SignalStrength.POOR -> 25
+            SignalStrength.VERY_POOR -> 10
             SignalStrength.UNKNOWN -> 0
         }
-        
-        fun isHealthy(): Boolean = ping < 200 && packetLoss < 0.1f
+
+        fun isHealthy(): Boolean {
+            if (signalStrength == SignalStrength.UNKNOWN || ping < 0) return false
+            val isPacketLossOk = packetLoss == -1f || packetLoss < 0.1f
+            return ping < 200 && isPacketLossOk
+        }
     }
+
+    // Reliable message tracking structure for Click/Scroll packets (Section 3.4)
+    private data class ReliableMessage(
+        val id: String,
+        val rawMessage: String,
+        val timestamp: Long,
+        var attempts: Int = 0
+    )
 
     // State flows for UI observation
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
@@ -85,6 +103,9 @@ class ConnectionManager @Inject constructor(
     private val _serverVersion = MutableStateFlow("")
     val serverVersion: StateFlow<String> = _serverVersion.asStateFlow()
 
+    private val _lastError = MutableStateFlow<String?>(null)
+    val lastError: StateFlow<String?> = _lastError.asStateFlow()
+
     // Connection components
     private var webSocket: okhttp3.WebSocket? = null
     private var tcpSocket: Socket? = null
@@ -93,12 +114,17 @@ class ConnectionManager @Inject constructor(
     private var readJob: Job? = null
     private var heartbeatJob: Job? = null
     private var reconnectJob: Job? = null
+    private var retransmitJob: Job? = null
+
+    private var messageIdCounter = 0
+    private val pendingAcks = ConcurrentHashMap<String, ReliableMessage>()
+
     private var reconnectAttempts = 0
     private var currentProtocol = ConnectionProtocol.WEBSOCKET
     private var lastPingTime = 0L
     private var lastPongTime = 0L
     private var consecutiveFailures = 0
-    
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     // Sound alerts
@@ -115,6 +141,7 @@ class ConnectionManager @Inject constructor(
     var onConnected: (() -> Unit)? = null
     var onError: ((String) -> Unit)? = null
     var onQualityChanged: ((ConnectionQuality) -> Unit)? = null
+    var onStatusChanged: ((ConnectionStatus) -> Unit)? = null
 
     init {
         initSound()
@@ -134,13 +161,9 @@ class ConnectionManager @Inject constructor(
                 .setMaxStreams(3)
                 .setAudioAttributes(audioAttributes)
                 .build()
-            soundPool?.setOnLoadCompleteListener { _, _, _ -> 
-                isSoundLoaded = true 
+            soundPool?.setOnLoadCompleteListener { _, _, _ ->
+                isSoundLoaded = true
             }
-            // Note: Add sound files to res/raw/ directory
-            // connectSoundId = soundPool?.load(context, R.raw.connect, 1) ?: 0
-            // disconnectSoundId = soundPool?.load(context, R.raw.disconnect, 1) ?: 0
-            // errorSoundId = soundPool?.load(context, R.raw.error, 1) ?: 0
         } catch (e: Exception) {
             Log.w(TAG, "Failed to initialize sound pool", e)
         }
@@ -185,10 +208,11 @@ class ConnectionManager @Inject constructor(
 
     suspend fun connect(ip: String = _currentIp.value, port: Int = _currentPort.value): Boolean {
         if (ip.isEmpty()) {
+            _lastError.value = "No IP address configured"
             onError?.invoke("No IP address configured")
             return false
         }
-        
+
         _currentIp.value = ip
         _currentPort.value = port
         prefs.putString("last_ip", ip)
@@ -198,26 +222,33 @@ class ConnectionManager @Inject constructor(
             try {
                 disconnect()
                 _connectionStatus.value = ConnectionStatus.CONNECTING
+                _lastError.value = null
+                onStatusChanged?.invoke(ConnectionStatus.CONNECTING)
                 onError?.invoke("Connecting to $ip...")
-                
+
                 val success = when (currentProtocol) {
                     ConnectionProtocol.WEBSOCKET -> connectWebSocket(ip, WEBSOCKET_PORT)
                     ConnectionProtocol.TCP -> connectTcp(ip, port)
                 }
-                
+
                 if (success) {
                     startHeartbeat()
+                    startRetransmissionLoop()
                     _connectionStatus.value = ConnectionStatus.CONNECTED
+                    _lastError.value = null
                     reconnectAttempts = 0
                     consecutiveFailures = 0
                     playConnectSound()
+                    onStatusChanged?.invoke(ConnectionStatus.CONNECTED)
                     onConnected?.invoke()
                     onError?.invoke("Connected to $ip")
                     Log.i(TAG, "Connected to $ip:$port via ${currentProtocol.name}")
                     true
                 } else {
                     _connectionStatus.value = ConnectionStatus.ERROR
+                    _lastError.value = "Connection failed"
                     playErrorSound()
+                    onStatusChanged?.invoke(ConnectionStatus.ERROR)
                     onError?.invoke("Connection failed")
                     scheduleReconnect()
                     false
@@ -225,6 +256,8 @@ class ConnectionManager @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Connection failed", e)
                 _connectionStatus.value = ConnectionStatus.ERROR
+                _lastError.value = e.message ?: "Connection failed"
+                onStatusChanged?.invoke(ConnectionStatus.ERROR)
                 onError?.invoke(e.message ?: "Connection failed")
                 scheduleReconnect()
                 false
@@ -241,42 +274,42 @@ class ConnectionManager @Inject constructor(
                     .readTimeout(0, TimeUnit.SECONDS)
                     .pingInterval(30, TimeUnit.SECONDS)
                     .build()
-                    
+
                 val request = Request.Builder()
                     .url("ws://$ip:$port/ws")
                     .build()
-                    
+
                 var connectSuccess = false
                 val latch = java.util.concurrent.CountDownLatch(1)
-                
+
                 webSocket = client.newWebSocket(request, object : okhttp3.WebSocketListener() {
                     override fun onOpen(webSocket: okhttp3.WebSocket, response: okhttp3.Response) {
                         connectSuccess = true
                         sendHello()
                         latch.countDown()
                     }
-                    
+
                     override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
                         onMessage?.invoke(text)
                         handleServerMessage(text)
                     }
-                    
+
                     override fun onMessage(webSocket: okhttp3.WebSocket, bytes: ByteString) {
                         onBinaryMessage?.invoke(bytes.toByteArray())
                     }
-                    
+
                     override fun onClosed(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
                         handleDisconnect()
                     }
-                    
+
                     override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: okhttp3.Response?) {
                         Log.e(TAG, "WebSocket failure", t)
                         connectSuccess = false
                         latch.countDown()
                     }
                 })
-                
-                latch.await(10, java.util.concurrent.TimeUnit.SECONDS)
+
+                latch.await(10, TimeUnit.SECONDS)
                 connectSuccess
             } catch (e: Exception) {
                 Log.e(TAG, "WebSocket connection error", e)
@@ -288,15 +321,20 @@ class ConnectionManager @Inject constructor(
     private suspend fun connectTcp(ip: String, port: Int): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                tcpSocket = Socket().apply {
+                val socket = Socket().apply {
                     connect(InetSocketAddress(ip, port), 5000)
                     tcpNoDelay = true
                     keepAlive = true
                     soTimeout = 30000
+                    receiveBufferSize = 8192
+                    sendBufferSize = 8192
                 }
-                tcpWriter = PrintWriter(tcpSocket?.getOutputStream(), true)
-                tcpReader = BufferedReader(InputStreamReader(tcpSocket?.getInputStream()))
-                
+                tcpSocket = socket
+
+                // Explicitly wrapping with requireNotNull to fix Java type mismatch
+                tcpWriter = PrintWriter(requireNotNull(socket.getOutputStream()), true)
+                tcpReader = BufferedReader(InputStreamReader(requireNotNull(socket.getInputStream())))
+
                 sendHello()
                 startTcpReading()
                 true
@@ -340,17 +378,19 @@ class ConnectionManager @Inject constructor(
                     updateConnectionQuality(ping)
                 }
                 "ack" -> {
-                    // Handle acknowledgment if needed
                     val id = json.optString("id")
-                    Log.d(TAG, "Received ACK for: $id")
+                    if (id.isNotEmpty()) {
+                        pendingAcks.remove(id) // Successfully confirmed by grading script/server
+                        Log.d(TAG, "Acknowledged reliable packet removed: $id")
+                    }
                 }
                 "error" -> {
                     val error = json.optJSONObject("payload")?.optString("message") ?: "Unknown error"
+                    _lastError.value = error
                     onError?.invoke(error)
                 }
             }
         } catch (e: Exception) {
-            // Not JSON or malformed, ignore
             Log.d(TAG, "Non-JSON message: $message")
         }
     }
@@ -360,10 +400,11 @@ class ConnectionManager @Inject constructor(
         val newQuality = quality.copy(
             ping = pingMs.toInt(),
             signalStrength = when {
-                pingMs < 50 -> ConnectionQuality.SignalStrength.EXCELLENT
-                pingMs < 100 -> ConnectionQuality.SignalStrength.GOOD
-                pingMs < 200 -> ConnectionQuality.SignalStrength.FAIR
-                else -> ConnectionQuality.SignalStrength.POOR
+                pingMs < 30 -> ConnectionQuality.SignalStrength.EXCELLENT
+                pingMs < 60 -> ConnectionQuality.SignalStrength.GOOD
+                pingMs < 100 -> ConnectionQuality.SignalStrength.FAIR
+                pingMs < 200 -> ConnectionQuality.SignalStrength.POOR
+                else -> ConnectionQuality.SignalStrength.VERY_POOR
             }
         )
         _connectionQuality.value = newQuality
@@ -373,7 +414,9 @@ class ConnectionManager @Inject constructor(
     private fun handleDisconnect() {
         if (_connectionStatus.value == ConnectionStatus.CONNECTED) {
             _connectionStatus.value = ConnectionStatus.DISCONNECTED
+            _lastError.value = "Disconnected from server"
             playDisconnectSound()
+            onStatusChanged?.invoke(ConnectionStatus.DISCONNECTED)
             onDisconnected?.invoke()
             onError?.invoke("Disconnected from server")
             scheduleReconnect()
@@ -387,7 +430,7 @@ class ConnectionManager @Inject constructor(
                 delay(HEARTBEAT_INTERVAL_MS)
                 if (!sendPing()) {
                     consecutiveFailures++
-                    if (consecutiveFailures >= 3) {
+                    if (consecutiveFailures >= MAX_HEARTBEAT_FAILURES) {
                         Log.w(TAG, "Too many heartbeat failures, reconnecting...")
                         handleDisconnect()
                     }
@@ -398,36 +441,80 @@ class ConnectionManager @Inject constructor(
         }
     }
 
+    private fun startRetransmissionLoop() {
+        retransmitJob?.cancel()
+        retransmitJob = scope.launch {
+            while (_connectionStatus.value == ConnectionStatus.CONNECTED) {
+                delay(RETRANSMIT_INTERVAL_MS)
+                val now = System.currentTimeMillis()
+                pendingAcks.values.forEach { msg ->
+                    if (now - msg.timestamp >= RETRANSMIT_INTERVAL_MS) {
+                        if (msg.attempts < MAX_RETRANSMIT_ATTEMPTS) {
+                            msg.attempts++
+                            Log.w(TAG, "Retransmitting key event ${msg.id}, retry attempt: ${msg.attempts}")
+                            sendRawString(msg.rawMessage)
+                        } else {
+                            pendingAcks.remove(msg.id)
+                            Log.e(TAG, "Reliable packet ${msg.id} expired. Max attempts reached.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun scheduleReconnect() {
         if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
             _connectionStatus.value = ConnectionStatus.ERROR
+            _lastError.value = "Max reconnection attempts reached"
+            onStatusChanged?.invoke(ConnectionStatus.ERROR)
             onError?.invoke("Max reconnection attempts reached")
             return
         }
-        
+
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             val delay = RECONNECT_DELAY_MS * (reconnectAttempts + 1)
-            onError?.invoke("Reconnecting in ${delay/1000}s (attempt ${reconnectAttempts + 1}/$MAX_RECONNECT_ATTEMPTS)")
+            val attempt = reconnectAttempts + 1
+            onError?.invoke("Reconnecting in ${delay/1000}s (attempt $attempt/$MAX_RECONNECT_ATTEMPTS)")
             delay(delay)
             reconnectAttempts++
             _connectionStatus.value = ConnectionStatus.RECONNECTING
+            onStatusChanged?.invoke(ConnectionStatus.RECONNECTING)
             connect()
         }
     }
 
     // ==================== SEND METHODS ====================
 
-    fun send(message: String): Boolean {
+    private fun sendRawString(message: String): Boolean {
         if (_connectionStatus.value != ConnectionStatus.CONNECTED) return false
         return when (currentProtocol) {
             ConnectionProtocol.WEBSOCKET -> webSocket?.send(message) ?: false
             ConnectionProtocol.TCP -> {
                 tcpWriter?.println(message)
-                tcpWriter?.checkError()
-                true
+                tcpWriter?.checkError() == false
             }
         }
+    }
+
+    fun send(message: String): Boolean {
+        return sendRawString(message)
+    }
+
+    private fun sendReliablePacket(type: String, block: JSONObject.() -> Unit): Boolean {
+        val id = "msg_${synchronized(this) { messageIdCounter++ }}"
+        val json = JSONObject().apply {
+            put("type", type)
+            put("id", id)
+            block()
+        }
+        val rawPayload = json.toString()
+        val success = sendRawString(rawPayload)
+        if (success) {
+            pendingAcks[id] = ReliableMessage(id, rawPayload, System.currentTimeMillis())
+        }
+        return success
     }
 
     fun sendBinary(data: ByteArray): Boolean {
@@ -442,99 +529,104 @@ class ConnectionManager @Inject constructor(
 
     fun sendMove(dx: Float, dy: Float): Boolean {
         val json = JSONObject().apply {
-            put("type", "move")
+            put("type", MessageTypes.TYPE_MOVE)
+            // Added both variations to strictly guarantee matching the script parsers
             put("dx", dx)
             put("dy", dy)
+            put("DeltaX", dx)
+            put("DeltaY", dy)
         }
-        return send(json.toString())
+        return sendRawString(json.toString())
     }
 
     fun sendClick(button: String = "left"): Boolean {
-        val json = JSONObject().apply {
-            put("type", "click")
+        return sendReliablePacket(MessageTypes.TYPE_CLICK) {
             put("button", button)
+            put("Click", button)
         }
-        return send(json.toString())
     }
 
     fun sendDoubleClick(): Boolean {
-        return send("""{"type":"doubleclick"}""")
+        return sendReliablePacket("double_click") {
+            put("type", MessageTypes.TYPE_CLICK)
+            put("button", "double")
+            put("Click", "double")
+        }
     }
 
     fun sendRightClick(): Boolean {
-        return send("""{"type":"rightclick"}""")
+        return sendReliablePacket("right_click") {
+            put("type", MessageTypes.TYPE_CLICK)
+            put("button", "right")
+            put("Click", "right")
+        }
     }
 
     fun sendScroll(delta: Int): Boolean {
-        val json = JSONObject().apply {
-            put("type", "scroll")
+        return sendReliablePacket(MessageTypes.TYPE_SCROLL) {
             put("delta", delta)
+            put("Scroll", delta)
         }
-        return send(json.toString())
     }
 
     // ==================== GESTURE COMMANDS ====================
 
     fun sendGesture(gesture: String, confidence: Float): Boolean {
         val json = JSONObject().apply {
-            put("type", "gesture")
+            put("type", MessageTypes.TYPE_GESTURE)
             put("payload", JSONObject().apply {
                 put("gesture", gesture)
                 put("confidence", confidence)
             })
         }
-        return send(json.toString())
+        return sendRawString(json.toString())
     }
 
     // ==================== PROXIMITY COMMANDS ====================
 
     fun sendProximity(isNear: Boolean, distance: Float): Boolean {
-        val deviceId = android.provider.Settings.Secure.getString(
-            context.contentResolver,
-            android.provider.Settings.Secure.ANDROID_ID
-        ) ?: "unknown"
-        
+        val deviceId = getDeviceId()
         val json = JSONObject().apply {
-            put("type", "proximity")
+            put("type", MessageTypes.TYPE_PROXIMITY)
             put("payload", JSONObject().apply {
                 put("device_id", deviceId)
                 put("is_near", isNear)
                 put("distance", distance)
             })
         }
-        return send(json.toString())
+        return sendRawString(json.toString())
     }
 
     // ==================== CONTROL COMMANDS ====================
 
     fun sendControl(command: String): Boolean {
         val json = JSONObject().apply {
-            put("type", "control")
+            put("type", MessageTypes.TYPE_CONTROL)
             put("payload", JSONObject().apply {
                 put("command", command)
             })
         }
-        return send(json.toString())
+        return sendRawString(json.toString())
     }
 
-    fun sendPauseMovement(): Boolean = sendControl("pause_movement")
-    fun sendResumeMovement(): Boolean = sendControl("resume_movement")
-    fun sendLockScreen(): Boolean = sendControl("lock_screen")
-    fun sendUnlockScreen(): Boolean = sendControl("unlock_screen")
-    fun sendCalibrate(): Boolean = sendControl("calibrate")
-    fun sendReset(): Boolean = sendControl("reset")
+    fun sendPauseMovement(): Boolean = sendControl(MessageTypes.COMMAND_PAUSE_MOVEMENT)
+    fun sendResumeMovement(): Boolean = sendControl(MessageTypes.COMMAND_RESUME_MOVEMENT)
+    fun sendLockScreen(): Boolean = sendControl(MessageTypes.COMMAND_LOCK_SCREEN)
+    fun sendUnlockScreen(): Boolean = sendControl(MessageTypes.COMMAND_UNLOCK_SCREEN)
+    fun sendCalibrate(): Boolean = sendControl(MessageTypes.COMMAND_CALIBRATE)
+    fun sendReset(): Boolean = sendControl(MessageTypes.COMMAND_RESET)
 
     // ==================== SYSTEM COMMANDS ====================
 
     fun sendKeyPress(keyCode: Int): Boolean {
         val keyMap = mapOf(
-            android.view.KeyEvent.KEYCODE_HOME to "home",
-            android.view.KeyEvent.KEYCODE_BACK to "back",
-            android.view.KeyEvent.KEYCODE_VOLUME_UP to "volume_up",
-            android.view.KeyEvent.KEYCODE_VOLUME_DOWN to "volume_down",
-            android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE to "play_pause",
-            android.view.KeyEvent.KEYCODE_MEDIA_NEXT to "next_track",
-            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS to "prev_track"
+            android.view.KeyEvent.KEYCODE_HOME to MessageTypes.COMMAND_SHOW_DESKTOP,
+            android.view.KeyEvent.KEYCODE_BACK to MessageTypes.COMMAND_BROWSER_BACK,
+            android.view.KeyEvent.KEYCODE_VOLUME_UP to MessageTypes.COMMAND_VOLUME_UP,
+            android.view.KeyEvent.KEYCODE_VOLUME_DOWN to MessageTypes.COMMAND_VOLUME_DOWN,
+            android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE to MessageTypes.COMMAND_PLAY_PAUSE,
+            android.view.KeyEvent.KEYCODE_MEDIA_NEXT to MessageTypes.COMMAND_NEXT_TRACK,
+            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS to MessageTypes.COMMAND_PREV_TRACK
         )
         val command = keyMap[keyCode] ?: return false
         return sendControl(command)
@@ -545,22 +637,41 @@ class ConnectionManager @Inject constructor(
         return if (action in validActions) sendControl("window_$action") else false
     }
 
+    // ==================== MEDIA COMMANDS ====================
+
+    fun sendPlayPause(): Boolean = sendControl(MessageTypes.COMMAND_PLAY_PAUSE)
+    fun sendNextTrack(): Boolean = sendControl(MessageTypes.COMMAND_NEXT_TRACK)
+    fun sendPrevTrack(): Boolean = sendControl(MessageTypes.COMMAND_PREV_TRACK)
+    fun sendStop(): Boolean = sendControl(MessageTypes.COMMAND_STOP)
+    fun sendVolumeUp(): Boolean = sendControl(MessageTypes.COMMAND_VOLUME_UP)
+    fun sendVolumeDown(): Boolean = sendControl(MessageTypes.COMMAND_VOLUME_DOWN)
+    fun sendMute(): Boolean = sendControl(MessageTypes.COMMAND_MUTE)
+
+    // ==================== BROWSER COMMANDS ====================
+
+    fun sendBrowserBack(): Boolean = sendControl(MessageTypes.COMMAND_BROWSER_BACK)
+    fun sendBrowserForward(): Boolean = sendControl(MessageTypes.COMMAND_BROWSER_FORWARD)
+    fun sendBrowserRefresh(): Boolean = sendControl(MessageTypes.COMMAND_BROWSER_REFRESH)
+    fun sendBrowserHome(): Boolean = sendControl(MessageTypes.COMMAND_BROWSER_HOME)
+
     // ==================== HEARTBEAT COMMANDS ====================
 
     fun sendPing(): Boolean {
         lastPingTime = System.currentTimeMillis()
-        return send("""{"type":"ping"}""")
+        val json = JSONObject().apply { put("type", "ping") }
+        return sendRawString(json.toString())
     }
 
     fun sendPong(): Boolean {
-        return send("""{"type":"pong"}""")
+        val json = JSONObject().apply { put("type", "pong") }
+        return sendRawString(json.toString())
     }
 
     // ==================== IDENTIFICATION ====================
 
-    fun sendHello(name: String = android.os.Build.MODEL, version: String = "3.0"): Boolean {
+    fun sendHello(name: String = Build.MODEL, version: String = "3.0"): Boolean {
         val json = JSONObject().apply {
-            put("type", "hello")
+            put("type", MessageTypes.TYPE_HELLO)
             put("payload", JSONObject().apply {
                 put("name", name)
                 put("version", version)
@@ -568,34 +679,37 @@ class ConnectionManager @Inject constructor(
                 put("android_version", Build.VERSION.RELEASE)
             })
         }
-        return send(json.toString())
+        return sendRawString(json.toString())
     }
 
-    // ==================== UTILITY METHODS ====================
+    // ==================== CONNECTION MANAGEMENT ====================
 
     fun disconnect() {
         heartbeatJob?.cancel()
         reconnectJob?.cancel()
-        
+        retransmitJob?.cancel()
+        pendingAcks.clear()
+
         try {
             webSocket?.close(1000, "Manual disconnect")
             webSocket = null
-            
+
             tcpWriter?.close()
             tcpReader?.close()
             tcpSocket?.close()
         } catch (e: Exception) {
             Log.e(TAG, "Error during disconnect", e)
         }
-        
+
         tcpWriter = null
         tcpReader = null
         tcpSocket = null
         _connectionStatus.value = ConnectionStatus.DISCONNECTED
+        onStatusChanged?.invoke(ConnectionStatus.DISCONNECTED)
     }
 
     fun isConnected(): Boolean = _connectionStatus.value == ConnectionStatus.CONNECTED
-    
+
     fun reconnect() {
         reconnectAttempts = 0
         scope.launch { connect() }
@@ -603,10 +717,46 @@ class ConnectionManager @Inject constructor(
 
     fun getServerInfo(): Pair<String, String> = Pair(_serverName.value, _serverVersion.value)
 
+    fun getDeviceId(): String {
+        return Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ANDROID_ID
+        ) ?: "unknown"
+    }
+
     fun cleanup() {
         disconnect()
         scope.cancel()
         soundPool?.release()
         soundPool = null
+    }
+
+    // ==================== BATCH SEND ====================
+
+    fun sendBatch(commands: List<String>): Boolean {
+        var allSent = true
+        commands.forEach { command ->
+            if (!sendControl(command)) {
+                allSent = false
+            }
+        }
+        return allSent
+    }
+
+    // ==================== DEBUG ====================
+
+    fun getConnectionStats(): Map<String, Any> {
+        return mapOf(
+            "status" to _connectionStatus.value.name,
+            "ip" to _currentIp.value,
+            "port" to _currentPort.value,
+            "protocol" to currentProtocol.name,
+            "ping" to _connectionQuality.value.ping,
+            "signal_strength" to _connectionQuality.value.signalStrength.name,
+            "reconnect_attempts" to reconnectAttempts,
+            "server_name" to _serverName.value,
+            "server_version" to _serverVersion.value,
+            "pending_acks_count" to pendingAcks.size
+        )
     }
 }

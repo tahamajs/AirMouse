@@ -59,7 +59,7 @@ fun ControlDashboard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Stats Grid
+            // Stats Grid - Passing Modifier.weight(1f) from parent RowScope
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -68,13 +68,15 @@ fun ControlDashboard(
                     title = "Connection",
                     value = connectionStatus,
                     icon = Icons.Default.Wifi,
-                    color = if (connectionStatus == "Connected") Color(0xFF4CAF50) else Color(0xFFF44336)
+                    color = if (connectionStatus == "Connected") Color(0xFF4CAF50) else Color(0xFFF44336),
+                    modifier = Modifier.weight(1f)
                 )
                 DashboardStat(
                     title = "Profile",
                     value = activeProfile,
                     icon = Icons.Default.Person,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
                 )
                 DashboardStat(
                     title = "Battery",
@@ -84,7 +86,8 @@ fun ControlDashboard(
                         batteryLevel > 50 -> Color(0xFF4CAF50)
                         batteryLevel > 20 -> Color(0xFFFF9800)
                         else -> Color(0xFFF44336)
-                    }
+                    },
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -134,27 +137,33 @@ fun ControlDashboard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Quick Action Buttons
+            // Quick Action Buttons - Passing Modifier.weight(1f) from parent RowScope
             Text("Quick Actions", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                QuickActionButton("Calibrate", Icons.Default.Tune) { onActionClick("calibrate") }
-                QuickActionButton("Settings", Icons.Default.Settings) { onActionClick("settings") }
-                QuickActionButton("Statistics", Icons.Default.BarChart) { onActionClick("stats") }
-                QuickActionButton("Help", Icons.AutoMirrored.Filled.Help) { onActionClick("help") }
+                QuickActionButton("Calibrate", Icons.Default.Tune, modifier = Modifier.weight(1f)) { onActionClick("calibrate") }
+                QuickActionButton("Settings", Icons.Default.Settings, modifier = Modifier.weight(1f)) { onActionClick("settings") }
+                QuickActionButton("Statistics", Icons.Default.BarChart, modifier = Modifier.weight(1f)) { onActionClick("stats") }
+                QuickActionButton("Help", Icons.AutoMirrored.Filled.Help, modifier = Modifier.weight(1f)) { onActionClick("help") }
             }
         }
     }
 }
 
 @Composable
-fun DashboardStat(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
+fun DashboardStat(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.weight(1f)
+        modifier = modifier
     ) {
         Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(32.dp))
         Spacer(modifier = Modifier.height(4.dp))
@@ -164,8 +173,13 @@ fun DashboardStat(title: String, value: String, icon: androidx.compose.ui.graphi
 }
 
 @Composable
-fun QuickActionButton(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = Modifier.weight(1f)) {
+fun QuickActionButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    OutlinedButton(onClick = onClick, modifier = modifier) {
         Icon(icon, contentDescription = label, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(4.dp))
         Text(label, fontSize = 11.sp)
@@ -259,7 +273,6 @@ fun GestureTrainingCard(gesture: GestureTrainingItem, onTrain: (String) -> Unit)
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ✅ FIXED: LinearProgressIndicator with proper progress
             LinearProgressIndicator(
                 progress = { gesture.progress / 100f },
                 modifier = Modifier.fillMaxWidth(),
@@ -855,63 +868,40 @@ fun CommunityPostCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(post.author.take(1), fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(post.author, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Text(post.timestamp, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Icon(Icons.Default.MoreVert, contentDescription = "Menu", modifier = Modifier.size(16.dp))
+                Text(post.author, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(post.timestamp, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(post.title, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(post.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(4.dp))
             Text(post.content, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            Spacer(modifier = Modifier.height(12.dp))
-
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // ✅ FIXED: Using Icons.Outlined.Favorite and Icons.Filled.Favorite correctly
-                SocialButton(
-                    icon = if (post.isLiked) Icons.Filled.Favorite else Icons.Outlined.Favorite,
-                    label = "${post.likes}",
-                    color = if (post.isLiked) Color(0xFFF44336) else MaterialTheme.colorScheme.onSurfaceVariant
-                ) { onLike(post.id) }
-
-                SocialButton(Icons.Outlined.ChatBubbleOutline, "${post.comments}", MaterialTheme.colorScheme.onSurfaceVariant) {
-                    onComment(post.id)
+                TextButton(onClick = { onLike(post.id) }) {
+                    Icon(
+                        imageVector = if (post.isLiked) Icons.Filled.Favorite else Icons.Outlined.Favorite,
+                        contentDescription = "Like",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(post.likes.toString(), fontSize = 11.sp)
                 }
-
-                SocialButton(Icons.Outlined.Share, "Share", MaterialTheme.colorScheme.onSurfaceVariant) {
-                    onShare(post.id)
+                TextButton(onClick = { onComment(post.id) }) {
+                    Icon(
+                        imageVector = Icons.Outlined.ChatBubbleOutline,
+                        contentDescription = "Comment",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(post.comments.toString(), fontSize = 11.sp)
+                }
+                IconButton(onClick = { onShare(post.id) }) {
+                    Icon(Icons.Outlined.Share, contentDescription = "Share", modifier = Modifier.size(16.dp))
                 }
             }
         }
-    }
-}
-
-@Composable
-fun SocialButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable { onClick() }
-    ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(16.dp), tint = color)
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(label, fontSize = 11.sp, color = color)
     }
 }
