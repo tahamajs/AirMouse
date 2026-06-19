@@ -359,7 +359,7 @@ class PresentationModeService(
             recordAction("action", mapOf("action" to action.name))
         } catch (e: Exception) {
             onError?.invoke("Failed to perform action: ${e.message}")
-            android.util.e(TAG, "Action failed: ${e.message}", e)
+            android.util.Log.e(TAG, "Action failed: ${e.message}", e)
         }
     }
 

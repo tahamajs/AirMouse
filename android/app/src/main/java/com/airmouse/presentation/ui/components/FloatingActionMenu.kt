@@ -14,7 +14,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +45,7 @@ fun FloatingActionMenu(
                         expanded = false
                     },
                     modifier = Modifier
-                        .padding(bottom = (items.size - index) * 70.dp)
+                        .padding(bottom = ((items.size - index) * 70).dp)
                         .size(48.dp),
                     containerColor = item.color,
                     shape = CircleShape

@@ -1,6 +1,7 @@
 package com.airmouse.presentation.ui.components
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,7 +74,7 @@ fun ConnectionStatusBadge(
                 ) {
                     // Animated status icon
                     Box {
-                        AnimatedConnectionStatus(
+                        com.airmouse.ui.components.AnimatedConnectionStatus(
                             isConnected = status == ConnectionManager.ConnectionStatus.CONNECTED,
                             signalStrength = quality.level(),
                             ping = quality.ping,
