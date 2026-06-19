@@ -3,8 +3,10 @@ package com.airmouse.presentation.ui.calibration
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
+import com.airmouse.domain.model.SensorCalibrationData
 import com.airmouse.features.CalibrationFeature
 import com.airmouse.features.SensorFeature
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,15 +58,18 @@ class CalibrationViewModel @Inject constructor(
                             CalibrationStatus.COMPLETED -> "Calibration complete!"
                             CalibrationStatus.FAILED -> "Calibration failed"
                             CalibrationStatus.SKIPPED -> "Calibration skipped"
+                            CalibrationStatus.IDLE -> "Ready to calibrate"
                         },
                         isComplete = state.status == CalibrationStatus.COMPLETED,
                         isCollecting = state.status == CalibrationStatus.IN_PROGRESS,
                         calibrationQuality = state.quality.name,
                         quality = state.quality.name,
                         calibrationData = CalibrationData(
-                            gyroBias = Triple(0f, 0f, 0f),
-                            accelBias = Triple(0f, 0f, 0f),
-                            magBias = Triple(0f, 0f, 0f)
+                            gyroBias = SensorCalibrationData(),
+                            accelOffset = SensorCalibrationData(),
+                            magOffset = SensorCalibrationData(),
+                            isCalibrated = state.isCalibrated,
+                            quality = state.quality
                         ),
                         errorMessage = state.error,
                         currentStep = when (state.status) {
@@ -72,6 +77,7 @@ class CalibrationViewModel @Inject constructor(
                             CalibrationStatus.MAG_COMPLETE -> 3
                             CalibrationStatus.ACCEL_COMPLETE -> 4
                             CalibrationStatus.COMPLETED -> 4
+                            CalibrationStatus.IDLE -> 1
                             else -> 1
                         }
                     )
