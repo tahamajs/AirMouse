@@ -8,6 +8,7 @@ import com.airmouse.data.datasource.local.AppDatabase
 import com.airmouse.data.repository.*
 import com.airmouse.domain.repository.*
 import com.airmouse.network.ConnectionManager
+import com.airmouse.network.UdpDiscovery
 import com.airmouse.utils.PreferencesManager
 import dagger.Binds
 import dagger.Module
@@ -96,9 +97,10 @@ object RepositoryProvidersModule {
     @Singleton
     fun provideConnectionRepositoryImpl(
         connectionManager: ConnectionManager,
+        udpDiscovery: UdpDiscovery,
         preferencesManager: PreferencesManager
     ): ConnectionRepositoryImpl {
-        return ConnectionRepositoryImpl(connectionManager, preferencesManager)
+        return ConnectionRepositoryImpl(connectionManager, udpDiscovery, preferencesManager)
     }
 
     @Provides
