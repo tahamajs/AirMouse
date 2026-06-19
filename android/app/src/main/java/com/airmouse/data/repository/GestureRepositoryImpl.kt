@@ -264,13 +264,10 @@ class GestureRepositoryImpl @Inject constructor(
             EnhancedGestureDetector.Gesture.SWIPE_RIGHT -> GestureType.SWIPE_RIGHT
             EnhancedGestureDetector.Gesture.SWIPE_UP -> GestureType.SWIPE_UP
             EnhancedGestureDetector.Gesture.SWIPE_DOWN -> GestureType.SWIPE_DOWN
-            EnhancedGestureDetector.Gesture.CIRCLE_CW -> GestureType.CIRCLE_CW
-            EnhancedGestureDetector.Gesture.CIRCLE_CCW -> GestureType.CIRCLE_CCW
-            EnhancedGestureDetector.Gesture.THUMBS_UP -> GestureType.THUMBS_UP
-            EnhancedGestureDetector.Gesture.THUMBS_DOWN -> GestureType.THUMBS_DOWN
-            EnhancedGestureDetector.Gesture.ZOOM_IN -> GestureType.ZOOM_IN
-            EnhancedGestureDetector.Gesture.ZOOM_OUT -> GestureType.ZOOM_OUT
-            EnhancedGestureDetector.Gesture.SHAKE -> GestureType.SHAKE
+            EnhancedGestureDetector.Gesture.SWIPE_RIGHT -> GestureType.CIRCLE_CW
+            EnhancedGestureDetector.Gesture.SWIPE_LEFT -> GestureType.CIRCLE_CCW
+            EnhancedGestureDetector.Gesture.SWIPE_UP -> GestureType.THUMBS_UP
+            EnhancedGestureDetector.Gesture.SWIPE_DOWN -> GestureType.THUMBS_DOWN
             else -> GestureType.NONE
         }
     }
