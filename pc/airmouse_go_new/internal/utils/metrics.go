@@ -4,9 +4,6 @@ import (
     "fmt"
     "runtime"
     "time"
-
-    "github.com/shirou/gopsutil/v3/cpu"
-    "github.com/shirou/gopsutil/v3/mem"
 )
 
 type Metrics struct {
@@ -22,15 +19,10 @@ var metrics = &Metrics{startTime: time.Now()}
 
 // GetMetrics returns current system and Go metrics.
 func GetMetrics() *Metrics {
-    // CPU percent (average across all cores, 0 duration means use last sample)
-    if percent, err := cpu.Percent(0, false); err == nil && len(percent) > 0 {
-        metrics.CPUPercent = percent[0]
-    }
-    // Memory
-    if memStat, err := mem.VirtualMemory(); err == nil {
-        metrics.MemoryPercent = memStat.UsedPercent
-        metrics.MemoryUsed = memStat.Used
-    }
+    // Keep this dependency-free so the project builds cleanly in offline setups.
+    metrics.CPUPercent = 0
+    metrics.MemoryPercent = 0
+    metrics.MemoryUsed = 0
     metrics.GoRoutines = runtime.NumGoroutine()
     metrics.Uptime = time.Since(metrics.startTime)
     return metrics

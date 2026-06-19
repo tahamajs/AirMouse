@@ -241,11 +241,11 @@ func (m *mouseController) Move(dx, dy float64) {
     
     // ML prediction (LSTM)
     if m.mlEnabled && m.mlPredictor != nil {
-        m.mlPredictor.AddPoint(float32(m.lastCursorX), float32(m.lastCursorY))
-        predDx, predDy, err := m.mlPredictor.PredictDelta()
+        m.mlPredictor.AddPoint(m.lastCursorX, m.lastCursorY)
+        predDx, predDy, _, err := m.mlPredictor.PredictDelta()
         if err == nil {
-            dx = (1-m.mlBlend)*dx + m.mlBlend*float64(predDx)
-            dy = (1-m.mlBlend)*dy + m.mlBlend*float64(predDy)
+            dx = (1-m.mlBlend)*dx + m.mlBlend*predDx
+            dy = (1-m.mlBlend)*dy + m.mlBlend*predDy
         }
     }
     

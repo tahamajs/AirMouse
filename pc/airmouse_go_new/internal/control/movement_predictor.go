@@ -57,6 +57,31 @@ func (p *MovementPredictor) SetBlendFactor(factor float64) {
     p.blendFactor = factor
 }
 
+func (p *MovementPredictor) GetBlendFactor() float64 {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    return p.blendFactor
+}
+
+func (p *MovementPredictor) IsEnabled() bool {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    return p.enabled
+}
+
+func (p *MovementPredictor) GetState() (x, y, vx, vy float64) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    return p.kf.GetState()
+}
+
+func (p *MovementPredictor) GetVelocity() (vx, vy float64) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    _, _, vx, vy = p.kf.GetState()
+    return
+}
+
 func (p *MovementPredictor) Reset() {
     p.mu.Lock()
     defer p.mu.Unlock()
