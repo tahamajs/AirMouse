@@ -393,7 +393,7 @@ fun SensorVisualizerScreen(
                         )
                     }
                     IconButton(onClick = { showStatsDialog = true }) {
-                        Icon(Icons.Default.BarChart, contentDescription = "Statistics")
+                        Icon(Icons.Default.Assessment, contentDescription = "Statistics")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -667,7 +667,7 @@ fun SensorDataCard(uiState: SensorVisualizerUiState, activeSensor: ActiveSensor)
                         SensorInfoRow(Icons.Default.Thermostat, "Temperature", String.format(Locale.US, "%.1f°C", uiState.temperature))
                     }
                     if (uiState.pressure != 0f) {
-                        SensorInfoRow(Icons.Default.BarChart, "Pressure", String.format(Locale.US, "%.1f hPa", uiState.pressure))
+                        SensorInfoRow(Icons.Default.Assessment, "Pressure", String.format(Locale.US, "%.1f hPa", uiState.pressure))
                     }
                     if (uiState.light != 0f) {
                         SensorInfoRow(Icons.Default.Lightbulb, "Light", String.format(Locale.US, "%.0f lx", uiState.light))

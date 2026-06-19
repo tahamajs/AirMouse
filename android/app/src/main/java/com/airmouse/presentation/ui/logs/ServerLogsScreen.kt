@@ -68,7 +68,7 @@ fun ServerLogsScreen(
                 actions = {
                     // Statistics button
                     IconButton(onClick = { showStatsDialog = true }) {
-                        Icon(Icons.Default.BarChart, contentDescription = "Statistics")
+                        Icon(Icons.Default.Assessment, contentDescription = "Statistics")
                     }
                     // Settings button
                     IconButton(onClick = { showSettingsDialog = true }) {

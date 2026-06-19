@@ -60,7 +60,7 @@ fun EdgeGesturesScreen(
                 },
                 actions = {
                     IconButton(onClick = { showStatsDialog = true }) {
-                        Icon(Icons.Default.BarChart, contentDescription = "Statistics")
+                        Icon(Icons.Default.Assessment, contentDescription = "Statistics")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -519,7 +519,7 @@ fun StatsPreviewCard(stats: EdgeGesturesStats, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.Assessment, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Statistics",

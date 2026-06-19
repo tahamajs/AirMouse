@@ -131,8 +131,8 @@ class ConnectionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun startDiscovery(onServerFound: (DiscoveredServer) -> Unit) {
-        udpDiscovery.onServerFound = { ip, port, name ->
-            val server = DiscoveredServer(ip = ip, port = port, name = name)
+        udpDiscovery.onServerFound = { ip, port, name, version ->
+            val server = DiscoveredServer(ip = ip, port = port, name = name, version = version)
             val currentServers = _discoveredServers.value.toMutableList()
             if (currentServers.none { it.ip == ip && it.port == port }) {
                 currentServers.add(server)
