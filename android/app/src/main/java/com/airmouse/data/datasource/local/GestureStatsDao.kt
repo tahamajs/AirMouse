@@ -127,7 +127,7 @@ interface GestureStatsDao {
 
     // ==================== Analytics Operations ====================
 
-    @Query("SELECT gestureName, detection_count FROM gesture_stats ORDER BY detection_count DESC LIMIT 5")
+    @Query("SELECT * FROM gesture_stats ORDER BY detection_count DESC LIMIT 5")
     suspend fun getTop5Gestures(): List<GestureStatsEntity>
 
     @Query("SELECT SUM(detection_count) FROM gesture_stats WHERE last_detected > :timestamp")
