@@ -24,7 +24,7 @@ fun LineChart(
         data.mapIndexed { index, value ->
             animateFloatAsState(
                 targetValue = value,
-                animationSpec = tween(1000, delay = index * 50L),
+                animationSpec = tween(1000, delayMillis = (index * 50L).toInt()),
                 label = "chart_$index"
             ).value
         }
