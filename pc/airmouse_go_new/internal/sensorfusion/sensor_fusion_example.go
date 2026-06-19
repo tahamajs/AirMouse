@@ -51,7 +51,7 @@ func RealTimeOrientationTracking() {
     ticker := time.NewTicker(10 * time.Millisecond)
     defer ticker.Stop()
     
-    for range ticker {
+    for range ticker.C {
         // In real application, read from IMU sensor
         gyro := []float64{0.01, 0.005, 0.002}
         accel := []float64{0.1, 0.05, 9.81}
