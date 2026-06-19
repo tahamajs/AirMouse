@@ -5,8 +5,8 @@ import (
     "fmt"
     "image/png"
     "net"
+    "net/url"
     "strconv"
-    "strings"
     "time"
 
     "fyne.io/fyne/v2"

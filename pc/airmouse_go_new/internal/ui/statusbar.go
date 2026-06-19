@@ -8,8 +8,6 @@ import (
     "fyne.io/fyne/v2"
     "fyne.io/fyne/v2/container"
     "fyne.io/fyne/v2/widget"
-
-    "airmouse-go/internal/utils"
 )
 
 // StatusBar creates a bottom bar with live metrics
