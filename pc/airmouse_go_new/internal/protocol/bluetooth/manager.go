@@ -92,7 +92,7 @@ func (m *Manager) Start() error {
     // Start HID report processor
     go m.processHIDReports()
     
-    logger.Info("Bluetooth manager started", "adapter", m.adapter)
+    logger.Info("Bluetooth manager started: adapter=%s", m.adapter)
     return nil
 }
 
@@ -167,7 +167,7 @@ func (m *Manager) handleDiscoveredDevice(addr, name string, rssi, txPower int32)
             Timestamp: time.Now(),
         })
         
-        logger.Debug("BLE device discovered", "addr", addr, "name", name, "rssi", rssi)
+        logger.Debug("BLE device discovered: addr=%s name=%s rssi=%d", addr, name, rssi)
     } else {
         conn.LastActive = time.Now()
         conn.RSSI = rssi
@@ -207,7 +207,7 @@ func (m *Manager) ConnectDevice(addr string) error {
     // Start HID report reader
     go m.readHIDReports(conn)
     
-    logger.Info("BLE device connected", "addr", addr, "name", conn.Name)
+    logger.Info("BLE device connected: addr=%s name=%s", addr, conn.Name)
     return nil
 }
 
@@ -237,7 +237,7 @@ func (m *Manager) DisconnectDevice(addr string) error {
         Timestamp: time.Now(),
     })
     
-    logger.Info("BLE device disconnected", "addr", addr)
+    logger.Info("BLE device disconnected: addr=%s", addr)
     return nil
 }
 
