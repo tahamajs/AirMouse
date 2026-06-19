@@ -102,7 +102,7 @@ class ProximityRepositoryImpl @Inject constructor(
                         rssi = rssi,
                         deviceAddress = _config.value.deviceAddress,
                         deviceName = getDeviceName(),
-                        lastUpdated = System.currentTimeMillis()
+                        lastUpdate = System.currentTimeMillis()
                     )
 
                     // Send to server via ConnectionManager
@@ -123,7 +123,7 @@ class ProximityRepositoryImpl @Inject constructor(
 
     override suspend fun stopMonitoring() {
         _isMonitoring.value = false
-        _state.value = _state.value.copy(lastUpdated = System.currentTimeMillis())
+        _state.value = _state.value.copy(lastUpdate = System.currentTimeMillis())
     }
 
     override suspend fun isMonitoring(): Boolean = _isMonitoring.value
@@ -202,7 +202,7 @@ class ProximityRepositoryImpl @Inject constructor(
         val pathLoss = if (denominator != 0.0) -10 * numerator / denominator else 2.5
 
         // Calculate txPower (RSSI at 1 meter)
-        val avgRssiAt1m = samples.filter { it.second == 1.0 }.map { it.first }.average()
+        val avgRssiAt1m = samples.filter { it.second == 1.0f }.map { it.first }.average()
         val txPower = if (avgRssiAt1m > 0) avgRssiAt1m else -59.0
 
         prefs.putInt("proximity_tx_power", txPower.toInt())
@@ -210,11 +210,7 @@ class ProximityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getCalibrationStatus(): ProximityCalibrationStatus {
-        return if (prefs.getBoolean("proximity_calibrated", false)) {
-            ProximityCalibrationStatus.CALIBRATED
-        } else {
-            ProximityCalibrationStatus.NOT_CALIBRATED
-        }
+        return if (prefs.getBoolean("proximity_calibrated", false)) ProximityCalibrationStatus.CALIBRATED else ProximityCalibrationStatus.NOT_CALIBRATED
     }
 
     override suspend fun resetCalibration() {

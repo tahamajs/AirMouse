@@ -1,7 +1,6 @@
 package com.airmouse.domain.model
 
 import android.os.Parcelable
-import androidx.compose.ui.graphics.Color
 import kotlinx.parcelize.Parcelize
 
 /**
@@ -21,6 +20,21 @@ data class ProximityState(
         val UNKNOWN = ProximityState(false, 5.0f, -100, "", null, 0, 0f)
     }
 }
+
+/**
+ * Proximity configuration.
+ */
+@Parcelize
+data class ProximityConfig(
+    val enabled: Boolean = false,
+    val nearThreshold: Float = 1.5f,
+    val farThreshold: Float = 3.0f,
+    val scanInterval: Long = 1000L,
+    val vibrationEnabled: Boolean = true,
+    val autoLockEnabled: Boolean = true,
+    val autoUnlockEnabled: Boolean = true,
+    val deviceAddress: String = ""
+) : Parcelable
 
 /**
  * Proximity calibration status.
@@ -62,15 +76,7 @@ data class ProximityCalibration(
 /**
  * Detailed calibration status for UI.
  */
-@Parcelize
-data class ProximityCalibrationStatus(
-    val isCalibrated: Boolean,
-    val accuracy: Float,
-    val nearThreshold: Float,
-    val farThreshold: Float,
-    val referenceRssi: Int,
-    val pathLossExponent: Float,
-    val qualityScore: Int,
-    val qualityColor: Long,
-    val confidenceDescription: String
-) : Parcelable
+enum class ProximityCalibrationStatus {
+    NOT_CALIBRATED,
+    CALIBRATED
+}
