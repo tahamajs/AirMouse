@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.VibrationEffect
 import android.os.Vibrator
+import com.airmouse.domain.model.CalibrationStatus
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -177,7 +178,7 @@ class CalibrationHelper(
     /**
      * Save calibration data to preferences
      */
-    private fun saveCalibrationData() {
+    fun saveCalibrationData() {
         prefs.putFloat("gyro_bias_x", gyroBiasX)
         prefs.putFloat("gyro_bias_y", gyroBiasY)
         prefs.putFloat("gyro_bias_z", gyroBiasZ)
@@ -634,6 +635,24 @@ class CalibrationHelper(
             "is_calibrated" to isCalibrated(),
             "calibration_timestamp" to prefs.getLong("calibration_timestamp", 0)
         )
+    }
+
+    fun getGyroBias(): FloatArray = floatArrayOf(gyroBiasX, gyroBiasY, gyroBiasZ)
+
+    fun getMagOffset(): FloatArray = floatArrayOf(magOffsetX, magOffsetY, magOffsetZ)
+
+    fun getMagScale(): FloatArray = floatArrayOf(magScaleX, magScaleY, magScaleZ)
+
+    fun getAccelOffset(): FloatArray = floatArrayOf(accelOffsetX, accelOffsetY, accelOffsetZ)
+
+    fun getAccelScale(): FloatArray = floatArrayOf(accelScaleX, accelScaleY, accelScaleZ)
+
+    fun isDeviceCalibrated(): Boolean = isCalibrated()
+
+    fun loadCalibrationStatus(): CalibrationStatus = when {
+        !isCalibrated() -> CalibrationStatus.NOT_STARTED
+        _calibrationQuality.value == CalibrationQuality.UNKNOWN -> CalibrationStatus.COMPLETED
+        else -> CalibrationStatus.COMPLETED
     }
 
     /**

@@ -29,7 +29,7 @@ class SensorRepository(context: Context) {
 
     // ✅ FIXED: Adjusted signatures to match CalibrationHelper's actual 0-argument expectations
     // Note: Check CalibrationHelper to see if the gyro method is named differently (e.g., calibrateGyroscopes)
-    suspend fun calibrateGyro(): Boolean = calibrationHelper.calibrateGyro()
+    suspend fun calibrateGyro(): Boolean = calibrationHelper.calibrateGyroscope()
     suspend fun calibrateMagnetometer(): Boolean = calibrationHelper.calibrateMagnetometer()
     suspend fun calibrateAccelerometer(): Boolean = calibrationHelper.calibrateAccelerometer()
 
