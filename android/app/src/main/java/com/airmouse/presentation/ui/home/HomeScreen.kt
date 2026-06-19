@@ -55,6 +55,7 @@ fun HomeScreen(
     // UI State
     var isConnected by remember { mutableStateOf(false) }
     var isConnecting by remember { mutableStateOf(false) }
+    var mouseStatus by remember { mutableStateOf("Mouse Off") }
     var serverIp by remember { mutableStateOf("192.168.1.100") }
     var serverPort by remember { mutableIntStateOf(8080) }
     var serverName by remember { mutableStateOf("My Desktop PC") }
@@ -66,6 +67,7 @@ fun HomeScreen(
     var showRegistrationDialog by rememberSaveable {
         mutableStateOf(homeUiState.userName.isBlank() && !homeViewModel.hasRegisteredUser())
     }
+    var showCalibrationRequiredDialog by remember { mutableStateOf(false) }
 
     val userName = homeUiState.userName.ifBlank { pendingUserName }
     val greetingText = if (userName.isNotBlank()) "Welcome back, $userName!" else "Welcome to Air Mouse Pro!"
@@ -77,6 +79,20 @@ fun HomeScreen(
         } else if (!homeViewModel.hasRegisteredUser()) {
             showRegistrationDialog = true
         }
+    }
+
+    fun connectMouse() {
+        if (!homeUiState.isCalibrated) {
+            showCalibrationRequiredDialog = true
+            return
+        }
+        isConnected = true
+        mouseStatus = "Mouse Active"
+    }
+
+    fun disconnectMouse() {
+        isConnected = false
+        mouseStatus = "Mouse Off"
     }
 
     // Permission launcher
@@ -99,13 +115,13 @@ fun HomeScreen(
     Scaffold(
         topBar = { HomeTopBar() },
         floatingActionButton = {
-            AnimatedVisibility(
-                visible = isConnected,
+                    AnimatedVisibility(
+                        visible = isConnected,
                 enter = fadeIn() + scaleIn(),
                 exit = fadeOut() + scaleOut()
             ) {
                 FloatingActionButton(
-                    onClick = { isConnected = false },
+                    onClick = { disconnectMouse() },
                     containerColor = MaterialTheme.colorScheme.error,
                     shape = CircleShape,
                     modifier = Modifier.size(56.dp)
@@ -146,13 +162,13 @@ fun HomeScreen(
                         serverName = serverName,
                         serverIp = serverIp,
                         ping = ping,
-                        onDisconnect = { isConnected = false },
+                        onDisconnect = { disconnectMouse() },
                         onReconnect = {
                             isConnecting = true
                             // Simulate connection
                             scope.launch {
                                 delay(2000)
-                                isConnected = true
+                                connectMouse()
                                 isConnecting = false
                             }
                         }
@@ -166,7 +182,7 @@ fun HomeScreen(
                         port = serverPort,
                         onIpChange = { serverIp = it },
                         onPortChange = { serverPort = it },
-                        onConnect = { isConnected = true },
+                        onConnect = { connectMouse() },
                         onScanQr = {
                             if (ContextCompat.checkSelfPermission(
                                     context,
@@ -230,13 +246,21 @@ fun HomeScreen(
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
                     .background(
-                        color = if (isConnected) Color(0xFF4CAF50) else Color(0xFFF44336),
+                        color = when {
+                            isConnected && homeUiState.isCalibrated -> Color(0xFF4CAF50)
+                            homeUiState.isCalibrated -> Color(0xFF2196F3)
+                            else -> Color(0xFFF44336)
+                        },
                         shape = RoundedCornerShape(8.dp)
                     )
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = if (isConnected) "ONLINE" else "OFFLINE",
+                    text = when {
+                        isConnected && homeUiState.isCalibrated -> mouseStatus
+                        homeUiState.isCalibrated -> "Calibrated"
+                        else -> "Calibrate First"
+                    },
                     color = Color.White,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
@@ -289,6 +313,27 @@ fun HomeScreen(
                             }
                         }) {
                             Text("Save")
+                        }
+                    }
+                )
+            }
+
+            if (showCalibrationRequiredDialog) {
+                AlertDialog(
+                    onDismissRequest = { showCalibrationRequiredDialog = false },
+                    title = { Text("Calibration required") },
+                    text = { Text("Please complete calibration before turning the mouse on.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showCalibrationRequiredDialog = false
+                            navigationActions.navigateToCalibrationResult()
+                        }) {
+                            Text("Calibrate")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showCalibrationRequiredDialog = false }) {
+                            Text("OK")
                         }
                     }
                 )

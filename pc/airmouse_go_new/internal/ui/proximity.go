@@ -51,7 +51,7 @@ func NewProximityTab() fyne.CanvasObject {
     )
     
     // Enable/disable service
-    tab.enableCheck = widget.NewCheckWithIcon("Enable Proximity Lock/Unlock", theme.VisibilityIcon(), func(enabled bool) {
+    tab.enableCheck = widget.NewCheck("Enable Proximity Lock/Unlock", func(enabled bool) {
         if enabled {
             tab.startProximityService()
         } else {
@@ -68,12 +68,6 @@ func NewProximityTab() fyne.CanvasObject {
         tab.distanceLabel,
         tab.deviceLabel,
     )
-    statusCard.Border = container.Border{
-        Top:    1,
-        Bottom: 1,
-        Left:   1,
-        Right:  1,
-    }
     
     // Thresholds card
     tab.nearSlider = widget.NewSlider(0.5, 5.0)
@@ -119,12 +113,6 @@ func NewProximityTab() fyne.CanvasObject {
         widget.NewLabel("Near (Unlock):"), nearContainer,
         widget.NewLabel("Far (Lock):"), farContainer,
     )
-    thresholdsCard.Border = container.Border{
-        Top:    1,
-        Bottom: 1,
-        Left:   1,
-        Right:  1,
-    }
     
     // Actions card
     tab.calibrateBtn = widget.NewButtonWithIcon("Start Calibration", theme.SettingsIcon(), tab.startCalibration)
@@ -140,12 +128,6 @@ func NewProximityTab() fyne.CanvasObject {
         widget.NewSeparator(),
         container.NewHBox(tab.calibrateBtn, tab.lockNowBtn, tab.unlockNowBtn),
     )
-    actionsCard.Border = container.Border{
-        Top:    1,
-        Bottom: 1,
-        Left:   1,
-        Right:  1,
-    }
     
     // History card
     tab.historyChart = widget.NewLabel("Distance History:\n")
@@ -156,12 +138,6 @@ func NewProximityTab() fyne.CanvasObject {
         widget.NewSeparator(),
         container.NewScroll(tab.historyChart),
     )
-    historyCard.Border = container.Border{
-        Top:    1,
-        Bottom: 1,
-        Left:   1,
-        Right:  1,
-    }
     
     // Main layout
     content := container.NewVBox(

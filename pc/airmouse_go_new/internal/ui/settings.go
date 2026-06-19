@@ -2,7 +2,6 @@ package ui
 
 import (
     "fmt"
-    "strings"
 
     "fyne.io/fyne/v2"
     "fyne.io/fyne/v2/container"
@@ -119,7 +118,7 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
     // Main content with tabs
     settingsTabs := container.NewAppTabs(
         container.NewTabItemWithIcon("Server", theme.ComputerIcon(), serverSection),
-        container.NewTabItemWithIcon("Cursor", theme.MouseIcon(), cursorSection),
+        container.NewTabItemWithIcon("Cursor", theme.ComputerIcon(), cursorSection),
         container.NewTabItemWithIcon("Click", theme.InfoIcon(), clickSection),
         container.NewTabItemWithIcon("AI", theme.ComputerIcon(), aiSection),
         container.NewTabItemWithIcon("Personalization", theme.SettingsIcon(), personalizationSection),
