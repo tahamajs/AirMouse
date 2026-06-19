@@ -124,7 +124,7 @@ class GestureStudioViewModel @Inject constructor(
 
     // ==================== Recording ====================
 
-    fun startRecording(name: String) {
+    fun startRecording(name: String = _uiState.value.gestureName) {
         if (name.isEmpty()) {
             _uiState.update {
                 it.copy(errorMessage = "Please enter a gesture name")
@@ -162,10 +162,11 @@ class GestureStudioViewModel @Inject constructor(
                 }
 
                 // Update quality based on samples
-                if (it.samplesCollected > 30) {
+                val sampleCount = _uiState.value.samplesCollected
+                if (sampleCount > 30) {
                     _uiState.update {
                         it.copy(
-                            recordingQuality = if (it.samplesCollected > 40)
+                            recordingQuality = if (sampleCount > 40)
                                 RecordingQuality.EXCELLENT
                             else
                                 RecordingQuality.GOOD
