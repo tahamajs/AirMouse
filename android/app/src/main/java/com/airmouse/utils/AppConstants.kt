@@ -1,6 +1,10 @@
 // app/src/main/java/com/airmouse/utils/AppConstants.kt
 package com.airmouse.utils
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 object AppConstants {
     // Server
     const val DEFAULT_SERVER_PORT = 8080
@@ -69,14 +73,6 @@ fun String.toValidFileName(): String {
 // 2.3 Number Extensions
 fun Float.format(digits: Int = 2): String {
     return String.format("%.${digits}f", this)
-}
-
-fun Float.radToDeg(): Float {
-    return this * 180f / Math.PI.toFloat()
-}
-
-fun Float.degToRad(): Float {
-    return this * Math.PI.toFloat() / 180f
 }
 
 // 2.4 Date Extensions
