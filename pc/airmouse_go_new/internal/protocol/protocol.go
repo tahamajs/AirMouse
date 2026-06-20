@@ -114,7 +114,7 @@ func (s *ProtocolServer) Start() error {
 	// Start TCP server
 	if cfg.EnableTCP {
 		utils.LogInfo("Protocol start: initializing TCP server host=%s port=%d", cfg.Host, cfg.Port)
-		s.tcpServer = tcp.NewServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr)
+		s.tcpServer = tcp.NewServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr, s.authMgr)
 		if err := s.tcpServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("TCP: %w", err))
 			utils.LogError("TCP server start failed: %v", err)
