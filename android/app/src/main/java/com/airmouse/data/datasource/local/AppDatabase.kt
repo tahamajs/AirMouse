@@ -14,7 +14,8 @@ import com.airmouse.data.datasource.local.entity.*
         SettingsEntity::class,
         StatisticsEntity::class,
         GestureTemplateEntity::class,
-        ProfileEntity::class
+        ProfileEntity::class,
+        TrainingSampleEntity::class
     ],
     version = 1,
     exportSchema = false
@@ -27,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun statisticsDao(): StatisticsDao
     abstract fun gestureDao(): GestureDao
     abstract fun profileDao(): ProfileDao
+    abstract fun trainingSampleDao(): TrainingSampleDao
 
     companion object {
         @Volatile

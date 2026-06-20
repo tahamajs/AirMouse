@@ -1,6 +1,6 @@
 package com.airmouse.data.datasource.local
 
-data class CalibrationData(
+data class CalibrationPrefsData(
     val gyroBiasX: Float = 0f,
     val gyroBiasY: Float = 0f,
     val gyroBiasZ: Float = 0f,

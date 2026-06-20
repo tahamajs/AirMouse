@@ -10,6 +10,7 @@ import com.airmouse.domain.model.SensorCalibrationData
 import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.utils.PreferencesManager
+import com.airmouse.utils.PreferencesKeys
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -158,6 +159,22 @@ class CalibrationRepositoryImpl @Inject constructor(
         prefs.putBoolean(PreferencesKeys.KEY_ACCEL_CALIBRATED, false)
         prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, false)
         prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_APPLIED, false)
+    }
+
+    override suspend fun updateCalibrationStatus(status: CalibrationStatus) {
+        prefs.putString(PreferencesKeys.KEY_CALIBRATION_STATUS, status.name)
+        _calibrationStatus.value = status
+    }
+
+    override suspend fun updateCalibrationQuality(quality: CalibrationQuality) {
+        prefs.putString(PreferencesKeys.KEY_CALIBRATION_QUALITY, quality.name)
+        _calibrationQuality.value = quality
+    }
+
+    override suspend fun updateCalibrationProgress(progress: Int) {
+        val clamped = progress.coerceIn(0, 100)
+        prefs.putInt(PreferencesKeys.KEY_CALIBRATION_PROGRESS, clamped)
+        _calibrationProgress.value = clamped
     }
 
     private fun getCurrentStatus(): CalibrationStatus = when {

@@ -2,6 +2,20 @@
 package com.airmouse.data.datasource.local
 
 import com.airmouse.domain.model.*
+import com.airmouse.data.datasource.local.dao.CalibrationDao
+import com.airmouse.data.datasource.local.dao.DailyStatsDao
+import com.airmouse.data.datasource.local.dao.GestureStatsDao
+import com.airmouse.data.datasource.local.dao.TrainingSampleDao
+import com.airmouse.data.datasource.local.dao.GestureDao
+import com.airmouse.data.datasource.local.dao.ProfileDao
+import com.airmouse.data.datasource.local.dao.StatisticsDao
+import com.airmouse.data.datasource.local.entity.CalibrationEntity
+import com.airmouse.data.datasource.local.entity.DailyStatsEntity
+import com.airmouse.data.datasource.local.entity.GestureStatsEntity
+import com.airmouse.data.datasource.local.entity.GestureTemplateEntity
+import com.airmouse.data.datasource.local.entity.ProfileEntity
+import com.airmouse.data.datasource.local.entity.StatisticsEntity
+import com.airmouse.data.datasource.local.entity.TrainingSampleEntity
 import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
 import java.util.*
@@ -126,8 +140,18 @@ class LocalDataSourceImpl @Inject constructor(
         trainingSampleDao.deleteSamplesByGesture(gestureName)
         val entities = samples.map { sample ->
             TrainingSampleEntity(
-                gestureName = gestureName,
-                sampleData = sample.joinToString(","),
+                gestureId = gestureName,
+                gyroX = sample.getOrNull(0) ?: 0f,
+                gyroY = sample.getOrNull(1) ?: 0f,
+                gyroZ = sample.getOrNull(2) ?: 0f,
+                accelX = sample.getOrNull(3) ?: 0f,
+                accelY = sample.getOrNull(4) ?: 0f,
+                accelZ = sample.getOrNull(5) ?: 0f,
+                magX = sample.getOrNull(6) ?: 0f,
+                magY = sample.getOrNull(7) ?: 0f,
+                magZ = sample.getOrNull(8) ?: 0f,
+                label = gestureName,
+                confidence = 1f,
                 timestamp = System.currentTimeMillis()
             )
         }
@@ -136,7 +160,17 @@ class LocalDataSourceImpl @Inject constructor(
 
     override suspend fun getTrainingSamples(gestureName: String): List<FloatArray> {
         return trainingSampleDao.getSamplesByGesture(gestureName).map { entity ->
-            entity.sampleData.split(",").map { it.toFloat() }.toFloatArray()
+            floatArrayOf(
+                entity.gyroX,
+                entity.gyroY,
+                entity.gyroZ,
+                entity.accelX,
+                entity.accelY,
+                entity.accelZ,
+                entity.magX,
+                entity.magY,
+                entity.magZ
+            )
         }
     }
 
@@ -193,17 +227,19 @@ class LocalDataSourceImpl @Inject constructor(
 
     override suspend fun saveSessionStats(stats: StatisticsSummary) {
         val entity = StatisticsEntity(
-            sessionId = UUID.randomUUID().toString(),
-            totalClicks = stats.totalClicks,
-            totalDoubleClicks = stats.totalDoubleClicks,
-            totalRightClicks = stats.totalRightClicks,
-            totalScrolls = stats.totalScrolls,
-            totalMovements = stats.totalMovements,
-            totalDistance = stats.totalDistance,
-            averageSpeed = stats.averageSpeed,
-            maxSpeed = stats.maxSpeed,
-            startTime = System.currentTimeMillis() - stats.sessionDuration,
-            isActive = true
+            id = UUID.randomUUID().toString(),
+            totalMovement = stats.totalDistance,
+            movementCount = stats.totalMovements.toLong(),
+            clickCount = stats.totalClicks.toLong(),
+            doubleClickCount = stats.totalDoubleClicks.toLong(),
+            rightClickCount = stats.totalRightClicks.toLong(),
+            scrollCount = stats.totalScrolls.toLong(),
+            totalScrollDelta = 0L,
+            gestureCount = 0L,
+            sessionCount = 1L,
+            totalSessionTime = stats.sessionDuration,
+            lastReset = System.currentTimeMillis(),
+            lastUpdated = System.currentTimeMillis()
         )
         statisticsDao.insertStatistics(entity)
     }
@@ -212,19 +248,15 @@ class LocalDataSourceImpl @Inject constructor(
         val entity = statisticsDao.getActiveSession()
         return if (entity != null) {
             StatisticsSummary(
-                totalClicks = entity.totalClicks,
-                totalDoubleClicks = entity.totalDoubleClicks,
-                totalRightClicks = entity.totalRightClicks,
-                totalScrolls = entity.totalScrolls,
-                totalMovements = entity.totalMovements,
-                totalDistance = entity.totalDistance,
-                averageSpeed = entity.averageSpeed,
-                maxSpeed = entity.maxSpeed,
-                sessionDuration = if (entity.isActive) {
-                    System.currentTimeMillis() - entity.startTime
-                } else {
-                    entity.endTime - entity.startTime
-                }
+                totalClicks = entity.clickCount.toInt(),
+                totalDoubleClicks = entity.doubleClickCount.toInt(),
+                totalRightClicks = entity.rightClickCount.toInt(),
+                totalScrolls = entity.scrollCount.toInt(),
+                totalMovements = entity.movementCount.toInt(),
+                totalDistance = entity.totalMovement,
+                averageSpeed = 0f,
+                maxSpeed = 0f,
+                sessionDuration = entity.totalSessionTime
             )
         } else {
             StatisticsSummary()
@@ -234,7 +266,7 @@ class LocalDataSourceImpl @Inject constructor(
     override suspend fun resetSessionStats() {
         val activeSession = statisticsDao.getActiveSession()
         activeSession?.let {
-            statisticsDao.endSession(it.sessionId, System.currentTimeMillis())
+            statisticsDao.endSession(it.id, System.currentTimeMillis())
         }
     }
 
@@ -283,16 +315,16 @@ class LocalDataSourceImpl @Inject constructor(
 
     override suspend fun getHistoricalStats(): HistoricalStatistics {
         val allStats = gestureStatsDao.getAllGestureStats()
-        val byType = allStats.associate { it.gestureName to it.detectionCount }
-        val mostUsed = allStats.maxByOrNull { it.detectionCount }
+        val byType = allStats.associate { it.gesture_name to it.count }
+        val mostUsed = allStats.maxByOrNull { it.count }
         val customStats = allStats.filter { it.isCustom }
 
         return HistoricalStatistics(
-            totalGestures = allStats.sumOf { it.detectionCount },
+            totalGestures = allStats.sumOf { it.count },
             gesturesByType = byType,
-            mostUsedGesture = mostUsed?.gestureName ?: "",
+            mostUsedGesture = mostUsed?.gesture_name ?: "",
             lastGestureTime = allStats.maxOfOrNull { it.lastDetected } ?: 0,
-            customGestureUsage = customStats.associate { it.gestureName to it.detectionCount }
+            customGestureUsage = customStats.associate { it.gesture_name to it.count }
         )
     }
 
@@ -300,13 +332,15 @@ class LocalDataSourceImpl @Inject constructor(
         stats.gesturesByType.forEach { (gesture, count) ->
             val existing = gestureStatsDao.getGestureStats(gesture)
             if (existing != null) {
-                gestureStatsDao.incrementDetection(gesture, stats.lastGestureTime)
+                gestureStatsDao.incrementDetection(gesture, timestamp = stats.lastGestureTime)
             } else {
                 gestureStatsDao.insertGestureStats(
                     GestureStatsEntity(
-                        gestureName = gesture,
-                        detectionCount = count,
+                        gesture_name = gesture,
+                        count = count,
+                        avgConfidence = 0f,
                         lastDetected = stats.lastGestureTime,
+                        detectionRate = if (count > 0) count.toFloat() else 0f,
                         isCustom = stats.customGestureUsage.containsKey(gesture)
                     )
                 )
@@ -317,9 +351,9 @@ class LocalDataSourceImpl @Inject constructor(
     override suspend fun getGestureStats(): List<GestureStatistics> {
         return gestureStatsDao.getAllGestureStats().map { entity ->
             GestureStatistics(
-                gestureName = entity.gestureName,
-                detectionCount = entity.detectionCount,
-                confidencePercentage = entity.confidencePercentage,
+                gestureName = entity.gesture_name,
+                detectionCount = entity.count,
+                confidencePercentage = entity.avgConfidence,
                 lastDetected = entity.lastDetected
             )
         }
@@ -330,10 +364,11 @@ class LocalDataSourceImpl @Inject constructor(
         stats.forEach { stat ->
             gestureStatsDao.insertGestureStats(
                 GestureStatsEntity(
-                    gestureName = stat.gestureName,
-                    detectionCount = stat.detectionCount,
-                    confidencePercentage = stat.confidencePercentage,
+                    gesture_name = stat.gestureName,
+                    count = stat.detectionCount,
+                    avgConfidence = stat.confidencePercentage,
                     lastDetected = stat.lastDetected,
+                    detectionRate = stat.confidencePercentage,
                     isCustom = stat.detectionCount > 0
                 )
             )
@@ -343,12 +378,12 @@ class LocalDataSourceImpl @Inject constructor(
     override suspend fun incrementGestureCount(gesture: String) {
         val existing = gestureStatsDao.getGestureStats(gesture)
         if (existing != null) {
-            gestureStatsDao.incrementDetection(gesture, System.currentTimeMillis())
+            gestureStatsDao.incrementDetection(gesture, timestamp = System.currentTimeMillis())
         } else {
             gestureStatsDao.insertGestureStats(
                 GestureStatsEntity(
-                    gestureName = gesture,
-                    detectionCount = 1,
+                    gesture_name = gesture,
+                    count = 1,
                     lastDetected = System.currentTimeMillis()
                 )
             )

@@ -1,16 +1,20 @@
 // app/src/main/java/com/airmouse/data/datasource/local/TrainingSampleDao.kt
-package com.airmouse.data.datasource.local
+package com.airmouse.data.datasource.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.airmouse.data.datasource.local.entity.TrainingSampleEntity
 
 @Dao
 interface TrainingSampleDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrainingSample(sample: TrainingSampleEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSamples(samples: List<TrainingSampleEntity>)
 
     @Query("SELECT * FROM training_samples WHERE gesture_id = :gestureId")
     suspend fun getSamplesByGesture(gestureId: String): List<TrainingSampleEntity>

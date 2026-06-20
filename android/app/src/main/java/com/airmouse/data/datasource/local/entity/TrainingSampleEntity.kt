@@ -1,5 +1,5 @@
-// app/src/main/java/com/airmouse/data/datasource/local/TrainingSampleEntity.kt
-package com.airmouse.data.datasource.local
+// app/src/main/java/com/airmouse/data/datasource/local/entity/TrainingSampleEntity.kt
+package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -11,40 +11,40 @@ data class TrainingSampleEntity(
     val id: Long = 0,
 
     @ColumnInfo(name = "gesture_id")
-    val gestureId: String,
+    val gestureId: String = "",
 
     @ColumnInfo(name = "gyro_x")
-    val gyroX: Float,
+    val gyroX: Float = 0f,
 
     @ColumnInfo(name = "gyro_y")
-    val gyroY: Float,
+    val gyroY: Float = 0f,
 
     @ColumnInfo(name = "gyro_z")
-    val gyroZ: Float,
+    val gyroZ: Float = 0f,
 
     @ColumnInfo(name = "accel_x")
-    val accelX: Float,
+    val accelX: Float = 0f,
 
     @ColumnInfo(name = "accel_y")
-    val accelY: Float,
+    val accelY: Float = 0f,
 
     @ColumnInfo(name = "accel_z")
-    val accelZ: Float,
+    val accelZ: Float = 0f,
 
     @ColumnInfo(name = "mag_x")
-    val magX: Float,
+    val magX: Float = 0f,
 
     @ColumnInfo(name = "mag_y")
-    val magY: Float,
+    val magY: Float = 0f,
 
     @ColumnInfo(name = "mag_z")
-    val magZ: Float,
+    val magZ: Float = 0f,
 
     @ColumnInfo(name = "label")
-    val label: String,
+    val label: String = "",
 
     @ColumnInfo(name = "confidence")
-    val confidence: Float,
+    val confidence: Float = 0f,
 
     @ColumnInfo(name = "timestamp")
     val timestamp: Long = System.currentTimeMillis(),

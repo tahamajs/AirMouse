@@ -1,5 +1,5 @@
-// app/src/main/java/com/airmouse/data/datasource/local/GestureStatsEntity.kt
-package com.airmouse.data.datasource.local
+// app/src/main/java/com/airmouse/data/datasource/local/entity/GestureStatsEntity.kt
+package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -20,5 +20,17 @@ data class GestureStatsEntity(
     val lastDetected: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "detection_rate")
-    val detectionRate: Float = 0f
+    val detectionRate: Float = 0f,
+
+    @androidx.room.Ignore
+    val gestureName: String = gesture_name,
+
+    @androidx.room.Ignore
+    val detectionCount: Int = count,
+
+    @androidx.room.Ignore
+    val confidencePercentage: Float = avgConfidence,
+
+    @androidx.room.Ignore
+    val isCustom: Boolean = false
 )

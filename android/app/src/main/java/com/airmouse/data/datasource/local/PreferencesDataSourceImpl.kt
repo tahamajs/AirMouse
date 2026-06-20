@@ -49,10 +49,10 @@ class PreferencesDataSourceImpl @Inject constructor(
     override suspend fun getLastPort(): Int = prefs.getInt("last_port", 8080)
 
     override suspend fun setLastProtocol(protocol: String) {
-        prefs.edit().putString("last_protocol", protocol).apply()
+        prefs.edit().putString("last_protocol", protocol.uppercase()).apply()
     }
 
-    override suspend fun getLastProtocol(): String = prefs.getString("last_protocol", "websocket") ?: "websocket"
+    override suspend fun getLastProtocol(): String = prefs.getString("last_protocol", "WEBSOCKET") ?: "WEBSOCKET"
 
     override suspend fun setSensitivity(value: Float) {
         prefs.edit().putFloat("sensitivity", value).apply()
