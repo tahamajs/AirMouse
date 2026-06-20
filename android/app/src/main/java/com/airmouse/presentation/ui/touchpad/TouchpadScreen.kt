@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -83,6 +85,9 @@ fun TouchpadScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                TouchpadHeroCard(uiState)
+            }
             item {
                 TouchpadSurface(
                     uiState = uiState,
@@ -295,6 +300,7 @@ fun TouchpadSurface(
         modifier = Modifier
             .fillMaxWidth()
             .height(350.dp)
+            .clip(RoundedCornerShape(28.dp))
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { onTap(it) },
@@ -326,13 +332,34 @@ fun TouchpadSurface(
             },
         colors = CardDefaults.cardColors(
             containerColor = if (uiState.isActive)
-                MaterialTheme.colorScheme.primaryContainer
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f)
             else
                 MaterialTheme.colorScheme.surfaceVariant
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        shape = RoundedCornerShape(28.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRoundRect(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(24f, 24f)
+                )
+                val centerY = size.height / 2f
+                val centerX = size.width / 2f
+                drawLine(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    start = Offset(0f, centerY),
+                    end = Offset(size.width, centerY),
+                    strokeWidth = 2f
+                )
+                drawLine(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    start = Offset(centerX, 0f),
+                    end = Offset(centerX, size.height),
+                    strokeWidth = 2f
+                )
+            }
             if (uiState.showTouchPoints) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     uiState.touchPoints.forEach { point ->
@@ -373,11 +400,56 @@ fun TouchpadSurface(
                     )
                 }
             } else if (uiState.touchPoints.isEmpty()) {
-                Text(
-                    "Touchpad Active",
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(42.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Text("Touchpad Active", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Swipe, tap, two-finger scroll, and long press for click actions.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TouchpadHeroCard(uiState: TouchpadUiState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(52.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Touchpad mode", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (uiState.isActive) "Ready for cursor, click, and scroll control."
+                        else "Press Start to turn the phone into a touchpad.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                AssistChip(
+                    onClick = { },
+                    enabled = false,
+                    label = { Text(if (uiState.isActive) "Active" else "Idle") }
                 )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                listOf("Tap to click", "Two-finger scroll", "Gestures").forEach { label ->
+                    Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)) {
+                        Text(label, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
         }
     }

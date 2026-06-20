@@ -4,6 +4,7 @@ package com.airmouse.presentation.ui.calibration
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +22,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -168,12 +170,11 @@ fun CalibrationGuideScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
-            // Step dots
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(totalSteps) { i ->
-                    Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(if (i == currentStep) Color(0xFF6366F1) else if (i < currentStep) Color(0xFF10B981) else Color(0xFF1E293B)))
-                }
-            }
+            HeroCalibrationCard(uiState = uiState)
+        }
+
+        item {
+            CalibrationStepTracker(currentStep = currentStep, totalSteps = totalSteps)
         }
 
         item {
@@ -227,6 +228,98 @@ fun CalibrationGuideScreen(
         
         item {
             SensorStatusDisplay(uiState = uiState, calibrationData = calibrationData)
+        }
+    }
+}
+
+@Composable
+private fun HeroCalibrationCard(uiState: CalibrationUiState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Brush.radialGradient(listOf(Color(0xFF22C55E), Color(0xFF16A34A))))
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Air Mouse calibration", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Follow the gyroscope, magnetometer, and six-position accelerometer steps exactly as the assignment describes.",
+                        color = Color.White.copy(alpha = 0.78f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CalibrationTag("Gyro bias")
+                CalibrationTag("Accel 6-pos")
+                CalibrationTag("Mag min/max")
+            }
+            if (uiState.isCalibrating) {
+                LinearProgressIndicator(
+                    progress = { uiState.progress / 100f },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF22C55E),
+                    trackColor = Color.White.copy(alpha = 0.12f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalibrationTag(text: String) {
+    Surface(shape = RoundedCornerShape(999.dp), color = Color.White.copy(alpha = 0.12f)) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            color = Color.White,
+            fontSize = 11.sp
+        )
+    }
+}
+
+@Composable
+private fun CalibrationStepTracker(currentStep: Int, totalSteps: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f)),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Step progress", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                repeat(totalSteps) { i ->
+                    val active = i == currentStep
+                    val done = i < currentStep
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(
+                                when {
+                                    done -> Color(0xFF10B981)
+                                    active -> Color(0xFF6366F1)
+                                    else -> Color(0xFF1E293B)
+                                }
+                            )
+                            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(999.dp))
+                    )
+                }
+            }
+            Text(
+                "Step ${currentStep + 1} of $totalSteps",
+                color = Color.White.copy(alpha = 0.78f),
+                fontSize = 12.sp
+            )
         }
     }
 }
@@ -304,14 +397,14 @@ private fun CalibrationGuidanceCard() {
         ) {
             Text("How to calibrate", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(
-                "The assignment expects calibrated sensor data, not raw readings. This means:\n" +
-                    "1. Gyroscope: keep the phone still, gather several samples, and subtract the average bias from future readings so the ideal stationary value is close to zero.\n" +
-                    "2. Accelerometer: place the phone in six orientations so each axis can be compared against gravity (about 9.81 m/s²) and use those samples to estimate offset and scale.\n" +
-                    "3. Magnetometer: rotate the phone through all directions, collect minimum and maximum values for each axis, then compute offset = (min + max) / 2 and scale = (max - min) / 2.\n" +
-                    "4. Correct magnetometer values with (Raw - Offset) / Scale.\n" +
-                    "5. Use a sensor-fusion filter such as Madgwick AHRS, or another suitable filter, to reduce drift and combine the calibrated sensors.\n" +
-                    "6. The final cursor should move smoothly, without jumps, and small involuntary hand movements should be suppressed using smoothing and deadzones.\n" +
-                    "7. The live readings below help verify stability before saving.",
+                "The assignment requires calibrated sensor data, not raw readings. The important parts are:\n" +
+                    "1. Read the gyroscope while the phone is still, collect several samples, and subtract the average bias so the stationary value becomes close to zero.\n" +
+                    "2. Calibrate the accelerometer in six orientations and compare each axis against gravity (about 9.81 m/s²) to estimate offsets and scale.\n" +
+                    "3. Calibrate the magnetometer by rotating the phone through all directions and storing min/max values for each axis.\n" +
+                    "4. Compute magnetometer offset as (min + max) / 2 and scale as (max - min) / 2, then correct readings with (Raw - Offset) / Scale.\n" +
+                    "5. Use a sensor-fusion filter such as Madgwick AHRS, or another suitable filter, to combine the calibrated sensors and reduce drift.\n" +
+                    "6. Raw sensor values should not be used directly for control; smoothing, deadzones, and drift reduction are required so the cursor does not jump or drift.\n" +
+                    "7. The live readings below help verify that calibration is stable before saving.",
                 color = Color.White.copy(alpha = 0.82f),
                 lineHeight = 20.sp
             )
