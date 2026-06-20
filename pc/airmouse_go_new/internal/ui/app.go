@@ -429,8 +429,14 @@ func (a *App) importConfig() {
 func (a *App) showPairingQR() {
 	ip := utils.GetLocalIP()
 	port := a.cfg.WebSocketPort
-	data := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&ws=ws://%s:%d/ws&name=%s&version=%s&protocol=WEBSOCKET",
-		ip, port, ip, port, a.cfg.ServerName, a.cfg.Version)
+	wsURL := fmt.Sprintf("ws://%s:%d/ws", ip, port)
+	data := fmt.Sprintf("airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&version=%s",
+		wsURL, a.cfg.ServerName, ip, port, a.cfg.Version)
+	if a.server != nil && a.server.GetAuthManager() != nil {
+		if pairingData, err := a.server.GetAuthManager().GetPairingQRData(wsURL); err == nil {
+			data = pairingData
+		}
+	}
 
 	qrWindow := a.fyneApp.NewWindow("Pairing QR Code")
 	qrWindow.Resize(fyne.NewSize(400, 450))
