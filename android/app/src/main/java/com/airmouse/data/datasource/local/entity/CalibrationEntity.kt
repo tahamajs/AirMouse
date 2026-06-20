@@ -1,5 +1,5 @@
-// app/src/main/java/com/airmouse/data/datasource/local/CalibrationEntity.kt
-package com.airmouse.data.datasource.local
+// app/src/main/java/com/airmouse/data/datasource/local/entity/CalibrationEntity.kt
+package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

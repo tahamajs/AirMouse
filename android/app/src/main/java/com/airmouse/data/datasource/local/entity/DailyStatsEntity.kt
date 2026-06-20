@@ -1,5 +1,5 @@
-// app/src/main/java/com/airmouse/data/datasource/local/DailyStatsEntity.kt
-package com.airmouse.data.datasource.local
+// app/src/main/java/com/airmouse/data/datasource/local/entity/DailyStatsEntity.kt
+package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -12,6 +12,12 @@ data class DailyStatsEntity(
 
     @ColumnInfo(name = "clicks")
     val clicks: Int = 0,
+
+    @ColumnInfo(name = "double_clicks")
+    val doubleClicks: Int = 0,
+
+    @ColumnInfo(name = "right_clicks")
+    val rightClicks: Int = 0,
 
     @ColumnInfo(name = "scrolls")
     val scrolls: Int = 0,
@@ -26,5 +32,11 @@ data class DailyStatsEntity(
     val sessionTime: Long = 0,
 
     @ColumnInfo(name = "active_time")
-    val activeTime: Long = 0
+    val activeTime: Long = 0,
+
+    @ColumnInfo(name = "distance")
+    val distance: Float = 0f,
+
+    @ColumnInfo(name = "last_updated")
+    val lastUpdated: Long = System.currentTimeMillis()
 )

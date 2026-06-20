@@ -53,7 +53,7 @@ class ConnectionRepositoryImpl @Inject constructor(
         val port = prefs.getInt("last_port", 8080)
         val protocol = prefs.getString("connection_protocol", "WEBSOCKET")
         val protocolEnum = try {
-            ConnectionProtocol.valueOf(protocol)
+            ConnectionProtocol.valueOf(protocol.uppercase())
         } catch (e: IllegalArgumentException) {
             ConnectionProtocol.WEBSOCKET
         }
@@ -100,6 +100,14 @@ class ConnectionRepositoryImpl @Inject constructor(
     override suspend fun connect(config: ConnectionConfig): Boolean {
         _config.value = config
         saveConnectionConfig(config)
+        val protocol = config.protocol
+        connectionManager.setProtocol(
+            when (protocol) {
+                ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
+                ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.TCP
+                ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+            }
+        )
         return connectionManager.connect(config.ip, config.port)
     }
 

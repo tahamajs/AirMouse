@@ -1,8 +1,25 @@
 // app/src/main/java/com/airmouse/data/mapper/DomainToEntityMapper.kt
 package com.airmouse.data.mapper
 
-import com.airmouse.data.datasource.local.*
-import com.airmouse.domain.model.*
+import com.airmouse.data.datasource.local.entity.CalibrationEntity
+import com.airmouse.data.datasource.local.entity.DailyStatsEntity
+import com.airmouse.data.datasource.local.entity.GestureStatsEntity
+import com.airmouse.data.datasource.local.entity.GestureTemplateEntity
+import com.airmouse.data.datasource.local.entity.ProfileEntity
+import com.airmouse.data.datasource.local.entity.StatisticsEntity
+import com.airmouse.data.datasource.local.entity.TrainingSampleEntity
+import com.airmouse.domain.model.CalibrationData
+import com.airmouse.domain.model.CalibrationQuality
+import com.airmouse.domain.model.CalibrationStatus
+import com.airmouse.domain.model.CustomGestureTemplate
+import com.airmouse.domain.model.DailyStats
+import com.airmouse.domain.model.GestureStatistics
+import com.airmouse.domain.model.GestureType
+import com.airmouse.domain.model.GestureTrainingStats
+import com.airmouse.domain.model.ProfileSettings
+import com.airmouse.domain.model.SensorCalibrationData
+import com.airmouse.domain.model.StatisticsSummary
+import com.airmouse.domain.model.UserProfile
 import java.util.UUID
 
 // ==================== Domain to Entity Mapper ====================
@@ -43,6 +60,7 @@ object DomainToEntityMapper {
         val sessionId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
         return StatisticsEntity(
+            id = sessionId,
             sessionId = sessionId,
             totalClicks = stats.totalClicks,
             totalDoubleClicks = stats.totalDoubleClicks,
@@ -54,7 +72,16 @@ object DomainToEntityMapper {
             maxSpeed = stats.maxSpeed,
             startTime = now - stats.sessionDuration,
             endTime = 0,
-            isActive = true
+            isActive = true,
+            totalMovement = stats.totalDistance,
+            movementCount = stats.totalMovements.toLong(),
+            clickCount = stats.totalClicks.toLong(),
+            doubleClickCount = stats.totalDoubleClicks.toLong(),
+            rightClickCount = stats.totalRightClicks.toLong(),
+            scrollCount = stats.totalScrolls.toLong(),
+            totalSessionTime = stats.sessionDuration,
+            lastReset = now,
+            lastUpdated = now
         )
     }
 
@@ -67,37 +94,36 @@ object DomainToEntityMapper {
             scrolls = stats.scrolls,
             movements = stats.movements,
             distance = stats.distance,
-            gestures = 0,
             lastUpdated = System.currentTimeMillis()
         )
     }
 
     fun mapToEntity(stat: GestureStatistics): GestureStatsEntity {
         return GestureStatsEntity(
+            gesture_name = stat.gestureName,
+            count = stat.detectionCount,
+            avgConfidence = stat.confidencePercentage,
+            lastDetected = stat.lastDetected,
+            detectionRate = if (stat.detectionCount > 0) stat.confidencePercentage else 0f,
             gestureName = stat.gestureName,
             detectionCount = stat.detectionCount,
             confidencePercentage = stat.confidencePercentage,
-            lastDetected = stat.lastDetected,
-            isCustom = false,
-            category = "general",
-            isFavorite = false,
-            avgExecutionTimeMs = 0f,
-            totalConfidenceSum = stat.confidencePercentage * stat.detectionCount
+            isCustom = false
         )
     }
 
     fun mapToEntity(stats: GestureTrainingStats): GestureStatsEntity {
         val mostUsed = stats.gesturesByType.maxByOrNull { it.value }
         return GestureStatsEntity(
+            gesture_name = mostUsed?.key?.name ?: "none",
+            count = stats.totalGestures,
+            avgConfidence = stats.averageConfidence,
+            lastDetected = stats.lastGestureTime,
+            detectionRate = if (stats.totalGestures > 0) stats.averageConfidence else 0f,
             gestureName = mostUsed?.key?.name ?: "none",
             detectionCount = stats.totalGestures,
             confidencePercentage = stats.averageConfidence,
-            lastDetected = stats.lastGestureTime,
-            isCustom = true,
-            category = "training",
-            isFavorite = false,
-            avgExecutionTimeMs = 0f,
-            totalConfidenceSum = stats.averageConfidence * stats.totalGestures
+            isCustom = true
         )
     }
 
@@ -342,28 +368,6 @@ object EntityToDomainMapper {
         return mapOf(
             "templates" to mapGestureTemplateEntitiesToDomainList(entities),
             "statistics" to mapGestureStatsEntitiesToDomainList(stats)
-        )
-    }
-
-    // ==================== Statistics Aggregation ====================
-
-    fun mapToDomain(stats: AggregatedStats): Map<String, Any> {
-        return mapOf(
-            "totalClicks" to stats.totalClicks,
-            "totalDoubleClicks" to stats.totalDoubleClicks,
-            "totalRightClicks" to stats.totalRightClicks,
-            "totalScrolls" to stats.totalScrolls,
-            "totalMovements" to stats.totalMovements,
-            "totalDistance" to stats.totalDistance,
-            "totalGestures" to stats.totalGestures
-        )
-    }
-
-    fun mapToDomain(avgStats: AverageStats): Map<String, Float> {
-        return mapOf(
-            "avgClicks" to avgStats.avgClicks,
-            "avgMovements" to avgStats.avgMovements,
-            "avgDistance" to avgStats.avgDistance
         )
     }
 

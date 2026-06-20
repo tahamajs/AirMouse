@@ -7,7 +7,7 @@ import com.airmouse.domain.model.GestureType
 import java.util.Date
 
 // Import the moved data classes
-import com.airmouse.data.datasource.local.CalibrationData
+import com.airmouse.data.datasource.local.CalibrationPrefsData
 import com.airmouse.data.datasource.local.SensorData
 import com.airmouse.data.datasource.local.GestureData
 import com.airmouse.data.datasource.local.Quadruple
@@ -252,13 +252,13 @@ class Converters {
     // ==================== Calibration Data Converters ====================
 
     @TypeConverter
-    fun fromCalibrationData(value: String?): CalibrationData? {
+    fun fromCalibrationData(value: String?): CalibrationPrefsData? {
         if (value == null) return null
-        return gson.fromJson(value, CalibrationData::class.java)
+        return gson.fromJson(value, CalibrationPrefsData::class.java)
     }
 
     @TypeConverter
-    fun fromCalibrationDataToString(data: CalibrationData?): String? {
+    fun fromCalibrationDataToString(data: CalibrationPrefsData?): String? {
         if (data == null) return null
         return gson.toJson(data)
     }

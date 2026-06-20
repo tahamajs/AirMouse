@@ -1,8 +1,8 @@
 // app/src/main/java/com/airmouse/data/repository/ProfileRepositoryImpl.kt
 package com.airmouse.data.repository
 
-import com.airmouse.data.datasource.local.ProfileDao
-import com.airmouse.data.datasource.local.ProfileEntity
+import com.airmouse.data.datasource.local.dao.ProfileDao
+import com.airmouse.data.datasource.local.entity.ProfileEntity
 import com.airmouse.domain.model.ProfileSettings
 import com.airmouse.domain.model.UserProfile
 import com.airmouse.domain.repository.IProfileRepository

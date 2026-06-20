@@ -20,4 +20,13 @@ interface StatisticsDao {
 
     @Query("DELETE FROM statistics")
     suspend fun deleteAll()
+
+    @Query("SELECT * FROM statistics WHERE id = 'default' LIMIT 1")
+    suspend fun getActiveSession(): StatisticsEntity?
+
+    @Query("UPDATE statistics SET last_updated = :timestamp WHERE id = :sessionId")
+    suspend fun endSession(sessionId: String, timestamp: Long)
+
+    @Query("DELETE FROM statistics WHERE last_updated < :timestamp")
+    suspend fun deleteOldSessions(timestamp: Long)
 }

@@ -9,6 +9,42 @@ data class StatisticsEntity(
     @PrimaryKey
     val id: String = "default",
 
+    @ColumnInfo(name = "session_id")
+    val sessionId: String = "default",
+
+    @ColumnInfo(name = "total_clicks")
+    val totalClicks: Int = 0,
+
+    @ColumnInfo(name = "total_double_clicks")
+    val totalDoubleClicks: Int = 0,
+
+    @ColumnInfo(name = "total_right_clicks")
+    val totalRightClicks: Int = 0,
+
+    @ColumnInfo(name = "total_scrolls")
+    val totalScrolls: Int = 0,
+
+    @ColumnInfo(name = "total_movements_legacy")
+    val totalMovements: Int = 0,
+
+    @ColumnInfo(name = "total_distance_legacy")
+    val totalDistance: Float = 0f,
+
+    @ColumnInfo(name = "average_speed_legacy")
+    val averageSpeed: Float = 0f,
+
+    @ColumnInfo(name = "max_speed_legacy")
+    val maxSpeed: Float = 0f,
+
+    @ColumnInfo(name = "start_time")
+    val startTime: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(name = "end_time")
+    val endTime: Long = 0L,
+
+    @ColumnInfo(name = "is_active_legacy")
+    val isActive: Boolean = true,
+
     @ColumnInfo(name = "total_movement")
     val totalMovement: Float = 0f,
 
