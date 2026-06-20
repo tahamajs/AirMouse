@@ -259,32 +259,58 @@ func (a *App) createMenuBar() *fyne.MainMenu {
 // ------------------------------------------------------------
 
 func (a *App) createToolbar() fyne.CanvasObject {
-	startBtn := widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
-		err := a.server.Start()
-		if err != nil && a.window != nil {
-			if a.server.IsRunning() {
-				dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
-					"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
-			} else {
-				dialog.ShowError(err, a.window)
-			}
-		}
+	var startBtn *widget.Button
+	startBtn = widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
+		startBtn.Disable()
+		a.connectionStatus.SetText("⏳ Status: Starting...")
+		go func() {
+			err := a.server.Start()
+			RunOnMain(func() {
+				if a.server.IsRunning() {
+					a.connectionStatus.SetText("🟢 Status: Running")
+				} else {
+					a.connectionStatus.SetText("⛔ Status: Stopped")
+					startBtn.Enable()
+				}
+				if err != nil && a.window != nil {
+					if a.server.IsRunning() {
+						dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+							"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
+					} else {
+						dialog.ShowError(err, a.window)
+					}
+				}
+			})
+		}()
 	})
 	stopBtn := widget.NewButtonWithIcon("Stop", theme.MediaStopIcon(), func() {
 		a.server.Stop()
 	})
-	restartBtn := widget.NewButtonWithIcon("Restart", theme.ViewRefreshIcon(), func() {
-		a.server.Stop()
-		time.Sleep(500 * time.Millisecond)
-		err := a.server.Start()
-		if err != nil && a.window != nil {
-			if a.server.IsRunning() {
-				dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
-					"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
-			} else {
-				dialog.ShowError(err, a.window)
-			}
-		}
+	var restartBtn *widget.Button
+	restartBtn = widget.NewButtonWithIcon("Restart", theme.ViewRefreshIcon(), func() {
+		restartBtn.Disable()
+		a.connectionStatus.SetText("⏳ Status: Restarting...")
+		go func() {
+			a.server.Stop()
+			time.Sleep(500 * time.Millisecond)
+			err := a.server.Start()
+			RunOnMain(func() {
+				restartBtn.Enable()
+				if a.server.IsRunning() {
+					a.connectionStatus.SetText("🟢 Status: Running")
+				} else {
+					a.connectionStatus.SetText("⛔ Status: Stopped")
+				}
+				if err != nil && a.window != nil {
+					if a.server.IsRunning() {
+						dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+							"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
+					} else {
+						dialog.ShowError(err, a.window)
+					}
+				}
+			})
+		}()
 	})
 	settingsBtn := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
 		dialog.ShowInformation("Settings", "Open the Settings tab to adjust server, network, and pairing options.", a.window)
