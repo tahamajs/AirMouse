@@ -1,27 +1,20 @@
-// app/src/main/java/com/airmouse/data/datasource/local/AppDatabase.kt
 package com.airmouse.data.datasource.local
 
+import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import android.content.Context
-import com.airmouse.data.datasource.local.dao.CalibrationDao
-import com.airmouse.data.datasource.local.dao.SettingsDao
-import com.airmouse.data.datasource.local.dao.StatisticsDao
-import com.airmouse.data.datasource.local.dao.GestureDao
-import com.airmouse.data.datasource.local.entity.CalibrationEntity
-import com.airmouse.data.datasource.local.entity.SettingsEntity
-import com.airmouse.data.datasource.local.entity.StatisticsEntity
-import com.airmouse.data.datasource.local.entity.GestureEntity
-import com.airmouse.data.datasource.local.Converters // Corrected import
+import com.airmouse.data.datasource.local.dao.*
+import com.airmouse.data.datasource.local.entity.*
 
 @Database(
     entities = [
         CalibrationEntity::class,
         SettingsEntity::class,
         StatisticsEntity::class,
-        GestureEntity::class
+        GestureTemplateEntity::class,
+        ProfileEntity::class
     ],
     version = 1,
     exportSchema = false
@@ -33,6 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun settingsDao(): SettingsDao
     abstract fun statisticsDao(): StatisticsDao
     abstract fun gestureDao(): GestureDao
+    abstract fun profileDao(): ProfileDao
 
     companion object {
         @Volatile

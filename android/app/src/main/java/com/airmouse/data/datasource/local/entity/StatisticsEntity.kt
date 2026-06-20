@@ -1,5 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/StatisticsEntity.kt
-package com.airmouse.data.datasource.local
+package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

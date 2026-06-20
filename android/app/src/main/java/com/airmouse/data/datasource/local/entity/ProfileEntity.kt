@@ -1,5 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/ProfileEntity.kt
-package com.airmouse.data.datasource.local
+package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -70,8 +69,12 @@ data class ProfileEntity(
     @ColumnInfo(name = "is_favorite")
     val isFavorite: Boolean = false,
 
+    // IMPORTANT: needed for ProfileDao queries
+    @ColumnInfo(name = "is_active")
+    val isActive: Boolean = true,
+
     @ColumnInfo(name = "tags")
-    val tags: String? = null, // JSON array
+    val tags: String? = null,
 
     @ColumnInfo(name = "icon_res")
     val iconRes: Int = 0,

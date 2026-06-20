@@ -142,9 +142,6 @@ data class CalibrationEntity(
                 isCalibrated = data.isCalibrated,
                 calibrationQuality = data.quality.name,
                 timestamp = data.timestamp,
-                version = data.version,
-                deviceModel = data.deviceModel,
-                androidVersion = data.androidVersion
             )
         }
     }

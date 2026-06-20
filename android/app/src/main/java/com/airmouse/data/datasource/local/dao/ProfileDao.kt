@@ -1,14 +1,13 @@
-// app/src/main/java/com/airmouse/data/datasource/local/ProfileDao.kt
-package com.airmouse.data.datasource.local
+package com.airmouse.data.datasource.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.airmouse.data.datasource.local.entity.ProfileEntity
 
 @Dao
 interface ProfileDao {
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProfile(profile: ProfileEntity)
 
