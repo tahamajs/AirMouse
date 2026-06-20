@@ -19,6 +19,7 @@ enum class SettingsSection(
     HAPTIC("Haptic & Sound", "Feedback preferences", Icons.Default.Vibration),
     DISPLAY("Display", "Theme and appearance", Icons.Default.DisplaySettings),
     THEMES("Themes", "Theme presets and accents", Icons.Default.Palette),
+    TOUCHPAD("Touchpad", "Touchpad mode and gesture controls", Icons.Default.TouchApp),
     CONNECTION("Connection", "Network settings", Icons.Default.Wifi),
     PRIVACY("Privacy & Data", "Your data preferences", Icons.Default.PrivacyTip),
     PRESENTATION("Presentation", "Slide control settings", Icons.Default.Slideshow),
@@ -72,6 +73,27 @@ data class SettingsUiState(
     val showDebugInfo: Boolean = false,
     val keepScreenOn: Boolean = false,
     val showFps: Boolean = false,
+
+    // Touchpad Settings
+    val touchpadActive: Boolean = false,
+    val touchpadSensitivity: Float = 1.0f,
+    val touchpadCursorSpeed: Float = 1.0f,
+    val touchpadPointerSpeed: Int = 50,
+    val touchpadAccelerationEnabled: Boolean = true,
+    val touchpadInvertVertical: Boolean = false,
+    val touchpadInvertHorizontal: Boolean = false,
+    val touchpadScrollSpeed: Float = 1.0f,
+    val touchpadNaturalScrolling: Boolean = true,
+    val touchpadTwoFingerScroll: Boolean = true,
+    val touchpadEdgeScrolling: Boolean = false,
+    val touchpadScrollInertia: Boolean = true,
+    val touchpadTapToClick: Boolean = true,
+    val touchpadDoubleTapDelay: Int = 300,
+    val touchpadThreeFingerSwipe: Boolean = true,
+    val touchpadPinchToZoom: Boolean = true,
+    val touchpadRotateToRotate: Boolean = false,
+    val touchpadHapticFeedback: Boolean = true,
+    val touchpadShowTouchPoints: Boolean = false,
 
     // Connection Settings
     val autoConnect: Boolean = true,
@@ -138,6 +160,27 @@ sealed class SettingsEvent {
     object ToggleDebugInfo : SettingsEvent()
     object ToggleKeepScreenOn : SettingsEvent()
     object ToggleShowFps : SettingsEvent()
+
+    // Touchpad Events
+    object ToggleTouchpadActive : SettingsEvent()
+    data class UpdateTouchpadSensitivity(val value: Float) : SettingsEvent()
+    data class UpdateTouchpadCursorSpeed(val value: Float) : SettingsEvent()
+    data class UpdateTouchpadPointerSpeed(val value: Int) : SettingsEvent()
+    object ToggleTouchpadAcceleration : SettingsEvent()
+    object ToggleTouchpadInvertVertical : SettingsEvent()
+    object ToggleTouchpadInvertHorizontal : SettingsEvent()
+    data class UpdateTouchpadScrollSpeed(val value: Float) : SettingsEvent()
+    object ToggleTouchpadNaturalScrolling : SettingsEvent()
+    object ToggleTouchpadTwoFingerScroll : SettingsEvent()
+    object ToggleTouchpadEdgeScrolling : SettingsEvent()
+    object ToggleTouchpadScrollInertia : SettingsEvent()
+    object ToggleTouchpadTapToClick : SettingsEvent()
+    data class UpdateTouchpadDoubleTapDelay(val value: Int) : SettingsEvent()
+    object ToggleTouchpadThreeFingerSwipe : SettingsEvent()
+    object ToggleTouchpadPinchToZoom : SettingsEvent()
+    object ToggleTouchpadRotateToRotate : SettingsEvent()
+    object ToggleTouchpadHapticFeedback : SettingsEvent()
+    object ToggleTouchpadShowTouchPoints : SettingsEvent()
 
     // Connection Events
     object ToggleAutoConnect : SettingsEvent()
