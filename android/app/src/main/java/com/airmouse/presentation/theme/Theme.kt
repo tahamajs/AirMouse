@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/theme/AirMouseTheme.kt
 package com.airmouse.presentation.theme
 
 import android.app.Activity
@@ -6,26 +7,52 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.material3.Typography
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
-import com.airmouse.R
+import com.airmouse.presentation.ui.themes.AccentColor
+import com.airmouse.presentation.ui.themes.ThemeColorScheme
+import com.airmouse.presentation.ui.themes.getThemeColorScheme
 
-// ==================== Color Schemes ====================
+// ==================== Typography ====================
+
+private val InterFontFamily = FontFamily.SansSerif
+
+val AirMouseTypography = Typography(
+    displayLarge = Typography().displayLarge.copy(fontFamily = InterFontFamily),
+    displayMedium = Typography().displayMedium.copy(fontFamily = InterFontFamily),
+    displaySmall = Typography().displaySmall.copy(fontFamily = InterFontFamily),
+    headlineLarge = Typography().headlineLarge.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold),
+    headlineMedium = Typography().headlineMedium.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
+    headlineSmall = Typography().headlineSmall.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
+    titleLarge = Typography().titleLarge.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
+    titleMedium = Typography().titleMedium.copy(fontFamily = InterFontFamily),
+    titleSmall = Typography().titleSmall.copy(fontFamily = InterFontFamily),
+    bodyLarge = Typography().bodyLarge.copy(fontFamily = InterFontFamily),
+    bodyMedium = Typography().bodyMedium.copy(fontFamily = InterFontFamily),
+    bodySmall = Typography().bodySmall.copy(fontFamily = InterFontFamily),
+    labelLarge = Typography().labelLarge.copy(fontFamily = InterFontFamily),
+    labelMedium = Typography().labelMedium.copy(fontFamily = InterFontFamily),
+    labelSmall = Typography().labelSmall.copy(fontFamily = InterFontFamily)
+)
+
+// ==================== Shapes ====================
+
+val AirMouseShapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(24.dp)
+)
+
+// ==================== Legacy Color Schemes (for backward compatibility) ====================
 
 val DarkColorScheme = darkColorScheme(
     primary = Color(0xFF00BCD4),
@@ -45,6 +72,26 @@ val DarkColorScheme = darkColorScheme(
     onError = Color(0xFFFFFFFF),
     onPrimaryContainer = Color(0xFFE5E7EB),
     onSecondaryContainer = Color(0xFFE5E7EB)
+)
+
+val LightColorScheme = lightColorScheme(
+    primary = Color(0xFF00838F),
+    secondary = Color(0xFF2E7D32),
+    tertiary = Color(0xFFE64A19),
+    background = Color(0xFFF8FAFC),
+    surface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFFF1F5F9),
+    onBackground = Color(0xFF1E293B),
+    onSurface = Color(0xFF1E293B),
+    primaryContainer = Color(0xFFE0F7FA),
+    secondaryContainer = Color(0xFFE8F5E9),
+    error = Color(0xFFD32F2F),
+    onPrimary = Color(0xFFFFFFFF),
+    onSecondary = Color(0xFFFFFFFF),
+    onTertiary = Color(0xFFFFFFFF),
+    onError = Color(0xFFFFFFFF),
+    onPrimaryContainer = Color(0xFF1E293B),
+    onSecondaryContainer = Color(0xFF1E293B)
 )
 
 val PureBlackColorScheme = darkColorScheme(
@@ -87,63 +134,123 @@ val HighContrastColorScheme = darkColorScheme(
     onSecondaryContainer = Color(0xFFFFFFFF)
 )
 
-val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF00838F),
-    secondary = Color(0xFF2E7D32),
-    tertiary = Color(0xFFE64A19),
-    background = Color(0xFFF8FAFC),
-    surface = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFF1F5F9),
-    onBackground = Color(0xFF1E293B),
-    onSurface = Color(0xFF1E293B),
-    primaryContainer = Color(0xFFE0F7FA),
-    secondaryContainer = Color(0xFFE8F5E9),
-    error = Color(0xFFD32F2F),
-    onPrimary = Color(0xFFFFFFFF),
-    onSecondary = Color(0xFFFFFFFF),
-    onTertiary = Color(0xFFFFFFFF),
-    onError = Color(0xFFFFFFFF),
-    onPrimaryContainer = Color(0xFF1E293B),
-    onSecondaryContainer = Color(0xFF1E293B)
-)
-
-// ==================== Typography ====================
-
-private val InterFontFamily = FontFamily.SansSerif
-
-// Base typography definitions without copying MaterialTheme.typography directly outside context
-val AirMouseTypography = Typography(
-    displayLarge = Typography().displayLarge.copy(fontFamily = InterFontFamily),
-    displayMedium = Typography().displayMedium.copy(fontFamily = InterFontFamily),
-    displaySmall = Typography().displaySmall.copy(fontFamily = InterFontFamily),
-    headlineLarge = Typography().headlineLarge.copy(fontFamily = InterFontFamily),
-    headlineMedium = Typography().headlineMedium.copy(fontFamily = InterFontFamily),
-    headlineSmall = Typography().headlineSmall.copy(fontFamily = InterFontFamily),
-    titleLarge = Typography().titleLarge.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
-    titleMedium = Typography().titleMedium.copy(fontFamily = InterFontFamily),
-    titleSmall = Typography().titleSmall.copy(fontFamily = InterFontFamily),
-    bodyLarge = Typography().bodyLarge.copy(fontFamily = InterFontFamily),
-    bodyMedium = Typography().bodyMedium.copy(fontFamily = InterFontFamily),
-    bodySmall = Typography().bodySmall.copy(fontFamily = InterFontFamily),
-    labelLarge = Typography().labelLarge.copy(fontFamily = InterFontFamily),
-    labelMedium = Typography().labelMedium.copy(fontFamily = InterFontFamily),
-    labelSmall = Typography().labelSmall.copy(fontFamily = InterFontFamily)
-)
-
-// ==================== Shapes ====================
-
-val AirMouseShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(32.dp)
-)
-
-// ==================== Theme Configuration ====================
+// ==================== Main Theme Composable ====================
 
 @Composable
 fun AirMouseTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    useDynamicColor: Boolean = true,
+    themeColors: ThemeColorScheme? = null,
+    themeId: String = "system",
+    accentColor: AccentColor = AccentColor.ORANGE,
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val view = LocalView.current
+
+    // Get theme colors if not provided
+    val colors = themeColors ?: remember(themeId, accentColor) {
+        getThemeColorScheme(themeId, accentColor)
+    }
+
+    // Build color scheme
+    val colorScheme = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else {
+        if (darkTheme) {
+            darkColorScheme(
+                primary = colors.primary,
+                onPrimary = colors.onPrimary,
+                primaryContainer = colors.primaryContainer,
+                onPrimaryContainer = colors.onPrimaryContainer,
+                secondary = colors.secondary,
+                onSecondary = colors.onSecondary,
+                secondaryContainer = colors.secondaryContainer,
+                onSecondaryContainer = colors.onSecondaryContainer,
+                tertiary = colors.tertiary,
+                onTertiary = colors.onTertiary,
+                tertiaryContainer = colors.tertiaryContainer,
+                onTertiaryContainer = colors.onTertiaryContainer,
+                error = colors.error,
+                onError = colors.onError,
+                errorContainer = colors.errorContainer,
+                onErrorContainer = colors.onErrorContainer,
+                background = colors.background,
+                onBackground = colors.onBackground,
+                surface = colors.surface,
+                onSurface = colors.onSurface,
+                surfaceVariant = colors.surfaceVariant,
+                onSurfaceVariant = colors.onSurfaceVariant,
+                outline = colors.outline,
+                outlineVariant = colors.outlineVariant,
+                scrim = colors.scrim,
+                inverseSurface = colors.inverseSurface,
+                inverseOnSurface = colors.inverseOnSurface,
+                inversePrimary = colors.inversePrimary,
+                surfaceTint = colors.surfaceTint
+            )
+        } else {
+            lightColorScheme(
+                primary = colors.primary,
+                onPrimary = colors.onPrimary,
+                primaryContainer = colors.primaryContainer,
+                onPrimaryContainer = colors.onPrimaryContainer,
+                secondary = colors.secondary,
+                onSecondary = colors.onSecondary,
+                secondaryContainer = colors.secondaryContainer,
+                onSecondaryContainer = colors.onSecondaryContainer,
+                tertiary = colors.tertiary,
+                onTertiary = colors.onTertiary,
+                tertiaryContainer = colors.tertiaryContainer,
+                onTertiaryContainer = colors.onTertiaryContainer,
+                error = colors.error,
+                onError = colors.onError,
+                errorContainer = colors.errorContainer,
+                onErrorContainer = colors.onErrorContainer,
+                background = colors.background,
+                onBackground = colors.onBackground,
+                surface = colors.surface,
+                onSurface = colors.onSurface,
+                surfaceVariant = colors.surfaceVariant,
+                onSurfaceVariant = colors.onSurfaceVariant,
+                outline = colors.outline,
+                outlineVariant = colors.outlineVariant,
+                scrim = colors.scrim,
+                inverseSurface = colors.inverseSurface,
+                inverseOnSurface = colors.inverseOnSurface,
+                inversePrimary = colors.inversePrimary,
+                surfaceTint = colors.surfaceTint
+            )
+        }
+    }
+
+    // Update system bars
+    SideEffect {
+        val window = (view.context as? Activity)?.window
+        if (window != null) {
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = colors.background.toArgb()
+
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
+
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
+    }
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = AirMouseTypography,
+        shapes = AirMouseShapes,
+        content = content
+    )
+}
+
+// ==================== Legacy Theme Function (Backward Compatibility) ====================
+
+@Composable
+fun AirMouseThemeLegacy(
     theme: String = "system",
     useDynamicColor: Boolean = true,
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -183,7 +290,6 @@ fun AirMouseTheme(
     SideEffect {
         val window = (view.context as? Activity)?.window
         if (window != null) {
-            // Replaces deprecated Accompanist systemUiController
             window.statusBarColor = Color.Transparent.toArgb()
             window.navigationBarColor = if (isDarkTheme) Color(0xFF0F1115).toArgb() else Color(0xFFF8FAFC).toArgb()
 
@@ -208,18 +314,25 @@ fun AirMouseTheme(
 @Composable
 fun rememberThemeState(
     initialTheme: String = "system",
-    onThemeChange: (String) -> Unit = {}
+    initialAccent: AccentColor = AccentColor.ORANGE,
+    onThemeChange: (String) -> Unit = {},
+    onAccentChange: (AccentColor) -> Unit = {}
 ): ThemeState {
     return remember {
-        ThemeState(initialTheme, onThemeChange)
+        ThemeState(initialTheme, initialAccent, onThemeChange, onAccentChange)
     }
 }
 
 class ThemeState(
     initialTheme: String,
-    private val onThemeChange: (String) -> Unit
+    initialAccent: AccentColor,
+    private val onThemeChange: (String) -> Unit,
+    private val onAccentChange: (AccentColor) -> Unit
 ) {
     var currentTheme by mutableStateOf(initialTheme)
+        private set
+
+    var currentAccent by mutableStateOf(initialAccent)
         private set
 
     fun updateTheme(theme: String) {
@@ -227,45 +340,23 @@ class ThemeState(
         onThemeChange(theme)
     }
 
+    fun updateAccent(accent: AccentColor) {
+        currentAccent = accent
+        onAccentChange(accent)
+    }
+
     @Composable
     fun isDarkTheme(): Boolean {
         return when (currentTheme) {
             "light" -> false
-            "dark", "pure_black" -> true
-            else -> isSystemInDarkTheme()
+            "high_contrast" -> false
+            else -> true
         }
     }
-}
 
-// ==================== Theme Preview Helpers ====================
-
-@Composable
-fun AirMouseThemePreview(
-    theme: String = "system",
-    content: @Composable () -> Unit
-) {
-    AirMouseTheme(theme = theme) {
-        content()
-    }
-}
-
-@Composable
-fun ThemePreview() {
-    val themes = listOf("light", "dark", "pure_black", "high_contrast")
-    Column {
-        for (theme in themes) {
-            AirMouseTheme(theme = theme) {
-                Surface(
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Text(
-                        text = "Theme: $theme",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-            }
-        }
+    @Composable
+    fun getThemeColors(): ThemeColorScheme {
+        return getThemeColorScheme(currentTheme, currentAccent)
     }
 }
 
@@ -275,7 +366,7 @@ enum class AppTheme {
     SYSTEM, LIGHT, DARK, PURE_BLACK, HIGH_CONTRAST, DYNAMIC
 }
 
-// ==================== Helper Ext/Functions ====================
+// ==================== Helper Functions ====================
 
 fun getThemeFromString(theme: String): AppTheme {
     return when (theme.lowercase()) {
@@ -288,23 +379,83 @@ fun getThemeFromString(theme: String): AppTheme {
     }
 }
 
-@Composable
-fun getAdaptiveColorScheme(theme: String, useDynamicColor: Boolean): ColorScheme {
-    val context = LocalContext.current
-    val actualTheme = getThemeFromString(theme)
-    val isDark = when (actualTheme) {
-        AppTheme.LIGHT -> false
-        AppTheme.DARK, AppTheme.PURE_BLACK -> true
-        else -> isSystemInDarkTheme()
+fun getThemeIdFromAppTheme(appTheme: AppTheme): String {
+    return when (appTheme) {
+        AppTheme.SYSTEM -> "system"
+        AppTheme.LIGHT -> "light"
+        AppTheme.DARK -> "dark"
+        AppTheme.PURE_BLACK -> "pure_black"
+        AppTheme.HIGH_CONTRAST -> "high_contrast"
+        AppTheme.DYNAMIC -> "dynamic"
     }
+}
+
+@Composable
+fun getAdaptiveColorScheme(
+    theme: String = "system",
+    accent: AccentColor = AccentColor.ORANGE,
+    useDynamicColor: Boolean = true
+): ColorScheme {
+    val context = LocalContext.current
+    val isDark = when (theme) {
+        "light" -> false
+        "high_contrast" -> false
+        else -> true
+    }
+    val themeColors = getThemeColorScheme(theme, accent)
 
     return when {
         useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        actualTheme == AppTheme.PURE_BLACK -> PureBlackColorScheme
-        actualTheme == AppTheme.HIGH_CONTRAST -> HighContrastColorScheme
+        theme == "pure_black" -> PureBlackColorScheme
+        theme == "high_contrast" -> HighContrastColorScheme
         isDark -> DarkColorScheme
         else -> LightColorScheme
     }
+}
+
+// ==================== Theme Preview Helpers ====================
+
+@Composable
+fun AirMouseThemePreview(
+    theme: String = "system",
+    accent: AccentColor = AccentColor.ORANGE,
+    content: @Composable () -> Unit
+) {
+    AirMouseTheme(themeId = theme, accentColor = accent) {
+        content()
+    }
+}
+
+@Composable
+fun ThemePreview() {
+    val themes = listOf("light", "dark", "pure_black", "high_contrast", "ocean", "sunset")
+    val accents = listOf(AccentColor.ORANGE, AccentColor.BLUE, AccentColor.PURPLE)
+
+    Column {
+        for (theme in themes) {
+            for (accent in accents.take(1)) {
+                AirMouseTheme(themeId = theme, accentColor = accent) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.background,
+                        modifier = androidx.compose.ui.Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Theme: $theme",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== Default Theme Config ====================
+
+object DefaultThemeConfig {
+    const val DEFAULT_THEME = "system"
+    val DEFAULT_ACCENT = AccentColor.ORANGE
 }

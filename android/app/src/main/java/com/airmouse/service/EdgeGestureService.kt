@@ -1,6 +1,8 @@
+//// app/src/main/java/com/airmouse/service/EdgeGestureService.kt
 //package com.airmouse.service
 //
-//import android.app.Service
+//import android.app.*
+//import android.content.Context
 //import android.content.Intent
 //import android.os.Build
 //import android.os.IBinder
@@ -10,8 +12,10 @@
 //import android.view.WindowManager
 //import android.widget.FrameLayout
 //import android.widget.ImageView
-//import com.airmouse.network.ConnectionManager
+//import android.widget.TextView
+//import androidx.core.app.NotificationCompat
 //import com.airmouse.R
+//import com.airmouse.network.ConnectionManager
 //import com.airmouse.utils.PreferencesManager
 //import dagger.hilt.android.AndroidEntryPoint
 //import kotlinx.coroutines.*
@@ -33,13 +37,13 @@
 //    private var initialY = 0
 //    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 //    private var hideJob: Job? = null
+//    private var connectionCheckJob: Job? = null
 //
 //    companion object {
-//        private const val EDGE_SIZE = 80
-//        private const val COLLAPSED_SIZE = 48
-//        private const val EXPANDED_SIZE = 120
+//        private const val NOTIFICATION_ID = 2002
+//        private const val CHANNEL_ID = "edge_gesture_channel"
 //
-//        fun startService(context: android.content.Context) {
+//        fun startService(context: Context) {
 //            val intent = Intent(context, EdgeGestureService::class.java)
 //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 //                context.startForegroundService(intent)
@@ -48,33 +52,67 @@
 //            }
 //        }
 //
-//        fun stopService(context: android.content.Context) {
+//        fun stopService(context: Context) {
 //            context.stopService(Intent(context, EdgeGestureService::class.java))
 //        }
 //    }
 //
 //    override fun onCreate() {
 //        super.onCreate()
+//        createNotificationChannel()
+//        startForeground(NOTIFICATION_ID, createNotification("Edge Gestures", "Active"))
 //        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+//
 //        if (prefs.getBoolean("edge_gestures_enabled", true)) {
 //            startEdgeGestures()
 //        }
 //    }
 //
+//    private fun createNotificationChannel() {
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            val channel = NotificationChannel(
+//                CHANNEL_ID,
+//                "Edge Gestures",
+//                NotificationManager.IMPORTANCE_LOW
+//            ).apply {
+//                description = "Edge gesture controls"
+//            }
+//            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+//        }
+//    }
+//
+//    private fun createNotification(title: String, content: String): Notification {
+//        return NotificationCompat.Builder(this, CHANNEL_ID)
+//            .setContentTitle(title)
+//            .setContentText(content)
+//            .setSmallIcon(R.drawable.ic_gesture)
+//            .setPriority(NotificationCompat.PRIORITY_LOW)
+//            .build()
+//    }
+//
 //    fun startEdgeGestures() {
 //        if (isActive) return
 //        isActive = true
-//
 //        createFloatingView()
+//        startConnectionCheck()
+//        updateNotification("Edge Gestures", "Active")
 //    }
 //
 //    fun stopEdgeGestures() {
 //        if (!isActive) return
 //        isActive = false
+//        connectionCheckJob?.cancel()
 //
-//        floatingView?.let { windowManager.removeView(it) }
+//        floatingView?.let {
+//            try {
+//                windowManager.removeView(it)
+//            } catch (e: Exception) {
+//                // View already removed
+//            }
+//        }
 //        floatingView = null
 //        hideJob?.cancel()
+//        updateNotification("Edge Gestures", "Stopped")
 //    }
 //
 //    private fun createFloatingView() {
@@ -100,7 +138,7 @@
 //
 //        setupTouchListener()
 //        setupActionButtons()
-//
+//        updateConnectionStatus(false)
 //        scheduleHide()
 //    }
 //
@@ -110,8 +148,9 @@
 //                android.view.MotionEvent.ACTION_DOWN -> {
 //                    startX = event.rawX
 //                    startY = event.rawY
-//                    initialX = (view.layoutParams as WindowManager.LayoutParams).x
-//                    initialY = (view.layoutParams as WindowManager.LayoutParams).y
+//                    val params = view.layoutParams as WindowManager.LayoutParams
+//                    initialX = params.x
+//                    initialY = params.y
 //                    expandView()
 //                    true
 //                }
@@ -139,29 +178,55 @@
 //        val btnScrollUp = floatingView?.findViewById<ImageView>(R.id.btn_scroll_up)
 //        val btnScrollDown = floatingView?.findViewById<ImageView>(R.id.btn_scroll_down)
 //        val btnClose = floatingView?.findViewById<ImageView>(R.id.btn_close)
+//        val btnStatus = floatingView?.findViewById<TextView>(R.id.btn_status)
 //
 //        btnClick?.setOnClickListener {
-//            connectionManager.sendClick()
-//            hideView()
+//            if (connectionManager.isConnected()) {
+//                connectionManager.sendClick()
+//                showFeedback("Click")
+//                hideView()
+//            } else {
+//                showFeedback("Not Connected")
+//            }
 //        }
 //
 //        btnRightClick?.setOnClickListener {
-//            connectionManager.sendRightClick()
-//            hideView()
+//            if (connectionManager.isConnected()) {
+//                connectionManager.sendRightClick()
+//                showFeedback("Right Click")
+//                hideView()
+//            } else {
+//                showFeedback("Not Connected")
+//            }
 //        }
 //
 //        btnScrollUp?.setOnClickListener {
-//            connectionManager.sendScroll(3)
-//            hideView()
+//            if (connectionManager.isConnected()) {
+//                connectionManager.sendScroll(3)
+//                showFeedback("Scroll Up")
+//                hideView()
+//            } else {
+//                showFeedback("Not Connected")
+//            }
 //        }
 //
 //        btnScrollDown?.setOnClickListener {
-//            connectionManager.sendScroll(-3)
-//            hideView()
+//            if (connectionManager.isConnected()) {
+//                connectionManager.sendScroll(-3)
+//                showFeedback("Scroll Down")
+//                hideView()
+//            } else {
+//                showFeedback("Not Connected")
+//            }
 //        }
 //
 //        btnClose?.setOnClickListener {
 //            stopEdgeGestures()
+//        }
+//
+//        btnStatus?.let { statusView ->
+//            // Update status on the floating view
+//            updateConnectionStatus(connectionManager.isConnected())
 //        }
 //    }
 //
@@ -171,12 +236,15 @@
 //
 //        floatingView?.let { view ->
 //            val params = view.layoutParams as WindowManager.LayoutParams
-//            params.width = dpToPx(EXPANDED_SIZE)
-//            params.height = dpToPx(EXPANDED_SIZE)
+//            params.width = dpToPx(120)
+//            params.height = dpToPx(120)
 //            windowManager.updateViewLayout(view, params)
 //
 //            val container = view.findViewById<FrameLayout>(R.id.edge_gesture_container)
 //            container?.alpha = 1f
+//
+//            // Update status
+//            updateConnectionStatus(connectionManager.isConnected())
 //        }
 //    }
 //
@@ -186,8 +254,8 @@
 //
 //        floatingView?.let { view ->
 //            val params = view.layoutParams as WindowManager.LayoutParams
-//            params.width = dpToPx(COLLAPSED_SIZE)
-//            params.height = dpToPx(COLLAPSED_SIZE)
+//            params.width = dpToPx(48)
+//            params.height = dpToPx(48)
 //            windowManager.updateViewLayout(view, params)
 //
 //            val container = view.findViewById<FrameLayout>(R.id.edge_gesture_container)
@@ -215,8 +283,39 @@
 //        }
 //    }
 //
+//    private fun showFeedback(message: String) {
+//        val statusView = floatingView?.findViewById<TextView>(R.id.btn_status)
+//        statusView?.text = message
+//        statusView?.postDelayed({
+//            updateConnectionStatus(connectionManager.isConnected())
+//        }, 1000)
+//    }
+//
+//    private fun updateConnectionStatus(isConnected: Boolean) {
+//        val statusView = floatingView?.findViewById<TextView>(R.id.btn_status)
+//        statusView?.text = if (isConnected) "🟢 Connected" else "🔴 Disconnected"
+//        statusView?.setTextColor(if (isConnected) android.graphics.Color.GREEN else android.graphics.Color.RED)
+//    }
+//
+//    private fun startConnectionCheck() {
+//        connectionCheckJob?.cancel()
+//        connectionCheckJob = serviceScope.launch {
+//            while (isActive) {
+//                delay(2000)
+//                updateConnectionStatus(connectionManager.isConnected())
+//            }
+//        }
+//    }
+//
 //    private fun dpToPx(dp: Int): Int {
 //        return (dp * resources.displayMetrics.density).toInt()
+//    }
+//
+//    private fun updateNotification(title: String, content: String) {
+//        val notification = createNotification(title, content)
+//        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+//        manager.notify(NOTIFICATION_ID, notification)
+//        startForeground(NOTIFICATION_ID, notification)
 //    }
 //
 //    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

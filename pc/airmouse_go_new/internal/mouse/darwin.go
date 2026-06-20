@@ -8,8 +8,8 @@ package mouse
 
 #include <CoreGraphics/CoreGraphics.h>
 
-void moveMouse(float dx, float dy, float sensitivity) {
-    CGEventRef event = CGEventCreateMouseEvent(NULL, kCGEventMouseMoved, CGPointMake(dx * sensitivity, dy * sensitivity), kCGMouseButtonLeft);
+void moveMouse(float dx, float dy) {
+    CGEventRef event = CGEventCreateMouseEvent(NULL, kCGEventMouseMoved, CGPointMake(dx, dy), kCGMouseButtonLeft);
     CGEventPost(kCGHIDEventTap, event);
     CFRelease(event);
 }
@@ -62,7 +62,7 @@ func (m *DarwinMouse) Move(dx, dy float64) {
     m.mu.RLock()
     sx, sy := m.applySensitivity(dx, dy)
     m.mu.RUnlock()
-    C.moveMouse(C.float(sx), C.float(sy), C.float(m.sensitivity))
+    C.moveMouse(C.float(sx), C.float(sy))
 }
 
 func (m *DarwinMouse) Click(button string) {

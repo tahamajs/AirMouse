@@ -1,8 +1,13 @@
+// app/src/main/java/com/airmouse/utils/PreferencesManager.kt
 package com.airmouse.utils
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.airmouse.domain.model.CalibrationData
+import com.airmouse.domain.model.CalibrationQuality
+import com.airmouse.domain.model.CalibrationStatus
+import com.airmouse.domain.model.SensorCalibrationData
 import com.airmouse.domain.model.StatisticsSummary
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -157,8 +162,10 @@ class PreferencesManager @Inject constructor(
 
     fun getConnectionTimeout(): Int = getInt("connection_timeout", DEFAULT_CONNECTION_TIMEOUT)
     fun setConnectionTimeout(timeout: Int) = putInt("connection_timeout", timeout.coerceIn(1000, 30000))
+
     fun isOnboardingCompleted(): Boolean = getBoolean("onboarding_completed", false)
     fun setOnboardingCompleted(completed: Boolean) = putBoolean("onboarding_completed", completed)
+
     fun getOnboardingVersion(): Int = getInt("onboarding_version", 0)
     fun setOnboardingVersion(version: Int) = putInt("onboarding_version", version)
 
@@ -171,6 +178,9 @@ class PreferencesManager @Inject constructor(
     // ==================== Theme / Appearance ====================
     fun getTheme(): String = getString("theme", DEFAULT_THEME)
     fun setTheme(theme: String) = putString("theme", theme)
+
+    fun getAccentColor(): String = getString("accent_color", "ORANGE")
+    fun setAccentColor(color: String) = putString("accent_color", color)
 
     fun getLanguage(): String = getString("language", "en")
     fun setLanguage(language: String) = putString("language", language)
@@ -190,93 +200,207 @@ class PreferencesManager @Inject constructor(
     fun isShowFps(): Boolean = getBoolean("show_fps", false)
     fun setShowFps(enabled: Boolean) = putBoolean("show_fps", enabled)
 
-    // ==================== Calibration ====================
+    // ==================== CALIBRATION METHODS ====================
+
+    // --- Complete Calibration Data ---
+    fun saveCalibrationData(data: CalibrationData) {
+        putFloat("gyro_bias_x", data.gyroBias.offsetX)
+        putFloat("gyro_bias_y", data.gyroBias.offsetY)
+        putFloat("gyro_bias_z", data.gyroBias.offsetZ)
+        putFloat("accel_offset_x", data.accelOffset.offsetX)
+        putFloat("accel_offset_y", data.accelOffset.offsetY)
+        putFloat("accel_offset_z", data.accelOffset.offsetZ)
+        putFloat("mag_offset_x", data.magOffset.offsetX)
+        putFloat("mag_offset_y", data.magOffset.offsetY)
+        putFloat("mag_offset_z", data.magOffset.offsetZ)
+        putBoolean("calibration_complete", data.isCalibrated)
+        putString("calibration_quality", data.quality.name)
+        putLong("calibration_timestamp", data.timestamp)
+    }
+
+    fun getCalibrationData(): CalibrationData {
+        return CalibrationData(
+            gyroBias = SensorCalibrationData(
+                offsetX = getFloat("gyro_bias_x", 0f),
+                offsetY = getFloat("gyro_bias_y", 0f),
+                offsetZ = getFloat("gyro_bias_z", 0f)
+            ),
+            accelOffset = SensorCalibrationData(
+                offsetX = getFloat("accel_offset_x", 0f),
+                offsetY = getFloat("accel_offset_y", 0f),
+                offsetZ = getFloat("accel_offset_z", 0f)
+            ),
+            magOffset = SensorCalibrationData(
+                offsetX = getFloat("mag_offset_x", 0f),
+                offsetY = getFloat("mag_offset_y", 0f),
+                offsetZ = getFloat("mag_offset_z", 0f)
+            ),
+            isCalibrated = getBoolean("calibration_complete", false),
+            quality = try {
+                CalibrationQuality.valueOf(getString("calibration_quality", "UNKNOWN"))
+            } catch (e: Exception) {
+                CalibrationQuality.UNKNOWN
+            },
+            timestamp = getLong("calibration_timestamp", 0L)
+        )
+    }
+
     fun isCalibrated(): Boolean = getBoolean("calibration_complete", false)
     fun setCalibrated(calibrated: Boolean) = putBoolean("calibration_complete", calibrated)
 
-    fun getCalibrationQuality(): Float = getFloat("calibration_quality", DEFAULT_CALIBRATION_QUALITY)
-    fun setCalibrationQuality(quality: Float) = putFloat("calibration_quality", quality.coerceIn(0f, 100f))
+    fun getCalibrationQuality(): CalibrationQuality {
+        return try {
+            CalibrationQuality.valueOf(getString("calibration_quality", "UNKNOWN"))
+        } catch (e: Exception) {
+            CalibrationQuality.UNKNOWN
+        }
+    }
+    fun setCalibrationQuality(quality: CalibrationQuality) = putString("calibration_quality", quality.name)
 
-    fun getLastCalibrationTime(): Long = getLong("calibration_complete_time", 0)
-    fun setLastCalibrationTime(time: Long) = putLong("calibration_complete_time", time)
+    fun getCalibrationQualityFloat(): Float = getFloat("calibration_quality_float", DEFAULT_CALIBRATION_QUALITY)
+    fun setCalibrationQualityFloat(quality: Float) = putFloat("calibration_quality_float", quality.coerceIn(0f, 100f))
+
+    fun getCalibrationTimestamp(): Long = getLong("calibration_timestamp", 0L)
+    fun setCalibrationTimestamp(time: Long) = putLong("calibration_timestamp", time)
 
     fun getCalibrationAttempts(): Int = getInt("calibration_attempts", 5)
     fun setCalibrationAttempts(attempts: Int) = putInt("calibration_attempts", attempts.coerceIn(0, 10))
     fun decrementCalibrationAttempts() { setCalibrationAttempts(getCalibrationAttempts() - 1) }
     fun resetCalibrationAttempts() { setCalibrationAttempts(5) }
 
-    // --- Gyroscope ---
-    fun saveGyroBias(bias: FloatArray) {
-        require(bias.size == 3) { "Bias must have exactly 3 elements" }
-        putFloat("gyro_bias_x", bias[0])
-        putFloat("gyro_bias_y", bias[1])
-        putFloat("gyro_bias_z", bias[2])
-        putFloat("gyro_offset_x", bias[0])
-        putFloat("gyro_offset_y", bias[1])
-        putFloat("gyro_offset_z", bias[2])
+    // --- Gyroscope Calibration ---
+    fun saveGyroBias(x: Float, y: Float, z: Float) {
+        putFloat("gyro_bias_x", x)
+        putFloat("gyro_bias_y", y)
+        putFloat("gyro_bias_z", z)
+        putFloat("gyro_offset_x", x)
+        putFloat("gyro_offset_y", y)
+        putFloat("gyro_offset_z", z)
     }
-    fun getGyroBias(): FloatArray = floatArrayOf(
+
+    fun getGyroBias(): Triple<Float, Float, Float> = Triple(
         getFloat("gyro_bias_x", 0f),
         getFloat("gyro_bias_y", 0f),
         getFloat("gyro_bias_z", 0f)
     )
-    fun getGyroOffsetX(): Float = getFloat("gyro_offset_x", 0f)
-    fun getGyroOffsetY(): Float = getFloat("gyro_offset_y", 0f)
-    fun getGyroOffsetZ(): Float = getFloat("gyro_offset_z", 0f)
 
-    // --- Accelerometer ---
-    fun saveAccelParams(offset: FloatArray, scale: FloatArray) {
-        require(offset.size == 3 && scale.size == 3) { "Arrays must have exactly 3 elements" }
-        putFloat("accel_offset_x", offset[0])
-        putFloat("accel_offset_y", offset[1])
-        putFloat("accel_offset_z", offset[2])
-        putFloat("accel_scale_x", scale[0])
-        putFloat("accel_scale_y", scale[1])
-        putFloat("accel_scale_z", scale[2])
+    fun saveGyroVariance(x: Float, y: Float, z: Float) {
+        putFloat("gyro_variance_x", x)
+        putFloat("gyro_variance_y", y)
+        putFloat("gyro_variance_z", z)
     }
-    fun saveAccelerometerParams(offset: FloatArray, scale: FloatArray) = saveAccelParams(offset, scale)
 
-    fun getAccelOffset(): FloatArray = floatArrayOf(
+    fun getGyroVariance(): Triple<Float, Float, Float> = Triple(
+        getFloat("gyro_variance_x", 0f),
+        getFloat("gyro_variance_y", 0f),
+        getFloat("gyro_variance_z", 0f)
+    )
+
+    fun saveGyroSampleCount(count: Int) = putInt("gyro_samples", count)
+    fun getGyroSampleCount(): Int = getInt("gyro_samples", 0)
+
+    fun isGyroCalibrated(): Boolean = getBoolean("gyro_calibrated", false)
+    fun setGyroCalibrated(calibrated: Boolean) = putBoolean("gyro_calibrated", calibrated)
+
+    // --- Accelerometer Calibration ---
+    fun saveAccelOffset(x: Float, y: Float, z: Float) {
+        putFloat("accel_offset_x", x)
+        putFloat("accel_offset_y", y)
+        putFloat("accel_offset_z", z)
+    }
+
+    fun getAccelOffset(): Triple<Float, Float, Float> = Triple(
         getFloat("accel_offset_x", 0f),
         getFloat("accel_offset_y", 0f),
         getFloat("accel_offset_z", 0f)
     )
-    fun getAccelScale(): FloatArray = floatArrayOf(
+
+    fun saveAccelScale(x: Float, y: Float, z: Float) {
+        putFloat("accel_scale_x", x)
+        putFloat("accel_scale_y", y)
+        putFloat("accel_scale_z", z)
+    }
+
+    fun getAccelScale(): Triple<Float, Float, Float> = Triple(
         getFloat("accel_scale_x", 1f),
         getFloat("accel_scale_y", 1f),
         getFloat("accel_scale_z", 1f)
     )
 
-    // --- Magnetometer ---
-    fun saveMagCalibration(offset: FloatArray, scale: FloatArray) {
-        require(offset.size == 3 && scale.size == 3) { "Arrays must have exactly 3 elements" }
-        putFloat("mag_offset_x", offset[0])
-        putFloat("mag_offset_y", offset[1])
-        putFloat("mag_offset_z", offset[2])
-        putFloat("mag_scale_x", scale[0])
-        putFloat("mag_scale_y", scale[1])
-        putFloat("mag_scale_z", scale[2])
+    fun saveAccelPosition(position: Int, x: Float, y: Float, z: Float) {
+        putFloat("accel_pos_${position}_x", x)
+        putFloat("accel_pos_${position}_y", y)
+        putFloat("accel_pos_${position}_z", z)
     }
-    fun getMagOffset(): FloatArray = floatArrayOf(
+
+    fun getAccelPosition(position: Int): Triple<Float, Float, Float>? {
+        val x = getFloat("accel_pos_${position}_x", Float.NaN)
+        val y = getFloat("accel_pos_${position}_y", Float.NaN)
+        val z = getFloat("accel_pos_${position}_z", Float.NaN)
+        return if (x.isNaN() || y.isNaN() || z.isNaN()) null else Triple(x, y, z)
+    }
+
+    fun getAllAccelPositions(): Map<Int, Triple<Float, Float, Float>> {
+        val result = mutableMapOf<Int, Triple<Float, Float, Float>>()
+        for (i in 0..5) {
+            getAccelPosition(i)?.let { result[i] = it }
+        }
+        return result
+    }
+
+    fun saveAccelPositionsCompleted(count: Int) = putInt("accel_positions_completed", count)
+    fun getAccelPositionsCompleted(): Int = getInt("accel_positions_completed", 0)
+
+    fun isAccelCalibrated(): Boolean = getBoolean("accel_calibrated", false)
+    fun setAccelCalibrated(calibrated: Boolean) = putBoolean("accel_calibrated", calibrated)
+
+    // --- Magnetometer Calibration ---
+    fun saveMagOffset(x: Float, y: Float, z: Float) {
+        putFloat("mag_offset_x", x)
+        putFloat("mag_offset_y", y)
+        putFloat("mag_offset_z", z)
+    }
+
+    fun getMagOffset(): Triple<Float, Float, Float> = Triple(
         getFloat("mag_offset_x", 0f),
         getFloat("mag_offset_y", 0f),
         getFloat("mag_offset_z", 0f)
     )
-    fun getMagScale(): FloatArray = floatArrayOf(
+
+    fun saveMagScale(x: Float, y: Float, z: Float) {
+        putFloat("mag_scale_x", x)
+        putFloat("mag_scale_y", y)
+        putFloat("mag_scale_z", z)
+    }
+
+    fun getMagScale(): Triple<Float, Float, Float> = Triple(
         getFloat("mag_scale_x", 1f),
         getFloat("mag_scale_y", 1f),
         getFloat("mag_scale_z", 1f)
     )
 
-    // --- Calibration status flags ---
-    fun isGyroCalibrated(): Boolean = getBoolean("gyro_calibrated", false)
-    fun setGyroCalibrated(calibrated: Boolean) = putBoolean("gyro_calibrated", calibrated)
+    fun saveMagSampleCount(count: Int) = putInt("mag_samples", count)
+    fun getMagSampleCount(): Int = getInt("mag_samples", 0)
 
     fun isMagCalibrated(): Boolean = getBoolean("mag_calibrated", false)
     fun setMagCalibrated(calibrated: Boolean) = putBoolean("mag_calibrated", calibrated)
 
-    fun isAccelCalibrated(): Boolean = getBoolean("accel_calibrated", false)
-    fun setAccelCalibrated(calibrated: Boolean) = putBoolean("accel_calibrated", calibrated)
+    // --- Calibration Status ---
+    fun getCalibrationStatus(): CalibrationStatus {
+        val status = getString("calibration_status", "NOT_STARTED")
+        return try {
+            CalibrationStatus.valueOf(status)
+        } catch (e: Exception) {
+            CalibrationStatus.NOT_STARTED
+        }
+    }
+    fun setCalibrationStatus(status: CalibrationStatus) = putString("calibration_status", status.name)
+
+    fun getCalibrationProgress(): Int = getInt("calibration_progress", 0)
+    fun setCalibrationProgress(progress: Int) = putInt("calibration_progress", progress.coerceIn(0, 100))
+
+    fun getCurrentCalibrationStep(): Int = getInt("calibration_current_step", 0)
+    fun setCurrentCalibrationStep(step: Int) = putInt("calibration_current_step", step.coerceIn(0, 3))
 
     // ==================== AI & Predictive ====================
     fun isAiSmoothingEnabled(): Boolean = getBoolean("ai_smoothing", false)
@@ -323,6 +447,9 @@ class PreferencesManager @Inject constructor(
     fun isProximityNotificationEnabled(): Boolean = getBoolean("proximity_notification", true)
     fun setProximityNotificationEnabled(enabled: Boolean) = putBoolean("proximity_notification", enabled)
 
+    fun getProximityDeviceMac(): String = getString("proximity_device_mac", "")
+    fun setProximityDeviceMac(mac: String) = putString("proximity_device_mac", mac)
+
     // ==================== Voice Commands ====================
     fun isVoiceEnabled(): Boolean = getBoolean("voice_enabled", false)
     fun setVoiceEnabled(enabled: Boolean) = putBoolean("voice_enabled", enabled)
@@ -350,6 +477,9 @@ class PreferencesManager @Inject constructor(
 
     fun getVoiceSensitivity(): Float = getFloat("voice_sensitivity", DEFAULT_VOICE_SENSITIVITY)
     fun setVoiceSensitivity(sensitivity: Float) = putFloat("voice_sensitivity", sensitivity.coerceIn(0.2f, 0.9f))
+
+    fun getVoiceCommandHistory(): String = getString("voice_command_history", "")
+    fun setVoiceCommandHistory(history: String) = putString("voice_command_history", history)
 
     // ==================== Edge Gestures ====================
     fun isEdgeGesturesEnabled(): Boolean = getBoolean("edge_gestures_enabled", false)
@@ -558,6 +688,64 @@ class PreferencesManager @Inject constructor(
     fun getLogLevel(): String = getString("log_level", DEFAULT_LOG_LEVEL)
     fun setLogLevel(level: String) = putString("log_level", level.uppercase())
 
+    // ==================== Touchpad Settings ====================
+    fun isTouchpadActive(): Boolean = getBoolean("touchpad_active", false)
+    fun setTouchpadActive(active: Boolean) = putBoolean("touchpad_active", active)
+
+    fun getTouchpadSensitivity(): Float = getFloat("touchpad_sensitivity", 1.0f)
+    fun setTouchpadSensitivity(value: Float) = putFloat("touchpad_sensitivity", value.coerceIn(0.5f, 2.0f))
+
+    fun getTouchpadScrollSpeed(): Float = getFloat("touchpad_scroll_speed", 1.0f)
+    fun setTouchpadScrollSpeed(value: Float) = putFloat("touchpad_scroll_speed", value.coerceIn(0.5f, 2.0f))
+
+    fun isTouchpadNaturalScrolling(): Boolean = getBoolean("touchpad_natural_scrolling", true)
+    fun setTouchpadNaturalScrolling(enabled: Boolean) = putBoolean("touchpad_natural_scrolling", enabled)
+
+    fun isTouchpadTapToClick(): Boolean = getBoolean("touchpad_tap_to_click", true)
+    fun setTouchpadTapToClick(enabled: Boolean) = putBoolean("touchpad_tap_to_click", enabled)
+
+    fun isTouchpadTwoFingerScroll(): Boolean = getBoolean("touchpad_two_finger_scroll", true)
+    fun setTouchpadTwoFingerScroll(enabled: Boolean) = putBoolean("touchpad_two_finger_scroll", enabled)
+
+    fun isTouchpadThreeFingerSwipe(): Boolean = getBoolean("touchpad_three_finger_swipe", true)
+    fun setTouchpadThreeFingerSwipe(enabled: Boolean) = putBoolean("touchpad_three_finger_swipe", enabled)
+
+    fun isTouchpadHapticFeedback(): Boolean = getBoolean("touchpad_haptic_feedback", true)
+    fun setTouchpadHapticFeedback(enabled: Boolean) = putBoolean("touchpad_haptic_feedback", enabled)
+
+    fun isTouchpadShowTouchPoints(): Boolean = getBoolean("touchpad_show_touch_points", false)
+    fun setTouchpadShowTouchPoints(enabled: Boolean) = putBoolean("touchpad_show_touch_points", enabled)
+
+    fun getTouchpadCursorSpeed(): Float = getFloat("touchpad_cursor_speed", 1.0f)
+    fun setTouchpadCursorSpeed(value: Float) = putFloat("touchpad_cursor_speed", value.coerceIn(0.5f, 2.0f))
+
+    fun isTouchpadAcceleration(): Boolean = getBoolean("touchpad_acceleration", true)
+    fun setTouchpadAcceleration(enabled: Boolean) = putBoolean("touchpad_acceleration", enabled)
+
+    fun isTouchpadInvertVertical(): Boolean = getBoolean("touchpad_invert_vertical", false)
+    fun setTouchpadInvertVertical(enabled: Boolean) = putBoolean("touchpad_invert_vertical", enabled)
+
+    fun isTouchpadInvertHorizontal(): Boolean = getBoolean("touchpad_invert_horizontal", false)
+    fun setTouchpadInvertHorizontal(enabled: Boolean) = putBoolean("touchpad_invert_horizontal", enabled)
+
+    fun getTouchpadPointerSpeed(): Int = getInt("touchpad_pointer_speed", 50)
+    fun setTouchpadPointerSpeed(value: Int) = putInt("touchpad_pointer_speed", value.coerceIn(20, 100))
+
+    fun getTouchpadDoubleTapDelay(): Int = getInt("touchpad_double_tap_delay", 300)
+    fun setTouchpadDoubleTapDelay(value: Int) = putInt("touchpad_double_tap_delay", value.coerceIn(100, 600))
+
+    fun isTouchpadEdgeScrolling(): Boolean = getBoolean("touchpad_edge_scrolling", false)
+    fun setTouchpadEdgeScrolling(enabled: Boolean) = putBoolean("touchpad_edge_scrolling", enabled)
+
+    fun isTouchpadScrollInertia(): Boolean = getBoolean("touchpad_scroll_inertia", true)
+    fun setTouchpadScrollInertia(enabled: Boolean) = putBoolean("touchpad_scroll_inertia", enabled)
+
+    fun isTouchpadPinchToZoom(): Boolean = getBoolean("touchpad_pinch_to_zoom", true)
+    fun setTouchpadPinchToZoom(enabled: Boolean) = putBoolean("touchpad_pinch_to_zoom", enabled)
+
+    fun isTouchpadRotateToRotate(): Boolean = getBoolean("touchpad_rotate_to_rotate", false)
+    fun setTouchpadRotateToRotate(enabled: Boolean) = putBoolean("touchpad_rotate_to_rotate", enabled)
+
     // ==================== Export / Import ====================
     fun exportSettings(): String {
         return buildString {
@@ -596,6 +784,11 @@ class PreferencesManager @Inject constructor(
             appendLine("haptic_strength=${getHapticStrength()}")
             appendLine("prediction_strength=${getPredictionStrength()}")
             appendLine("ai_blend_factor=${getAiBlendFactor()}")
+            appendLine("calibration_complete=${isCalibrated()}")
+            appendLine("calibration_quality=${getCalibrationQuality().name}")
+            appendLine("calibration_timestamp=${getCalibrationTimestamp()}")
+            appendLine("touchpad_active=${isTouchpadActive()}")
+            appendLine("touchpad_sensitivity=${getTouchpadSensitivity()}")
         }
     }
 
@@ -637,6 +830,13 @@ class PreferencesManager @Inject constructor(
                     line.startsWith("haptic_strength=") -> setHapticStrength(line.substringAfter("="))
                     line.startsWith("prediction_strength=") -> setPredictionStrength(line.substringAfter("=").toFloatOrNull() ?: continue)
                     line.startsWith("ai_blend_factor=") -> setAiBlendFactor(line.substringAfter("=").toFloatOrNull() ?: continue)
+                    line.startsWith("calibration_complete=") -> setCalibrated(line.substringAfter("=").toBoolean())
+                    line.startsWith("calibration_quality=") -> setCalibrationQuality(try {
+                        CalibrationQuality.valueOf(line.substringAfter("="))
+                    } catch (e: Exception) { CalibrationQuality.UNKNOWN })
+                    line.startsWith("calibration_timestamp=") -> setCalibrationTimestamp(line.substringAfter("=").toLongOrNull() ?: continue)
+                    line.startsWith("touchpad_active=") -> setTouchpadActive(line.substringAfter("=").toBoolean())
+                    line.startsWith("touchpad_sensitivity=") -> setTouchpadSensitivity(line.substringAfter("=").toFloatOrNull() ?: continue)
                 }
             }
             true

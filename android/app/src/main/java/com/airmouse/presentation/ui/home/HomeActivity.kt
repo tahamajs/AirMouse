@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/home/HomeActivity.kt
 package com.airmouse.presentation.ui.home
 
 import android.Manifest
@@ -45,6 +46,7 @@ class HomeActivity : ComponentActivity() {
 
     private var isReady = false
     private var permissionGranted = false
+    private var isInitialLaunch = true
 
     // Permission launchers
     private val cameraPermissionLauncher = registerForActivityResult(
@@ -87,12 +89,26 @@ class HomeActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
+        // Check if it's first launch
+        isInitialLaunch = prefs.getBoolean("is_first_launch", true)
+        if (isInitialLaunch) {
+            prefs.putBoolean("is_first_launch", false)
+        }
+
         applyTheme()
-        requestPermissions()
+
+        // Check if permissions are already granted
+        val missingPerms = getMissingPermissions()
+        if (missingPerms.isEmpty()) {
+            permissionGranted = true
+            proceedToMain()
+        } else {
+            requestPermissions()
+        }
 
         // Simulate a short loading time for splash screen
         Handler(Looper.getMainLooper()).postDelayed({
-            if (permissionGranted) {
+            if (permissionGranted && !isReady) {
                 proceedToMain()
             }
         }, 1000)
@@ -103,8 +119,15 @@ class HomeActivity : ComponentActivity() {
         isReady = true
 
         setContent {
+            val isDarkTheme = when (prefs.getString("theme", "system")) {
+                "dark", "pure_black" -> true
+                "light" -> false
+                "high_contrast" -> false
+                else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            }
+
             AirMouseTheme(
-                darkTheme = isDarkTheme(),
+                darkTheme = isDarkTheme,
                 useDynamicColor = prefs.getBoolean("dynamic_colors", true)
             ) {
                 Surface(
@@ -114,16 +137,6 @@ class HomeActivity : ComponentActivity() {
                     MainScreen()
                 }
             }
-        }
-    }
-
-    private fun isDarkTheme(): Boolean {
-        return when (prefs.getString("theme", "system")) {
-            "dark" -> true
-            "light" -> false
-            "pure_black" -> true
-            "high_contrast" -> false
-            else -> resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
         }
     }
 
@@ -230,8 +243,15 @@ class HomeActivity : ComponentActivity() {
 
     private fun showRationaleDialog() {
         setContent {
+            val isDarkTheme = when (prefs.getString("theme", "system")) {
+                "dark", "pure_black" -> true
+                "light" -> false
+                "high_contrast" -> false
+                else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            }
+
             AirMouseTheme(
-                darkTheme = isDarkTheme(),
+                darkTheme = isDarkTheme,
                 useDynamicColor = prefs.getBoolean("dynamic_colors", true)
             ) {
                 Surface(
@@ -319,7 +339,7 @@ class HomeActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Permission list with icons
+                        // Permission list
                         PermissionItem(
                             icon = "📷",
                             name = "Camera",
@@ -401,5 +421,19 @@ class HomeActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // If permissions were granted while app was in background
+        if (!isReady && getMissingPermissions().isEmpty()) {
+            permissionGranted = true
+            proceedToMain()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyTheme()
     }
 }

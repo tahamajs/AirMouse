@@ -6,30 +6,33 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import android.content.Context
+import com.airmouse.data.datasource.local.dao.CalibrationDao
+import com.airmouse.data.datasource.local.dao.SettingsDao
+import com.airmouse.data.datasource.local.dao.StatisticsDao
+import com.airmouse.data.datasource.local.dao.GestureDao
+import com.airmouse.data.datasource.local.entity.CalibrationEntity
+import com.airmouse.data.datasource.local.entity.SettingsEntity
+import com.airmouse.data.datasource.local.entity.StatisticsEntity
+import com.airmouse.data.datasource.local.entity.GestureEntity
+import com.airmouse.data.datasource.local.Converters // Corrected import
 
 @Database(
     entities = [
         CalibrationEntity::class,
-        GestureTemplateEntity::class,
-        TrainingSampleEntity::class,
-        ProfileEntity::class,
+        SettingsEntity::class,
         StatisticsEntity::class,
-        DailyStatsEntity::class,
-        GestureStatsEntity::class
+        GestureEntity::class
     ],
-    version = 4,
+    version = 1,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun calibrationDao(): CalibrationDao
-    abstract fun gestureDao(): GestureDao
-    abstract fun trainingSampleDao(): TrainingSampleDao
-    abstract fun profileDao(): ProfileDao
+    abstract fun settingsDao(): SettingsDao
     abstract fun statisticsDao(): StatisticsDao
-    abstract fun dailyStatsDao(): DailyStatsDao
-    abstract fun gestureStatsDao(): GestureStatsDao
+    abstract fun gestureDao(): GestureDao
 
     companion object {
         @Volatile

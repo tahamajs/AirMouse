@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/home/HomeScreen.kt
 @file:Suppress("DEPRECATION")
 
 package com.airmouse.presentation.ui.home
@@ -11,7 +12,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,18 +25,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.airmouse.presentation.navigation.Destinations
-import com.airmouse.presentation.navigation.NavigationActions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.util.Locale
-import kotlinx.coroutines.launch
+import com.airmouse.presentation.navigation.Destinations
+import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,8 +113,8 @@ fun HomeScreen(
     Scaffold(
         topBar = { HomeTopBar(navigationActions = navigationActions) },
         floatingActionButton = {
-                    AnimatedVisibility(
-                        visible = isConnected,
+            AnimatedVisibility(
+                visible = isConnected,
                 enter = fadeIn() + scaleIn(),
                 exit = fadeOut() + scaleOut()
             ) {
@@ -146,7 +148,7 @@ fun HomeScreen(
                         GreetingCard(
                             text = greetingText,
                             userName = userName,
-                            onEditProfile = { navigationActions.navigateTo(Destinations.Profiles) }
+                            onEditProfile = { navigationActions.navigateTo(Destinations.Profiles.route) }
                         )
                     }
                 }
@@ -161,7 +163,6 @@ fun HomeScreen(
                         onDisconnect = { disconnectMouse() },
                         onReconnect = {
                             isConnecting = true
-                            // Simulate connection
                             scope.launch {
                                 delay(2000)
                                 connectMouse()
@@ -198,10 +199,10 @@ fun HomeScreen(
                 // Quick Actions
                 item {
                     QuickActionsRow(
-                        onCalibrate = { navigationActions.navigateToCalibrationResult() },
-                        onGestureStudio = { navigationActions.navigateTo(Destinations.GestureStudio) },
-                        onVoiceCommands = { navigationActions.navigateTo(Destinations.VoiceCommands) },
-                        onNetworkDiscovery = { navigationActions.navigateTo(Destinations.NetworkDiscovery) }
+                        onCalibrate = { navigationActions.navigateTo(Destinations.CalibrationResult.route) },
+                        onGestureStudio = { navigationActions.navigateTo(Destinations.GestureStudio.route) },
+                        onVoiceCommands = { navigationActions.navigateTo(Destinations.VoiceCommands.route) },
+                        onNetworkDiscovery = { navigationActions.navigateTo(Destinations.NetworkDiscovery.route) }
                     )
                 }
 
@@ -233,6 +234,18 @@ fun HomeScreen(
                 // Tips
                 item {
                     TipsCard()
+                }
+
+                // Footer
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Air Mouse Pro v3.0.0",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
             }
 
@@ -296,7 +309,8 @@ fun HomeScreen(
                                 value = pendingUserName,
                                 onValueChange = { pendingUserName = it },
                                 label = { Text("Your name") },
-                                singleLine = true
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions.Default
                             )
                         }
                     },
@@ -322,7 +336,7 @@ fun HomeScreen(
                     confirmButton = {
                         TextButton(onClick = {
                             showCalibrationRequiredDialog = false
-                            navigationActions.navigateToCalibrationResult()
+                            navigationActions.navigateTo(Destinations.CalibrationResult.route)
                         }) {
                             Text("Calibrate")
                         }
@@ -337,6 +351,10 @@ fun HomeScreen(
         }
     }
 }
+
+// ==========================================
+// TOP BAR
+// ==========================================
 
 @Composable
 fun HomeTopBar(navigationActions: NavigationActions) {
@@ -385,7 +403,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
                     onClick = {
                         overflowMenuExpanded = false
-                        navigationActions.navigateToCalibrationResult()
+                        navigationActions.navigateTo(Destinations.CalibrationResult.route)
                     }
                 )
                 DropdownMenuItem(
@@ -393,7 +411,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                     onClick = {
                         overflowMenuExpanded = false
-                        navigationActions.navigateTo(Destinations.Profiles)
+                        navigationActions.navigateTo(Destinations.Profiles.route)
                     }
                 )
                 DropdownMenuItem(
@@ -401,7 +419,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     onClick = {
                         overflowMenuExpanded = false
-                        navigationActions.navigateTo(Destinations.Settings)
+                        navigationActions.navigateTo(Destinations.Settings.route)
                     }
                 )
                 DropdownMenuItem(
@@ -409,7 +427,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null) },
                     onClick = {
                         overflowMenuExpanded = false
-                        navigationActions.navigateTo(Destinations.Help)
+                        navigationActions.navigateTo(Destinations.Help.route)
                     }
                 )
             }
@@ -420,6 +438,10 @@ fun HomeTopBar(navigationActions: NavigationActions) {
         )
     )
 }
+
+// ==========================================
+// GREETING CARD
+// ==========================================
 
 @Composable
 fun GreetingCard(text: String, userName: String, onEditProfile: () -> Unit) {
@@ -449,6 +471,10 @@ fun GreetingCard(text: String, userName: String, onEditProfile: () -> Unit) {
         }
     }
 }
+
+// ==========================================
+// CONNECTION STATUS CARD
+// ==========================================
 
 @Composable
 fun ConnectionStatusCard(
@@ -530,6 +556,10 @@ fun ConnectionStatusCard(
         }
     }
 }
+
+// ==========================================
+// CONNECTION CONTROLS CARD
+// ==========================================
 
 @Composable
 fun ConnectionControlsCard(
@@ -618,6 +648,10 @@ fun ConnectionControlsCard(
     }
 }
 
+// ==========================================
+// QUICK ACTIONS
+// ==========================================
+
 @Composable
 fun QuickActionsRow(
     onCalibrate: () -> Unit,
@@ -658,6 +692,10 @@ fun RowScope.QuickActionButton(onClick: () -> Unit, icon: androidx.compose.ui.gr
     }
 }
 
+// ==========================================
+// SENSOR PREVIEW CARD
+// ==========================================
+
 @Composable
 fun SensorPreviewCard(roll: Float, yaw: Float, pitch: Float) {
     Card(
@@ -672,13 +710,17 @@ fun SensorPreviewCard(roll: Float, yaw: Float, pitch: Float) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Roll: ${String.format(Locale.US, "%.1f", roll)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                Text("Yaw: ${String.format(Locale.US, "%.1f", yaw)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                Text("Pitch: ${String.format(Locale.US, "%.1f", pitch)}°", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text("Roll: ${String.format(Locale.US, "%.1f", roll)}°", fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+                Text("Yaw: ${String.format(Locale.US, "%.1f", yaw)}°", fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+                Text("Pitch: ${String.format(Locale.US, "%.1f", pitch)}°", fontSize = 13.sp, fontFamily = FontFamily.Monospace)
             }
         }
     }
 }
+
+// ==========================================
+// STATS ROW
+// ==========================================
 
 @Composable
 fun StatsRow(clicks: Int, scrolls: Int, sessionDuration: String) {
@@ -712,6 +754,10 @@ fun StatsCard(title: String, value: String, icon: androidx.compose.ui.graphics.v
         }
     }
 }
+
+// ==========================================
+// PERFORMANCE CARD
+// ==========================================
 
 @Composable
 fun PerformanceCard(batteryLevel: Int, isCharging: Boolean, cpuUsage: Int, memoryUsage: Int, frameRate: Int) {
@@ -752,6 +798,10 @@ fun PerformanceCard(batteryLevel: Int, isCharging: Boolean, cpuUsage: Int, memor
     }
 }
 
+// ==========================================
+// RECENT GESTURES CARD
+// ==========================================
+
 @Composable
 fun RecentGesturesCard(gestures: List<String>, onClear: () -> Unit) {
     Card(
@@ -782,6 +832,10 @@ fun RecentGesturesCard(gestures: List<String>, onClear: () -> Unit) {
         }
     }
 }
+
+// ==========================================
+// TIPS CARD
+// ==========================================
 
 @Composable
 fun TipsCard() {

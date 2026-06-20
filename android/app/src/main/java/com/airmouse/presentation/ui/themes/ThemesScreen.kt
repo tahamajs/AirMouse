@@ -1,9 +1,10 @@
+// app/src/main/java/com/airmouse/presentation/ui/themes/ThemesScreen.kt
 package com.airmouse.presentation.ui.themes
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,29 +34,47 @@ fun ThemesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val themes = viewModel.themeOptions
+    val colors = LocalThemeColors.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Themes") },
+                title = {
+                    Text(
+                        "Themes",
+                        color = colors.onSurface
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colors.onSurface
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.resetToDefault() }) {
-                        Icon(Icons.Default.Restore, contentDescription = "Reset")
+                        Icon(
+                            Icons.Default.Restore,
+                            contentDescription = "Reset",
+                            tint = colors.onSurface
+                        )
                     }
                     IconButton(onClick = { viewModel.toggleCustomization() }) {
                         Icon(
                             if (uiState.isCustomizing) Icons.Filled.Close else Icons.Filled.Brush,
-                            contentDescription = "Customize"
+                            contentDescription = "Customize",
+                            tint = colors.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = colors.primaryContainer,
+                    titleContentColor = colors.onPrimaryContainer,
+                    navigationIconContentColor = colors.onPrimaryContainer,
+                    actionIconContentColor = colors.onPrimaryContainer
                 )
             )
         }
@@ -65,11 +84,12 @@ fun ThemesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentColor = colors.onSurface
         ) {
             // Current Theme Indicator
             item {
-                CurrentThemeCard(uiState, viewModel)
+                CurrentThemeCard(uiState, viewModel, colors)
             }
 
             // Theme Options
@@ -78,18 +98,20 @@ fun ThemesScreen(
                     text = "Themes",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
+                    color = colors.onSurface,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
 
-            items(themes) { theme ->
+            items(themes.filter { !it.isPremium }) { theme ->
                 ThemeOptionCard(
                     theme = theme,
                     isSelected = uiState.currentTheme == theme.id,
                     isPreviewing = uiState.previewTheme == theme.id,
                     onSelect = { viewModel.setTheme(theme.id) },
                     onPreview = { viewModel.previewTheme(theme.id) },
-                    onPreviewEnd = { viewModel.clearPreview() }
+                    onPreviewEnd = { viewModel.clearPreview() },
+                    colors = colors
                 )
             }
 
@@ -101,6 +123,7 @@ fun ThemesScreen(
                         text = "Accent Colors",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
+                        color = colors.onSurface,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 }
@@ -109,13 +132,14 @@ fun ThemesScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = colors.surfaceVariant
                         )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = "Choose your accent color",
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium,
+                                color = colors.onSurface
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
@@ -126,7 +150,8 @@ fun ThemesScreen(
                                     AccentColorOption(
                                         accentColor = accentColor,
                                         isSelected = uiState.accentColor == accentColor,
-                                        onClick = { viewModel.setAccentColor(accentColor) }
+                                        onClick = { viewModel.setAccentColor(accentColor) },
+                                        colors = colors
                                     )
                                 }
                             }
@@ -142,6 +167,7 @@ fun ThemesScreen(
                     text = "Premium Themes",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
+                    color = colors.onSurface,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
@@ -150,14 +176,15 @@ fun ThemesScreen(
                 PremiumThemeCard(
                     theme = theme,
                     isSelected = uiState.currentTheme == theme.id,
-                    onSelect = { viewModel.setTheme(theme.id) }
+                    onSelect = { viewModel.setTheme(theme.id) },
+                    colors = colors
                 )
             }
 
             // Info Section
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-                InfoCard()
+                InfoCard(colors)
             }
         }
     }
@@ -166,9 +193,11 @@ fun ThemesScreen(
     if (uiState.success != null) {
         Snackbar(
             modifier = Modifier.padding(16.dp),
+            containerColor = colors.primary,
+            contentColor = colors.onPrimary,
             action = {
                 TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Dismiss")
+                    Text("Dismiss", color = colors.onPrimary)
                 }
             }
         ) {
@@ -179,10 +208,11 @@ fun ThemesScreen(
     if (uiState.error != null) {
         Snackbar(
             modifier = Modifier.padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.error,
+            containerColor = colors.error,
+            contentColor = colors.onError,
             action = {
                 TextButton(onClick = { viewModel.clearError() }) {
-                    Text("Dismiss", color = MaterialTheme.colorScheme.onError)
+                    Text("Dismiss", color = colors.onError)
                 }
             }
         ) {
@@ -192,11 +222,15 @@ fun ThemesScreen(
 }
 
 @Composable
-fun CurrentThemeCard(uiState: ThemesUiState, viewModel: ThemesViewModel) {
+fun CurrentThemeCard(
+    uiState: ThemesUiState,
+    viewModel: ThemesViewModel,
+    colors: ThemeColorScheme
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = colors.primaryContainer
         )
     ) {
         Row(
@@ -210,20 +244,26 @@ fun CurrentThemeCard(uiState: ThemesUiState, viewModel: ThemesViewModel) {
                 Text(
                     text = "Current Theme",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = colors.onPrimaryContainer
                 )
                 Text(
-                    text = viewModel.themeOptions.find { it.id == uiState.currentTheme }?.name?.uppercase() ?: uiState.currentTheme.uppercase(),
+                    text = ThemeDefinitions.getTheme(uiState.currentTheme)?.name?.uppercase()
+                        ?: uiState.currentTheme.uppercase(),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = colors.onPrimaryContainer
+                )
+                Text(
+                    text = "Accent: ${uiState.accentColor.displayName}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onPrimaryContainer.copy(alpha = 0.8f)
                 )
             }
             if (uiState.isCustomizing) {
                 Icon(
                     Icons.Default.Brush,
                     contentDescription = "Customizing",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = colors.onPrimaryContainer
                 )
             }
         }
@@ -237,7 +277,8 @@ fun ThemeOptionCard(
     isPreviewing: Boolean,
     onSelect: () -> Unit,
     onPreview: () -> Unit,
-    onPreviewEnd: () -> Unit
+    onPreviewEnd: () -> Unit,
+    colors: ThemeColorScheme
 ) {
     Card(
         modifier = Modifier
@@ -245,9 +286,9 @@ fun ThemeOptionCard(
             .animateContentSize(),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
+                colors.primaryContainer
             else
-                MaterialTheme.colorScheme.surfaceVariant
+                colors.surfaceVariant
         ),
         onClick = onSelect
     ) {
@@ -265,12 +306,13 @@ fun ThemeOptionCard(
                     Text(
                         text = theme.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) colors.onPrimaryContainer else colors.onSurface
                     )
                     Text(
                         text = theme.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isSelected) colors.onPrimaryContainer.copy(alpha = 0.8f) else colors.onSurfaceVariant
                     )
                 }
 
@@ -291,7 +333,11 @@ fun ThemeOptionCard(
 
                 RadioButton(
                     selected = isSelected,
-                    onClick = onSelect
+                    onClick = onSelect,
+                    colors = RadioButtonDefaults.colors(
+                        selectedColor = colors.primary,
+                        unselectedColor = colors.onSurfaceVariant
+                    )
                 )
             }
 
@@ -321,9 +367,16 @@ fun ThemeOptionCard(
                 ) {
                     TextButton(
                         onClick = onPreview,
-                        modifier = Modifier.padding(top = 8.dp)
+                        modifier = Modifier.padding(top = 8.dp),
+                        colors = TextButtonDefaults.textButtonColors(
+                            contentColor = colors.primary
+                        )
                     ) {
-                        Icon(Icons.Default.Visibility, contentDescription = "Preview", modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Visibility,
+                            contentDescription = "Preview",
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Preview")
                     }
@@ -339,8 +392,9 @@ fun ThemeOptionCard(
                 .fillMaxWidth()
                 .height(200.dp),
             colors = CardDefaults.cardColors(
-                containerColor = getThemeColor(theme.id)
-            )
+                containerColor = getPreviewColor(theme.id)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -362,7 +416,7 @@ fun ThemeOptionCard(
                         onClick = onPreviewEnd,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.White,
-                            contentColor = getThemeColor(theme.id)
+                            contentColor = getPreviewColor(theme.id)
                         )
                     ) {
                         Text("Close Preview")
@@ -377,15 +431,16 @@ fun ThemeOptionCard(
 fun PremiumThemeCard(
     theme: ThemeOption,
     isSelected: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    colors: ThemeColorScheme
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
+                colors.primaryContainer
             else
-                MaterialTheme.colorScheme.surfaceVariant
+                colors.surfaceVariant
         ),
         onClick = onSelect
     ) {
@@ -404,26 +459,31 @@ fun PremiumThemeCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(getThemeColor(theme.id))
+                        .background(getPreviewColor(theme.id))
                 )
 
                 Column {
                     Text(
                         text = theme.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) colors.onPrimaryContainer else colors.onSurface
                     )
                     Text(
                         text = theme.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isSelected) colors.onPrimaryContainer.copy(alpha = 0.8f) else colors.onSurfaceVariant
                     )
                 }
             }
 
             RadioButton(
                 selected = isSelected,
-                onClick = onSelect
+                onClick = onSelect,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = colors.primary,
+                    unselectedColor = colors.onSurfaceVariant
+                )
             )
         }
     }
@@ -433,7 +493,8 @@ fun PremiumThemeCard(
 fun AccentColorOption(
     accentColor: AccentColor,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    colors: ThemeColorScheme
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -447,7 +508,7 @@ fun AccentColorOption(
                 .clip(CircleShape)
                 .background(Color(accentColor.colorCode))
                 .then(
-                    if (isSelected) Modifier.border(3.dp, Color.White, CircleShape)
+                    if (isSelected) Modifier.border(3.dp, colors.primary, CircleShape)
                     else Modifier
                 )
         )
@@ -455,28 +516,33 @@ fun AccentColorOption(
         Text(
             text = accentColor.displayName,
             fontSize = 10.sp,
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (isSelected) colors.primary else colors.onSurfaceVariant
         )
     }
 }
 
 @Composable
-fun InfoCard() {
+fun InfoCard(colors: ThemeColorScheme) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = colors.secondaryContainer
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Info, contentDescription = "Info", modifier = Modifier.size(20.dp))
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "Info",
+                    modifier = Modifier.size(20.dp),
+                    tint = colors.onSecondaryContainer
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Theme Tips",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = colors.onSecondaryContainer
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -486,13 +552,13 @@ fun InfoCard() {
                         "• Premium themes require in-app purchase\n" +
                         "• Themes sync across all your devices",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+                color = colors.onSecondaryContainer
             )
         }
     }
 }
 
-private fun getThemeColor(themeId: String): Color {
+private fun getPreviewColor(themeId: String): Color {
     return when (themeId) {
         "light" -> Color(0xFFF5F5F5)
         "dark" -> Color(0xFF1E1E1E)
@@ -507,6 +573,11 @@ private fun getThemeColor(themeId: String): Color {
         "mint" -> Color(0xFF00695C)
         "peach" -> Color(0xFFD84315)
         "sky" -> Color(0xFF1565C0)
+        "midnight" -> Color(0xFF0A0A0A)
+        "gold" -> Color(0xFF4E342E)
+        "matrix" -> Color(0xFF003300)
+        "cotton_candy" -> Color(0xFF4A148C)
+        "coffee" -> Color(0xFF3E2723)
         else -> Color(0xFF1E1E1E)
     }
 }

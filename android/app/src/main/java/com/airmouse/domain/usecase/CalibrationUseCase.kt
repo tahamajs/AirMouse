@@ -8,19 +8,13 @@ import com.airmouse.domain.repository.ICalibrationRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-/**
- * Use case for sensor calibration
- */
 class CalibrationUseCase @Inject constructor(
     private val calibrationRepository: ICalibrationRepository
 ) {
 
-    /**
-     * Start full calibration process
-     */
-    suspend operator fun invoke(onProgress: (Int) -> Unit): Result<Boolean> {
+    suspend fun startFullCalibration(onProgress: (Int) -> Unit): Result<Boolean> {
         return try {
-            // Step 1: Calibrate gyroscope
+            // Step 1: Gyroscope
             val gyroSuccess = calibrationRepository.calibrateGyroscope { progress ->
                 onProgress(progress / 3)
             }
@@ -28,7 +22,7 @@ class CalibrationUseCase @Inject constructor(
                 return Result.failure(Exception("Gyroscope calibration failed"))
             }
 
-            // Step 2: Calibrate magnetometer
+            // Step 2: Magnetometer
             val magSuccess = calibrationRepository.calibrateMagnetometer { progress ->
                 onProgress(33 + (progress / 3))
             }
@@ -36,7 +30,7 @@ class CalibrationUseCase @Inject constructor(
                 return Result.failure(Exception("Magnetometer calibration failed"))
             }
 
-            // Step 3: Calibrate accelerometer
+            // Step 3: Accelerometer
             val accelSuccess = calibrationRepository.calibrateAccelerometer { instruction ->
                 // Instruction callback
             }
@@ -51,9 +45,6 @@ class CalibrationUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Calibrate gyroscope only
-     */
     suspend fun calibrateGyroscope(onProgress: (Int) -> Unit): Result<Boolean> {
         return try {
             val result = calibrationRepository.calibrateGyroscope(onProgress)
@@ -63,9 +54,6 @@ class CalibrationUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Calibrate magnetometer only
-     */
     suspend fun calibrateMagnetometer(onProgress: (Int) -> Unit): Result<Boolean> {
         return try {
             val result = calibrationRepository.calibrateMagnetometer(onProgress)
@@ -75,9 +63,6 @@ class CalibrationUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Calibrate accelerometer only
-     */
     suspend fun calibrateAccelerometer(onInstruction: (String) -> Unit): Result<Boolean> {
         return try {
             val result = calibrationRepository.calibrateAccelerometer(onInstruction)
@@ -87,44 +72,30 @@ class CalibrationUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Get calibration status
-     */
     suspend fun getCalibrationStatus(): CalibrationStatus {
         return calibrationRepository.getCalibrationStatus()
     }
 
-    /**
-     * Observe calibration status
-     */
     fun observeCalibrationStatus(): Flow<CalibrationStatus> {
         return calibrationRepository.observeCalibrationStatus()
     }
 
-    /**
-     * Get calibration quality
-     */
     suspend fun getCalibrationQuality(): CalibrationQuality {
         return calibrationRepository.getCalibrationQuality()
     }
 
-    /**
-     * Observe calibration quality
-     */
     fun observeCalibrationQuality(): Flow<CalibrationQuality> {
         return calibrationRepository.observeCalibrationQuality()
     }
 
-    /**
-     * Get calibration data
-     */
     suspend fun getCalibrationData(): CalibrationData {
         return calibrationRepository.getCalibrationData()
     }
 
-    /**
-     * Reset calibration
-     */
+    suspend fun saveCalibrationData(data: CalibrationData) {
+        calibrationRepository.saveCalibrationData(data)
+    }
+
     suspend fun resetCalibration(): Result<Unit> {
         return try {
             calibrationRepository.resetCalibration()
@@ -134,10 +105,21 @@ class CalibrationUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Check if calibrated
-     */
     suspend fun isCalibrated(): Boolean {
         return calibrationRepository.getCalibrationStatus() == CalibrationStatus.COMPLETED
+    }
+
+    suspend fun resetAllCalibration(): Result<Unit> {
+        return try {
+            calibrationRepository.resetAllCalibration()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun hasCalibrationData(): Boolean {
+        val data = calibrationRepository.getCalibrationData()
+        return data.isCalibrated
     }
 }

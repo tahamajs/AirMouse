@@ -23,104 +23,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import javax.inject.Inject
-
-// ==========================================
-// VIEW MODEL
-// ==========================================
-
-data class AboutUiState(
-    val appName: String = "Air Mouse",
-    val versionName: String = "3.0.0",
-    val versionCode: Int = 30,
-    val buildDate: String = "2025-06-20",
-    val totalDownloads: Int = 12500,
-    val totalUsers: Int = 3400,
-    val totalGestures: Int = 87500,
-    val isUpdateAvailable: Boolean = false,
-    val isLoading: Boolean = false
-)
-
-@HiltViewModel
-class AboutViewModel @Inject constructor() : ViewModel() {
-
-    private val _uiState = MutableStateFlow(AboutUiState())
-    val uiState: StateFlow<AboutUiState> = _uiState.asStateFlow()
-
-    fun shareApp() {
-        // Implementation for sharing
-    }
-
-    fun rateApp() {
-        // Implementation for rating
-    }
-
-    fun checkForUpdates() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            // Simulate update check
-            kotlinx.coroutines.delay(1500)
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                isUpdateAvailable = true
-            )
-        }
-    }
-
-    fun openUrl(url: String) {
-        // Implementation to open URL
-    }
-}
-
-// ==========================================
-// GLASS CARD COMPOSABLE
-// ==========================================
-
-@Composable
-fun GlassCard(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
-                    )
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-        ),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            content()
-        }
-    }
-}
-
-// ==========================================
-// MAIN SCREEN
-// ==========================================
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.presentation.navigation.NavigationActionsImpl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,7 +40,36 @@ fun AboutScreen(
     navigationActions: NavigationActions,
     viewModel: AboutViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val effect by viewModel.effect.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Handle side effects
+    LaunchedEffect(effect) {
+        when (effect) {
+            is AboutEffect.OpenUrl -> {
+                val url = (effect as AboutEffect.OpenUrl).url
+                // Open URL - implementation depends on your navigation
+                navigationActions.navigateTo(url)
+                viewModel.clearEffect()
+            }
+            is AboutEffect.ShowToast -> {
+                // Show toast - implementation depends on your Toast system
+                android.widget.Toast.makeText(context, effect.message, android.widget.Toast.LENGTH_SHORT).show()
+                viewModel.clearEffect()
+            }
+            is AboutEffect.NavigateBack -> {
+                navigationActions.navigateBack()
+                viewModel.clearEffect()
+            }
+            is AboutEffect.ShowUpdateDialog -> {
+                // Show update dialog - implementation depends on your dialog system
+                viewModel.clearEffect()
+            }
+            null -> { /* No effect */ }
+        }
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "logoScale")
     val logoScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -136,7 +77,8 @@ fun AboutScreen(
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        ), label = "scale"
+        ),
+        label = "scale"
     )
 
     var showContributors by remember { mutableStateOf(false) }
@@ -147,15 +89,15 @@ fun AboutScreen(
             TopAppBar(
                 title = { Text("About", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
-                    IconButton(onClick = { navigationActions.navigateBack() }) {
+                    IconButton(onClick = { viewModel.onEvent(AboutEvent.NavigateBack) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.shareApp() }) {
+                    IconButton(onClick = { viewModel.onEvent(AboutEvent.ShareApp) }) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
-                    IconButton(onClick = { viewModel.rateApp() }) {
+                    IconButton(onClick = { viewModel.onEvent(AboutEvent.RateApp) }) {
                         Icon(Icons.Default.Star, contentDescription = "Rate")
                     }
                 },
@@ -168,7 +110,7 @@ fun AboutScreen(
         floatingActionButton = {
             if (uiState.isUpdateAvailable) {
                 FloatingActionButton(
-                    onClick = { viewModel.checkForUpdates() },
+                    onClick = { viewModel.onEvent(AboutEvent.CheckForUpdates) },
                     containerColor = Color(0xFF4CAF50),
                     modifier = Modifier.size(56.dp)
                 ) {
@@ -400,11 +342,21 @@ fun AboutScreen(
                         Text("🔗 Links", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        LinkItem("GitHub Repository", Icons.Default.Code, "github.com/airmouse") { viewModel.openUrl("https://github.com/airmouse") }
-                        LinkItem("Website", Icons.Default.Language, "www.airmouse.io") { viewModel.openUrl("https://www.airmouse.io") }
-                        LinkItem("Documentation", Icons.Default.Description, "docs.airmouse.io") { viewModel.openUrl("https://docs.airmouse.io") }
-                        LinkItem("Support", Icons.Default.SupportAgent, "support@airmouse.io") { viewModel.openUrl("mailto:support@airmouse.io") }
-                        LinkItem("Discord Community", Icons.AutoMirrored.Filled.Chat, "discord.gg/airmouse") { viewModel.openUrl("https://discord.gg/airmouse") }
+                        LinkItem("GitHub Repository", Icons.Default.Code, "github.com/airmouse") {
+                            viewModel.onEvent(AboutEvent.OpenUrl("https://github.com/airmouse"))
+                        }
+                        LinkItem("Website", Icons.Default.Language, "www.airmouse.io") {
+                            viewModel.onEvent(AboutEvent.OpenUrl("https://www.airmouse.io"))
+                        }
+                        LinkItem("Documentation", Icons.Default.Description, "docs.airmouse.io") {
+                            viewModel.onEvent(AboutEvent.OpenUrl("https://docs.airmouse.io"))
+                        }
+                        LinkItem("Support", Icons.Default.SupportAgent, "support@airmouse.io") {
+                            viewModel.onEvent(AboutEvent.OpenUrl("mailto:support@airmouse.io"))
+                        }
+                        LinkItem("Discord Community", Icons.AutoMirrored.Filled.Chat, "discord.gg/airmouse") {
+                            viewModel.onEvent(AboutEvent.OpenUrl("https://discord.gg/airmouse"))
+                        }
                     }
                 }
 
@@ -434,7 +386,7 @@ fun AboutScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.checkForUpdates() },
+                        onClick = { viewModel.onEvent(AboutEvent.CheckForUpdates) },
                         modifier = Modifier.weight(1f),
                         enabled = !uiState.isLoading
                     ) {
@@ -448,7 +400,7 @@ fun AboutScreen(
                     }
 
                     Button(
-                        onClick = { navigationActions.navigateBack() },
+                        onClick = { viewModel.onEvent(AboutEvent.NavigateBack) },
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -470,6 +422,35 @@ fun AboutScreen(
 // ==========================================
 // SUB-COMPONENTS
 // ==========================================
+
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+                    )
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            content()
+        }
+    }
+}
 
 @Composable
 fun StatItem(value: String, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -569,14 +550,6 @@ fun LinkItem(title: String, icon: androidx.compose.ui.graphics.vector.ImageVecto
 }
 
 // ==========================================
-// NAVIGATION ACTIONS (stub for preview)
-// ==========================================
-
-class NavigationActions {
-    fun navigateBack() {}
-}
-
-// ==========================================
 // PREVIEWS
 // ==========================================
 
@@ -584,7 +557,7 @@ class NavigationActions {
 @Composable
 fun AboutScreenPreviewLight() {
     MaterialTheme {
-        AboutScreen(navigationActions = NavigationActions())
+        AboutScreen(navigationActions = NavigationActionsImpl())
     }
 }
 
@@ -592,6 +565,6 @@ fun AboutScreenPreviewLight() {
 @Composable
 fun AboutScreenPreviewDark() {
     MaterialTheme {
-        AboutScreen(navigationActions = NavigationActions())
+        AboutScreen(navigationActions = NavigationActionsImpl())
     }
 }
