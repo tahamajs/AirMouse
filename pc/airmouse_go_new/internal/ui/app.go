@@ -100,15 +100,15 @@ func (a *App) Run() error {
 	a.logsTab = safeTab(NewLogsTab(), "Logs")
 
 	// ----- Debug: Print tab status -----
-	fmt.Println("✅ All tabs created successfully")
-	fmt.Printf("  Dashboard: %T\n", a.dashboardTab)
-	fmt.Printf("  Devices: %T\n", a.devicesTab)
-	fmt.Printf("  Network: %T\n", a.networkTab)
-	fmt.Printf("  Gestures: %T\n", a.gesturesTab)
-	fmt.Printf("  Proximity: %T\n", a.proximityTab)
-	fmt.Printf("  Analytics: %T\n", a.analyticsTab)
-	fmt.Printf("  Settings: %T\n", a.settingsTab)
-	fmt.Printf("  Logs: %T\n", a.logsTab)
+	utils.LogInfo("All tabs created successfully")
+	utils.LogDebug("Dashboard tab: %T", a.dashboardTab)
+	utils.LogDebug("Devices tab: %T", a.devicesTab)
+	utils.LogDebug("Network tab: %T", a.networkTab)
+	utils.LogDebug("Gestures tab: %T", a.gesturesTab)
+	utils.LogDebug("Proximity tab: %T", a.proximityTab)
+	utils.LogDebug("Analytics tab: %T", a.analyticsTab)
+	utils.LogDebug("Settings tab: %T", a.settingsTab)
+	utils.LogDebug("Logs tab: %T", a.logsTab)
 
 	// ----- Tab container -----
 	tabs := container.NewAppTabs(
@@ -149,9 +149,9 @@ func (a *App) Run() error {
 	go a.connectionStatusUpdater()
 
 	// ----- Show and run -----
-	fmt.Println("🚀 Showing window...")
+	utils.LogInfo("Showing window")
 	a.window.ShowAndRun()
-	fmt.Println("👋 Window closed")
+	utils.LogInfo("Window closed")
 	return nil
 }
 
@@ -163,7 +163,7 @@ func safeTab(tab fyne.CanvasObject, name string) fyne.CanvasObject {
 	if tab != nil {
 		return tab
 	}
-	fmt.Printf("⚠️ Warning: %s tab returned nil, using placeholder\n", name)
+	utils.LogWarn("Tab %s returned nil, using placeholder", name)
 	return widget.NewLabelWithStyle("⚠️ "+name+" tab not implemented", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 }
 
@@ -259,7 +259,7 @@ func (a *App) createToolbar() fyne.CanvasObject {
 		_ = a.server.Start()
 	})
 	settingsBtn := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
-		// TODO: switch to settings tab
+		dialog.ShowInformation("Settings", "Open the Settings tab to adjust server, network, and pairing options.", a.window)
 	})
 	helpBtn := widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
 		showShortcutsDialog(a.window)
@@ -367,8 +367,9 @@ func (a *App) importConfig() {
 
 func (a *App) showPairingQR() {
 	ip := utils.GetLocalIP()
-	port := a.cfg.Port
-	data := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&name=%s", ip, port, a.cfg.ServerName)
+	port := a.cfg.WebSocketPort
+	data := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&ws=ws://%s:%d/ws&name=%s&version=%s&protocol=WEBSOCKET",
+		ip, port, ip, port, a.cfg.ServerName, a.cfg.Version)
 
 	qrWindow := a.fyneApp.NewWindow("Pairing QR Code")
 	qrWindow.Resize(fyne.NewSize(400, 450))
@@ -396,8 +397,7 @@ func (a *App) showPairingQR() {
 func (a *App) clearAllDevices() {
 	dialog.ShowConfirm("Clear Devices", "Remove all connected devices?", func(confirmed bool) {
 		if confirmed {
-			// TODO: implement device manager clear
-			dialog.ShowInformation("Devices Cleared", "All devices have been removed.", a.window)
+			dialog.ShowInformation("Clear Devices", "Device removal is handled from the Devices tab for each client.", a.window)
 		}
 	}, a.window)
 }

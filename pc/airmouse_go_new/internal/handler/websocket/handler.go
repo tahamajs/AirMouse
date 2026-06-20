@@ -150,7 +150,6 @@ func (h *Handler) processMessage(client *Client, data []byte) {
 		// client proximity updates
 		// read payload fields if needed and forward
 	case "control":
-		// control commands like pause/resume movement
 		var cmd string
 		if pRaw, ok := root["payload"]; ok {
 			var obj map[string]json.RawMessage
@@ -159,12 +158,14 @@ func (h *Handler) processMessage(client *Client, data []byte) {
 					_ = json.Unmarshal(cRaw, &cmd)
 				}
 			}
+		} else if cRaw, ok := root["command"]; ok {
+			_ = json.Unmarshal(cRaw, &cmd)
 		}
 		switch cmd {
 		case "pause_movement":
-			// TODO: implement pause at hub/service level
+			_ = h.hub.mouseService.Pause(5)
 		case "resume_movement":
-			// TODO
+			_ = h.hub.mouseService.Pause(0)
 		}
 	}
 

@@ -4,6 +4,7 @@ package com.airmouse.presentation.ui.calibration
 import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
+import com.airmouse.domain.model.SensorCalibrationData
 
 // ==========================================
 // UI STATE

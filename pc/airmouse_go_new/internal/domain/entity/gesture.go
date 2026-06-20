@@ -79,6 +79,32 @@ func (g *Gesture) IsHighConfidence() bool {
 	return g.Confidence >= 0.7
 }
 
+// GetAction maps common gestures to system action identifiers.
+func (g *Gesture) GetAction() string {
+	switch g.Type {
+	case GestureThumbsUp:
+		return "play_pause"
+	case GestureThumbsDown:
+		return "stop"
+	case GestureSwipeLeft:
+		return "prev_track"
+	case GestureSwipeRight:
+		return "next_track"
+	case GestureSwipeUp:
+		return "volume_up"
+	case GestureSwipeDown:
+		return "volume_down"
+	case GestureDoubleTap:
+		return "double_click"
+	case GestureCircleCW:
+		return "volume_up"
+	case GestureCircleCCW:
+		return "volume_down"
+	default:
+		return string(g.Type)
+	}
+}
+
 // NewGestureTemplate creates a new template with a unique ID.
 func NewGestureTemplate(name string, gestureType GestureType) *GestureTemplate {
 	now := time.Now().UnixMilli()

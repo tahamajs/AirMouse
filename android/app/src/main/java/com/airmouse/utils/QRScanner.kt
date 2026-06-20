@@ -24,6 +24,19 @@ class QRScanner(private val fragment: Fragment) {
         private const val TAG = "QRScanner"
         const val SCHEME_AIRMOUSE = "airmouse"
         const val HOST_CONNECT = "connect"
+
+        fun parseConnectionDataStatic(qrData: String): ConnectionData? {
+            val uri = Uri.parse(qrData)
+            if (uri.scheme != SCHEME_AIRMOUSE || (uri.host != HOST_CONNECT && uri.host != "pair")) return null
+            val ip = uri.getQueryParameter("ip") ?: return null
+            val port = uri.getQueryParameter("port")?.toIntOrNull() ?: 8081
+            val name = uri.getQueryParameter("name") ?: "Air Mouse Server"
+            val ws = uri.getQueryParameter("ws")
+            val token = uri.getQueryParameter("token")
+            val protocol = uri.getQueryParameter("protocol") ?: if (!ws.isNullOrBlank()) "WEBSOCKET" else "TCP"
+            val useSSL = uri.getQueryParameter("ssl")?.equals("true", ignoreCase = true) == true
+            return ConnectionData(ip, port, name, ws, token, protocol, useSSL)
+        }
     }
 
     private val requestPermissionLauncher = fragment.registerForActivityResult(
@@ -87,27 +100,6 @@ class QRScanner(private val fragment: Fragment) {
         scanLauncher.launch(options)
     }
 
-    /**
-     * Parse Air Mouse connection data from QR code
-     * Expected format: airmouse://connect?ip=192.168.1.100&port=8080
-     */
-    fun parseConnectionData(qrData: String): ConnectionData? {
-        return try {
-            val uri = Uri.parse(qrData)
-            if (uri.scheme == SCHEME_AIRMOUSE && uri.host == HOST_CONNECT) {
-                val ip = uri.getQueryParameter("ip")
-                val port = uri.getQueryParameter("port")?.toIntOrNull() ?: 8080
-                val name = uri.getQueryParameter("name") ?: "Air Mouse Server"
-                if (ip != null && ip.isNotEmpty()) {
-                    ConnectionData(ip, port, name)
-                } else null
-            } else null
-        } catch (e: Exception) {
-            LogManager.error("Failed to parse QR data: ${e.message}", TAG)
-            null
-        }
-    }
-
     private fun hasCameraHardware(context: Context): Boolean {
         return context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
     }
@@ -156,6 +148,10 @@ class QRScanner(private val fragment: Fragment) {
     data class ConnectionData(
         val ip: String,
         val port: Int,
-        val name: String
+        val name: String,
+        val wsUrl: String? = null,
+        val token: String? = null,
+        val protocol: String = "WEBSOCKET",
+        val useSSL: Boolean = false
     )
 }

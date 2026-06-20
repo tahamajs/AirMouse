@@ -49,7 +49,7 @@ class CalibrationFeature @Inject constructor(
     suspend fun startFullCalibration(onProgress: (Int) -> Unit): Result<Boolean> {
         _state.value = _state.value.copy(status = CalibrationStatus.IN_PROGRESS)
 
-        val result = calibrationUseCase { progress ->
+        val result = calibrationUseCase.startFullCalibration { progress ->
             onProgress(progress)
             _state.value = _state.value.copy(
                 progress = progress,

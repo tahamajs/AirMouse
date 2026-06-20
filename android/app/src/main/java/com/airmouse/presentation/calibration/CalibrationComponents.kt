@@ -184,6 +184,14 @@ fun CalibrationStatusChipText(
         status.contains("Progress") || status.contains("In Progress") -> Color(0xFFF59E0B)
         else -> Color(0xFF6366F1)
     }
+    val pulse by animateFloatAsState(
+        targetValue = if (status.contains("Progress") || status.contains("In Progress")) 1f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
 
     Surface(
         modifier = modifier,
@@ -202,18 +210,8 @@ fun CalibrationStatusChipText(
                     .clip(CircleShape)
                     .background(color)
                     .graphicsLayer {
-                        if (status.contains("Progress") || status.contains("In Progress")) {
-                            val pulse by animateFloatAsState(
-                                targetValue = 1f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(1000, easing = FastOutSlowInEasing),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = "pulse"
-                            )
-                            scaleX = 1f + pulse * 0.5f
-                            scaleY = 1f + pulse * 0.5f
-                        }
+                        scaleX = 1f + pulse * 0.5f
+                        scaleY = 1f + pulse * 0.5f
                     }
             )
             Text(
@@ -237,11 +235,11 @@ fun CalibrationQualityIndicator(
     showEmoji: Boolean = true
 ) {
     val (color, emoji, label) = when (quality) {
-        CalibrationQuality.EXCELLENT -> Color(0xFF10B981) to "🌟" to "Excellent"
-        CalibrationQuality.GOOD -> Color(0xFF3B82F6) to "👍" to "Good"
-        CalibrationQuality.FAIR -> Color(0xFFF59E0B) to "⚠️" to "Fair"
-        CalibrationQuality.POOR -> Color(0xFFEF4444) to "❌" to "Poor"
-        CalibrationQuality.UNKNOWN -> Color(0xFF64748B) to "❓" to "Unknown"
+        CalibrationQuality.EXCELLENT -> Triple(Color(0xFF10B981), "🌟", "Excellent")
+        CalibrationQuality.GOOD -> Triple(Color(0xFF3B82F6), "👍", "Good")
+        CalibrationQuality.FAIR -> Triple(Color(0xFFF59E0B), "⚠️", "Fair")
+        CalibrationQuality.POOR -> Triple(Color(0xFFEF4444), "❌", "Poor")
+        CalibrationQuality.UNKNOWN -> Triple(Color(0xFF64748B), "❓", "Unknown")
     }
 
     Row(

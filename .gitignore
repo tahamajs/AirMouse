@@ -28,3 +28,5 @@ pc/airmouse-go/.gomodcache/*
 .md
 pc/airmouse_go_new/.gomodcache/*
 pc/airmouse_go_new/.gocache/*
+.gocache/*
+.gomodcache/*

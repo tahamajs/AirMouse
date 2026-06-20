@@ -157,7 +157,7 @@ class SettingsViewModel @Inject constructor(
                 SettingsEvent.ToggleNotificationOnGesture -> toggleNotificationOnGesture()
 
                 // ==================== DISPLAY EVENTS ====================
-                is SettingsEvent.UpdateTheme -> updateTheme(event.value)
+                is SettingsEvent.UpdateTheme -> updateTheme(event.theme)
                 SettingsEvent.ToggleDynamicColors -> toggleDynamicColors()
                 is SettingsEvent.UpdateFontSize -> updateFontSize(event.value)
                 SettingsEvent.ToggleDebugInfo -> toggleDebugInfo()

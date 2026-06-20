@@ -56,7 +56,14 @@ func (s *mouseService) Move(dx, dy float64) error {
     s.mu.RUnlock()
     
     // Apply profile transformations
-    dx, dy = s.profile.Apply(dx, dy)
+    if s.profile.Deadband > 0 {
+        if math.Abs(dx) < s.profile.Deadband {
+            dx = 0
+        }
+        if math.Abs(dy) < s.profile.Deadband {
+            dy = 0
+        }
+    }
     
     if dx == 0 && dy == 0 {
         return nil
@@ -64,8 +71,12 @@ func (s *mouseService) Move(dx, dy float64) error {
     
     // Apply smoothing (EMA)
     s.mu.Lock()
-    s.lastX = s.profile.SmoothingAlpha*dx + (1-s.profile.SmoothingAlpha)*s.lastX
-    s.lastY = s.profile.SmoothingAlpha*dy + (1-s.profile.SmoothingAlpha)*s.lastY
+    alpha := s.profile.SmoothingAlpha
+    if alpha <= 0 {
+        alpha = 0.3
+    }
+    s.lastX = alpha*dx + (1-alpha)*s.lastX
+    s.lastY = alpha*dy + (1-alpha)*s.lastY
     smX, smY := s.lastX, s.lastY
     s.mu.Unlock()
     

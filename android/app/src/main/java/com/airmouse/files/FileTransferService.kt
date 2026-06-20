@@ -10,15 +10,12 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
-import okio.ByteString
 import java.io.*
 import java.security.MessageDigest
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.min
+import org.json.JSONObject
 
 /**
  * Complete file transfer service supporting upload/download with binary WebSocket.
@@ -81,6 +78,13 @@ class FileTransferService @Inject constructor(
     private var currentDownloadId: String? = null
     private var currentDownloadStream: FileOutputStream? = null
     private var currentDownloadMd5 = MessageDigest.getInstance("MD5")
+    private var currentDownloadExpectedMd5: String? = null
+    private var currentDownloadExpectedSize: Long = 0L
+    private var currentDownloadTempFile: File? = null
+    private var currentDownloadCompletionDeferred: CompletableDeferred<Unit>? = null
+    private var transferredBytes = 0L
+    private val messageListener: (String) -> Unit = { handleServerMessage(it) }
+    private val binaryListener: (ByteArray) -> Unit = { onBinaryMessage(it) }
 
     init {
         if (!transfersDir.exists()) transfersDir.mkdirs()
@@ -89,13 +93,8 @@ class FileTransferService @Inject constructor(
     }
 
     private fun setupBinaryMessageListener() {
-        // Register a binary message listener with ConnectionManager.
-        // We need to extend ConnectionManager to expose binary messages.
-        // For now, we assume ConnectionManager has a method: onBinaryMessage: ((ByteArray) -> Unit)?
-        // Alternatively, we can directly access the underlying WebSocket.
-        // To keep it self-contained, we'll use a custom WebSocket instance.
-        // In practice, you would inject WebSocketManager and register a listener.
-        // This implementation assumes the existence of such a callback.
+        connectionManager.addMessageListener(messageListener)
+        connectionManager.addBinaryMessageListener(binaryListener)
     }
 
     private fun loadTransferHistory() {
@@ -218,8 +217,19 @@ class FileTransferService @Inject constructor(
         updateTransferSize(transfer.id, fileSize)
 
         // Send metadata
-        val meta = """{"type":"file","action":"start","id":"${transfer.id}","name":"${transfer.fileName}","size":$fileSize,"md5":"${transfer.md5 ?: ""}","version":$PROTOCOL_VERSION}"""
-        connectionManager.send(meta)
+        val meta = JSONObject().apply {
+            put("type", "file")
+            put("action", "start")
+            put("id", transfer.id)
+            put("name", transfer.fileName)
+            put("size", fileSize)
+            put("md5", transfer.md5 ?: "")
+            put("version", PROTOCOL_VERSION)
+            put("direction", "upload")
+        }.toString()
+        if (!connectionManager.send(meta)) {
+            throw IOException("Failed to send file start packet")
+        }
 
         val inputStream = BufferedInputStream(FileInputStream(file))
         val buffer = ByteArray(CHUNK_SIZE)
@@ -231,7 +241,9 @@ class FileTransferService @Inject constructor(
                 if (bytesRead <= 0) break
 
                 val chunk = buffer.copyOf(bytesRead)
-                connectionManager.sendBinary(chunk)
+                if (!connectionManager.sendBinary(chunk)) {
+                    throw IOException("Failed to send file chunk")
+                }
 
                 transferred += bytesRead
                 updateTransferProgress(transfer.id, transferred, fileSize)
@@ -239,7 +251,15 @@ class FileTransferService @Inject constructor(
             }
 
             inputStream.close()
-            connectionManager.send("""{"type":"file","action":"complete","id":"${transfer.id}"}""")
+            if (!connectionManager.send(JSONObject().apply {
+                    put("type", "file")
+                    put("action", "complete")
+                    put("id", transfer.id)
+                    put("direction", "upload")
+                }.toString())
+            ) {
+                throw IOException("Failed to send file completion packet")
+            }
             updateTransferStatus(transfer.id, TransferInfo.Status.COMPLETED)
             Log.i(TAG, "Upload completed: ${transfer.fileName}")
 
@@ -256,58 +276,113 @@ class FileTransferService @Inject constructor(
         if (outputFile.exists()) outputFile.delete()
 
         currentDownloadId = transfer.id
-        currentDownloadStream = FileOutputStream(outputFile)
+        currentDownloadTempFile = File(transfersDir, ".download_${transfer.id}_${transfer.fileName}")
+        if (currentDownloadTempFile?.exists() == true) currentDownloadTempFile?.delete()
+        currentDownloadStream = FileOutputStream(currentDownloadTempFile)
         currentDownloadMd5.reset()
+        currentDownloadExpectedMd5 = transfer.md5
+        currentDownloadExpectedSize = transfer.fileSize
+        transferredBytes = 0L
 
-        // Create a promise to wait for completion
         val completionDeferred = CompletableDeferred<Unit>()
+        currentDownloadCompletionDeferred = completionDeferred
 
-        // Register temporary binary message receiver
-        val originalCallback = downloadCallback
         downloadCallback = { data ->
             if (currentDownloadId == transfer.id) {
                 try {
                     currentDownloadStream?.write(data)
                     currentDownloadMd5.update(data)
                     transferredBytes += data.size
-                    updateTransferProgress(transfer.id, transferredBytes, transfer.fileSize)
+                    updateTransferProgress(transfer.id, transferredBytes, currentDownloadExpectedSize.takeIf { it > 0 } ?: transfer.fileSize)
                 } catch (e: Exception) {
                     completionDeferred.completeExceptionally(e)
                 }
             }
         }
 
-        // Request download from server
-        connectionManager.send("""{"type":"file","action":"download","id":"${transfer.id}","name":"${transfer.fileName}"}""")
+        val request = JSONObject().apply {
+            put("type", "file")
+            put("action", "download")
+            put("id", transfer.id)
+            put("name", transfer.fileName)
+            put("version", PROTOCOL_VERSION)
+        }.toString()
+        if (!connectionManager.send(request)) {
+            throw IOException("Failed to send file download request")
+        }
 
-        // Wait for completion message or error
         try {
-            withTimeoutOrNull(300_000L) { completionDeferred.await() }
-            // After completion, verify MD5 if available
+            withTimeout(300_000L) { completionDeferred.await() }
+            currentDownloadStream?.flush()
             currentDownloadStream?.close()
             val actualMd5 = currentDownloadMd5.digest().joinToString("") { "%02x".format(it) }
-            if (transfer.md5 != null && actualMd5 != transfer.md5) {
-                throw IOException("MD5 mismatch: expected ${transfer.md5}, got $actualMd5")
+            val expectedMd5 = currentDownloadExpectedMd5
+            if (!expectedMd5.isNullOrBlank() && actualMd5 != expectedMd5) {
+                throw IOException("MD5 mismatch: expected $expectedMd5, got $actualMd5")
             }
+            if (currentDownloadExpectedSize > 0 && transferredBytes != currentDownloadExpectedSize) {
+                throw IOException("Size mismatch: expected $currentDownloadExpectedSize, got $transferredBytes")
+            }
+            currentDownloadTempFile?.let { temp ->
+                if (outputFile.exists()) outputFile.delete()
+                if (!temp.renameTo(outputFile)) {
+                    throw IOException("Failed to finalize downloaded file")
+                }
+            }
+            updateTransferSize(transfer.id, transferredBytes)
             updateTransferStatus(transfer.id, TransferInfo.Status.COMPLETED)
             Log.i(TAG, "Download completed: ${transfer.fileName}")
         } catch (e: Exception) {
             currentDownloadStream?.close()
-            outputFile.delete()
+            currentDownloadTempFile?.delete()
             throw e
         } finally {
-            downloadCallback = originalCallback
+            downloadCallback = null
             currentDownloadId = null
             currentDownloadStream = null
-            transferredBytes = 0
+            currentDownloadTempFile = null
+            currentDownloadExpectedMd5 = null
+            currentDownloadExpectedSize = 0L
+            currentDownloadCompletionDeferred = null
+            transferredBytes = 0L
         }
     }
 
-    // Helper to receive binary data from ConnectionManager (simplified)
-    // In real integration, you would set this in ConnectionManager's binary listener.
-    private var transferredBytes = 0L
     fun onBinaryMessage(data: ByteArray) {
         downloadCallback?.invoke(data)
+    }
+
+    private fun handleServerMessage(message: String) {
+        try {
+            val json = JSONObject(message)
+            if (json.optString("type") != "file") return
+            when (json.optString("action")) {
+                "start" -> {
+                    if (json.optString("id") == currentDownloadId) {
+                        currentDownloadExpectedMd5 = json.optString("md5").takeIf { it.isNotBlank() } ?: currentDownloadExpectedMd5
+                        if (json.has("size")) currentDownloadExpectedSize = json.optLong("size", currentDownloadExpectedSize)
+                    }
+                }
+                "complete" -> {
+                    if (json.optString("id") == currentDownloadId) {
+                        currentDownloadStream?.flush()
+                        currentDownloadCompletionDeferred?.complete(Unit)
+                        if (json.has("md5")) {
+                            currentDownloadExpectedMd5 = json.optString("md5")
+                        }
+                    }
+                }
+                "error" -> {
+                    if (json.optString("id") == currentDownloadId) {
+                        val error = json.optString("message", "File transfer failed")
+                        currentDownloadStream?.close()
+                        currentDownloadTempFile?.delete()
+                        throw IOException(error)
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -414,5 +489,7 @@ class FileTransferService @Inject constructor(
         scope.cancel()
         downloadCallback = null
         currentDownloadStream?.close()
+        connectionManager.removeMessageListener(messageListener)
+        connectionManager.removeBinaryMessageListener(binaryListener)
     }
 }

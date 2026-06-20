@@ -336,8 +336,8 @@ func (t *DashboardTab) showPairingQRDialog() {
 	port := t.cfg.Port
 
 	pairingData := fmt.Sprintf(
-		"airmouse://pair?ip=%s&port=%d&name=%s&version=%s",
-		ip, port, t.cfg.ServerName, t.cfg.Version,
+		"airmouse://pair?ip=%s&port=%d&ws=ws://%s:%d/ws&name=%s&version=%s&protocol=WEBSOCKET",
+		ip, port, ip, t.cfg.WebSocketPort, t.cfg.ServerName, t.cfg.Version,
 	)
 
 	pngBytes, err := qrcode.Encode(pairingData, qrcode.High, 300)

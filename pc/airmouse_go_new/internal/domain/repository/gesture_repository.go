@@ -15,6 +15,9 @@ type GestureRepository interface {
 	// ListTemplates returns all stored gesture templates, optionally filtered by type.
 	ListTemplates(filterType entity.GestureType) ([]*entity.GestureTemplate, error)
 
+	// ListAllTemplates returns every stored template.
+	ListAllTemplates() ([]*entity.GestureTemplate, error)
+
 	// DeleteTemplate removes a template by ID.
 	DeleteTemplate(id string) error
 
@@ -29,4 +32,7 @@ type GestureRepository interface {
 
 	// UpdateMetadata merges key‑value pairs into the template’s metadata.
 	UpdateMetadata(id string, metadata map[string]interface{}) error
+
+	// IncrementUsage increases usage statistics for the template.
+	IncrementUsage(id string, score float64) error
 }

@@ -65,7 +65,7 @@ func (s *Server) Start() error {
     s.running = true
     go s.acceptLoop()
     
-    utils.LogInfo("TCP server started", "address", addr)
+    utils.LogInfo("TCP server started: address=%s", addr)
     return nil
 }
 
@@ -74,7 +74,7 @@ func (s *Server) acceptLoop() {
         conn, err := s.listener.Accept()
         if err != nil {
             if s.running {
-                utils.LogError("TCP accept error", "error", err)
+                utils.LogError("TCP accept error: %v", err)
             }
             continue
         }
@@ -99,7 +99,7 @@ func (s *Server) handleClient(conn net.Conn) {
     s.clients[clientID] = client
     s.mu.Unlock()
     
-    utils.LogInfo("TCP client connected", "id", clientID, "ip", clientIP)
+    utils.LogInfo("TCP client connected: id=%s ip=%s", clientID, clientIP)
     s.deviceMgr.RegisterDevice(clientID, device.TypeTCP, client.Name)
     s.triggerEvent(TCPEvent{
         Type:      "connected",
@@ -122,7 +122,7 @@ func (s *Server) handleClient(conn net.Conn) {
                 return
             }
             if time.Since(c.LastActive) > 30*time.Second {
-                utils.LogInfo("TCP client timeout", "id", clientID)
+                utils.LogInfo("TCP client timeout: id=%s", clientID)
                 conn.Close()
                 return
             }
@@ -146,7 +146,7 @@ func (s *Server) handleClient(conn net.Conn) {
     delete(s.clients, clientID)
     s.mu.Unlock()
     
-    utils.LogInfo("TCP client disconnected", "id", clientID)
+    utils.LogInfo("TCP client disconnected: id=%s", clientID)
     s.deviceMgr.UnregisterDevice(clientID)
     s.triggerEvent(TCPEvent{
         Type:      "disconnected",
@@ -159,7 +159,7 @@ func (s *Server) handleClient(conn net.Conn) {
 func (s *Server) processLine(client *Client, line []byte) {
     msgType, payload, id, err := decodeWireMessage(line)
     if err != nil {
-        utils.LogDebug("Invalid TCP message", "error", err)
+        utils.LogDebug("Invalid TCP message: %v", err)
         return
     }
     
@@ -201,7 +201,7 @@ func (s *Server) processLine(client *Client, line []byte) {
         client.Conn.Write([]byte(welcome))
         client.BytesSent += int64(len(welcome))
         
-        utils.LogInfo("TCP client identified", "id", client.ID, "name", client.Name)
+        utils.LogInfo("TCP client identified: id=%s name=%s", client.ID, client.Name)
         
     case "ping":
         client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))
@@ -209,26 +209,26 @@ func (s *Server) processLine(client *Client, line []byte) {
     case "gesture":
         gesture, _ := payload["gesture"].(string)
         confidence := number(payload["confidence"])
-        utils.LogInfo("TCP gesture received", "client", client.ID, "gesture", gesture, "confidence", confidence)
+        utils.LogInfo("TCP gesture received: client=%s gesture=%s confidence=%.2f", client.ID, gesture, confidence)
         
     case "proximity":
         isNear, _ := payload["is_near"].(bool)
         distance := number(payload["distance"])
-        utils.LogInfo("TCP proximity update", "client", client.ID, "near", isNear, "distance", distance)
+        utils.LogInfo("TCP proximity update: client=%s near=%v distance=%.2f", client.ID, isNear, distance)
         
     case "control":
         command, _ := payload["command"].(string)
         switch command {
         case "pause_movement":
             control.SetMovementPaused(true)
-            utils.LogInfo("Movement paused by TCP client", "client", client.ID)
+            utils.LogInfo("Movement paused by TCP client: client=%s", client.ID)
         case "resume_movement":
             control.SetMovementPaused(false)
-            utils.LogInfo("Movement resumed by TCP client", "client", client.ID)
+            utils.LogInfo("Movement resumed by TCP client: client=%s", client.ID)
         }
         
     default:
-        utils.LogDebug("Unknown TCP message type", "type", msgType, "client", client.ID)
+        utils.LogDebug("Unknown TCP message type: type=%s client=%s", msgType, client.ID)
     }
 }
 

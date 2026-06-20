@@ -42,6 +42,11 @@ sealed class NetworkMessage {
         val confidence: Float
     ) : NetworkMessage()
 
+    data class Control(
+        val command: String,
+        val value: Int? = null
+    ) : NetworkMessage()
+
     object Ping : NetworkMessage()
     object Pong : NetworkMessage()
 
@@ -81,6 +86,10 @@ sealed class NetworkMessage {
                     "gesture" -> {
                         val p = payload()
                         Gesture(p.optString("gesture"), p.optDouble("confidence", 0.0).toFloat())
+                    }
+                    "control" -> {
+                        val p = payload()
+                        Control(p.optString("command"), if (p.has("value")) p.optInt("value") else null)
                     }
                     "ping" -> Ping
                     "pong" -> Pong
@@ -127,6 +136,11 @@ sealed class NetworkMessage {
                     jsonObject.put("type", "gesture")
                     jsonObject.put("gesture", message.gesture)
                     jsonObject.put("confidence", message.confidence)
+                }
+                is Control -> {
+                    jsonObject.put("type", "control")
+                    jsonObject.put("command", message.command)
+                    message.value?.let { jsonObject.put("value", it) }
                 }
                 Ping -> jsonObject.put("type", "ping")
                 Pong -> jsonObject.put("type", "pong")

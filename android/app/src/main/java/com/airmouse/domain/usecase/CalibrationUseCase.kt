@@ -96,6 +96,13 @@ class CalibrationUseCase @Inject constructor(
         calibrationRepository.saveCalibrationData(data)
     }
 
+    suspend fun applyCalibration(data: CalibrationData) {
+        calibrationRepository.saveCalibrationData(data)
+        calibrationRepository.updateCalibrationStatus(CalibrationStatus.COMPLETED)
+        calibrationRepository.updateCalibrationQuality(data.quality)
+        calibrationRepository.updateCalibrationProgress(100)
+    }
+
     suspend fun resetCalibration(): Result<Unit> {
         return try {
             calibrationRepository.resetCalibration()

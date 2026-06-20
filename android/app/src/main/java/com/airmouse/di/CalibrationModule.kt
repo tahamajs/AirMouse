@@ -6,6 +6,10 @@ import com.airmouse.data.datasource.local.ICalibrationDataSource
 import com.airmouse.data.repository.CalibrationRepositoryImpl
 import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.usecase.CalibrationUseCase
+import com.airmouse.sensors.CalibrationHelper
+import com.airmouse.utils.PreferencesManager
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,19 +22,29 @@ object CalibrationModule {
 
     @Provides
     @Singleton
-    fun provideCalibrationDataSource(
+    fun provideCalibrationHelper(
+        @ApplicationContext context: Context,
         prefs: PreferencesManager
-    ): ICalibrationDataSource {
-        return CalibrationDataSourceImpl(prefs)
+    ): CalibrationHelper {
+        return CalibrationHelper(context, prefs)
     }
 
     @Provides
     @Singleton
     fun provideCalibrationRepository(
+        calibrationHelper: CalibrationHelper,
         dataSource: ICalibrationDataSource,
         prefs: PreferencesManager
     ): ICalibrationRepository {
-        return CalibrationRepositoryImpl(dataSource, prefs)
+        return CalibrationRepositoryImpl(calibrationHelper, dataSource, prefs)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCalibrationDataSource(
+        prefs: PreferencesManager
+    ): ICalibrationDataSource {
+        return CalibrationDataSourceImpl(prefs)
     }
 
     @Provides

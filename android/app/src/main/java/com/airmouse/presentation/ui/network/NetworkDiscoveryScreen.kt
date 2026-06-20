@@ -69,19 +69,22 @@ fun NetworkDiscoveryScreen(
                     IconButton(onClick = { showSortMenu = true }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Sort,
-                            contentDescription = "Sort"
+                            contentDescription = "Sort",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                     IconButton(onClick = { viewModel.refreshScan() }) {
                         Icon(
                             imageVector = if (uiState.isScanning) Icons.Default.Close else Icons.Default.Refresh,
-                            contentDescription = if (uiState.isScanning) "Stop Scan" else "Refresh"
+                            contentDescription = if (uiState.isScanning) "Stop Scan" else "Refresh",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                     IconButton(onClick = { showManualConnectDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.AddLink,
-                            contentDescription = "Manual Connect"
+                            contentDescription = "Manual Connect",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 },
@@ -95,11 +98,13 @@ fun NetworkDiscoveryScreen(
                 FloatingActionButton(
                     onClick = { viewModel.disconnect() },
                     containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
                     modifier = Modifier.size(56.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel Connection"
+                        contentDescription = "Cancel Connection",
+                        tint = MaterialTheme.colorScheme.onError
                     )
                 }
             }
@@ -331,6 +336,7 @@ fun NetworkDiscoveryScreen(
                             Icon(
                                 imageVector = Icons.Default.Wifi,
                                 contentDescription = "Discovered",
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -354,6 +360,7 @@ fun NetworkDiscoveryScreen(
                             Icon(
                                 imageVector = Icons.Default.Bookmark,
                                 contentDescription = "Saved",
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -377,6 +384,7 @@ fun NetworkDiscoveryScreen(
                             Icon(
                                 imageVector = Icons.Default.History,
                                 contentDescription = "History",
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))

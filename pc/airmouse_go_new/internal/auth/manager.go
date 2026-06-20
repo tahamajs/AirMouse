@@ -2,12 +2,15 @@ package auth
 
 import (
     "crypto/rand"
+    "crypto/hmac"
+    "crypto/sha256"
     "encoding/hex"
+    "encoding/base64"
+    "encoding/json"
     "fmt"
+    "strings"
     "sync"
     "time"
-
-    "github.com/golang-jwt/jwt/v5"
 )
 
 type Manager struct {
@@ -27,6 +30,15 @@ type TokenInfo struct {
     ExpiresAt  time.Time
     LastUsed   time.Time
     UsageCount int
+}
+
+type tokenClaims struct {
+    Exp  int64  `json:"exp"`
+    Iat  int64  `json:"iat"`
+    Type string `json:"type"`
+    JTI  string `json:"jti"`
+    DeviceID string `json:"device_id,omitempty"`
+    DeviceName string `json:"device_name,omitempty"`
 }
 
 func NewManager(secret string) *Manager {
@@ -60,18 +72,16 @@ func (m *Manager) SetTokenTTL(ttl time.Duration) {
 }
 
 func (m *Manager) GeneratePairingToken() (string, error) {
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-        "exp":  time.Now().Add(5 * time.Minute).Unix(),
-        "iat":  time.Now().Unix(),
-        "type": "pairing",
-        "jti":  generateRandomID(),
-    })
-    
-    tokenString, err := token.SignedString(m.secret)
+    claims := tokenClaims{
+        Exp:  time.Now().Add(5 * time.Minute).Unix(),
+        Iat:  time.Now().Unix(),
+        Type: "pairing",
+        JTI:  generateRandomID(),
+    }
+    tokenString, err := m.signClaims(claims)
     if err != nil {
         return "", err
     }
-    
     m.mu.Lock()
     m.pendingPairs[tokenString] = time.Now().Add(5 * time.Minute)
     m.mu.Unlock()
@@ -80,18 +90,14 @@ func (m *Manager) GeneratePairingToken() (string, error) {
 }
 
 func (m *Manager) ValidatePairingToken(tokenString string) bool {
-    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-        return m.secret, nil
-    })
-    if err != nil || !token.Valid {
+    claims, err := m.parseClaims(tokenString)
+    if err != nil || claims.Type != "pairing" {
         return false
     }
-    
     m.mu.Lock()
     defer m.mu.Unlock()
-    
     expiry, exists := m.pendingPairs[tokenString]
-    if exists && expiry.After(time.Now()) {
+    if exists && expiry.After(time.Now()) && claims.Exp >= time.Now().Unix() {
         delete(m.pendingPairs, tokenString)
         return true
     }
@@ -112,16 +118,14 @@ func (m *Manager) GenerateAuthToken(deviceID, deviceName string) (string, error)
     tokenID := generateRandomID()
     now := time.Now()
     
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-        "exp":      now.Add(m.tokenTTL).Unix(),
-        "iat":      now.Unix(),
-        "type":     "auth",
-        "device_id": deviceID,
-        "device_name": deviceName,
-        "jti":      tokenID,
+    tokenString, err := m.signClaims(tokenClaims{
+        Exp: now.Add(m.tokenTTL).Unix(),
+        Iat: now.Unix(),
+        Type: "auth",
+        JTI: tokenID,
+        DeviceID: deviceID,
+        DeviceName: deviceName,
     })
-    
-    tokenString, err := token.SignedString(m.secret)
     if err != nil {
         return "", err
     }
@@ -140,25 +144,14 @@ func (m *Manager) GenerateAuthToken(deviceID, deviceName string) (string, error)
 }
 
 func (m *Manager) ValidateAuthToken(tokenString string) (bool, string, string) {
-    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-        return m.secret, nil
-    })
-    if err != nil || !token.Valid {
+    claims, err := m.parseClaims(tokenString)
+    if err != nil {
         return false, "", ""
     }
-    
-    claims, ok := token.Claims.(jwt.MapClaims)
-    if !ok {
+    if claims.Type != "auth" || claims.Exp < time.Now().Unix() {
         return false, "", ""
     }
-    
-    tokenType, ok := claims["type"].(string)
-    if !ok || tokenType != "auth" {
-        return false, "", ""
-    }
-    
-    deviceID, _ := claims["device_id"].(string)
-    deviceName, _ := claims["device_name"].(string)
+    deviceID, deviceName := claims.DeviceID, claims.DeviceName
     
     m.mu.Lock()
     defer m.mu.Unlock()
@@ -237,7 +230,42 @@ func (m *Manager) GetPairingQRData(wsURL string) (string, error) {
     if err != nil {
         return "", err
     }
-    return fmt.Sprintf("airmouse://pair?token=%s&ws=%s", token, wsURL), nil
+    return fmt.Sprintf("airmouse://pair?token=%s&ws=%s&protocol=WEBSOCKET", token, wsURL), nil
+}
+
+func (m *Manager) signClaims(claims tokenClaims) (string, error) {
+    body, err := json.Marshal(claims)
+    if err != nil {
+        return "", err
+    }
+    payload := base64.RawURLEncoding.EncodeToString(body)
+    mac := hmac.New(sha256.New, m.secret)
+    _, _ = mac.Write([]byte(payload))
+    sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+    return payload + "." + sig, nil
+}
+
+func (m *Manager) parseClaims(tokenString string) (*tokenClaims, error) {
+    parts := strings.Split(tokenString, ".")
+    if len(parts) != 2 {
+        return nil, fmt.Errorf("invalid token format")
+    }
+    payload, err := base64.RawURLEncoding.DecodeString(parts[0])
+    if err != nil {
+        return nil, err
+    }
+    mac := hmac.New(sha256.New, m.secret)
+    _, _ = mac.Write([]byte(parts[0]))
+    expected := mac.Sum(nil)
+    sig, err := base64.RawURLEncoding.DecodeString(parts[1])
+    if err != nil || !hmac.Equal(sig, expected) {
+        return nil, fmt.Errorf("invalid token signature")
+    }
+    var claims tokenClaims
+    if err := json.Unmarshal(payload, &claims); err != nil {
+        return nil, err
+    }
+    return &claims, nil
 }
 
 func (m *Manager) ValidateToken(tokenString string) bool {

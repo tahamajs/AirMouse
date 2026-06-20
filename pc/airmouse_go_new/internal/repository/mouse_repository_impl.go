@@ -68,7 +68,7 @@ func (r *mouseRepositoryImpl) Move(dx, dy float64) error {
     dx, dy = r.applyAcceleration(dx, dy)
     
     // Apply smoothing if enabled
-    if r.profile.SmoothingEnabled {
+    if r.profile.SmoothingEnabled || r.profile.SmoothingAlpha > 0 {
         dx, dy = r.applySmoothing(dx, dy)
     }
     
@@ -251,9 +251,9 @@ func (r *mouseRepositoryImpl) GetStatistics() (*entity.Statistics, error) {
         ClickCount:        atomic.LoadInt64(&r.clicks),
         DoubleClickCount:  atomic.LoadInt64(&r.doubleClicks),
         RightClickCount:   atomic.LoadInt64(&r.rightClicks),
-        MiddleClickCount:  atomic.LoadInt64(&r.middleClicks),
         ScrollCount:       atomic.LoadInt64(&r.scrolls),
         TotalScrollDelta:  atomic.LoadInt64(&r.totalScroll),
+        MiddleClickCount:  atomic.LoadInt64(&r.middleClicks),
         AverageSpeed:      avgSpeed,
         LastUpdateTime:    time.Now(),
     }, nil
@@ -287,21 +287,25 @@ func (r *mouseRepositoryImpl) applySensitivity(dx, dy float64) (float64, float64
 }
 
 func (r *mouseRepositoryImpl) applyAcceleration(dx, dy float64) (float64, float64) {
-    if !r.profile.AccelerationEnabled {
+    if !r.profile.AccelerationEnabled && !r.profile.Acceleration {
         return dx, dy
     }
     
     distance := math.Hypot(dx, dy)
-    factor := 1.0 + (distance/100.0)*r.profile.AccelerationFactor
-    if factor > r.profile.MaxAcceleration {
-        factor = r.profile.MaxAcceleration
+    factor := 1.0 + (distance/100.0)*r.profile.AccelerationCurve
+    maxAcceleration := r.profile.MaxAcceleration
+    if maxAcceleration <= 0 {
+        maxAcceleration = 2.0
+    }
+    if factor > maxAcceleration {
+        factor = maxAcceleration
     }
     
     return dx * factor, dy * factor
 }
 
 func (r *mouseRepositoryImpl) applySmoothing(dx, dy float64) (float64, float64) {
-    if !r.profile.SmoothingEnabled {
+    if !r.profile.SmoothingEnabled && r.profile.SmoothingAlpha <= 0 {
         return dx, dy
     }
     

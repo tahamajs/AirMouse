@@ -318,8 +318,8 @@ class TouchpadViewModel @Inject constructor(
 
     private fun handleThreeFingerGesture(pointers: List<Pair<Float, Float>>) {
         // Calculate center and movement
-        val centerX = pointers.sumOf { it.first } / 3f
-        val centerY = pointers.sumOf { it.second } / 3f
+        val centerX = pointers.map { it.first }.sum() / 3f
+        val centerY = pointers.map { it.second }.sum() / 3f
 
         // Simplified swipe detection
         if (lastX != 0f || lastY != 0f) {
@@ -352,7 +352,7 @@ class TouchpadViewModel @Inject constructor(
 
     private fun handleFourFingerGesture(pointers: List<Pair<Float, Float>>) {
         // 4-finger gestures (e.g., volume up/down)
-        val centerY = pointers.sumOf { it.second } / 4f
+        val centerY = pointers.map { it.second }.sum() / 4f
 
         if (lastY != 0f) {
             val dy = centerY - lastY
@@ -454,6 +454,12 @@ class TouchpadViewModel @Inject constructor(
         triggerEffect(TouchpadEffect.ShowToast("Acceleration ${if (newValue) "enabled" else "disabled"}"))
     }
 
+    private fun updateAcceleration(enabled: Boolean) {
+        if (_uiState.value.accelerationEnabled != enabled) {
+            toggleAcceleration()
+        }
+    }
+
     private fun toggleInvertVertical() {
         val newValue = !_uiState.value.invertVertical
         saveSetting("touchpad_invert_vertical", newValue)
@@ -478,10 +484,22 @@ class TouchpadViewModel @Inject constructor(
         _uiState.update { it.copy(naturalScrolling = newValue) }
     }
 
+    private fun updateNaturalScrolling(enabled: Boolean) {
+        if (_uiState.value.naturalScrolling != enabled) {
+            toggleNaturalScrolling()
+        }
+    }
+
     private fun toggleTwoFingerScroll() {
         val newValue = !_uiState.value.twoFingerScroll
         saveSetting("touchpad_two_finger_scroll", newValue)
         _uiState.update { it.copy(twoFingerScroll = newValue) }
+    }
+
+    private fun updateTwoFingerScroll(enabled: Boolean) {
+        if (_uiState.value.twoFingerScroll != enabled) {
+            toggleTwoFingerScroll()
+        }
     }
 
     private fun toggleEdgeScrolling() {
@@ -503,6 +521,12 @@ class TouchpadViewModel @Inject constructor(
         _uiState.update { it.copy(tapToClick = newValue) }
     }
 
+    private fun updateTapToClick(enabled: Boolean) {
+        if (_uiState.value.tapToClick != enabled) {
+            toggleTapToClick()
+        }
+    }
+
     private fun updateDoubleTapDelay(value: Int) {
         saveSetting("touchpad_double_tap_delay", value)
         _uiState.update { it.copy(doubleTapDelay = value) }
@@ -512,6 +536,12 @@ class TouchpadViewModel @Inject constructor(
         val newValue = !_uiState.value.threeFingerSwipe
         saveSetting("touchpad_three_finger_swipe", newValue)
         _uiState.update { it.copy(threeFingerSwipe = newValue) }
+    }
+
+    private fun updateThreeFingerSwipe(enabled: Boolean) {
+        if (_uiState.value.threeFingerSwipe != enabled) {
+            toggleThreeFingerSwipe()
+        }
     }
 
     private fun togglePinchToZoom() {

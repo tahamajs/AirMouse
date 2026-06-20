@@ -20,7 +20,9 @@ import com.airmouse.data.datasource.local.ICalibrationDataSource
 import com.airmouse.domain.model.ConnectionStatus
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.repository.ICalibrationRepository
+import com.airmouse.domain.model.ConnectionProtocol
 import com.airmouse.network.ConnectionManager
+import com.airmouse.utils.QRScanner
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -595,12 +597,59 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(serverPort = port) }
     }
 
+    fun applyScannedConnection(data: QRScanner.ConnectionData) {
+        _uiState.update {
+            it.copy(
+                serverIp = data.ip,
+                serverPort = data.port,
+                isConnecting = true
+            )
+        }
+        prefs.putString("last_ip", data.ip)
+        prefs.putInt("last_port", data.port)
+        prefs.putString("connection_protocol", data.protocol)
+        data.token?.let { prefs.putString("auth_token", it) }
+        viewModelScope.launch {
+            val protocol = when (data.protocol.uppercase(Locale.US)) {
+                "TCP" -> ConnectionProtocol.TCP
+                else -> ConnectionProtocol.WEBSOCKET
+            }
+            connectionManager.setProtocol(
+                if (protocol == ConnectionProtocol.TCP) {
+                    ConnectionManager.ConnectionProtocol.TCP
+                } else {
+                    ConnectionManager.ConnectionProtocol.WEBSOCKET
+                }
+            )
+            val success = connectionManager.connect(data.ip, data.port)
+            if (success) {
+                addLogMessage("Connected to ${data.name}")
+                _uiState.update { it.copy(isConnecting = false) }
+            } else {
+                addLogMessage("Connection failed")
+                _uiState.update { it.copy(isConnecting = false) }
+            }
+        }
+    }
+
     fun connect() {
         val ip = _uiState.value.serverIp
         if (ip.isBlank()) {
             addLogMessage("Please enter server IP")
             return
         }
+
+        val protocol = when (prefs.getString("last_protocol", "WEBSOCKET").uppercase(Locale.US)) {
+            "TCP" -> ConnectionProtocol.TCP
+            else -> ConnectionProtocol.WEBSOCKET
+        }
+        connectionManager.setProtocol(
+            if (protocol == ConnectionProtocol.TCP) {
+                ConnectionManager.ConnectionProtocol.TCP
+            } else {
+                ConnectionManager.ConnectionProtocol.WEBSOCKET
+            }
+        )
 
         _uiState.update { it.copy(isConnecting = true) }
         addLogMessage("Connecting to $ip:${_uiState.value.serverPort}...")

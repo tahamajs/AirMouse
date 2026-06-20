@@ -193,19 +193,7 @@ fun MainNavHost(
         // ==========================================
 
         composable(Destinations.Onboarding.route) {
-            OnboardingScreen(
-                navigationActions = navigationActions,
-                onComplete = {
-                    navController.navigate(Destinations.Home.route) {
-                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
-                    }
-                },
-                onSkip = {
-                    navController.navigate(Destinations.Home.route) {
-                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
-                    }
-                }
-            )
+            OnboardingScreen(navigationActions = navigationActions)
         }
     }
 }

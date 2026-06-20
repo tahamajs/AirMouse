@@ -118,7 +118,12 @@ class DataSender(
 
             val type = runCatching { JSONObject(line).optString("type") }.getOrDefault("")
             if (type == "ack") {
-                val id = runCatching { JSONObject(line).optLong("id", -1L) }.getOrDefault(-1L)
+                val json = JSONObject(line)
+                val id = when (val rawId = json.opt("id")) {
+                    is Number -> rawId.toLong()
+                    is String -> rawId.toLongOrNull() ?: -1L
+                    else -> -1L
+                }
                 if (id >= 0) {
                     pendingAcks.remove(id)
                 }
@@ -128,11 +133,7 @@ class DataSender(
     }
 
     fun sendMove(dx: Float, dy: Float) {
-        sendRaw(MoveMessage(dx = dx, dy = dy).let { JSONObject().apply {
-            put("type", it.type)
-            put("dx", it.dx)
-            put("dy", it.dy)
-        }.toString() })
+        sendRaw(NetworkMessage.toJson(NetworkMessage.Move(dx, dy)))
     }
 
     fun sendClick() = sendCritical("click")
@@ -141,11 +142,26 @@ class DataSender(
     fun sendScroll(delta: Int) = sendCritical("scroll", delta = delta)
 
     fun sendHello(deviceName: String) {
-        sendRaw(HelloMessage(name = deviceName).let { JSONObject().apply {
-            put("type", it.type)
-            put("name", it.name)
-            put("version", "3.0")
-        }.toString() })
+        sendRaw(NetworkMessage.toJson(NetworkMessage.Hello(deviceName)))
+    }
+
+    fun sendGesture(gesture: String, confidence: Float) {
+        sendRaw(NetworkMessage.toJson(NetworkMessage.Gesture(gesture, confidence)))
+    }
+
+    fun sendProximity(isNear: Boolean, distance: Float) {
+        sendRaw(NetworkMessage.toJson(NetworkMessage.Proximity(isNear, distance)))
+    }
+
+    fun sendCommand(command: String, delta: Int = 0) {
+        when (command.lowercase()) {
+            "click" -> sendClick()
+            "doubleclick" -> sendDoubleClick()
+            "rightclick" -> sendRightClick()
+            "scroll" -> sendScroll(delta)
+            "gesture" -> sendGesture("custom", 1.0f)
+            else -> Unit
+        }
     }
 
     fun updateHost(newHost: String) {
@@ -176,10 +192,12 @@ class DataSender(
 
     private fun sendRaw(payload: String) {
         if (!running || !isConnected) return
-        writer?.apply {
-            print(payload)
-            print('\n')
-            flush()
+        scope.launch(Dispatchers.IO) {
+            writer?.apply {
+                print(payload)
+                print('\n')
+                flush()
+            }
         }
     }
 

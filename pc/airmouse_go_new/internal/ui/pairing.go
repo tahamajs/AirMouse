@@ -36,8 +36,8 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	port := cfg.Port
 
 	// Create pairing data with full device info
-	pairingData := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&name=%s&version=3.0&type=mobile",
-		ip, port, url.QueryEscape(cfg.ServerName))
+	pairingData := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&ws=%s&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
+		ip, port, url.QueryEscape(wsURL), url.QueryEscape(cfg.ServerName))
 
 	// Generate QR code
 	pngBytes, err := qrcode.Encode(pairingData, qrcode.High, 300)
@@ -95,9 +95,9 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 
 	copyURLBtn := widget.NewButtonWithIcon("Copy URL", theme.ContentCopyIcon(), func() {
 		if parent != nil {
-			fullURL := fmt.Sprintf("airmouse://%s:%d", ip, port)
+			fullURL := wsURL
 			parent.Clipboard().SetContent(fullURL)
-			dialog.ShowInformation("Copied", "Connection URL copied to clipboard", parent)
+			dialog.ShowInformation("Copied", "WebSocket URL copied to clipboard", parent)
 		}
 	})
 
@@ -162,7 +162,8 @@ func QuickPairDialog(parent fyne.Window) {
 	cfg := config.Get()
 	ip := utils.GetLocalIP()
 
-	pairingData := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&name=%s", ip, cfg.Port, cfg.ServerName)
+	pairingData := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&ws=ws://%s:%d/ws&name=%s&version=3.0&protocol=WEBSOCKET",
+		ip, cfg.WebSocketPort, ip, cfg.WebSocketPort, cfg.ServerName)
 	pngBytes, _ := qrcode.Encode(pairingData, qrcode.Medium, 200)
 	img, _ := png.Decode(bytes.NewReader(pngBytes))
 
@@ -173,7 +174,7 @@ func QuickPairDialog(parent fyne.Window) {
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("Quick Pair", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		qrImage,
-		widget.NewLabel(fmt.Sprintf("IP: %s:%d", ip, cfg.Port)),
+		widget.NewLabel(fmt.Sprintf("WebSocket: %s:%d", ip, cfg.WebSocketPort)),
 	)
 
 	dialog.ShowCustom("Quick Pair", "Close", content, parent)

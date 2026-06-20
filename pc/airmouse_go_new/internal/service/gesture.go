@@ -2,8 +2,6 @@ package service
 
 import (
     "errors"
-    "math"
-    "time"
 
     "airmouse-go/internal/domain/entity"
     "airmouse-go/internal/domain/repository"
@@ -158,7 +156,7 @@ func (s *gestureService) ExecuteGesture(gesture *entity.Gesture) error {
         return errors.New("gesture cannot be nil")
     }
     
-    if !gesture.IsHighConfidence(s.threshold) {
+    if !gesture.IsHighConfidence() {
         return nil
     }
     

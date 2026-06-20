@@ -46,16 +46,17 @@ fun AboutScreen(
 
     // Handle side effects
     LaunchedEffect(effect) {
-        when (effect) {
+        val currentEffect = effect
+        when (currentEffect) {
             is AboutEffect.OpenUrl -> {
-                val url = (effect as AboutEffect.OpenUrl).url
+                val url = currentEffect.url
                 // Open URL - implementation depends on your navigation
                 navigationActions.navigateTo(url)
                 viewModel.clearEffect()
             }
             is AboutEffect.ShowToast -> {
                 // Show toast - implementation depends on your Toast system
-                android.widget.Toast.makeText(context, effect.message, android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, currentEffect.message, android.widget.Toast.LENGTH_SHORT).show()
                 viewModel.clearEffect()
             }
             is AboutEffect.NavigateBack -> {
@@ -557,7 +558,33 @@ fun LinkItem(title: String, icon: androidx.compose.ui.graphics.vector.ImageVecto
 @Composable
 fun AboutScreenPreviewLight() {
     MaterialTheme {
-        AboutScreen(navigationActions = NavigationActionsImpl())
+        AboutScreen(
+            navigationActions = object : NavigationActions {
+                override fun navigateTo(route: String) = Unit
+                override fun navigateBack() = Unit
+                override fun navigateToHome() = Unit
+                override fun navigateToSettings() = Unit
+                override fun navigateToCalibration() = Unit
+                override fun navigateToCalibrationResult(quality: String) = Unit
+                override fun navigateToStatistics() = Unit
+                override fun navigateToHelp() = Unit
+                override fun navigateToAbout() = Unit
+                override fun navigateToProfiles() = Unit
+                override fun navigateToTouchpad() = Unit
+                override fun navigateToGestureStudio() = Unit
+                override fun navigateToNetworkDiscovery() = Unit
+                override fun navigateToProximity() = Unit
+                override fun navigateToVoiceCommands() = Unit
+                override fun navigateToEdgeGestures() = Unit
+                override fun navigateToSensorVisualizer() = Unit
+                override fun navigateToServerLogs() = Unit
+                override fun navigateToThemes() = Unit
+                override fun navigateToBattery() = Unit
+                override fun navigateToAccessibility() = Unit
+                override fun navigateToOnboarding() = Unit
+                override fun navigateToTouchpadSettings() = Unit
+            }
+        )
     }
 }
 
@@ -565,6 +592,32 @@ fun AboutScreenPreviewLight() {
 @Composable
 fun AboutScreenPreviewDark() {
     MaterialTheme {
-        AboutScreen(navigationActions = NavigationActionsImpl())
+        AboutScreen(
+            navigationActions = object : NavigationActions {
+                override fun navigateTo(route: String) = Unit
+                override fun navigateBack() = Unit
+                override fun navigateToHome() = Unit
+                override fun navigateToSettings() = Unit
+                override fun navigateToCalibration() = Unit
+                override fun navigateToCalibrationResult(quality: String) = Unit
+                override fun navigateToStatistics() = Unit
+                override fun navigateToHelp() = Unit
+                override fun navigateToAbout() = Unit
+                override fun navigateToProfiles() = Unit
+                override fun navigateToTouchpad() = Unit
+                override fun navigateToGestureStudio() = Unit
+                override fun navigateToNetworkDiscovery() = Unit
+                override fun navigateToProximity() = Unit
+                override fun navigateToVoiceCommands() = Unit
+                override fun navigateToEdgeGestures() = Unit
+                override fun navigateToSensorVisualizer() = Unit
+                override fun navigateToServerLogs() = Unit
+                override fun navigateToThemes() = Unit
+                override fun navigateToBattery() = Unit
+                override fun navigateToAccessibility() = Unit
+                override fun navigateToOnboarding() = Unit
+                override fun navigateToTouchpadSettings() = Unit
+            }
+        )
     }
 }

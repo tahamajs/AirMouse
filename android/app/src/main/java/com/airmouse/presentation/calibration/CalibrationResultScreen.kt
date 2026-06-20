@@ -1,6 +1,7 @@
 // app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationResultScreen.kt
 package com.airmouse.presentation.ui.calibration
 
+import android.os.Build
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -28,39 +29,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.airmouse.BuildConfig
 import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
+import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
-
-// ==========================================
-// NAVIGATION ACTIONS
-// ==========================================
-
-interface NavigationActions {
-    fun navigateBack()
-    fun navigateToHome()
-    fun navigateToCalibration()
-}
-
-// ==========================================
-// QUALITY CONFIG
-// ==========================================
-
-data class CalibrationQualityConfig(
-    val color: Color,
-    val emoji: String,
-    val title: String,
-    val description: String,
-    val subtext: String,
-    val score: String,
-    val status: String
-)
-
-// ==========================================
-// MAIN SCREEN
-// ==========================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,8 +52,9 @@ fun CalibrationResultScreen(
     val calibrationDataState by viewModel.calibrationData.collectAsStateWithLifecycle()
     val isCalibrating by viewModel.isCalibrating.collectAsStateWithLifecycle()
 
-    // Get calibration data from ViewModel
-    val calibrationData = calibrationDataState ?: viewModel.loadCalibrationData()
+    val calibrationData by produceState<CalibrationData?>(initialValue = calibrationDataState, calibrationDataState) {
+        value = calibrationDataState ?: viewModel.loadCalibrationData()
+    }
 
     // Animation states
     var animationTriggered by remember { mutableStateOf(false) }
@@ -107,8 +83,9 @@ fun CalibrationResultScreen(
         confettiActive = false
     }
 
-    val quality = calibrationData?.quality ?: CalibrationQuality.UNKNOWN
-    val qualityConfig = getQualityConfig(quality)
+    val data = calibrationData
+    val quality = data?.quality ?: CalibrationQuality.UNKNOWN
+    val qualityConfig = CalibrationQualityConfig.fromQuality(quality)
 
     Box(
         modifier = Modifier
@@ -120,7 +97,7 @@ fun CalibrationResultScreen(
             )
     ) {
         if (confettiActive) {
-            ConfettiEffect()
+            CalibrationResultConfettiEffect()
         }
 
         Scaffold(
@@ -143,7 +120,7 @@ fun CalibrationResultScreen(
                         }
                     },
                     actions = {
-                        if (calibrationData != null && calibrationData.isCalibrated) {
+                        if (data != null && data.isCalibrated) {
                             IconButton(onClick = { viewModel.syncToServer() }) {
                                 Icon(
                                     Icons.Default.Sync,
@@ -179,24 +156,24 @@ fun CalibrationResultScreen(
                 }
 
                 // Quality metrics card
-                if (calibrationData != null) {
+                if (data != null) {
                     item {
                         QualityMetricsCard(
                             qualityConfig = qualityConfig,
-                            calibrationData = calibrationData
+                            calibrationData = data
                         )
                     }
 
                     // Sensor calibration details
                     item {
-                        SensorCalibrationDetailsCard(calibrationData = calibrationData)
+                        SensorCalibrationDetailsCard(calibrationData = data)
                     }
 
                     // Calibration summary
                     item {
                         CalibrationSummaryCard(
-                            calibrationData = calibrationData,
-                            timestamp = calibrationData.timestamp
+                            calibrationData = data,
+                            timestamp = data.timestamp
                         )
                     }
                 }
@@ -211,7 +188,7 @@ fun CalibrationResultScreen(
                         },
                         onShare = onShare,
                         onExport = onExport,
-                        calibrationData = calibrationData
+                        calibrationData = data
                     )
                 }
 
@@ -358,7 +335,7 @@ fun QualityMetricsCard(
                 )
                 QualityMetricItem(
                     label = "Version",
-                    value = "v${calibrationData.version}",
+                    value = "v${BuildConfig.VERSION_NAME}",
                     color = Color.White.copy(alpha = 0.6f)
                 )
             }
@@ -512,11 +489,11 @@ fun CalibrationSummaryCard(
             )
             SummaryRow(
                 label = "Version",
-                value = "v${calibrationData.version}"
+                value = "v${BuildConfig.VERSION_NAME}"
             )
             SummaryRow(
                 label = "Device",
-                value = calibrationData.deviceModel.ifEmpty { android.os.Build.MODEL }
+                value = Build.MODEL
             )
         }
     }
@@ -661,7 +638,7 @@ fun QualityMetricItem(label: String, value: String, color: Color) {
 // ==========================================
 
 @Composable
-fun ConfettiEffect() {
+fun CalibrationResultConfettiEffect() {
     val colors = listOf(
         Color(0xFF6366F1),
         Color(0xFF10B981),
@@ -700,64 +677,6 @@ fun ConfettiEffect() {
     }
 }
 
-// ==========================================
-// QUALITY CONFIG HELPER
-// ==========================================
-
-fun getQualityConfig(quality: CalibrationQuality): CalibrationQualityConfig {
-    return when (quality) {
-        CalibrationQuality.EXCELLENT -> CalibrationQualityConfig(
-            color = Color(0xFF10B981),
-            emoji = "🌟",
-            title = "Excellent Calibration",
-            description = "Perfect calibration! Your device is performing at its best.",
-            subtext = "All sensors are optimally calibrated.",
-            score = "95%",
-            status = "✅ Ready"
-        )
-        CalibrationQuality.GOOD -> CalibrationQualityConfig(
-            color = Color(0xFF3B82F6),
-            emoji = "👍",
-            title = "Good Calibration",
-            description = "Calibration successful with good accuracy.",
-            subtext = "Device is ready for use.",
-            score = "80%",
-            status = "✅ Ready"
-        )
-        CalibrationQuality.FAIR -> CalibrationQualityConfig(
-            color = Color(0xFFF59E0B),
-            emoji = "⚠️",
-            title = "Fair Calibration",
-            description = "Calibration complete with fair accuracy.",
-            subtext = "Consider recalibrating for best results.",
-            score = "60%",
-            status = "⚠️ Review"
-        )
-        CalibrationQuality.POOR -> CalibrationQualityConfig(
-            color = Color(0xFFEF4444),
-            emoji = "❌",
-            title = "Poor Calibration",
-            description = "Calibration completed but accuracy is poor.",
-            subtext = "Please recalibrate for best results.",
-            score = "40%",
-            status = "❌ Recalibrate"
-        )
-        CalibrationQuality.UNKNOWN -> CalibrationQualityConfig(
-            color = Color(0xFF64748B),
-            emoji = "❓",
-            title = "Unknown Calibration",
-            description = "Calibration completed but quality could not be determined.",
-            subtext = "Please recalibrate for best results.",
-            score = "50%",
-            status = "❓ Unknown"
-        )
-    }
-}
-
-// ==========================================
-// QUALITY SCORE HELPER
-// ==========================================
-
 fun getQualityScore(quality: CalibrationQuality): Int {
     return when (quality) {
         CalibrationQuality.EXCELLENT -> 95
@@ -777,7 +696,7 @@ fun getQualityScore(quality: CalibrationQuality): Int {
 fun CalibrationResultScreenPreview() {
     MaterialTheme {
         CalibrationResultScreen(
-            navigationActions = NavigationActions(),
+            navigationActions = PreviewNavigationActions,
             onContinue = {},
             onRecalibrate = {}
         )
@@ -789,19 +708,35 @@ fun CalibrationResultScreenPreview() {
 fun CalibrationResultScreenDarkPreview() {
     MaterialTheme {
         CalibrationResultScreen(
-            navigationActions = NavigationActions(),
+            navigationActions = PreviewNavigationActions,
             onContinue = {},
             onRecalibrate = {}
         )
     }
 }
 
-// ==========================================
-// NAVIGATION ACTIONS IMPLEMENTATION
-// ==========================================
-
-class NavigationActions {
-    fun navigateBack() {}
-    fun navigateToHome() {}
-    fun navigateToCalibration() {}
+private val PreviewNavigationActions = object : NavigationActions {
+    override fun navigateTo(route: String) = Unit
+    override fun navigateBack() = Unit
+    override fun navigateToHome() = Unit
+    override fun navigateToSettings() = Unit
+    override fun navigateToCalibration() = Unit
+    override fun navigateToCalibrationResult(quality: String) = Unit
+    override fun navigateToStatistics() = Unit
+    override fun navigateToHelp() = Unit
+    override fun navigateToAbout() = Unit
+    override fun navigateToProfiles() = Unit
+    override fun navigateToTouchpad() = Unit
+    override fun navigateToGestureStudio() = Unit
+    override fun navigateToNetworkDiscovery() = Unit
+    override fun navigateToProximity() = Unit
+    override fun navigateToVoiceCommands() = Unit
+    override fun navigateToEdgeGestures() = Unit
+    override fun navigateToSensorVisualizer() = Unit
+    override fun navigateToServerLogs() = Unit
+    override fun navigateToThemes() = Unit
+    override fun navigateToBattery() = Unit
+    override fun navigateToAccessibility() = Unit
+    override fun navigateToOnboarding() = Unit
+    override fun navigateToTouchpadSettings() = Unit
 }

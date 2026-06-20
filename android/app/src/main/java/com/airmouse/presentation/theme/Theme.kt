@@ -5,6 +5,7 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -395,15 +396,13 @@ fun getAdaptiveColorScheme(
     theme: String = "system",
     accent: AccentColor = AccentColor.ORANGE,
     useDynamicColor: Boolean = true
-): ColorScheme {
+): androidx.compose.material3.ColorScheme {
     val context = LocalContext.current
     val isDark = when (theme) {
         "light" -> false
         "high_contrast" -> false
         else -> true
     }
-    val themeColors = getThemeColorScheme(theme, accent)
-
     return when {
         useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
