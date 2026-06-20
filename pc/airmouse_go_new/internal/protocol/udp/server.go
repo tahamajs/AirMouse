@@ -1,263 +1,265 @@
 package udp
 
 import (
-    "encoding/json"
-    "fmt"
-    "net"
-    "strings"
-    "sync"
-    "time"
+	"encoding/json"
+	"fmt"
+	"net"
+	"strings"
+	"sync"
+	"time"
 
-    "airmouse-go/internal/device"
-    "airmouse-go/internal/utils"
+	"airmouse-go/internal/config"
+	"airmouse-go/internal/device"
+	"airmouse-go/internal/utils"
 )
 
 // Server – UDP discovery server
 type Server struct {
-    port      int
-    conn      *net.UDPConn
-    deviceMgr *device.Manager
-    running   bool
-    mu        sync.RWMutex
-    clients   map[string]*UDPClient
-    callbacks []func(event UDPEvent)
+	port      int
+	conn      *net.UDPConn
+	deviceMgr *device.Manager
+	running   bool
+	mu        sync.RWMutex
+	clients   map[string]*UDPClient
+	callbacks []func(event UDPEvent)
 }
 
 // UDPClient – a discovered client
 type UDPClient struct {
-    Address     *net.UDPAddr
-    LastSeen    time.Time
-    DeviceID    string
-    DeviceName  string
+	Address    *net.UDPAddr
+	LastSeen   time.Time
+	DeviceID   string
+	DeviceName string
 }
 
 // UDPEvent – event for callbacks
 type UDPEvent struct {
-    Type      string
-    ClientIP  string
-    Timestamp time.Time
+	Type      string
+	ClientIP  string
+	Timestamp time.Time
 }
 
 func NewServer(port int, deviceMgr *device.Manager) *Server {
-    return &Server{
-        port:      port,
-        deviceMgr: deviceMgr,
-        clients:   make(map[string]*UDPClient),
-        callbacks: make([]func(UDPEvent), 0),
-    }
+	return &Server{
+		port:      port,
+		deviceMgr: deviceMgr,
+		clients:   make(map[string]*UDPClient),
+		callbacks: make([]func(UDPEvent), 0),
+	}
 }
 
 // Start the UDP discovery server
 func (s *Server) Start() error {
-    addr := net.UDPAddr{
-        Port: s.port,
-        IP:   net.ParseIP("0.0.0.0"),
-    }
+	addr := net.UDPAddr{
+		Port: s.port,
+		IP:   net.ParseIP("0.0.0.0"),
+	}
 
-    conn, err := net.ListenUDP("udp4", &addr)
-    if err != nil {
-        return fmt.Errorf("failed to listen on UDP port %d: %w", s.port, err)
-    }
+	conn, err := net.ListenUDP("udp4", &addr)
+	if err != nil {
+		return fmt.Errorf("failed to listen on UDP port %d: %w", s.port, err)
+	}
 
-    s.conn = conn
-    s.running = true
-    go s.listenLoop()
+	s.conn = conn
+	s.running = true
+	go s.listenLoop()
 
-    utils.LogInfo("UDP discovery server started on port %d", s.port)
-    return nil
+	utils.LogInfo("UDP discovery server started on port %d", s.port)
+	return nil
 }
 
 // listenLoop – main receive loop
 func (s *Server) listenLoop() {
-    buf := make([]byte, 1024)
-    for s.running {
-        s.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-        n, clientAddr, err := s.conn.ReadFromUDP(buf)
-        if err != nil {
-            if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-                continue
-            }
-            if s.running {
-                utils.LogDebug("UDP read error: %v", err)
-            }
-            continue
-        }
+	buf := make([]byte, 1024)
+	for s.running {
+		s.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+		n, clientAddr, err := s.conn.ReadFromUDP(buf)
+		if err != nil {
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				continue
+			}
+			if s.running {
+				utils.LogDebug("UDP read error: %v", err)
+			}
+			continue
+		}
 
-        msg := strings.TrimSpace(string(buf[:n]))
-        s.handleMessage(msg, clientAddr)
-    }
+		msg := strings.TrimSpace(string(buf[:n]))
+		s.handleMessage(msg, clientAddr)
+	}
 }
 
 // handleMessage – process incoming messages
 func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
-    clientIP := clientAddr.IP.String()
+	clientIP := clientAddr.IP.String()
 
-    // Update/register client
-    s.mu.Lock()
-    client, exists := s.clients[clientIP]
-    if !exists {
-        client = &UDPClient{
-            Address:  clientAddr,
-            LastSeen: time.Now(),
-        }
-        s.clients[clientIP] = client
-    }
-    client.LastSeen = time.Now()
-    s.mu.Unlock()
+	// Update/register client
+	s.mu.Lock()
+	client, exists := s.clients[clientIP]
+	if !exists {
+		client = &UDPClient{
+			Address:  clientAddr,
+			LastSeen: time.Now(),
+		}
+		s.clients[clientIP] = client
+	}
+	client.LastSeen = time.Now()
+	s.mu.Unlock()
 
-    // Handle discovery requests (both spellings)
-    if msg == "AIRMOUSE_DISCOVER" || msg == "AIRMOUSE_DISCOVERY" {
-        s.sendDiscoveryResponse(clientAddr)
-        utils.LogDebug("UDP discovery request from %s", clientIP)
-        return
-    }
+	// Handle discovery requests (both spellings)
+	if msg == "AIRMOUSE_DISCOVER" || msg == "AIRMOUSE_DISCOVERY" {
+		s.sendDiscoveryResponse(clientAddr)
+		utils.LogDebug("UDP discovery request from %s", clientIP)
+		return
+	}
 
-    // Other known message types
-    switch msg {
-    case "AIRMOUSE_HELLO":
-        s.triggerEvent(UDPEvent{
-            Type:      "hello",
-            ClientIP:  clientIP,
-            Timestamp: time.Now(),
-        })
-        return
-    }
+	// Other known message types
+	switch msg {
+	case "AIRMOUSE_HELLO":
+		s.triggerEvent(UDPEvent{
+			Type:      "hello",
+			ClientIP:  clientIP,
+			Timestamp: time.Now(),
+		})
+		return
+	}
 
-    // Try JSON parsing for structured messages
-    var parsed map[string]interface{}
-    if err := json.Unmarshal([]byte(msg), &parsed); err == nil {
-        if msgType, ok := parsed["type"].(string); ok {
-            switch msgType {
-            case "proximity":
-                utils.LogDebug("UDP proximity update from %s", clientIP)
-            case "ping":
-                s.sendPong(clientAddr)
-            default:
-                utils.LogDebug("UDP message type=%s from %s", msgType, clientIP)
-            }
-            return
-        }
-    }
+	// Try JSON parsing for structured messages
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(msg), &parsed); err == nil {
+		if msgType, ok := parsed["type"].(string); ok {
+			switch msgType {
+			case "proximity":
+				utils.LogDebug("UDP proximity update from %s", clientIP)
+			case "ping":
+				s.sendPong(clientAddr)
+			default:
+				utils.LogDebug("UDP message type=%s from %s", msgType, clientIP)
+			}
+			return
+		}
+	}
 
-    utils.LogDebug("UDP unknown message from %s: %s", clientIP, msg)
+	utils.LogDebug("UDP unknown message from %s: %s", clientIP, msg)
 }
 
 // sendDiscoveryResponse – sends plain‑text response compatible with Android app
 func (s *Server) sendDiscoveryResponse(clientAddr *net.UDPAddr) {
-    // Android expects: "AIRMOUSE_SERVER:port:name"
-    // It uses the source IP of the packet as the server IP.
-    response := fmt.Sprintf("AIRMOUSE_SERVER:8080:Air Mouse Server")
-    _, err := s.conn.WriteToUDP([]byte(response), clientAddr)
-    if err != nil {
-        utils.LogDebug("Failed to send discovery response: %v", err)
-    }
+	cfg := config.Get()
+	// Android discovery clients currently accept the legacy text format:
+	// AIRMOUSE_SERVER:<port>:<name>:<version>
+	response := fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s", cfg.Port, cfg.ServerName, cfg.Version)
+	_, err := s.conn.WriteToUDP([]byte(response), clientAddr)
+	if err != nil {
+		utils.LogDebug("Failed to send discovery response: %v", err)
+	}
 }
 
 // sendPong – replies to a ping
 func (s *Server) sendPong(clientAddr *net.UDPAddr) {
-    pong := map[string]interface{}{
-        "type": "pong",
-        "time": time.Now().UnixMilli(),
-    }
-    data, err := json.Marshal(pong)
-    if err != nil {
-        return
-    }
-    s.conn.WriteToUDP(data, clientAddr)
+	pong := map[string]interface{}{
+		"type": "pong",
+		"time": time.Now().UnixMilli(),
+	}
+	data, err := json.Marshal(pong)
+	if err != nil {
+		return
+	}
+	s.conn.WriteToUDP(data, clientAddr)
 }
 
 // Stop the server
 func (s *Server) Stop() {
-    s.running = false
-    if s.conn != nil {
-        s.conn.Close()
-    }
-    s.mu.Lock()
-    s.clients = make(map[string]*UDPClient)
-    s.mu.Unlock()
-    utils.LogInfo("UDP discovery server stopped")
+	s.running = false
+	if s.conn != nil {
+		s.conn.Close()
+	}
+	s.mu.Lock()
+	s.clients = make(map[string]*UDPClient)
+	s.mu.Unlock()
+	utils.LogInfo("UDP discovery server stopped")
 }
 
 // GetStats – server statistics
 func (s *Server) GetStats() map[string]interface{} {
-    s.mu.RLock()
-    defer s.mu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-    activeClients := 0
-    now := time.Now()
-    for _, c := range s.clients {
-        if now.Sub(c.LastSeen) < 30*time.Second {
-            activeClients++
-        }
-    }
+	activeClients := 0
+	now := time.Now()
+	for _, c := range s.clients {
+		if now.Sub(c.LastSeen) < 30*time.Second {
+			activeClients++
+		}
+	}
 
-    return map[string]interface{}{
-        "running":        s.running,
-        "port":           s.port,
-        "total_clients":  len(s.clients),
-        "active_clients": activeClients,
-    }
+	return map[string]interface{}{
+		"running":        s.running,
+		"port":           s.port,
+		"total_clients":  len(s.clients),
+		"active_clients": activeClients,
+	}
 }
 
 // AddEventListener – register a callback for events
 func (s *Server) AddEventListener(callback func(event UDPEvent)) {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    if callback != nil {
-        s.callbacks = append(s.callbacks, callback)
-    }
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if callback != nil {
+		s.callbacks = append(s.callbacks, callback)
+	}
 }
 
 // triggerEvent – fire an event
 func (s *Server) triggerEvent(event UDPEvent) {
-    s.mu.RLock()
-    callbacks := make([]func(UDPEvent), len(s.callbacks))
-    copy(callbacks, s.callbacks)
-    s.mu.RUnlock()
+	s.mu.RLock()
+	callbacks := make([]func(UDPEvent), len(s.callbacks))
+	copy(callbacks, s.callbacks)
+	s.mu.RUnlock()
 
-    for _, cb := range callbacks {
-        go cb(event)
-    }
+	for _, cb := range callbacks {
+		go cb(event)
+	}
 }
 
 // BroadcastMessage – send a message to all known clients
 func (s *Server) BroadcastMessage(msg interface{}) error {
-    data, err := json.Marshal(msg)
-    if err != nil {
-        return err
-    }
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
 
-    s.mu.RLock()
-    defer s.mu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-    for _, client := range s.clients {
-        s.conn.WriteToUDP(data, client.Address)
-    }
-    return nil
+	for _, client := range s.clients {
+		s.conn.WriteToUDP(data, client.Address)
+	}
+	return nil
 }
 
 // GetConnectedClients – list all UDP clients
 func (s *Server) GetConnectedClients() []*UDPClient {
-    s.mu.RLock()
-    defer s.mu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-    clients := make([]*UDPClient, 0, len(s.clients))
-    for _, c := range s.clients {
-        clients = append(clients, c)
-    }
-    return clients
+	clients := make([]*UDPClient, 0, len(s.clients))
+	for _, c := range s.clients {
+		clients = append(clients, c)
+	}
+	return clients
 }
 
 // getLocalIP – utility to get the first non‑loopback IPv4 address
 func getLocalIP() string {
-    addrs, err := net.InterfaceAddrs()
-    if err != nil {
-        return "127.0.0.1"
-    }
-    for _, addr := range addrs {
-        if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
-            return ipnet.IP.String()
-        }
-    }
-    return "127.0.0.1"
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "127.0.0.1"
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+			return ipnet.IP.String()
+		}
+	}
+	return "127.0.0.1"
 }

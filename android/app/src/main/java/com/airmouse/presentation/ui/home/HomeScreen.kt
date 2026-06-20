@@ -71,8 +71,15 @@ fun HomeScreen(
 
     val userName = homeUiState.userName.ifBlank { pendingUserName }
     val greetingText = if (userName.isNotBlank()) "Welcome back, $userName!" else "Welcome to Air Mouse Pro!"
+    val isRegistered = homeViewModel.hasRegisteredUser() || homeUiState.userName.isNotBlank()
     val isConnectionActive = homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.CONNECTED
     val isConnectionPending = homeUiState.isConnecting
+    val connectionStatusText = when {
+        isConnectionActive && homeUiState.isCalibrated -> "Mouse active"
+        isConnectionPending -> "Waiting for server approval..."
+        homeUiState.isCalibrated -> "Ready to connect"
+        else -> "Calibrate first"
+    }
 
     LaunchedEffect(homeUiState.serverIp, homeUiState.serverPort) {
         serverIp = homeUiState.serverIp.ifBlank { serverIp }
@@ -182,6 +189,7 @@ fun HomeScreen(
                         serverName = serverName,
                         serverIp = serverIp,
                         ping = ping,
+                        statusText = connectionStatusText,
                         onDisconnect = { disconnectMouse() },
                         onReconnect = {
                             scope.launch {
@@ -194,6 +202,20 @@ fun HomeScreen(
 
                 // Connection Controls
                 item {
+                    if (!isRegistered) {
+                        AssistChip(
+                            onClick = { },
+                            enabled = false,
+                            label = { Text("Register your name to unlock collaboration") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                     ConnectionControlsCard(
                         ip = serverIp,
                         port = serverPort,
@@ -226,6 +248,7 @@ fun HomeScreen(
                             }
                         },
                         isConnecting = isConnectionPending,
+                        isRegistered = isRegistered,
                         lastServer = homeUiState.serverIp.ifBlank { "Not set" }
                     )
                 }
@@ -516,6 +539,7 @@ fun ConnectionStatusCard(
     serverName: String,
     serverIp: String,
     ping: Int,
+    statusText: String,
     onDisconnect: () -> Unit,
     onReconnect: () -> Unit
 ) {
@@ -558,7 +582,7 @@ fun ConnectionStatusCard(
 
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = if (isConnected) "Connected to $serverName" else "Disconnected",
+                text = if (isConnected) "Connected to $serverName" else statusText,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -618,6 +642,7 @@ fun ConnectionControlsCard(
     onConnect: () -> Unit,
     onScanQr: () -> Unit,
     isConnecting: Boolean,
+    isRegistered: Boolean,
     lastServer: String
 ) {
     Card(
@@ -629,6 +654,15 @@ fun ConnectionControlsCard(
             Text(text = "🔌 Connect to Server", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             if (lastServer.isNotEmpty()) {
                 Text(text = "Last used: $lastServer", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            if (!isRegistered) {
+                Spacer(modifier = Modifier.height(8.dp))
+                AssistChip(
+                    onClick = { },
+                    enabled = false,
+                    label = { Text("Register your name first") }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -665,7 +699,7 @@ fun ConnectionControlsCard(
             ) {
                 Button(
                     onClick = onConnect,
-                    enabled = !isConnecting,
+                    enabled = !isConnecting && isRegistered,
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
@@ -696,7 +730,8 @@ fun ConnectionControlsCard(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.primary
-                    )
+                    ),
+                    enabled = !isConnecting && isRegistered
                 ) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
