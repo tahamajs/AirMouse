@@ -137,6 +137,8 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("🔗 Pair New Device", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
+		instructions,
+		widget.NewSeparator(),
 		tabs,
 		widget.NewSeparator(),
 		serverInfo,
