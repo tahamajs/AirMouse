@@ -285,6 +285,7 @@ func (a *App) createToolbar() fyne.CanvasObject {
 	})
 	stopBtn := widget.NewButtonWithIcon("Stop", theme.MediaStopIcon(), func() {
 		a.connectionStatus.SetText("⏳ Status: Stopping...")
+		utils.LogInfo("Stop button clicked")
 		go func() {
 			a.server.Stop()
 			RunOnMain(func() {

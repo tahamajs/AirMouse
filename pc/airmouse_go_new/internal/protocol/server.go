@@ -15,16 +15,16 @@ import (
 	"airmouse-go/internal/protocol/usb"
 	"airmouse-go/internal/protocol/websocket"
 	"airmouse-go/internal/utils"
-	    "time"
-    "github.com/gorilla/websocket"
-
+	"github.com/gorilla/websocket"
+	"time"
 )
+
 type Client struct {
-    ID       string
-    Name     string
-    Conn     *websocket.Conn
-    LastSeen time.Time
-    IsActive bool
+	ID       string
+	Name     string
+	Conn     *websocket.Conn
+	LastSeen time.Time
+	IsActive bool
 }
 
 type startStopStats interface {
@@ -46,11 +46,19 @@ type bluetoothStartStopStats interface {
 }
 
 var (
-	newTCPServer       = func(host string, port int, mouse control.MouseController, deviceMgr *device.Manager) startStopStats { return tcp.NewServer(host, port, mouse, deviceMgr) }
-	newWebSocketServer = func(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) websocketStartStopStats { return websocket.NewServer(port, mouse, deviceMgr, authMgr) }
-	newUDPServer       = func(port int, deviceMgr *device.Manager) startStopStats { return udp.NewServer(port, deviceMgr) }
-	newBluetoothMgr    = func(adapter string, mouse control.MouseController, deviceMgr *device.Manager) bluetoothStartStopStats { return bluetooth.NewManager(adapter, mouse, deviceMgr) }
-	newUSBServer       = func(mouse control.MouseController, deviceMgr *device.Manager) startStopStats { return usb.NewServer(mouse, deviceMgr) }
+	newTCPServer = func(host string, port int, mouse control.MouseController, deviceMgr *device.Manager) startStopStats {
+		return tcp.NewServer(host, port, mouse, deviceMgr)
+	}
+	newWebSocketServer = func(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) websocketStartStopStats {
+		return websocket.NewServer(port, mouse, deviceMgr, authMgr)
+	}
+	newUDPServer    = func(port int, deviceMgr *device.Manager) startStopStats { return udp.NewServer(port, deviceMgr) }
+	newBluetoothMgr = func(adapter string, mouse control.MouseController, deviceMgr *device.Manager) bluetoothStartStopStats {
+		return bluetooth.NewManager(adapter, mouse, deviceMgr)
+	}
+	newUSBServer = func(mouse control.MouseController, deviceMgr *device.Manager) startStopStats {
+		return usb.NewServer(mouse, deviceMgr)
+	}
 )
 
 type ProtocolServer struct {
@@ -80,6 +88,11 @@ func (s *ProtocolServer) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	cfg := config.Get()
+
+	if s.running {
+		utils.LogInfo("Protocol server already running")
+		return nil
+	}
 
 	if cfg.EnableTCP {
 		s.tcpServer = newTCPServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr)
@@ -128,19 +141,30 @@ func (s *ProtocolServer) Start() error {
 func (s *ProtocolServer) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if !s.running {
+		utils.LogInfo("Protocol server already stopped")
+		return
+	}
+
 	if s.tcpServer != nil {
+		utils.LogInfo("Stopping TCP server")
 		s.tcpServer.Stop()
 	}
 	if s.wsServer != nil {
+		utils.LogInfo("Stopping WebSocket server")
 		_ = s.wsServer.Stop()
 	}
 	if s.udpServer != nil {
+		utils.LogInfo("Stopping UDP discovery")
 		s.udpServer.Stop()
 	}
 	if s.bluetoothMgr != nil {
+		utils.LogInfo("Stopping Bluetooth manager")
 		s.bluetoothMgr.Stop()
 	}
 	if s.usbServer != nil {
+		utils.LogInfo("Stopping USB server")
 		s.usbServer.Stop()
 	}
 	s.running = false

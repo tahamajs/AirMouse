@@ -144,6 +144,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.refreshBtn.Disable()
 		tab.endpointLabel.SetText("🔌 Endpoint: not started")
 		tab.uptimeLabel.SetText("⏱️ Uptime: --:--:--")
+		utils.LogInfo("Dashboard stop button clicked")
 		go server.Stop()
 	})
 	tab.stopBtn.Disable()
