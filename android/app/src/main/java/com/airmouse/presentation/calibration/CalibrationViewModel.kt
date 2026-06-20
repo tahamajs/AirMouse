@@ -267,6 +267,25 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
+    fun loadCalibrationData(): CalibrationData? = _calibrationData.value
+
+    fun syncToServer() {
+        viewModelScope.launch {
+            val data = _calibrationData.value ?: run {
+                _uiState.update { it.copy(errorMessage = "No calibration data available") }
+                return@launch
+            }
+
+            try {
+                calibrationRepository.saveCalibrationData(data)
+                _uiState.update { it.copy(statusMessage = "Calibration synced to server") }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync calibration to server", e)
+                _uiState.update { it.copy(errorMessage = e.message ?: "Sync failed") }
+            }
+        }
+    }
+
     fun skipCalibration() {
         calibrationJob?.cancel()
         _isCalibrating.value = false
