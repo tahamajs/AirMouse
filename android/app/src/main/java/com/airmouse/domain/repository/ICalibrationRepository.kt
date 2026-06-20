@@ -14,6 +14,8 @@ interface ICalibrationRepository {
     fun observeCalibrationStatus(): Flow<CalibrationStatus>
     suspend fun getCalibrationProgress(): Int
     fun observeCalibrationProgress(): Flow<Int>
+    fun observeCalibrationQuality(): Flow<CalibrationQuality>
+
     // Gyroscope calibration
     suspend fun calibrateGyroscope(onProgress: (Int) -> Unit): Boolean
     suspend fun getGyroBias(): GyroBias
@@ -33,11 +35,6 @@ interface ICalibrationRepository {
     suspend fun getCalibrationData(): CalibrationData
     suspend fun saveCalibrationData(data: CalibrationData)
     suspend fun resetCalibration()
-
-    // Quality
     suspend fun getCalibrationQuality(): CalibrationQuality
-    fun observeCalibrationQuality(): Flow<CalibrationQuality>
-
-    // Reset
     suspend fun resetAllCalibration()
 }

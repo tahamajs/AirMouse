@@ -12,12 +12,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -25,8 +24,13 @@ import androidx.navigation.compose.rememberNavController
 import com.airmouse.presentation.navigation.AirMouseBottomBar
 import com.airmouse.presentation.navigation.AirMouseNavHost
 import com.airmouse.presentation.navigation.Destinations
-import com.airmouse.presentation.navigation.rememberNavigationActions
+import com.airmouse.presentation.navigation.NavigationActionsImpl
 import com.airmouse.presentation.theme.AirMouseTheme
+import com.airmouse.presentation.ui.themes.*
+import com.airmouse.presentation.ui.themes.AccentColor
+import com.airmouse.presentation.ui.themes.LocalThemeColors
+import com.airmouse.presentation.ui.themes.ProvideThemeColors
+import com.airmouse.presentation.ui.themes.getThemeColorScheme
 import com.airmouse.ui.onboarding.OnboardingActivity
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -57,27 +61,48 @@ class MainActivity : ComponentActivity() {
         setupWindow()
 
         setContent {
-            val isDarkTheme = when (prefs.getString("theme", "system")) {
-                "dark", "pure_black" -> true
-                "light", "high_contrast" -> false
-                else -> isSystemInDarkTheme()
+            val themeId = prefs.getString("theme", "system")
+            val accentName = prefs.getString("accent_color", "ORANGE")
+            val accentColor = try {
+                AccentColor.valueOf(accentName)
+            } catch (e: Exception) {
+                AccentColor.ORANGE
             }
 
-            AirMouseTheme(
-                darkTheme = isDarkTheme,
-                useDynamicColor = prefs.getBoolean("dynamic_colors", true)
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    LaunchedEffect(Unit) {
-                        delay(500)
-                        keepSplashOnScreen = false
-                    }
+            val isDarkTheme = when (themeId) {
+                "light" -> false
+                "high_contrast" -> false
+                else -> true
+            }
 
-                    // Onboarding is guaranteed to be complete here, route straight home
-                    MainScreen(startDestination = Destinations.Home.route)
+            // Get theme colors based on selected theme and accent
+            val themeColors = remember(themeId, accentColor) {
+                getThemeColorScheme(themeId, accentColor)
+            }
+
+            // Update system bars based on theme
+            LaunchedEffect(themeId) {
+                updateSystemBarsForTheme(themeId)
+            }
+
+            // Provide theme colors to all composables
+            ProvideThemeColors(themeColors) {
+                AirMouseTheme(
+                    darkTheme = isDarkTheme,
+                    useDynamicColor = prefs.getBoolean("dynamic_colors", true),
+                    themeColors = themeColors
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = themeColors.background
+                    ) {
+                        LaunchedEffect(Unit) {
+                            delay(500)
+                            keepSplashOnScreen = false
+                        }
+
+                        MainScreen(startDestination = Destinations.Home.route)
+                    }
                 }
             }
         }
@@ -94,16 +119,35 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateSystemBarsColor() {
-        val isDarkTheme = when (prefs.getString("theme", "system")) {
-            "dark", "pure_black" -> true
-            "light", "high_contrast" -> false
-            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val themeId = prefs.getString("theme", "system")
+        updateSystemBarsForTheme(themeId)
+    }
+
+    private fun updateSystemBarsForTheme(themeId: String) {
+        val isDark = when (themeId) {
+            "light" -> false
+            "high_contrast" -> false
+            else -> true
         }
 
         val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller?.isAppearanceLightStatusBars = !isDarkTheme
+        controller?.isAppearanceLightStatusBars = !isDark
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            controller.isAppearanceLightNavigationBars = !isDarkTheme
+            controller.isAppearanceLightNavigationBars = !isDark
+        }
+
+        // Set navigation bar color to match theme
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val accentName = prefs.getString("accent_color", "ORANGE")
+            val accentColor = try {
+                AccentColor.valueOf(accentName)
+            } catch (e: Exception) {
+                AccentColor.ORANGE
+            }
+
+            val colorScheme = getThemeColorScheme(themeId, accentColor)
+            window.navigationBarColor = colorScheme.background.toArgb()
+            window.statusBarColor = Color.TRANSPARENT
         }
     }
 
@@ -119,6 +163,11 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         updateSystemBarsColor()
     }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        updateSystemBarsColor()
+    }
 }
 
 @Composable
@@ -126,7 +175,8 @@ fun MainScreen(startDestination: String) {
     val navController = rememberNavController()
     val navBackStackEntry = navController.currentBackStackEntryAsState().value
     val currentRoute = navBackStackEntry?.destination?.route
-    val navigationActions = rememberNavigationActions(navController)
+    val navigationActions = NavigationActionsImpl(navController)
+    val themeColors = LocalThemeColors.current
 
     Scaffold(
         bottomBar = {
@@ -134,11 +184,12 @@ fun MainScreen(startDestination: String) {
                 AirMouseBottomBar(
                     currentRoute = currentRoute,
                     onItemSelected = { destination ->
-                        navigationActions.navigateTo(destination)
+                        navigationActions.navigateTo(destination.route)
                     }
                 )
             }
-        }
+        },
+        containerColor = themeColors.background
     ) { paddingValues ->
         AirMouseNavHost(
             navController = navController,

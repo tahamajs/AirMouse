@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/home/HomeViewModel.kt
 @file:Suppress("unused")
 
 package com.airmouse.presentation.ui.home
@@ -15,7 +16,10 @@ import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.airmouse.data.datasource.local.ICalibrationDataSource
 import com.airmouse.domain.model.ConnectionStatus
+import com.airmouse.domain.model.CalibrationQuality
+import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.network.ConnectionManager
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,7 +39,9 @@ import kotlin.math.*
 class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: PreferencesManager,
-    val connectionManager: ConnectionManager
+    val connectionManager: ConnectionManager,
+    private val calibrationRepository: ICalibrationRepository,
+    private val calibrationDataSource: ICalibrationDataSource
 ) : ViewModel() {
 
     // ==================== STATE ====================
@@ -48,6 +54,9 @@ class HomeViewModel @Inject constructor(
 
     private val _connectionQuality = MutableStateFlow(ConnectionQuality.UNKNOWN)
     val connectionQuality: StateFlow<ConnectionQuality> = _connectionQuality.asStateFlow()
+
+    private val _calibrationStatus = MutableStateFlow<CalibrationQuality>(CalibrationQuality.UNKNOWN)
+    val calibrationStatus: StateFlow<CalibrationQuality> = _calibrationStatus.asStateFlow()
 
     // ==================== SENSOR SETUP ====================
 
@@ -88,6 +97,9 @@ class HomeViewModel @Inject constructor(
     // Motion history for pattern detection
     private val motionHistory = mutableListOf<MotionSample>()
     private val maxMotionHistory = 30
+
+    // Calibration data
+    private var calibrationData: com.airmouse.domain.model.CalibrationData? = null
 
     // ==================== SENSOR LISTENER ====================
 
@@ -130,6 +142,7 @@ class HomeViewModel @Inject constructor(
         startBatteryMonitoring()
         loadGestureStats()
         startPerformanceMonitor()
+        loadCalibrationStatus()
 
         // Auto-connect if enabled
         if (prefs.getBoolean("auto_connect", true)) {
@@ -146,6 +159,39 @@ class HomeViewModel @Inject constructor(
         // Start sensor listener if already active
         if (_uiState.value.isActive) {
             startSensors()
+        }
+    }
+
+    // ==================== CALIBRATION LOADING ====================
+
+    private fun loadCalibrationStatus() {
+        viewModelScope.launch {
+            try {
+                val data = calibrationRepository.getCalibrationData()
+                calibrationData = data
+                _calibrationStatus.value = data.quality
+                _uiState.update {
+                    it.copy(
+                        isCalibrated = data.isCalibrated,
+                        calibrationQuality = data.quality.name
+                    )
+                }
+                if (data.isCalibrated) {
+                    addLogMessage("Calibration loaded: ${data.quality.name}")
+                }
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
+
+        // Also observe calibration quality
+        viewModelScope.launch {
+            calibrationRepository.observeCalibrationQuality().collect { quality ->
+                _calibrationStatus.value = quality
+                _uiState.update {
+                    it.copy(calibrationQuality = quality.name)
+                }
+            }
         }
     }
 
@@ -201,6 +247,7 @@ class HomeViewModel @Inject constructor(
                     ConnectionManager.ConnectionStatus.CONNECTED -> ConnectionStatus.CONNECTED
                     ConnectionManager.ConnectionStatus.ERROR -> ConnectionStatus.ERROR
                     ConnectionManager.ConnectionStatus.RECONNECTING -> ConnectionStatus.CONNECTING
+                    else -> ConnectionStatus.DISCONNECTED
                 }
 
                 _uiState.update {
@@ -216,6 +263,8 @@ class HomeViewModel @Inject constructor(
                         addLogMessage("Connected to ${connectionManager.currentIp.value}")
                         updateConnectionQuality()
                         startSensors()
+                        // Sync calibration when connected
+                        syncCalibrationToServer()
                     }
                     ConnectionManager.ConnectionStatus.DISCONNECTED -> {
                         addLogMessage("Disconnected")
@@ -250,6 +299,50 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             // Connection quality is updated via the observer above
         }
+    }
+
+    // ==================== CALIBRATION SYNC ====================
+
+    private fun syncCalibrationToServer() {
+        viewModelScope.launch {
+            try {
+                val data = calibrationRepository.getCalibrationData()
+                if (data.isCalibrated) {
+                    val message = buildCalibrationMessage(data)
+                    connectionManager.send(message)
+                    addLogMessage("Calibration synced to server")
+                }
+            } catch (e: Exception) {
+                addLogMessage("Failed to sync calibration: ${e.message}")
+            }
+        }
+    }
+
+    private fun buildCalibrationMessage(data: com.airmouse.domain.model.CalibrationData): String {
+        return """
+            {
+                "type": "calibration_data",
+                "payload": {
+                    "gyro": {
+                        "bias_x": ${data.gyroBias.offsetX},
+                        "bias_y": ${data.gyroBias.offsetY},
+                        "bias_z": ${data.gyroBias.offsetZ}
+                    },
+                    "accel": {
+                        "offset_x": ${data.accelOffset.offsetX},
+                        "offset_y": ${data.accelOffset.offsetY},
+                        "offset_z": ${data.accelOffset.offsetZ}
+                    },
+                    "mag": {
+                        "offset_x": ${data.magOffset.offsetX},
+                        "offset_y": ${data.magOffset.offsetY},
+                        "offset_z": ${data.magOffset.offsetZ}
+                    },
+                    "quality": "${data.quality.name}",
+                    "timestamp": ${data.timestamp}
+                }
+            }
+        """.trimIndent()
     }
 
     // ==================== SENSOR PROCESSING ====================
@@ -618,11 +711,13 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             while (true) {
                 delay(2000)
-                val memInfo = Runtime.getRuntime()
+                val runtime = Runtime.getRuntime()
+                val usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024
+                val totalMemory = runtime.totalMemory() / 1024 / 1024
                 _sensorState.update {
                     it.copy(
-                        memoryUsage = (memInfo.totalMemory() - memInfo.freeMemory()) / 1024 / 1024,
-                        totalMemory = memInfo.totalMemory() / 1024 / 1024,
+                        memoryUsage = usedMemory,
+                        totalMemory = totalMemory,
                         cpuUsage = 0f // Would need external library for accurate CPU usage
                     )
                 }
@@ -665,6 +760,17 @@ class HomeViewModel @Inject constructor(
         val last = motionHistory.last().timestamp
         return last - first
     }
+
+    fun getAverageLatency(): Long {
+        // Calculate average latency from connection
+        return 0L // Placeholder
+    }
+
+    fun getGestureStats(): GestureStats = _uiState.value.gestureStats
+
+    fun getCalibrationQuality(): String = _uiState.value.calibrationQuality
+
+    fun isCalibrated(): Boolean = _uiState.value.isCalibrated
 
     // ==================== LIFE CYCLE ====================
 
@@ -719,7 +825,8 @@ class HomeViewModel @Inject constructor(
         val isCalibrated: Boolean = false,
         val isConnecting: Boolean = false,
         val userName: String = "",
-        val theme: String = "dark"
+        val theme: String = "dark",
+        val calibrationQuality: String = "UNKNOWN"
     )
 
     data class GestureStats(
@@ -738,5 +845,3 @@ class HomeViewModel @Inject constructor(
         UNKNOWN(0xFF9E9E9E, "Unknown")
     }
 }
-
-// app/src/main/java/com/airmouse/presentation/ui/home/HomeViewModel.kt

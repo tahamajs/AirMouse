@@ -1,0 +1,237 @@
+// app/src/main/java/com/airmouse/presentation/ui/touchpad/TouchpadState.kt
+package com.airmouse.presentation.ui.touchpad
+
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.airmouse.presentation.navigation.Destinations
+
+// ==========================================
+// UI STATE
+// ==========================================
+
+data class TouchpadUiState(
+    // Core state
+    val isActive: Boolean = false,
+
+    // Cursor settings
+    val sensitivity: Float = 1.0f,
+    val cursorSpeed: Float = 1.0f,
+    val pointerSpeed: Int = 50,
+    val accelerationEnabled: Boolean = true,
+    val invertVertical: Boolean = false,
+    val invertHorizontal: Boolean = false,
+
+    // Scroll settings
+    val scrollSpeed: Float = 1.0f,
+    val naturalScrolling: Boolean = true,
+    val twoFingerScroll: Boolean = true,
+    val edgeScrolling: Boolean = false,
+    val scrollInertia: Boolean = true,
+
+    // Gesture settings
+    val tapToClick: Boolean = true,
+    val doubleTapDelay: Int = 300,
+    val threeFingerSwipe: Boolean = true,
+    val pinchToZoom: Boolean = true,
+    val rotateToRotate: Boolean = false,
+
+    // Feedback settings
+    val hapticFeedback: Boolean = true,
+    val showTouchPoints: Boolean = false,
+
+    // Runtime state
+    val currentX: Float = 0f,
+    val currentY: Float = 0f,
+    val isDragging: Boolean = false,
+    val isScrolling: Boolean = false,
+    val lastGesture: String = "",
+    val touchPoints: List<TouchPoint> = emptyList(),
+    val gestureHistory: List<String> = emptyList()
+)
+
+data class TouchPoint(
+    val id: Int,
+    val x: Float,
+    val y: Float,
+    val pressure: Float
+)
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum class TouchpadMode(val displayName: String) {
+    STANDARD("Standard"),
+    PRECISION("Precision"),
+    GAMING("Gaming"),
+    PRESENTATION("Presentation"),
+    CUSTOM("Custom")
+}
+
+enum class TouchpadGesture(val displayName: String) {
+    TAP("Tap"),
+    DOUBLE_TAP("Double Tap"),
+    LONG_PRESS("Long Press"),
+    SWIPE_LEFT("Swipe Left"),
+    SWIPE_RIGHT("Swipe Right"),
+    SWIPE_UP("Swipe Up"),
+    SWIPE_DOWN("Swipe Down"),
+    PINCH_IN("Pinch In"),
+    PINCH_OUT("Pinch Out"),
+    ROTATE_CW("Rotate CW"),
+    ROTATE_CCW("Rotate CCW"),
+    THREE_FINGER_SWIPE_LEFT("3-Finger Swipe Left"),
+    THREE_FINGER_SWIPE_RIGHT("3-Finger Swipe Right"),
+    THREE_FINGER_SWIPE_UP("3-Finger Swipe Up"),
+    THREE_FINGER_SWIPE_DOWN("3-Finger Swipe Down"),
+    EDGE_SCROLL("Edge Scroll"),
+    TWO_FINGER_SCROLL("Two-Finger Scroll"),
+    DRAG("Drag"),
+    NONE("None")
+}
+
+// ==========================================
+// EVENTS
+// ==========================================
+
+sealed class TouchpadEvent {
+    // Core events
+    object ToggleTouchpad : TouchpadEvent()
+    object ResetToDefaults : TouchpadEvent()
+    data class ApplyPreset(val mode: TouchpadMode) : TouchpadEvent()
+
+    // Touch events
+    data class TouchEvent(
+        val x: Float,
+        val y: Float,
+        val pointerCount: Int,
+        val pointers: List<Pair<Float, Float>>,
+        val pressure: Float
+    ) : TouchpadEvent()
+
+    data class TapEvent(val x: Float, val y: Float) : TouchpadEvent()
+    object LongPressEvent : TouchpadEvent()
+    object GestureEnd : TouchpadEvent()
+
+    // Cursor settings
+    data class UpdateSensitivity(val value: Float) : TouchpadEvent()
+    data class UpdateCursorSpeed(val value: Float) : TouchpadEvent()
+    data class UpdatePointerSpeed(val value: Int) : TouchpadEvent()
+    object ToggleAcceleration : TouchpadEvent()
+    object ToggleInvertVertical : TouchpadEvent()
+    object ToggleInvertHorizontal : TouchpadEvent()
+
+    // Scroll settings
+    data class UpdateScrollSpeed(val value: Float) : TouchpadEvent()
+    object ToggleNaturalScrolling : TouchpadEvent()
+    object ToggleTwoFingerScroll : TouchpadEvent()
+    object ToggleEdgeScrolling : TouchpadEvent()
+    object ToggleScrollInertia : TouchpadEvent()
+
+    // Gesture settings
+    object ToggleTapToClick : TouchpadEvent()
+    data class UpdateDoubleTapDelay(val value: Int) : TouchpadEvent()
+    object ToggleThreeFingerSwipe : TouchpadEvent()
+    object TogglePinchToZoom : TouchpadEvent()
+    object ToggleRotateToRotate : TouchpadEvent()
+
+    // Feedback settings
+    object ToggleHapticFeedback : TouchpadEvent()
+    object ToggleShowTouchPoints : TouchpadEvent()
+
+    // Navigation
+    object NavigateBack : TouchpadEvent()
+    object NavigateToSettings : TouchpadEvent()
+}
+
+// ==========================================
+// EFFECTS
+// ==========================================
+
+sealed class TouchpadEffect {
+    data class ShowToast(val message: String) : TouchpadEffect()
+    data class SendMessage(val message: String) : TouchpadEffect()
+    data class SendMove(val dx: Float, val dy: Float) : TouchpadEffect()
+    data class SendScroll(val delta: Int) : TouchpadEffect()
+    data class SendClick(val button: String) : TouchpadEffect()
+    data class SendGesture(val gesture: String) : TouchpadEffect()
+    data class SendCommand(val command: String) : TouchpadEffect()
+    object NavigateBack : TouchpadEffect()
+    object NavigateToSettings : TouchpadEffect()
+    data class Vibrate(val duration: Long) : TouchpadEffect()
+}
+
+// ==========================================
+// PRESET CONFIGURATIONS
+// ==========================================
+
+data class TouchpadPreset(
+    val mode: TouchpadMode,
+    val sensitivity: Float,
+    val cursorSpeed: Float,
+    val scrollSpeed: Float,
+    val accelerationEnabled: Boolean,
+    val tapToClick: Boolean,
+    val twoFingerScroll: Boolean,
+    val threeFingerSwipe: Boolean,
+    val naturalScrolling: Boolean
+)
+
+object TouchpadPresets {
+    val STANDARD = TouchpadPreset(
+        mode = TouchpadMode.STANDARD,
+        sensitivity = 1.0f,
+        cursorSpeed = 1.0f,
+        scrollSpeed = 1.0f,
+        accelerationEnabled = true,
+        tapToClick = true,
+        twoFingerScroll = true,
+        threeFingerSwipe = true,
+        naturalScrolling = true
+    )
+
+    val PRECISION = TouchpadPreset(
+        mode = TouchpadMode.PRECISION,
+        sensitivity = 0.7f,
+        cursorSpeed = 0.6f,
+        scrollSpeed = 0.8f,
+        accelerationEnabled = false,
+        tapToClick = true,
+        twoFingerScroll = true,
+        threeFingerSwipe = false,
+        naturalScrolling = true
+    )
+
+    val GAMING = TouchpadPreset(
+        mode = TouchpadMode.GAMING,
+        sensitivity = 1.5f,
+        cursorSpeed = 1.5f,
+        scrollSpeed = 0.5f,
+        accelerationEnabled = true,
+        tapToClick = false,
+        twoFingerScroll = false,
+        threeFingerSwipe = false,
+        naturalScrolling = false
+    )
+
+    val PRESENTATION = TouchpadPreset(
+        mode = TouchpadMode.PRESENTATION,
+        sensitivity = 0.5f,
+        cursorSpeed = 1.0f,
+        scrollSpeed = 1.5f,
+        accelerationEnabled = false,
+        tapToClick = true,
+        twoFingerScroll = true,
+        threeFingerSwipe = true,
+        naturalScrolling = false
+    )
+
+    fun getPreset(mode: TouchpadMode): TouchpadPreset {
+        return when (mode) {
+            TouchpadMode.STANDARD -> STANDARD
+            TouchpadMode.PRECISION -> PRECISION
+            TouchpadMode.GAMING -> GAMING
+            TouchpadMode.PRESENTATION -> PRESENTATION
+            TouchpadMode.CUSTOM -> STANDARD
+        }
+    }
+}

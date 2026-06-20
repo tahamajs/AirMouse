@@ -5,8 +5,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface StatisticsDao {
@@ -14,39 +12,33 @@ interface StatisticsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStatistics(stats: StatisticsEntity)
 
-    @Update
-    suspend fun updateStatistics(stats: StatisticsEntity)
+    @Query("SELECT * FROM statistics WHERE id = 'default'")
+    suspend fun getStatistics(): StatisticsEntity?
 
-    @Query("SELECT * FROM statistics WHERE session_id = :sessionId")
-    suspend fun getStatisticsBySession(sessionId: String): StatisticsEntity?
+    @Query("UPDATE statistics SET click_count = click_count + 1 WHERE id = 'default'")
+    suspend fun incrementClicks()
 
-    @Query("SELECT * FROM statistics WHERE is_active = 1 ORDER BY start_time DESC LIMIT 1")
-    suspend fun getActiveSession(): StatisticsEntity?
+    @Query("UPDATE statistics SET double_click_count = double_click_count + 1 WHERE id = 'default'")
+    suspend fun incrementDoubleClicks()
 
-    @Query("SELECT * FROM statistics WHERE is_active = 1")
-    fun observeActiveSession(): Flow<StatisticsEntity?>
+    @Query("UPDATE statistics SET right_click_count = right_click_count + 1 WHERE id = 'default'")
+    suspend fun incrementRightClicks()
 
-    @Query("SELECT * FROM statistics ORDER BY start_time DESC LIMIT :limit")
-    suspend fun getRecentSessions(limit: Int): List<StatisticsEntity>
+    @Query("UPDATE statistics SET scroll_count = scroll_count + 1, total_scroll_delta = total_scroll_delta + :delta WHERE id = 'default'")
+    suspend fun incrementScrolls(delta: Long)
 
-    @Query("UPDATE statistics SET is_active = 0, end_time = :endTime WHERE session_id = :sessionId")
-    suspend fun endSession(sessionId: String, endTime: Long)
+    @Query("UPDATE statistics SET movement_count = movement_count + 1, total_movement = total_movement + :distance WHERE id = 'default'")
+    suspend fun incrementMovement(distance: Float)
 
-    @Query("DELETE FROM statistics WHERE end_time < :timestamp AND is_active = 0")
-    suspend fun deleteOldSessions(timestamp: Long)
+    @Query("UPDATE statistics SET gesture_count = gesture_count + 1 WHERE id = 'default'")
+    suspend fun incrementGestures()
 
-    @Query("SELECT SUM(total_clicks) FROM statistics")
-    suspend fun getTotalClicks(): Int
+    @Query("UPDATE statistics SET session_count = session_count + 1, total_session_time = total_session_time + :duration WHERE id = 'default'")
+    suspend fun incrementSession(duration: Long)
 
-    @Query("SELECT SUM(total_movements) FROM statistics")
-    suspend fun getTotalMovements(): Int
+    @Query("UPDATE statistics SET last_updated = :timestamp WHERE id = 'default'")
+    suspend fun updateLastUpdated(timestamp: Long)
 
-    @Query("SELECT SUM(total_distance) FROM statistics")
-    suspend fun getTotalDistance(): Float
-
-    @Query("SELECT AVG(average_speed) FROM statistics WHERE average_speed > 0")
-    suspend fun getAverageSpeed(): Float
-
-    @Query("SELECT COUNT(*) FROM statistics")
-    suspend fun getSessionCount(): Int
+    @Query("DELETE FROM statistics")
+    suspend fun deleteAll()
 }

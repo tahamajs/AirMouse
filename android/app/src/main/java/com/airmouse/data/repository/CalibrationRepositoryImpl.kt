@@ -1,5 +1,7 @@
+// app/src/main/java/com/airmouse/data/repository/CalibrationRepositoryImpl.kt
 package com.airmouse.data.repository
 
+import com.airmouse.data.datasource.local.ICalibrationDataSource
 import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
@@ -17,11 +19,12 @@ import javax.inject.Singleton
 @Singleton
 class CalibrationRepositoryImpl @Inject constructor(
     private val calibrationHelper: CalibrationHelper,
+    private val dataSource: ICalibrationDataSource,
     private val prefs: PreferencesManager
 ) : ICalibrationRepository {
 
     private val _calibrationStatus = MutableStateFlow(getCurrentStatus())
-    private val _calibrationProgress = MutableStateFlow(prefs.getInt("calibration_progress", 0))
+    private val _calibrationProgress = MutableStateFlow(prefs.getInt(PreferencesKeys.KEY_CALIBRATION_PROGRESS, 0))
     private val _calibrationQuality = MutableStateFlow(getCurrentQuality())
 
     override suspend fun getCalibrationStatus(): CalibrationStatus = getCurrentStatus()
@@ -36,19 +39,16 @@ class CalibrationRepositoryImpl @Inject constructor(
 
     override suspend fun calibrateGyroscope(onProgress: (Int) -> Unit): Boolean {
         _calibrationStatus.value = CalibrationStatus.IN_PROGRESS
-        prefs.putBoolean("calibration_in_progress", true)
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, true)
         val result = calibrationHelper.calibrateGyroscope()
         if (result) {
-            prefs.putBoolean("gyro_calibrated", true)
+            prefs.putBoolean(PreferencesKeys.KEY_GYRO_CALIBRATED, true)
             _calibrationStatus.value = CalibrationStatus.GYRO_COMPLETE
-            _calibrationQuality.value = calibrationHelper.getCalibrationStats()["calibration_quality"]
-                ?.toString()
-                ?.let { runCatching { CalibrationQuality.valueOf(it) }.getOrNull() }
-                ?: CalibrationQuality.UNKNOWN
+            _calibrationQuality.value = getCurrentQuality()
             _calibrationProgress.value = 33
             onProgress(33)
         }
-        prefs.putBoolean("calibration_in_progress", false)
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, false)
         return result
     }
 
@@ -62,23 +62,21 @@ class CalibrationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveGyroBias(bias: GyroBias) {
-        prefs.putFloat("gyro_bias_x", bias.offsetX)
-        prefs.putFloat("gyro_bias_y", bias.offsetY)
-        prefs.putFloat("gyro_bias_z", bias.offsetZ)
+        dataSource.saveGyroBias(bias.offsetX, bias.offsetY, bias.offsetZ)
         calibrationHelper.saveCalibrationData()
     }
 
     override suspend fun calibrateMagnetometer(onProgress: (Int) -> Unit): Boolean {
         _calibrationStatus.value = CalibrationStatus.IN_PROGRESS
-        prefs.putBoolean("calibration_in_progress", true)
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, true)
         val result = calibrationHelper.calibrateMagnetometer()
         if (result) {
-            prefs.putBoolean("mag_calibrated", true)
+            prefs.putBoolean(PreferencesKeys.KEY_MAG_CALIBRATED, true)
             _calibrationStatus.value = CalibrationStatus.MAG_COMPLETE
             _calibrationProgress.value = 66
             onProgress(66)
         }
-        prefs.putBoolean("calibration_in_progress", false)
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, false)
         return result
     }
 
@@ -96,26 +94,22 @@ class CalibrationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveMagOffset(data: SensorCalibrationData) {
-        prefs.putFloat("mag_offset_x", data.offsetX)
-        prefs.putFloat("mag_offset_y", data.offsetY)
-        prefs.putFloat("mag_offset_z", data.offsetZ)
-        prefs.putFloat("mag_scale_x", data.scaleX)
-        prefs.putFloat("mag_scale_y", data.scaleY)
-        prefs.putFloat("mag_scale_z", data.scaleZ)
+        dataSource.saveMagOffset(data.offsetX, data.offsetY, data.offsetZ)
+        dataSource.saveMagScale(data.scaleX, data.scaleY, data.scaleZ)
         calibrationHelper.saveCalibrationData()
     }
 
     override suspend fun calibrateAccelerometer(onInstruction: (String) -> Unit): Boolean {
         _calibrationStatus.value = CalibrationStatus.IN_PROGRESS
-        prefs.putBoolean("calibration_in_progress", true)
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, true)
         onInstruction("Place device flat facing up")
         val result = calibrationHelper.calibrateAccelerometer()
         if (result) {
-            prefs.putBoolean("accel_calibrated", true)
+            prefs.putBoolean(PreferencesKeys.KEY_ACCEL_CALIBRATED, true)
             _calibrationStatus.value = CalibrationStatus.ACCEL_COMPLETE
             _calibrationProgress.value = 100
         }
-        prefs.putBoolean("calibration_in_progress", false)
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, false)
         return result
     }
 
@@ -133,43 +127,17 @@ class CalibrationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveAccelOffset(data: SensorCalibrationData) {
-        prefs.putFloat("accel_offset_x", data.offsetX)
-        prefs.putFloat("accel_offset_y", data.offsetY)
-        prefs.putFloat("accel_offset_z", data.offsetZ)
-        prefs.putFloat("accel_scale_x", data.scaleX)
-        prefs.putFloat("accel_scale_y", data.scaleY)
-        prefs.putFloat("accel_scale_z", data.scaleZ)
+        dataSource.saveAccelOffset(data.offsetX, data.offsetY, data.offsetZ)
+        dataSource.saveAccelScale(data.scaleX, data.scaleY, data.scaleZ)
         calibrationHelper.saveCalibrationData()
     }
 
     override suspend fun getCalibrationData(): CalibrationData {
-        return CalibrationData(
-            gyroBias = getGyroBias().let {
-                SensorCalibrationData(
-                    offsetX = it.offsetX,
-                    offsetY = it.offsetY,
-                    offsetZ = it.offsetZ
-                )
-            },
-            accelOffset = getAccelOffset(),
-            magOffset = getMagOffset(),
-            isCalibrated = prefs.isCalibrated(),
-            quality = getCalibrationQuality()
-        )
+        return dataSource.getCalibrationData()
     }
 
     override suspend fun saveCalibrationData(data: CalibrationData) {
-        saveGyroBias(
-            GyroBias(
-                offsetX = data.gyroBias.offsetX,
-                offsetY = data.gyroBias.offsetY,
-                offsetZ = data.gyroBias.offsetZ
-            )
-        )
-        saveAccelOffset(data.accelOffset)
-        saveMagOffset(data.magOffset)
-        prefs.putBoolean("calibration_complete", data.isCalibrated)
-        prefs.putString("calibration_quality", data.quality.name)
+        dataSource.saveCalibrationData(data)
     }
 
     override suspend fun resetCalibration() {
@@ -183,23 +151,29 @@ class CalibrationRepositoryImpl @Inject constructor(
 
     override suspend fun resetAllCalibration() {
         resetCalibration()
-        prefs.putBoolean("calibration_complete", false)
-        prefs.putBoolean("gyro_calibrated", false)
-        prefs.putBoolean("mag_calibrated", false)
-        prefs.putBoolean("accel_calibrated", false)
-        prefs.putBoolean("calibration_in_progress", false)
+        dataSource.resetAll()
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_COMPLETE, false)
+        prefs.putBoolean(PreferencesKeys.KEY_GYRO_CALIBRATED, false)
+        prefs.putBoolean(PreferencesKeys.KEY_MAG_CALIBRATED, false)
+        prefs.putBoolean(PreferencesKeys.KEY_ACCEL_CALIBRATED, false)
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, false)
+        prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_APPLIED, false)
     }
 
     private fun getCurrentStatus(): CalibrationStatus = when {
-        prefs.getBoolean("calibration_in_progress", false) -> CalibrationStatus.IN_PROGRESS
-        prefs.isCalibrated() -> CalibrationStatus.COMPLETED
-        prefs.getBoolean("gyro_calibrated", false) -> CalibrationStatus.GYRO_COMPLETE
+        prefs.getBoolean(PreferencesKeys.KEY_CALIBRATION_IN_PROGRESS, false) -> CalibrationStatus.IN_PROGRESS
+        prefs.getBoolean(PreferencesKeys.KEY_CALIBRATION_COMPLETE, false) -> CalibrationStatus.COMPLETED
+        prefs.getBoolean(PreferencesKeys.KEY_GYRO_CALIBRATED, false) -> CalibrationStatus.GYRO_COMPLETE
+        prefs.getBoolean(PreferencesKeys.KEY_MAG_CALIBRATED, false) -> CalibrationStatus.MAG_COMPLETE
+        prefs.getBoolean(PreferencesKeys.KEY_ACCEL_CALIBRATED, false) -> CalibrationStatus.ACCEL_COMPLETE
         else -> CalibrationStatus.NOT_STARTED
     }
 
     private fun getCurrentQuality(): CalibrationQuality {
-        return runCatching {
-            CalibrationQuality.valueOf(prefs.getString("calibration_quality", "UNKNOWN"))
-        }.getOrDefault(CalibrationQuality.UNKNOWN)
+        return try {
+            CalibrationQuality.valueOf(prefs.getString(PreferencesKeys.KEY_CALIBRATION_QUALITY, "UNKNOWN"))
+        } catch (e: Exception) {
+            CalibrationQuality.UNKNOWN
+        }
     }
 }

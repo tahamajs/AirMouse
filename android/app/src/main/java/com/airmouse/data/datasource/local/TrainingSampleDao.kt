@@ -5,38 +5,28 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TrainingSampleDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSample(sample: TrainingSampleEntity)
+    suspend fun insertTrainingSample(sample: TrainingSampleEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSamples(samples: List<TrainingSampleEntity>)
+    @Query("SELECT * FROM training_samples WHERE gesture_id = :gestureId")
+    suspend fun getSamplesByGesture(gestureId: String): List<TrainingSampleEntity>
 
-    @Query("SELECT * FROM training_samples WHERE gesture_name = :gestureName ORDER BY timestamp DESC")
-    suspend fun getSamplesByGesture(gestureName: String): List<TrainingSampleEntity>
+    @Query("SELECT * FROM training_samples WHERE label = :label")
+    suspend fun getSamplesByLabel(label: String): List<TrainingSampleEntity>
 
-    @Query("SELECT * FROM training_samples WHERE gesture_name = :gestureName ORDER BY timestamp DESC")
-    fun observeSamplesByGesture(gestureName: String): Flow<List<TrainingSampleEntity>>
+    @Query("DELETE FROM training_samples WHERE gesture_id = :gestureId")
+    suspend fun deleteSamplesByGesture(gestureId: String)
 
-    @Query("SELECT * FROM training_samples ORDER BY timestamp DESC LIMIT :limit")
-    suspend fun getRecentSamples(limit: Int): List<TrainingSampleEntity>
-
-    @Query("DELETE FROM training_samples WHERE gesture_name = :gestureName")
-    suspend fun deleteSamplesByGesture(gestureName: String)
-
-    @Query("DELETE FROM training_samples WHERE timestamp < :timestamp")
-    suspend fun deleteSamplesOlderThan(timestamp: Long)
-
-    @Query("SELECT COUNT(*) FROM training_samples WHERE gesture_name = :gestureName")
-    suspend fun getSampleCount(gestureName: String): Int
+    @Query("DELETE FROM training_samples WHERE id = :id")
+    suspend fun deleteSample(id: Long)
 
     @Query("SELECT COUNT(*) FROM training_samples")
-    suspend fun getTotalSampleCount(): Int
+    suspend fun getSampleCount(): Int
 
-    @Query("DELETE FROM training_samples")
-    suspend fun deleteAllSamples()
+    @Query("SELECT COUNT(*) FROM training_samples WHERE label = :label")
+    suspend fun getSampleCountByLabel(label: String): Int
 }

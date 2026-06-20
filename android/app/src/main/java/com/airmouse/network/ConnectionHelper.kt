@@ -1,22 +1,13 @@
 // app/src/main/java/com/airmouse/network/ConnectionHelper.kt
 package com.airmouse.network
 
+import android.view.KeyEvent
 import org.json.JSONObject
 
 /**
- * Extension functions for easier message construction.
- * These helpers create properly formatted JSON messages for the Go server.
- *
- * Usage:
- * ```
- * val moveMsg = JSONObject().putMove(12.5f, -3.2f)
- * connectionManager.send(moveMsg.toString())
- *
- * // Or use the extension functions directly:
- * connectionManager.sendMove(12.5f, -3.2f)
- * ```
+ * Message types constants for the Air Mouse protocol.
+ * These match the Go server's expected message format.
  */
-
 // ==================== MOUSE COMMANDS ====================
 
 /**
@@ -28,6 +19,9 @@ fun JSONObject.putMove(dx: Float, dy: Float): JSONObject = apply {
     put("type", MessageTypes.TYPE_MOVE)
     put("dx", dx)
     put("dy", dy)
+    // Also add for compatibility with different parsers
+    put("DeltaX", dx)
+    put("DeltaY", dy)
 }
 
 /**
@@ -44,24 +38,28 @@ fun JSONObject.putClick(button: String, id: String? = null): JSONObject = apply 
 /**
  * Create a double click message JSON object
  */
-fun JSONObject.putDoubleClick(): JSONObject = apply {
+fun JSONObject.putDoubleClick(id: String? = null): JSONObject = apply {
     put("type", MessageTypes.TYPE_DOUBLE_CLICK)
+    id?.let { put("id", it) }
 }
 
 /**
  * Create a right click message JSON object
  */
-fun JSONObject.putRightClick(): JSONObject = apply {
+fun JSONObject.putRightClick(id: String? = null): JSONObject = apply {
     put("type", MessageTypes.TYPE_RIGHT_CLICK)
+    id?.let { put("id", it) }
 }
 
 /**
  * Create a scroll message JSON object
  * @param delta Positive = scroll up, negative = scroll down
  */
-fun JSONObject.putScroll(delta: Int): JSONObject = apply {
+fun JSONObject.putScroll(delta: Int, id: String? = null): JSONObject = apply {
     put("type", MessageTypes.TYPE_SCROLL)
     put("delta", delta)
+    put("Scroll", delta)
+    id?.let { put("id", it) }
 }
 
 // ==================== IDENTIFICATION ====================
@@ -80,12 +78,13 @@ fun JSONObject.putHello(
     androidVersion: String? = null
 ): JSONObject = apply {
     put("type", MessageTypes.TYPE_HELLO)
-    put("payload", JSONObject().apply {
+    val payload = JSONObject().apply {
         put("name", name)
         put("version", version)
         device?.let { put("device", it) }
         androidVersion?.let { put("android_version", it) }
-    })
+    }
+    put("payload", payload)
 }
 
 // ==================== GESTURE COMMANDS ====================
@@ -97,10 +96,11 @@ fun JSONObject.putHello(
  */
 fun JSONObject.putGesture(gesture: String, confidence: Float): JSONObject = apply {
     put("type", MessageTypes.TYPE_GESTURE)
-    put("payload", JSONObject().apply {
+    val payload = JSONObject().apply {
         put("gesture", gesture)
         put("confidence", confidence)
-    })
+    }
+    put("payload", payload)
 }
 
 // ==================== PROXIMITY COMMANDS ====================
@@ -113,24 +113,26 @@ fun JSONObject.putGesture(gesture: String, confidence: Float): JSONObject = appl
  */
 fun JSONObject.putProximity(isNear: Boolean, distance: Float, deviceId: String): JSONObject = apply {
     put("type", MessageTypes.TYPE_PROXIMITY)
-    put("payload", JSONObject().apply {
+    val payload = JSONObject().apply {
         put("device_id", deviceId)
         put("is_near", isNear)
         put("distance", distance)
-    })
+    }
+    put("payload", payload)
 }
 
 // ==================== CONTROL COMMANDS ====================
 
 /**
  * Create a control message JSON object
- * @param command Control command (e.g., "pause_movement")
+ * @param command Control command
  */
 fun JSONObject.putControl(command: String): JSONObject = apply {
     put("type", MessageTypes.TYPE_CONTROL)
-    put("payload", JSONObject().apply {
+    val payload = JSONObject().apply {
         put("command", command)
-    })
+    }
+    put("payload", payload)
 }
 
 // ==================== HEARTBEAT COMMANDS ====================
@@ -159,11 +161,12 @@ fun JSONObject.putPong(): JSONObject = apply {
  */
 fun JSONObject.putWelcome(serverName: String, version: String, clientId: String? = null): JSONObject = apply {
     put("type", MessageTypes.TYPE_WELCOME)
-    put("payload", JSONObject().apply {
+    val payload = JSONObject().apply {
         put("server", serverName)
         put("version", version)
         clientId?.let { put("id", it) }
-    })
+    }
+    put("payload", payload)
 }
 
 /**
@@ -186,10 +189,11 @@ fun JSONObject.putAck(id: String, status: String = "ok", message: String? = null
  */
 fun JSONObject.putError(code: Int, message: String): JSONObject = apply {
     put("type", MessageTypes.TYPE_ERROR)
-    put("payload", JSONObject().apply {
+    val payload = JSONObject().apply {
         put("code", code)
         put("message", message)
-    })
+    }
+    put("payload", payload)
 }
 
 // ==================== CONVENIENCE EXTENSIONS FOR CONNECTION MANAGER ====================
@@ -394,17 +398,18 @@ fun ConnectionManager.sendPong(): Boolean {
  * @param keyCode Android KeyEvent code
  */
 fun ConnectionManager.sendKeyPress(keyCode: Int): Boolean {
-    val keyMap = mapOf(
-        android.view.KeyEvent.KEYCODE_HOME to MessageTypes.COMMAND_SHOW_DESKTOP,
-        android.view.KeyEvent.KEYCODE_BACK to MessageTypes.COMMAND_BROWSER_BACK,
-        android.view.KeyEvent.KEYCODE_VOLUME_UP to MessageTypes.COMMAND_VOLUME_UP,
-        android.view.KeyEvent.KEYCODE_VOLUME_DOWN to MessageTypes.COMMAND_VOLUME_DOWN,
-        android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE to MessageTypes.COMMAND_PLAY_PAUSE,
-        android.view.KeyEvent.KEYCODE_MEDIA_NEXT to MessageTypes.COMMAND_NEXT_TRACK,
-        android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS to MessageTypes.COMMAND_PREV_TRACK,
-        android.view.KeyEvent.KEYCODE_MEDIA_STOP to MessageTypes.COMMAND_STOP
-    )
-    val command = keyMap[keyCode] ?: return false
+    val command = when (keyCode) {
+        KeyEvent.KEYCODE_HOME -> MessageTypes.COMMAND_SHOW_DESKTOP
+        KeyEvent.KEYCODE_BACK -> MessageTypes.COMMAND_BROWSER_BACK
+        KeyEvent.KEYCODE_VOLUME_UP -> MessageTypes.COMMAND_VOLUME_UP
+        KeyEvent.KEYCODE_VOLUME_DOWN -> MessageTypes.COMMAND_VOLUME_DOWN
+        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> MessageTypes.COMMAND_PLAY_PAUSE
+        KeyEvent.KEYCODE_MEDIA_NEXT -> MessageTypes.COMMAND_NEXT_TRACK
+        KeyEvent.KEYCODE_MEDIA_PREVIOUS -> MessageTypes.COMMAND_PREV_TRACK
+        KeyEvent.KEYCODE_MEDIA_STOP -> MessageTypes.COMMAND_STOP
+        KeyEvent.KEYCODE_MUTE -> MessageTypes.COMMAND_MUTE
+        else -> return false
+    }
     return sendControlCommand(command)
 }
 
@@ -508,4 +513,60 @@ fun JSONObject.getProximityDistance(): Float {
  */
 fun JSONObject.getProximityIsNear(): Boolean {
     return getPayload()?.optBoolean("is_near") ?: false
+}
+
+/**
+ * Extension function to check if message is a ping
+ */
+fun JSONObject.isPing(): Boolean {
+    return optString("type") == MessageTypes.TYPE_PING
+}
+
+/**
+ * Extension function to check if message is a pong
+ */
+fun JSONObject.isPong(): Boolean {
+    return optString("type") == MessageTypes.TYPE_PONG
+}
+
+/**
+ * Extension function to check if message is a welcome
+ */
+fun JSONObject.isWelcome(): Boolean {
+    return optString("type") == MessageTypes.TYPE_WELCOME
+}
+
+/**
+ * Extension function to get server name from welcome
+ */
+fun JSONObject.getServerName(): String? {
+    return getPayload()?.optString("server")
+}
+
+/**
+ * Extension function to get server version from welcome
+ */
+fun JSONObject.getServerVersion(): String? {
+    return getPayload()?.optString("version")
+}
+
+/**
+ * Extension function to check if message is an ACK
+ */
+fun JSONObject.isAck(): Boolean {
+    return optString("type") == MessageTypes.TYPE_ACK
+}
+
+/**
+ * Extension function to get ACK ID
+ */
+fun JSONObject.getAckId(): String? {
+    return optString("id", null)
+}
+
+/**
+ * Extension function to get ACK status
+ */
+fun JSONObject.getAckStatus(): String {
+    return optString("status", "ok")
 }

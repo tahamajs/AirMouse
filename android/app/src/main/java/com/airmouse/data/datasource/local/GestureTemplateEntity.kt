@@ -4,6 +4,7 @@ package com.airmouse.data.datasource.local
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.airmouse.domain.model.GestureType
 
 @Entity(tableName = "gesture_templates")
 data class GestureTemplateEntity(
@@ -16,23 +17,14 @@ data class GestureTemplateEntity(
     @ColumnInfo(name = "type")
     val type: String,
 
-    @ColumnInfo(name = "action")
-    val action: String,
+    @ColumnInfo(name = "description")
+    val description: String? = null,
 
-    @ColumnInfo(name = "confidence_threshold")
-    val confidenceThreshold: Float = 0.7f,
+    @ColumnInfo(name = "data")
+    val data: ByteArray? = null,
 
-    @ColumnInfo(name = "is_enabled")
-    val isEnabled: Boolean = true,
-
-    @ColumnInfo(name = "is_custom")
-    val isCustom: Boolean = false,
-
-    @ColumnInfo(name = "detection_count")
-    val detectionCount: Int = 0,
-
-    @ColumnInfo(name = "last_detected")
-    val lastDetected: Long = 0,
+    @ColumnInfo(name = "metadata")
+    val metadata: String? = null,
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
@@ -40,28 +32,15 @@ data class GestureTemplateEntity(
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long = System.currentTimeMillis(),
 
-    @ColumnInfo(name = "metadata")
-    val metadata: String? = null,
-
-    @ColumnInfo(name = "description")
-    val description: String? = null,
-
-    @ColumnInfo(name = "icon_res")
-    val iconRes: Int = 0,
-
     @ColumnInfo(name = "version")
     val version: Int = 1,
 
-    @ColumnInfo(name = "is_system")
-    val isSystem: Boolean = false,
+    @ColumnInfo(name = "usage_count")
+    val usageCount: Int = 0,
 
-    @ColumnInfo(name = "training_samples_count")
-    val trainingSamplesCount: Int = 0,
+    @ColumnInfo(name = "avg_score")
+    val avgScore: Float = 0f,
 
-    @ColumnInfo(name = "is_favorite")
-    val isFavorite: Boolean = false
-) {
-    fun getDisplayName(): String = if (name.isNotEmpty()) name else "Unnamed Gesture"
-    fun isSystemGesture(): Boolean = isSystem
-    fun isCustomGesture(): Boolean = isCustom
-}
+    @ColumnInfo(name = "is_predefined")
+    val isPredefined: Boolean = false
+)

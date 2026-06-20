@@ -5,10 +5,11 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.data.datasource.local.ICalibrationDataSource
-import com.airmouse.domain.model.CalibrationQuality
-import com.airmouse.domain.model.CalibrationStatus
-import com.airmouse.domain.model.ConnectionStatus
+import com.airmouse.domain.model.*
+import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.repository.IConnectionRepository
+import com.airmouse.domain.usecase.CalibrationUseCase
+import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -19,7 +20,10 @@ import javax.inject.Inject
 @HiltViewModel
 class CalibrationViewModel @Inject constructor(
     private val dataSource: ICalibrationDataSource,
-    private val connectionRepository: IConnectionRepository
+    private val connectionRepository: IConnectionRepository,
+    private val calibrationRepository: ICalibrationRepository,
+    private val calibrationUseCase: CalibrationUseCase,
+    private val prefs: PreferencesManager
 ) : ViewModel() {
 
     companion object {
@@ -37,6 +41,18 @@ class CalibrationViewModel @Inject constructor(
 
     private val _isCalibrating = MutableStateFlow(false)
     val isCalibrating: StateFlow<Boolean> = _isCalibrating.asStateFlow()
+
+    private val _calibrationData = MutableStateFlow<CalibrationData?>(null)
+    val calibrationData: StateFlow<CalibrationData?> = _calibrationData.asStateFlow()
+
+    private val _calibrationStatus = MutableStateFlow<CalibrationStatus>(CalibrationStatus.NOT_STARTED)
+    val calibrationStatus: StateFlow<CalibrationStatus> = _calibrationStatus.asStateFlow()
+
+    private val _calibrationProgress = MutableStateFlow(0)
+    val calibrationProgress: StateFlow<Int> = _calibrationProgress.asStateFlow()
+
+    private val _calibrationQuality = MutableStateFlow<CalibrationQuality>(CalibrationQuality.UNKNOWN)
+    val calibrationQuality: StateFlow<CalibrationQuality> = _calibrationQuality.asStateFlow()
 
     // ==========================================
     // Internal State
@@ -57,10 +73,60 @@ class CalibrationViewModel @Inject constructor(
     )
 
     private var serverCalibrationSent = false
+    private var calibrationApplied = false
 
     init {
         loadExistingCalibration()
         observeServerConnection()
+        observeCalibrationStatusFromRepository()
+        applyCalibrationOnStart()
+    }
+
+    // ==========================================
+    // Observe Calibration Status from Repository
+    // ==========================================
+
+    private fun observeCalibrationStatusFromRepository() {
+        viewModelScope.launch {
+            calibrationRepository.observeCalibrationStatus().collect { status ->
+                _calibrationStatus.value = status
+                _uiState.update { state ->
+                    state.copy(
+                        statusMessage = when (status) {
+                            CalibrationStatus.COMPLETED -> "Calibration complete!"
+                            CalibrationStatus.IN_PROGRESS -> "Calibrating..."
+                            CalibrationStatus.GYRO_COMPLETE -> "Gyroscope calibrated ✓"
+                            CalibrationStatus.MAG_COMPLETE -> "Magnetometer calibrated ✓"
+                            CalibrationStatus.ACCEL_COMPLETE -> "Accelerometer calibrated ✓"
+                            CalibrationStatus.SKIPPED -> "Calibration skipped"
+                            CalibrationStatus.FAILED -> "Calibration failed"
+                            else -> "Ready to calibrate"
+                        }
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            calibrationRepository.observeCalibrationProgress().collect { progress ->
+                _calibrationProgress.value = progress
+                _uiState.update { state ->
+                    state.copy(progress = progress)
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            calibrationRepository.observeCalibrationQuality().collect { quality ->
+                _calibrationQuality.value = quality
+                _uiState.update { state ->
+                    state.copy(
+                        calibrationQuality = quality.name,
+                        quality = quality.name
+                    )
+                }
+            }
+        }
     }
 
     // ==========================================
@@ -76,8 +142,29 @@ class CalibrationViewModel @Inject constructor(
                 }
 
                 if (isConnected && _uiState.value.isComplete && !serverCalibrationSent) {
-                    sendCalibrationToServer()
+                    syncCalibrationToServer()
                 }
+            }
+        }
+    }
+
+    // ==========================================
+    // Auto-Apply Calibration on Start
+    // ==========================================
+
+    private fun applyCalibrationOnStart() {
+        viewModelScope.launch {
+            val data = calibrationRepository.getCalibrationData()
+            if (data.isCalibrated) {
+                applyCalibrationToSensors(data)
+                _uiState.update { state ->
+                    state.copy(
+                        isCalibrationApplied = true,
+                        calibrationData = data,
+                        statusMessage = "Calibration applied automatically"
+                    )
+                }
+                Log.i(TAG, "Calibration applied on start: ${data.quality}")
             }
         }
     }
@@ -89,22 +176,22 @@ class CalibrationViewModel @Inject constructor(
     private fun loadExistingCalibration() {
         viewModelScope.launch {
             try {
-                val data = dataSource.getCalibrationData()
+                val data = calibrationRepository.getCalibrationData()
                 if (data.isCalibrated && data.quality != CalibrationQuality.UNKNOWN) {
+                    _calibrationData.value = data
+                    _calibrationQuality.value = data.quality
+                    _calibrationStatus.value = CalibrationStatus.COMPLETED
                     _uiState.update { state ->
                         state.copy(
                             isComplete = true,
                             calibrationQuality = data.quality.name,
                             quality = data.quality.name,
                             statusMessage = "Calibration loaded from storage",
-                            progress = 100
+                            progress = 100,
+                            calibrationData = data,
+                            isCalibrationApplied = true
                         )
                     }
-
-                    if (_uiState.value.isServerConnected) {
-                        sendCalibrationToServer()
-                    }
-
                     Log.i(TAG, "Loaded existing calibration: ${data.quality}")
                 }
             } catch (e: Exception) {
@@ -114,18 +201,76 @@ class CalibrationViewModel @Inject constructor(
     }
 
     // ==========================================
+    // Calibration Data Management
+    // ==========================================
+
+    suspend fun loadCalibrationData(): CalibrationData {
+        return calibrationRepository.getCalibrationData()
+    }
+
+    fun saveCalibrationData(data: CalibrationData) {
+        viewModelScope.launch {
+            try {
+                calibrationRepository.saveCalibrationData(data)
+                _calibrationData.value = data
+                _calibrationQuality.value = data.quality
+                _uiState.update { state ->
+                    state.copy(
+                        calibrationData = data,
+                        isCalibrationApplied = true,
+                        statusMessage = "Calibration saved successfully!"
+                    )
+                }
+                Log.i(TAG, "Calibration data saved: ${data.quality}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save calibration", e)
+                _uiState.update { state ->
+                    state.copy(errorMessage = "Failed to save calibration: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun applyCalibrationToSensors(data: CalibrationData) {
+        if (!data.isCalibrated) {
+            Log.w(TAG, "Cannot apply uncalibrated data")
+            return
+        }
+
+        calibrationApplied = true
+        calibrationUseCase.applyCalibration(data)
+
+        _uiState.update { state ->
+            state.copy(
+                isCalibrationApplied = true,
+                statusMessage = "Calibration applied to sensors"
+            )
+        }
+
+        Log.i(TAG, "Calibration applied to sensors: ${data.quality}")
+    }
+
+    fun isCalibrationApplied(): Boolean = calibrationApplied
+
+    suspend fun isCalibrated(): Boolean = calibrationUseCase.isCalibrated()
+
+    suspend fun getCalibrationQuality(): CalibrationQuality = calibrationUseCase.getCalibrationQuality()
+
+    // ==========================================
     // Send Calibration to Server
     // ==========================================
 
-    private suspend fun sendCalibrationToServer() {
+    suspend fun syncCalibrationToServer() {
         try {
-            val (gx, gy, gz) = dataSource.getGyroBias()
-            val (aox, aoy, aoz) = dataSource.getAccelOffset()
-            val (mox, moy, moz) = dataSource.getMagOffset()
+            val data = calibrationRepository.getCalibrationData()
+            if (!data.isCalibrated) {
+                Log.w(TAG, "No calibration data to send")
+                return
+            }
 
-            val message = buildCalibrationMessage(gx, gy, gz, aox, aoy, aoz, mox, moy, moz)
-
+            val message = buildCalibrationMessage(data)
             val success = connectionRepository.sendMessage(message)
+
             if (success) {
                 serverCalibrationSent = true
                 Log.i(TAG, "Calibration sent to server successfully")
@@ -143,20 +288,28 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
-    private fun buildCalibrationMessage(
-        gx: Float, gy: Float, gz: Float,
-        aox: Float, aoy: Float, aoz: Float,
-        mox: Float, moy: Float, moz: Float
-    ): String {
+    private fun buildCalibrationMessage(data: CalibrationData): String {
         return """
             {
-                "type": "calibration",
+                "type": "calibration_data",
                 "payload": {
-                    "gyro": {"x": $gx, "y": $gy, "z": $gz},
-                    "accel": {"x": $aox, "y": $aoy, "z": $aoz},
-                    "mag": {"x": $mox, "y": $moy, "z": $moz},
-                    "quality": "${_uiState.value.calibrationQuality}",
-                    "timestamp": ${System.currentTimeMillis()}
+                    "gyro": {
+                        "bias_x": ${data.gyroBias.offsetX},
+                        "bias_y": ${data.gyroBias.offsetY},
+                        "bias_z": ${data.gyroBias.offsetZ}
+                    },
+                    "accel": {
+                        "offset_x": ${data.accelOffset.offsetX},
+                        "offset_y": ${data.accelOffset.offsetY},
+                        "offset_z": ${data.accelOffset.offsetZ}
+                    },
+                    "mag": {
+                        "offset_x": ${data.magOffset.offsetX},
+                        "offset_y": ${data.magOffset.offsetY},
+                        "offset_z": ${data.magOffset.offsetZ}
+                    },
+                    "quality": "${data.quality.name}",
+                    "timestamp": ${data.timestamp}
                 }
             }
         """.trimIndent()
@@ -170,6 +323,7 @@ class CalibrationViewModel @Inject constructor(
         if (_isCalibrating.value) return
         _isCalibrating.value = true
         serverCalibrationSent = false
+        calibrationApplied = false
 
         _uiState.update { state ->
             state.copy(
@@ -195,13 +349,18 @@ class CalibrationViewModel @Inject constructor(
         accelPositions.clear()
         currentAccelPosition = 0
         serverCalibrationSent = false
+        calibrationApplied = false
 
         _isCalibrating.value = false
+        _calibrationData.value = null
+        _calibrationProgress.value = 0
+        _calibrationQuality.value = CalibrationQuality.UNKNOWN
+        _calibrationStatus.value = CalibrationStatus.NOT_STARTED
 
         _uiState.update { CalibrationUiState.initial() }
 
         viewModelScope.launch {
-            dataSource.resetAll()
+            calibrationRepository.resetAllCalibration()
         }
     }
 
@@ -223,8 +382,8 @@ class CalibrationViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            dataSource.setCalibrationStatus(CalibrationStatus.SKIPPED)
-            dataSource.setCalibrationQuality(CalibrationQuality.UNKNOWN)
+            calibrationRepository.updateCalibrationStatus(CalibrationStatus.SKIPPED)
+            calibrationRepository.updateCalibrationQuality(CalibrationQuality.UNKNOWN)
         }
     }
 
@@ -232,6 +391,62 @@ class CalibrationViewModel @Inject constructor(
         resetCalibration()
         startCalibration()
     }
+
+    fun applyCalibration() {
+        viewModelScope.launch {
+            val data = calibrationRepository.getCalibrationData()
+            if (!data.isCalibrated) {
+                _uiState.update { state ->
+                    state.copy(
+                        statusMessage = "No calibration data available",
+                        errorMessage = "Please calibrate first"
+                    )
+                }
+                return@launch
+            }
+
+            applyCalibrationToSensors(data)
+            _uiState.update { state ->
+                state.copy(
+                    statusMessage = "Calibration applied successfully!",
+                    isCalibrationApplied = true
+                )
+            }
+        }
+    }
+
+    fun syncToServer() {
+        viewModelScope.launch {
+            if (_uiState.value.isComplete) {
+                syncCalibrationToServer()
+            } else {
+                _uiState.update { state ->
+                    state.copy(
+                        statusMessage = "Complete calibration first before syncing",
+                        errorMessage = "Calibration not complete"
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun getCalibrationData(): CalibrationData {
+        return calibrationRepository.getCalibrationData()
+    }
+
+    fun getCompletedPositions(): List<Int> {
+        return accelPositions.keys.toList()
+    }
+
+    fun getTotalPositions(): Int {
+        return POSITIONS_NEEDED
+    }
+
+    fun getCalibrationProgress(): Int = _calibrationProgress.value
+
+    fun getCalibrationQuality(): CalibrationQuality = _calibrationQuality.value
+
+    fun getCalibrationStatus(): CalibrationStatus = _calibrationStatus.value
 
     fun nextStep() {
         val currentStep = _uiState.value.currentStep
@@ -286,29 +501,6 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
-    fun syncToServer() {
-        viewModelScope.launch {
-            if (_uiState.value.isComplete) {
-                sendCalibrationToServer()
-            } else {
-                _uiState.update { state ->
-                    state.copy(
-                        statusMessage = "Complete calibration first before syncing",
-                        errorMessage = "Calibration not complete"
-                    )
-                }
-            }
-        }
-    }
-
-    fun getCompletedPositions(): List<Int> {
-        return accelPositions.keys.toList()
-    }
-
-    fun getTotalPositions(): Int {
-        return POSITIONS_NEEDED
-    }
-
     // ==========================================
     // Calibration Steps
     // ==========================================
@@ -334,6 +526,7 @@ class CalibrationViewModel @Inject constructor(
                 val data = getSimulatedSensorData()
                 gyroSamples.add(Triple(data.gyroX, data.gyroY, data.gyroZ))
                 progress = gyroSamples.size.toFloat() / SAMPLES_NEEDED
+                _calibrationProgress.value = (progress * 33).toInt()
 
                 _uiState.update { state ->
                     state.copy(
@@ -358,6 +551,7 @@ class CalibrationViewModel @Inject constructor(
                 )
             }
             _isCalibrating.value = false
+            calibrationRepository.updateCalibrationStatus(CalibrationStatus.GYRO_COMPLETE)
         }
     }
 
@@ -396,6 +590,7 @@ class CalibrationViewModel @Inject constructor(
                 val data = getSimulatedSensorData()
                 magSamples.add(Triple(data.magX, data.magY, data.magZ))
                 progress = magSamples.size.toFloat() / (SAMPLES_NEEDED * 2)
+                _calibrationProgress.value = 33 + (progress * 33).toInt()
 
                 _uiState.update { state ->
                     state.copy(
@@ -417,6 +612,7 @@ class CalibrationViewModel @Inject constructor(
                 )
             }
             _isCalibrating.value = false
+            calibrationRepository.updateCalibrationStatus(CalibrationStatus.MAG_COMPLETE)
         }
     }
 
@@ -500,6 +696,7 @@ class CalibrationViewModel @Inject constructor(
             )
 
             val progress = (currentAccelPosition + 1).toFloat() / POSITIONS_NEEDED
+            _calibrationProgress.value = 66 + (progress * 34).toInt()
 
             _uiState.update { state ->
                 state.copy(
@@ -536,6 +733,7 @@ class CalibrationViewModel @Inject constructor(
         }
 
         accelPositions.clear()
+        calibrationRepository.updateCalibrationStatus(CalibrationStatus.ACCEL_COMPLETE)
     }
 
     // ==========================================
@@ -546,16 +744,38 @@ class CalibrationViewModel @Inject constructor(
         _isCalibrating.value = false
 
         val quality = determineQuality()
+        val data = CalibrationData(
+            gyroBias = SensorCalibrationData(
+                offsetX = prefs.getFloat("gyro_bias_x", 0f),
+                offsetY = prefs.getFloat("gyro_bias_y", 0f),
+                offsetZ = prefs.getFloat("gyro_bias_z", 0f)
+            ),
+            accelOffset = SensorCalibrationData(
+                offsetX = prefs.getFloat("accel_offset_x", 0f),
+                offsetY = prefs.getFloat("accel_offset_y", 0f),
+                offsetZ = prefs.getFloat("accel_offset_z", 0f)
+            ),
+            magOffset = SensorCalibrationData(
+                offsetX = prefs.getFloat("mag_offset_x", 0f),
+                offsetY = prefs.getFloat("mag_offset_y", 0f),
+                offsetZ = prefs.getFloat("mag_offset_z", 0f)
+            ),
+            isCalibrated = true,
+            quality = quality,
+            timestamp = System.currentTimeMillis()
+        )
 
         viewModelScope.launch {
-            dataSource.setCalibrationStatus(CalibrationStatus.COMPLETED)
-            dataSource.setCalibrationQuality(quality)
-            dataSource.setCalibrationProgress(100)
-            dataSource.setCalibrationComplete(true)
+            calibrationRepository.saveCalibrationData(data)
+            calibrationRepository.updateCalibrationStatus(CalibrationStatus.COMPLETED)
+            calibrationRepository.updateCalibrationQuality(quality)
+            calibrationRepository.updateCalibrationProgress(100)
 
             if (_uiState.value.isServerConnected) {
-                sendCalibrationToServer()
+                syncCalibrationToServer()
             }
+
+            applyCalibrationToSensors(data)
         }
 
         _uiState.update { state ->
@@ -569,7 +789,9 @@ class CalibrationViewModel @Inject constructor(
                 else "Calibration complete! Connect to sync to server",
                 calibrationQuality = quality.name,
                 quality = quality.name,
-                showConfetti = true
+                showConfetti = true,
+                calibrationData = data,
+                isCalibrationApplied = true
             )
         }
 
@@ -598,7 +820,7 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
-    // Helper for blocking suspend calls
+    // Helper for blocking suspend calls in non-suspend functions
     private fun <T> runBlocking(block: suspend () -> T): T {
         return kotlinx.coroutines.runBlocking { block() }
     }

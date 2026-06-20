@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/main/MainNavHost.kt
 @file:Suppress("unused")
 
 package com.airmouse.presentation.ui.main
@@ -12,10 +13,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.presentation.navigation.rememberNavigationActions
+import com.airmouse.presentation.navigation.NavigationActionsImpl
 import com.airmouse.presentation.ui.about.AboutScreen
 import com.airmouse.presentation.ui.accessibility.AccessibilityScreen
 import com.airmouse.presentation.ui.battery.BatteryScreen
+import com.airmouse.presentation.ui.calibration.CalibrationResultScreen
 import com.airmouse.presentation.ui.calibration.CalibrationScreen
 import com.airmouse.presentation.ui.edge.EdgeGesturesScreen
 import com.airmouse.presentation.ui.gesture.GestureStudioScreen
@@ -40,7 +42,7 @@ fun MainNavHost(
     navController: NavHostController = rememberNavController(),
     startDestination: String = Destinations.Home.route
 ) {
-    val navigationActions = rememberNavigationActions(navController)
+    val navigationActions = NavigationActionsImpl(navController)
 
     NavHost(
         navController = navController,
@@ -63,96 +65,146 @@ fun MainNavHost(
                     slideOutHorizontally(animationSpec = tween(300)) { it }
         }
     ) {
-        // Main Bottom Navigation Screens
+        // ==========================================
+        // MAIN BOTTOM NAVIGATION SCREENS
+        // ==========================================
+
         composable(Destinations.Home.route) {
             HomeScreen(navigationActions = navigationActions)
         }
+
         composable(Destinations.Statistics.route) {
             StatisticsScreen(navigationActions = navigationActions)
         }
+
         composable(Destinations.Settings.route) {
             SettingsScreen(
                 navigationActions = navigationActions,
                 onBack = { navigationActions.navigateBack() }
             )
         }
+
         composable(Destinations.Help.route) {
             HelpScreen(navigationActions = navigationActions)
         }
 
-        // Info Screens
+        // ==========================================
+        // INFO SCREENS
+        // ==========================================
+
         composable(Destinations.About.route) {
             AboutScreen(navigationActions = navigationActions)
         }
 
-        // Calibration & Sensors
+        // ==========================================
+        // CALIBRATION & SENSORS
+        // ==========================================
+
         composable(Destinations.Calibration.route) {
             CalibrationScreen(
                 navigationActions = navigationActions,
                 onComplete = {
-                    // Navigate back or to home after calibration
                     navigationActions.navigateToHome()
                 }
             )
         }
+
         composable(Destinations.CalibrationResult.route) {
-            CalibrationScreen(
+            CalibrationResultScreen(
                 navigationActions = navigationActions,
-                onComplete = { navigationActions.navigateToHome() },
-                onRecalibrate = { navigationActions.navigateToCalibration() }
+                onContinue = { navigationActions.navigateToHome() },
+                onRecalibrate = { navigationActions.navigateTo(Destinations.Calibration.route) }
             )
         }
+
         composable(Destinations.SensorVisualizer.route) {
             SensorVisualizerScreen(navigationActions = navigationActions)
         }
 
-        // Gesture & Touch
+        // ==========================================
+        // GESTURE & TOUCH
+        // ==========================================
+
         composable(Destinations.GestureStudio.route) {
             GestureStudioScreen(navigationActions = navigationActions)
         }
+
         composable(Destinations.EdgeGestures.route) {
             EdgeGesturesScreen(navigationActions = navigationActions)
         }
+
         composable(Destinations.Touchpad.route) {
             TouchpadScreen(navigationActions = navigationActions)
         }
 
-        // Connectivity
+        // ==========================================
+        // CONNECTIVITY
+        // ==========================================
+
         composable(Destinations.NetworkDiscovery.route) {
             NetworkDiscoveryScreen(navigationActions = navigationActions)
         }
+
         composable(Destinations.ServerLogs.route) {
             ServerLogsScreen(navigationActions = navigationActions)
         }
 
-        // Security & Privacy
+        // ==========================================
+        // SECURITY & PRIVACY
+        // ==========================================
+
         composable(Destinations.Proximity.route) {
             ProximityScreen(navigationActions = navigationActions)
         }
+
         composable(Destinations.VoiceCommands.route) {
             VoiceCommandsScreen(navigationActions = navigationActions)
         }
 
-        // Customization
+        // ==========================================
+        // CUSTOMIZATION
+        // ==========================================
+
         composable(Destinations.Profiles.route) {
-            ProfilesScreen()
+            ProfilesScreen(
+                navigationActions = navigationActions,
+                onNavigateBack = { navigationActions.navigateBack() }
+            )
         }
+
         composable(Destinations.Themes.route) {
             ThemesScreen(navigationActions = navigationActions)
         }
 
-        // System
+        // ==========================================
+        // SYSTEM
+        // ==========================================
+
         composable(Destinations.Battery.route) {
             BatteryScreen(navigationActions = navigationActions)
         }
+
         composable(Destinations.Accessibility.route) {
             AccessibilityScreen(navigationActions = navigationActions)
         }
 
-        // Onboarding
+        // ==========================================
+        // ONBOARDING
+        // ==========================================
+
         composable(Destinations.Onboarding.route) {
             OnboardingScreen(
-                navigationActions = navigationActions
+                navigationActions = navigationActions,
+                onComplete = {
+                    navController.navigate(Destinations.Home.route) {
+                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
+                    }
+                },
+                onSkip = {
+                    navController.navigate(Destinations.Home.route) {
+                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
+                    }
+                }
             )
         }
     }

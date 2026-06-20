@@ -1,99 +1,133 @@
 // app/src/main/java/com/airmouse/presentation/navigation/NavigationActions.kt
-@file:Suppress("unused")
-
 package com.airmouse.presentation.navigation
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.rememberNavController
 
-class NavigationActions(
-    val navController: NavController
-) {
-    fun navigateTo(destination: Destinations) {
-        navController.navigate(destination.route) {
-            popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
-            }
-            launchSingleTop = true
-            restoreState = true
-        }
+interface NavigationActions {
+    fun navigateTo(route: String)
+    fun navigateBack()
+    fun navigateToHome()
+    fun navigateToSettings()
+    fun navigateToCalibration()
+    fun navigateToCalibrationResult(quality: String)
+    fun navigateToStatistics()
+    fun navigateToHelp()
+    fun navigateToAbout()
+    fun navigateToProfiles()
+    fun navigateToTouchpad()
+    fun navigateToGestureStudio()
+    fun navigateToNetworkDiscovery()
+    fun navigateToProximity()
+    fun navigateToVoiceCommands()
+    fun navigateToEdgeGestures()
+    fun navigateToSensorVisualizer()
+    fun navigateToServerLogs()
+    fun navigateToThemes()
+    fun navigateToBattery()
+    fun navigateToAccessibility()
+    fun navigateToOnboarding()
+    fun navigateToTouchpadSettings()
+}
+
+class NavigationActionsImpl(
+    private val navController: NavController
+) : NavigationActions {
+
+    override fun navigateTo(route: String) {
+        navController.navigate(route)
     }
 
-    fun navigateToWithOptions(
-        destination: Destinations,
-        popUpTo: Destinations? = null,
-        inclusive: Boolean = false
-    ) {
-        navController.navigate(destination.route) {
-            popUpTo?.let {
-                popUpTo(it.route) {
-                    this.inclusive = inclusive
-                }
-            }
-            launchSingleTop = true
-        }
-    }
-
-    fun navigateToHome() = navigateTo(Destinations.Home)
-    fun navigateToStatistics() = navigateTo(Destinations.Statistics)
-    fun navigateToSettings() = navigateTo(Destinations.Settings)
-    fun navigateToHelp() = navigateTo(Destinations.Help)
-
-    fun navigateToAbout() = navigateTo(Destinations.About)
-    fun navigateToCalibration() = navigateTo(Destinations.Calibration)
-    fun navigateToSensorVisualizer() = navigateTo(Destinations.SensorVisualizer)
-    fun navigateToGestureStudio() = navigateTo(Destinations.GestureStudio)
-    fun navigateToEdgeGestures() = navigateTo(Destinations.EdgeGestures)
-    fun navigateToTouchpad() = navigateTo(Destinations.Touchpad)
-    fun navigateToNetworkDiscovery() = navigateTo(Destinations.NetworkDiscovery)
-    fun navigateToServerLogs() = navigateTo(Destinations.ServerLogs)
-    fun navigateToProximity() = navigateTo(Destinations.Proximity)
-    fun navigateToVoiceCommands() = navigateTo(Destinations.VoiceCommands)
-    fun navigateToProfiles() = navigateTo(Destinations.Profiles)
-    fun navigateToThemes() = navigateTo(Destinations.Themes)
-    fun navigateToBattery() = navigateTo(Destinations.Battery)
-    fun navigateToAccessibility() = navigateTo(Destinations.Accessibility)
-    fun navigateToTouchpadSettings() = navigateTo(Destinations.TouchpadSettings)
-    fun navigateToOnboarding() = navigateTo(Destinations.Onboarding)
-    fun navigateToCalibrationResult() = navigateTo(Destinations.CalibrationResult)
-
-    fun navigateBack() {
+    override fun navigateBack() {
         navController.popBackStack()
     }
 
-    fun navigateUp() {
-        navController.navigateUp()
+    override fun navigateToHome() {
+        navController.navigate(Destinations.Home.route) {
+            popUpTo(Destinations.Home.route) { inclusive = true }
+            launchSingleTop = true
+        }
     }
 
-    fun clearBackStack() {
-        navController.popBackStack(
-            navController.graph.findStartDestination().id,
-            inclusive = false
-        )
+    override fun navigateToSettings() {
+        navController.navigate(Destinations.Settings.route)
     }
 
-    fun navigateToHomeAndClearStack() {
-        navController.popBackStack(
-            navController.graph.findStartDestination().id,
-            inclusive = false
-        )
-        navigateToHome()
+    override fun navigateToCalibration() {
+        navController.navigate(Destinations.Calibration.route)
     }
 
-    fun canGoBack(): Boolean = navController.previousBackStackEntry != null
-    fun getCurrentRoute(): String? = navController.currentDestination?.route
-    fun isCurrentDestination(destination: Destinations): Boolean =
-        navController.currentDestination?.route == destination.route
-}
+    override fun navigateToCalibrationResult(quality: String) {
+        navController.navigate("${Destinations.CalibrationResult.route}?quality=$quality") {
+            popUpTo(Destinations.Calibration.route) { inclusive = true }
+        }
+    }
 
-@Composable
-fun rememberNavigationActions(
-    navController: NavController = rememberNavController()
-): NavigationActions {
-    return remember(navController) {
-        NavigationActions(navController)
+    override fun navigateToStatistics() {
+        navController.navigate(Destinations.Statistics.route)
+    }
+
+    override fun navigateToHelp() {
+        navController.navigate(Destinations.Help.route)
+    }
+
+    override fun navigateToAbout() {
+        navController.navigate(Destinations.About.route)
+    }
+
+    override fun navigateToProfiles() {
+        navController.navigate(Destinations.Profiles.route)
+    }
+
+    override fun navigateToTouchpad() {
+        navController.navigate(Destinations.Touchpad.route)
+    }
+
+    override fun navigateToGestureStudio() {
+        navController.navigate(Destinations.GestureStudio.route)
+    }
+
+    override fun navigateToNetworkDiscovery() {
+        navController.navigate(Destinations.NetworkDiscovery.route)
+    }
+
+    override fun navigateToProximity() {
+        navController.navigate(Destinations.Proximity.route)
+    }
+
+    override fun navigateToVoiceCommands() {
+        navController.navigate(Destinations.VoiceCommands.route)
+    }
+
+    override fun navigateToEdgeGestures() {
+        navController.navigate(Destinations.EdgeGestures.route)
+    }
+
+    override fun navigateToSensorVisualizer() {
+        navController.navigate(Destinations.SensorVisualizer.route)
+    }
+
+    override fun navigateToServerLogs() {
+        navController.navigate(Destinations.ServerLogs.route)
+    }
+
+    override fun navigateToThemes() {
+        navController.navigate(Destinations.Themes.route)
+    }
+
+    override fun navigateToBattery() {
+        navController.navigate(Destinations.Battery.route)
+    }
+
+    override fun navigateToAccessibility() {
+        navController.navigate(Destinations.Accessibility.route)
+    }
+
+    override fun navigateToOnboarding() {
+        navController.navigate(Destinations.Onboarding.route)
+    }
+
+    override fun navigateToTouchpadSettings() {
+        navController.navigate(Destinations.TouchpadSettings.route)
     }
 }

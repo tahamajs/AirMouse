@@ -20,12 +20,13 @@ fun AirMouseBottomBar(
 ) {
     val items = Destinations.bottomNavDestinations
     val selectedIndex = items.indexOfFirst { it.route == currentRoute }
+    val colorScheme = MaterialTheme.colorScheme
 
     NavigationBar(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = colorScheme.surface,
         tonalElevation = 8.dp
     ) {
         items.forEachIndexed { index, destination ->
@@ -49,11 +50,11 @@ fun AirMouseBottomBar(
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF00BCD4),
-                    selectedTextColor = Color(0xFF00BCD4),
-                    unselectedIconColor = Color(0xFF96A0AE),
-                    unselectedTextColor = Color(0xFF96A0AE),
-                    indicatorColor = Color(0xFF00BCD4).copy(alpha = 0.2f)
+                    selectedIconColor = colorScheme.primary,
+                    selectedTextColor = colorScheme.primary,
+                    unselectedIconColor = colorScheme.onSurfaceVariant,
+                    unselectedTextColor = colorScheme.onSurfaceVariant,
+                    indicatorColor = colorScheme.primary.copy(alpha = 0.2f)
                 )
             )
         }

@@ -8,11 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.airmouse.presentation.ui.about.AboutScreen
 import com.airmouse.presentation.ui.accessibility.AccessibilityScreen
 import com.airmouse.presentation.ui.battery.BatteryScreen
-import com.airmouse.presentation.ui.calibration.CalibrationProcessScreen
+import com.airmouse.presentation.ui.calibration.CalibrationGuideDialog
 import com.airmouse.presentation.ui.calibration.CalibrationScreen
+import com.airmouse.presentation.ui.calibration.CalibrationViewModel
 import com.airmouse.presentation.ui.edge.EdgeGesturesScreen
 import com.airmouse.presentation.ui.gesture.GestureStudioScreen
 import com.airmouse.presentation.ui.help.HelpScreen
@@ -28,6 +30,7 @@ import com.airmouse.presentation.ui.statistics.StatisticsScreen
 import com.airmouse.presentation.ui.themes.ThemesScreen
 import com.airmouse.presentation.ui.touchpad.TouchpadScreen
 import com.airmouse.presentation.ui.voice.VoiceCommandsScreen
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun AirMouseNavHost(
@@ -35,7 +38,7 @@ fun AirMouseNavHost(
     startDestination: String,
     modifier: Modifier = Modifier
 ) {
-    val navActions = rememberNavigationActions(navController)
+    val navActions = NavigationActionsImpl(navController)
 
     NavHost(
         navController = navController,
@@ -82,16 +85,30 @@ fun AirMouseNavHost(
             )
         }
 
-        // ==================== CALIBRATION (Process + Result) ====================
+        // ==================== CALIBRATION ====================
 
-        // Calibration Process Screen - the step-by-step guide
+        // Calibration Guide Dialog - step-by-step instructions
         composable(Destinations.Calibration.route) {
+            CalibrationGuideDialog(
+                step = 0,
+                onDismiss = { navActions.navigateBack() },
+                onNextStep = {
+                    // Navigate to calibration process
+                    navActions.navigateTo(Destinations.CalibrationProcess.route)
+                }
+            )
+        }
+
+        // Calibration Process Screen - actual calibration
+        composable(Destinations.CalibrationProcess.route) {
+            val viewModel: CalibrationViewModel = hiltViewModel()
             CalibrationProcessScreen(
+                viewModel = viewModel,
                 navigationActions = navActions,
-                onCalibrationComplete = { resultData ->
+                onCalibrationComplete = { quality ->
                     // Navigate to results screen with quality parameter
                     navController.navigate(
-                        Destinations.CalibrationResult.createRoute(resultData.quality)
+                        Destinations.CalibrationResult.createRoute("quality" to quality)
                     ) {
                         popUpTo(Destinations.Calibration.route) { inclusive = true }
                     }
@@ -102,20 +119,21 @@ fun AirMouseNavHost(
         // Calibration Results Screen - shows the final quality
         composable(
             route = Destinations.CalibrationResult.route,
-            arguments = Destinations.CalibrationResult.arguments
+            arguments = listOf(
+                navArgument("quality") { defaultValue = "GOOD" }
+            )
         ) { backStackEntry ->
             val quality = backStackEntry.arguments?.getString("quality") ?: "GOOD"
             CalibrationScreen(
                 navigationActions = navActions,
-                quality = quality,
-                onContinue = { navController.popBackStack() },
+                onContinue = { navActions.navigateToHome() },
                 onRecalibrate = {
                     navController.navigate(Destinations.Calibration.route) {
                         popUpTo(Destinations.CalibrationResult.route) { inclusive = true }
                     }
                 },
-                onSkip = { navController.popBackStack() },
-                onComplete = { navController.popBackStack() }
+                onSkip = { navActions.navigateToHome() },
+                onComplete = { navActions.navigateToHome() }
             )
         }
 
@@ -146,7 +164,7 @@ fun AirMouseNavHost(
         }
 
         composable(Destinations.TouchpadSettings.route) {
-            TouchpadScreen(navigationActions = navActions)
+            TouchpadSettingsScreen(navigationActions = navActions)
         }
 
         composable(Destinations.NetworkDiscovery.route) {

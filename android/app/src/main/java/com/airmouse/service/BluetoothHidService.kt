@@ -1,3 +1,4 @@
+//// app/src/main/java/com/airmouse/service/BluetoothHidService.kt
 //package com.airmouse.service
 //
 //import android.app.*
@@ -80,7 +81,14 @@
 //            return
 //        }
 //
-//        // ✅ FIXED: Use the correct API with executor and callback
+//        // Check if Bluetooth is enabled
+//        if (!bluetoothAdapter.isEnabled) {
+//            Timber.w("Bluetooth is not enabled")
+//            updateNotification("Bluetooth Off", "Please enable Bluetooth")
+//            return
+//        }
+//
+//        // Check if HID Device profile is supported
 //        val mainExecutor = ContextCompat.getMainExecutor(this)
 //
 //        bluetoothAdapter.getProfileProxy(this, object : BluetoothProfile.ServiceListener {
@@ -97,6 +105,7 @@
 //                    hidDevice = null
 //                    isRegistered = false
 //                    Timber.i("HID Device service disconnected")
+//                    updateNotification("Disconnected", "HID profile unavailable")
 //                }
 //            }
 //        }, BluetoothProfile.HID_DEVICE)
@@ -105,15 +114,60 @@
 //    @android.annotation.SuppressLint("MissingPermission")
 //    private fun registerHidApp() {
 //        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-//        isRegistered = true
-//        updateNotification("Ready", "HID profile available")
+//
+//        val sdpSettings = BluetoothHidDeviceAppSdpSettings(
+//            "Air Mouse Pro",
+//            "Air Mouse Pro HID",
+//            "Air Mouse",
+//            BluetoothHidDevice.SUBCLASS1_COMBO,
+//            byteArrayOf()
+//        )
+//
+//        val qosSettings = BluetoothHidDeviceAppQosSettings(100, 100, 0, 0, 0, 0)
+//
+//        hidDevice?.registerApp(sdpSettings, qosSettings, null, object : BluetoothHidDevice.Callback() {
+//            override fun onAppStatusChanged(registered: Boolean, appId: Int) {
+//                isRegistered = registered
+//                if (registered) {
+//                    Timber.i("HID App registered successfully")
+//                    updateNotification("Ready", "HID profile registered")
+//                } else {
+//                    Timber.w("HID App registration failed")
+//                    updateNotification("Error", "Failed to register HID profile")
+//                }
+//            }
+//
+//            override fun onConnectionStateChanged(device: BluetoothDevice?, state: Int) {
+//                super.onConnectionStateChanged(device, state)
+//                when (state) {
+//                    BluetoothProfile.STATE_CONNECTED -> {
+//                        isConnected = true
+//                        connectedDevice = device
+//                        Timber.i("Device connected: ${device?.name}")
+//                        updateNotification("Connected", "Mouse connected to ${device?.name}")
+//                    }
+//                    BluetoothProfile.STATE_DISCONNECTED -> {
+//                        isConnected = false
+//                        connectedDevice = null
+//                        Timber.i("Device disconnected")
+//                        updateNotification("Disconnected", "Waiting for connection")
+//                    }
+//                    BluetoothProfile.STATE_CONNECTING -> {
+//                        Timber.d("Connecting to device: ${device?.name}")
+//                    }
+//                    BluetoothProfile.STATE_DISCONNECTING -> {
+//                        Timber.d("Disconnecting from device: ${device?.name}")
+//                    }
+//                }
+//            }
+//        })
 //    }
 //
 //    @android.annotation.SuppressLint("MissingPermission")
 //    fun sendMouseReport(dx: Int, dy: Int, buttons: Byte) {
 //        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
 //        if (!isRegistered || hidDevice == null) return
-//        if (!isConnected) return
+//        if (!isConnected || connectedDevice == null) return
 //
 //        val report = byteArrayOf(buttons, dx.toByte(), dy.toByte())
 //        runCatching {
@@ -130,6 +184,7 @@
 //            delay(50)
 //            sendMouseReport(0, 0, 0)
 //        }
+//        Timber.d("Click sent: $button")
 //    }
 //
 //    fun sendMove(dx: Int, dy: Int) {
@@ -173,6 +228,7 @@
 //
 //    fun isConnected(): Boolean = isConnected
 //    fun isRegistered(): Boolean = isRegistered
+//    fun getConnectedDeviceName(): String? = connectedDevice?.name
 //
 //    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 //        return START_STICKY
