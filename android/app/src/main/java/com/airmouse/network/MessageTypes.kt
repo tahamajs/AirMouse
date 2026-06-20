@@ -11,7 +11,21 @@ package com.airmouse.network
  */
 object MessageTypes {
 
-    // ==================== CLIENT TO SERVER ====================
+    // ==================== PROTOCOL VERSION & PORTS ====================
+
+    /** Current protocol version */
+    const val PROTOCOL_VERSION = "3.0"
+
+    /** Default TCP port */
+    const val DEFAULT_TCP_PORT = 8080
+
+    /** Default WebSocket port */
+    const val DEFAULT_WEBSOCKET_PORT = 8081
+
+    /** Default UDP discovery port */
+    const val DEFAULT_UDP_PORT = 8082
+
+    // ==================== CLIENT → SERVER MESSAGE TYPES ====================
 
     /** Mouse movement delta */
     const val TYPE_MOVE = "move"
@@ -58,7 +72,10 @@ object MessageTypes {
     /** Custom data message */
     const val TYPE_CUSTOM = "custom"
 
-    // ==================== SERVER TO CLIENT ====================
+    /** Calibration data sent to server */
+    const val TYPE_CALIBRATION_DATA = "calibration_data"
+
+    // ==================== SERVER → CLIENT MESSAGE TYPES ====================
 
     /** Welcome message after successful hello */
     const val TYPE_WELCOME = "welcome"
@@ -266,70 +283,70 @@ object MessageTypes {
 
     // ==================== GESTURE TYPES ====================
 
-    /** Thumbs up gesture - typically Play/Pause */
+    /** Thumbs up gesture – typically Play/Pause */
     const val GESTURE_THUMBS_UP = "ThumbsUp"
 
-    /** Thumbs down gesture - typically Stop */
+    /** Thumbs down gesture – typically Stop */
     const val GESTURE_THUMBS_DOWN = "ThumbsDown"
 
-    /** Left swipe gesture - typically Previous Track */
+    /** Left swipe gesture – typically Previous Track */
     const val GESTURE_SWIPE_LEFT = "SwipeLeft"
 
-    /** Right swipe gesture - typically Next Track */
+    /** Right swipe gesture – typically Next Track */
     const val GESTURE_SWIPE_RIGHT = "SwipeRight"
 
-    /** Up swipe gesture - typically Volume Up */
+    /** Up swipe gesture – typically Volume Up */
     const val GESTURE_SWIPE_UP = "SwipeUp"
 
-    /** Down swipe gesture - typically Volume Down */
+    /** Down swipe gesture – typically Volume Down */
     const val GESTURE_SWIPE_DOWN = "SwipeDown"
 
-    /** Clockwise circle gesture - typically Volume Up */
+    /** Clockwise circle gesture – typically Volume Up */
     const val GESTURE_CIRCLE_CW = "CircleCW"
 
-    /** Counter-clockwise circle gesture - typically Volume Down */
+    /** Counter-clockwise circle gesture – typically Volume Down */
     const val GESTURE_CIRCLE_CCW = "CircleCCW"
 
-    /** Pinch in gesture - typically Zoom Out */
+    /** Pinch in gesture – typically Zoom Out */
     const val GESTURE_PINCH_IN = "PinchIn"
 
-    /** Pinch out gesture - typically Zoom In */
+    /** Pinch out gesture – typically Zoom In */
     const val GESTURE_PINCH_OUT = "PinchOut"
 
-    /** Double tap gesture - typically Play/Pause */
+    /** Double tap gesture – typically Play/Pause */
     const val GESTURE_DOUBLE_TAP = "DoubleTap"
 
-    /** Long press gesture - typically Right Click */
+    /** Long press gesture – typically Right Click */
     const val GESTURE_LONG_PRESS = "LongPress"
 
-    /** Shake gesture - typically Undo */
+    /** Shake gesture – typically Undo */
     const val GESTURE_SHAKE = "Shake"
 
-    /** Peace sign gesture - typically Lock Screen */
+    /** Peace sign gesture – typically Lock Screen */
     const val GESTURE_PEACE = "Peace"
 
-    /** Fist gesture - typically Mute */
+    /** Fist gesture – typically Mute */
     const val GESTURE_FIST = "Fist"
 
-    /** Zoom in gesture */
+    /** Zoom in gesture (alternate) */
     const val GESTURE_ZOOM_IN = "ZoomIn"
 
-    /** Zoom out gesture */
+    /** Zoom out gesture (alternate) */
     const val GESTURE_ZOOM_OUT = "ZoomOut"
 
-    /** Wave gesture - typically Hello */
+    /** Wave gesture – typically Hello */
     const val GESTURE_WAVE = "Wave"
 
-    /** OK sign gesture - typically Confirm */
+    /** OK sign gesture – typically Confirm */
     const val GESTURE_OK = "Ok"
 
-    /** Point gesture - typically Select */
+    /** Point gesture – typically Select */
     const val GESTURE_POINT = "Point"
 
-    /** Heart gesture - typically Favorite */
+    /** Heart gesture – typically Favorite */
     const val GESTURE_HEART = "Heart"
 
-    /** V sign gesture - typically Victory */
+    /** V sign gesture – typically Victory */
     const val GESTURE_V = "V"
 
     // ==================== BUTTON TYPES ====================
@@ -349,45 +366,42 @@ object MessageTypes {
     /** Forward mouse button */
     const val BUTTON_FORWARD = "forward"
 
-    // ==================== PROTOCOL VERSIONS ====================
+    // ==================== PRIORITIES ====================
 
-    /** Current protocol version */
-    const val PROTOCOL_VERSION = "3.0"
+    /** High priority – critical actions (click, lock, etc.) */
+    const val PRIORITY_HIGH = "high"
 
-    /** Minimum supported protocol version */
-    const val MIN_PROTOCOL_VERSION = "3.0"
+    /** Medium priority – standard actions (move, scroll) */
+    const val PRIORITY_MEDIUM = "medium"
 
-    /** Maximum supported protocol version */
-    const val MAX_PROTOCOL_VERSION = "3.0"
+    /** Low priority – analytics, logs, etc. */
+    const val PRIORITY_LOW = "low"
 
-    // ==================== CONNECTION PARAMETERS ====================
+    // ==================== ERROR CODES ====================
 
-    /** Default TCP port */
-    const val DEFAULT_TCP_PORT = 8080
+    /** Invalid JSON format */
+    const val ERROR_INVALID_JSON = 400
 
-    /** Default WebSocket port */
-    const val DEFAULT_WEBSOCKET_PORT = 8081
+    /** Missing required field */
+    const val ERROR_MISSING_FIELD = 401
 
-    /** Default UDP discovery port */
-    const val DEFAULT_UDP_PORT = 8082
+    /** Invalid message type */
+    const val ERROR_INVALID_TYPE = 402
 
-    /** Default heartbeat interval in milliseconds */
-    const val DEFAULT_HEARTBEAT_INTERVAL_MS = 30000L
+    /** Authentication failed */
+    const val ERROR_AUTH_FAILED = 403
 
-    /** Default connection timeout in milliseconds */
-    const val DEFAULT_CONNECTION_TIMEOUT_MS = 10000L
+    /** Permission denied */
+    const val ERROR_PERMISSION_DENIED = 404
 
-    /** Default read timeout in milliseconds */
-    const val DEFAULT_READ_TIMEOUT_MS = 30000L
+    /** Rate limit exceeded */
+    const val ERROR_RATE_LIMIT = 429
 
-    /** Default write timeout in milliseconds */
-    const val DEFAULT_WRITE_TIMEOUT_MS = 5000L
+    /** Internal server error */
+    const val ERROR_INTERNAL = 500
 
-    /** Default max reconnection attempts */
-    const val DEFAULT_MAX_RECONNECT_ATTEMPTS = 10
-
-    /** Default reconnection delay in milliseconds */
-    const val DEFAULT_RECONNECT_DELAY_MS = 3000L
+    /** Service unavailable */
+    const val ERROR_SERVICE_UNAVAILABLE = 503
 
     // ==================== MESSAGE SIZE LIMITS ====================
 
@@ -428,52 +442,21 @@ object MessageTypes {
 
     /** Maximum control messages per second */
     const val MAX_CONTROL_RATE = 10
-
-    // ==================== ERROR CODES ====================
-
-    /** Invalid JSON format */
-    const val ERROR_INVALID_JSON = 400
-
-    /** Missing required field */
-    const val ERROR_MISSING_FIELD = 401
-
-    /** Invalid message type */
-    const val ERROR_INVALID_TYPE = 402
-
-    /** Authentication failed */
-    const val ERROR_AUTH_FAILED = 403
-
-    /** Permission denied */
-    const val ERROR_PERMISSION_DENIED = 404
-
-    /** Rate limit exceeded */
-    const val ERROR_RATE_LIMIT = 429
-
-    /** Internal server error */
-    const val ERROR_INTERNAL = 500
-
-    /** Service unavailable */
-    const val ERROR_SERVICE_UNAVAILABLE = 503
-
-    // ==================== MESSAGE PRIORITIES ====================
-
-    /** High priority - critical actions (click, lock, etc.) */
-    const val PRIORITY_HIGH = "high"
-
-    /** Medium priority - standard actions (move, scroll) */
-    const val PRIORITY_MEDIUM = "medium"
-
-    /** Low priority - analytics, logs, etc. */
-    const val PRIORITY_LOW = "low"
 }
 
+// ============================================================
+// Helper object for gesture-to-action mapping
+// ============================================================
+
 /**
- * Helper object for gesture-to-action mapping
+ * Provides default action mappings for gestures and helper functions
+ * for confidence thresholds and priorities.
  */
 object GestureActionMap {
 
     /**
-     * Map gesture names to their default system actions
+     * Map gesture names to their default system actions.
+     * Keys should match the gesture constants defined in MessageTypes.
      */
     val defaultActions: Map<String, String> = mapOf(
         MessageTypes.GESTURE_THUMBS_UP to MessageTypes.COMMAND_PLAY_PAUSE,
@@ -499,14 +482,15 @@ object GestureActionMap {
     )
 
     /**
-     * Get action for a gesture, with fallback to "none"
+     * Get the default system action for a gesture, falling back to "none".
      */
     fun getActionForGesture(gesture: String): String {
         return defaultActions[gesture] ?: "none"
     }
 
     /**
-     * Get confidence threshold for a gesture (different gestures may need different thresholds)
+     * Get the confidence threshold for a gesture.
+     * Different gestures may require different thresholds.
      */
     fun getConfidenceThreshold(gesture: String): Float {
         return when (gesture) {
@@ -520,12 +504,12 @@ object GestureActionMap {
             MessageTypes.GESTURE_POINT -> 0.7f
             MessageTypes.GESTURE_HEART -> 0.75f
             MessageTypes.GESTURE_V -> 0.7f
-            else -> 0.6f
+            else -> 0.6f  // default threshold
         }
     }
 
     /**
-     * Get priority for a gesture
+     * Get the priority level for a gesture.
      */
     fun getPriorityForGesture(gesture: String): String {
         return when (gesture) {
@@ -546,64 +530,4 @@ object GestureActionMap {
             else -> MessageTypes.PRIORITY_LOW
         }
     }
-}// app/src/main/java/com/airmouse/network/MessageTypes.kt
-package com.airmouse.network
-
-object MessageTypes {
-    // Protocol version
-    const val PROTOCOL_VERSION = "3.0"
-
-    // Default ports
-    const val DEFAULT_TCP_PORT = 8080
-    const val DEFAULT_WEBSOCKET_PORT = 8081
-    const val DEFAULT_UDP_PORT = 8082
-
-    // Message types (client → server)
-    const val TYPE_MOVE = "move"
-    const val TYPE_CLICK = "click"
-    const val TYPE_DOUBLE_CLICK = "doubleclick"
-    const val TYPE_RIGHT_CLICK = "rightclick"
-    const val TYPE_SCROLL = "scroll"
-    const val TYPE_HELLO = "hello"
-    const val TYPE_GESTURE = "gesture"
-    const val TYPE_PROXIMITY = "proximity"
-    const val TYPE_CONTROL = "control"
-    const val TYPE_PING = "ping"
-    const val TYPE_PONG = "pong"
-    const val TYPE_ACK = "ack"
-    const val TYPE_ERROR = "error"
-    const val TYPE_WELCOME = "welcome"
-    const val TYPE_CALIBRATION_DATA = "calibration_data"
-
-    // Button types
-    const val BUTTON_LEFT = "left"
-    const val BUTTON_RIGHT = "right"
-    const val BUTTON_MIDDLE = "middle"
-    const val BUTTON_BACK = "back"
-    const val BUTTON_FORWARD = "forward"
-
-    // Control commands
-    const val COMMAND_PAUSE_MOVEMENT = "pause_movement"
-    const val COMMAND_RESUME_MOVEMENT = "resume_movement"
-    const val COMMAND_LOCK_SCREEN = "lock_screen"
-    const val COMMAND_UNLOCK_SCREEN = "unlock_screen"
-    const val COMMAND_CALIBRATE = "calibrate"
-    const val COMMAND_RESET = "reset"
-    const val COMMAND_PLAY_PAUSE = "play_pause"
-    const val COMMAND_NEXT_TRACK = "next_track"
-    const val COMMAND_PREV_TRACK = "prev_track"
-    const val COMMAND_STOP = "stop"
-    const val COMMAND_VOLUME_UP = "volume_up"
-    const val COMMAND_VOLUME_DOWN = "volume_down"
-    const val COMMAND_MUTE = "mute"
-    const val COMMAND_BROWSER_BACK = "browser_back"
-    const val COMMAND_BROWSER_FORWARD = "browser_forward"
-    const val COMMAND_BROWSER_REFRESH = "browser_refresh"
-    const val COMMAND_BROWSER_HOME = "browser_home"
-    const val COMMAND_SHOW_DESKTOP = "show_desktop"
-    const val COMMAND_TASK_VIEW = "task_view"
-    const val COMMAND_SWITCH_WINDOW = "switch_window"
-    const val COMMAND_ZOOM_IN = "zoom_in"
-    const val COMMAND_ZOOM_OUT = "zoom_out"
-    const val COMMAND_ZOOM_RESET = "zoom_reset"
 }
