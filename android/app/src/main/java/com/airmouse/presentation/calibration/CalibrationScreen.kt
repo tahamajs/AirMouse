@@ -304,10 +304,13 @@ private fun CalibrationGuidanceCard() {
         ) {
             Text("How to calibrate", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(
-                "1. Keep the phone completely still and collect several gyro samples to estimate bias.\n" +
-                    "2. Hold the phone in six different orientations for the accelerometer so scale and offset can be computed from gravity (about 9.81 m/s²).\n" +
-                    "3. Move the phone in a figure-eight pattern for the magnetometer so offset and scale can be estimated across the full sphere.\n" +
-                    "4. Use the live values below to verify raw sensor output and filter stability before saving.",
+                "The assignment expects calibrated sensor data, not raw readings. This means:\n" +
+                    "1. Gyroscope: keep the phone still, gather several samples, and subtract the average bias from future readings so the ideal stationary value is close to zero.\n" +
+                    "2. Accelerometer: place the phone in six orientations so each axis can be compared against gravity (about 9.81 m/s²) and use those samples to estimate offset and scale.\n" +
+                    "3. Magnetometer: rotate the phone through all directions, collect minimum and maximum values for each axis, then compute offset = (min + max) / 2 and scale = (max - min) / 2.\n" +
+                    "4. Correct magnetometer values with (Raw - Offset) / Scale.\n" +
+                    "5. Use a sensor-fusion filter such as Madgwick AHRS, or another suitable filter, to reduce drift and combine the calibrated sensors.\n" +
+                    "6. The live readings below help verify stability before saving.",
                 color = Color.White.copy(alpha = 0.82f),
                 lineHeight = 20.sp
             )
