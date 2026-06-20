@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import com.airmouse.presentation.ui.about.AboutScreen
 import com.airmouse.presentation.ui.accessibility.AccessibilityScreen
 import com.airmouse.presentation.ui.battery.BatteryScreen
+import com.airmouse.presentation.ui.calibration.CalibrationProcessScreen
 import com.airmouse.presentation.ui.calibration.CalibrationScreen
 import com.airmouse.presentation.ui.edge.EdgeGesturesScreen
 import com.airmouse.presentation.ui.gesture.GestureStudioScreen
@@ -57,6 +58,8 @@ fun AirMouseNavHost(
                     slideOutHorizontally(animationSpec = tween(300)) { it }
         }
     ) {
+        // ==================== MAIN SCREENS ====================
+
         composable(Destinations.Home.route) {
             HomeScreen(navigationActions = navActions)
         }
@@ -72,27 +75,58 @@ fun AirMouseNavHost(
             )
         }
 
+        composable(Destinations.Profiles.route) {
+            ProfilesScreen(
+                navigationActions = navActions,
+                onNavigateBack = { navActions.navigateBack() }
+            )
+        }
+
+        // ==================== CALIBRATION (Process + Result) ====================
+
+        // Calibration Process Screen - the step-by-step guide
+        composable(Destinations.Calibration.route) {
+            CalibrationProcessScreen(
+                navigationActions = navActions,
+                onCalibrationComplete = { resultData ->
+                    // Navigate to results screen with quality parameter
+                    navController.navigate(
+                        Destinations.CalibrationResult.createRoute(resultData.quality)
+                    ) {
+                        popUpTo(Destinations.Calibration.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Calibration Results Screen - shows the final quality
+        composable(
+            route = Destinations.CalibrationResult.route,
+            arguments = Destinations.CalibrationResult.arguments
+        ) { backStackEntry ->
+            val quality = backStackEntry.arguments?.getString("quality") ?: "GOOD"
+            CalibrationScreen(
+                navigationActions = navActions,
+                quality = quality,
+                onContinue = { navController.popBackStack() },
+                onRecalibrate = {
+                    navController.navigate(Destinations.Calibration.route) {
+                        popUpTo(Destinations.CalibrationResult.route) { inclusive = true }
+                    }
+                },
+                onSkip = { navController.popBackStack() },
+                onComplete = { navController.popBackStack() }
+            )
+        }
+
+        // ==================== OTHER SCREENS ====================
+
         composable(Destinations.Help.route) {
             HelpScreen(navigationActions = navActions)
         }
 
         composable(Destinations.About.route) {
             AboutScreen(navigationActions = navActions)
-        }
-
-        composable(Destinations.Calibration.route) {
-            CalibrationScreen(
-                navigationActions = navActions,
-                onComplete = { navController.popBackStack() },
-                onRecalibrate = { /* Add implementation if required */ }
-            )
-        }
-        composable(Destinations.CalibrationResult.route) {
-            CalibrationScreen(
-                navigationActions = navActions,
-                onComplete = { navController.popBackStack() },
-                onRecalibrate = { navActions.navigateToCalibration() }
-            )
         }
 
         composable(Destinations.SensorVisualizer.route) {
@@ -108,6 +142,10 @@ fun AirMouseNavHost(
         }
 
         composable(Destinations.Touchpad.route) {
+            TouchpadScreen(navigationActions = navActions)
+        }
+
+        composable(Destinations.TouchpadSettings.route) {
             TouchpadScreen(navigationActions = navActions)
         }
 
@@ -127,10 +165,6 @@ fun AirMouseNavHost(
             VoiceCommandsScreen(navigationActions = navActions)
         }
 
-        composable(Destinations.Profiles.route) {
-            ProfilesScreen(navigationActions = navActions)
-        }
-
         composable(Destinations.Themes.route) {
             ThemesScreen(navigationActions = navActions)
         }
@@ -143,14 +177,21 @@ fun AirMouseNavHost(
             AccessibilityScreen(navigationActions = navActions)
         }
 
-        composable(Destinations.TouchpadSettings.route) {
-            TouchpadScreen(navigationActions = navActions)
-        }
+        // ==================== ONBOARDING ====================
 
         composable(Destinations.Onboarding.route) {
-            // Updated to match OnboardingScreen parameter constraints
             OnboardingScreen(
-                navigationActions = navActions
+                navigationActions = navActions,
+                onComplete = {
+                    navController.navigate(Destinations.Home.route) {
+                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
+                    }
+                },
+                onSkip = {
+                    navController.navigate(Destinations.Home.route) {
+                        popUpTo(Destinations.Onboarding.route) { inclusive = true }
+                    }
+                }
             )
         }
     }
