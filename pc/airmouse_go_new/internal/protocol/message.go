@@ -10,8 +10,8 @@ import (
 // ------------------------------------------------------------
 
 type WireMessage struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload,omitempty"`
+	Type    string           `json:"type"`
+	Payload json.RawMessage  `json:"payload,omitempty"`
 	ID      *json.RawMessage `json:"id,omitempty"`
 }
 
@@ -73,6 +73,11 @@ func DecodeWireMessage(line []byte) (msgType string, payload map[string]any, id 
 	return msgType, payload, id, nil
 }
 
+// Backward-compatible aliases used by older tests and internal call sites.
+func decodeWireMessage(line []byte) (string, map[string]any, *string, error) {
+	return DecodeWireMessage(line)
+}
+
 // rawMessageToString converts a json.RawMessage to string
 func rawMessageToString(raw json.RawMessage) (string, error) {
 	var s string
@@ -106,6 +111,10 @@ func AckMessage(id *string) []byte {
 	return append(body, '\n')
 }
 
+func ackMessage(id *string) []byte {
+	return AckMessage(id)
+}
+
 // ErrorMessage returns an error message
 func ErrorMessage(errMsg string) []byte {
 	body, _ := json.Marshal(map[string]any{
@@ -113,6 +122,10 @@ func ErrorMessage(errMsg string) []byte {
 		"error": errMsg,
 	})
 	return append(body, '\n')
+}
+
+func errorMessage(errMsg string) []byte {
+	return ErrorMessage(errMsg)
 }
 
 // WelcomeMessage returns a welcome message
@@ -125,6 +138,10 @@ func WelcomeMessage(serverName, version string) []byte {
 		},
 	})
 	return append(body, '\n')
+}
+
+func welcomeMessage(serverName, version string) []byte {
+	return WelcomeMessage(serverName, version)
 }
 
 // PongMessage returns a pong message
@@ -203,8 +220,8 @@ func ProximityMessage(deviceID string, isNear bool, distance float32) []byte {
 // HelloMessage creates a hello message
 func HelloMessage(name, version string) []byte {
 	body, _ := json.Marshal(map[string]any{
-		"type": "hello",
-		"name": name,
+		"type":    "hello",
+		"name":    name,
 		"version": version,
 	})
 	return append(body, '\n')

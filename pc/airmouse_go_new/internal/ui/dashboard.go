@@ -92,50 +92,59 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	// Buttons
 	tab.startBtn = widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() {
-		err := server.Start()
-		if server.IsRunning() {
-			tab.mu.Lock()
-			tab.serverStart = time.Now()
-			tab.mu.Unlock()
-			tab.serverStatus.SetText("✅ Server Status: Running")
-			tab.startBtn.Disable()
-			tab.stopBtn.Enable()
-			tab.refreshBtn.Enable()
-
-			ip := utils.GetLocalIP()
-			tab.endpointLabel.SetText(fmt.Sprintf(
-				"🔌 Endpoint: %s:%d (TCP) | ws://%s:%d\n📡 UDP Discovery: port %d",
-				ip, tab.cfg.Port, ip, tab.cfg.WebSocketPort, tab.cfg.UDPPort,
-			))
-
-			if tab.cfg.EnableAISmoothing {
-				tab.aiStatusLabel.SetText("🧠 AI Smoothing: Enabled ✅")
-			} else {
-				tab.aiStatusLabel.SetText("🧠 AI Smoothing: Disabled ⭕")
-			}
-		}
-
-		if err != nil {
-			win := getCurrentWindow()
-			if win != nil {
+		tab.startBtn.Disable()
+		tab.serverStatus.SetText("⏳ Server Status: Starting...")
+		go func() {
+			err := server.Start()
+			RunOnMain(func() {
 				if server.IsRunning() {
-					dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
-						"Server is running, but one or more protocols reported an issue:\n\n%v", err), win)
+					tab.mu.Lock()
+					tab.serverStart = time.Now()
+					tab.mu.Unlock()
+					tab.serverStatus.SetText("✅ Server Status: Running")
+					tab.startBtn.Disable()
+					tab.stopBtn.Enable()
+					tab.refreshBtn.Enable()
+
+					ip := utils.GetLocalIP()
+					tab.endpointLabel.SetText(fmt.Sprintf(
+						"🔌 Endpoint: %s:%d (TCP) | ws://%s:%d\n📡 UDP Discovery: port %d",
+						ip, tab.cfg.Port, ip, tab.cfg.WebSocketPort, tab.cfg.UDPPort,
+					))
+
+					if tab.cfg.EnableAISmoothing {
+						tab.aiStatusLabel.SetText("🧠 AI Smoothing: Enabled ✅")
+					} else {
+						tab.aiStatusLabel.SetText("🧠 AI Smoothing: Disabled ⭕")
+					}
 				} else {
-					dialog.ShowError(fmt.Errorf("Failed to start server: %v", err), win)
+					tab.serverStatus.SetText("⛔ Server Status: Stopped")
+					tab.startBtn.Enable()
 				}
-			}
-		}
+
+				if err != nil {
+					win := getCurrentWindow()
+					if win != nil {
+						if server.IsRunning() {
+							dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+								"Server is running, but one or more protocols reported an issue:\n\n%v", err), win)
+						} else {
+							dialog.ShowError(fmt.Errorf("Failed to start server: %v", err), win)
+						}
+					}
+				}
+			})
+		}()
 	})
 
 	tab.stopBtn = widget.NewButtonWithIcon("Stop Server", theme.MediaStopIcon(), func() {
-		server.Stop()
 		tab.serverStatus.SetText("⛔ Server Status: Stopped")
 		tab.startBtn.Enable()
 		tab.stopBtn.Disable()
 		tab.refreshBtn.Disable()
 		tab.endpointLabel.SetText("🔌 Endpoint: not started")
 		tab.uptimeLabel.SetText("⏱️ Uptime: --:--:--")
+		go server.Stop()
 	})
 	tab.stopBtn.Disable()
 
@@ -362,11 +371,11 @@ func (t *DashboardTab) showPairingQRDialog() {
 	qrImage.FillMode = canvas.ImageFillOriginal
 
 	instructions := widget.NewLabel(
-		"📱 How to pair:\n\n"+
-			"1. Open Air Mouse app on your phone\n"+
-			"2. Tap the QR scanner icon\n"+
-			"3. Scan this QR code\n"+
-			"4. Your device will appear in the Devices tab\n\n"+
+		"📱 How to pair:\n\n" +
+			"1. Open Air Mouse app on your phone\n" +
+			"2. Tap the QR scanner icon\n" +
+			"3. Scan this QR code\n" +
+			"4. Your device will appear in the Devices tab\n\n" +
 			fmt.Sprintf("Server: %s\nIP: %s\nPort: %d\nVersion: %s",
 				t.cfg.ServerName, ip, port, t.cfg.Version),
 	)

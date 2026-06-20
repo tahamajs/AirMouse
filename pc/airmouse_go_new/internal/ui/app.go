@@ -36,14 +36,14 @@ type App struct {
 	deviceMgr *device.Manager
 	collector *personalization.DataCollector
 
-	dashboardTab  fyne.CanvasObject
-	devicesTab    fyne.CanvasObject
-	networkTab    fyne.CanvasObject
-	gesturesTab   fyne.CanvasObject
-	proximityTab  fyne.CanvasObject
-	analyticsTab  fyne.CanvasObject
-	settingsTab   fyne.CanvasObject
-	logsTab       fyne.CanvasObject
+	dashboardTab fyne.CanvasObject
+	devicesTab   fyne.CanvasObject
+	networkTab   fyne.CanvasObject
+	gesturesTab  fyne.CanvasObject
+	proximityTab fyne.CanvasObject
+	analyticsTab fyne.CanvasObject
+	settingsTab  fyne.CanvasObject
+	logsTab      fyne.CanvasObject
 
 	statusBar        *StatusBar
 	connectionStatus *widget.Label
@@ -324,10 +324,12 @@ func (a *App) connectionStatusUpdater() {
 	for range ticker.C {
 		deviceCount := len(a.deviceMgr.GetAllDevices())
 		RunOnMain(func() {
-			if deviceCount > 0 {
+			if a.server != nil && !a.server.IsRunning() {
+				a.connectionStatus.SetText("⛔ Status: Stopped")
+			} else if deviceCount > 0 {
 				a.connectionStatus.SetText(fmt.Sprintf("🟢 Connected: %d device(s)", deviceCount))
 			} else {
-				a.connectionStatus.SetText("🔴 Status: Waiting for connections")
+				a.connectionStatus.SetText("🟡 Status: Waiting for connections")
 			}
 		})
 	}
