@@ -234,6 +234,27 @@ class NotificationManager @Inject constructor(
         notificationManagerCompat.notify(NOTIFICATION_DISCONNECTED, notification)
     }
 
+    fun showConnectionPendingNotification(serverName: String? = null) {
+        val message = if (serverName.isNullOrBlank()) {
+            "Waiting for server approval..."
+        } else {
+            "Waiting for $serverName to accept the connection..."
+        }
+
+        val notification = createBaseNotification(
+            channelId = CHANNEL_CONNECTION,
+            title = "⏳ Connecting...",
+            message = message,
+            icon = R.drawable.ic_reconnecting,
+            priority = PRIORITY_LOW
+        ).apply {
+            setOngoing(true)
+            setOnlyAlertOnce(true)
+        }.build()
+
+        notificationManagerCompat.notify(NOTIFICATION_INFO, notification)
+    }
+
     fun showConnectionErrorNotification(error: String) {
         val notification = createBaseNotification(
             channelId = CHANNEL_ERROR,
@@ -558,8 +579,7 @@ class NotificationManager @Inject constructor(
             // Find and cancel all notifications in the group
             val activeNotifications = getActiveNotifications()
             activeNotifications?.forEach { notification ->
-                val extras = notification.notification.extras
-                val notificationGroupKey = extras.getString("android.support.groupKey")
+                val notificationGroupKey = notification.notification.group
                 if (notificationGroupKey == groupKey) {
                     notificationManagerCompat.cancel(notification.id)
                 }
