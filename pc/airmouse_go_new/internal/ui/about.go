@@ -73,22 +73,21 @@ func ShowAboutDialog(parent fyne.Window) {
 	for _, f := range features {
 		featuresText += f + "\n"
 	}
-	featuresList := widget.NewLabel(featuresText)
+	featuresList := widget.NewRichTextFromMarkdown(featuresText)
 
 	// Credits
 	creditsText := "Credits:\n\n"
 	for _, c := range credits {
 		creditsText += "• " + c + "\n"
 	}
-	creditsList := widget.NewLabel(creditsText)
+	creditsList := widget.NewRichTextFromMarkdown(creditsText)
 
 	// License info
-	licenseInfo := widget.NewLabel(
+	licenseInfo := widget.NewRichTextFromMarkdown(
 		"© 2025 University of Tehran - Embedded Systems Laboratory\n\n" +
-			"This software is licensed under the MIT License.\n" +
+			"This software is licensed under the MIT License.\n\n" +
 			"See LICENSE file for full details.",
 	)
-	licenseInfo.Wrapping = fyne.TextWrapWord
 
 	// Links
 	githubBtn := widget.NewButtonWithIcon("GitHub Repository", theme.InfoIcon(), func() {
@@ -119,7 +118,7 @@ func ShowAboutDialog(parent fyne.Window) {
 		widget.NewSeparator(),
 		container.NewHBox(githubBtn, docsBtn),
 
-		widget.NewLabel("\nSpecial thanks to all contributors and open-source projects that made this possible."),
+		widget.NewRichTextFromMarkdown("Special thanks to all contributors and open-source projects that made this possible."),
 
 		// Footer with dynamic copyright year
 		widget.NewLabel(fmt.Sprintf("© %d Air Mouse Project", time.Now().Year())),
