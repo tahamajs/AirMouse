@@ -2,6 +2,7 @@
 package com.airmouse.presentation.ui.calibration
 
 import android.util.Log
+import android.os.Trace
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.data.datasource.local.ICalibrationDataSource
@@ -145,6 +146,8 @@ class CalibrationViewModel @Inject constructor(
         _isCalibrating.value = true
         gyroSamples.clear()
         calibrationJob = viewModelScope.launch {
+            Trace.beginSection("Calibration#gyroSampling")
+            try {
             _uiState.update { it.copy(isCalibrating = true, isCollecting = true, statusMessage = "Sampling Gyro...") }
             var count = 0
             while (count < GYRO_SAMPLES_NEEDED) {
@@ -159,6 +162,9 @@ class CalibrationViewModel @Inject constructor(
             _uiState.update { it.copy(isCalibrating = false, isCollecting = false, statusMessage = "Gyroscope Complete ✓", stepInstruction = "Keep device ready for Magnetometer") }
             calibrationRepository.updateCalibrationStatus(CalibrationStatus.GYRO_COMPLETE)
             nextStep()
+            } finally {
+                Trace.endSection()
+            }
         }
     }
 
@@ -177,6 +183,8 @@ class CalibrationViewModel @Inject constructor(
         _isCalibrating.value = true
         magSamples.clear()
         calibrationJob = viewModelScope.launch {
+            Trace.beginSection("Calibration#magSampling")
+            try {
             _uiState.update { it.copy(isCalibrating = true, isCollecting = true, statusMessage = "Sampling Mag...") }
             var count = 0
             while (count < MAG_SAMPLES_NEEDED) {
@@ -191,6 +199,9 @@ class CalibrationViewModel @Inject constructor(
             _uiState.update { it.copy(isCalibrating = false, isCollecting = false, statusMessage = "Magnetometer Complete ✓", stepInstruction = "Prepare for Accelerometer") }
             calibrationRepository.updateCalibrationStatus(CalibrationStatus.MAG_COMPLETE)
             nextStep()
+            } finally {
+                Trace.endSection()
+            }
         }
     }
 
@@ -207,6 +218,8 @@ class CalibrationViewModel @Inject constructor(
         
         _isCalibrating.value = true
         calibrationJob = viewModelScope.launch {
+            Trace.beginSection("Calibration#accelerometerSampling")
+            try {
             _uiState.update { it.copy(isCalibrating = true, isCollecting = true, statusMessage = "Sampling: ${accelPositionsList[currentPos]}") }
             val samples = mutableListOf<Triple<Float, Float, Float>>()
             var count = 0
@@ -235,6 +248,9 @@ class CalibrationViewModel @Inject constructor(
                 delay(250)
                 startAccelPositionSampling()
             }
+            } finally {
+                Trace.endSection()
+            }
         }
     }
 
@@ -258,12 +274,17 @@ class CalibrationViewModel @Inject constructor(
 
     fun completeCalibration() {
         viewModelScope.launch {
+            Trace.beginSection("Calibration#complete")
+            try {
             _uiState.update { it.copy(statusMessage = "Finalizing...", isCollecting = true) }
             delay(TRANSITION_DELAY)
             val data = CalibrationData(isCalibrated = true, quality = CalibrationQuality.EXCELLENT, timestamp = System.currentTimeMillis())
             calibrationRepository.saveCalibrationData(data)
             calibrationRepository.updateCalibrationStatus(CalibrationStatus.COMPLETED)
             _uiState.update { it.copy(isComplete = true, isCalibrating = false, isCollecting = false, progress = 100, calibrationData = data) }
+            } finally {
+                Trace.endSection()
+            }
         }
     }
 
