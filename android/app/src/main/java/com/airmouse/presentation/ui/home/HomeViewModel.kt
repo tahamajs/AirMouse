@@ -14,6 +14,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.Trace
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.data.datasource.local.ICalibrationDataSource
@@ -113,28 +114,33 @@ class HomeViewModel @Inject constructor(
         override fun onSensorChanged(event: SensorEvent) {
             if (!_uiState.value.isActive || !_uiState.value.isCalibrated) return
 
-            val timestamp = System.currentTimeMillis()
-            val dt = if (lastSampleTime > 0) (timestamp - lastSampleTime) / 1000f else 0.016f
-            lastSampleTime = timestamp
+            Trace.beginSection("AirMouse#onSensorChanged")
+            try {
+                val timestamp = System.currentTimeMillis()
+                val dt = if (lastSampleTime > 0) (timestamp - lastSampleTime) / 1000f else 0.016f
+                lastSampleTime = timestamp
 
-            when (event.sensor.type) {
-                Sensor.TYPE_GYROSCOPE -> processGyroscope(event.values, dt)
-                Sensor.TYPE_ACCELEROMETER -> {
-                    System.arraycopy(event.values, 0, gravity, 0, 3)
-                    updateOrientationFromAccelMag()
+                when (event.sensor.type) {
+                    Sensor.TYPE_GYROSCOPE -> processGyroscope(event.values, dt)
+                    Sensor.TYPE_ACCELEROMETER -> {
+                        System.arraycopy(event.values, 0, gravity, 0, 3)
+                        updateOrientationFromAccelMag()
+                    }
+                    Sensor.TYPE_MAGNETIC_FIELD -> {
+                        System.arraycopy(event.values, 0, magnetic, 0, 3)
+                        updateOrientationFromAccelMag()
+                    }
+                    Sensor.TYPE_ROTATION_VECTOR -> processRotationVector(event.values)
                 }
-                Sensor.TYPE_MAGNETIC_FIELD -> {
-                    System.arraycopy(event.values, 0, magnetic, 0, 3)
-                    updateOrientationFromAccelMag()
-                }
-                Sensor.TYPE_ROTATION_VECTOR -> processRotationVector(event.values)
-            }
 
-            samplesProcessed++
-            if (samplesProcessed % 60 == 0) {
-                val fps = ((samplesProcessed * 1000L) / (System.currentTimeMillis() - lastSampleTime)).coerceAtMost(120L).toInt()
-                _sensorState.update { it.copy(fps = fps) }
-                samplesProcessed = 0
+                samplesProcessed++
+                if (samplesProcessed % 60 == 0) {
+                    val fps = ((samplesProcessed * 1000L) / (System.currentTimeMillis() - lastSampleTime)).coerceAtMost(120L).toInt()
+                    _sensorState.update { it.copy(fps = fps) }
+                    samplesProcessed = 0
+                }
+            } finally {
+                Trace.endSection()
             }
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -377,6 +383,8 @@ class HomeViewModel @Inject constructor(
     // ==================== SENSOR PROCESSING ====================
 
     private fun processGyroscope(values: FloatArray, dt: Float) {
+        Trace.beginSection("AirMouse#processGyroscope")
+        try {
         val sensitivity = prefs.getSensitivity()
         val invertX = prefs.getBoolean("invert_x", false)
         val invertY = prefs.getBoolean("invert_y", false)
@@ -445,6 +453,9 @@ class HomeViewModel @Inject constructor(
                     (values[2] - gyroOffsetZ).pow(2)
         )
         detectGesture(magnitude, now)
+        } finally {
+            Trace.endSection()
+        }
     }
 
     private fun processRotationVector(values: FloatArray) {
@@ -502,6 +513,8 @@ class HomeViewModel @Inject constructor(
     // ==================== GESTURE DETECTION ====================
 
     private fun detectGesture(magnitude: Float, now: Long = System.currentTimeMillis()) {
+        Trace.beginSection("AirMouse#detectGesture")
+        try {
         if (now - lastScrollTime < scrollCooldown) return
 
         val clickThreshold = max(6f, prefs.getFloat("click_threshold", 8f))
@@ -570,6 +583,9 @@ class HomeViewModel @Inject constructor(
             addLogMessage("Right click")
             _uiState.update { it.copy(lastGesture = "Right Click") }
             lastRightClickTime = now
+        }
+        } finally {
+            Trace.endSection()
         }
     }
 
@@ -712,6 +728,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun connect() {
+        Trace.beginSection("AirMouse#connect")
+        try {
         val ip = _uiState.value.serverIp
         if (ip.isBlank()) {
             addLogMessage("Please enter server IP")
@@ -739,6 +757,9 @@ class HomeViewModel @Inject constructor(
                 addLogMessage("Connection failed")
                 _uiState.update { it.copy(isConnecting = false) }
             }
+        }
+        } finally {
+            Trace.endSection()
         }
     }
 
