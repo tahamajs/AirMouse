@@ -178,6 +178,13 @@ func (m *DeviceManager) simulateDeviceDiscovery() {
 			RSSI:        -45,
 			MACAddress:  addr,
 		}
+		m.triggerEvent(DeviceEvent{
+			Type:       "discovered",
+			DeviceID:   addr,
+			DeviceName: "AirMouse Device",
+			Timestamp:  time.Now(),
+		})
+		logInfo("Nearby device discovered: %s (%s)", "AirMouse Device", addr)
 		logDebug("BLE device discovered: AirMouse Device (%s)", addr)
 	}
 }
@@ -390,6 +397,13 @@ func (m *DeviceManager) UpdateBLEDevice(addr, name string, rssi int32) {
 			RSSI:        rssi,
 			MACAddress:  addr,
 		}
+		m.triggerEvent(DeviceEvent{
+			Type:       "discovered",
+			DeviceID:   addr,
+			DeviceName: name,
+			Timestamp:  time.Now(),
+		})
+		logInfo("Nearby BLE device discovered: %s (%s)", name, addr)
 		logDebug("BLE device discovered: %s (%s)", name, addr)
 	}
 }
@@ -564,13 +578,13 @@ func (m *DeviceManager) GetStatistics() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_devices":     len(m.devices),
-		"blocked_devices":   len(m.blockedIDs),
-		"by_type":           typeCount,
-		"by_status":         statusCount,
-		"total_bytes_sent":  totalSent,
-		"total_bytes_recv":  totalRecv,
-		"max_devices":       m.maxDevices,
+		"total_devices":    len(m.devices),
+		"blocked_devices":  len(m.blockedIDs),
+		"by_type":          typeCount,
+		"by_status":        statusCount,
+		"total_bytes_sent": totalSent,
+		"total_bytes_recv": totalRecv,
+		"max_devices":      m.maxDevices,
 	}
 }
 

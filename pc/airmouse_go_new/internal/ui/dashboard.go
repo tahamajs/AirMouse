@@ -39,6 +39,7 @@ type DashboardTab struct {
 	serverNameLabel *widget.Label
 	summaryLabel    *widget.Label
 	deviceDetailBox *widget.Label
+	nearbyDetailBox *widget.Label
 	recentLogsBox   *widget.Label
 
 	controlBtn *widget.Button
@@ -98,6 +99,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	)
 	tab.deviceDetailBox = widget.NewLabel("No connected devices yet.")
 	tab.deviceDetailBox.Wrapping = fyne.TextWrapWord
+	tab.nearbyDetailBox = widget.NewLabel("Nearby device list will appear here once the server sees clients on the network.")
+	tab.nearbyDetailBox.Wrapping = fyne.TextWrapWord
 	tab.recentLogsBox = widget.NewLabel("Waiting for logs...")
 	tab.recentLogsBox.Wrapping = fyne.TextWrapWord
 	tab.recentLogsBox.SetText("Waiting for logs...\n")
@@ -232,6 +235,14 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		container.NewScroll(tab.deviceDetailBox),
 	)))
 
+	nearbyCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("📡 Nearby Network Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel("These are the devices the server has discovered on the local network."),
+		widget.NewLabel("Tap Pair to open the QR / manual pairing wizard for that device."),
+		container.NewScroll(tab.nearbyDetailBox),
+	)))
+
 	logsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📝 Recent Activity", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -265,6 +276,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		container.NewHBox(tab.refreshBtn, tab.qrBtn),
 		actionsCard,
 		deviceCard,
+		nearbyCard,
 		logsCard,
 		featureCard,
 		profileCard,
@@ -352,6 +364,7 @@ func (t *DashboardTab) refreshStats() {
 			t.deviceDetailBox.SetText("No connected devices yet.")
 			utils.LogDebug("Dashboard device list empty")
 		}
+		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(devices))
 
 		t.mu.Lock()
 		if !t.serverStart.IsZero() {
@@ -428,7 +441,7 @@ func truncateRecentLogs(entries []string, max int) []string {
 
 func formatDeviceDetails(d *device.DeviceInfo) string {
 	return fmt.Sprintf(
-		"• %s [%s]\n  ID: %s\n  Status: %s\n  Connected: %s\n  Last active: %s\n  Sent: %s (%d msg)\n  Received: %s (%d msg)\n  RSSI: %d\n  IP: %s\n  MAC: %s\n  Version: %s",
+		"• %s [%s]\n  ID: %s\n  Status: %s\n  Connected: %s\n  Last active: %s\n  Sent: %s (%d msg)\n  Received: %s (%d msg)\n  RSSI: %d\n  IP: %s\n  MAC: %s\n  Version: %s\n  User agent: %s",
 		d.Name,
 		d.Type,
 		d.ID,
@@ -441,6 +454,7 @@ func formatDeviceDetails(d *device.DeviceInfo) string {
 		emptyOrDash(d.IPAddress),
 		emptyOrDash(d.MACAddress),
 		emptyOrDash(d.Version),
+		emptyOrDash(d.UserAgent),
 	)
 }
 
@@ -457,6 +471,31 @@ func (t *DashboardTab) deviceSummaryLabel() fyne.CanvasObject {
 		widget.NewLabelWithStyle("Latest device details", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("Device name, type, IP, version, and connection state are shown below."),
 	)
+}
+
+func (t *DashboardTab) buildNearbyDeviceSummary(devices []*device.DeviceInfo) string {
+	if len(devices) == 0 {
+		return "No nearby devices found yet.\n\nOnce an Android app scans the LAN or sends a hello packet, it will appear here."
+	}
+
+	var b strings.Builder
+	for _, d := range devices {
+		fmt.Fprintf(&b,
+			"• %s [%s]\n  Status: %s | Last active: %s | IP: %s | RSSI: %d\n  Version: %s | MAC: %s | Sent: %s | Received: %s\n\n",
+			d.Name,
+			d.Type,
+			d.Status,
+			FormatDuration(time.Since(d.LastActive)),
+			emptyOrDash(d.IPAddress),
+			d.RSSI,
+			emptyOrDash(d.Version),
+			emptyOrDash(d.MACAddress),
+			FormatBytes(d.BytesSent),
+			FormatBytes(d.BytesRecv),
+		)
+	}
+	b.WriteString("Use the Network tab QR code or the Pair button on a device row to open the pairing wizard.")
+	return b.String()
 }
 
 // ------------------------------------------------------------
