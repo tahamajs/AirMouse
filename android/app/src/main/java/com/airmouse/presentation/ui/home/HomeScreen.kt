@@ -80,6 +80,13 @@ fun HomeScreen(
         homeUiState.isCalibrated -> "Ready to connect"
         else -> "Calibrate first"
     }
+    val statusAccent = when {
+        isConnectionActive && homeUiState.isCalibrated -> Color(0xFF10B981)
+        isConnectionPending -> Color(0xFFF59E0B)
+        homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.ERROR -> Color(0xFFEF4444)
+        homeUiState.isCalibrated -> Color(0xFF3B82F6)
+        else -> Color(0xFF8B5CF6)
+    }
 
     LaunchedEffect(homeUiState.serverIp, homeUiState.serverPort) {
         serverIp = homeUiState.serverIp.ifBlank { serverIp }
@@ -175,6 +182,20 @@ fun HomeScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                item {
+                    StateOverviewBanner(
+                        isConnected = isConnectionActive,
+                        isCalibrated = homeUiState.isCalibrated,
+                        isConnecting = isConnectionPending,
+                        statusText = connectionStatusText,
+                        accent = statusAccent,
+                        serverIp = serverIp,
+                        serverPort = serverPort,
+                        onOpenCalibration = { navigationActions.navigateTo(Destinations.CalibrationResult.route) },
+                        onOpenNetwork = { navigationActions.navigateTo(Destinations.NetworkDiscovery.route) }
+                    )
+                }
+
                 // Animated Greeting Card
                 item {
                     AnimatedVisibility(
@@ -276,6 +297,10 @@ fun HomeScreen(
                     SensorPreviewCard(roll = 12f, yaw = -45f, pitch = 3f)
                 }
 
+                item {
+                    SmoothTrackingHint()
+                }
+
                 // Stats
                 item {
                     StatsRow(clicks = 124, scrolls = 42, sessionDuration = "00:14:23")
@@ -320,11 +345,7 @@ fun HomeScreen(
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
                     .background(
-                        color = when {
-                            isConnectionActive && homeUiState.isCalibrated -> Color(0xFF4CAF50)
-                            homeUiState.isCalibrated -> Color(0xFF2196F3)
-                            else -> Color(0xFFF44336)
-                        },
+                        color = statusAccent,
                         shape = RoundedCornerShape(8.dp)
                     )
                     .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -555,6 +576,92 @@ fun HomeTopBar(
             scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
         )
     )
+}
+
+@Composable
+private fun StateOverviewBanner(
+    isConnected: Boolean,
+    isCalibrated: Boolean,
+    isConnecting: Boolean,
+    statusText: String,
+    accent: Color,
+    serverIp: String,
+    serverPort: Int,
+    onOpenCalibration: () -> Unit,
+    onOpenNetwork: () -> Unit
+) {
+    val headline = when {
+        isConnected && isCalibrated -> "Ready to control"
+        isConnecting -> "Connecting to desktop"
+        isCalibrated -> "Calibration complete"
+        else -> "Finish calibration first"
+    }
+    val detail = when {
+        isConnected && isCalibrated -> "Touchpad, gestures, and mouse control are active."
+        isConnecting -> "We are negotiating the session and waiting for the desktop response."
+        isCalibrated -> "Your motion profile is ready. Next, pair with the desktop."
+        else -> "Complete calibration to unlock pairing and control."
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.12f))
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(accent, CircleShape)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(headline, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(statusText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                AssistChip(
+                    onClick = onOpenCalibration,
+                    label = { Text(if (isCalibrated) "Recalibrate" else "Calibrate") }
+                )
+            }
+
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                FilterChip(
+                    selected = isCalibrated,
+                    onClick = onOpenCalibration,
+                    label = { Text("Calibration") }
+                )
+                FilterChip(
+                    selected = isConnected,
+                    onClick = onOpenNetwork,
+                    label = { Text("Network") }
+                )
+                FilterChip(
+                    selected = isConnecting,
+                    onClick = { },
+                    label = { Text("Session") }
+                )
+            }
+
+            Text(
+                text = "Target: $serverIp:$serverPort",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 // ==========================================
@@ -869,6 +976,33 @@ fun SensorPreviewCard(roll: Float, yaw: Float, pitch: Float) {
                 Text("Roll: ${String.format(Locale.US, "%.1f", roll)}°", fontSize = 13.sp, fontFamily = FontFamily.Monospace)
                 Text("Yaw: ${String.format(Locale.US, "%.1f", yaw)}°", fontSize = 13.sp, fontFamily = FontFamily.Monospace)
                 Text("Pitch: ${String.format(Locale.US, "%.1f", pitch)}°", fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+            }
+        }
+    }
+}
+
+@Composable
+fun SmoothTrackingHint() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Smooth tracking enabled", fontWeight = FontWeight.Bold)
+                Text(
+                    "Movement is smoothed, tiny hand jitter is filtered, and click/scroll gestures use stronger thresholds.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
