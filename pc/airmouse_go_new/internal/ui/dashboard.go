@@ -184,8 +184,10 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	statsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📊 Statistics", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		tab.statsLabel,
-		tab.connLabel,
+		container.NewGridWithColumns(2,
+			tab.statsLabel,
+			tab.connLabel,
+		),
 	)))
 
 	// Actions card
@@ -212,9 +214,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	deviceCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📱 Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		tab.connLabel,
-		widget.NewLabelWithStyle("Latest device details", fyne.TextAlignLeading, fyne.TextStyle{Bold: false}),
-		tab.deviceDetailBox,
+		tab.deviceSummaryLabel(),
+		container.NewScroll(tab.deviceDetailBox),
 	)))
 
 	logsCard := NewGlassCard(container.NewPadded(container.NewVBox(
@@ -387,6 +388,13 @@ func emptyOrDash(v string) string {
 		return "-"
 	}
 	return v
+}
+
+func (t *DashboardTab) deviceSummaryLabel() fyne.CanvasObject {
+	return container.NewVBox(
+		widget.NewLabelWithStyle("Latest device details", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabel("Device metadata updates live as clients connect."),
+	)
 }
 
 // ------------------------------------------------------------
