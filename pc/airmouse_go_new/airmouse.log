@@ -1,0 +1,218 @@
+2026-06-20 06:00:24.632 [INFO] main.go:86: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:00:24.632 [INFO] main.go:91: System Information:
+2026-06-20 06:00:24.632 [INFO] main.go:92:   OS: darwin
+2026-06-20 06:00:24.632 [INFO] main.go:93:   Arch: arm64
+2026-06-20 06:00:24.632 [INFO] main.go:94:   CPUs: 8
+2026-06-20 06:00:24.632 [INFO] main.go:95:   Go Version: go1.25.0
+2026-06-20 06:00:24.632 [INFO] main.go:96:   Build Time: 2025-01-15
+2026-06-20 06:00:24.632 [INFO] main.go:97:   Git Commit: unknown
+2026-06-20 06:00:24.632 [INFO] main.go:109: Authentication disabled
+2026-06-20 06:00:24.639 [INFO] main.go:61: Application started successfully
+2026-06-20 06:00:24.639 [INFO] main.go:62: WebSocket server will listen on port 8081
+2026-06-20 06:00:24.639 [INFO] main.go:63: TCP server will listen on port 8080
+2026-06-20 06:00:24.639 [INFO] main.go:64: UDP discovery will listen on port 8082
+2026-06-20 06:03:24.661 [INFO] main.go:86: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:03:24.661 [INFO] main.go:91: System Information:
+2026-06-20 06:03:24.661 [INFO] main.go:92:   OS: darwin
+2026-06-20 06:03:24.661 [INFO] main.go:93:   Arch: arm64
+2026-06-20 06:03:24.661 [INFO] main.go:94:   CPUs: 8
+2026-06-20 06:03:24.661 [INFO] main.go:95:   Go Version: go1.25.0
+2026-06-20 06:03:24.661 [INFO] main.go:96:   Build Time: 2025-01-15
+2026-06-20 06:03:24.661 [INFO] main.go:97:   Git Commit: unknown
+2026-06-20 06:03:24.661 [INFO] main.go:109: Authentication disabled
+2026-06-20 06:03:24.669 [INFO] main.go:61: Application started successfully
+2026-06-20 06:03:24.669 [INFO] main.go:62: WebSocket server will listen on port 8081
+2026-06-20 06:03:24.669 [INFO] main.go:63: TCP server will listen on port 8080
+2026-06-20 06:03:24.669 [INFO] main.go:64: UDP discovery will listen on port 8082
+2026-06-20 06:06:43.179 [INFO] main.go:86: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:06:43.179 [INFO] main.go:91: System Information:
+2026-06-20 06:06:43.179 [INFO] main.go:92:   OS: darwin
+2026-06-20 06:06:43.179 [INFO] main.go:93:   Arch: arm64
+2026-06-20 06:06:43.179 [INFO] main.go:94:   CPUs: 8
+2026-06-20 06:06:43.179 [INFO] main.go:95:   Go Version: go1.25.0
+2026-06-20 06:06:43.179 [INFO] main.go:96:   Build Time: 2025-01-15
+2026-06-20 06:06:43.179 [INFO] main.go:97:   Git Commit: unknown
+2026-06-20 06:06:43.179 [INFO] main.go:109: Authentication disabled
+2026-06-20 06:06:43.186 [INFO] main.go:61: Application started successfully
+2026-06-20 06:06:43.186 [INFO] main.go:62: WebSocket server will listen on port 8081
+2026-06-20 06:06:43.186 [INFO] main.go:63: TCP server will listen on port 8080
+2026-06-20 06:06:43.186 [INFO] main.go:64: UDP discovery will listen on port 8082
+2026-06-20 06:08:38.560 [INFO] main.go:86: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:08:38.561 [INFO] main.go:91: System Information:
+2026-06-20 06:08:38.561 [INFO] main.go:92:   OS: darwin
+2026-06-20 06:08:38.561 [INFO] main.go:93:   Arch: arm64
+2026-06-20 06:08:38.561 [INFO] main.go:94:   CPUs: 8
+2026-06-20 06:08:38.561 [INFO] main.go:95:   Go Version: go1.25.0
+2026-06-20 06:08:38.561 [INFO] main.go:96:   Build Time: 2025-01-15
+2026-06-20 06:08:38.561 [INFO] main.go:97:   Git Commit: unknown
+2026-06-20 06:08:38.561 [INFO] main.go:109: Authentication disabled
+2026-06-20 06:08:38.567 [INFO] main.go:61: Application started successfully
+2026-06-20 06:08:38.567 [INFO] main.go:62: WebSocket server will listen on port 8081
+2026-06-20 06:08:38.567 [INFO] main.go:63: TCP server will listen on port 8080
+2026-06-20 06:08:38.567 [INFO] main.go:64: UDP discovery will listen on port 8082
+2026-06-20 06:09:11.355 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-20 06:09:11.356 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 06:09:25.872 [INFO] main.go:135: Received signal: interrupt
+2026-06-20 06:09:25.872 [INFO] main.go:149: Initiating graceful shutdown...
+2026-06-20 06:09:25.872 [INFO] main.go:153: Stopping protocol server...
+2026-06-20 06:09:25.894 [INFO] main.go:73: Shutting down...
+2026-06-20 06:09:27.873 [WARN] main.go:164: Protocol server stop timed out – forcing exit
+2026-06-20 06:09:27.873 [INFO] main.go:170: Closing UI...
+2026-06-20 06:09:27.887 [INFO] main.go:174: Shutdown complete
+2026-06-20 06:09:56.198 [INFO] main.go:86: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:09:56.198 [INFO] main.go:91: System Information:
+2026-06-20 06:09:56.198 [INFO] main.go:92:   OS: darwin
+2026-06-20 06:09:56.198 [INFO] main.go:93:   Arch: arm64
+2026-06-20 06:09:56.198 [INFO] main.go:94:   CPUs: 8
+2026-06-20 06:09:56.198 [INFO] main.go:95:   Go Version: go1.25.0
+2026-06-20 06:09:56.198 [INFO] main.go:96:   Build Time: 2025-01-15
+2026-06-20 06:09:56.198 [INFO] main.go:97:   Git Commit: unknown
+2026-06-20 06:09:56.198 [INFO] main.go:109: Authentication disabled
+2026-06-20 06:09:56.205 [INFO] main.go:61: Application started successfully
+2026-06-20 06:09:56.205 [INFO] main.go:62: WebSocket server will listen on port 8081
+2026-06-20 06:09:56.205 [INFO] main.go:63: TCP server will listen on port 8080
+2026-06-20 06:09:56.205 [INFO] main.go:64: UDP discovery will listen on port 8082
+2026-06-20 06:10:30.091 [INFO] main.go:86: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:10:30.091 [INFO] main.go:91: System Information:
+2026-06-20 06:10:30.091 [INFO] main.go:92:   OS: darwin
+2026-06-20 06:10:30.091 [INFO] main.go:93:   Arch: arm64
+2026-06-20 06:10:30.091 [INFO] main.go:94:   CPUs: 8
+2026-06-20 06:10:30.091 [INFO] main.go:95:   Go Version: go1.25.0
+2026-06-20 06:10:30.091 [INFO] main.go:96:   Build Time: 2025-01-15
+2026-06-20 06:10:30.091 [INFO] main.go:97:   Git Commit: unknown
+2026-06-20 06:10:30.091 [INFO] main.go:109: Authentication disabled
+2026-06-20 06:10:30.096 [INFO] main.go:61: Application started successfully
+2026-06-20 06:10:30.096 [INFO] main.go:62: WebSocket server will listen on port 8081
+2026-06-20 06:10:30.096 [INFO] main.go:63: TCP server will listen on port 8080
+2026-06-20 06:10:30.096 [INFO] main.go:64: UDP discovery will listen on port 8082
+2026-06-20 06:10:36.449 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-20 06:10:36.449 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 06:11:11.534 [INFO] main.go:135: Received signal: interrupt
+2026-06-20 06:11:11.535 [INFO] main.go:149: Initiating graceful shutdown...
+2026-06-20 06:11:11.535 [INFO] main.go:153: Stopping protocol server...
+2026-06-20 06:11:11.558 [INFO] main.go:73: Shutting down...
+2026-06-20 06:11:13.536 [WARN] main.go:164: Protocol server stop timed out – forcing exit
+2026-06-20 06:11:13.536 [INFO] main.go:170: Closing UI...
+2026-06-20 06:11:13.542 [INFO] main.go:174: Shutdown complete
+2026-06-20 06:13:45.516 [INFO] main.go:86: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:13:45.516 [INFO] main.go:91: System Information:
+2026-06-20 06:13:45.516 [INFO] main.go:92:   OS: darwin
+2026-06-20 06:13:45.516 [INFO] main.go:93:   Arch: arm64
+2026-06-20 06:13:45.516 [INFO] main.go:94:   CPUs: 8
+2026-06-20 06:13:45.516 [INFO] main.go:95:   Go Version: go1.25.0
+2026-06-20 06:13:45.516 [INFO] main.go:96:   Build Time: 2025-01-15
+2026-06-20 06:13:45.516 [INFO] main.go:97:   Git Commit: unknown
+2026-06-20 06:13:45.516 [INFO] main.go:109: Authentication disabled
+2026-06-20 06:13:45.520 [INFO] main.go:61: Application started successfully
+2026-06-20 06:13:45.520 [INFO] main.go:62: WebSocket server will listen on port 8081
+2026-06-20 06:13:45.520 [INFO] main.go:63: TCP server will listen on port 8080
+2026-06-20 06:13:45.520 [INFO] main.go:64: UDP discovery will listen on port 8082
+2026-06-20 06:15:23.047 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-20 06:15:23.048 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 06:23:38.004 [INFO] main.go:97: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:23:38.004 [INFO] main.go:102: System Information:
+2026-06-20 06:23:38.004 [INFO] main.go:103:   OS: darwin
+2026-06-20 06:23:38.004 [INFO] main.go:104:   Arch: arm64
+2026-06-20 06:23:38.004 [INFO] main.go:105:   CPUs: 8
+2026-06-20 06:23:38.004 [INFO] main.go:106:   Go Version: go1.25.0
+2026-06-20 06:23:38.004 [INFO] main.go:107:   Build Time: 2025-01-15
+2026-06-20 06:23:38.004 [INFO] main.go:108:   Git Commit: unknown
+2026-06-20 06:23:38.004 [INFO] main.go:120: Authentication disabled
+2026-06-20 06:23:38.013 [INFO] main.go:71: Application started successfully
+2026-06-20 06:23:38.013 [INFO] main.go:72: WebSocket server will listen on port 8081
+2026-06-20 06:23:38.013 [INFO] main.go:73: TCP server will listen on port 8080
+2026-06-20 06:23:38.013 [INFO] main.go:74: UDP discovery will listen on port 8082
+2026-06-20 06:23:38.505 [INFO] main.go:38: Bluetooth manager started: adapter=default
+2026-06-20 06:23:38.505 [INFO] main.go:38: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 06:39:45.814 [INFO] main.go:146: Received signal: interrupt
+2026-06-20 06:39:45.815 [INFO] main.go:160: Initiating graceful shutdown...
+2026-06-20 06:39:45.815 [INFO] main.go:164: Stopping protocol server...
+2026-06-20 06:39:45.815 [INFO] main.go:173: Protocol server stopped
+2026-06-20 06:39:45.815 [INFO] main.go:181: Stopping device manager...
+2026-06-20 06:39:45.815 [INFO] main.go:38: Device manager stopped
+2026-06-20 06:39:45.815 [INFO] main.go:187: Closing UI...
+2026-06-20 06:39:45.827 [INFO] main.go:191: Shutdown complete
+2026-06-20 06:43:39.339 [INFO] main.go:98: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 06:43:39.340 [INFO] main.go:103: System Information:
+2026-06-20 06:43:39.340 [INFO] main.go:104:   OS: darwin
+2026-06-20 06:43:39.340 [INFO] main.go:105:   Arch: arm64
+2026-06-20 06:43:39.340 [INFO] main.go:106:   CPUs: 8
+2026-06-20 06:43:39.340 [INFO] main.go:107:   Go Version: go1.25.0
+2026-06-20 06:43:39.340 [INFO] main.go:108:   Build Time: 2025-01-15
+2026-06-20 06:43:39.340 [INFO] main.go:109:   Git Commit: unknown
+2026-06-20 06:43:39.340 [INFO] main.go:121: Authentication disabled
+2026-06-20 06:43:39.345 [INFO] main.go:72: Application started successfully
+2026-06-20 06:43:39.345 [INFO] main.go:73: WebSocket server will listen on port 8081
+2026-06-20 06:43:39.345 [INFO] main.go:74: TCP server will listen on port 8080
+2026-06-20 06:43:39.345 [INFO] main.go:75: UDP discovery will listen on port 8082
+2026-06-20 06:43:39.840 [INFO] main.go:39: Bluetooth manager started: adapter=default
+2026-06-20 06:43:39.840 [INFO] main.go:39: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 06:44:54.323 [INFO] main.go:84: Shutting down...
+2026-06-20 06:44:54.324 [INFO] main.go:39: Device manager stopped
+2026-06-20 07:13:30.588 [INFO] main.go:98: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 07:13:30.589 [INFO] main.go:103: System Information:
+2026-06-20 07:13:30.589 [INFO] main.go:104:   OS: darwin
+2026-06-20 07:13:30.589 [INFO] main.go:105:   Arch: arm64
+2026-06-20 07:13:30.589 [INFO] main.go:106:   CPUs: 8
+2026-06-20 07:13:30.589 [INFO] main.go:107:   Go Version: go1.25.0
+2026-06-20 07:13:30.589 [INFO] main.go:108:   Build Time: 2025-01-15
+2026-06-20 07:13:30.589 [INFO] main.go:109:   Git Commit: unknown
+2026-06-20 07:13:30.589 [INFO] main.go:121: Authentication disabled
+2026-06-20 07:13:30.593 [INFO] main.go:72: Application started successfully
+2026-06-20 07:13:30.593 [INFO] main.go:73: WebSocket server will listen on port 8081
+2026-06-20 07:13:30.593 [INFO] main.go:74: TCP server will listen on port 8080
+2026-06-20 07:13:30.593 [INFO] main.go:75: UDP discovery will listen on port 8082
+2026-06-20 07:13:31.090 [INFO] main.go:39: Bluetooth manager started: adapter=default
+2026-06-20 07:13:31.097 [INFO] main.go:39: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 08:01:39.617 [INFO] main.go:84: Shutting down...
+2026-06-20 08:01:39.620 [INFO] main.go:39: Device manager stopped

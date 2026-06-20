@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
@@ -32,6 +33,16 @@ func main() {
 	cfg := config.Get()
 	logger.Init(cfg.LogLevel, cfg.LogFile)
 
+	// Initialize device package logger
+	device.SetLogger(
+		func(msg string, args ...interface{}) {
+			logger.Info(fmt.Sprintf(msg, args...))
+		},
+		func(msg string, args ...interface{}) {
+			logger.Debug(fmt.Sprintf(msg, args...))
+		},
+	)
+
 	printBanner()
 	logSystemInfo()
 
@@ -55,7 +66,7 @@ func main() {
 	defer cancel()
 
 	// Handle OS signals in a separate goroutine
-	go handleSignals(ctx, appUI, protocolServer)
+	go handleSignals(ctx, appUI, protocolServer, deviceManager)
 
 	// --- 6. Log server endpoints ---
 	logger.Info("Application started successfully")
@@ -72,6 +83,7 @@ func main() {
 	// --- 8. Cleanup after UI exits ---
 	logger.Info("Shutting down...")
 	protocolServer.Stop()
+	deviceManager.Stop()
 	logger.Close()
 }
 
@@ -83,7 +95,7 @@ func printBanner() {
 ║     Turn your phone into a wireless mouse                      ║
 ╚═══════════════════════════════════════════════════════════════╝
 `
-	logger.Info(banner, version)
+	logger.Info(fmt.Sprintf(banner, version))
 }
 
 // logSystemInfo prints system details.
@@ -125,7 +137,7 @@ func loadAppIcon() fyne.Resource {
 }
 
 // handleSignals listens for OS signals and performs graceful shutdown.
-func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.ProtocolServer) {
+func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.ProtocolServer, deviceMgr *device.DeviceManager) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
@@ -165,6 +177,12 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 					}
 				}
 
+				// Stop device manager
+				if deviceMgr != nil {
+					logger.Info("Stopping device manager...")
+					deviceMgr.Stop()
+				}
+
 				// Stop the UI (this will cause appUI.Run() to return).
 				if appUI != nil {
 					logger.Info("Closing UI...")
@@ -174,9 +192,13 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 				logger.Info("Shutdown complete")
 				logger.Close()
 				os.Exit(0)
+
+			default:
+				logger.Debug("Unhandled signal: %v", sig)
 			}
 
 		case <-ctx.Done():
+			logger.Debug("Context cancelled, stopping signal handler")
 			return
 		}
 	}

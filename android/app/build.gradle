@@ -167,10 +167,19 @@ dependencies {
     // ==================== KOTLIN ====================
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.24"
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+    implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
 
     // ==================== COMPOSE BOM ====================
     implementation platform('androidx.compose:compose-bom:2024.10.00')
     implementation platform('androidx.compose:compose-bom:2024.10.00')
+    implementation("androidx.compose.ui:ui:1.5.0")
+    implementation("androidx.compose.material3:material3:1.1.0")
+    implementation("androidx.compose.runtime:runtime:1.5.0")
+    implementation("androidx.compose.animation:animation:1.5.0")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.5.0")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.5.0")
 
     // ==================== COMPOSE UI ====================
     implementation 'androidx.compose.ui:ui'
