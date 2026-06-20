@@ -44,7 +44,7 @@ fun CalibrationGuideDialog(
     val calibrationProgress by viewModel.calibrationProgress.collectAsStateWithLifecycle()
     val isCalibrating by viewModel.isCalibrating.collectAsStateWithLifecycle()
 
-    var currentImageIndex by remember { mutableIntStateOf(0) }
+    var currentImageIndex by remember { mutableStateOf(0) }
     val totalImages = when (step) {
         0 -> 3
         1 -> 4
@@ -64,13 +64,11 @@ fun CalibrationGuideDialog(
     LaunchedEffect(calibrationStatus) {
         when (calibrationStatus) {
             CalibrationStatus.COMPLETED -> {
+                // Close dialog when calibration completes
                 onDismiss()
             }
             CalibrationStatus.FAILED -> {
-                // Show error state
-            }
-            CalibrationStatus.IN_PROGRESS -> {
-                // Update progress in UI
+                // Could show error state here
             }
             else -> { /* Not started or idle */ }
         }
@@ -242,6 +240,7 @@ fun CalibrationGuideDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // Skip/Close button
                         Button(
                             onClick = onDismiss,
                             modifier = Modifier
@@ -260,9 +259,11 @@ fun CalibrationGuideDialog(
                             )
                         }
 
+                        // Next Step button (only if not complete and onNextStep provided)
                         if (onNextStep != null && step < 3) {
                             Button(
                                 onClick = {
+                                    // Call the external callback and then the ViewModel's nextStep
                                     onNextStep()
                                     viewModel.nextStep()
                                 },
@@ -291,6 +292,7 @@ fun CalibrationGuideDialog(
                             }
                         }
 
+                        // Get Started button (when calibration complete)
                         if (step >= 3) {
                             Button(
                                 onClick = onDismiss,
