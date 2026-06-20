@@ -171,8 +171,8 @@ func (s *Server) processLine(client *Client, line []byte) {
 
 	switch msgType {
 	case "move":
-		dx := number(payload["dx"])
-		dy := number(payload["dy"])
+		dx := firstNumber(payload, "dx", "DeltaX", "deltaX")
+		dy := firstNumber(payload, "dy", "DeltaY", "deltaY")
 		s.mouse.Move(dx, dy)
 		utils.LogDebug("TCP move forwarded: client=%s dx=%.2f dy=%.2f", client.ID, dx, dy)
 
@@ -194,7 +194,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 		s.writeAck(client, id)
 
 	case "scroll":
-		delta := int(number(payload["delta"]))
+		delta := int(firstNumber(payload, "delta", "Scroll", "scroll"))
 		s.mouse.Scroll(delta)
 		utils.LogDebug("TCP scroll forwarded: client=%s delta=%d", client.ID, delta)
 		s.writeAck(client, id)
@@ -332,4 +332,13 @@ func (s *Server) SendToClient(clientID string, msg interface{}) error {
 		client.BytesSent += int64(len(data) + 1)
 	}
 	return err
+}
+
+func firstNumber(payload map[string]any, keys ...string) float64 {
+	for _, key := range keys {
+		if v, ok := payload[key]; ok {
+			return number(v)
+		}
+	}
+	return 0
 }

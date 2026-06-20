@@ -699,3 +699,33 @@
 2026-06-20 20:24:25.855 [INFO] main.go:39: Device manager stopped
 2026-06-20 20:24:25.877 [INFO] main.go:188: Closing UI...
 2026-06-20 20:24:25.989 [INFO] main.go:192: Shutdown complete
+2026-06-20 20:56:35.877 [INFO] main.go:100: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 20:56:35.877 [INFO] main.go:105: System Information:
+2026-06-20 20:56:35.877 [INFO] main.go:106:   OS: darwin
+2026-06-20 20:56:35.877 [INFO] main.go:107:   Arch: arm64
+2026-06-20 20:56:35.877 [INFO] main.go:108:   CPUs: 8
+2026-06-20 20:56:35.877 [INFO] main.go:109:   Go Version: go1.25.0
+2026-06-20 20:56:35.877 [INFO] main.go:110:   Build Time: 2025-01-15
+2026-06-20 20:56:35.877 [INFO] main.go:111:   Git Commit: unknown
+2026-06-20 20:56:35.877 [INFO] main.go:123: Authentication disabled
+2026-06-20 20:56:35.882 [INFO] main.go:73: Application started successfully
+2026-06-20 20:56:35.882 [INFO] main.go:74: WebSocket server will listen on port 8081
+2026-06-20 20:56:35.882 [INFO] main.go:75: TCP server will listen on port 8080
+2026-06-20 20:56:35.882 [INFO] main.go:76: UDP discovery will listen on port 8082
+2026-06-20 20:56:35.882 [INFO] main.go:77: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-20 20:56:36.377 [INFO] main.go:39: Bluetooth manager started: adapter=default
+2026-06-20 20:56:36.377 [INFO] main.go:39: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 21:00:11.270 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-20 21:00:11.272 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 21:00:11.272 [INFO] main.go:146: Protocol lifecycle event: start
+2026-06-20 21:50:07.143 [INFO] main.go:179: Received signal: interrupt
+2026-06-20 21:50:07.145 [INFO] main.go:193: Initiating graceful shutdown...
+2026-06-20 21:50:07.145 [INFO] main.go:197: Stopping protocol server...
+2026-06-20 21:50:07.190 [INFO] main.go:86: Shutting down...
+2026-06-20 21:50:09.147 [WARN] main.go:208: Protocol server stop timed out – forcing exit
+2026-06-20 21:50:09.147 [INFO] main.go:214: Stopping device manager...
