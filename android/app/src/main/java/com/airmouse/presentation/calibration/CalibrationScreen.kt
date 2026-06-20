@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -190,6 +191,14 @@ fun CalibrationGuideScreen(
         }
 
         item {
+            CalibrationGuidanceCard()
+        }
+
+        item {
+            LiveSensorDataCard(uiState = uiState)
+        }
+
+        item {
             if (!uiState.isCalibrating) {
                 Button(
                     onClick = onStartCalibration,
@@ -281,3 +290,68 @@ private fun SensorStatusDisplay(uiState: CalibrationUiState, calibrationData: Ca
     }
     Text(message, color = Color.White.copy(alpha = 0.7f), modifier = Modifier.fillMaxWidth())
 }
+
+@Composable
+private fun CalibrationGuidanceCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("How to calibrate", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(
+                "1. Keep the phone still and press Start Calibration.\n" +
+                    "2. Follow the on-screen steps for gyro, magnetometer, and accelerometer.\n" +
+                    "3. Rotate the device slowly in different axes so the filters can estimate bias, drift, and scale.\n" +
+                    "4. Use the live values below to verify raw sensor output before saving.",
+                color = Color.White.copy(alpha = 0.82f),
+                lineHeight = 20.sp
+            )
+            Text(
+                "The app combines calibrated sensor data to infer motion direction, click, scroll, and cursor movement.",
+                color = Color(0xFF93C5FD),
+                fontSize = 13.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun LiveSensorDataCard(uiState: CalibrationUiState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Live sensor values", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            SensorValueRow("Gyro", uiState.gyroData)
+            SensorValueRow("Accel", uiState.accelData)
+            SensorValueRow("Mag", uiState.magData)
+            SensorValueRow("Orientation", Triple(uiState.roll, uiState.pitch, uiState.yaw))
+        }
+    }
+}
+
+@Composable
+private fun SensorValueRow(label: String, values: Triple<Float, Float, Float>) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = Color.White.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold)
+        Text(
+            text = "${formatSensorValue(values.first)}, ${formatSensorValue(values.second)}, ${formatSensorValue(values.third)}",
+            color = Color.White,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 12.sp
+        )
+    }
+}
+
+private fun formatSensorValue(value: Float): String = String.format(Locale.US, "%.3f", value)
