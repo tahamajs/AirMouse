@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
@@ -32,6 +33,7 @@ type Server struct {
 	clients   map[string]*Client
 	mouse     control.MouseController
 	deviceMgr *device.Manager
+	authMgr   *auth.Manager
 	mu        sync.RWMutex
 	running   bool
 	callbacks []func(event TCPEvent)
@@ -44,13 +46,14 @@ type TCPEvent struct {
 	Timestamp time.Time
 }
 
-func NewServer(host string, port int, mouse control.MouseController, deviceMgr *device.Manager) *Server {
+func NewServer(host string, port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *Server {
 	return &Server{
 		host:      host,
 		port:      port,
 		clients:   make(map[string]*Client),
 		mouse:     mouse,
 		deviceMgr: deviceMgr,
+		authMgr:   authMgr,
 		callbacks: make([]func(TCPEvent), 0),
 	}
 }
@@ -201,6 +204,16 @@ func (s *Server) processLine(client *Client, line []byte) {
 
 	case "hello":
 		name, _ := payload["name"].(string)
+		token, _ := payload["token"].(string)
+		if config.Get().AuthEnabled {
+			if token == "" || s.authMgr == nil || !s.authMgr.ValidateToken(token) {
+				errMsg := `{"type":"error","payload":{"message":"connection rejected: invalid pairing token"}}` + "\n"
+				_, _ = client.Conn.Write([]byte(errMsg))
+				_ = client.Conn.Close()
+				utils.LogInfo("TCP client rejected: id=%s reason=invalid token", client.ID)
+				return
+			}
+		}
 		if name != "" {
 			client.Name = name
 			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
