@@ -61,7 +61,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 			"1. Open the Air Mouse Android app\n" +
 			"2. Tap the QR scanner icon in the top right\n" +
 			"3. Scan this QR code\n" +
-			"4. The app will automatically connect\n\n" +
+			"4. The app will show approval pending, then approved\n\n" +
 			"## Method 2: Manual Entry\n" +
 			"1. Open Air Mouse app\n" +
 			"2. Tap **Manual Connection**\n" +
