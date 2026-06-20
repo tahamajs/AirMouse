@@ -535,11 +535,11 @@ func (a *App) showUserGuide() {
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("User Guide", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		widget.NewLabel("1. Start the server from Dashboard"),
-		widget.NewLabel("2. Scan QR code with Android app"),
-		widget.NewLabel("3. Move your phone to control cursor"),
-		widget.NewLabel("4. Use gestures for media control"),
-		widget.NewLabel("5. Enable proximity for auto-lock"),
+		widget.NewLabel("1. Start the server from Dashboard and wait for it to be ready."),
+		widget.NewLabel("2. Scan the pairing QR code with the Android app."),
+		widget.NewLabel("3. Watch the Android app show approval pending, then approved."),
+		widget.NewLabel("4. Move your phone to control the cursor after approval."),
+		widget.NewLabel("5. Use gestures for media control and proximity for auto-lock."),
 	)
 	dialog.ShowCustom("User Guide", "Close", content, a.window)
 }

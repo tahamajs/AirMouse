@@ -538,10 +538,10 @@ func (t *DashboardTab) showPairingQRDialog() {
 
 	instructions := widget.NewLabel(
 		"📱 How to pair:\n\n" +
-			"1. Open Air Mouse app on your phone\n" +
+			"1. Open Air Mouse on your phone\n" +
 			"2. Tap the QR scanner icon\n" +
 			"3. Scan this QR code\n" +
-			"4. Your device will appear in the Devices tab\n\n" +
+			"4. The phone will show approval pending, then approved\n\n" +
 			fmt.Sprintf("Server: %s\nIP: %s\nPort: %d\nVersion: %s",
 				t.cfg.ServerName, ip, port, t.cfg.Version),
 	)

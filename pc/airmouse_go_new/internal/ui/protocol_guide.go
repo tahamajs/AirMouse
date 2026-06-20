@@ -33,7 +33,7 @@ func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServ
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Network Protocol", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("This page explains how the Android app and the Go server talk to each other during pairing and control."),
+		widget.NewLabel("This page explains how the Android app and the Go server approve, connect, and exchange control data."),
 		widget.NewSeparator(),
 		widget.NewLabel(fmt.Sprintf("Server status: %s", statusText)),
 		widget.NewLabel(fmt.Sprintf("TCP port: %d", cfg.Port)),
@@ -41,10 +41,10 @@ func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServ
 		widget.NewLabel(fmt.Sprintf("UDP discovery port: %d", cfg.UDPPort)),
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Handshake", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("1. Android connects over WebSocket or TCP."),
-		widget.NewLabel("2. Android sends hello with device name and app version."),
-		widget.NewLabel("3. Go replies with welcome to confirm pairing."),
-		widget.NewLabel("4. Cursor, click, and scroll messages begin after welcome."),
+		widget.NewLabel("1. Android connects over WebSocket or TCP and waits for approval."),
+		widget.NewLabel("2. Android sends hello with device name, app version, and pairing token."),
+		widget.NewLabel("3. Go replies with welcome to approve the session."),
+		widget.NewLabel("4. Cursor, click, and scroll messages begin after approval."),
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Message Rules", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("• move is best effort and not ACKed."),
@@ -54,7 +54,7 @@ func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServ
 		widget.NewLabel("• The server also accepts DeltaX / DeltaY and Scroll aliases."),
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Assignment Summary", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("The goal is a smooth, low-latency cursor flow with explicit handshake, discovery, and ACK-based reliability."),
+		widget.NewLabel("The goal is a smooth, low-latency cursor flow with approval, discovery, and ACK-based reliability."),
 		widget.NewLabel(fmt.Sprintf("Current local IP: %s", utils.GetLocalIP())),
 	)
 }
