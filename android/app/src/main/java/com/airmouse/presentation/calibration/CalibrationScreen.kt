@@ -310,7 +310,8 @@ private fun CalibrationGuidanceCard() {
                     "3. Magnetometer: rotate the phone through all directions, collect minimum and maximum values for each axis, then compute offset = (min + max) / 2 and scale = (max - min) / 2.\n" +
                     "4. Correct magnetometer values with (Raw - Offset) / Scale.\n" +
                     "5. Use a sensor-fusion filter such as Madgwick AHRS, or another suitable filter, to reduce drift and combine the calibrated sensors.\n" +
-                    "6. The live readings below help verify stability before saving.",
+                    "6. The final cursor should move smoothly, without jumps, and small involuntary hand movements should be suppressed using smoothing and deadzones.\n" +
+                    "7. The live readings below help verify stability before saving.",
                 color = Color.White.copy(alpha = 0.82f),
                 lineHeight = 20.sp
             )
