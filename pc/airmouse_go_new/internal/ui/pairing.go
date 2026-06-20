@@ -55,35 +55,33 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	qrImage.FillMode = canvas.ImageFillOriginal
 
 	// Instructions
-	instructions := widget.NewLabel(
-		"📱 **How to pair your device**\n\n"+
-			"**Method 1: QR Code**\n"+
-			"1. Open the Air Mouse Android app\n"+
-			"2. Tap the QR scanner icon in the top right\n"+
-			"3. Scan this QR code\n"+
-			"4. The app will automatically connect\n\n"+
-			"**Method 2: Manual Entry**\n"+
-			"1. Open Air Mouse app\n"+
-			"2. Tap 'Manual Connection'\n"+
-			"3. Enter the IP address and port below\n"+
-			"4. Tap 'Connect'\n\n"+
-			"**Method 3: UDP Discovery**\n"+
-			"1. Make sure both devices are on the same network\n"+
-			"2. The app will automatically discover the server\n"+
+	instructions := widget.NewRichTextFromMarkdown(
+		"# How to pair your device\n\n" +
+			"## Method 1: QR Code\n" +
+			"1. Open the Air Mouse Android app\n" +
+			"2. Tap the QR scanner icon in the top right\n" +
+			"3. Scan this QR code\n" +
+			"4. The app will automatically connect\n\n" +
+			"## Method 2: Manual Entry\n" +
+			"1. Open Air Mouse app\n" +
+			"2. Tap **Manual Connection**\n" +
+			"3. Enter the IP address and port below\n" +
+			"4. Tap **Connect**\n\n" +
+			"## Method 3: UDP Discovery\n" +
+			"1. Make sure both devices are on the same network\n" +
+			"2. The app will automatically discover the server\n" +
 			"3. Tap on the discovered server to connect")
-	instructions.Wrapping = fyne.TextWrapWord
 
 	// Server info
-	serverInfo := widget.NewLabel(fmt.Sprintf(
-		"**Server Information**\n\n"+
-			"Server Name: %s\n"+
-			"IP Address: %s\n"+
-			"TCP Port: %d\n"+
-			"WebSocket Port: %d\n"+
-			"UDP Discovery Port: %d\n"+
-			"Version: 3.0.0",
+	serverInfo := widget.NewRichTextFromMarkdown(fmt.Sprintf(
+		"## Server Information\n\n"+
+			"- **Server Name:** %s\n"+
+			"- **IP Address:** %s\n"+
+			"- **TCP Port:** %d\n"+
+			"- **WebSocket Port:** %d\n"+
+			"- **UDP Discovery Port:** %d\n"+
+			"- **Version:** 3.0.0",
 		cfg.ServerName, ip, cfg.Port, cfg.WebSocketPort, cfg.UDPPort))
-	serverInfo.Wrapping = fyne.TextWrapWord
 
 	// Copy buttons
 	copyIPBtn := widget.NewButtonWithIcon("Copy IP", theme.ContentCopyIcon(), func() {
