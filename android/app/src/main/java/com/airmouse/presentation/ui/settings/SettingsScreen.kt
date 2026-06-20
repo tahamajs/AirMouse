@@ -19,10 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.airmouse.presentation.navigation.NavigationActions
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +63,16 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Access tuning, theme, and connection controls",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -113,7 +125,7 @@ fun SettingsMainScreen(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item { SettingsHeader() }
         item {
@@ -121,6 +133,9 @@ fun SettingsMainScreen(
                 navigationActions = navigationActions,
                 viewModel = viewModel
             )
+        }
+        item {
+            SettingsStateHintCard()
         }
         items(SettingsSection.entries) { section ->
             SettingsCard(
@@ -147,11 +162,55 @@ fun SettingsHeader() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("⚙️ Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text("Customize your Air Mouse experience", style = MaterialTheme.typography.bodyMedium)
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Customize motion, pairing, theme, and feedback in one place.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                AssistChip(onClick = { }, label = { Text("Motion") })
+                AssistChip(onClick = { }, label = { Text("Connection") })
+                AssistChip(onClick = { }, label = { Text("Theme") })
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsStateHintCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Fast access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Use the section cards below for focused changes. Theme and connection options are available without leaving this screen.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                FilterChip(selected = true, onClick = { }, label = { Text("Live state") })
+                FilterChip(selected = false, onClick = { }, label = { Text("One tap save") })
+                FilterChip(selected = false, onClick = { }, label = { Text("Easy access") })
+            }
         }
     }
 }
@@ -205,7 +264,8 @@ fun SettingsCard(
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(22.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -264,6 +324,22 @@ fun SectionDetailScreen(
             modifier = modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(section.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            section.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
             when (section) {
                 SettingsSection.CURSOR -> item { CursorSettings(uiState, viewModel) }
                 SettingsSection.GESTURE -> item { GestureSettings(uiState, viewModel) }
@@ -843,6 +919,14 @@ fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
 
 @Composable
 fun PrivacySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.handleEvent(SettingsEvent.ImportSettingsFromUri(uri.toString()))
+        }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SettingsSwitch(
             title = "Anonymous Statistics",
@@ -873,9 +957,16 @@ fun PrivacySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
                     OutlinedButton(onClick = { viewModel.handleEvent(SettingsEvent.ClearCache) }, modifier = Modifier.weight(1f)) {
                         Text("Clear Cache")
                     }
-                    OutlinedButton(onClick = { viewModel.handleEvent(SettingsEvent.ExportSettings) }, modifier = Modifier.weight(1f)) {
-                        Text("Export Data")
+                    OutlinedButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
+                        Text("Import Data")
                     }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { viewModel.handleEvent(SettingsEvent.ExportSettings) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Export Settings")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
