@@ -259,66 +259,6 @@ func (a *App) createMenuBar() *fyne.MainMenu {
 // ------------------------------------------------------------
 
 func (a *App) createToolbar() fyne.CanvasObject {
-	var startBtn *widget.Button
-	startBtn = widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
-		startBtn.Disable()
-		a.connectionStatus.SetText("⏳ Status: Starting...")
-		go func() {
-			err := a.server.Start()
-			RunOnMain(func() {
-				if a.server.IsRunning() {
-					a.connectionStatus.SetText("🟢 Status: Running")
-				} else {
-					a.connectionStatus.SetText("⛔ Status: Stopped")
-					startBtn.Enable()
-				}
-				if err != nil && a.window != nil {
-					if a.server.IsRunning() {
-						dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
-							"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
-					} else {
-						dialog.ShowError(err, a.window)
-					}
-				}
-			})
-		}()
-	})
-	stopBtn := widget.NewButtonWithIcon("Stop", theme.MediaStopIcon(), func() {
-		a.connectionStatus.SetText("⏳ Status: Stopping...")
-		utils.LogInfo("Stop button clicked")
-		go func() {
-			a.server.Stop()
-			RunOnMain(func() {
-				a.connectionStatus.SetText("⛔ Status: Stopped")
-			})
-		}()
-	})
-	var restartBtn *widget.Button
-	restartBtn = widget.NewButtonWithIcon("Restart", theme.ViewRefreshIcon(), func() {
-		restartBtn.Disable()
-		a.connectionStatus.SetText("⏳ Status: Restarting...")
-		go func() {
-			a.server.Stop()
-			time.Sleep(500 * time.Millisecond)
-			err := a.server.Start()
-			RunOnMain(func() {
-				restartBtn.Enable()
-				if a.server.IsRunning() {
-					a.connectionStatus.SetText("🟢 Status: Running")
-				} else {
-					a.connectionStatus.SetText("⛔ Status: Stopped")
-				}
-				if err != nil && a.window != nil {
-					if a.server.IsRunning() {
-						dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
-							"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
-					} else {
-						dialog.ShowError(err, a.window)
-					}
-				}
-			})
-		}()
-	})
 	settingsBtn := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
 		dialog.ShowInformation("Settings", "Open the Settings tab to adjust server, network, and pairing options.", a.window)
 	})
@@ -326,15 +266,15 @@ func (a *App) createToolbar() fyne.CanvasObject {
 		showShortcutsDialog(a.window)
 	})
 
-	statusIndicator := widget.NewLabel("●")
-	statusIndicator.TextStyle = fyne.TextStyle{Bold: true}
+	title := widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	subtitle := widget.NewLabel("One dashboard for server control, device status, and pairing.")
+	subtitle.Wrapping = fyne.TextWrapWord
 
-	return container.NewHBox(
-		startBtn, stopBtn, restartBtn,
-		widget.NewSeparator(),
-		settingsBtn, helpBtn,
-		widget.NewSeparator(),
-		statusIndicator,
+	return container.NewBorder(
+		container.NewVBox(title, subtitle),
+		nil,
+		nil,
+		container.NewHBox(settingsBtn, helpBtn),
 		a.connectionStatus,
 	)
 }
