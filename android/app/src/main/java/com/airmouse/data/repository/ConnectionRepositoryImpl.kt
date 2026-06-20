@@ -51,11 +51,11 @@ class ConnectionRepositoryImpl @Inject constructor(
     private fun loadConfig() {
         val ip = prefs.getString("last_ip", "")
         val port = prefs.getInt("last_port", 8080)
-        val protocol = prefs.getString("connection_protocol", "WEBSOCKET")
+        val protocol = prefs.getString("connection_protocol", "TCP")
         val protocolEnum = try {
             ConnectionProtocol.valueOf(protocol.uppercase())
         } catch (e: IllegalArgumentException) {
-            ConnectionProtocol.WEBSOCKET
+            ConnectionProtocol.TCP
         }
         _config.value = ConnectionConfig(ip = ip, port = port, protocol = protocolEnum)
     }
