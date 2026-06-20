@@ -229,6 +229,7 @@ class SettingsViewModel @Inject constructor(
                 SettingsEvent.ResetDefaults -> resetDefaults()
                 SettingsEvent.ExportSettings -> exportSettings()
                 SettingsEvent.ImportSettings -> importSettings()
+                is SettingsEvent.ImportSettingsFromUri -> importSettingsFromUri(event.uri)
                 SettingsEvent.ClearCache -> clearCache()
                 SettingsEvent.ClearAllData -> clearAllData()
                 SettingsEvent.OpenSystemSettings -> openSystemSettings()
@@ -801,6 +802,104 @@ class SettingsViewModel @Inject constructor(
 
     private suspend fun importSettings() {
         showToast("Import settings - select a settings file")
+    }
+
+    private suspend fun importSettingsFromUri(uriString: String) {
+        runCatching {
+            val uri = Uri.parse(uriString)
+            val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                ?: throw IllegalStateException("Unable to read selected file")
+            applyImportedSettings(text)
+        }.onSuccess {
+            showToast("Settings imported successfully!")
+        }.onFailure {
+            _uiState.update { state -> state.copy(error = "Import failed: ${it.message}") }
+            showToast("Import failed")
+        }
+    }
+
+    private fun applyImportedSettings(content: String) {
+        content.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("===") && !it.startsWith("Date:") }
+            .forEach { line ->
+                val delimiter = line.indexOf(":")
+                if (delimiter <= 0) return@forEach
+                val key = line.substring(0, delimiter).trim()
+                val rawValue = line.substring(delimiter + 1).trim()
+                when (key) {
+                    "Sensitivity" -> updateOrSkipFloat("sensitivity", rawValue)
+                    "Acceleration" -> updateOrSkipBoolean("acceleration_enabled", rawValue)
+                    "Acceleration Factor" -> updateOrSkipFloat("acceleration_factor", rawValue)
+                    "Invert X" -> updateOrSkipBoolean("invert_x", rawValue)
+                    "Invert Y" -> updateOrSkipBoolean("invert_y", rawValue)
+                    "Smoothing" -> updateOrSkipBoolean("smoothing_enabled", rawValue)
+                    "Smoothing Factor" -> updateOrSkipFloat("smoothing_factor", rawValue)
+                    "Click Threshold" -> updateOrSkipFloat("click_threshold", rawValue)
+                    "Double Click Interval" -> updateOrSkipLong("double_click_interval", rawValue)
+                    "Scroll Threshold" -> updateOrSkipFloat("scroll_threshold", rawValue)
+                    "Right Click Tilt" -> updateOrSkipFloat("right_click_tilt", rawValue)
+                    "Right Click Duration" -> updateOrSkipLong("right_click_duration", rawValue)
+                    "Gesture Debounce" -> updateOrSkipLong("gesture_debounce", rawValue)
+                    "AI Smoothing" -> updateOrSkipBoolean("ai_smoothing", rawValue)
+                    "AI Blend Factor" -> updateOrSkipFloat("ai_blend_factor", rawValue)
+                    "Predictive" -> updateOrSkipBoolean("predictive_movement", rawValue)
+                    "Prediction Strength" -> updateOrSkipFloat("prediction_strength", rawValue)
+                    "Kalman Filter" -> updateOrSkipBoolean("kalman_enabled", rawValue)
+                    "Haptic Enabled" -> updateOrSkipBoolean("haptic_enabled", rawValue)
+                    "Haptic Strength" -> updateOrSkipString("haptic_strength", rawValue)
+                    "Sound Enabled" -> updateOrSkipBoolean("sound_enabled", rawValue)
+                    "Visual Feedback" -> updateOrSkipBoolean("visual_feedback", rawValue)
+                    "Notification on Gesture" -> updateOrSkipBoolean("notification_on_gesture", rawValue)
+                    "Theme" -> updateOrSkipString("theme", rawValue)
+                    "Dynamic Colors" -> updateOrSkipBoolean("dynamic_colors", rawValue)
+                    "Font Size" -> updateOrSkipFloat("font_size", rawValue)
+                    "Show Debug" -> updateOrSkipBoolean("show_debug_info", rawValue)
+                    "Keep Screen On" -> updateOrSkipBoolean("keep_screen_on", rawValue)
+                    "Show FPS" -> updateOrSkipBoolean("show_fps", rawValue)
+                    "Touchpad Active" -> updateOrSkipBoolean("touchpad_active", rawValue)
+                    "Touchpad Sensitivity" -> updateOrSkipFloat("touchpad_sensitivity", rawValue)
+                    "Touchpad Cursor Speed" -> updateOrSkipFloat("touchpad_cursor_speed", rawValue)
+                    "Touchpad Pointer Speed" -> updateOrSkipInt("touchpad_pointer_speed", rawValue)
+                    "Touchpad Acceleration" -> updateOrSkipBoolean("touchpad_acceleration", rawValue)
+                    "Touchpad Invert Vertical" -> updateOrSkipBoolean("touchpad_invert_vertical", rawValue)
+                    "Touchpad Invert Horizontal" -> updateOrSkipBoolean("touchpad_invert_horizontal", rawValue)
+                    "Touchpad Scroll Speed" -> updateOrSkipFloat("touchpad_scroll_speed", rawValue)
+                    "Touchpad Natural Scrolling" -> updateOrSkipBoolean("touchpad_natural_scrolling", rawValue)
+                    "Touchpad Two Finger Scroll" -> updateOrSkipBoolean("touchpad_two_finger_scroll", rawValue)
+                    "Touchpad Edge Scrolling" -> updateOrSkipBoolean("touchpad_edge_scrolling", rawValue)
+                    "Touchpad Scroll Inertia" -> updateOrSkipBoolean("touchpad_scroll_inertia", rawValue)
+                    "Touchpad Tap To Click" -> updateOrSkipBoolean("touchpad_tap_to_click", rawValue)
+                    "Touchpad Double Tap Delay" -> updateOrSkipInt("touchpad_double_tap_delay", rawValue)
+                    "Touchpad Three Finger Swipe" -> updateOrSkipBoolean("touchpad_three_finger_swipe", rawValue)
+                    "Touchpad Pinch To Zoom" -> updateOrSkipBoolean("touchpad_pinch_to_zoom", rawValue)
+                    "Touchpad Rotate To Rotate" -> updateOrSkipBoolean("touchpad_rotate_to_rotate", rawValue)
+                    "Touchpad Haptic Feedback" -> updateOrSkipBoolean("touchpad_haptic_feedback", rawValue)
+                    "Touchpad Show Touch Points" -> updateOrSkipBoolean("touchpad_show_touch_points", rawValue)
+                }
+            }
+        loadSettings()
+    }
+
+    private fun updateOrSkipBoolean(key: String, raw: String) {
+        val parsed = raw.equals("true", ignoreCase = true)
+        prefs.putBoolean(key, parsed)
+    }
+
+    private fun updateOrSkipFloat(key: String, raw: String) {
+        raw.toFloatOrNull()?.let { prefs.putFloat(key, it) }
+    }
+
+    private fun updateOrSkipInt(key: String, raw: String) {
+        raw.toIntOrNull()?.let { prefs.putInt(key, it) }
+    }
+
+    private fun updateOrSkipLong(key: String, raw: String) {
+        raw.toLongOrNull()?.let { prefs.putLong(key, it) }
+    }
+
+    private fun updateOrSkipString(key: String, raw: String) {
+        prefs.putString(key, raw)
     }
 
     private suspend fun clearCache() {
