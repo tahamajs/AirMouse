@@ -83,6 +83,27 @@ class SettingsViewModel @Inject constructor(
                 keepScreenOn = prefs.getBoolean("keep_screen_on", false),
                 showFps = prefs.getBoolean("show_fps", false),
 
+                // ==================== TOUCHPAD SETTINGS ====================
+                touchpadActive = prefs.getBoolean("touchpad_active", false),
+                touchpadSensitivity = prefs.getFloat("touchpad_sensitivity", 1.0f),
+                touchpadCursorSpeed = prefs.getFloat("touchpad_cursor_speed", 1.0f),
+                touchpadPointerSpeed = prefs.getInt("touchpad_pointer_speed", 50),
+                touchpadAccelerationEnabled = prefs.getBoolean("touchpad_acceleration", true),
+                touchpadInvertVertical = prefs.getBoolean("touchpad_invert_vertical", false),
+                touchpadInvertHorizontal = prefs.getBoolean("touchpad_invert_horizontal", false),
+                touchpadScrollSpeed = prefs.getFloat("touchpad_scroll_speed", 1.0f),
+                touchpadNaturalScrolling = prefs.getBoolean("touchpad_natural_scrolling", true),
+                touchpadTwoFingerScroll = prefs.getBoolean("touchpad_two_finger_scroll", true),
+                touchpadEdgeScrolling = prefs.getBoolean("touchpad_edge_scrolling", false),
+                touchpadScrollInertia = prefs.getBoolean("touchpad_scroll_inertia", true),
+                touchpadTapToClick = prefs.getBoolean("touchpad_tap_to_click", true),
+                touchpadDoubleTapDelay = prefs.getInt("touchpad_double_tap_delay", 300),
+                touchpadThreeFingerSwipe = prefs.getBoolean("touchpad_three_finger_swipe", true),
+                touchpadPinchToZoom = prefs.getBoolean("touchpad_pinch_to_zoom", true),
+                touchpadRotateToRotate = prefs.getBoolean("touchpad_rotate_to_rotate", false),
+                touchpadHapticFeedback = prefs.getBoolean("touchpad_haptic_feedback", true),
+                touchpadShowTouchPoints = prefs.getBoolean("touchpad_show_touch_points", false),
+
                 // ==================== CONNECTION SETTINGS ====================
                 autoConnect = prefs.getBoolean("auto_connect", true),
                 reconnectAttempts = prefs.getInt("reconnect_attempts", 5),
@@ -163,6 +184,27 @@ class SettingsViewModel @Inject constructor(
                 SettingsEvent.ToggleDebugInfo -> toggleDebugInfo()
                 SettingsEvent.ToggleKeepScreenOn -> toggleKeepScreenOn()
                 SettingsEvent.ToggleShowFps -> toggleShowFps()
+
+                // ==================== TOUCHPAD EVENTS ====================
+                SettingsEvent.ToggleTouchpadActive -> toggleTouchpadActive()
+                is SettingsEvent.UpdateTouchpadSensitivity -> updateTouchpadSensitivity(event.value)
+                is SettingsEvent.UpdateTouchpadCursorSpeed -> updateTouchpadCursorSpeed(event.value)
+                is SettingsEvent.UpdateTouchpadPointerSpeed -> updateTouchpadPointerSpeed(event.value)
+                SettingsEvent.ToggleTouchpadAcceleration -> toggleTouchpadAcceleration()
+                SettingsEvent.ToggleTouchpadInvertVertical -> toggleTouchpadInvertVertical()
+                SettingsEvent.ToggleTouchpadInvertHorizontal -> toggleTouchpadInvertHorizontal()
+                is SettingsEvent.UpdateTouchpadScrollSpeed -> updateTouchpadScrollSpeed(event.value)
+                SettingsEvent.ToggleTouchpadNaturalScrolling -> toggleTouchpadNaturalScrolling()
+                SettingsEvent.ToggleTouchpadTwoFingerScroll -> toggleTouchpadTwoFingerScroll()
+                SettingsEvent.ToggleTouchpadEdgeScrolling -> toggleTouchpadEdgeScrolling()
+                SettingsEvent.ToggleTouchpadScrollInertia -> toggleTouchpadScrollInertia()
+                SettingsEvent.ToggleTouchpadTapToClick -> toggleTouchpadTapToClick()
+                is SettingsEvent.UpdateTouchpadDoubleTapDelay -> updateTouchpadDoubleTapDelay(event.value)
+                SettingsEvent.ToggleTouchpadThreeFingerSwipe -> toggleTouchpadThreeFingerSwipe()
+                SettingsEvent.ToggleTouchpadPinchToZoom -> toggleTouchpadPinchToZoom()
+                SettingsEvent.ToggleTouchpadRotateToRotate -> toggleTouchpadRotateToRotate()
+                SettingsEvent.ToggleTouchpadHapticFeedback -> toggleTouchpadHapticFeedback()
+                SettingsEvent.ToggleTouchpadShowTouchPoints -> toggleTouchpadShowTouchPoints()
 
                 // ==================== CONNECTION EVENTS ====================
                 SettingsEvent.ToggleAutoConnect -> toggleAutoConnect()
@@ -384,6 +426,119 @@ class SettingsViewModel @Inject constructor(
     }
 
     // ======================================================
+    // TOUCHPAD METHODS - ALL SAVED
+    // ======================================================
+
+    private suspend fun toggleTouchpadActive() {
+        val current = _uiState.value.touchpadActive
+        prefs.putBoolean("touchpad_active", !current)
+        _uiState.update { it.copy(touchpadActive = !current) }
+    }
+
+    private suspend fun updateTouchpadSensitivity(value: Float) {
+        prefs.putFloat("touchpad_sensitivity", value)
+        _uiState.update { it.copy(touchpadSensitivity = value) }
+    }
+
+    private suspend fun updateTouchpadCursorSpeed(value: Float) {
+        prefs.putFloat("touchpad_cursor_speed", value)
+        _uiState.update { it.copy(touchpadCursorSpeed = value) }
+    }
+
+    private suspend fun updateTouchpadPointerSpeed(value: Int) {
+        prefs.putInt("touchpad_pointer_speed", value)
+        _uiState.update { it.copy(touchpadPointerSpeed = value) }
+    }
+
+    private suspend fun toggleTouchpadAcceleration() {
+        val current = _uiState.value.touchpadAccelerationEnabled
+        prefs.putBoolean("touchpad_acceleration", !current)
+        _uiState.update { it.copy(touchpadAccelerationEnabled = !current) }
+    }
+
+    private suspend fun toggleTouchpadInvertVertical() {
+        val current = _uiState.value.touchpadInvertVertical
+        prefs.putBoolean("touchpad_invert_vertical", !current)
+        _uiState.update { it.copy(touchpadInvertVertical = !current) }
+    }
+
+    private suspend fun toggleTouchpadInvertHorizontal() {
+        val current = _uiState.value.touchpadInvertHorizontal
+        prefs.putBoolean("touchpad_invert_horizontal", !current)
+        _uiState.update { it.copy(touchpadInvertHorizontal = !current) }
+    }
+
+    private suspend fun updateTouchpadScrollSpeed(value: Float) {
+        prefs.putFloat("touchpad_scroll_speed", value)
+        _uiState.update { it.copy(touchpadScrollSpeed = value) }
+    }
+
+    private suspend fun toggleTouchpadNaturalScrolling() {
+        val current = _uiState.value.touchpadNaturalScrolling
+        prefs.putBoolean("touchpad_natural_scrolling", !current)
+        _uiState.update { it.copy(touchpadNaturalScrolling = !current) }
+    }
+
+    private suspend fun toggleTouchpadTwoFingerScroll() {
+        val current = _uiState.value.touchpadTwoFingerScroll
+        prefs.putBoolean("touchpad_two_finger_scroll", !current)
+        _uiState.update { it.copy(touchpadTwoFingerScroll = !current) }
+    }
+
+    private suspend fun toggleTouchpadEdgeScrolling() {
+        val current = _uiState.value.touchpadEdgeScrolling
+        prefs.putBoolean("touchpad_edge_scrolling", !current)
+        _uiState.update { it.copy(touchpadEdgeScrolling = !current) }
+    }
+
+    private suspend fun toggleTouchpadScrollInertia() {
+        val current = _uiState.value.touchpadScrollInertia
+        prefs.putBoolean("touchpad_scroll_inertia", !current)
+        _uiState.update { it.copy(touchpadScrollInertia = !current) }
+    }
+
+    private suspend fun toggleTouchpadTapToClick() {
+        val current = _uiState.value.touchpadTapToClick
+        prefs.putBoolean("touchpad_tap_to_click", !current)
+        _uiState.update { it.copy(touchpadTapToClick = !current) }
+    }
+
+    private suspend fun updateTouchpadDoubleTapDelay(value: Int) {
+        prefs.putInt("touchpad_double_tap_delay", value)
+        _uiState.update { it.copy(touchpadDoubleTapDelay = value) }
+    }
+
+    private suspend fun toggleTouchpadThreeFingerSwipe() {
+        val current = _uiState.value.touchpadThreeFingerSwipe
+        prefs.putBoolean("touchpad_three_finger_swipe", !current)
+        _uiState.update { it.copy(touchpadThreeFingerSwipe = !current) }
+    }
+
+    private suspend fun toggleTouchpadPinchToZoom() {
+        val current = _uiState.value.touchpadPinchToZoom
+        prefs.putBoolean("touchpad_pinch_to_zoom", !current)
+        _uiState.update { it.copy(touchpadPinchToZoom = !current) }
+    }
+
+    private suspend fun toggleTouchpadRotateToRotate() {
+        val current = _uiState.value.touchpadRotateToRotate
+        prefs.putBoolean("touchpad_rotate_to_rotate", !current)
+        _uiState.update { it.copy(touchpadRotateToRotate = !current) }
+    }
+
+    private suspend fun toggleTouchpadHapticFeedback() {
+        val current = _uiState.value.touchpadHapticFeedback
+        prefs.putBoolean("touchpad_haptic_feedback", !current)
+        _uiState.update { it.copy(touchpadHapticFeedback = !current) }
+    }
+
+    private suspend fun toggleTouchpadShowTouchPoints() {
+        val current = _uiState.value.touchpadShowTouchPoints
+        prefs.putBoolean("touchpad_show_touch_points", !current)
+        _uiState.update { it.copy(touchpadShowTouchPoints = !current) }
+    }
+
+    // ======================================================
     // CONNECTION METHODS - ALL SAVED
     // ======================================================
 
@@ -513,6 +668,26 @@ class SettingsViewModel @Inject constructor(
         prefs.putBoolean("show_debug_info", defaultState.showDebugInfo)
         prefs.putBoolean("keep_screen_on", defaultState.keepScreenOn)
         prefs.putBoolean("show_fps", defaultState.showFps)
+        // Touchpad
+        prefs.putBoolean("touchpad_active", defaultState.touchpadActive)
+        prefs.putFloat("touchpad_sensitivity", defaultState.touchpadSensitivity)
+        prefs.putFloat("touchpad_cursor_speed", defaultState.touchpadCursorSpeed)
+        prefs.putInt("touchpad_pointer_speed", defaultState.touchpadPointerSpeed)
+        prefs.putBoolean("touchpad_acceleration", defaultState.touchpadAccelerationEnabled)
+        prefs.putBoolean("touchpad_invert_vertical", defaultState.touchpadInvertVertical)
+        prefs.putBoolean("touchpad_invert_horizontal", defaultState.touchpadInvertHorizontal)
+        prefs.putFloat("touchpad_scroll_speed", defaultState.touchpadScrollSpeed)
+        prefs.putBoolean("touchpad_natural_scrolling", defaultState.touchpadNaturalScrolling)
+        prefs.putBoolean("touchpad_two_finger_scroll", defaultState.touchpadTwoFingerScroll)
+        prefs.putBoolean("touchpad_edge_scrolling", defaultState.touchpadEdgeScrolling)
+        prefs.putBoolean("touchpad_scroll_inertia", defaultState.touchpadScrollInertia)
+        prefs.putBoolean("touchpad_tap_to_click", defaultState.touchpadTapToClick)
+        prefs.putInt("touchpad_double_tap_delay", defaultState.touchpadDoubleTapDelay)
+        prefs.putBoolean("touchpad_three_finger_swipe", defaultState.touchpadThreeFingerSwipe)
+        prefs.putBoolean("touchpad_pinch_to_zoom", defaultState.touchpadPinchToZoom)
+        prefs.putBoolean("touchpad_rotate_to_rotate", defaultState.touchpadRotateToRotate)
+        prefs.putBoolean("touchpad_haptic_feedback", defaultState.touchpadHapticFeedback)
+        prefs.putBoolean("touchpad_show_touch_points", defaultState.touchpadShowTouchPoints)
         // Connection
         prefs.putBoolean("auto_connect", defaultState.autoConnect)
         prefs.putInt("reconnect_attempts", defaultState.reconnectAttempts)
@@ -579,6 +754,27 @@ class SettingsViewModel @Inject constructor(
             appendLine("Show Debug: ${state.showDebugInfo}")
             appendLine("Keep Screen On: ${state.keepScreenOn}")
             appendLine("Show FPS: ${state.showFps}")
+            appendLine()
+            appendLine("=== Touchpad Settings ===")
+            appendLine("Touchpad Active: ${state.touchpadActive}")
+            appendLine("Touchpad Sensitivity: ${state.touchpadSensitivity}")
+            appendLine("Touchpad Cursor Speed: ${state.touchpadCursorSpeed}")
+            appendLine("Touchpad Pointer Speed: ${state.touchpadPointerSpeed}")
+            appendLine("Touchpad Acceleration: ${state.touchpadAccelerationEnabled}")
+            appendLine("Touchpad Invert Vertical: ${state.touchpadInvertVertical}")
+            appendLine("Touchpad Invert Horizontal: ${state.touchpadInvertHorizontal}")
+            appendLine("Touchpad Scroll Speed: ${state.touchpadScrollSpeed}")
+            appendLine("Touchpad Natural Scrolling: ${state.touchpadNaturalScrolling}")
+            appendLine("Touchpad Two Finger Scroll: ${state.touchpadTwoFingerScroll}")
+            appendLine("Touchpad Edge Scrolling: ${state.touchpadEdgeScrolling}")
+            appendLine("Touchpad Scroll Inertia: ${state.touchpadScrollInertia}")
+            appendLine("Touchpad Tap To Click: ${state.touchpadTapToClick}")
+            appendLine("Touchpad Double Tap Delay: ${state.touchpadDoubleTapDelay}")
+            appendLine("Touchpad Three Finger Swipe: ${state.touchpadThreeFingerSwipe}")
+            appendLine("Touchpad Pinch To Zoom: ${state.touchpadPinchToZoom}")
+            appendLine("Touchpad Rotate To Rotate: ${state.touchpadRotateToRotate}")
+            appendLine("Touchpad Haptic Feedback: ${state.touchpadHapticFeedback}")
+            appendLine("Touchpad Show Touch Points: ${state.touchpadShowTouchPoints}")
             appendLine()
             appendLine("=== Connection Settings ===")
             appendLine("Auto Connect: ${state.autoConnect}")
