@@ -67,6 +67,7 @@ func (s *Server) Start() error {
 	go s.acceptLoop()
 
 	utils.LogInfo("TCP server started: address=%s", addr)
+	utils.LogDebug("TCP listen socket ready on %s", addr)
 	return nil
 }
 
@@ -101,6 +102,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	s.mu.Unlock()
 
 	utils.LogInfo("TCP client connected: id=%s ip=%s", clientID, clientIP)
+	utils.LogDebug("TCP initial client record created: id=%s name=%s", clientID, client.Name)
 	s.deviceMgr.RegisterDevice(clientID, device.TypeTCP, client.Name)
 	s.triggerEvent(TCPEvent{
 		Type:      "connected",
@@ -134,6 +136,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
+			utils.LogDebug("TCP read loop ending for client=%s err=%v", clientID, err)
 			break
 		}
 
@@ -164,12 +167,14 @@ func (s *Server) processLine(client *Client, line []byte) {
 		return
 	}
 	cfg := config.Get()
+	utils.LogDebug("TCP message parsed: client=%s type=%s payload_keys=%d", client.ID, msgType, len(payload))
 
 	switch msgType {
 	case "move":
 		dx := number(payload["dx"])
 		dy := number(payload["dy"])
 		s.mouse.Move(dx, dy)
+		utils.LogDebug("TCP move forwarded: client=%s dx=%.2f dy=%.2f", client.ID, dx, dy)
 
 	case "click":
 		button, _ := payload["button"].(string)
@@ -177,6 +182,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 			button = "left"
 		}
 		s.mouse.Click(button)
+		utils.LogDebug("TCP click forwarded: client=%s button=%s", client.ID, button)
 		s.writeAck(client, id)
 
 	case "doubleclick":
@@ -190,6 +196,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 	case "scroll":
 		delta := int(number(payload["delta"]))
 		s.mouse.Scroll(delta)
+		utils.LogDebug("TCP scroll forwarded: client=%s delta=%d", client.ID, delta)
 		s.writeAck(client, id)
 
 	case "hello":
