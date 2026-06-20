@@ -148,16 +148,65 @@ fun CalibrationStatusChip(
     status: CalibrationStatus,
     modifier: Modifier = Modifier
 ) {
-    val (statusText, isError, isComplete, isSynced) = when (status) {
-        CalibrationStatus.NOT_STARTED -> "Not Started" to false to false to false
-        CalibrationStatus.IN_PROGRESS -> "In Progress" to false to false to false
-        CalibrationStatus.GYRO_COMPLETE -> "Gyro Complete" to false to false to false
-        CalibrationStatus.MAG_COMPLETE -> "Mag Complete" to false to false to false
-        CalibrationStatus.ACCEL_COMPLETE -> "Accel Complete" to false to false to false
-        CalibrationStatus.COMPLETED -> "✓ Complete" to false to true to false
-        CalibrationStatus.FAILED -> "❌ Failed" to true to false to false
-        CalibrationStatus.SKIPPED -> "⏭️ Skipped" to false to true to false
-        CalibrationStatus.IDLE -> "Idle" to false to false to false
+    val statusText: String
+    val isError: Boolean
+    val isComplete: Boolean
+    val isSynced: Boolean
+    when (status) {
+        CalibrationStatus.NOT_STARTED -> {
+            statusText = "Not Started"
+            isError = false
+            isComplete = false
+            isSynced = false
+        }
+        CalibrationStatus.IN_PROGRESS -> {
+            statusText = "In Progress"
+            isError = false
+            isComplete = false
+            isSynced = false
+        }
+        CalibrationStatus.GYRO_COMPLETE -> {
+            statusText = "Gyro Complete"
+            isError = false
+            isComplete = false
+            isSynced = false
+        }
+        CalibrationStatus.MAG_COMPLETE -> {
+            statusText = "Mag Complete"
+            isError = false
+            isComplete = false
+            isSynced = false
+        }
+        CalibrationStatus.ACCEL_COMPLETE -> {
+            statusText = "Accel Complete"
+            isError = false
+            isComplete = false
+            isSynced = false
+        }
+        CalibrationStatus.COMPLETED -> {
+            statusText = "✓ Complete"
+            isError = false
+            isComplete = true
+            isSynced = false
+        }
+        CalibrationStatus.FAILED -> {
+            statusText = "❌ Failed"
+            isError = true
+            isComplete = false
+            isSynced = false
+        }
+        CalibrationStatus.SKIPPED -> {
+            statusText = "⏭️ Skipped"
+            isError = false
+            isComplete = true
+            isSynced = false
+        }
+        CalibrationStatus.IDLE -> {
+            statusText = "Idle"
+            isError = false
+            isComplete = false
+            isSynced = false
+        }
     }
 
     CalibrationStatusChipText(

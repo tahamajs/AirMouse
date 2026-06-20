@@ -188,10 +188,21 @@ object DomainToEntityMapper {
 
     fun mapToEntity(gestureName: String, sample: FloatArray, confidence: Float): TrainingSampleEntity {
         return TrainingSampleEntity(
-            gestureName = gestureName,
-            sampleData = sample.joinToString(","),
+            gestureId = gestureName,
+            gyroX = sample.getOrNull(0) ?: 0f,
+            gyroY = sample.getOrNull(1) ?: 0f,
+            gyroZ = sample.getOrNull(2) ?: 0f,
+            accelX = sample.getOrNull(3) ?: 0f,
+            accelY = sample.getOrNull(4) ?: 0f,
+            accelZ = sample.getOrNull(5) ?: 0f,
+            magX = sample.getOrNull(6) ?: 0f,
+            magY = sample.getOrNull(7) ?: 0f,
+            magZ = sample.getOrNull(8) ?: 0f,
+            label = gestureName,
+            confidence = confidence,
             timestamp = System.currentTimeMillis(),
-            confidence = confidence
+            isValid = true,
+            sessionId = null
         )
     }
 
@@ -352,7 +363,17 @@ object EntityToDomainMapper {
     // ==================== Training Sample ====================
 
     fun mapToDomain(entity: TrainingSampleEntity): FloatArray {
-        return entity.sampleData.split(",").map { it.toFloat() }.toFloatArray()
+        return floatArrayOf(
+            entity.gyroX,
+            entity.gyroY,
+            entity.gyroZ,
+            entity.accelX,
+            entity.accelY,
+            entity.accelZ,
+            entity.magX,
+            entity.magY,
+            entity.magZ
+        )
     }
 
     fun mapTrainingSampleEntitiesToDomainList(entities: List<TrainingSampleEntity>): List<FloatArray> {
