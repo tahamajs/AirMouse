@@ -104,6 +104,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		if server.IsRunning() {
 			tab.controlBtn.Disable()
 			tab.serverStatus.SetText("⏳ Server Status: Stopping...")
+			utils.LogInfo("Dashboard requested server stop")
 			go func() {
 				server.Stop()
 				RunOnMain(func() {
@@ -122,6 +123,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 		tab.controlBtn.Disable()
 		tab.serverStatus.SetText("⏳ Server Status: Starting...")
+		utils.LogInfo("Dashboard requested server start")
 		go func() {
 			err := server.Start()
 			RunOnMain(func() {
@@ -140,6 +142,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 						"🔌 Endpoint: %s:%d (TCP) | ws://%s:%d\n📡 UDP Discovery: port %d",
 						ip, tab.cfg.Port, ip, tab.cfg.WebSocketPort, tab.cfg.UDPPort,
 					))
+					utils.LogInfo("Dashboard server running on %s:%d ws://%s:%d udp=%d", ip, tab.cfg.Port, ip, tab.cfg.WebSocketPort, tab.cfg.UDPPort)
 
 					if tab.cfg.EnableAISmoothing {
 						tab.aiStatusLabel.SetText("🧠 AI Smoothing: Enabled ✅")
@@ -163,6 +166,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 							dialog.ShowError(fmt.Errorf("Failed to start server: %v", err), win)
 						}
 					}
+					utils.LogError("Dashboard server start failed: %v", err)
 				}
 			})
 		}()
@@ -319,24 +323,11 @@ func (t *DashboardTab) refreshStats() {
 	clicks, dbl, right, scroll := t.mouse.Stats()
 	devices := t.deviceMgr.GetAllDevices()
 	deviceCount := len(devices)
+	utils.LogDebug("Dashboard refresh: clicks=%d double=%d right=%d scroll=%d devices=%d", clicks, dbl, right, scroll, deviceCount)
 
 	var deviceDetails []string
 	for _, d := range devices {
-		deviceDetails = append(deviceDetails, fmt.Sprintf(
-			"• %s [%s]\n  ID: %s\n  Status: %s\n  Connected: %s\n  Last active: %s\n  Sent: %s (%d msg)\n  Received: %s (%d msg)\n  RSSI: %d\n  IP: %s\n  MAC: %s\n  Version: %s",
-			d.Name,
-			d.Type,
-			d.ID,
-			d.Status,
-			FormatDuration(time.Since(d.ConnectedAt)),
-			FormatDuration(time.Since(d.LastActive)),
-			FormatBytes(d.BytesSent), d.MessagesSent,
-			FormatBytes(d.BytesRecv), d.MessagesRecv,
-			d.RSSI,
-			emptyOrDash(d.IPAddress),
-			emptyOrDash(d.MACAddress),
-			emptyOrDash(d.Version),
-		))
+		deviceDetails = append(deviceDetails, formatDeviceDetails(d))
 	}
 	// Update UI in one batch
 	RunOnMain(func() {
@@ -347,8 +338,10 @@ func (t *DashboardTab) refreshStats() {
 		t.connLabel.SetText(fmt.Sprintf("📱 Connected devices: %d", deviceCount))
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
+			utils.LogDebug("Dashboard device list updated: %s", strings.Join(deviceNamesForLog(devices), ", "))
 		} else {
 			t.deviceDetailBox.SetText("No connected devices yet.")
+			utils.LogDebug("Dashboard device list empty")
 		}
 
 		t.mu.Lock()
@@ -369,10 +362,10 @@ func (t *DashboardTab) addRecentLog(level, msg string) {
 	t.logMu.Lock()
 	defer t.logMu.Unlock()
 
-	line := fmt.Sprintf("%s [%s] %s", time.Now().Format("15:04:05"), level, msg)
+	line := formatRecentLogEntry(time.Now(), level, msg)
 	t.recentLogs = append(t.recentLogs, line)
 	if len(t.recentLogs) > 12 {
-		t.recentLogs = t.recentLogs[len(t.recentLogs)-12:]
+		t.recentLogs = truncateRecentLogs(t.recentLogs, 12)
 	}
 
 	text := strings.Join(t.recentLogs, "\n")
@@ -388,6 +381,47 @@ func emptyOrDash(v string) string {
 		return "-"
 	}
 	return v
+}
+
+func formatRecentLogEntry(ts time.Time, level, msg string) string {
+	return fmt.Sprintf("%s [%s] %s", ts.Format("15:04:05"), strings.ToUpper(strings.TrimSpace(level)), strings.TrimSpace(msg))
+}
+
+func truncateRecentLogs(entries []string, max int) []string {
+	if max <= 0 || len(entries) <= max {
+		out := make([]string, len(entries))
+		copy(out, entries)
+		return out
+	}
+	out := make([]string, max)
+	copy(out, entries[len(entries)-max:])
+	return out
+}
+
+func formatDeviceDetails(d device.DeviceInfo) string {
+	return fmt.Sprintf(
+		"• %s [%s]\n  ID: %s\n  Status: %s\n  Connected: %s\n  Last active: %s\n  Sent: %s (%d msg)\n  Received: %s (%d msg)\n  RSSI: %d\n  IP: %s\n  MAC: %s\n  Version: %s",
+		d.Name,
+		d.Type,
+		d.ID,
+		d.Status,
+		FormatDuration(time.Since(d.ConnectedAt)),
+		FormatDuration(time.Since(d.LastActive)),
+		FormatBytes(d.BytesSent), d.MessagesSent,
+		FormatBytes(d.BytesRecv), d.MessagesRecv,
+		d.RSSI,
+		emptyOrDash(d.IPAddress),
+		emptyOrDash(d.MACAddress),
+		emptyOrDash(d.Version),
+	)
+}
+
+func deviceNamesForLog(devices []*device.DeviceInfo) []string {
+	names := make([]string, 0, len(devices))
+	for _, d := range devices {
+		names = append(names, fmt.Sprintf("%s (%s)", d.Name, d.Type))
+	}
+	return names
 }
 
 func (t *DashboardTab) deviceSummaryLabel() fyne.CanvasObject {
