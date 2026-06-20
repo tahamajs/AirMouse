@@ -113,6 +113,7 @@ func (s *ProtocolServer) Start() error {
 
 	// Start TCP server
 	if cfg.EnableTCP {
+		utils.LogInfo("Protocol start: initializing TCP server host=%s port=%d", cfg.Host, cfg.Port)
 		s.tcpServer = tcp.NewServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr)
 		if err := s.tcpServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("TCP: %w", err))
@@ -124,6 +125,7 @@ func (s *ProtocolServer) Start() error {
 
 	// Start WebSocket server
 	if cfg.EnableWebSocket {
+		utils.LogInfo("Protocol start: initializing WebSocket server port=%d", cfg.WebSocketPort)
 		s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
 		if err := s.wsServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("WebSocket: %w", err))
@@ -135,6 +137,7 @@ func (s *ProtocolServer) Start() error {
 
 	// Start UDP discovery server
 	if cfg.EnableUDP {
+		utils.LogInfo("Protocol start: initializing UDP discovery port=%d", cfg.UDPPort)
 		s.udpServer = udp.NewServer(cfg.UDPPort, s.deviceMgr)
 		if err := s.udpServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("UDP: %w", err))
@@ -146,6 +149,7 @@ func (s *ProtocolServer) Start() error {
 
 	// Start Bluetooth manager
 	if cfg.EnableBluetooth {
+		utils.LogInfo("Protocol start: initializing Bluetooth manager adapter=%s", cfg.BluetoothAdapter)
 		s.bluetoothMgr = bluetooth.NewManager(cfg.BluetoothAdapter, s.mouseCtrl, s.deviceMgr)
 		if err := s.bluetoothMgr.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("Bluetooth: %w", err))
@@ -157,6 +161,7 @@ func (s *ProtocolServer) Start() error {
 
 	// Start USB/serial server
 	if cfg.EnableSerial {
+		utils.LogInfo("Protocol start: initializing USB server")
 		s.usbServer = usb.NewServer(s.mouseCtrl, s.deviceMgr)
 		if err := s.usbServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("USB: %w", err))
@@ -324,6 +329,7 @@ func (s *ProtocolServer) triggerEvent(event ServerEvent) {
 	copy(callbacks, s.callbacks)
 	s.mu.RUnlock()
 
+	utils.LogDebug("Protocol event emitted: type=%s client=%s", event.Type, event.ClientID)
 	for _, cb := range callbacks {
 		go cb(event)
 	}

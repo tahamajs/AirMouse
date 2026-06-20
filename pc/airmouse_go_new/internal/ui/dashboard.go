@@ -398,7 +398,7 @@ func truncateRecentLogs(entries []string, max int) []string {
 	return out
 }
 
-func formatDeviceDetails(d device.DeviceInfo) string {
+func formatDeviceDetails(d *device.DeviceInfo) string {
 	return fmt.Sprintf(
 		"• %s [%s]\n  ID: %s\n  Status: %s\n  Connected: %s\n  Last active: %s\n  Sent: %s (%d msg)\n  Received: %s (%d msg)\n  RSSI: %d\n  IP: %s\n  MAC: %s\n  Version: %s",
 		d.Name,
