@@ -303,15 +303,15 @@ private fun CalibrationGuidanceCard() {
         ) {
             Text("How to calibrate", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(
-                "1. Keep the phone still and press Start Calibration.\n" +
-                    "2. Follow the on-screen steps for gyro, magnetometer, and accelerometer.\n" +
-                    "3. Rotate the device slowly in different axes so the filters can estimate bias, drift, and scale.\n" +
-                    "4. Use the live values below to verify raw sensor output before saving.",
+                "1. Keep the phone completely still and collect several gyro samples to estimate bias.\n" +
+                    "2. Hold the phone in six different orientations for the accelerometer so scale and offset can be computed from gravity (about 9.81 m/s²).\n" +
+                    "3. Move the phone in a figure-eight pattern for the magnetometer so offset and scale can be estimated across the full sphere.\n" +
+                    "4. Use the live values below to verify raw sensor output and filter stability before saving.",
                 color = Color.White.copy(alpha = 0.82f),
                 lineHeight = 20.sp
             )
             Text(
-                "The app combines calibrated sensor data to infer motion direction, click, scroll, and cursor movement.",
+                "The app combines calibrated sensor data to infer motion direction, click, scroll, and cursor movement without relying on raw unfiltered readings.",
                 color = Color(0xFF93C5FD),
                 fontSize = 13.sp
             )
