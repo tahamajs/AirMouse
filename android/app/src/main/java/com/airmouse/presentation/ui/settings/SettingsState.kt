@@ -205,6 +205,7 @@ sealed class SettingsEvent {
     object ResetDefaults : SettingsEvent()
     object ExportSettings : SettingsEvent()
     object ImportSettings : SettingsEvent()
+    data class ImportSettingsFromUri(val uri: String) : SettingsEvent()
     object ClearCache : SettingsEvent()
     object ClearAllData : SettingsEvent()
     object OpenSystemSettings : SettingsEvent()
