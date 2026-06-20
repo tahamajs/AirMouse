@@ -27,8 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -54,6 +54,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     // UI State
+    var isConnected by remember { mutableStateOf(false) }
     var mouseStatus by remember { mutableStateOf("Mouse Off") }
     var serverIp by remember { mutableStateOf("192.168.1.100") }
     var serverPort by remember { mutableIntStateOf(8080) }

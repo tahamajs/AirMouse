@@ -75,15 +75,22 @@ func NewPremiumDashboard(server *protocol.ProtocolServer, mouse control.MouseCon
 
 	// ----- Server Controls -----
 	d.startBtn = widget.NewButtonWithIcon("▶ Start Server", theme.MediaPlayIcon(), func() {
-		if err := server.Start(); err == nil {
+		err := server.Start()
+		if server.IsRunning() {
 			d.mu.Lock()
 			d.serverStart = time.Now()
 			d.mu.Unlock()
 			d.updateUI(true)
-		} else {
+		}
+		if err != nil {
 			win := getCurrentWindow()
 			if win != nil {
-				dialog.ShowError(fmt.Errorf("Failed to start server: %v", err), win)
+				if server.IsRunning() {
+					dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+						"Server is running, but one or more protocols reported an issue:\n\n%v", err), win)
+				} else {
+					dialog.ShowError(fmt.Errorf("Failed to start server: %v", err), win)
+				}
 			}
 		}
 	})
