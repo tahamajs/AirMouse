@@ -295,6 +295,7 @@ fun ModernDrawerContent(
             title = "Main",
             items = listOf(
                 DrawerItem(Destinations.Home.route, "Home", Icons.Default.Home),
+                DrawerItem(Destinations.Touchpad.route, "Touchpad", Icons.Default.TouchApp),
                 DrawerItem(Destinations.Statistics.route, "Statistics", Icons.Default.Assessment),
                 DrawerItem(Destinations.Settings.route, "Settings", Icons.Default.Settings),
                 DrawerItem(Destinations.Help.route, "Help", Icons.AutoMirrored.Filled.Help),

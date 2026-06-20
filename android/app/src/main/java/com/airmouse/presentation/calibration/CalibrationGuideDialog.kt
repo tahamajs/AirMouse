@@ -1,12 +1,17 @@
 // app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationGuideDialog.kt
 package com.airmouse.presentation.ui.calibration
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,50 +33,32 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.domain.model.CalibrationStatus
 import kotlinx.coroutines.delay
 
-// ==========================================
-// CALIBRATION GUIDE DIALOG
-// ==========================================
-
 @Composable
 fun CalibrationGuideDialog(
-    step: Int,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    onNextStep: (() -> Unit)? = null,
+    initialStep: Int = 0,
     viewModel: CalibrationViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val calibrationStatus by viewModel.calibrationStatus.collectAsStateWithLifecycle()
-    val calibrationProgress by viewModel.calibrationProgress.collectAsStateWithLifecycle()
     val isCalibrating by viewModel.isCalibrating.collectAsStateWithLifecycle()
+    val calibrationProgress by viewModel.calibrationProgress.collectAsStateWithLifecycle()
+
+    // Determine current display step (0: Gyro, 1: Mag, 2: Accel, 3: Success)
+    val step = when {
+        uiState.isComplete -> 3
+        uiState.currentStep > 0 -> (uiState.currentStep - 1).coerceIn(0, 2)
+        else -> initialStep.coerceIn(0, 3)
+    }
 
     var currentImageIndex by remember { mutableStateOf(0) }
-    val totalImages = when (step) {
-        0 -> 3
-        1 -> 4
-        2 -> 6
-        else -> 1
-    }
-
-    // Auto-advance instruction frames
+    
+    // Auto-advance internal instruction frames for the animations
     LaunchedEffect(step) {
+        currentImageIndex = 0
         while (true) {
             delay(2000)
-            currentImageIndex = (currentImageIndex + 1) % totalImages
-        }
-    }
-
-    // Monitor calibration status from repository
-    LaunchedEffect(calibrationStatus) {
-        when (calibrationStatus) {
-            CalibrationStatus.COMPLETED -> {
-                // Close dialog when calibration completes
-                onDismiss()
-            }
-            CalibrationStatus.FAILED -> {
-                // Could show error state here
-            }
-            else -> { /* Not started or idle */ }
+            currentImageIndex = (currentImageIndex + 1) % 6
         }
     }
 
@@ -87,230 +74,160 @@ fun CalibrationGuideDialog(
                 .fillMaxWidth(0.92f)
                 .wrapContentHeight()
                 .padding(vertical = 24.dp),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF1E293B)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
             Box {
                 // Close button at top-right corner
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color(0xFF94A3B8)
-                    )
+                    Icon(Icons.Default.Close, "Close", tint = Color(0xFF94A3B8))
                 }
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                        .padding(top = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Animated instruction icon
+                    // 1. Animated Illustration
                     Box(
                         modifier = Modifier
-                            .size(200.dp)
-                            .background(Color(0xFF0F172A), RoundedCornerShape(16.dp)),
+                            .size(180.dp)
+                            .background(Color(0xFF0F172A), RoundedCornerShape(24.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        when (step) {
-                            0 -> GyroscopeInstructionAnimation(currentImageIndex)
-                            1 -> MagnetometerInstructionAnimation(currentImageIndex)
-                            2 -> AccelerometerInstructionAnimation(currentImageIndex)
-                            else -> CompletedInstructionAnimation()
+                        AnimatedContent(
+                            targetState = step,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(500)) togetherWith fadeOut(animationSpec = tween(500))
+                            },
+                            label = "IconTransition"
+                        ) { targetStep ->
+                            when (targetStep) {
+                                0 -> GyroscopeInstructionAnimation(currentImageIndex)
+                                1 -> MagnetometerInstructionAnimation(currentImageIndex)
+                                2 -> AccelerometerInstructionAnimation(
+                                    if (uiState.isCollecting) currentImageIndex else uiState.currentPosition
+                                )
+                                else -> CompletedInstructionAnimation()
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Title with status indicator
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = when (step) {
-                                0 -> "🧭 Gyroscope Calibration"
-                                1 -> "🧲 Magnetometer Calibration"
-                                2 -> "📐 Accelerometer Calibration"
-                                else -> "✅ Calibration Complete!"
-                            },
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            textAlign = TextAlign.Center
-                        )
-
-                        if (isCalibrating) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = Color(0xFF6366F1)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Main instruction
+                    // 2. Title & Status
                     Text(
                         text = when (step) {
-                            0 -> "Place your device on a flat, stationary surface"
-                            1 -> "Move your device in a smooth figure‑8 pattern"
-                            2 -> "Rotate your device to each shown orientation"
-                            else -> "Your device is now fully calibrated!"
+                            0 -> "🧭 Gyroscope"
+                            1 -> "🧲 Magnetometer"
+                            2 -> "📐 Accelerometer"
+                            else -> "✅ Calibration Complete!"
                         },
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 3. Dynamic Instructions
+                    Text(
+                        text = if (uiState.statusMessage.isNotEmpty()) uiState.statusMessage else uiState.stepInstruction,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFFE2E8F0),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Detailed instruction
-                    Text(
-                        text = when (step) {
-                            0 -> "Keep the device perfectly still for 5 seconds"
-                            1 -> "Ensure you cover all axes of movement"
-                            2 -> "Hold each position steady for 3 seconds"
-                            else -> "You can now enjoy precise cursor control"
-                        },
-                        fontSize = 14.sp,
-                        color = Color(0xFF94A3B8),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        modifier = Modifier.heightIn(min = 48.dp)
                     )
 
-                    // Progress bar for calibration
-                    if (isCalibrating && step < 3) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                    // 4. Progress Bar
+                    if ((isCalibrating || uiState.isCollecting) && !uiState.isComplete) {
+                        Spacer(modifier = Modifier.height(16.dp))
                         LinearProgressIndicator(
-                            progress = { calibrationProgress / 100f },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp)),
+                            progress = { if (step == 2) uiState.stepProgress else calibrationProgress / 100f },
+                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
                             color = Color(0xFF6366F1),
                             trackColor = Color.White.copy(alpha = 0.1f)
                         )
                         Text(
-                            "${calibrationProgress}% complete",
-                            fontSize = 11.sp,
-                            color = Color.White.copy(alpha = 0.5f)
+                            text = if (step == 2) "Capturing Position ${uiState.currentPosition + 1}/6" else "$calibrationProgress% complete",
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8),
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Step progress indicator (dots)
-                    if (step < 3) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        ) {
-                            repeat(totalImages) { index ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .background(
-                                            if (index == currentImageIndex % totalImages)
-                                                Color(0xFF6366F1)
-                                            else
-                                                Color(0xFF334155),
-                                            shape = RoundedCornerShape(4.dp)
-                                        )
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Action buttons
+                    // 5. Action Buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Skip/Close button
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier
-                                .weight(if (onNextStep != null && step < 3) 1f else 1f)
-                                .height(52.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF334155)
-                            )
-                        ) {
-                            Text(
-                                if (step >= 3) "Close" else "Skip",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
-                            )
-                        }
-
-                        // Next Step button (only if not complete and onNextStep provided)
-                        if (onNextStep != null && step < 3) {
-                            Button(
-                                onClick = {
-                                    // Call the external callback and then the ViewModel's nextStep
-                                    onNextStep()
-                                    viewModel.nextStep()
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(52.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF6366F1)
-                                )
-                            ) {
-                                if (isCalibrating) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
-                                        color = Color.White
-                                    )
-                                } else {
-                                    Text(
-                                        "Next Step →",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                        }
-
-                        // Get Started button (when calibration complete)
-                        if (step >= 3) {
+                        if (uiState.isComplete) {
                             Button(
                                 onClick = onDismiss,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(52.dp),
-                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth().height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                            ) {
+                                Icon(Icons.Default.CheckCircle, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Get Started", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            val isStepFinished = uiState.statusMessage.contains("✓") || uiState.statusMessage.contains("Captured")
+                            
+                            Button(
+                                onClick = {
+                                    when {
+                                        step == 2 && !uiState.isCollecting -> viewModel.startCurrentStep()
+                                        isStepFinished -> {
+                                            if (step == 2 && uiState.currentPosition >= 6) {
+                                                viewModel.completeCalibration()
+                                            } else {
+                                                viewModel.nextStep()
+                                            }
+                                        }
+                                        else -> viewModel.startCurrentStep()
+                                    }
+                                },
+                                modifier = Modifier.weight(1.5f).height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                enabled = !isCalibrating && !uiState.isCollecting || (step == 2 && !uiState.isCollecting) || isStepFinished,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF10B981)
+                                    containerColor = if (isStepFinished) Color(0xFF10B981) else Color(0xFF6366F1)
                                 )
                             ) {
-                                Text(
-                                    "Get Started",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
-                                )
+                                if (isCalibrating || uiState.isCollecting) {
+                                    CircularProgressIndicator(Modifier.size(24.dp), Color.White, 2.dp)
+                                } else {
+                                    val btnText = when {
+                                        isStepFinished -> if (step == 2 && uiState.currentPosition >= 6) "Finish" else "Next Step →"
+                                        step == 2 -> "Capture Position"
+                                        uiState.currentStep == 0 -> "Start Calibration"
+                                        else -> "Begin Step"
+                                    }
+                                    val icon = if (step == 2) Icons.Default.TouchApp else Icons.Default.PlayArrow
+                                    Icon(icon, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(btnText, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.resetCalibration()
+                                    onDismiss()
+                                },
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                            ) {
+                                Text("Cancel", color = Color.White.copy(alpha = 0.7f))
                             }
                         }
                     }
@@ -320,210 +237,56 @@ fun CalibrationGuideDialog(
     }
 }
 
-// ==========================================
-// ANIMATION COMPONENTS - Unique Names
-// ==========================================
-
 @Composable
 fun GyroscopeInstructionAnimation(frame: Int) {
     val rotation = when (frame % 3) {
         0 -> 0f
-        1 -> 5f
-        else -> -5f
+        1 -> 3f
+        else -> -3f
     }
-
-    val pulse = remember { Animatable(1f) }
-    LaunchedEffect(frame) {
-        pulse.animateTo(
-            targetValue = if (frame % 2 == 0) 1.0f else 1.1f,
-            animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
-        )
-    }
-
-    Box(
-        modifier = Modifier
-            .size(140.dp)
-            .rotate(rotation)
-            .scale(pulse.value)
-            .background(Color(0xFF020617), RoundedCornerShape(16.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("📱", fontSize = 56.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Flat Surface", fontSize = 13.sp, color = Color(0xFF94A3B8))
-            Text("Keep Still", fontSize = 11.sp, color = Color(0xFF64748B))
-        }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("📱", fontSize = 64.sp, modifier = Modifier.rotate(rotation))
+        Text("KEEP STILL", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
     }
 }
 
 @Composable
 fun MagnetometerInstructionAnimation(frame: Int) {
-    val infiniteTransition = rememberInfiniteTransition(label = "mag_rotate")
+    val infiniteTransition = rememberInfiniteTransition(label = "mag")
     val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3000, easing = LinearEasing)
-        ),
-        label = "mag_rotation"
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing)), label = ""
     )
-
-    val pulse = remember { Animatable(1f) }
-    LaunchedEffect(frame) {
-        pulse.animateTo(
-            targetValue = if (frame % 2 == 0) 1.0f else 1.2f,
-            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing)
-        )
-    }
-
-    Box(
-        modifier = Modifier
-            .size(140.dp)
-            .scale(pulse.value)
-            .background(Color(0xFF020617), RoundedCornerShape(16.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("∞", fontSize = 56.sp, modifier = Modifier.rotate(rotation))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Figure‑8 Pattern", fontSize = 13.sp, color = Color(0xFF94A3B8))
-            Text("Rotate in all directions", fontSize = 11.sp, color = Color(0xFF64748B))
-        }
-    }
+    Text("∞", fontSize = 80.sp, color = Color(0xFF6366F1), modifier = Modifier.rotate(rotation))
 }
 
 @Composable
-fun AccelerometerInstructionAnimation(frame: Int) {
-    val orientations = listOf(
-        "⬆️" to "Top",
-        "⬇️" to "Bottom",
-        "⬅️" to "Left",
-        "➡️" to "Right",
-        "🔄" to "Front",
-        "↩️" to "Back"
-    )
-    val index = frame % orientations.size
-    val (emoji, label) = orientations[index]
-
-    val pulse = remember { Animatable(1f) }
-    LaunchedEffect(frame) {
-        pulse.animateTo(
-            targetValue = if (frame % 2 == 0) 1.0f else 1.15f,
-            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
-        )
-    }
-
-    Box(
-        modifier = Modifier
-            .size(140.dp)
-            .scale(pulse.value)
-            .background(Color(0xFF020617), RoundedCornerShape(16.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(emoji, fontSize = 56.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(label, fontSize = 13.sp, color = Color(0xFF94A3B8))
-            Text("Hold this position", fontSize = 11.sp, color = Color(0xFF64748B))
-        }
+fun AccelerometerInstructionAnimation(position: Int) {
+    val orientations = listOf("⬆️ Top", "⬇️ Bottom", "⬅️ Left", "➡️ Right", "🔄 Front", "↩️ Back")
+    val current = orientations.getOrElse(position % 6) { "📱" }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(current.split(" ")[0], fontSize = 64.sp)
+        Text(current.split(" ").getOrElse(1) { "" }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
     }
 }
 
 @Composable
 fun CompletedInstructionAnimation() {
-    val scale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "complete_scale"
+    val infiniteTransition = rememberInfiniteTransition(label = "confetti")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(tween(1000), repeatMode = RepeatMode.Reverse), label = ""
     )
-
-    val infiniteTransition = rememberInfiniteTransition(label = "confetti_float")
-    val offsetY by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 20f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "confetti_y"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(140.dp)
-            .scale(scale)
-            .background(Color(0xFF020617), RoundedCornerShape(16.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("🎉", fontSize = 56.sp, modifier = Modifier.graphicsLayer { translationY = offsetY })
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Ready to Go!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
-            Text("Calibration successful", fontSize = 12.sp, color = Color(0xFF94A3B8))
-        }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("🎉", fontSize = 72.sp, modifier = Modifier.scale(scale))
+        Text("READY TO GO", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
     }
 }
 
-// ==========================================
-// PREVIEWS - Unique Names
-// ==========================================
-
-@Preview(showBackground = true, name = "Gyroscope Step")
+@Preview(showBackground = true)
 @Composable
-fun PreviewGyroGuideDialog() {
+fun PreviewCalibrationGuideDialog() {
     MaterialTheme {
-        CalibrationGuideDialog(step = 0, onDismiss = {})
-    }
-}
-
-@Preview(showBackground = true, name = "Magnetometer Step")
-@Composable
-fun PreviewMagnetometerGuideDialog() {
-    MaterialTheme {
-        CalibrationGuideDialog(step = 1, onDismiss = {})
-    }
-}
-
-@Preview(showBackground = true, name = "Accelerometer Step")
-@Composable
-fun PreviewAccelerometerGuideDialog() {
-    MaterialTheme {
-        CalibrationGuideDialog(step = 2, onDismiss = {})
-    }
-}
-
-@Preview(showBackground = true, name = "Completed Step")
-@Composable
-fun PreviewCompletedGuideDialog() {
-    MaterialTheme {
-        CalibrationGuideDialog(step = 3, onDismiss = {})
-    }
-}
-
-@Preview(showBackground = true, name = "With Next Button")
-@Composable
-fun PreviewGuideDialogWithNext() {
-    MaterialTheme {
-        CalibrationGuideDialog(
-            step = 1,
-            onDismiss = {},
-            onNextStep = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "With Progress")
-@Composable
-fun PreviewGuideDialogWithProgress() {
-    MaterialTheme {
-        CalibrationGuideDialog(
-            step = 1,
-            onDismiss = {},
-            onNextStep = {}
-        )
+        CalibrationGuideDialog(onDismiss = {})
     }
 }

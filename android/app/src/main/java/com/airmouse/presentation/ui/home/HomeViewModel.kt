@@ -261,6 +261,9 @@ class HomeViewModel @Inject constructor(
                 }
 
                 when (status) {
+                    ConnectionManager.ConnectionStatus.CONNECTING -> {
+                        addLogMessage("Waiting for server approval...")
+                    }
                     ConnectionManager.ConnectionStatus.CONNECTED -> {
                         addLogMessage("Connected to ${connectionManager.currentIp.value}")
                         _uiState.update {
@@ -287,7 +290,7 @@ class HomeViewModel @Inject constructor(
                         stopSensors()
                     }
                     ConnectionManager.ConnectionStatus.ERROR -> {
-                        addLogMessage("Connection error")
+                        addLogMessage(connectionManager.lastError.value ?: "Connection error")
                         _uiState.update {
                             it.copy(
                                 isConnecting = false,
