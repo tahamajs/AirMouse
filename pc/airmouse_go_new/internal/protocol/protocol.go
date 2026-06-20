@@ -188,9 +188,8 @@ func (s *ProtocolServer) Start() error {
 // Stop stops all protocol servers
 func (s *ProtocolServer) Stop() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if !s.running {
+		s.mu.Unlock()
 		return
 	}
 
@@ -228,6 +227,8 @@ func (s *ProtocolServer) Stop() {
 	}
 
 	s.running = false
+	s.mu.Unlock()
+
 	s.triggerEvent(ServerEvent{
 		Type:      "stop",
 		Timestamp: time.Now(),
