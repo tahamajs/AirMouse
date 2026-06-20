@@ -13,7 +13,10 @@ import (
 	"airmouse-go/internal/device"
 )
 
-// DevicesTab shows connected devices and allows management.
+// ------------------------------------------------------------
+// DevicesTab – Device management tab
+// ------------------------------------------------------------
+
 type DevicesTab struct {
 	list         *widget.List
 	devices      []*device.DeviceInfo
@@ -31,6 +34,11 @@ type DevicesTab struct {
 
 // NewDevicesTab creates a new devices management tab.
 func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
+	if deviceMgr == nil {
+		return widget.NewLabelWithStyle("⚠️ Device Manager unavailable",
+			fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+	}
+
 	tab := &DevicesTab{
 		deviceMgr:  deviceMgr,
 		devices:    deviceMgr.GetAllDevices(),
@@ -87,7 +95,6 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 
 				nameLabel.SetText(d.Name)
 				typeLabel.SetText(fmt.Sprintf("[%s]", d.Type))
-				// Use FormatDurationShort from helpers.go
 				timeLabel.SetText(FormatDurationShort(time.Since(d.LastActive)))
 
 				if d.ID == tab.selectedID {
@@ -234,6 +241,10 @@ func (t *DevicesTab) refresh() {
 
 // showDeviceDetails populates the details panel.
 func (t *DevicesTab) showDeviceDetails(d *device.DeviceInfo) {
+	if d == nil || t.details == nil {
+		return
+	}
+
 	uptime := time.Since(d.ConnectedAt)
 	idleTime := time.Since(d.LastActive)
 
@@ -275,6 +286,9 @@ func (t *DevicesTab) showDeviceDetails(d *device.DeviceInfo) {
 
 // getStatusText returns a status string with emoji.
 func (t *DevicesTab) getStatusText(d *device.DeviceInfo) string {
+	if d == nil {
+		return "Unknown"
+	}
 	if time.Since(d.LastActive) < 10*time.Second {
 		return "🟢 Active"
 	} else if time.Since(d.LastActive) < 60*time.Second {
@@ -285,6 +299,9 @@ func (t *DevicesTab) getStatusText(d *device.DeviceInfo) string {
 
 // updateButtons enables/disables action buttons.
 func (t *DevicesTab) updateButtons(enabled bool) {
+	if t.disconnectBtn == nil || t.blockBtn == nil || t.renameBtn == nil {
+		return
+	}
 	if enabled {
 		t.disconnectBtn.Enable()
 		t.blockBtn.Enable()
@@ -302,11 +319,14 @@ func (t *DevicesTab) disconnectDevice() {
 	if win == nil {
 		return
 	}
+	if t.selectedID == "" {
+		return
+	}
 	dialog.ShowConfirm("Disconnect Device",
 		"Are you sure you want to disconnect this device?",
 		func(confirmed bool) {
 			if confirmed {
-				t.deviceMgr.UnregisterDevice(t.selectedID)
+				_ = t.deviceMgr.UnregisterDevice(t.selectedID)
 				t.selectedID = ""
 				t.refresh()
 				t.statusLabel.SetText("✓ Device disconnected")
@@ -323,11 +343,14 @@ func (t *DevicesTab) blockDevice() {
 	if win == nil {
 		return
 	}
+	if t.selectedID == "" {
+		return
+	}
 	dialog.ShowConfirm("Block Device",
 		"Block this device from connecting in the future?",
 		func(confirmed bool) {
 			if confirmed {
-				t.deviceMgr.BlockDevice(t.selectedID)
+				_ = t.deviceMgr.BlockDevice(t.selectedID)
 				t.disconnectDevice()
 				t.statusLabel.SetText("✓ Device blocked")
 			}
@@ -339,6 +362,9 @@ func (t *DevicesTab) blockDevice() {
 func (t *DevicesTab) renameDevice() {
 	win := getCurrentWindow()
 	if win == nil {
+		return
+	}
+	if t.selectedID == "" {
 		return
 	}
 	var targetDevice *device.DeviceInfo
@@ -364,7 +390,7 @@ func (t *DevicesTab) renameDevice() {
 	dialog.ShowCustomConfirm("Rename Device", "Save", "Cancel", content,
 		func(confirmed bool) {
 			if confirmed && nameEntry.Text != "" {
-				t.deviceMgr.UpdateDeviceName(t.selectedID, nameEntry.Text)
+				_ = t.deviceMgr.UpdateDeviceName(t.selectedID, nameEntry.Text)
 				t.refresh()
 				t.statusLabel.SetText(fmt.Sprintf("✓ Device renamed to: %s", nameEntry.Text))
 			}

@@ -24,7 +24,7 @@ import (
 )
 
 // ------------------------------------------------------------
-//  DashboardTab
+//  DashboardTab – Optimized version without chart to prevent hangs
 // ------------------------------------------------------------
 
 type DashboardTab struct {
@@ -42,24 +42,29 @@ type DashboardTab struct {
 	qrBtn      *widget.Button
 	refreshBtn *widget.Button
 
-	speedChart    fyne.CanvasObject
-	qualityWidget *ConnectionQualityWidget // defined in connection.go
-
 	serverStart time.Time
 	mu          sync.Mutex
 	mouse       control.MouseController
 	server      *protocol.ProtocolServer
 	deviceMgr   *device.Manager
 	cfg         *config.Config
+	stopChan    chan struct{}
 }
 
 // NewDashboardTab creates the dashboard tab content.
 func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) fyne.CanvasObject {
+	// Safety: if any dependency is nil, return a placeholder
+	if server == nil || mouse == nil || deviceMgr == nil {
+		return widget.NewLabelWithStyle("⚠️ Dashboard unavailable - dependencies missing",
+			fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+	}
+
 	tab := &DashboardTab{
 		mouse:     mouse,
 		server:    server,
 		deviceMgr: deviceMgr,
 		cfg:       config.Get(),
+		stopChan:  make(chan struct{}),
 	}
 
 	// Header with server name
@@ -84,10 +89,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		fyne.TextAlignCenter,
 		fyne.TextStyle{Bold: true},
 	)
-
-	// Speed chart & quality widget – use the existing constructors from other files
-	tab.speedChart = NewSpeedChart()          // defined in speedchart_stub.go (or elsewhere)
-	tab.qualityWidget = NewConnectionQualityWidget() // defined in connection.go
 
 	// Buttons
 	tab.startBtn = widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() {
@@ -162,32 +163,27 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		),
 	)
 
+	// Status card
+	statusCard := container.NewVBox(
+		widget.NewLabelWithStyle("📡 Server Status", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		tab.serverStatus,
+		tab.endpointLabel,
+		tab.uptimeLabel,
+		tab.aiStatusLabel,
+	)
+
 	// Main layout (two columns)
 	content := container.NewVBox(
 		tab.serverNameLabel,
 		widget.NewSeparator(),
-		tab.serverStatus,
-		container.NewHBox(tab.startBtn, tab.stopBtn, tab.refreshBtn, tab.qrBtn),
-		widget.NewSeparator(),
 		container.NewGridWithColumns(2,
-			container.NewVBox(
-				statsCard,
-				tab.qualityWidget.Widget(),
-				actionsCard,
-			),
-			container.NewVBox(
-				widget.NewLabelWithStyle("📈 Cursor Speed", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-				tab.speedChart,
-			),
+			statsCard,
+			statusCard,
 		),
-		widget.NewSeparator(),
+		container.NewHBox(tab.startBtn, tab.stopBtn, tab.refreshBtn, tab.qrBtn),
+		actionsCard,
 		profileCard,
-		widget.NewSeparator(),
-		container.NewVBox(
-			tab.endpointLabel,
-			tab.uptimeLabel,
-			tab.aiStatusLabel,
-		),
 	)
 
 	// Start background stats updater
@@ -222,14 +218,20 @@ func (t *DashboardTab) createProfileCard() fyne.CanvasObject {
 }
 
 // ------------------------------------------------------------
-//  Stats updater (background goroutine)
+//  Stats updater (background goroutine) – with rate limiting
 // ------------------------------------------------------------
 
 func (t *DashboardTab) statsUpdater() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(2 * time.Second) // Reduced from 1s to 2s to reduce load
 	defer ticker.Stop()
-	for range ticker.C {
-		t.refreshStats()
+
+	for {
+		select {
+		case <-ticker.C:
+			t.refreshStats()
+		case <-t.stopChan:
+			return
+		}
 	}
 }
 
@@ -241,6 +243,8 @@ func (t *DashboardTab) refreshStats() {
 	if t.mouse == nil {
 		return
 	}
+
+	// Get stats once
 	clicks, dbl, right, scroll := t.mouse.Stats()
 	devices := t.deviceMgr.GetAllDevices()
 	deviceCount := len(devices)
@@ -255,6 +259,7 @@ func (t *DashboardTab) refreshStats() {
 		deviceListStr = strings.Join(deviceNames, ", ")
 	}
 
+	// Update UI in one batch
 	RunOnMain(func() {
 		t.statsLabel.SetText(fmt.Sprintf(
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
@@ -274,13 +279,6 @@ func (t *DashboardTab) refreshStats() {
 			))
 		}
 		t.mu.Unlock()
-
-		// Update connection quality
-		if deviceCount > 0 {
-			t.qualityWidget.SetQuality(-45, 15)
-		} else {
-			t.qualityWidget.SetQuality(-99, 0)
-		}
 	})
 }
 
@@ -356,11 +354,11 @@ func (t *DashboardTab) showPairingQRDialog() {
 	qrImage.FillMode = canvas.ImageFillOriginal
 
 	instructions := widget.NewLabel(
-		"📱 How to pair:\n\n" +
-			"1. Open Air Mouse app on your phone\n" +
-			"2. Tap the QR scanner icon\n" +
-			"3. Scan this QR code\n" +
-			"4. Your device will appear in the Devices tab\n\n" +
+		"📱 How to pair:\n\n"+
+			"1. Open Air Mouse app on your phone\n"+
+			"2. Tap the QR scanner icon\n"+
+			"3. Scan this QR code\n"+
+			"4. Your device will appear in the Devices tab\n\n"+
 			fmt.Sprintf("Server: %s\nIP: %s\nPort: %d\nVersion: %s",
 				t.cfg.ServerName, ip, port, t.cfg.Version),
 	)
@@ -374,4 +372,9 @@ func (t *DashboardTab) showPairingQRDialog() {
 	)
 
 	dialog.ShowCustom("Pairing Information", "Close", content, win)
+}
+
+// Stop stops the dashboard background goroutines
+func (t *DashboardTab) Stop() {
+	close(t.stopChan)
 }

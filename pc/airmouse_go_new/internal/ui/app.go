@@ -91,13 +91,24 @@ func (a *App) Run() error {
 
 	// ----- Create all tabs (using safeTab to catch nil) -----
 	a.dashboardTab = safeTab(NewDashboardTab(a.server, a.mouse, a.deviceMgr), "Dashboard")
-	a.devicesTab   = safeTab(NewDevicesTab(a.deviceMgr), "Devices")
-	a.networkTab   = safeTab(NewNetworkTab(a.cfg), "Network")
-	a.gesturesTab  = safeTab(NewGesturesTab(), "Gestures")
+	a.devicesTab = safeTab(NewDevicesTab(a.deviceMgr), "Devices")
+	a.networkTab = safeTab(NewNetworkTab(a.cfg), "Network")
+	a.gesturesTab = safeTab(NewGesturesTab(), "Gestures")
 	a.proximityTab = safeTab(NewProximityTab(), "Proximity")
 	a.analyticsTab = safeTab(NewAnalyticsTab(a.collector), "Analytics")
-	a.settingsTab  = safeTab(NewSettingsTab(a.cfg, a.mouse), "Settings")
-	a.logsTab      = safeTab(NewLogsTab(), "Logs")
+	a.settingsTab = safeTab(NewSettingsTab(a.cfg, a.mouse), "Settings")
+	a.logsTab = safeTab(NewLogsTab(), "Logs")
+
+	// ----- Debug: Print tab status -----
+	fmt.Println("✅ All tabs created successfully")
+	fmt.Printf("  Dashboard: %T\n", a.dashboardTab)
+	fmt.Printf("  Devices: %T\n", a.devicesTab)
+	fmt.Printf("  Network: %T\n", a.networkTab)
+	fmt.Printf("  Gestures: %T\n", a.gesturesTab)
+	fmt.Printf("  Proximity: %T\n", a.proximityTab)
+	fmt.Printf("  Analytics: %T\n", a.analyticsTab)
+	fmt.Printf("  Settings: %T\n", a.settingsTab)
+	fmt.Printf("  Logs: %T\n", a.logsTab)
 
 	// ----- Tab container -----
 	tabs := container.NewAppTabs(
@@ -137,7 +148,10 @@ func (a *App) Run() error {
 	// ----- Start background tasks -----
 	go a.connectionStatusUpdater()
 
+	// ----- Show and run -----
+	fmt.Println("🚀 Showing window...")
 	a.window.ShowAndRun()
+	fmt.Println("👋 Window closed")
 	return nil
 }
 
@@ -149,7 +163,8 @@ func safeTab(tab fyne.CanvasObject, name string) fyne.CanvasObject {
 	if tab != nil {
 		return tab
 	}
-	return widget.NewLabel("⚠️ " + name + " tab not implemented")
+	fmt.Printf("⚠️ Warning: %s tab returned nil, using placeholder\n", name)
+	return widget.NewLabelWithStyle("⚠️ "+name+" tab not implemented", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 }
 
 // ------------------------------------------------------------
