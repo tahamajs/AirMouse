@@ -196,6 +196,16 @@ fun HomeScreen(
                     )
                 }
 
+                item {
+                    MouseMotionPreviewCard(
+                        yaw = homeUiState.orientationYaw,
+                        pitch = homeUiState.orientationPitch,
+                        roll = homeUiState.orientationRoll,
+                        isActive = isConnectionActive && homeUiState.isCalibrated,
+                        isRegistered = isRegistered
+                    )
+                }
+
                 // Animated Greeting Card
                 item {
                     AnimatedVisibility(
@@ -978,6 +988,107 @@ fun SensorPreviewCard(roll: Float, yaw: Float, pitch: Float) {
                 Text("Pitch: ${String.format(Locale.US, "%.1f", pitch)}°", fontSize = 13.sp, fontFamily = FontFamily.Monospace)
             }
         }
+    }
+}
+
+@Composable
+fun MouseMotionPreviewCard(
+    yaw: Float,
+    pitch: Float,
+    roll: Float,
+    isActive: Boolean,
+    isRegistered: Boolean
+) {
+    val boxX = ((yaw / 90f) + 0.5f).coerceIn(0.15f, 0.85f)
+    val boxY = ((pitch / 90f) + 0.5f).coerceIn(0.15f, 0.85f)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Mouse movement preview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (isActive) "The green square follows device orientation in real time."
+                        else "Register, calibrate, and connect to activate the live mouse preview.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                AssistChip(
+                    onClick = { },
+                    enabled = false,
+                    label = { Text(if (isRegistered) "Registered" else "Registration required") }
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .align(Alignment.Center)
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .align(Alignment.Center)
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .align(Alignment.TopStart)
+                            .offset(x = (boxX * 100).dp, y = (boxY * 100).dp)
+                            .background(
+                                color = if (isActive) Color(0xFF22C55E) else Color(0xFF94A3B8),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                SensorStatusPill("Yaw ${String.format(Locale.US, "%.1f", yaw)}°")
+                SensorStatusPill("Pitch ${String.format(Locale.US, "%.1f", pitch)}°")
+                SensorStatusPill("Roll ${String.format(Locale.US, "%.1f", roll)}°")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SensorStatusPill(label: String) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

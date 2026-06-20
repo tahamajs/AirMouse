@@ -51,6 +51,7 @@ func main() {
     deviceManager := device.NewManager()
     authManager := initAuth(cfg)
     protocolServer := protocol.NewProtocolServer(mouseController, deviceManager, authManager)
+    wireLifecycleLogging(protocolServer, deviceManager)
 
     // --- 3. Create Fyne application ---
     a := app.New()
@@ -73,6 +74,7 @@ func main() {
     logger.Info("WebSocket server will listen on port %d", cfg.WebSocketPort)
     logger.Info("TCP server will listen on port %d", cfg.Port)
     logger.Info("UDP discovery will listen on port %d", cfg.UDPPort)
+    logger.Info("Active protocols: %v", protocolServer.GetActiveProtocols())
 
     // --- 7. Run the UI (blocks until the window is closed) ---
     if err := appUI.Run(); err != nil {
@@ -134,6 +136,36 @@ func loadAppIcon() fyne.Resource {
     }
     // No icon – Fyne will use a default.
     return nil
+}
+
+func wireLifecycleLogging(server *protocol.ProtocolServer, deviceMgr *device.DeviceManager) {
+    if server != nil {
+        server.AddEventListener(func(event protocol.ServerEvent) {
+            switch event.Type {
+            case "start":
+                logger.Info("Protocol lifecycle event: start")
+            case "stop":
+                logger.Info("Protocol lifecycle event: stop")
+            case "client_connected":
+                logger.Info("Protocol lifecycle event: client connected id=%s", event.ClientID)
+            case "client_disconnected":
+                logger.Info("Protocol lifecycle event: client disconnected id=%s", event.ClientID)
+            default:
+                logger.Debug("Protocol lifecycle event: %s id=%s", event.Type, event.ClientID)
+            }
+        })
+    }
+
+    if deviceMgr != nil {
+        deviceMgr.AddEventListener(func(event device.DeviceEvent) {
+            logger.Info(
+                "Device lifecycle event: type=%s id=%s name=%s",
+                event.Type,
+                event.DeviceID,
+                event.DeviceName,
+            )
+        })
+    }
 }
 
 // handleSignals listens for OS signals and performs graceful shutdown.
