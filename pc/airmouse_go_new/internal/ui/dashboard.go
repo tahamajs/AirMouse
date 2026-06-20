@@ -92,7 +92,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	// Buttons
 	tab.startBtn = widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() {
-		if err := server.Start(); err == nil {
+		err := server.Start()
+		if server.IsRunning() {
 			tab.mu.Lock()
 			tab.serverStart = time.Now()
 			tab.mu.Unlock()
@@ -112,10 +113,17 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 			} else {
 				tab.aiStatusLabel.SetText("🧠 AI Smoothing: Disabled ⭕")
 			}
-		} else {
+		}
+
+		if err != nil {
 			win := getCurrentWindow()
 			if win != nil {
-				dialog.ShowError(fmt.Errorf("Failed to start server: %v", err), win)
+				if server.IsRunning() {
+					dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+						"Server is running, but one or more protocols reported an issue:\n\n%v", err), win)
+				} else {
+					dialog.ShowError(fmt.Errorf("Failed to start server: %v", err), win)
+				}
 			}
 		}
 	})

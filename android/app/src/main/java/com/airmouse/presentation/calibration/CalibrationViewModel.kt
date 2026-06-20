@@ -293,6 +293,7 @@ class CalibrationViewModel @Inject constructor(
                 }
                 return@launch
             }
+            calibrationUseCase.applyCalibration(data)
             applyCalibrationToSensors(data)
             _uiState.update { state ->
                 state.copy(

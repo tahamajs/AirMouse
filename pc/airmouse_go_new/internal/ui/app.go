@@ -174,16 +174,28 @@ func safeTab(tab fyne.CanvasObject, name string) fyne.CanvasObject {
 func (a *App) createMenuBar() *fyne.MainMenu {
 	fileMenu := fyne.NewMenu("File",
 		fyne.NewMenuItem("Start Server", func() {
-			if err := a.server.Start(); err != nil {
-				dialog.ShowError(err, a.window)
+			err := a.server.Start()
+			if err != nil {
+				if a.server.IsRunning() {
+					dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+						"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
+				} else {
+					dialog.ShowError(err, a.window)
+				}
 			}
 		}),
 		fyne.NewMenuItem("Stop Server", func() { a.server.Stop() }),
 		fyne.NewMenuItem("Restart Server", func() {
 			a.server.Stop()
 			time.Sleep(500 * time.Millisecond)
-			if err := a.server.Start(); err != nil {
-				dialog.ShowError(err, a.window)
+			err := a.server.Start()
+			if err != nil {
+				if a.server.IsRunning() {
+					dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+						"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
+				} else {
+					dialog.ShowError(err, a.window)
+				}
 			}
 		}),
 		fyne.NewMenuItemSeparator(),
@@ -248,7 +260,15 @@ func (a *App) createMenuBar() *fyne.MainMenu {
 
 func (a *App) createToolbar() fyne.CanvasObject {
 	startBtn := widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
-		_ = a.server.Start()
+		err := a.server.Start()
+		if err != nil && a.window != nil {
+			if a.server.IsRunning() {
+				dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+					"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
+			} else {
+				dialog.ShowError(err, a.window)
+			}
+		}
 	})
 	stopBtn := widget.NewButtonWithIcon("Stop", theme.MediaStopIcon(), func() {
 		a.server.Stop()
@@ -256,7 +276,15 @@ func (a *App) createToolbar() fyne.CanvasObject {
 	restartBtn := widget.NewButtonWithIcon("Restart", theme.ViewRefreshIcon(), func() {
 		a.server.Stop()
 		time.Sleep(500 * time.Millisecond)
-		_ = a.server.Start()
+		err := a.server.Start()
+		if err != nil && a.window != nil {
+			if a.server.IsRunning() {
+				dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+					"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
+			} else {
+				dialog.ShowError(err, a.window)
+			}
+		}
 	})
 	settingsBtn := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
 		dialog.ShowInformation("Settings", "Open the Settings tab to adjust server, network, and pairing options.", a.window)
