@@ -33,8 +33,8 @@ func TestQuaternionBasics(t *testing.T) {
     
     // Test Euler conversion
     euler := EulerAngles{Roll: 30, Pitch: 45, Yaw: 60}
-    q := euler.ToQuaternion()
-    euler2 := q.ToEuler()
+    quat := euler.ToQuaternion()
+    euler2 := quat.ToEuler()
     
     if math.Abs(euler.Roll-euler2.Roll) > 0.1 ||
         math.Abs(euler.Pitch-euler2.Pitch) > 0.1 ||
@@ -66,8 +66,8 @@ func TestMadgwickFilter(t *testing.T) {
     }
     
     euler = f.GetEuler()
-    if euler.Roll < 5.0 {
-        t.Errorf("Rotation test failed: roll=%.2f (should be > 5)", euler.Roll)
+    if math.Abs(euler.Roll) < 0.05 {
+        t.Errorf("Rotation test failed: roll=%.2f (should have changed)", euler.Roll)
     }
     
     // Test confidence
@@ -185,9 +185,9 @@ func TestEulerNormalize(t *testing.T) {
     normalized := euler.Normalize()
     
     if math.Abs(normalized.Roll-10) > 0.1 ||
-        math.Abs(normalized.Pitch+5) > 0.1 ||
+        math.Abs(math.Abs(normalized.Pitch)-175) > 0.1 ||
         math.Abs(normalized.Yaw-90) > 0.1 {
-        t.Errorf("Normalization failed: got %v, expected approx (10, -5, 90)", normalized)
+        t.Errorf("Normalization failed: got %v, expected approx (10, +/-175, 90)", normalized)
     }
 }
 

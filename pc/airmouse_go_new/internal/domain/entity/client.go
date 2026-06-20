@@ -30,6 +30,7 @@ type Client struct {
     Status       ClientStatus       `json:"status"`
     Capabilities ClientCapabilities `json:"capabilities"`
     Version      string             `json:"version,omitempty"`
+    Type         string             `json:"type,omitempty"`
 
 	// Connection details
 	Transport   string    `json:"transport"`   // "websocket", "tcp", "udp", "bluetooth", "usb"
@@ -106,6 +107,11 @@ func (c *Client) IsHealthy() bool {
         return false
     }
     return true
+}
+
+// SetType stores the transport/device category for legacy callers.
+func (c *Client) SetType(typ string) {
+	c.Type = typ
 }
 
 // SetCapabilities updates the client’s feature set.

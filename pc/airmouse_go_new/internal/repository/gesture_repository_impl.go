@@ -57,10 +57,10 @@ func (r *gestureRepositoryImpl) SaveTemplate(template *entity.GestureTemplate) e
     if template.Name == "" {
         return errors.New("template name cannot be empty")
     }
-    if template.CreatedAt.IsZero() {
-        template.CreatedAt = time.Now()
+    if template.CreatedAt == 0 {
+        template.CreatedAt = time.Now().UnixMilli()
     }
-    template.UpdatedAt = time.Now()
+    template.UpdatedAt = time.Now().UnixMilli()
     
     r.mu.Lock()
     defer r.mu.Unlock()
@@ -122,6 +122,10 @@ func (r *gestureRepositoryImpl) ListTemplates(filterType entity.GestureType) ([]
     })
     
     return list, nil
+}
+
+func (r *gestureRepositoryImpl) ListAllTemplates() ([]*entity.GestureTemplate, error) {
+    return r.ListTemplates("")
 }
 
 func (r *gestureRepositoryImpl) DeleteTemplate(id string) error {
@@ -197,7 +201,25 @@ func (r *gestureRepositoryImpl) UpdateMetadata(id string, metadata map[string]in
         t.Metadata[k] = v
     }
     
-    t.UpdatedAt = time.Now()
+    t.UpdatedAt = time.Now().UnixMilli()
+    return nil
+}
+
+func (r *gestureRepositoryImpl) IncrementUsage(id string, score float64) error {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+
+    t, ok := r.templates[id]
+    if !ok {
+        return errors.New("template not found")
+    }
+    if t.Metadata == nil {
+        t.Metadata = make(map[string]interface{})
+    }
+    t.Metadata["last_score"] = score
+    usage, _ := t.Metadata["usage_count"].(int)
+    t.Metadata["usage_count"] = usage + 1
+    t.UpdatedAt = time.Now().UnixMilli()
     return nil
 }
 

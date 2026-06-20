@@ -45,13 +45,17 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			h.clients[client] = true
 			h.mu.Unlock()
-			_ = h.connService.RegisterClient(client.entity)
+			if h.connService != nil {
+				_ = h.connService.RegisterClient(client.entity)
+			}
 		case client := <-h.unregister:
 			h.mu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
-				_ = h.connService.UnregisterClient(client.id)
+				if h.connService != nil {
+					_ = h.connService.UnregisterClient(client.id)
+				}
 			}
 			h.mu.Unlock()
 		case message := <-h.broadcast:

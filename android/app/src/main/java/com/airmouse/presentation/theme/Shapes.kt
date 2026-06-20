@@ -10,28 +10,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-// ==================== DIMENSIONS ====================
-
-object Dimensions {
-    val radius0 = 0.dp
-    val radius2 = 2.dp
-    val radius4 = 4.dp
-    val radius6 = 6.dp
-    val radius8 = 8.dp
-    val radius10 = 10.dp
-    val radius12 = 12.dp
-    val radius14 = 14.dp
-    val radius16 = 16.dp
-    val radius18 = 18.dp
-    val radius20 = 20.dp
-    val radius24 = 24.dp
-    val radius28 = 28.dp
-    val radius32 = 32.dp
-    val radius40 = 40.dp
-    val radius50 = 50.dp
-    val radiusFull = 999.dp
-}
-
 // ==================== MATERIAL 3 SHAPES ====================
 
 val AppShapes = Shapes(

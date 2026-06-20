@@ -319,7 +319,8 @@ class NetworkDiscoveryViewModel @Inject constructor(
                                     version = version,
                                     ping = ping,
                                     signalStrength = calculateSignalStrength(ping),
-                                    deviceType = detectDeviceType(name)
+                                    deviceType = detectDeviceType(name),
+                                    protocol = if (port == 8081) Protocol.WEBSOCKET else Protocol.TCP
                                 )
                                 updateDiscoveredServers()
                             }
@@ -366,7 +367,8 @@ class NetworkDiscoveryViewModel @Inject constructor(
                                 port = port,
                                 ping = ping,
                                 signalStrength = calculateSignalStrength(ping),
-                                isReachable = true
+                                isReachable = true,
+                                protocol = if (port == 8081) Protocol.WEBSOCKET else Protocol.TCP
                             )
                             updateDiscoveredServers()
                         }
@@ -494,6 +496,16 @@ class NetworkDiscoveryViewModel @Inject constructor(
     suspend fun connectToServer(server: DiscoveredServer) {
         _uiState.update { it.copy(isConnecting = true, selectedServerId = server.id, connectionProgress = 0) }
 
+        prefs.setLastIp(server.ip)
+        prefs.setLastPort(server.port)
+        prefs.setLastProtocol(server.protocol.name)
+        connectionManager.setProtocol(
+            when (server.protocol) {
+                Protocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
+                else -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+            }
+        )
+
         val success = connectionManager.connect(server.ip, server.port)
 
         if (success) {
@@ -513,7 +525,8 @@ class NetworkDiscoveryViewModel @Inject constructor(
             id = UUID.randomUUID().toString(),
             ip = ip,
             port = port,
-            name = "Manual Entry"
+            name = "Manual Entry",
+            protocol = Protocol.WEBSOCKET
         )
         connectToServer(server)
     }

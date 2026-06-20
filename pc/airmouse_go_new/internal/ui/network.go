@@ -162,9 +162,9 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		if win == nil {
 			return
 		}
-		endpoint := fmt.Sprintf("airmouse://%s:%s", tab.ipEntry.Text, tab.portEntry.Text)
+		endpoint := fmt.Sprintf("ws://%s:%s/ws", tab.ipEntry.Text, tab.wsPortEntry.Text)
 		win.Clipboard().SetContent(endpoint)
-		dialog.ShowInformation("Copied", "Endpoint copied to clipboard", win)
+		dialog.ShowInformation("Copied", "WebSocket endpoint copied to clipboard", win)
 	})
 
 	tab.genQrBtn = widget.NewButtonWithIcon("Generate QR", theme.InfoIcon(), tab.updateQR)
@@ -177,7 +177,12 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
 			if err == nil && writer != nil {
 				defer writer.Close()
-				data := fmt.Sprintf("airmouse://%s:%s?name=%s", tab.ipEntry.Text, tab.portEntry.Text, url.QueryEscape(tab.cfg.ServerName))
+                data := fmt.Sprintf("airmouse://pair?ip=%s&port=%s&ws=ws://%s:%s/ws&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
+                    tab.ipEntry.Text,
+                    tab.portEntry.Text,
+                    tab.ipEntry.Text,
+					tab.wsPortEntry.Text,
+					url.QueryEscape(tab.cfg.ServerName))
 				pngBytes, _ := qrcode.Encode(data, qrcode.High, 300)
 				_, _ = writer.Write(pngBytes)
 				dialog.ShowInformation("Saved", "QR code saved successfully", win)
@@ -250,9 +255,11 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 
 // updateQR refreshes the QR code image based on the current IP and port.
 func (t *NetworkTab) updateQR() {
-	data := fmt.Sprintf("airmouse://%s:%s?name=%s",
+	data := fmt.Sprintf("airmouse://pair?ip=%s&port=%s&ws=ws://%s:%s/ws&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
 		t.ipEntry.Text,
 		t.portEntry.Text,
+		t.ipEntry.Text,
+		t.wsPortEntry.Text,
 		url.QueryEscape(t.cfg.ServerName))
 
 	pngBytes, err := qrcode.Encode(data, qrcode.High, 250)

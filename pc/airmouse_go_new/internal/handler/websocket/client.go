@@ -87,37 +87,98 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) processMessage(data []byte) {
-	var msg dto.Message
-	if err := json.Unmarshal(data, &msg); err != nil {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
 		return
 	}
-	switch msg.Type {
+	var msgType string
+	if tRaw, ok := raw["type"]; ok {
+		_ = json.Unmarshal(tRaw, &msgType)
+	}
+	var id string
+	if idRaw, ok := raw["id"]; ok {
+		_ = json.Unmarshal(idRaw, &id)
+	}
+	payload := raw["payload"]
+	if len(payload) == 0 {
+		if msgType == "" {
+			return
+		}
+		payload = data
+	}
+	switch msgType {
 	case "move":
 		var p dto.MovePayload
-		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			_ = c.hub.mouseService.Move(p.DX, p.DY)
+		if err := json.Unmarshal(payload, &p); err != nil {
+			var flat struct {
+				DX float64 `json:"dx"`
+				DY float64 `json:"dy"`
+			}
+			if err := json.Unmarshal(data, &flat); err == nil {
+				p.DX, p.DY = flat.DX, flat.DY
+			}
 		}
+		_ = c.hub.mouseService.Move(p.DX, p.DY)
 	case "click":
 		var p dto.ClickPayload
-		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			_ = c.hub.mouseService.Click(entity.MouseButton(p.Button))
+		if err := json.Unmarshal(payload, &p); err != nil {
+			var flat struct {
+				Button string `json:"button"`
+			}
+			if err := json.Unmarshal(data, &flat); err == nil {
+				p.Button = flat.Button
+			}
 		}
+		if p.Button == "" {
+			p.Button = "left"
+		}
+		_ = c.hub.mouseService.Click(entity.MouseButton(p.Button))
 	case "doubleclick":
 		_ = c.hub.mouseService.DoubleClick()
 	case "rightclick":
 		_ = c.hub.mouseService.RightClick()
 	case "scroll":
 		var p dto.ScrollPayload
-		if err := json.Unmarshal(msg.Payload, &p); err == nil {
-			_ = c.hub.mouseService.Scroll(p.Delta)
+		if err := json.Unmarshal(payload, &p); err != nil {
+			var flat struct {
+				Delta int `json:"delta"`
+			}
+			if err := json.Unmarshal(data, &flat); err == nil {
+				p.Delta = flat.Delta
+			}
 		}
+		_ = c.hub.mouseService.Scroll(p.Delta)
 	case "hello":
 		var p dto.HelloPayload
-		if err := json.Unmarshal(msg.Payload, &p); err == nil {
+		if err := json.Unmarshal(payload, &p); err != nil {
+			var flat struct {
+				Name    string `json:"name"`
+				Version string `json:"version"`
+			}
+			if err := json.Unmarshal(data, &flat); err == nil {
+				p.Name = flat.Name
+				p.Version = flat.Version
+			}
+		}
+		if p.Name != "" {
 			c.entity.Name = p.Name
+			c.entity.Version = p.Version
 			_ = c.hub.connService.RegisterClient(c.entity)
 		}
 	case "ping":
 		c.send <- []byte(`{"type":"pong"}`)
+	case "control":
+		var payloadMap map[string]any
+		if err := json.Unmarshal(payload, &payloadMap); err != nil {
+			_ = json.Unmarshal(data, &payloadMap)
+		}
+		if cmd, _ := payloadMap["command"].(string); cmd != "" {
+			switch cmd {
+			case "pause_movement":
+				_ = c.hub.mouseService.Pause(5)
+			case "resume_movement":
+				_ = c.hub.mouseService.Pause(0)
+			}
+		}
 	}
 }

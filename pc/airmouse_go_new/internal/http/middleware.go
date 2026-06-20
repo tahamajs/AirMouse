@@ -1,9 +1,10 @@
 package http
 
 import (
-    "log"
     "net/http"
     "time"
+
+    "airmouse-go/internal/utils"
 )
 
 type Middleware func(http.Handler) http.Handler
@@ -19,7 +20,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         start := time.Now()
         next.ServeHTTP(w, r)
-        log.Printf("%s %s %v", r.Method, r.URL.Path, time.Since(start))
+        utils.LogInfo("HTTP %s %s took %s", r.Method, r.URL.Path, time.Since(start))
     })
 }
 
@@ -27,7 +28,7 @@ func RecoverMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         defer func() {
             if err := recover(); err != nil {
-                log.Printf("panic: %v", err)
+                utils.LogError("HTTP panic: %v", err)
                 w.WriteHeader(http.StatusInternalServerError)
                 w.Write([]byte(`{"error":"internal server error"}`))
             }
@@ -52,6 +53,9 @@ func CORSMiddleware(next http.Handler) http.Handler {
 }
 
 func RateLimitMiddleware(requestsPerSecond int) Middleware {
+    if requestsPerSecond <= 0 {
+        requestsPerSecond = 1
+    }
     ticker := time.NewTicker(time.Second / time.Duration(requestsPerSecond))
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

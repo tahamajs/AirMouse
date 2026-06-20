@@ -600,7 +600,9 @@ class CalibrationViewModel @Inject constructor(
             prefs.putInt("accel_positions", accelPositions.size)
         }
         accelPositions.clear()
-        calibrationRepository.updateCalibrationStatus(CalibrationStatus.ACCEL_COMPLETE)
+        viewModelScope.launch {
+            calibrationRepository.updateCalibrationStatus(CalibrationStatus.ACCEL_COMPLETE)
+        }
     }
 
     // ==========================================
@@ -785,7 +787,7 @@ class CalibrationViewModel @Inject constructor(
 
     suspend fun isCalibrated(): Boolean = calibrationUseCase.isCalibrated()
 
-    suspend fun getCalibrationQuality(): CalibrationQuality = calibrationUseCase.getCalibrationQuality()
+    suspend fun loadCalibrationQuality(): CalibrationQuality = calibrationUseCase.getCalibrationQuality()
 
     // ==========================================
     // Public Getters

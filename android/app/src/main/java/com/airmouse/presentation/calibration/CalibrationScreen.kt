@@ -32,65 +32,16 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.R
+import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
+import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.delay
 
 // ==========================================
 // NAVIGATION ACTIONS
 // ==========================================
-
-interface NavigationActions {
-    fun navigateBack()
-    fun navigateToHome()
-    fun navigateToCalibrationProcess()
-}
-
-// ==========================================
-// DATA CLASSES
-// ==========================================
-
-data class CalibrationQualityConfig(
-    val color: Color,
-    val emoji: String,
-    val title: String,
-    val description: String,
-    val subtext: String,
-    val score: String,
-    val status: String
-)
-
-data class CalibrationUiState(
-    val isComplete: Boolean = false,
-    val isCalibrating: Boolean = false,
-    val calibrationQuality: String = "",
-    val progress: Int = 0,
-    val statusMessage: String = "",
-    val samplesCollected: Int = 0,
-    val totalSamplesNeeded: Int = 100,
-    val currentStep: Int = 0,
-    val totalSteps: Int = 4,
-    val stepInstruction: String = "",
-    val detailedInstruction: String = "",
-    val errorMessage: String? = null,
-    val showConfetti: Boolean = false,
-    val isCalibrationApplied: Boolean = false,
-    val isServerConnected: Boolean = false,
-    val gyroData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
-    val accelData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
-    val magData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f)
-) {
-    companion object {
-        fun initial() = CalibrationUiState(
-            statusMessage = "Ready to calibrate",
-            stepInstruction = "Tap 'Start Calibration' to begin"
-        )
-    }
-}
-
-// ==========================================
-// CONFETTI EFFECT
-// ==========================================
+ 
 
 @Composable
 fun ConfettiEffect() {
@@ -226,46 +177,8 @@ fun CalibrationScreen(
         }
     }
 
-    // Quality configuration
-    val quality = uiState.calibrationQuality.ifEmpty { "GOOD" }
-    val qualityConfig = when (quality.uppercase()) {
-        "EXCELLENT" -> CalibrationQualityConfig(
-            color = Color(0xFF10B981),
-            emoji = "🌟",
-            title = "Excellent",
-            description = "Perfect calibration! Your device is performing at its best.",
-            subtext = "All sensors are optimally calibrated.",
-            score = "95%",
-            status = "✅ Ready"
-        )
-        "GOOD" -> CalibrationQualityConfig(
-            color = Color(0xFF3B82F6),
-            emoji = "👍",
-            title = "Good",
-            description = "Calibration successful with good accuracy.",
-            subtext = "Device is ready for use.",
-            score = "80%",
-            status = "✅ Ready"
-        )
-        "FAIR" -> CalibrationQualityConfig(
-            color = Color(0xFFF59E0B),
-            emoji = "⚠️",
-            title = "Fair",
-            description = "Calibration complete with fair accuracy.",
-            subtext = "Consider recalibrating for best results.",
-            score = "60%",
-            status = "⚠️ Review"
-        )
-        else -> CalibrationQualityConfig(
-            color = Color(0xFF64748B),
-            emoji = "❓",
-            title = "Unknown",
-            description = "Calibration completed but quality could not be determined.",
-            subtext = "Please recalibrate for best results.",
-            score = "50%",
-            status = "❓ Unknown"
-        )
-    }
+    val qualityText = uiState.calibrationQuality.ifEmpty { "GOOD" }
+    val qualityConfig = CalibrationQualityConfig.fromQualityString(qualityText)
 
     LaunchedEffect(uiState.isComplete) {
         if (uiState.isComplete) {
@@ -867,7 +780,7 @@ fun CompletionScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    QualityMetric("Quality", quality.uppercase(), qualityConfig.color)
+                    QualityMetric("Quality", qualityText.uppercase(), qualityConfig.color)
                     QualityMetric("Score", qualityConfig.score, qualityConfig.color)
                     QualityMetric("Status", qualityConfig.status, qualityConfig.color)
                 }

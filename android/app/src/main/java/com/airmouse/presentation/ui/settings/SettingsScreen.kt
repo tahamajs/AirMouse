@@ -38,7 +38,8 @@ fun SettingsScreen(
 
     // Handle effects
     LaunchedEffect(effect) {
-        when (effect) {
+        val currentEffect = effect
+        when (currentEffect) {
             is SettingsEffect.ShowToast -> {
                 // Show toast - handled by scaffold
                 viewModel.handleEvent(SettingsEvent.ShowToast(""))
@@ -46,7 +47,7 @@ fun SettingsScreen(
             is SettingsEffect.NavigateBack -> onBack()
             is SettingsEffect.NavigateTo -> {
                 // Navigate to route
-                navigationActions.navigateTo(effect.route)
+                navigationActions.navigateTo(currentEffect.route)
             }
             is SettingsEffect.OpenUrl -> {
                 // Open URL

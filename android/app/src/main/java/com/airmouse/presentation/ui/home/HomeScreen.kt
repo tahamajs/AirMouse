@@ -36,6 +36,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.utils.QRScanner
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -51,8 +54,6 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     // UI State
-    var isConnected by remember { mutableStateOf(false) }
-    var isConnecting by remember { mutableStateOf(false) }
     var mouseStatus by remember { mutableStateOf("Mouse Off") }
     var serverIp by remember { mutableStateOf("192.168.1.100") }
     var serverPort by remember { mutableIntStateOf(8080) }
@@ -69,6 +70,13 @@ fun HomeScreen(
 
     val userName = homeUiState.userName.ifBlank { pendingUserName }
     val greetingText = if (userName.isNotBlank()) "Welcome back, $userName!" else "Welcome to Air Mouse Pro!"
+    val isConnectionActive = homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.CONNECTED
+    val isConnectionPending = homeUiState.isConnecting
+
+    LaunchedEffect(homeUiState.serverIp, homeUiState.serverPort) {
+        serverIp = homeUiState.serverIp.ifBlank { serverIp }
+        serverPort = homeUiState.serverPort.takeIf { it > 0 } ?: serverPort
+    }
 
     LaunchedEffect(homeUiState.userName) {
         if (homeUiState.userName.isNotBlank()) {
@@ -84,13 +92,11 @@ fun HomeScreen(
             showCalibrationRequiredDialog = true
             return
         }
-        isConnected = true
-        mouseStatus = "Mouse Active"
+        homeViewModel.connect()
     }
 
     fun disconnectMouse() {
-        isConnected = false
-        mouseStatus = "Mouse Off"
+        homeViewModel.disconnect()
     }
 
     // Permission launcher
@@ -104,6 +110,20 @@ fun HomeScreen(
         }
     }
 
+    val scanQrLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        val scannedData = result.contents
+        if (!scannedData.isNullOrBlank()) {
+            QRScanner.parseConnectionDataStatic(scannedData)?.let { parsed ->
+                serverIp = parsed.ip
+                serverPort = parsed.port
+                serverName = parsed.name
+                homeViewModel.updateIp(parsed.ip)
+                homeViewModel.updatePort(parsed.port)
+                homeViewModel.applyScannedConnection(parsed)
+            }
+        }
+    }
+
     // Animated greeting
     LaunchedEffect(Unit) {
         delay(500)
@@ -114,17 +134,18 @@ fun HomeScreen(
         topBar = { HomeTopBar(navigationActions = navigationActions) },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = isConnected,
+                visible = isConnectionActive,
                 enter = fadeIn() + scaleIn(),
                 exit = fadeOut() + scaleOut()
             ) {
                 FloatingActionButton(
                     onClick = { disconnectMouse() },
                     containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
                     shape = CircleShape,
                     modifier = Modifier.size(56.dp)
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Disconnect")
+                    Icon(Icons.Default.Close, contentDescription = "Disconnect", tint = MaterialTheme.colorScheme.onError)
                 }
             }
         }
@@ -155,18 +176,16 @@ fun HomeScreen(
 
                 // Connection Status
                 item {
-                    ConnectionStatusCard(
-                        isConnected = isConnected,
+                ConnectionStatusCard(
+                        isConnected = isConnectionActive,
                         serverName = serverName,
                         serverIp = serverIp,
                         ping = ping,
                         onDisconnect = { disconnectMouse() },
                         onReconnect = {
-                            isConnecting = true
                             scope.launch {
                                 delay(2000)
                                 connectMouse()
-                                isConnecting = false
                             }
                         }
                     )
@@ -177,22 +196,36 @@ fun HomeScreen(
                     ConnectionControlsCard(
                         ip = serverIp,
                         port = serverPort,
-                        onIpChange = { serverIp = it },
-                        onPortChange = { serverPort = it },
-                        onConnect = { connectMouse() },
+                        onIpChange = {
+                            serverIp = it
+                            homeViewModel.updateIp(it)
+                        },
+                        onPortChange = {
+                            serverPort = it
+                            homeViewModel.updatePort(it)
+                        },
+                        onConnect = {
+                            connectMouse()
+                        },
                         onScanQr = {
                             if (ContextCompat.checkSelfPermission(
                                     context,
                                     Manifest.permission.CAMERA
                                 ) == PackageManager.PERMISSION_GRANTED
                             ) {
-                                // Start scanning
+                                val options = ScanOptions().apply {
+                                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                    setPrompt("Scan the Air Mouse pairing QR code")
+                                    setBeepEnabled(true)
+                                    setOrientationLocked(false)
+                                }
+                                scanQrLauncher.launch(options)
                             } else {
                                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                             }
                         },
-                        isConnecting = isConnecting,
-                        lastServer = "192.168.1.100"
+                        isConnecting = isConnectionPending,
+                        lastServer = homeUiState.serverIp.ifBlank { "Not set" }
                     )
                 }
 
@@ -539,16 +572,30 @@ fun ConnectionStatusCard(
                 OutlinedButton(
                     onClick = onDisconnect,
                     modifier = Modifier.fillMaxWidth(0.6f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Disconnect")
                 }
             } else {
                 Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = onReconnect, modifier = Modifier.fillMaxWidth(0.6f)) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
+                Button(
+                    onClick = onReconnect,
+                    modifier = Modifier.fillMaxWidth(0.6f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Reconnect")
                 }
@@ -621,12 +668,20 @@ fun ConnectionControlsCard(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
                     if (isConnecting) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
                     } else {
-                        Icon(Icons.Default.ConnectWithoutContact, contentDescription = null)
+                        Icon(Icons.Default.ConnectWithoutContact, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Connect")
                     }
@@ -637,9 +692,12 @@ fun ConnectionControlsCard(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
                 ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Scan QR")
                 }

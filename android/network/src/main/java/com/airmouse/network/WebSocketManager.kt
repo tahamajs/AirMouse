@@ -133,11 +133,7 @@ object WebSocketManager {
     }
 
     fun sendPauseMovement(pause: Boolean) {
-        val json = JSONObject().apply {
-            put("type", "control")
-            put("command", if (pause) "pause_movement" else "resume_movement")
-        }
-        send(json.toString())
+        send(NetworkMessage.toJson(NetworkMessage.Control(if (pause) "pause_movement" else "resume_movement")))
     }
 
     fun disconnect() {

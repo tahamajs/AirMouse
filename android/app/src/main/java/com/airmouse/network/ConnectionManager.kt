@@ -212,6 +212,8 @@ class ConnectionManager @Inject constructor(
     var onError: ((String) -> Unit)? = null
     var onQualityChanged: ((ConnectionQuality) -> Unit)? = null
     var onStatusChanged: ((ConnectionStatus) -> Unit)? = null
+    private val extraMessageListeners = mutableListOf<(String) -> Unit>()
+    private val extraBinaryListeners = mutableListOf<(ByteArray) -> Unit>()
 
     // ============================================================
     // Initialisation
@@ -250,16 +252,16 @@ class ConnectionManager @Inject constructor(
             _currentIp.value = ip
             _currentPort.value = port
         }
-        val protocolOrdinal = prefs.getInt("last_protocol", 0)
-        currentProtocol = when (protocolOrdinal) {
-            0 -> ConnectionProtocol.WEBSOCKET
-            else -> ConnectionProtocol.TCP
+        val protocolName = prefs.getString("last_protocol", "WEBSOCKET")?.uppercase() ?: "WEBSOCKET"
+        currentProtocol = when (protocolName) {
+            "TCP" -> ConnectionProtocol.TCP
+            else -> ConnectionProtocol.WEBSOCKET
         }
     }
 
     fun setProtocol(protocol: ConnectionProtocol) {
         currentProtocol = protocol
-        prefs.putInt("last_protocol", protocol.ordinal)
+        prefs.putString("last_protocol", protocol.name)
     }
 
     // ============================================================
@@ -289,7 +291,7 @@ class ConnectionManager @Inject constructor(
                 welcomeDeferred = serverWelcome
 
                 val success = when (currentProtocol) {
-                    ConnectionProtocol.WEBSOCKET -> connectWebSocket(ip, WEBSOCKET_PORT)
+                    ConnectionProtocol.WEBSOCKET -> connectWebSocket(ip, port)
                     ConnectionProtocol.TCP -> connectTcp(ip, port)
                 }
 
@@ -340,6 +342,13 @@ class ConnectionManager @Inject constructor(
     private suspend fun connectWebSocket(ip: String, port: Int): Boolean {
         return withContext(Dispatchers.IO) {
             try {
+                val authToken = prefs.getString("auth_token", "")
+                val baseUrl = "ws://$ip:$port/ws"
+                val url = if (!authToken.isNullOrBlank()) {
+                    "$baseUrl?token=$authToken"
+                } else {
+                    baseUrl
+                }
                 val client = OkHttpClient.Builder()
                     .connectTimeout(10, TimeUnit.SECONDS)
                     .writeTimeout(10, TimeUnit.SECONDS)
@@ -348,7 +357,7 @@ class ConnectionManager @Inject constructor(
                     .build()
 
                 val request = Request.Builder()
-                    .url("ws://$ip:$port/ws")
+                    .url(url)
                     .build()
 
                 var connectSuccess = false
@@ -368,6 +377,13 @@ class ConnectionManager @Inject constructor(
 
                     override fun onMessage(webSocket: okhttp3.WebSocket, bytes: ByteString) {
                         onBinaryMessage?.invoke(bytes.toByteArray())
+                        extraBinaryListeners.forEach { listener ->
+                            try {
+                                listener(bytes.toByteArray())
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Binary listener failed", e)
+                            }
+                        }
                     }
 
                     override fun onClosed(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
@@ -439,6 +455,13 @@ class ConnectionManager @Inject constructor(
 
     private fun handleServerMessage(message: String) {
         try {
+            extraMessageListeners.forEach { listener ->
+                try {
+                    listener(message)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Message listener failed", e)
+                }
+            }
             val json = JSONObject(message)
             when (json.optString("type")) {
                 MessageTypes.TYPE_WELCOME -> {
@@ -459,6 +482,9 @@ class ConnectionManager @Inject constructor(
                         pendingAcks.remove(id)
                         Log.d(TAG, "Acknowledged reliable packet removed: $id")
                     }
+                }
+                "file" -> {
+                    // File transfer service handles these messages via an extra listener.
                 }
                 MessageTypes.TYPE_ERROR -> {
                     val error = json.optJSONObject("payload")?.optString("message") ?: "Unknown error"
@@ -602,6 +628,22 @@ class ConnectionManager @Inject constructor(
             ConnectionProtocol.WEBSOCKET -> webSocket?.send(ByteString.of(*data)) ?: false
             else -> false
         }
+    }
+
+    fun addMessageListener(listener: (String) -> Unit) {
+        extraMessageListeners.add(listener)
+    }
+
+    fun removeMessageListener(listener: (String) -> Unit) {
+        extraMessageListeners.remove(listener)
+    }
+
+    fun addBinaryMessageListener(listener: (ByteArray) -> Unit) {
+        extraBinaryListeners.add(listener)
+    }
+
+    fun removeBinaryMessageListener(listener: (ByteArray) -> Unit) {
+        extraBinaryListeners.remove(listener)
     }
 
     // ------------------------------------------------------------
@@ -772,6 +814,8 @@ class ConnectionManager @Inject constructor(
                 put("version", version)
                 put("device", Build.MANUFACTURER + " " + Build.MODEL)
                 put("android_version", Build.VERSION.RELEASE)
+                put("protocol", currentProtocol.name)
+                put("transport", if (currentProtocol == ConnectionProtocol.WEBSOCKET) "websocket" else "tcp")
             })
         }
         return sendRawString(json.toString())

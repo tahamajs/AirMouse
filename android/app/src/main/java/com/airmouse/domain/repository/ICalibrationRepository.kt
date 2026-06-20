@@ -37,4 +37,7 @@ interface ICalibrationRepository {
     suspend fun resetCalibration()
     suspend fun getCalibrationQuality(): CalibrationQuality
     suspend fun resetAllCalibration()
+    suspend fun updateCalibrationStatus(status: CalibrationStatus)
+    suspend fun updateCalibrationQuality(quality: CalibrationQuality)
+    suspend fun updateCalibrationProgress(progress: Int)
 }

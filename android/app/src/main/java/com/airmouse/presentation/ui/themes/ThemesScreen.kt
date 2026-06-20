@@ -84,8 +84,7 @@ fun ThemesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentColor = colors.onSurface
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Current Theme Indicator
             item {
@@ -368,7 +367,7 @@ fun ThemeOptionCard(
                     TextButton(
                         onClick = onPreview,
                         modifier = Modifier.padding(top = 8.dp),
-                        colors = TextButtonDefaults.textButtonColors(
+                        colors = ButtonDefaults.textButtonColors(
                             contentColor = colors.primary
                         )
                     ) {

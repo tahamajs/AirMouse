@@ -142,11 +142,19 @@ class PreferencesManager @Inject constructor(
     fun getLastServerIp(): String = getString("last_server_ip", "")
     fun setLastServerIp(ip: String) = putString("last_server_ip", ip)
 
+    fun getLastIp(): String = getString("last_ip", getLastServerIp())
+    fun setLastIp(ip: String) = putString("last_ip", ip)
+
     fun getLastServerPort(): Int = getInt("last_server_port", DEFAULT_LAST_PORT)
     fun setLastServerPort(port: Int) = putInt("last_server_port", port)
 
+    fun getLastPort(): Int = getInt("last_port", getLastServerPort())
+    fun setLastPort(port: Int) = putInt("last_port", port)
+
     fun getLastProtocol(): Int = getInt("last_protocol", DEFAULT_LAST_PROTOCOL)
     fun setLastProtocol(protocol: Int) = putInt("last_protocol", protocol)
+
+    fun setLastProtocol(protocol: String) = putString("last_protocol", protocol)
 
     fun getServerMac(): String = getString("server_mac", "")
     fun setServerMac(mac: String) = putString("server_mac", mac)

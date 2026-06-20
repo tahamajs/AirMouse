@@ -11,6 +11,26 @@ func mediaKey(key string) {
     _ = key
 }
 
+func keyCombination(key, modifier string) {
+	_ = modifier
+	switch key {
+	case "copy":
+		fmt.Println("Copy")
+	case "cut":
+		fmt.Println("Cut")
+	case "paste":
+		fmt.Println("Paste")
+	case "undo":
+		fmt.Println("Undo")
+	case "redo":
+		fmt.Println("Redo")
+	case "select_all":
+		fmt.Println("Select all")
+	default:
+		keyTap(key)
+	}
+}
+
 func volumeUp() {
     mediaKey("VolumeUp")
 }

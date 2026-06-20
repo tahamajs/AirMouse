@@ -52,8 +52,13 @@ func TestTCPFlatMessageFormat(t *testing.T) {
             var msg map[string]interface{}
             json.Unmarshal([]byte(tt.input), &msg)
             
+            payload, _ := msg["payload"].(map[string]interface{})
             _, hasDX := msg["dx"]
             _, hasDY := msg["dy"]
+            if payload != nil {
+                _, hasDX = payload["dx"]
+                _, hasDY = payload["dy"]
+            }
             
             if hasDX != tt.hasDX {
                 t.Errorf("DX presence mismatch: expected %v, got %v", tt.hasDX, hasDX)

@@ -47,10 +47,13 @@ type ScrollEvent struct {
 type MovementProfile struct {
 	Sensitivity       float64 `json:"sensitivity"` // 0.2 – 2.0
 	Acceleration      bool    `json:"acceleration"`
+	AccelerationEnabled bool  `json:"acceleration_enabled,omitempty"`
 	AccelerationCurve float64 `json:"acceleration_curve"` // 1.0 = linear, >1 = aggressive
 	Deadband          float64 `json:"deadband"`           // minimum movement to ignore (pixels)
 	SmoothingAlpha    float64 `json:"smoothing_alpha"`    // EMA factor (0..1)
 	PredictiveBlend   float64 `json:"predictive_blend"`   // 0 = raw, 1 = full prediction
+	SmoothingEnabled  bool    `json:"smoothing_enabled,omitempty"`
+	MaxAcceleration   float64 `json:"max_acceleration,omitempty"`
 }
 
 // DefaultMovementProfile returns a sane default profile.
@@ -58,10 +61,13 @@ func DefaultMovementProfile() *MovementProfile {
 	return &MovementProfile{
 		Sensitivity:       0.5,
 		Acceleration:      true,
+		AccelerationEnabled: true,
 		AccelerationCurve: 1.5,
 		Deadband:          0.8,
 		SmoothingAlpha:    0.3,
 		PredictiveBlend:   0.6,
+		SmoothingEnabled:  true,
+		MaxAcceleration:   2.0,
 	}
 }
 
@@ -72,8 +78,11 @@ type Statistics struct {
 	ClickCount       int64     `json:"click_count"`
 	DoubleClickCount int64     `json:"double_click_count"`
 	RightClickCount  int64     `json:"right_click_count"`
+	MiddleClickCount int64     `json:"middle_click_count"`
 	ScrollCount      int64     `json:"scroll_count"`
 	TotalScrollDelta int64     `json:"total_scroll_delta"` // sum of all scroll deltas
+	AverageSpeed     float64   `json:"average_speed,omitempty"`
+	LastUpdateTime   time.Time `json:"last_update_time,omitempty"`
 	LastReset        time.Time `json:"last_reset"`
 }
 

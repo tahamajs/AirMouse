@@ -1,9 +1,7 @@
 package sysaction
 
 import (
-    "fmt"
     "log"
-    "runtime"
 )
 
 type Action string
