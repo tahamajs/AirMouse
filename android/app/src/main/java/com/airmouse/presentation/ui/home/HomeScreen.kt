@@ -75,6 +75,7 @@ fun HomeScreen(
         isConnectionActive && homeUiState.isCalibrated -> "Mouse active"
         isConnectionActive -> "Connected"
         isConnectionPending -> "Waiting for server approval..."
+        homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.ERROR -> "Connection failed, retry"
         homeUiState.isCalibrated -> "Ready to connect"
         else -> "Calibrate first"
     }
@@ -455,6 +456,14 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                 onDismissRequest = { overflowMenuExpanded = false }
             ) {
                 DropdownMenuItem(
+                    text = { Text("Touchpad") },
+                    leadingIcon = { Icon(Icons.Default.TouchApp, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.Touchpad.route)
+                    }
+                )
+                DropdownMenuItem(
                     text = { Text("Calibration") },
                     leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
                     onClick = {
@@ -463,11 +472,43 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     }
                 )
                 DropdownMenuItem(
+                    text = { Text("Gesture Studio") },
+                    leadingIcon = { Icon(Icons.Default.Gesture, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.GestureStudio.route)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Network Discovery") },
+                    leadingIcon = { Icon(Icons.Default.Wifi, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.NetworkDiscovery.route)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Server Logs") },
+                    leadingIcon = { Icon(Icons.Default.List, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.ServerLogs.route)
+                    }
+                )
+                DropdownMenuItem(
                     text = { Text("Profiles") },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                     onClick = {
                         overflowMenuExpanded = false
                         navigationActions.navigateTo(Destinations.Profiles.route)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Themes") },
+                    leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.Themes.route)
                     }
                 )
                 DropdownMenuItem(
@@ -484,6 +525,14 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     onClick = {
                         overflowMenuExpanded = false
                         navigationActions.navigateTo(Destinations.Help.route)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("About") },
+                    leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.About.route)
                     }
                 )
             }
@@ -621,7 +670,7 @@ fun ConnectionStatusCard(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Reconnect")
+                    Text(if (isConnecting) "Connecting..." else "Retry")
                 }
             }
         }

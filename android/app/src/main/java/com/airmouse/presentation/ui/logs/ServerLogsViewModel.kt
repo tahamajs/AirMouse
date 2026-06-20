@@ -9,12 +9,14 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.network.ConnectionManager
+import com.airmouse.utils.LogManager
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.update
+import androidx.lifecycle.Observer
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -42,6 +44,8 @@ class ServerLogsViewModel @Inject constructor(
     private val logEntries = mutableListOf<LogEntry>()
     private var nextId = 0
     private var autoRefreshJob: Job? = null
+    private var sharedLogObserver: Observer<List<LogManager.LogEntry>>? = null
+    private var lastSharedLogCount = 0
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
     
     companion object {
@@ -57,6 +61,7 @@ class ServerLogsViewModel @Inject constructor(
         loadSettings()
         startAutoRefresh()
         deleteOldLogs()
+        attachSharedLogStream()
     }
 
     private fun loadSettings() {
@@ -115,6 +120,47 @@ class ServerLogsViewModel @Inject constructor(
         // This would capture logs from various components
         addLogEntry(LogLevel.INFO, "System", "Log viewer initialized", "Version 3.0.0")
         addLogEntry(LogLevel.DEBUG, "Storage", "Log retention: ${_uiState.value.logRetentionDays} days")
+    }
+
+    private fun attachSharedLogStream() {
+        val observer = Observer<List<LogManager.LogEntry>> { entries ->
+            if (entries.isNullOrEmpty()) return@Observer
+
+            val newEntries = if (entries.size > lastSharedLogCount) {
+                entries.take(entries.size - lastSharedLogCount)
+            } else {
+                entries
+            }
+
+            lastSharedLogCount = entries.size
+            addSharedLogEntries(newEntries)
+        }
+
+        sharedLogObserver = observer
+        LogManager.logEntries.observeForever(observer)
+    }
+
+    private fun addSharedLogEntries(entries: List<LogManager.LogEntry>) {
+        if (entries.isEmpty()) return
+        val newEntries = entries.reversed().map { shared ->
+            LogEntry(
+                id = (nextId++).toString(),
+                timestamp = shared.timestampMs,
+                level = shared.level.toLogLevel(),
+                tag = shared.tag,
+                message = shared.message
+            )
+        }
+
+        if (newEntries.isNotEmpty()) {
+            logEntries.addAll(0, newEntries)
+            while (logEntries.size > MAX_LOGS) {
+                logEntries.removeAt(logEntries.lastIndex)
+            }
+            updateFilteredLogs()
+            updateStatistics()
+            saveLogs()
+        }
     }
 
     private fun loadSavedLogs() {
@@ -720,7 +766,18 @@ class ServerLogsViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        sharedLogObserver?.let { LogManager.logEntries.removeObserver(it) }
         autoRefreshJob?.cancel()
         saveLogs()
     }
+}
+
+private fun String.toLogLevel(): LogLevel = when (uppercase(Locale.getDefault())) {
+    "DEBUG" -> LogLevel.DEBUG
+    "INFO" -> LogLevel.INFO
+    "WARN" -> LogLevel.WARN
+    "ERROR" -> LogLevel.ERROR
+    "VERBOSE" -> LogLevel.VERBOSE
+    "FATAL" -> LogLevel.FATAL
+    else -> LogLevel.INFO
 }

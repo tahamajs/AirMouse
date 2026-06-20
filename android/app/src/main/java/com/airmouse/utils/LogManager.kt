@@ -36,6 +36,7 @@ object LogManager {
 
         val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date())
         val entry = LogEntry(
+            timestampMs = System.currentTimeMillis(),
             timestamp = timestamp,
             message = message,
             level = level.uppercase(),
@@ -85,6 +86,7 @@ object LogManager {
     fun getLogFile(): File? = logFile
 
     data class LogEntry(
+        val timestampMs: Long,
         val timestamp: String,
         val message: String,
         val level: String,

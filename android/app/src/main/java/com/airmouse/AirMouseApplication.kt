@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration as WorkConfiguration
 import com.airmouse.utils.PreferencesManager
+import com.airmouse.utils.LogManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +70,7 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
         appStartTime = System.currentTimeMillis()
 
         // Initialize core components
+        LogManager.init(this)
         initLogging()
         initCrashReporting()
         initPreferences()

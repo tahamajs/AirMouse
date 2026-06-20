@@ -224,12 +224,13 @@ sealed class Destinations(
         )
 
         /** List of destinations that appear in the bottom navigation bar */
-        val bottomNavDestinations: List<Destinations> = listOf(
-            Home,
-            Statistics,
-            Settings,
-            Help
-        )
+        val bottomNavDestinations: List<Destinations>
+            get() = listOf(
+                Home,
+                Statistics,
+                Settings,
+                Help
+            )
 
         /**
          * Checks if a given route belongs to the bottom navigation.
