@@ -65,6 +65,7 @@ func (s *Server) Start() error {
 	go s.listenLoop()
 
 	utils.LogInfo("UDP discovery server started on port %d", s.port)
+	utils.LogDebug("UDP discovery bound to %s", addr.String())
 	return nil
 }
 
@@ -92,6 +93,7 @@ func (s *Server) listenLoop() {
 // handleMessage – process incoming messages
 func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 	clientIP := clientAddr.IP.String()
+	utils.LogDebug("UDP inbound packet from %s payload=%q", clientIP, msg)
 
 	// Update/register client
 	s.mu.Lock()
@@ -152,7 +154,9 @@ func (s *Server) sendDiscoveryResponse(clientAddr *net.UDPAddr) {
 	_, err := s.conn.WriteToUDP([]byte(response), clientAddr)
 	if err != nil {
 		utils.LogDebug("Failed to send discovery response: %v", err)
+		return
 	}
+	utils.LogInfo("UDP discovery response sent to %s on port %d", clientAddr.IP.String(), cfg.Port)
 }
 
 // sendPong – replies to a ping
@@ -165,7 +169,11 @@ func (s *Server) sendPong(clientAddr *net.UDPAddr) {
 	if err != nil {
 		return
 	}
-	s.conn.WriteToUDP(data, clientAddr)
+	if _, err := s.conn.WriteToUDP(data, clientAddr); err != nil {
+		utils.LogDebug("Failed to send UDP pong: %v", err)
+	} else {
+		utils.LogDebug("UDP pong sent to %s", clientAddr.IP.String())
+	}
 }
 
 // Stop the server
