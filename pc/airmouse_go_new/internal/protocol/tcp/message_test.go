@@ -43,6 +43,22 @@ func TestDecodeWireMessageNestedPayloadAndStringID(t *testing.T) {
 	}
 }
 
+func TestDecodeWireMessageAliasedMotionFields(t *testing.T) {
+	msgType, payload, _, err := decodeWireMessage([]byte(`{"type":"move","DeltaX":4.5,"DeltaY":-2.25}`))
+	if err != nil {
+		t.Fatalf("decodeWireMessage returned error: %v", err)
+	}
+	if msgType != "move" {
+		t.Fatalf("msgType = %q, want move", msgType)
+	}
+	if got := payload["DeltaX"]; got != 4.5 {
+		t.Fatalf("DeltaX = %v, want 4.5", got)
+	}
+	if got := payload["DeltaY"]; got != -2.25 {
+		t.Fatalf("DeltaY = %v, want -2.25", got)
+	}
+}
+
 func TestAckMessage(t *testing.T) {
 	id := "abc-123"
 	got := ackMessage(&id)

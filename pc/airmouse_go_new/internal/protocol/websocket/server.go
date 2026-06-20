@@ -310,8 +310,8 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		s.processFileMessage(client, payload)
 
 	case "move":
-		dx := toFloat64(payload["dx"])
-		dy := toFloat64(payload["dy"])
+		dx := firstFloat64(payload, "dx", "DeltaX", "deltaX")
+		dy := firstFloat64(payload, "dy", "DeltaY", "deltaY")
 		if s.mouse != nil {
 			s.mouse.Move(dx, dy)
 		}
@@ -339,7 +339,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		utils.LogDebug("Right click received: device=%s", client.ID)
 
 	case "scroll":
-		delta := toInt(payload["delta"])
+		delta := firstInt(payload, "delta", "Scroll", "scroll")
 		if s.mouse != nil {
 			s.mouse.Scroll(delta)
 		}
@@ -558,6 +558,24 @@ func toInt64(v any) int64 {
 	default:
 		return 0
 	}
+}
+
+func firstFloat64(payload map[string]any, keys ...string) float64 {
+	for _, key := range keys {
+		if v, ok := payload[key]; ok {
+			return toFloat64(v)
+		}
+	}
+	return 0
+}
+
+func firstInt(payload map[string]any, keys ...string) int {
+	for _, key := range keys {
+		if v, ok := payload[key]; ok {
+			return toInt(v)
+		}
+	}
+	return 0
 }
 
 // GetStats returns server statistics.

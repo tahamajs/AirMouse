@@ -31,10 +31,12 @@ type DashboardTab struct {
 	statsLabel      *widget.Label
 	connLabel       *widget.Label
 	endpointLabel   *widget.Label
+	protocolLabel   *widget.Label
 	uptimeLabel     *widget.Label
 	aiStatusLabel   *widget.Label
 	serverStatus    *widget.Label
 	serverNameLabel *widget.Label
+	summaryLabel    *widget.Label
 	deviceDetailBox *widget.Label
 	recentLogsBox   *widget.Label
 
@@ -81,8 +83,11 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	tab.connLabel = widget.NewLabel("📱 Connected devices: 0")
 
 	tab.endpointLabel = widget.NewLabel("🔌 Endpoint: not started")
+	tab.protocolLabel = widget.NewLabel("🛰️ Protocols: TCP / WebSocket / UDP discovery")
 	tab.uptimeLabel = widget.NewLabel("⏱️ Uptime: --:--:--")
 	tab.aiStatusLabel = widget.NewLabel("🧠 AI Smoothing: Disabled")
+	tab.summaryLabel = widget.NewLabel("Status summary will appear here once the server starts.")
+	tab.summaryLabel.Wrapping = fyne.TextWrapWord
 
 	tab.serverStatus = widget.NewLabelWithStyle(
 		"⛔ Server Status: Stopped",
@@ -210,7 +215,9 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		widget.NewLabelWithStyle("📡 Server Status", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		tab.serverStatus,
+		tab.summaryLabel,
 		tab.endpointLabel,
+		tab.protocolLabel,
 		tab.uptimeLabel,
 		tab.aiStatusLabel,
 	)))
@@ -229,13 +236,12 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	)))
 
 	featureCard := NewGlassCard(container.NewPadded(container.NewVBox(
-		widget.NewLabelWithStyle("✨ Features", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("✨ Setup Checklist", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		widget.NewLabel("• One-tap server start/stop"),
-		widget.NewLabel("• QR pairing for instant phone setup"),
-		widget.NewLabel("• Live device stats and metadata"),
-		widget.NewLabel("• Recent activity feed from the shared logger"),
-		widget.NewLabel("• Pause, resume, and reset movement controls"),
+		widget.NewLabel("• Start the server and confirm the endpoint"),
+		widget.NewLabel("• Pair the Android device with QR or Network tab"),
+		widget.NewLabel("• Watch live logs, device metadata, and statistics"),
+		widget.NewLabel("• Use pause/resume when calibrating or testing"),
 	)))
 
 	hero := NewGlassCard(container.NewVBox(
@@ -353,8 +359,24 @@ func (t *DashboardTab) refreshStats() {
 				int(uptime.Minutes())%60,
 				int(uptime.Seconds())%60,
 			))
+			t.summaryLabel.SetText(fmt.Sprintf(
+				"Running on %s with %d connected device(s). Live telemetry and logs are updating below.",
+				utils.GetLocalIP(),
+				deviceCount,
+			))
 		}
 		t.mu.Unlock()
+
+		if t.server != nil && t.server.IsRunning() {
+			ip := utils.GetLocalIP()
+			t.endpointLabel.SetText(fmt.Sprintf("🔌 Endpoint: http://%s:%d | ws://%s:%d/ws", ip, t.cfg.Port, ip, t.cfg.WebSocketPort))
+			t.protocolLabel.SetText(fmt.Sprintf("🛰️ Protocols: TCP %d | WebSocket %d | UDP %d", t.cfg.Port, t.cfg.WebSocketPort, t.cfg.UDPPort))
+			if t.cfg.EnableAISmoothing {
+				t.aiStatusLabel.SetText("🧠 AI Smoothing: Enabled ✅")
+			} else {
+				t.aiStatusLabel.SetText("🧠 AI Smoothing: Disabled ⭕")
+			}
+		}
 	})
 }
 

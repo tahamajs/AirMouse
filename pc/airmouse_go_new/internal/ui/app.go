@@ -47,6 +47,7 @@ type App struct {
 
 	statusBar        *StatusBar
 	connectionStatus *widget.Label
+	summaryStatus    *widget.Label
 }
 
 // ------------------------------------------------------------
@@ -88,6 +89,8 @@ func (a *App) Run() error {
 	// Status bar
 	a.statusBar = NewStatusBar()
 	a.connectionStatus = widget.NewLabel("🔌 Status: Ready")
+	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts.")
+	a.summaryStatus.Wrapping = fyne.TextWrapWord
 
 	// ----- Create all tabs (using safeTab to catch nil) -----
 	a.dashboardTab = safeTab(NewDashboardTab(a.server, a.mouse, a.deviceMgr), "Dashboard")
@@ -257,11 +260,11 @@ func (a *App) createToolbar() fyne.CanvasObject {
 	subtitle.Wrapping = fyne.TextWrapWord
 
 	return container.NewBorder(
-		container.NewVBox(title, subtitle),
+		container.NewVBox(title, subtitle, a.connectionStatus, a.summaryStatus),
 		nil,
 		nil,
 		container.NewHBox(settingsBtn, helpBtn),
-		a.connectionStatus,
+		nil,
 	)
 }
 
@@ -270,6 +273,9 @@ func (a *App) startServerAsync(source string) {
 		return
 	}
 	utils.LogInfo("UI requested server start: source=%s", source)
+	if a.connectionStatus != nil {
+		a.connectionStatus.SetText("⏳ Status: Starting server...")
+	}
 	go func() {
 		err := a.server.Start()
 		RunOnMain(func() {
@@ -281,9 +287,7 @@ func (a *App) startServerAsync(source string) {
 					dialog.ShowError(err, a.window)
 				}
 			}
-			if a.connectionStatus != nil {
-				a.connectionStatus.SetText("🟢 Server start requested")
-			}
+			a.refreshConnectionSummary()
 		})
 	}()
 }
@@ -293,12 +297,13 @@ func (a *App) stopServerAsync(source string) {
 		return
 	}
 	utils.LogInfo("UI requested server stop: source=%s", source)
+	if a.connectionStatus != nil {
+		a.connectionStatus.SetText("⏳ Status: Stopping server...")
+	}
 	go func() {
 		a.server.Stop()
 		RunOnMain(func() {
-			if a.connectionStatus != nil {
-				a.connectionStatus.SetText("⛔ Server stop requested")
-			}
+			a.refreshConnectionSummary()
 		})
 	}()
 }
@@ -319,16 +324,49 @@ func (a *App) connectionStatusUpdater() {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		deviceCount := len(a.deviceMgr.GetAllDevices())
-		RunOnMain(func() {
-			if a.server != nil && !a.server.IsRunning() {
-				a.connectionStatus.SetText("⛔ Status: Stopped")
-			} else if deviceCount > 0 {
-				a.connectionStatus.SetText(fmt.Sprintf("🟢 Connected: %d device(s)", deviceCount))
-			} else {
-				a.connectionStatus.SetText("🟡 Status: Waiting for connections")
-			}
-		})
+		RunOnMain(func() { a.refreshConnectionSummary() })
+	}
+}
+
+func (a *App) refreshConnectionSummary() {
+	if a.connectionStatus == nil {
+		return
+	}
+
+	deviceCount := 0
+	if a.deviceMgr != nil {
+		deviceCount = len(a.deviceMgr.GetAllDevices())
+	}
+	utils.LogDebug("Refreshing connection summary: server_nil=%t running=%t devices=%d", a.server == nil, a.server != nil && a.server.IsRunning(), deviceCount)
+
+	if a.server == nil {
+		a.connectionStatus.SetText("⚪ Status: Server unavailable")
+		if a.summaryStatus != nil {
+			a.summaryStatus.SetText("The server instance is not configured.")
+		}
+		return
+	}
+
+	if !a.server.IsRunning() {
+		a.connectionStatus.SetText("⛔ Status: Stopped")
+		if a.summaryStatus != nil {
+			a.summaryStatus.SetText("No active listeners. Use Start Server to bring up TCP, WebSocket, and UDP discovery.")
+		}
+		return
+	}
+
+	ip := utils.GetLocalIP()
+	a.connectionStatus.SetText(fmt.Sprintf("🟢 Running: %d device(s) connected", deviceCount))
+	if a.summaryStatus != nil {
+		a.summaryStatus.SetText(fmt.Sprintf(
+			"Listening on %s:%d | ws://%s:%d/ws | UDP %d | Theme: %s",
+			ip,
+			a.cfg.Port,
+			ip,
+			a.cfg.WebSocketPort,
+			a.cfg.UDPPort,
+			a.cfg.Theme,
+		))
 	}
 }
 
