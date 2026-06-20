@@ -887,3 +887,5 @@
 2026-06-21 00:34:28.795 [INFO] main.go:77: Active protocols: [TCP WebSocket UDP Bluetooth USB]
 2026-06-21 00:34:29.288 [INFO] main.go:39: Bluetooth manager started: adapter=default
 2026-06-21 00:34:29.288 [INFO] main.go:39: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-21 00:47:48.488 [INFO] main.go:86: Shutting down...
+2026-06-21 00:47:48.490 [INFO] main.go:39: Device manager stopped
