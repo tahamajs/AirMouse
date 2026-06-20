@@ -58,21 +58,21 @@ var (
 	// LightTheme – bright mode.
 	LightTheme = &CustomTheme{
 		name:             "light",
-		primaryColor:     color.RGBA{99, 102, 241, 255},
-		backgroundColor:  color.RGBA{248, 250, 252, 255},
+		primaryColor:     color.RGBA{37, 99, 235, 255},
+		backgroundColor:  color.RGBA{241, 245, 249, 255},
 		foregroundColor:  color.RGBA{15, 23, 42, 255},
-		secondaryColor:   color.RGBA{241, 245, 249, 255},
+		secondaryColor:   color.RGBA{226, 232, 240, 255},
 		successColor:     color.RGBA{16, 185, 129, 255},
 		warningColor:     color.RGBA{245, 158, 11, 255},
 		errorColor:       color.RGBA{239, 68, 68, 255},
-		hoverColor:       color.RGBA{226, 232, 240, 255},
-		pressedColor:     color.RGBA{203, 213, 225, 255},
-		focusColor:       color.RGBA{99, 102, 241, 200},
+		hoverColor:       color.RGBA{203, 213, 225, 255},
+		pressedColor:     color.RGBA{148, 163, 184, 255},
+		focusColor:       color.RGBA{37, 99, 235, 200},
 		inputBgColor:     color.RGBA{255, 255, 255, 255},
-		placeholderColor: color.RGBA{100, 116, 139, 150},
+		placeholderColor: color.RGBA{71, 85, 105, 170},
 		scrollBarColor:   color.RGBA{203, 213, 225, 200},
 		shadowColor:      color.RGBA{0, 0, 0, 30},
-		hyperlinkColor:   color.RGBA{37, 99, 235, 255},
+		hyperlinkColor:   color.RGBA{29, 78, 216, 255},
 	}
 
 	// PureBlackTheme – OLED‑friendly all‑black.
@@ -209,7 +209,7 @@ func (t *CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 	case theme.ColorNameForeground:
 		return t.foregroundColor
 	case theme.ColorNameButton:
-		return t.primaryColor
+		return t.secondaryColor
 	case theme.ColorNameDisabled:
 		return color.RGBA{128, 128, 128, 128}
 	case theme.ColorNameError:

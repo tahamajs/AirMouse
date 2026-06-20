@@ -148,12 +148,11 @@ func NewGesturesTab() fyne.CanvasObject {
 	// ----- Stats & Instructions -----
 	statsCard := tab.createStatsCard()
 
-	instructions := widget.NewLabel(
-		"💡 **Tips:**\n" +
-			"• Train gestures by performing them 5-10 times\n" +
-			"• Higher confidence = better recognition\n" +
-			"• You can map gestures to any system action")
-	instructions.Wrapping = fyne.TextWrapWord
+	instructions := widget.NewRichTextFromMarkdown(
+		"## Tips\n\n" +
+			"- Train gestures by performing them 5 to 10 times\n" +
+			"- Higher confidence usually means better recognition\n" +
+			"- You can map gestures to any system action")
 
 	// ----- Layout -----
 	toolbar := container.NewVBox(
