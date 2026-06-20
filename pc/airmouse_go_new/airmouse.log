@@ -289,3 +289,5 @@
 2026-06-20 17:12:53.748 [INFO] main.go:75: UDP discovery will listen on port 8082
 2026-06-20 17:12:54.241 [INFO] main.go:39: Bluetooth manager started: adapter=default
 2026-06-20 17:12:54.241 [INFO] main.go:39: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 17:17:39.759 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-20 17:17:39.760 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true

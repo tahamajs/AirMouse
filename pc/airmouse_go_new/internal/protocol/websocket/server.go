@@ -299,7 +299,7 @@ func (s *Server) writeLoop(client *WSClient) {
 // processMessage processes incoming messages.
 func (s *Server) processMessage(client *WSClient, msgType string, payload map[string]any, id *string) {
 	// Send ACK for commands that expect it
-	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "scroll") {
+	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll") {
 		if ack := AckMessage(id); len(ack) > 0 {
 			client.Send <- ack
 		}
@@ -345,21 +345,21 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 		utils.LogDebug("Scroll received: device=%s, delta=%d", client.ID, delta)
 
-    case "hello":
-        name, _ := payload["name"].(string)
-        if name == "" {
-            name = "Unknown"
-        }
+	case "hello":
+		name, _ := payload["name"].(string)
+		if name == "" {
+			name = "Unknown"
+		}
 		client.Name = name
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.UpdateDeviceName(client.ID, name)
 		}
 		utils.LogInfo("Device identified: id=%s, name=%s", client.ID, name)
 
-        // Send welcome response
-        cfg := config.Get()
-        welcome := WelcomeMessage(cfg.ServerName, cfg.Version)
-        client.Send <- welcome
+		// Send welcome response
+		cfg := config.Get()
+		welcome := WelcomeMessage(cfg.ServerName, cfg.Version)
+		client.Send <- welcome
 
 	case "gesture":
 		gesture, _ := payload["gesture"].(string)
