@@ -72,6 +72,10 @@ class HomeViewModel @Inject constructor(
     private var gyroOffsetX = 0f
     private var gyroOffsetY = 0f
     private var gyroOffsetZ = 0f
+    private var filteredDx = 0f
+    private var filteredDy = 0f
+    private var stationarySamples = 0
+    private var lastMoveSentAt = 0L
 
     // Orientation tracking
     private var yaw = 0f
@@ -377,6 +381,10 @@ class HomeViewModel @Inject constructor(
         val invertX = prefs.getBoolean("invert_x", false)
         val invertY = prefs.getBoolean("invert_y", false)
         val smoothingEnabled = prefs.getBoolean("smoothing_enabled", true)
+        val smoothingFactor = prefs.getFloat("smoothing_factor", 0.5f).coerceIn(0.05f, 0.95f)
+        val moveDeadzone = max(0.08f, prefs.getFloat("move_deadzone", 0.14f))
+        val stationaryBiasAlpha = prefs.getFloat("stationary_bias_alpha", 0.01f).coerceIn(0.001f, 0.05f)
+        val stationaryThreshold = prefs.getFloat("stationary_threshold", 0.12f)
 
         var dx = (values[2] - gyroOffsetZ) * sensitivity
         var dy = (values[0] - gyroOffsetX) * sensitivity
@@ -384,21 +392,46 @@ class HomeViewModel @Inject constructor(
         if (invertX) dx = -dx
         if (invertY) dy = -dy
 
+        val rawMagnitude = hypot(dx.toDouble(), dy.toDouble()).toFloat()
+
+        if (rawMagnitude < stationaryThreshold) {
+            stationarySamples++
+            if (stationarySamples > 8) {
+                gyroOffsetX = gyroOffsetX * (1 - stationaryBiasAlpha) + values[0] * stationaryBiasAlpha
+                gyroOffsetY = gyroOffsetY * (1 - stationaryBiasAlpha) + values[1] * stationaryBiasAlpha
+                gyroOffsetZ = gyroOffsetZ * (1 - stationaryBiasAlpha) + values[2] * stationaryBiasAlpha
+            }
+        } else {
+            stationarySamples = 0
+        }
+
         // Apply smoothing (EMA)
         if (smoothingEnabled) {
-            val alpha = 0.3f
-            val smoothedDx = _sensorState.value.lastDx * (1 - alpha) + dx * alpha
-            val smoothedDy = _sensorState.value.lastDy * (1 - alpha) + dy * alpha
-            _sensorState.update {
-                it.copy(lastDx = smoothedDx, lastDy = smoothedDy)
-            }
-            dx = smoothedDx
-            dy = smoothedDy
+            filteredDx = filteredDx * (1 - smoothingFactor) + dx * smoothingFactor
+            filteredDy = filteredDy * (1 - smoothingFactor) + dy * smoothingFactor
+            dx = filteredDx
+            dy = filteredDy
+        } else {
+            filteredDx = dx
+            filteredDy = dy
         }
 
         // Deadband
-        if (abs(dx) < 0.5f) dx = 0f
-        if (abs(dy) < 0.5f) dy = 0f
+        if (abs(dx) < moveDeadzone) dx = 0f
+        if (abs(dy) < moveDeadzone) dy = 0f
+
+        // Reduce bursty packets from tiny wrist adjustments
+        val now = System.currentTimeMillis()
+        if (dx == 0f && dy == 0f) {
+            _sensorState.update {
+                it.copy(lastDx = 0f, lastDy = 0f)
+            }
+        } else {
+            _sensorState.update {
+                it.copy(lastDx = dx, lastDy = dy)
+            }
+            lastMoveSentAt = now
+        }
 
         if (dx != 0f || dy != 0f) {
             connectionManager.sendMove(dx, dy)
@@ -411,7 +444,7 @@ class HomeViewModel @Inject constructor(
                     (values[1] - gyroOffsetY).pow(2) +
                     (values[2] - gyroOffsetZ).pow(2)
         )
-        detectGesture(magnitude)
+        detectGesture(magnitude, now)
     }
 
     private fun processRotationVector(values: FloatArray) {
@@ -468,14 +501,15 @@ class HomeViewModel @Inject constructor(
 
     // ==================== GESTURE DETECTION ====================
 
-    private fun detectGesture(magnitude: Float) {
-        val now = System.currentTimeMillis()
+    private fun detectGesture(magnitude: Float, now: Long = System.currentTimeMillis()) {
         if (now - lastScrollTime < scrollCooldown) return
 
-        val clickThreshold = prefs.getFloat("click_threshold", 8f)
-        val scrollThreshold = prefs.getFloat("scroll_threshold", 5f)
+        val clickThreshold = max(6f, prefs.getFloat("click_threshold", 8f))
+        val scrollThreshold = max(4f, prefs.getFloat("scroll_threshold", 5f))
         val rightClickTilt = prefs.getFloat("right_click_tilt", 45f)
         val doubleClickInterval = prefs.getLong("double_click_interval", doubleClickMaxInterval)
+
+        if (magnitude < 0.18f) return
 
         when {
             magnitude > clickThreshold -> {
@@ -557,6 +591,9 @@ class HomeViewModel @Inject constructor(
         }
 
         isSensorsActive = true
+        filteredDx = 0f
+        filteredDy = 0f
+        stationarySamples = 0
         val sensorDelay = SensorManager.SENSOR_DELAY_GAME
 
         gyroscope?.let { sensorManager.registerListener(sensorListener, it, sensorDelay) }
