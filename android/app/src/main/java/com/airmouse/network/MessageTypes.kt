@@ -546,4 +546,64 @@ object GestureActionMap {
             else -> MessageTypes.PRIORITY_LOW
         }
     }
+}// app/src/main/java/com/airmouse/network/MessageTypes.kt
+package com.airmouse.network
+
+object MessageTypes {
+    // Protocol version
+    const val PROTOCOL_VERSION = "3.0"
+
+    // Default ports
+    const val DEFAULT_TCP_PORT = 8080
+    const val DEFAULT_WEBSOCKET_PORT = 8081
+    const val DEFAULT_UDP_PORT = 8082
+
+    // Message types (client → server)
+    const val TYPE_MOVE = "move"
+    const val TYPE_CLICK = "click"
+    const val TYPE_DOUBLE_CLICK = "doubleclick"
+    const val TYPE_RIGHT_CLICK = "rightclick"
+    const val TYPE_SCROLL = "scroll"
+    const val TYPE_HELLO = "hello"
+    const val TYPE_GESTURE = "gesture"
+    const val TYPE_PROXIMITY = "proximity"
+    const val TYPE_CONTROL = "control"
+    const val TYPE_PING = "ping"
+    const val TYPE_PONG = "pong"
+    const val TYPE_ACK = "ack"
+    const val TYPE_ERROR = "error"
+    const val TYPE_WELCOME = "welcome"
+    const val TYPE_CALIBRATION_DATA = "calibration_data"
+
+    // Button types
+    const val BUTTON_LEFT = "left"
+    const val BUTTON_RIGHT = "right"
+    const val BUTTON_MIDDLE = "middle"
+    const val BUTTON_BACK = "back"
+    const val BUTTON_FORWARD = "forward"
+
+    // Control commands
+    const val COMMAND_PAUSE_MOVEMENT = "pause_movement"
+    const val COMMAND_RESUME_MOVEMENT = "resume_movement"
+    const val COMMAND_LOCK_SCREEN = "lock_screen"
+    const val COMMAND_UNLOCK_SCREEN = "unlock_screen"
+    const val COMMAND_CALIBRATE = "calibrate"
+    const val COMMAND_RESET = "reset"
+    const val COMMAND_PLAY_PAUSE = "play_pause"
+    const val COMMAND_NEXT_TRACK = "next_track"
+    const val COMMAND_PREV_TRACK = "prev_track"
+    const val COMMAND_STOP = "stop"
+    const val COMMAND_VOLUME_UP = "volume_up"
+    const val COMMAND_VOLUME_DOWN = "volume_down"
+    const val COMMAND_MUTE = "mute"
+    const val COMMAND_BROWSER_BACK = "browser_back"
+    const val COMMAND_BROWSER_FORWARD = "browser_forward"
+    const val COMMAND_BROWSER_REFRESH = "browser_refresh"
+    const val COMMAND_BROWSER_HOME = "browser_home"
+    const val COMMAND_SHOW_DESKTOP = "show_desktop"
+    const val COMMAND_TASK_VIEW = "task_view"
+    const val COMMAND_SWITCH_WINDOW = "switch_window"
+    const val COMMAND_ZOOM_IN = "zoom_in"
+    const val COMMAND_ZOOM_OUT = "zoom_out"
+    const val COMMAND_ZOOM_RESET = "zoom_reset"
 }
