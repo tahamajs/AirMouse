@@ -772,7 +772,6 @@ class CalibrationViewModel @Inject constructor(
         }
 
         calibrationApplied = true
-        calibrationUseCase.applyCalibration(data)
 
         _uiState.update { state ->
             state.copy(

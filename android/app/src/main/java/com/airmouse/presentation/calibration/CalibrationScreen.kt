@@ -780,7 +780,7 @@ fun CompletionScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    QualityMetric("Quality", uiState.calibrationQuality.ifEmpty { "GOOD" }.uppercase(), qualityConfig.color)
+                    QualityMetric("Quality", calibrationData.quality.name, qualityConfig.color)
                     QualityMetric("Score", qualityConfig.score, qualityConfig.color)
                     QualityMetric("Status", qualityConfig.status, qualityConfig.color)
                 }
