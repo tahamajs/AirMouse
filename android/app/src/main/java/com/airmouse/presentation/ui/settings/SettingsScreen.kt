@@ -60,6 +60,7 @@ enum class SettingsSection(
     AI("AI & Predictive", "Smart movement prediction", Icons.Default.Psychology),
     HAPTIC("Haptic & Sound", "Feedback preferences", Icons.Default.Vibration),
     DISPLAY("Display", "Theme and appearance", Icons.Default.DisplaySettings),
+    THEMES("Themes", "Theme presets and accents", Icons.Default.Palette),
     CONNECTION("Connection", "Network settings", Icons.Default.Wifi),
     PRIVACY("Privacy & Data", "Your data preferences", Icons.Default.PrivacyTip),
     PRESENTATION("Presentation", "Slide control settings", Icons.Default.Slideshow),
@@ -237,6 +238,7 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         _uiState.update {
+            val savedTheme = prefs.getString("theme", "system")
             it.copy(
                 // Cursor Settings
                 sensitivity = prefs.getFloat("sensitivity", 0.5f),
@@ -270,7 +272,7 @@ class SettingsViewModel @Inject constructor(
                 notificationOnGesture = prefs.getBoolean("notification_on_gesture", false),
 
                 // Display Settings
-                theme = prefs.getString("theme", "system"),
+                theme = normalizeThemeId(savedTheme),
                 useDynamicColors = prefs.getBoolean("dynamic_colors", true),
                 fontSize = prefs.getFloat("font_size", 16f),
                 showDebugInfo = prefs.getBoolean("show_debug_info", false),
@@ -579,10 +581,18 @@ class SettingsViewModel @Inject constructor(
     // ==================== DISPLAY METHODS ====================
 
     private suspend fun updateTheme(theme: String) {
+        val normalizedTheme = normalizeThemeId(theme)
         saveAndUpdate({
-            prefs.putString("theme", theme)
-            _uiState.update { it.copy(theme = theme) }
-        }, "Theme: $theme")
+            prefs.putString("theme", normalizedTheme)
+            _uiState.update { it.copy(theme = normalizedTheme) }
+        }, "Theme: $normalizedTheme")
+    }
+
+    private fun normalizeThemeId(theme: String): String {
+        return when (theme.lowercase(Locale.ROOT)) {
+            "system", "light", "dark", "pure_black", "high_contrast", "dynamic" -> theme.lowercase(Locale.ROOT)
+            else -> "system"
+        }
     }
 
     private suspend fun toggleDynamicColors() {
@@ -905,6 +915,7 @@ fun SettingsScreen(
             SettingsMainScreen(
                 uiState = uiState,
                 onSectionSelected = { selectedSection = it },
+                navigationActions = navigationActions,
                 viewModel = viewModel,
                 modifier = modifier.padding(paddingValues)
             )
@@ -913,6 +924,7 @@ fun SettingsScreen(
                 section = selectedSection!!,
                 uiState = uiState,
                 viewModel = viewModel,
+                navigationActions = navigationActions,
                 onBack = { selectedSection = null },
                 modifier = modifier.padding(paddingValues)
             )
@@ -926,6 +938,7 @@ fun SettingsScreen(
 fun SettingsMainScreen(
     uiState: SettingsUiState,
     onSectionSelected: (SettingsSection) -> Unit,
+    navigationActions: NavigationActions,
     viewModel: SettingsViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -944,7 +957,13 @@ fun SettingsMainScreen(
                 title = section.title,
                 description = section.description,
                 icon = section.icon,
-                onClick = { onSectionSelected(section) }
+                onClick = {
+                    if (section == SettingsSection.THEMES) {
+                        navigationActions.navigateToThemes()
+                    } else {
+                        onSectionSelected(section)
+                    }
+                }
             )
         }
 
@@ -1057,6 +1076,7 @@ fun SectionDetailScreen(
     section: SettingsSection,
     uiState: SettingsUiState,
     viewModel: SettingsViewModel,
+    navigationActions: NavigationActions,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1105,7 +1125,8 @@ fun SectionDetailScreen(
                 SettingsSection.GESTURE -> item { GestureSettings(uiState, viewModel) }
                 SettingsSection.AI -> item { AISettings(uiState, viewModel) }
                 SettingsSection.HAPTIC -> item { HapticSettings(uiState, viewModel) }
-                SettingsSection.DISPLAY -> item { DisplaySettings(uiState, viewModel) }
+                SettingsSection.DISPLAY -> item { DisplaySettings(uiState, viewModel, navigationActions) }
+                SettingsSection.THEMES -> item { ThemesShortcutCard(navigationActions) }
                 SettingsSection.CONNECTION -> item { ConnectionSettings(uiState, viewModel) }
                 SettingsSection.PRIVACY -> item { PrivacySettings(uiState, viewModel) }
                 SettingsSection.PRESENTATION -> item { PresentationSettings(uiState, viewModel) }
@@ -1466,7 +1487,11 @@ fun HapticSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
 // ==================== DISPLAY SETTINGS ====================
 
 @Composable
-fun DisplaySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+fun DisplaySettings(
+    uiState: SettingsUiState,
+    viewModel: SettingsViewModel,
+    navigationActions: NavigationActions? = null
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -1489,13 +1514,19 @@ fun DisplaySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Quick themes",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf("system", "light", "dark", "pure_black").forEach { theme ->
+                    listOf("system", "light", "dark", "pure_black", "high_contrast").forEach { theme ->
                         FilterChip(
                             selected = uiState.theme == theme,
                             onClick = { viewModel.handleEvent(SettingsEvent.UpdateTheme(theme)) },
@@ -1506,6 +1537,7 @@ fun DisplaySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
                                         "light" -> "Light"
                                         "dark" -> "Dark"
                                         "pure_black" -> "Pure Black"
+                                        "high_contrast" -> "High Contrast"
                                         else -> theme
                                     }
                                 )
@@ -1519,6 +1551,8 @@ fun DisplaySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
                 }
             }
         }
+
+        ThemesShortcutCard(navigationActions)
 
         SettingsSwitch(
             title = "Dynamic Colors",
@@ -1557,6 +1591,41 @@ fun DisplaySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
             checked = uiState.showFps,
             onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleShowFps) }
         )
+    }
+}
+
+@Composable
+fun ThemesShortcutCard(
+    navigationActions: NavigationActions? = null
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                "Open full Themes studio",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                "Browse theme presets, previews, and accent colors in one place.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+            )
+            if (navigationActions != null) {
+                Button(onClick = { navigationActions.navigateToThemes() }) {
+                    Text("Open Themes")
+                }
+            }
+        }
     }
 }
 

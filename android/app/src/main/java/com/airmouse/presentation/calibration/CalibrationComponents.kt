@@ -21,9 +21,47 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+
+// ==========================================
+// GLASS CARD (reusable)
+// ==========================================
+
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+                    )
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            content()
+        }
+    }
+}
+
+// ==========================================
+// STEP INDICATOR
+// ==========================================
 
 @Composable
 fun CalibrationProgressIndicator(
@@ -108,6 +146,10 @@ fun CalibrationStepConnector(
     )
 }
 
+// ==========================================
+// STATUS CHIP
+// ==========================================
+
 @Composable
 fun CalibrationStatusChip(
     status: String,
@@ -136,6 +178,10 @@ fun CalibrationStatusChip(
         )
     }
 }
+
+// ==========================================
+// QUALITY INDICATOR
+// ==========================================
 
 @Composable
 fun CalibrationQualityIndicator(
@@ -167,6 +213,10 @@ fun CalibrationQualityIndicator(
         )
     }
 }
+
+// ==========================================
+// ANIMATED CHECKMARK
+// ==========================================
 
 @Composable
 fun AnimatedCheckmark(
@@ -205,6 +255,10 @@ fun AnimatedCheckmark(
     }
 }
 
+// ==========================================
+// LOADING SPINNER
+// ==========================================
+
 @Composable
 fun AnimatedLoadingSpinner(
     isActive: Boolean,
@@ -236,6 +290,10 @@ fun AnimatedLoadingSpinner(
         )
     }
 }
+
+// ==========================================
+// INSTRUCTION CARD
+// ==========================================
 
 @Composable
 fun CalibrationInstructionCard(
@@ -276,6 +334,10 @@ fun CalibrationInstructionCard(
     }
 }
 
+// ==========================================
+// PULSE ANIMATION
+// ==========================================
+
 @Composable
 fun PulseAnimation(
     modifier: Modifier = Modifier,
@@ -301,4 +363,345 @@ fun PulseAnimation(
                 if (isActive) Color(0xFF6366F1) else Color(0xFF64748B)
             )
     )
+}
+
+// ==========================================
+// SENSOR VISUALIZER (3D-like phone orientation)
+// ==========================================
+
+@Composable
+fun CalibrationSensorVisualizer(
+    roll: Float = 0f,
+    pitch: Float = 0f,
+    yaw: Float = 0f,
+    modifier: Modifier = Modifier
+) {
+    // Simple 2D representation of phone orientation
+    val rotationX = pitch * 0.5f
+    val rotationY = roll * 0.5f
+
+    Box(
+        modifier = modifier
+            .size(120.dp)
+            .graphicsLayer {
+                rotationX = rotationX
+                rotationY = rotationY
+                shadowElevation = 8f
+                spotShadowAlpha = 0.5f
+            }
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                )
+            )
+            .border(1.dp, Color(0xFF334155), RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        // Phone screen mock
+        Box(
+            modifier = Modifier
+                .fillMaxSize(0.8f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF020617))
+                .border(1.dp, Color(0xFF1E293B), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            // Crosshair
+            val dotX = (roll / 45f).coerceIn(-1f, 1f) * 20f
+            val dotY = (pitch / 45f).coerceIn(-1f, 1f) * 20f
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF6366F1))
+                    .offset(x = dotX.dp, y = dotY.dp)
+            )
+            Text("Air Mouse", fontSize = 10.sp, color = Color(0xFF6366F1))
+        }
+    }
+}
+
+// ==========================================
+// STATS ROW
+// ==========================================
+
+@Composable
+fun CalibrationStatsRow(
+    gyroX: Float,
+    gyroY: Float,
+    gyroZ: Float,
+    accelX: Float,
+    accelY: Float,
+    accelZ: Float,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        CalibrationStatItem("Gyro", gyroX, gyroY, gyroZ, Color(0xFFEF4444))
+        CalibrationStatItem("Accel", accelX, accelY, accelZ, Color(0xFF3B82F6))
+    }
+}
+
+@Composable
+fun CalibrationStatItem(
+    label: String,
+    x: Float,
+    y: Float,
+    z: Float,
+    color: Color
+) {
+    Card(
+        modifier = Modifier.weight(1f),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1E293B)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(label, fontSize = 10.sp, color = Color(0xFF64748B))
+            Text(
+                "%.1f".format(x),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                "%.1f".format(y),
+                fontSize = 10.sp,
+                color = color.copy(alpha = 0.7f)
+            )
+            Text(
+                "%.1f".format(z),
+                fontSize = 10.sp,
+                color = color.copy(alpha = 0.5f)
+            )
+        }
+    }
+}
+
+// ==========================================
+// ACTION BUTTON WITH LOADING STATE
+// ==========================================
+
+@Composable
+fun CalibrationActionButton(
+    text: String,
+    onClick: () -> Unit,
+    isLoading: Boolean = false,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !isLoading,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF6366F1),
+            disabledContainerColor = Color(0xFF1E293B)
+        )
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = Color.White
+            )
+        } else {
+            Text(text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+// ==========================================
+// STEPS GUIDE
+// ==========================================
+
+@Composable
+fun CalibrationStepsGuide(
+    steps: List<Pair<String, String>>,
+    currentStep: Int,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        steps.forEachIndexed { index, (title, description) ->
+            val isActive = index == currentStep
+            val isDone = index < currentStep
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(
+                            when {
+                                isDone -> Color(0xFF10B981)
+                                isActive -> Color(0xFF6366F1)
+                                else -> Color(0xFF1E293B)
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isDone) {
+                        Text("✓", color = Color.White, fontSize = 12.sp)
+                    } else {
+                        Text("${index + 1}", color = Color.White, fontSize = 12.sp)
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        title,
+                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = 14.sp,
+                        color = if (isActive) Color(0xFF6366F1) else Color.White
+                    )
+                    if (isActive) {
+                        Text(
+                            description,
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==========================================
+// PREVIEWS
+// ==========================================
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCalibrationProgressIndicator() {
+    MaterialTheme {
+        Column(modifier = Modifier.padding(16.dp)) {
+            CalibrationProgressIndicator(progress = 50, currentStep = 2)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCalibrationStatusChip() {
+    MaterialTheme {
+        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CalibrationStatusChip("Calibrating")
+            CalibrationStatusChip("Complete")
+            CalibrationStatusChip("Error", isError = true)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCalibrationQualityIndicator() {
+    MaterialTheme {
+        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CalibrationQualityIndicator("EXCELLENT")
+            CalibrationQualityIndicator("GOOD")
+            CalibrationQualityIndicator("FAIR")
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewAnimatedCheckmark() {
+    MaterialTheme {
+        AnimatedCheckmark(isVisible = true, modifier = Modifier.padding(16.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewAnimatedLoadingSpinner() {
+    MaterialTheme {
+        AnimatedLoadingSpinner(isActive = true, modifier = Modifier.padding(16.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCalibrationInstructionCard() {
+    MaterialTheme {
+        CalibrationInstructionCard(
+            title = "Place Device Flat",
+            instruction = "Place your device on a flat surface",
+            description = "Ensure the device is stationary during calibration.",
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewPulseAnimation() {
+    MaterialTheme {
+        PulseAnimation(isActive = true, modifier = Modifier.padding(16.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCalibrationSensorVisualizer() {
+    MaterialTheme {
+        CalibrationSensorVisualizer(roll = 10f, pitch = 5f, modifier = Modifier.padding(16.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCalibrationStatsRow() {
+    MaterialTheme {
+        CalibrationStatsRow(
+            gyroX = 0.1f, gyroY = -0.2f, gyroZ = 0.05f,
+            accelX = 9.8f, accelY = -0.1f, accelZ = 0.2f,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCalibrationActionButton() {
+    MaterialTheme {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            CalibrationActionButton(text = "Start Calibration", onClick = {})
+            CalibrationActionButton(text = "Calibrating...", onClick = {}, isLoading = true)
+            CalibrationActionButton(text = "Disabled", onClick = {}, enabled = false)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCalibrationStepsGuide() {
+    MaterialTheme {
+        val steps = listOf(
+            "Place Device Flat" to "Keep device stationary",
+            "Move in Figure-8" to "Rotate device in all directions",
+            "Hold Still" to "Wait for calibration to complete"
+        )
+        CalibrationStepsGuide(
+            steps = steps,
+            currentStep = 1,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
 }

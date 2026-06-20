@@ -1,4 +1,6 @@
 // app/src/main/java/com/airmouse/presentation/navigation/NavigationActions.kt
+@file:Suppress("unused")
+
 package com.airmouse.presentation.navigation
 
 import androidx.compose.runtime.Composable

@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationUiState.kt
 package com.airmouse.presentation.ui.calibration
 
 import com.airmouse.domain.model.CalibrationData
