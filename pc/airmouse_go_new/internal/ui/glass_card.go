@@ -21,10 +21,10 @@ type GlassCard struct {
 // NewGlassCard creates a new glass card
 func NewGlassCard(content fyne.CanvasObject) *GlassCard {
 	card := &GlassCard{
-		Content:     content,
-		BorderColor: color.RGBA{255, 255, 255, 30},
-		BgColor:     color.RGBA{255, 255, 255, 10},
-		CornerRadius: 16,
+		Content:      content,
+		BorderColor:   color.RGBA{148, 163, 184, 70},
+		BgColor:       color.RGBA{15, 23, 42, 200},
+		CornerRadius:  18,
 	}
 	card.ExtendBaseWidget(card)
 	return card

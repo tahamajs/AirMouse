@@ -102,9 +102,8 @@ func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager,
 // Start starts all enabled protocol servers
 func (s *ProtocolServer) Start() error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if s.running {
+		s.mu.Unlock()
 		return fmt.Errorf("server already running")
 	}
 
@@ -168,6 +167,8 @@ func (s *ProtocolServer) Start() error {
 	}
 
 	s.running = true
+	s.mu.Unlock()
+
 	s.triggerEvent(ServerEvent{
 		Type:      "start",
 		Timestamp: time.Now(),
