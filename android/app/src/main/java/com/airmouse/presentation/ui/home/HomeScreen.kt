@@ -52,6 +52,7 @@ fun HomeScreen(
     val homeViewModel: HomeViewModel = hiltViewModel()
     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    var overflowMenuExpanded by remember { mutableStateOf(false) }
 
     var serverIp by remember { mutableStateOf("192.168.1.100") }
     var serverPort by remember { mutableIntStateOf(8080) }
@@ -138,7 +139,14 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = { HomeTopBar(navigationActions = navigationActions) },
+        topBar = {
+            HomeTopBar(
+                navigationActions = navigationActions,
+                overflowMenuExpanded = overflowMenuExpanded,
+                onMenuClick = { overflowMenuExpanded = true },
+                onMenuDismiss = { overflowMenuExpanded = false }
+            )
+        },
         floatingActionButton = {
             AnimatedVisibility(
                 visible = isConnectionActive,
@@ -414,8 +422,12 @@ fun HomeScreen(
 // ==========================================
 
 @Composable
-fun HomeTopBar(navigationActions: NavigationActions) {
-    var overflowMenuExpanded by remember { mutableStateOf(false) }
+fun HomeTopBar(
+    navigationActions: NavigationActions,
+    overflowMenuExpanded: Boolean,
+    onMenuClick: () -> Unit,
+    onMenuDismiss: () -> Unit
+) {
     TopAppBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -441,25 +453,25 @@ fun HomeTopBar(navigationActions: NavigationActions) {
             }
         },
         navigationIcon = {
-            IconButton(onClick = { overflowMenuExpanded = true }) {
+            IconButton(onClick = onMenuClick) {
                 Icon(Icons.Default.Menu, contentDescription = "Menu")
             }
         },
         actions = {
-            IconButton(onClick = { overflowMenuExpanded = true }) {
-                BadgedBox(badge = { Badge { Text("3") } }) {
+            IconButton(onClick = onMenuClick) {
+                BadgedBox(badge = { Badge { Text("•") } }) {
                     Icon(Icons.Default.MoreVert, contentDescription = "More options")
                 }
             }
             DropdownMenu(
                 expanded = overflowMenuExpanded,
-                onDismissRequest = { overflowMenuExpanded = false }
+                onDismissRequest = onMenuDismiss
             ) {
                 DropdownMenuItem(
                     text = { Text("Touchpad") },
                     leadingIcon = { Icon(Icons.Default.TouchApp, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.Touchpad.route)
                     }
                 )
@@ -467,7 +479,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("Calibration") },
                     leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.CalibrationResult.route)
                     }
                 )
@@ -475,7 +487,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("Gesture Studio") },
                     leadingIcon = { Icon(Icons.Default.Gesture, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.GestureStudio.route)
                     }
                 )
@@ -483,7 +495,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("Network Discovery") },
                     leadingIcon = { Icon(Icons.Default.Wifi, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.NetworkDiscovery.route)
                     }
                 )
@@ -491,7 +503,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("Server Logs") },
                     leadingIcon = { Icon(Icons.Default.List, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.ServerLogs.route)
                     }
                 )
@@ -499,7 +511,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("Profiles") },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.Profiles.route)
                     }
                 )
@@ -507,7 +519,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("Themes") },
                     leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.Themes.route)
                     }
                 )
@@ -515,7 +527,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("Settings") },
                     leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.Settings.route)
                     }
                 )
@@ -523,7 +535,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("Help") },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.Help.route)
                     }
                 )
@@ -531,7 +543,7 @@ fun HomeTopBar(navigationActions: NavigationActions) {
                     text = { Text("About") },
                     leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
                     onClick = {
-                        overflowMenuExpanded = false
+                        onMenuDismiss()
                         navigationActions.navigateTo(Destinations.About.route)
                     }
                 )
