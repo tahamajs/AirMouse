@@ -29,14 +29,17 @@ type ConnectionQualityWidget struct {
 	maxHistory   int
 	callbacks    []func(quality int)
 	stopChan     chan struct{}
+	initialized  bool
 }
 
 // NewConnectionQualityWidget creates a widget that displays connection status.
 func NewConnectionQualityWidget() *ConnectionQualityWidget {
-	ic := canvas.NewImageFromImage(nil)
+	// Create a default colored image (must be *image.Uniform)
+	defaultImg := image.NewUniform(color.RGBA{128, 128, 128, 255})
+
+	ic := canvas.NewImageFromImage(defaultImg)
 	ic.FillMode = canvas.ImageFillContain
 	ic.SetMinSize(fyne.NewSize(32, 32))
-	ic.Image = image.NewUniform(color.RGBA{128, 128, 128, 255})
 	ic.Refresh()
 
 	lbl := widget.NewLabel("Disconnected")
@@ -64,15 +67,22 @@ func NewConnectionQualityWidget() *ConnectionQualityWidget {
 		lastUpdate:   time.Now(),
 		callbacks:    make([]func(quality int), 0),
 		stopChan:     make(chan struct{}),
+		initialized:  true,
 	}
 
+	// Start the updater in a separate goroutine
 	go w.updater()
+
 	return w
 }
 
 func (w *ConnectionQualityWidget) updater() {
+	if !w.initialized {
+		return
+	}
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -84,8 +94,12 @@ func (w *ConnectionQualityWidget) updater() {
 }
 
 func (w *ConnectionQualityWidget) updateMovingAverage() {
+	if !w.initialized {
+		return
+	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
 	if time.Since(w.lastUpdate) > 5*time.Second {
 		w.status = "unknown"
 		w.rssi = -99
@@ -103,6 +117,9 @@ func (w *ConnectionQualityWidget) updateMovingAverage() {
 }
 
 func (w *ConnectionQualityWidget) updateDisplay(avgLatency int64) {
+	if !w.initialized {
+		return
+	}
 	var text string
 	var statusText string
 	var signalValue float64
@@ -155,15 +172,27 @@ func (w *ConnectionQualityWidget) updateDisplay(avgLatency int64) {
 	w.latencyLabel.SetText(fmt.Sprintf("Latency: %d ms", avgLatency))
 	w.signalBar.SetValue(signalValue)
 
+	// Execute callbacks safely
 	for _, cb := range w.callbacks {
-		go cb(quality)
+		go func(callback func(int)) {
+			defer func() {
+				if r := recover(); r != nil {
+					// Recover from panics in callbacks
+				}
+			}()
+			callback(quality)
+		}(cb)
 	}
 }
 
 // SetQuality updates the widget with a new RSSI and latency value.
 func (w *ConnectionQualityWidget) SetQuality(rssi int, latencyMs int64) {
+	if !w.initialized {
+		return
+	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
 	w.rssi = rssi
 	w.lastUpdate = time.Now()
 	w.history = append(w.history, latencyMs)
@@ -180,16 +209,24 @@ func (w *ConnectionQualityWidget) SetQuality(rssi int, latencyMs int64) {
 }
 
 func (w *ConnectionQualityWidget) updateIcon(rssi int) {
+	if !w.initialized || w.icon == nil {
+		return
+	}
 	var col color.Color
 	if rssi > -50 {
-		col = color.RGBA{16, 185, 129, 255}
+		col = color.RGBA{16, 185, 129, 255} // Green
 	} else if rssi > -70 {
-		col = color.RGBA{245, 158, 11, 255}
+		col = color.RGBA{245, 158, 11, 255} // Yellow
 	} else {
-		col = color.RGBA{239, 68, 68, 255}
+		col = color.RGBA{239, 68, 68, 255} // Red
 	}
-	w.icon.Image = image.NewUniform(col)
-	w.icon.Refresh()
+
+	// Create a new uniform image with the color
+	newImg := image.NewUniform(col)
+	if newImg != nil {
+		w.icon.Image = newImg
+		w.icon.Refresh()
+	}
 }
 
 // GetQuality returns the current quality rating (0‑100).
@@ -238,8 +275,12 @@ func (w *ConnectionQualityWidget) IsConnected() bool {
 
 // Reset clears the widget state.
 func (w *ConnectionQualityWidget) Reset() {
+	if !w.initialized {
+		return
+	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
 	w.rssi = -99
 	w.history = make([]int64, 0, w.maxHistory)
 	w.status = "unknown"
@@ -250,12 +291,20 @@ func (w *ConnectionQualityWidget) Reset() {
 	w.statusLabel.Importance = widget.MediumImportance
 	w.latencyLabel.SetText("Latency: -- ms")
 	w.signalBar.SetValue(0)
-	w.icon.Image = image.NewUniform(color.RGBA{128, 128, 128, 255})
-	w.icon.Refresh()
+
+	// Reset icon to default gray
+	defaultImg := image.NewUniform(color.RGBA{128, 128, 128, 255})
+	if defaultImg != nil && w.icon != nil {
+		w.icon.Image = defaultImg
+		w.icon.Refresh()
+	}
 }
 
 // AddEventListener adds a callback for quality changes.
 func (w *ConnectionQualityWidget) AddEventListener(callback func(quality int)) {
+	if !w.initialized || callback == nil {
+		return
+	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.callbacks = append(w.callbacks, callback)
@@ -263,11 +312,22 @@ func (w *ConnectionQualityWidget) AddEventListener(callback func(quality int)) {
 
 // Stop stops the background updater goroutine.
 func (w *ConnectionQualityWidget) Stop() {
-	close(w.stopChan)
+	if !w.initialized {
+		return
+	}
+	select {
+	case <-w.stopChan:
+		// Already stopped
+	default:
+		close(w.stopChan)
+	}
 }
 
 // Widget returns the full‑size widget container.
 func (w *ConnectionQualityWidget) Widget() fyne.CanvasObject {
+	if !w.initialized {
+		return widget.NewLabel("Connection widget not initialized")
+	}
 	return container.NewVBox(
 		container.NewHBox(w.icon, w.label),
 		w.statusLabel,
@@ -278,5 +338,13 @@ func (w *ConnectionQualityWidget) Widget() fyne.CanvasObject {
 
 // CompactWidget returns a compact version of the widget.
 func (w *ConnectionQualityWidget) CompactWidget() fyne.CanvasObject {
+	if !w.initialized {
+		return widget.NewLabel("Connection widget not initialized")
+	}
 	return container.NewHBox(w.icon, w.label, w.latencyLabel)
+}
+
+// IsInitialized returns true if the widget is properly initialized.
+func (w *ConnectionQualityWidget) IsInitialized() bool {
+	return w.initialized
 }

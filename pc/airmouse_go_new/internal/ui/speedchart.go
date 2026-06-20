@@ -27,18 +27,20 @@ type SpeedChart struct {
 	autoScale bool
 	gridColor color.Color
 	bgColor   color.Color
+	initialized bool
 }
 
 // NewSpeedChart creates a chart that plots cursor speed over time.
 func NewSpeedChart() fyne.CanvasObject {
 	chart := &SpeedChart{
-		history:   make([]float64, 0, 100),
-		maxPoints: 100,
-		maxSpeed:  100,
-		autoScale: true,
-		color:     color.RGBA{99, 102, 241, 255},
-		gridColor: color.RGBA{60, 60, 70, 100},
-		bgColor:   color.RGBA{30, 30, 40, 255},
+		history:     make([]float64, 0, 100),
+		maxPoints:   100,
+		maxSpeed:    100,
+		autoScale:   true,
+		color:       color.RGBA{99, 102, 241, 255},
+		gridColor:   color.RGBA{60, 60, 70, 100},
+		bgColor:     color.RGBA{30, 30, 40, 255},
+		initialized: true,
 	}
 	chart.container = container.NewWithoutLayout()
 	chart.ExtendBaseWidget(chart)
@@ -55,6 +57,9 @@ func (c *SpeedChart) MinSize() fyne.Size {
 }
 
 func (c *SpeedChart) updater() {
+	if !c.initialized {
+		return
+	}
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -66,6 +71,9 @@ func (c *SpeedChart) updater() {
 
 // AddDataPoint adds a data point to the chart.
 func (c *SpeedChart) AddDataPoint(speed float64) {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -97,11 +105,24 @@ func (c *SpeedChart) AddDataPoint(speed float64) {
 }
 
 func (c *SpeedChart) redraw() {
+	if !c.initialized || c.container == nil {
+		return
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	// Clear existing objects
 	c.container.Objects = nil
+
+	// Always ensure we have at least one object to render
 	if len(c.history) == 0 {
+		// Show placeholder text
+		label := canvas.NewText("No data yet", color.RGBA{200, 200, 200, 255})
+		label.Alignment = fyne.TextAlignCenter
+		label.TextSize = 16
+		label.Move(fyne.NewPos(200, 90))
+		c.container.Add(label)
+		c.container.Refresh()
 		return
 	}
 
@@ -165,6 +186,9 @@ func (c *SpeedChart) redraw() {
 
 // SetColor changes the line colour.
 func (c *SpeedChart) SetColor(col color.Color) {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.color = col
@@ -174,6 +198,9 @@ func (c *SpeedChart) SetColor(col color.Color) {
 
 // SetAutoScale enables/disables auto‑scaling.
 func (c *SpeedChart) SetAutoScale(enabled bool) {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.autoScale = enabled
@@ -186,6 +213,9 @@ func (c *SpeedChart) SetAutoScale(enabled bool) {
 
 // Clear removes all data.
 func (c *SpeedChart) Clear() {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.history = make([]float64, 0, c.maxPoints)
@@ -196,9 +226,17 @@ func (c *SpeedChart) Clear() {
 
 // GetMaxSpeed returns the current maximum speed shown.
 func (c *SpeedChart) GetMaxSpeed() float64 {
+	if !c.initialized {
+		return 0
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.maxSpeed
+}
+
+// IsInitialized returns true if the chart is properly initialized.
+func (c *SpeedChart) IsInitialized() bool {
+	return c.initialized
 }
 
 // ------------------------------------------------------------
@@ -214,6 +252,7 @@ type PingChart struct {
 	mu            sync.RWMutex
 	goodThreshold float64
 	warnThreshold float64
+	initialized   bool
 }
 
 func NewPingChart() fyne.CanvasObject {
@@ -223,6 +262,7 @@ func NewPingChart() fyne.CanvasObject {
 		maxLatency:    100,
 		goodThreshold: 50,
 		warnThreshold: 100,
+		initialized:   true,
 	}
 	chart.container = container.NewWithoutLayout()
 	chart.ExtendBaseWidget(chart)
@@ -238,6 +278,9 @@ func (c *PingChart) MinSize() fyne.Size {
 }
 
 func (c *PingChart) AddPing(latencyMs float64) {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.history) >= c.maxPoints {
@@ -252,12 +295,24 @@ func (c *PingChart) AddPing(latencyMs float64) {
 }
 
 func (c *PingChart) redraw() {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	c.container.Objects = nil
-	if len(c.history) == 0 {
+	if !c.initialized || c.container == nil {
 		return
 	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	c.container.Objects = nil
+
+	if len(c.history) == 0 {
+		label := canvas.NewText("No ping data yet", color.RGBA{200, 200, 200, 255})
+		label.Alignment = fyne.TextAlignCenter
+		label.TextSize = 16
+		label.Move(fyne.NewPos(200, 70))
+		c.container.Add(label)
+		c.container.Refresh()
+		return
+	}
+
 	width := float32(500)
 	height := float32(150)
 
@@ -308,6 +363,9 @@ func (c *PingChart) redraw() {
 }
 
 func (c *PingChart) SetThresholds(good, warn float64) {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.goodThreshold = good
@@ -317,6 +375,9 @@ func (c *PingChart) SetThresholds(good, warn float64) {
 }
 
 func (c *PingChart) Clear() {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.history = make([]float64, 0, c.maxPoints)
@@ -326,6 +387,9 @@ func (c *PingChart) Clear() {
 }
 
 func (c *PingChart) GetAverageLatency() float64 {
+	if !c.initialized {
+		return 0
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if len(c.history) == 0 {
@@ -336,6 +400,10 @@ func (c *PingChart) GetAverageLatency() float64 {
 		sum += v
 	}
 	return sum / float64(len(c.history))
+}
+
+func (c *PingChart) IsInitialized() bool {
+	return c.initialized
 }
 
 // ------------------------------------------------------------
@@ -349,13 +417,15 @@ type MovementChart struct {
 	maxPoints int
 	color     color.Color
 	mu        sync.RWMutex
+	initialized bool
 }
 
 func NewMovementChart() fyne.CanvasObject {
 	chart := &MovementChart{
-		points:    make([]fyne.Position, 0, 200),
-		maxPoints: 200,
-		color:     color.RGBA{99, 102, 241, 255},
+		points:      make([]fyne.Position, 0, 200),
+		maxPoints:   200,
+		color:       color.RGBA{99, 102, 241, 255},
+		initialized: true,
 	}
 	chart.container = container.NewWithoutLayout()
 	chart.ExtendBaseWidget(chart)
@@ -371,6 +441,9 @@ func (c *MovementChart) MinSize() fyne.Size {
 }
 
 func (c *MovementChart) AddPoint(x, y float32) {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.points) >= c.maxPoints {
@@ -382,12 +455,24 @@ func (c *MovementChart) AddPoint(x, y float32) {
 }
 
 func (c *MovementChart) redraw() {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	c.container.Objects = nil
-	if len(c.points) < 2 {
+	if !c.initialized || c.container == nil {
 		return
 	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	c.container.Objects = nil
+
+	if len(c.points) < 2 {
+		label := canvas.NewText("No movement data yet", color.RGBA{200, 200, 200, 255})
+		label.Alignment = fyne.TextAlignCenter
+		label.TextSize = 16
+		label.Move(fyne.NewPos(150, 90))
+		c.container.Add(label)
+		c.container.Refresh()
+		return
+	}
+
 	width := float32(400)
 	height := float32(200)
 
@@ -439,9 +524,16 @@ func (c *MovementChart) redraw() {
 }
 
 func (c *MovementChart) Clear() {
+	if !c.initialized {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.points = make([]fyne.Position, 0, c.maxPoints)
 	c.redraw()
 	c.Refresh()
+}
+
+func (c *MovementChart) IsInitialized() bool {
+	return c.initialized
 }
