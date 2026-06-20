@@ -118,6 +118,12 @@ fun SettingsMainScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item { SettingsHeader() }
+        item {
+            SettingsQuickActionsCard(
+                navigationActions = navigationActions,
+                viewModel = viewModel
+            )
+        }
         items(SettingsSection.entries) { section ->
             SettingsCard(
                 title = section.title,
@@ -148,6 +154,43 @@ fun SettingsHeader() {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("⚙️ Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text("Customize your Air Mouse experience", style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+fun SettingsQuickActionsCard(
+    navigationActions: NavigationActions,
+    viewModel: SettingsViewModel
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Jump to the most useful pages and keep the setup flow smooth.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { navigationActions.navigateToTouchpad() }, modifier = Modifier.weight(1f)) {
+                    Text("Touchpad")
+                }
+                OutlinedButton(onClick = { navigationActions.navigateToCalibration() }, modifier = Modifier.weight(1f)) {
+                    Text("Calibrate")
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { viewModel.handleEvent(SettingsEvent.ResetDefaults) }, modifier = Modifier.weight(1f)) {
+                    Text("Reset")
+                }
+                Button(onClick = { viewModel.handleEvent(SettingsEvent.SaveSettings) }, modifier = Modifier.weight(1f)) {
+                    Text("Save")
+                }
+            }
         }
     }
 }
@@ -230,6 +273,7 @@ fun SectionDetailScreen(
                 SettingsSection.HAPTIC -> item { HapticSettings(uiState, viewModel) }
                 SettingsSection.DISPLAY -> item { DisplaySettings(uiState, viewModel, navigationActions) }
                 SettingsSection.THEMES -> item { ThemesShortcutCard(navigationActions) }
+                SettingsSection.TOUCHPAD -> item { TouchpadSettings(uiState, viewModel, navigationActions) }
                 SettingsSection.CONNECTION -> item { ConnectionSettings(uiState, viewModel) }
                 SettingsSection.PRIVACY -> item { PrivacySettings(uiState, viewModel) }
                 SettingsSection.PRESENTATION -> item { PresentationSettings(uiState, viewModel) }
@@ -593,6 +637,165 @@ fun ThemesShortcutCard(navigationActions: NavigationActions? = null) {
                 Button(onClick = { navigationActions.navigateToThemes() }) { Text("Open Themes") }
             }
         }
+    }
+}
+
+// ==================== TOUCHPAD SETTINGS ====================
+
+@Composable
+fun TouchpadSettings(
+    uiState: SettingsUiState,
+    viewModel: SettingsViewModel,
+    navigationActions: NavigationActions? = null
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Touchpad Studio", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "Tune touchpad mode, click behavior, scroll behavior, and visual feedback.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { navigationActions?.navigateToTouchpad() }) { Text("Open Touchpad") }
+                    OutlinedButton(onClick = { navigationActions?.navigateToTouchpadSettings() }) { Text("Touchpad Page") }
+                }
+            }
+        }
+
+        SettingsSwitch(
+            title = "Touchpad Active",
+            description = "Enable touchpad mode on the phone",
+            checked = uiState.touchpadActive,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadActive) }
+        )
+        SettingsSlider(
+            title = "Touchpad Sensitivity",
+            value = uiState.touchpadSensitivity,
+            onValueChange = { viewModel.handleEvent(SettingsEvent.UpdateTouchpadSensitivity(it)) },
+            valueRange = 0.5f..2.0f,
+            steps = 15,
+            formatValue = { "%.1fx".format(it) },
+            description = "Overall response of touchpad movement"
+        )
+        SettingsSlider(
+            title = "Cursor Speed",
+            value = uiState.touchpadCursorSpeed,
+            onValueChange = { viewModel.handleEvent(SettingsEvent.UpdateTouchpadCursorSpeed(it)) },
+            valueRange = 0.5f..2.0f,
+            steps = 15,
+            formatValue = { "%.1fx".format(it) },
+            description = "How fast the pointer moves"
+        )
+        SettingsSlider(
+            title = "Pointer Precision",
+            value = uiState.touchpadPointerSpeed.toFloat(),
+            onValueChange = { viewModel.handleEvent(SettingsEvent.UpdateTouchpadPointerSpeed(it.toInt())) },
+            valueRange = 20f..100f,
+            steps = 8,
+            formatValue = { "${it.toInt()}%" },
+            description = "Trade speed for finer control"
+        )
+        SettingsSwitch(
+            title = "Acceleration",
+            description = "Increase cursor response for fast swipes",
+            checked = uiState.touchpadAccelerationEnabled,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadAcceleration) }
+        )
+        SettingsSwitch(
+            title = "Invert Vertical",
+            description = "Flip up/down movement",
+            checked = uiState.touchpadInvertVertical,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadInvertVertical) }
+        )
+        SettingsSwitch(
+            title = "Invert Horizontal",
+            description = "Flip left/right movement",
+            checked = uiState.touchpadInvertHorizontal,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadInvertHorizontal) }
+        )
+        SettingsSlider(
+            title = "Scroll Speed",
+            value = uiState.touchpadScrollSpeed,
+            onValueChange = { viewModel.handleEvent(SettingsEvent.UpdateTouchpadScrollSpeed(it)) },
+            valueRange = 0.5f..2.0f,
+            steps = 15,
+            formatValue = { "%.1fx".format(it) },
+            description = "Scroll distance per gesture"
+        )
+        SettingsSwitch(
+            title = "Natural Scrolling",
+            description = "Content follows finger direction",
+            checked = uiState.touchpadNaturalScrolling,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadNaturalScrolling) }
+        )
+        SettingsSwitch(
+            title = "Two-Finger Scroll",
+            description = "Use two fingers to scroll on touchpad",
+            checked = uiState.touchpadTwoFingerScroll,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadTwoFingerScroll) }
+        )
+        SettingsSwitch(
+            title = "Edge Scrolling",
+            description = "Scroll when dragging near the edge",
+            checked = uiState.touchpadEdgeScrolling,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadEdgeScrolling) }
+        )
+        SettingsSwitch(
+            title = "Scroll Inertia",
+            description = "Smooth the end of scrolling gestures",
+            checked = uiState.touchpadScrollInertia,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadScrollInertia) }
+        )
+        SettingsSwitch(
+            title = "Tap to Click",
+            description = "Single tap sends left click",
+            checked = uiState.touchpadTapToClick,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadTapToClick) }
+        )
+        SettingsSlider(
+            title = "Double Tap Delay",
+            value = uiState.touchpadDoubleTapDelay.toFloat(),
+            onValueChange = { viewModel.handleEvent(SettingsEvent.UpdateTouchpadDoubleTapDelay(it.toInt())) },
+            valueRange = 100f..600f,
+            steps = 10,
+            formatValue = { "${it.toInt()}ms" },
+            description = "Maximum delay between taps"
+        )
+        SettingsSwitch(
+            title = "Three-Finger Swipe",
+            description = "Use three-finger swipe shortcuts",
+            checked = uiState.touchpadThreeFingerSwipe,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadThreeFingerSwipe) }
+        )
+        SettingsSwitch(
+            title = "Pinch to Zoom",
+            description = "Allow pinch-to-zoom gestures",
+            checked = uiState.touchpadPinchToZoom,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadPinchToZoom) }
+        )
+        SettingsSwitch(
+            title = "Rotate to Rotate",
+            description = "Rotate gestures map to rotate actions",
+            checked = uiState.touchpadRotateToRotate,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadRotateToRotate) }
+        )
+        SettingsSwitch(
+            title = "Haptic Feedback",
+            description = "Vibrate on touchpad actions",
+            checked = uiState.touchpadHapticFeedback,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadHapticFeedback) }
+        )
+        SettingsSwitch(
+            title = "Show Touch Points",
+            description = "Display contact points on the touchpad",
+            checked = uiState.touchpadShowTouchPoints,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadShowTouchPoints) }
+        )
     }
 }
 
