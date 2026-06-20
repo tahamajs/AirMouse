@@ -44,6 +44,7 @@ type App struct {
 	analyticsTab fyne.CanvasObject
 	settingsTab  fyne.CanvasObject
 	logsTab      fyne.CanvasObject
+	protocolTab  fyne.CanvasObject
 
 	statusBar        *StatusBar
 	connectionStatus *widget.Label
@@ -101,6 +102,7 @@ func (a *App) Run() error {
 	a.analyticsTab = safeTab(NewAnalyticsTab(a.collector), "Analytics")
 	a.settingsTab = safeTab(NewSettingsTab(a.cfg, a.mouse), "Settings")
 	a.logsTab = safeTab(NewLogsTab(), "Logs")
+	a.protocolTab = safeTab(NewProtocolGuideTab(a.cfg, a.server), "Network Protocol")
 
 	// ----- Debug: Print tab status -----
 	utils.LogInfo("All tabs created successfully")
@@ -112,6 +114,7 @@ func (a *App) Run() error {
 	utils.LogDebug("Analytics tab: %T", a.analyticsTab)
 	utils.LogDebug("Settings tab: %T", a.settingsTab)
 	utils.LogDebug("Logs tab: %T", a.logsTab)
+	utils.LogDebug("Protocol tab: %T", a.protocolTab)
 
 	// ----- Tab container -----
 	tabs := container.NewAppTabs(
@@ -123,6 +126,7 @@ func (a *App) Run() error {
 		container.NewTabItemWithIcon("Analytics", theme.InfoIcon(), a.analyticsTab),
 		container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), a.settingsTab),
 		container.NewTabItemWithIcon("Logs", theme.DocumentIcon(), a.logsTab),
+		container.NewTabItemWithIcon("Protocol", theme.InfoIcon(), a.protocolTab),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 	tabs.OnSelected = func(ti *container.TabItem) {
@@ -227,6 +231,7 @@ func (a *App) createMenuBar() *fyne.MainMenu {
 		fyne.NewMenuItem("Personalization Trainer", func() { a.showPersonalizationDialog() }),
 		fyne.NewMenuItem("Gesture Recorder", func() { a.showGestureRecorder() }),
 		fyne.NewMenuItem("Network Diagnostics", func() { a.showNetworkDiagnostics() }),
+		fyne.NewMenuItem("Network Protocol", func() { a.showNetworkProtocolGuide() }),
 		fyne.NewMenuItem("Performance Monitor", func() { a.showPerformanceMonitor() }),
 	)
 

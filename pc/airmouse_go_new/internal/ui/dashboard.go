@@ -32,6 +32,7 @@ type DashboardTab struct {
 	connLabel       *widget.Label
 	endpointLabel   *widget.Label
 	protocolLabel   *widget.Label
+	retryLabel      *widget.Label
 	uptimeLabel     *widget.Label
 	aiStatusLabel   *widget.Label
 	serverStatus    *widget.Label
@@ -84,6 +85,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	tab.endpointLabel = widget.NewLabel("🔌 Endpoint: not started")
 	tab.protocolLabel = widget.NewLabel("🛰️ Protocols: TCP / WebSocket / UDP discovery")
+	tab.retryLabel = widget.NewLabel("🔁 ACK / Retry: waiting for handshake")
 	tab.uptimeLabel = widget.NewLabel("⏱️ Uptime: --:--:--")
 	tab.aiStatusLabel = widget.NewLabel("🧠 AI Smoothing: Disabled")
 	tab.summaryLabel = widget.NewLabel("Status summary will appear here once the server starts.")
@@ -218,12 +220,13 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.summaryLabel,
 		tab.endpointLabel,
 		tab.protocolLabel,
+		tab.retryLabel,
 		tab.uptimeLabel,
 		tab.aiStatusLabel,
 	)))
 
 	deviceCard := NewGlassCard(container.NewPadded(container.NewVBox(
-		widget.NewLabelWithStyle("📱 Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("📱 Nearby / Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		tab.deviceSummaryLabel(),
 		container.NewScroll(tab.deviceDetailBox),
@@ -371,11 +374,14 @@ func (t *DashboardTab) refreshStats() {
 			ip := utils.GetLocalIP()
 			t.endpointLabel.SetText(fmt.Sprintf("🔌 Endpoint: http://%s:%d | ws://%s:%d/ws", ip, t.cfg.Port, ip, t.cfg.WebSocketPort))
 			t.protocolLabel.SetText(fmt.Sprintf("🛰️ Protocols: TCP %d | WebSocket %d | UDP %d", t.cfg.Port, t.cfg.WebSocketPort, t.cfg.UDPPort))
+			t.retryLabel.SetText("🔁 ACK / Retry: click, double-click, right-click, and scroll are ACKed; Android retries if needed.")
 			if t.cfg.EnableAISmoothing {
 				t.aiStatusLabel.SetText("🧠 AI Smoothing: Enabled ✅")
 			} else {
 				t.aiStatusLabel.SetText("🧠 AI Smoothing: Disabled ⭕")
 			}
+		} else {
+			t.retryLabel.SetText("🔁 ACK / Retry: waiting for server start")
 		}
 	})
 }
@@ -449,7 +455,7 @@ func deviceNamesForLog(devices []*device.DeviceInfo) []string {
 func (t *DashboardTab) deviceSummaryLabel() fyne.CanvasObject {
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Latest device details", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("Device metadata updates live as clients connect."),
+		widget.NewLabel("Device name, type, IP, version, and connection state are shown below."),
 	)
 }
 
