@@ -558,3 +558,32 @@
 2026-06-20 19:18:47.347 [INFO] main.go:39: USB serial server started: baud_rate=115200 auto_detect=true
 2026-06-20 19:20:31.123 [INFO] manager.go:95: Bluetooth manager started: adapter=default
 2026-06-20 19:20:31.126 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-20 19:38:23.309 [INFO] main.go:147: Received signal: interrupt
+2026-06-20 19:38:23.314 [INFO] main.go:161: Initiating graceful shutdown...
+2026-06-20 19:38:23.314 [INFO] main.go:165: Stopping protocol server...
+2026-06-20 19:38:23.449 [INFO] main.go:84: Shutting down...
+2026-06-20 19:38:25.318 [WARN] main.go:176: Protocol server stop timed out – forcing exit
+2026-06-20 19:38:25.318 [INFO] main.go:182: Stopping device manager...
+2026-06-20 19:38:25.319 [INFO] main.go:39: Device manager stopped
+2026-06-20 19:38:25.319 [INFO] main.go:188: Closing UI...
+2026-06-20 19:38:25.436 [INFO] main.go:192: Shutdown complete
+2026-06-20 19:39:07.143 [INFO] main.go:98: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-20 19:39:07.144 [INFO] main.go:103: System Information:
+2026-06-20 19:39:07.144 [INFO] main.go:104:   OS: darwin
+2026-06-20 19:39:07.144 [INFO] main.go:105:   Arch: arm64
+2026-06-20 19:39:07.144 [INFO] main.go:106:   CPUs: 8
+2026-06-20 19:39:07.144 [INFO] main.go:107:   Go Version: go1.25.0
+2026-06-20 19:39:07.144 [INFO] main.go:108:   Build Time: 2025-01-15
+2026-06-20 19:39:07.144 [INFO] main.go:109:   Git Commit: unknown
+2026-06-20 19:39:07.144 [INFO] main.go:121: Authentication disabled
+2026-06-20 19:39:07.187 [INFO] main.go:72: Application started successfully
+2026-06-20 19:39:07.187 [INFO] main.go:73: WebSocket server will listen on port 8081
+2026-06-20 19:39:07.187 [INFO] main.go:74: TCP server will listen on port 8080
+2026-06-20 19:39:07.187 [INFO] main.go:75: UDP discovery will listen on port 8082
+2026-06-20 19:39:07.646 [INFO] main.go:39: Bluetooth manager started: adapter=default
+2026-06-20 19:39:07.646 [INFO] main.go:39: USB serial server started: baud_rate=115200 auto_detect=true

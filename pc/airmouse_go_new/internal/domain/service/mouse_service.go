@@ -3,6 +3,7 @@ package service
 import (
 	"math"
 	"sync"
+	"time"
 
 	"airmouse-go/internal/domain/entity"
 	"airmouse-go/internal/domain/repository"
@@ -42,6 +43,12 @@ type MouseService interface {
 
 	// GetProfile returns the current movement profile.
 	GetProfile() (*entity.MovementProfile, error)
+
+	// Pause temporarily suspends movement handling.
+	Pause(seconds int) error
+
+	// IsPaused reports whether movement is currently paused.
+	IsPaused() bool
 }
 
 type mouseService struct {
@@ -50,6 +57,7 @@ type mouseService struct {
 
 	// Internal state for smoothing
 	lastX, lastY float64
+	pausedUntil  time.Time
 	mu           sync.Mutex
 }
 
@@ -163,4 +171,23 @@ func (s *mouseService) GetProfile() (*entity.MovementProfile, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.profile, nil
+}
+
+func (s *mouseService) Pause(seconds int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if seconds <= 0 {
+		s.pausedUntil = time.Time{}
+		return nil
+	}
+
+	s.pausedUntil = time.Now().Add(time.Duration(seconds) * time.Second)
+	return nil
+}
+
+func (s *mouseService) IsPaused() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return time.Now().Before(s.pausedUntil)
 }

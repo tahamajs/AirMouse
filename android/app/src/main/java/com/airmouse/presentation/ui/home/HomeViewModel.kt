@@ -507,12 +507,24 @@ class HomeViewModel @Inject constructor(
         val clickThreshold = max(6f, prefs.getFloat("click_threshold", 8f))
         val scrollThreshold = max(4f, prefs.getFloat("scroll_threshold", 5f))
         val rightClickTilt = prefs.getFloat("right_click_tilt", 45f)
+        val axisDeadzone = max(0.08f, prefs.getFloat("move_deadzone", 0.14f))
+        val clickAxisThreshold = max(1.5f, clickThreshold * 0.20f)
+        val scrollAxisThreshold = max(1.0f, scrollThreshold * 0.18f)
         val doubleClickInterval = prefs.getLong("double_click_interval", doubleClickMaxInterval)
 
-        if (magnitude < 0.18f) return
+        if (magnitude < axisDeadzone) return
+
+        val yawDelta = abs(yaw - motionHistory.lastOrNull()?.dx.orZero())
+        val pitchDelta = abs(pitch - motionHistory.lastOrNull()?.dy.orZero())
+        val rollDelta = abs(roll)
+
+        val movementStrength = max(yawDelta, pitchDelta)
+        val clickStrength = rollDelta
+
+        if (movementStrength < axisDeadzone && clickStrength < axisDeadzone) return
 
         when {
-            magnitude > clickThreshold -> {
+            clickStrength >= clickThreshold || clickStrength > clickAxisThreshold && movementStrength < scrollAxisThreshold -> {
                 val timeSinceLastClick = now - lastClickTime
                 if (timeSinceLastClick < doubleClickInterval && timeSinceLastClick > 100) {
                     // Double click
@@ -532,13 +544,18 @@ class HomeViewModel @Inject constructor(
                 }
                 lastScrollTime = now
             }
-            magnitude > scrollThreshold -> {
+            movementStrength >= scrollThreshold || movementStrength > scrollAxisThreshold -> {
                 val scrollDelta = when {
-                    magnitude > 7f -> 3
-                    magnitude > 6f -> 2
+                    movementStrength > scrollThreshold * 1.5f -> 3
+                    movementStrength > scrollThreshold * 1.2f -> 2
                     else -> 1
                 }
-                connectionManager.sendScroll(scrollDelta)
+                val direction = if (pitchDelta >= yawDelta) {
+                    if (pitch > 0) 1 else -1
+                } else {
+                    if (yaw > 0) 1 else -1
+                }
+                connectionManager.sendScroll(scrollDelta * direction)
                 updateGestureStats("scroll")
                 addLogMessage("Scroll $scrollDelta")
                 _uiState.update { it.copy(lastGesture = "Scroll") }
@@ -555,6 +572,8 @@ class HomeViewModel @Inject constructor(
             lastRightClickTime = now
         }
     }
+
+    private fun Float?.orZero(): Float = this ?: 0f
 
     private fun updateGestureStats(gesture: String) {
         when (gesture) {

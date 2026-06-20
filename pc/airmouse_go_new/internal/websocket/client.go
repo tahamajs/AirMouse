@@ -62,7 +62,7 @@ func (c *Client) ReadPump(handler *Handler) {
 		_ = c.conn.Close()
 	}()
 
-	_ = c.conn.SetReadLimit(4096)
+	c.conn.SetReadLimit(4096)
 	_ = c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	c.conn.SetPongHandler(func(string) error {
 		atomic.StoreInt64(&c.lastPing, time.Now().Unix())

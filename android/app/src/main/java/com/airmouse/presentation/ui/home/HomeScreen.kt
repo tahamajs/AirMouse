@@ -193,6 +193,7 @@ fun HomeScreen(
                 item {
                 ConnectionStatusCard(
                         isConnected = isConnectionActive,
+                        isConnecting = isConnectionPending,
                         serverName = serverName,
                         serverIp = serverIp,
                         ping = ping,
@@ -596,6 +597,7 @@ fun GreetingCard(text: String, userName: String, onEditProfile: () -> Unit) {
 @Composable
 fun ConnectionStatusCard(
     isConnected: Boolean,
+    isConnecting: Boolean,
     serverName: String,
     serverIp: String,
     ping: Int,
