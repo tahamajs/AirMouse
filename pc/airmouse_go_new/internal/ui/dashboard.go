@@ -104,19 +104,19 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		if server.IsRunning() {
 			tab.controlBtn.Disable()
 			tab.serverStatus.SetText("⏳ Server Status: Stopping...")
-				go func() {
-					server.Stop()
-					RunOnMain(func() {
-						tab.serverStatus.SetText("⛔ Server Status: Stopped")
-						tab.controlBtn.SetText("Start Server")
-						tab.controlBtn.SetIcon(theme.MediaPlayIcon())
-						tab.controlBtn.Enable()
-						tab.refreshBtn.Disable()
-						tab.endpointLabel.SetText("🔌 Endpoint: not started")
-						tab.uptimeLabel.SetText("⏱️ Uptime: --:--:--")
-						tab.deviceDetailBox.SetText("No connected devices yet.")
-					})
-				}()
+			go func() {
+				server.Stop()
+				RunOnMain(func() {
+					tab.serverStatus.SetText("⛔ Server Status: Stopped")
+					tab.controlBtn.SetText("Start Server")
+					tab.controlBtn.SetIcon(theme.MediaPlayIcon())
+					tab.controlBtn.Enable()
+					tab.refreshBtn.Disable()
+					tab.endpointLabel.SetText("🔌 Endpoint: not started")
+					tab.uptimeLabel.SetText("⏱️ Uptime: --:--:--")
+					tab.deviceDetailBox.SetText("No connected devices yet.")
+				})
+			}()
 			return
 		}
 
