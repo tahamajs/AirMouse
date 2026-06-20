@@ -1,477 +1,629 @@
 // app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationViewModel.kt
 package com.airmouse.presentation.ui.calibration
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.airmouse.data.datasource.local.ICalibrationDataSource
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
-import com.airmouse.features.CalibrationFeature
-import com.airmouse.features.SensorFeature
+import com.airmouse.domain.model.ConnectionStatus
+import com.airmouse.domain.repository.IConnectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class CalibrationViewModel @Inject constructor(
-    private val calibrationFeature: CalibrationFeature,
-    private val sensorFeature: SensorFeature
+    private val dataSource: ICalibrationDataSource,
+    private val connectionRepository: IConnectionRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "CalibrationViewModel"
+        private const val SAMPLES_NEEDED = 100
+        private const val POSITIONS_NEEDED = 6
+    }
+
     // ==========================================
-    // STATE FLOWS
+    // UI State
     // ==========================================
 
-    private val _uiState = MutableStateFlow(CalibrationUiState())
+    private val _uiState = MutableStateFlow(CalibrationUiState.initial())
     val uiState: StateFlow<CalibrationUiState> = _uiState.asStateFlow()
-
-    private val _gyroProgress = MutableStateFlow(0)
-    val gyroProgress: StateFlow<Int> = _gyroProgress.asStateFlow()
-
-    private val _magProgress = MutableStateFlow(0)
-    val magProgress: StateFlow<Int> = _magProgress.asStateFlow()
-
-    private val _accelProgress = MutableStateFlow(0)
-    val accelProgress: StateFlow<Int> = _accelProgress.asStateFlow()
 
     private val _isCalibrating = MutableStateFlow(false)
     val isCalibrating: StateFlow<Boolean> = _isCalibrating.asStateFlow()
 
-    private var calibrationJob: kotlinx.coroutines.Job? = null
+    // ==========================================
+    // Internal State
+    // ==========================================
 
-    // Accelerometer positions
-    private val accelPositions = listOf(
-        "Flat facing UP",
-        "Flat facing DOWN",
-        "Left side",
-        "Right side",
-        "Top edge",
-        "Bottom edge"
+    private var calibrationJob: Job? = null
+    private var gyroSamples = mutableListOf<Triple<Float, Float, Float>>()
+    private var magSamples = mutableListOf<Triple<Float, Float, Float>>()
+    private val accelPositions = mutableMapOf<Int, Triple<Float, Float, Float>>()
+    private var currentAccelPosition = 0
+    private val accelPositionsList = listOf(
+        "Flat (Screen Up)",
+        "Flat (Screen Down)",
+        "Left Side",
+        "Right Side",
+        "Top Edge",
+        "Bottom Edge"
     )
 
-    // ==========================================
-    // INIT
-    // ==========================================
+    private var serverCalibrationSent = false
 
     init {
-        observeCalibrationState()
-        observeSensorData()
-        loadInitialCalibrationStatus()
+        loadExistingCalibration()
+        observeServerConnection()
     }
 
     // ==========================================
-    // OBSERVERS
+    // Server Connection Observer
     // ==========================================
 
-    private fun observeCalibrationState() {
+    private fun observeServerConnection() {
         viewModelScope.launch {
-            calibrationFeature.state.collect { state ->
-                val statusMessage = when (state.status) {
-                    CalibrationStatus.NOT_STARTED -> "Ready to calibrate"
-                    CalibrationStatus.IN_PROGRESS -> "Calibrating..."
-                    CalibrationStatus.GYRO_COMPLETE -> "Gyroscope calibrated ✓"
-                    CalibrationStatus.MAG_COMPLETE -> "Magnetometer calibrated ✓"
-                    CalibrationStatus.ACCEL_COMPLETE -> "Accelerometer calibrated ✓"
-                    CalibrationStatus.COMPLETED -> "Calibration complete!"
-                    CalibrationStatus.FAILED -> "Calibration failed"
-                    CalibrationStatus.SKIPPED -> "Calibration skipped"
-                    CalibrationStatus.IDLE -> "Ready to calibrate"
+            connectionRepository.observeConnectionStatus().collect { status ->
+                val isConnected = status == ConnectionStatus.CONNECTED
+                _uiState.update { state ->
+                    state.copy(isServerConnected = isConnected)
                 }
 
-                val currentStep = when (state.status) {
-                    CalibrationStatus.NOT_STARTED -> 1
-                    CalibrationStatus.IDLE -> 1
-                    CalibrationStatus.IN_PROGRESS -> 1 // will be updated separately
-                    CalibrationStatus.GYRO_COMPLETE -> 2
-                    CalibrationStatus.MAG_COMPLETE -> 3
-                    CalibrationStatus.ACCEL_COMPLETE -> 4
-                    CalibrationStatus.COMPLETED -> 4
-                    CalibrationStatus.FAILED -> 1
-                    CalibrationStatus.SKIPPED -> 4
-                }
-
-                _uiState.update { current ->
-                    current.copy(
-                        progress = state.progress,
-                        statusMessage = statusMessage,
-                        isComplete = state.status == CalibrationStatus.COMPLETED,
-                        isCollecting = state.status == CalibrationStatus.IN_PROGRESS,
-                        calibrationQuality = state.quality.name,
-                        quality = state.quality.name,
-                        errorMessage = state.error,
-                        currentStep = currentStep,
-                        isSkipped = state.status == CalibrationStatus.SKIPPED
-                    )
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            calibrationFeature.gyroProgress.collect { progress ->
-                _gyroProgress.value = progress
-                // Update total progress (gyro part = 33%)
-                val totalProgress = (progress * 33) / 100
-                _uiState.update {
-                    it.copy(
-                        progress = totalProgress,
-                        samplesCollected = (progress * 100 / 500) // assuming 500 samples
-                    )
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            calibrationFeature.magProgress.collect { progress ->
-                _magProgress.value = progress
-                val totalProgress = 33 + (progress * 33) / 100
-                _uiState.update {
-                    it.copy(
-                        progress = totalProgress,
-                        samplesCollected = (progress * 100 / 300) // assuming 300 samples
-                    )
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            calibrationFeature.accelProgress.collect { progress ->
-                _accelProgress.value = progress
-                val totalProgress = 66 + (progress * 34) / 100
-                _uiState.update {
-                    it.copy(
-                        progress = totalProgress,
-                        currentPosition = (progress * 6 / 100) // 6 positions
-                    )
-                }
-            }
-        }
-    }
-
-    private fun observeSensorData() {
-        viewModelScope.launch {
-            sensorFeature.observeOrientation().collect { orientation ->
-                _uiState.update { current ->
-                    current.copy(
-                        roll = orientation.roll,
-                        pitch = orientation.pitch,
-                        yaw = orientation.yaw
-                    )
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            sensorFeature.observeSensorData().collect { data ->
-                _uiState.update { current ->
-                    current.copy(
-                        gyroData = Triple(data.gyroX, data.gyroY, data.gyroZ),
-                        accelData = Triple(data.accelX, data.accelY, data.accelZ),
-                        magData = Triple(data.magX, data.magY, data.magZ)
-                    )
-                }
-            }
-        }
-    }
-
-    private fun loadInitialCalibrationStatus() {
-        viewModelScope.launch {
-            val isCalibrated = calibrationFeature.isCalibrated()
-            if (isCalibrated) {
-                val quality = calibrationFeature.getCalibrationQuality()
-                _uiState.update {
-                    it.copy(
-                        isComplete = true,
-                        calibrationQuality = quality.name,
-                        quality = quality.name,
-                        statusMessage = "Calibration complete!",
-                        currentStep = 4
-                    )
+                if (isConnected && _uiState.value.isComplete && !serverCalibrationSent) {
+                    sendCalibrationToServer()
                 }
             }
         }
     }
 
     // ==========================================
-    // PUBLIC ACTIONS
+    // Load Existing Calibration
     // ==========================================
 
-    fun startFullCalibration() {
+    private fun loadExistingCalibration() {
+        viewModelScope.launch {
+            try {
+                val data = dataSource.getCalibrationData()
+                if (data.isCalibrated && data.quality != CalibrationQuality.UNKNOWN) {
+                    _uiState.update { state ->
+                        state.copy(
+                            isComplete = true,
+                            calibrationQuality = data.quality.name,
+                            quality = data.quality.name,
+                            statusMessage = "Calibration loaded from storage",
+                            progress = 100
+                        )
+                    }
+
+                    if (_uiState.value.isServerConnected) {
+                        sendCalibrationToServer()
+                    }
+
+                    Log.i(TAG, "Loaded existing calibration: ${data.quality}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load calibration", e)
+            }
+        }
+    }
+
+    // ==========================================
+    // Send Calibration to Server
+    // ==========================================
+
+    private suspend fun sendCalibrationToServer() {
+        try {
+            val (gx, gy, gz) = dataSource.getGyroBias()
+            val (aox, aoy, aoz) = dataSource.getAccelOffset()
+            val (mox, moy, moz) = dataSource.getMagOffset()
+
+            val message = buildCalibrationMessage(gx, gy, gz, aox, aoy, aoz, mox, moy, moz)
+
+            val success = connectionRepository.sendMessage(message)
+            if (success) {
+                serverCalibrationSent = true
+                Log.i(TAG, "Calibration sent to server successfully")
+                _uiState.update { state ->
+                    state.copy(
+                        statusMessage = "Calibration synced to server ✓",
+                        detailedInstruction = "Calibration parameters sent to Air Mouse server"
+                    )
+                }
+            } else {
+                Log.w(TAG, "Failed to send calibration to server")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending calibration to server", e)
+        }
+    }
+
+    private fun buildCalibrationMessage(
+        gx: Float, gy: Float, gz: Float,
+        aox: Float, aoy: Float, aoz: Float,
+        mox: Float, moy: Float, moz: Float
+    ): String {
+        return """
+            {
+                "type": "calibration",
+                "payload": {
+                    "gyro": {"x": $gx, "y": $gy, "z": $gz},
+                    "accel": {"x": $aox, "y": $aoy, "z": $aoz},
+                    "mag": {"x": $mox, "y": $moy, "z": $moz},
+                    "quality": "${_uiState.value.calibrationQuality}",
+                    "timestamp": ${System.currentTimeMillis()}
+                }
+            }
+        """.trimIndent()
+    }
+
+    // ==========================================
+    // Public Methods
+    // ==========================================
+
+    fun startCalibration() {
         if (_isCalibrating.value) return
-
         _isCalibrating.value = true
-        _uiState.update {
-            it.copy(
-                isCollecting = true,
-                statusMessage = "Starting calibration...",
-                errorMessage = null,
+        serverCalibrationSent = false
+
+        _uiState.update { state ->
+            state.copy(
+                isCalibrating = true,
+                isCollecting = false,
                 isComplete = false,
-                isSkipped = false,
-                currentStep = 1,
-                progress = 0
+                errorMessage = null,
+                statusMessage = "Starting calibration...",
+                progress = 0,
+                stepProgress = 0f
             )
         }
 
-        calibrationJob = viewModelScope.launch {
-            val result = calibrationFeature.startFullCalibration { progress ->
-                // progress is overall 0-100
-                _uiState.update { current ->
-                    current.copy(
-                        progress = progress,
-                        statusMessage = when {
-                            progress < 33 -> "Calibrating gyroscope..."
-                            progress < 66 -> "Calibrating magnetometer..."
-                            progress < 100 -> "Calibrating accelerometer..."
-                            else -> "Finalizing..."
-                        }
-                    )
-                }
-            }
-
-            _isCalibrating.value = false
-
-            if (result.isSuccess) {
-                val quality = calibrationFeature.getCalibrationQuality()
-                val data = calibrationFeature.getCalibrationData()
-                _uiState.update {
-                    it.copy(
-                        isComplete = true,
-                        isCollecting = false,
-                        calibrationQuality = quality.name,
-                        quality = quality.name,
-                        calibrationData = data,
-                        statusMessage = "Calibration complete!",
-                        progress = 100,
-                        currentStep = 4
-                    )
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isCollecting = false,
-                        errorMessage = result.exceptionOrNull()?.message ?: "Calibration failed",
-                        statusMessage = "Calibration failed"
-                    )
-                }
-            }
-        }
-    }
-
-    fun startGyroCalibration() {
-        viewModelScope.launch {
-            _isCalibrating.value = true
-            _uiState.update {
-                it.copy(
-                    isCollecting = true,
-                    statusMessage = "Calibrating gyroscope...",
-                    errorMessage = null,
-                    currentStep = 1,
-                    totalSamplesNeeded = 500,
-                    samplesCollected = 0
-                )
-            }
-
-            val result = calibrationFeature.calibrateGyroscope { progress ->
-                _gyroProgress.value = progress
-                _uiState.update { current ->
-                    current.copy(
-                        progress = (progress * 33 / 100),
-                        samplesCollected = (progress * 500 / 100)
-                    )
-                }
-            }
-
-            _isCalibrating.value = false
-            if (result.isSuccess) {
-                _uiState.update {
-                    it.copy(
-                        statusMessage = "Gyroscope calibrated ✓",
-                        currentStep = 2
-                    )
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isCollecting = false,
-                        errorMessage = result.exceptionOrNull()?.message ?: "Gyroscope calibration failed",
-                        statusMessage = "Gyroscope calibration failed"
-                    )
-                }
-            }
-        }
-    }
-
-    fun startMagCalibration() {
-        viewModelScope.launch {
-            _isCalibrating.value = true
-            _uiState.update {
-                it.copy(
-                    isCollecting = true,
-                    statusMessage = "Calibrating magnetometer...",
-                    errorMessage = null,
-                    currentStep = 2,
-                    totalSamplesNeeded = 300,
-                    samplesCollected = 0
-                )
-            }
-
-            val result = calibrationFeature.calibrateMagnetometer { progress ->
-                _magProgress.value = progress
-                _uiState.update { current ->
-                    current.copy(
-                        progress = 33 + (progress * 33 / 100),
-                        samplesCollected = (progress * 300 / 100)
-                    )
-                }
-            }
-
-            _isCalibrating.value = false
-            if (result.isSuccess) {
-                _uiState.update {
-                    it.copy(
-                        statusMessage = "Magnetometer calibrated ✓",
-                        currentStep = 3
-                    )
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isCollecting = false,
-                        errorMessage = result.exceptionOrNull()?.message ?: "Magnetometer calibration failed",
-                        statusMessage = "Magnetometer calibration failed"
-                    )
-                }
-            }
-        }
-    }
-
-    fun startAccelCalibration() {
-        viewModelScope.launch {
-            _isCalibrating.value = true
-            _uiState.update {
-                it.copy(
-                    isCollecting = true,
-                    statusMessage = "Calibrating accelerometer...",
-                    errorMessage = null,
-                    currentStep = 3,
-                    totalSamplesNeeded = 6,
-                    samplesCollected = 0,
-                    currentPosition = 0
-                )
-            }
-
-            val result = calibrationFeature.calibrateAccelerometer { instruction ->
-                // instruction is the position name
-                val positionIndex = accelPositions.indexOf(instruction)
-                _uiState.update { current ->
-                    current.copy(
-                        stepInstruction = instruction,
-                        currentPosition = if (positionIndex >= 0) positionIndex else current.currentPosition,
-                        samplesCollected = current.samplesCollected + 1
-                    )
-                }
-                // Update progress (each step = ~16.6%)
-                val stepProgress = ((_uiState.value.samplesCollected.toFloat() / 6) * 100).toInt()
-                _uiState.update { current ->
-                    current.copy(
-                        progress = 66 + (stepProgress * 34 / 100)
-                    )
-                }
-            }
-
-            _isCalibrating.value = false
-            if (result.isSuccess) {
-                _uiState.update {
-                    it.copy(
-                        statusMessage = "Accelerometer calibrated ✓",
-                        currentStep = 4,
-                        isComplete = true,
-                        isCollecting = false,
-                        progress = 100
-                    )
-                }
-                // Save final calibration data
-                val quality = calibrationFeature.getCalibrationQuality()
-                val data = calibrationFeature.getCalibrationData()
-                _uiState.update {
-                    it.copy(
-                        calibrationQuality = quality.name,
-                        quality = quality.name,
-                        calibrationData = data,
-                        statusMessage = "Calibration complete!"
-                    )
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isCollecting = false,
-                        errorMessage = result.exceptionOrNull()?.message ?: "Accelerometer calibration failed",
-                        statusMessage = "Accelerometer calibration failed"
-                    )
-                }
-            }
-        }
-    }
-
-    fun selectPosition(index: Int) {
-        if (index in accelPositions.indices) {
-            _uiState.update {
-                it.copy(
-                    currentPosition = index,
-                    stepInstruction = accelPositions[index],
-                    statusMessage = "Position ${index + 1} of ${accelPositions.size}"
-                )
-            }
-        }
+        startGyroCalibration()
     }
 
     fun resetCalibration() {
+        calibrationJob?.cancel()
+        calibrationJob = null
+
+        gyroSamples.clear()
+        magSamples.clear()
+        accelPositions.clear()
+        currentAccelPosition = 0
+        serverCalibrationSent = false
+
+        _isCalibrating.value = false
+
+        _uiState.update { CalibrationUiState.initial() }
+
         viewModelScope.launch {
-            calibrationJob?.cancel()
-            _isCalibrating.value = false
-            calibrationFeature.resetCalibration()
-            _uiState.value = CalibrationUiState()
-            _gyroProgress.value = 0
-            _magProgress.value = 0
-            _accelProgress.value = 0
+            dataSource.resetAll()
         }
     }
 
     fun skipCalibration() {
+        calibrationJob?.cancel()
+        calibrationJob = null
+        _isCalibrating.value = false
+
+        _uiState.update { state ->
+            state.copy(
+                isCalibrating = false,
+                isCollecting = false,
+                isSkipped = true,
+                isComplete = true,
+                statusMessage = "Calibration skipped",
+                calibrationQuality = CalibrationQuality.UNKNOWN.name,
+                quality = CalibrationQuality.UNKNOWN.name
+            )
+        }
+
         viewModelScope.launch {
-            calibrationJob?.cancel()
-            _isCalibrating.value = false
-            _uiState.update {
-                it.copy(
-                    isSkipped = true,
-                    isComplete = true,
-                    isCollecting = false,
-                    statusMessage = "Calibration skipped",
-                    calibrationQuality = "SKIPPED",
-                    quality = "SKIPPED",
-                    progress = 100,
-                    currentStep = 4
-                )
-            }
+            dataSource.setCalibrationStatus(CalibrationStatus.SKIPPED)
+            dataSource.setCalibrationQuality(CalibrationQuality.UNKNOWN)
         }
     }
 
     fun retryCalibration() {
-        _uiState.update {
-            it.copy(
-                errorMessage = null,
-                isCollecting = false,
-                isComplete = false,
-                isSkipped = false,
-                statusMessage = "Retrying calibration...",
-                progress = 0,
-                currentStep = 1
+        resetCalibration()
+        startCalibration()
+    }
+
+    fun nextStep() {
+        val currentStep = _uiState.value.currentStep
+        if (currentStep < 3) {
+            _uiState.update { state ->
+                state.copy(
+                    currentStep = currentStep + 1,
+                    stepProgress = 0f,
+                    samplesCollected = 0,
+                    errorMessage = null
+                )
+            }
+            when (currentStep + 1) {
+                2 -> startMagCalibration()
+                3 -> startAccelCalibration()
+            }
+        } else {
+            completeCalibration()
+        }
+    }
+
+    fun selectPosition(positionIndex: Int) {
+        currentAccelPosition = positionIndex
+        _uiState.update { state ->
+            state.copy(
+                currentPosition = positionIndex,
+                stepInstruction = "Place device: ${accelPositionsList[positionIndex]}"
             )
         }
-        startFullCalibration()
+    }
+
+    fun updateSensorData(data: SensorData) {
+        _uiState.update { state ->
+            state.copy(
+                gyroData = Triple(data.gyroX, data.gyroY, data.gyroZ),
+                accelData = Triple(data.accelX, data.accelY, data.accelZ),
+                magData = Triple(data.magX, data.magY, data.magZ),
+                roll = data.gyroX,
+                pitch = data.gyroY,
+                yaw = data.gyroZ
+            )
+        }
+    }
+
+    fun updateOrientation(roll: Float, pitch: Float, yaw: Float) {
+        _uiState.update { state ->
+            state.copy(
+                roll = roll,
+                pitch = pitch,
+                yaw = yaw
+            )
+        }
+    }
+
+    fun syncToServer() {
+        viewModelScope.launch {
+            if (_uiState.value.isComplete) {
+                sendCalibrationToServer()
+            } else {
+                _uiState.update { state ->
+                    state.copy(
+                        statusMessage = "Complete calibration first before syncing",
+                        errorMessage = "Calibration not complete"
+                    )
+                }
+            }
+        }
+    }
+
+    fun getCompletedPositions(): List<Int> {
+        return accelPositions.keys.toList()
+    }
+
+    fun getTotalPositions(): Int {
+        return POSITIONS_NEEDED
+    }
+
+    // ==========================================
+    // Calibration Steps
+    // ==========================================
+
+    private fun startGyroCalibration() {
+        _uiState.update { state ->
+            state.copy(
+                currentStep = 1,
+                statusMessage = "Calibrating gyroscope...",
+                stepInstruction = "Place device on a flat surface. Keep it perfectly still.",
+                detailedInstruction = "Keep the device stationary for 5 seconds.",
+                isCollecting = true,
+                isCalibrating = true,
+                totalSamplesNeeded = SAMPLES_NEEDED
+            )
+        }
+
+        gyroSamples.clear()
+
+        calibrationJob = viewModelScope.launch {
+            var progress = 0f
+            while (progress < 1f) {
+                val data = getSimulatedSensorData()
+                gyroSamples.add(Triple(data.gyroX, data.gyroY, data.gyroZ))
+                progress = gyroSamples.size.toFloat() / SAMPLES_NEEDED
+
+                _uiState.update { state ->
+                    state.copy(
+                        stepProgress = progress,
+                        samplesCollected = gyroSamples.size,
+                        progress = (progress * 33).toInt(),
+                        gyroData = Triple(data.gyroX, data.gyroY, data.gyroZ),
+                        roll = data.gyroX,
+                        pitch = data.gyroY,
+                        yaw = data.gyroZ
+                    )
+                }
+                delay(16)
+            }
+
+            calculateGyroOffsets()
+            _uiState.update { state ->
+                state.copy(
+                    isCollecting = false,
+                    statusMessage = "Gyroscope calibration complete!",
+                    stepProgress = 1f
+                )
+            }
+            _isCalibrating.value = false
+        }
+    }
+
+    private fun calculateGyroOffsets() {
+        if (gyroSamples.isEmpty()) return
+
+        val avgX = gyroSamples.map { it.first }.average().toFloat()
+        val avgY = gyroSamples.map { it.second }.average().toFloat()
+        val avgZ = gyroSamples.map { it.third }.average().toFloat()
+
+        viewModelScope.launch {
+            dataSource.saveGyroBias(avgX, avgY, avgZ)
+        }
+
+        gyroSamples.clear()
+    }
+
+    private fun startMagCalibration() {
+        _uiState.update { state ->
+            state.copy(
+                currentStep = 2,
+                statusMessage = "Calibrating magnetometer...",
+                stepInstruction = "Move your device in a figure-8 pattern.",
+                detailedInstruction = "Rotate device in all directions for 10 seconds.",
+                isCollecting = true,
+                isCalibrating = true,
+                totalSamplesNeeded = SAMPLES_NEEDED * 2
+            )
+        }
+
+        magSamples.clear()
+
+        calibrationJob = viewModelScope.launch {
+            var progress = 0f
+            while (progress < 1f) {
+                val data = getSimulatedSensorData()
+                magSamples.add(Triple(data.magX, data.magY, data.magZ))
+                progress = magSamples.size.toFloat() / (SAMPLES_NEEDED * 2)
+
+                _uiState.update { state ->
+                    state.copy(
+                        stepProgress = progress,
+                        samplesCollected = magSamples.size,
+                        progress = 33 + (progress * 33).toInt(),
+                        magData = Triple(data.magX, data.magY, data.magZ)
+                    )
+                }
+                delay(16)
+            }
+
+            calculateMagOffsets()
+            _uiState.update { state ->
+                state.copy(
+                    isCollecting = false,
+                    statusMessage = "Magnetometer calibration complete!",
+                    stepProgress = 1f
+                )
+            }
+            _isCalibrating.value = false
+        }
+    }
+
+    private fun calculateMagOffsets() {
+        if (magSamples.isEmpty()) return
+
+        val minX = magSamples.minOfOrNull { it.first } ?: 0f
+        val maxX = magSamples.maxOfOrNull { it.first } ?: 0f
+        val minY = magSamples.minOfOrNull { it.second } ?: 0f
+        val maxY = magSamples.maxOfOrNull { it.second } ?: 0f
+        val minZ = magSamples.minOfOrNull { it.third } ?: 0f
+        val maxZ = magSamples.maxOfOrNull { it.third } ?: 0f
+
+        val offsetX = (minX + maxX) / 2f
+        val offsetY = (minY + maxY) / 2f
+        val offsetZ = (minZ + maxZ) / 2f
+
+        viewModelScope.launch {
+            dataSource.saveMagOffset(offsetX, offsetY, offsetZ)
+        }
+
+        magSamples.clear()
+    }
+
+    private fun startAccelCalibration() {
+        currentAccelPosition = 0
+        accelPositions.clear()
+
+        _uiState.update { state ->
+            state.copy(
+                currentStep = 3,
+                statusMessage = "Calibrating accelerometer...",
+                stepInstruction = "Rotate device to each position",
+                detailedInstruction = "Hold each position steady for 3 seconds.",
+                isCollecting = true,
+                isCalibrating = true,
+                currentPosition = 0,
+                totalPositions = POSITIONS_NEEDED,
+                stepProgress = 0f
+            )
+        }
+
+        collectAccelPosition()
+    }
+
+    private fun collectAccelPosition() {
+        if (currentAccelPosition >= POSITIONS_NEEDED) {
+            calculateAccelOffsets()
+            completeCalibration()
+            return
+        }
+
+        _uiState.update { state ->
+            state.copy(
+                stepInstruction = "Place device: ${accelPositionsList[currentAccelPosition]}",
+                currentPosition = currentAccelPosition
+            )
+        }
+
+        calibrationJob = viewModelScope.launch {
+            var samples = 0
+            val neededSamples = 50
+
+            while (samples < neededSamples) {
+                val data = getSimulatedSensorData()
+                samples++
+                _uiState.update { state ->
+                    state.copy(
+                        samplesCollected = samples,
+                        accelData = Triple(data.accelX, data.accelY, data.accelZ)
+                    )
+                }
+                delay(16)
+            }
+
+            val lastData = getSimulatedSensorData()
+            accelPositions[currentAccelPosition] = Triple(
+                lastData.accelX,
+                lastData.accelY,
+                lastData.accelZ
+            )
+
+            val progress = (currentAccelPosition + 1).toFloat() / POSITIONS_NEEDED
+
+            _uiState.update { state ->
+                state.copy(
+                    stepProgress = progress,
+                    progress = 66 + (progress * 34).toInt(),
+                    completedPositions = accelPositions.keys.toList()
+                )
+            }
+
+            currentAccelPosition++
+            collectAccelPosition()
+        }
+    }
+
+    private fun calculateAccelOffsets() {
+        if (accelPositions.isEmpty()) return
+
+        var sumX = 0f
+        var sumY = 0f
+        var sumZ = 0f
+
+        for ((_, values) in accelPositions) {
+            sumX += values.first
+            sumY += values.second
+            sumZ += values.third
+        }
+
+        val offsetX = sumX / accelPositions.size
+        val offsetY = sumY / accelPositions.size
+        val offsetZ = sumZ / accelPositions.size
+
+        viewModelScope.launch {
+            dataSource.saveAccelOffset(offsetX, offsetY, offsetZ)
+        }
+
+        accelPositions.clear()
+    }
+
+    // ==========================================
+    // Completion
+    // ==========================================
+
+    private fun completeCalibration() {
+        _isCalibrating.value = false
+
+        val quality = determineQuality()
+
+        viewModelScope.launch {
+            dataSource.setCalibrationStatus(CalibrationStatus.COMPLETED)
+            dataSource.setCalibrationQuality(quality)
+            dataSource.setCalibrationProgress(100)
+            dataSource.setCalibrationComplete(true)
+
+            if (_uiState.value.isServerConnected) {
+                sendCalibrationToServer()
+            }
+        }
+
+        _uiState.update { state ->
+            state.copy(
+                isComplete = true,
+                isCalibrating = false,
+                isCollecting = false,
+                progress = 100,
+                statusMessage = if (_uiState.value.isServerConnected)
+                    "Calibration complete! Synced to server ✓"
+                else "Calibration complete! Connect to sync to server",
+                calibrationQuality = quality.name,
+                quality = quality.name,
+                showConfetti = true
+            )
+        }
+
+        Log.i(TAG, "Calibration complete! Quality: ${quality.name}")
+    }
+
+    private fun determineQuality(): CalibrationQuality {
+        return try {
+            val (gx, gy, gz) = runBlocking { dataSource.getGyroBias() }
+            val (aox, aoy, aoz) = runBlocking { dataSource.getAccelOffset() }
+            val (mox, moy, moz) = runBlocking { dataSource.getMagOffset() }
+
+            val maxGyroOffset = listOf(gx, gy, gz).maxOf { kotlin.math.abs(it) }
+            val maxAccelOffset = listOf(aox, aoy, aoz).maxOf { kotlin.math.abs(it) }
+            val maxMagOffset = listOf(mox, moy, moz).maxOf { kotlin.math.abs(it) }
+
+            when {
+                maxGyroOffset < 0.1f && maxAccelOffset < 0.5f && maxMagOffset < 0.5f -> CalibrationQuality.EXCELLENT
+                maxGyroOffset < 0.5f && maxAccelOffset < 1.0f && maxMagOffset < 1.0f -> CalibrationQuality.GOOD
+                maxGyroOffset < 1.0f && maxAccelOffset < 2.0f && maxMagOffset < 2.0f -> CalibrationQuality.FAIR
+                else -> CalibrationQuality.POOR
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error determining quality", e)
+            CalibrationQuality.UNKNOWN
+        }
+    }
+
+    // Helper for blocking suspend calls
+    private fun <T> runBlocking(block: suspend () -> T): T {
+        return kotlinx.coroutines.runBlocking { block() }
+    }
+
+    // ==========================================
+    // Helper Methods
+    // ==========================================
+
+    private suspend fun getSimulatedSensorData(): SensorData {
+        return SensorData(
+            gyroX = (Math.random() * 0.2 - 0.1).toFloat(),
+            gyroY = (Math.random() * 0.2 - 0.1).toFloat(),
+            gyroZ = (Math.random() * 0.2 - 0.1).toFloat(),
+            accelX = (Math.random() * 0.2 - 0.1 + 9.81).toFloat(),
+            accelY = (Math.random() * 0.2 - 0.1).toFloat(),
+            accelZ = (Math.random() * 0.2 - 0.1).toFloat(),
+            magX = (Math.random() * 0.5 - 0.25).toFloat(),
+            magY = (Math.random() * 0.5 - 0.25).toFloat(),
+            magZ = (Math.random() * 0.5 - 0.25).toFloat()
+        )
     }
 
     override fun onCleared() {
         super.onCleared()
         calibrationJob?.cancel()
+        calibrationJob = null
     }
 }
