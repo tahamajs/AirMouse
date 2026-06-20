@@ -68,7 +68,7 @@ func (f *fakeMouse) GetPosition() (float64, float64)                      { retu
 
 func TestTCPProcessLine_SimulatedAndroidSession(t *testing.T) {
 	mouse := &fakeMouse{}
-	s := NewServer("127.0.0.1", 0, mouse, device.NewManager())
+	s := NewServer("127.0.0.1", 0, mouse, device.NewManager(), nil)
 
 	client := &Client{
 		ID:          "client-1",

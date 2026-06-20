@@ -10,7 +10,9 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
+	"airmouse-go/internal/utils"
 )
 
 // ------------------------------------------------------------
@@ -18,18 +20,18 @@ import (
 // ------------------------------------------------------------
 
 type DevicesTab struct {
-	list         *widget.List
-	devices      []*device.DeviceInfo
-	deviceMgr    *device.Manager
-	details      *widget.Label
-	refreshBtn   *widget.Button
+	list          *widget.List
+	devices       []*device.DeviceInfo
+	deviceMgr     *device.Manager
+	details       *widget.Label
+	refreshBtn    *widget.Button
 	disconnectBtn *widget.Button
-	blockBtn     *widget.Button
-	renameBtn    *widget.Button
-	statusLabel  *widget.Label
-	searchEntry  *widget.Entry
-	filterSelect *widget.Select
-	selectedID   string
+	blockBtn      *widget.Button
+	renameBtn     *widget.Button
+	statusLabel   *widget.Label
+	searchEntry   *widget.Entry
+	filterSelect  *widget.Select
+	selectedID    string
 }
 
 // NewDevicesTab creates a new devices management tab.
@@ -72,6 +74,7 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 				widget.NewLabel(""), // name
 				widget.NewLabel(""), // type
 				widget.NewLabel(""), // time
+				widget.NewButton("Pair", func() {}),
 			)
 		},
 		func(id int, obj fyne.CanvasObject) {
@@ -81,11 +84,12 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 			}
 			d := devices[id]
 			hbox := obj.(*fyne.Container)
-			if len(hbox.Objects) >= 4 {
+			if len(hbox.Objects) >= 5 {
 				statusIcon := hbox.Objects[0].(*widget.Label)
 				nameLabel := hbox.Objects[1].(*widget.Label)
 				typeLabel := hbox.Objects[2].(*widget.Label)
 				timeLabel := hbox.Objects[3].(*widget.Label)
+				pairBtn := hbox.Objects[4].(*widget.Button)
 
 				if time.Since(d.LastActive) < 10*time.Second {
 					statusIcon.SetText("🟢")
@@ -101,6 +105,12 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 					nameLabel.TextStyle = fyne.TextStyle{Bold: true}
 				} else {
 					nameLabel.TextStyle = fyne.TextStyle{}
+				}
+
+				pairBtn.SetText("Pair")
+				pairBtn.OnTapped = func() {
+					tab.selectedID = d.ID
+					tab.showPairingForDevice(d)
 				}
 			}
 		},
@@ -282,6 +292,27 @@ func (t *DevicesTab) showDeviceDetails(d *device.DeviceInfo) {
 		FormatBytes(d.BytesSent+d.BytesRecv),
 	)
 	t.details.SetText(details)
+}
+
+func (t *DevicesTab) showPairingForDevice(d *device.DeviceInfo) {
+	win := getCurrentWindow()
+	if win == nil || d == nil {
+		return
+	}
+
+	content := container.NewVBox(
+		widget.NewLabelWithStyle("Pair Device", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel(fmt.Sprintf("Name: %s", d.Name)),
+		widget.NewLabel(fmt.Sprintf("Type: %s", d.Type)),
+		widget.NewLabel(fmt.Sprintf("ID: %s", d.ID)),
+		widget.NewLabel("This opens the pairing wizard using the current server QR / WebSocket endpoint."),
+		widget.NewButtonWithIcon("Open Pairing Wizard", theme.ConfirmIcon(), func() {
+			ShowPairingWizard(win, fmt.Sprintf("ws://%s:%d/ws", utils.GetLocalIP(), config.Get().WebSocketPort))
+		}),
+	)
+
+	dialog.ShowCustom("Pair Device", "Close", content, win)
 }
 
 // getStatusText returns a status string with emoji.

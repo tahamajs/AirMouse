@@ -26,20 +26,21 @@ import (
 // ------------------------------------------------------------
 
 type NetworkTab struct {
-	ipEntry      *widget.Entry
-	portEntry    *widget.Entry
-	wsPortEntry  *widget.Entry
-	udpPortEntry *widget.Entry
-	qrImage      *canvas.Image
-	ipList       *widget.List
-	ipData       []string
-	statusLabel  *widget.Label
-	refreshBtn   *widget.Button
-	copyBtn      *widget.Button
-	genQrBtn     *widget.Button
-	saveQrBtn    *widget.Button
-	testConnBtn  *widget.Button
-	cfg          *config.Config
+	ipEntry       *widget.Entry
+	portEntry     *widget.Entry
+	wsPortEntry   *widget.Entry
+	udpPortEntry  *widget.Entry
+	qrImage       *canvas.Image
+	ipList        *widget.List
+	ipData        []string
+	statusLabel   *widget.Label
+	overviewLabel *widget.Label
+	refreshBtn    *widget.Button
+	copyBtn       *widget.Button
+	genQrBtn      *widget.Button
+	saveQrBtn     *widget.Button
+	testConnBtn   *widget.Button
+	cfg           *config.Config
 }
 
 // NewNetworkTab creates the network configuration tab.
@@ -49,9 +50,9 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		ipData: getIPList(),
 	}
 
-	// Header
-	header := container.NewHBox(
+	header := container.NewVBox(
 		widget.NewLabelWithStyle("🌐 Network Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabel("Use this page to discover the host IP, verify the ports, and generate a QR code for Android pairing."),
 	)
 
 	// IP Address selection
@@ -137,6 +138,9 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 	// Status label
 	tab.statusLabel = widget.NewLabel("✅ Ready")
 	tab.statusLabel.Importance = widget.SuccessImportance
+	tab.overviewLabel = widget.NewLabel("")
+	tab.overviewLabel.Wrapping = fyne.TextWrapWord
+	tab.overviewLabel.SetText(tab.pairingSummary())
 
 	// Buttons
 	tab.refreshBtn = widget.NewButtonWithIcon("Refresh IPs", theme.ViewRefreshIcon(), func() {
@@ -177,12 +181,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
 			if err == nil && writer != nil {
 				defer writer.Close()
-                data := fmt.Sprintf("airmouse://pair?ip=%s&port=%s&ws=ws://%s:%s/ws&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
-                    tab.ipEntry.Text,
-                    tab.portEntry.Text,
-                    tab.ipEntry.Text,
-					tab.wsPortEntry.Text,
-					url.QueryEscape(tab.cfg.ServerName))
+				data := tab.pairingURI()
 				pngBytes, _ := qrcode.Encode(data, qrcode.High, 300)
 				_, _ = writer.Write(pngBytes)
 				dialog.ShowInformation("Saved", "QR code saved successfully", win)
@@ -201,6 +200,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		if tab.ipEntry.Validate() == nil {
 			cfg.Host = s
 			_ = cfg.Save()
+			tab.overviewLabel.SetText(tab.pairingSummary())
 			tab.updateQR()
 			tab.ipList.Refresh()
 		}
@@ -210,6 +210,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
 			cfg.Port = p
 			_ = cfg.Save()
+			tab.overviewLabel.SetText(tab.pairingSummary())
 			tab.updateQR()
 		}
 	}
@@ -218,6 +219,8 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
 			cfg.WebSocketPort = p
 			_ = cfg.Save()
+			tab.overviewLabel.SetText(tab.pairingSummary())
+			tab.updateQR()
 		}
 	}
 
@@ -225,16 +228,27 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
 			cfg.UDPPort = p
 			_ = cfg.Save()
+			tab.overviewLabel.SetText(tab.pairingSummary())
 		}
 	}
 
-	// Layout
-	content := container.NewVBox(
-		header,
+	overviewCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("Connection Overview", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel(fmt.Sprintf("Server name: %s", tab.cfg.ServerName)),
+		widget.NewLabel(fmt.Sprintf("Current host IP: %s", tab.ipEntry.Text)),
+		widget.NewLabel(fmt.Sprintf("TCP / WS / UDP: %s / %s / %s", tab.portEntry.Text, tab.wsPortEntry.Text, tab.udpPortEntry.Text)),
+		tab.overviewLabel,
+		widget.NewLabel("The Android app can scan the QR code below and then request a session on the selected protocol."),
+	)))
+
+	ipCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("Host Selection", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		widget.NewLabel("Available IP addresses:"),
 		container.NewScroll(tab.ipList),
-		widget.NewLabel("Selected IP:"), tab.ipEntry,
+		widget.NewLabel("Selected IP:"),
+		tab.ipEntry,
 		widget.NewLabel("Ports:"),
 		container.NewGridWithColumns(3,
 			tab.portEntry,
@@ -242,10 +256,21 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 			tab.udpPortEntry,
 		),
 		container.NewHBox(tab.refreshBtn, tab.testConnBtn, tab.copyBtn),
-		container.NewHBox(tab.genQrBtn, tab.saveQrBtn),
-		widget.NewSeparator(),
+	)))
+
+	qrCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("Pairing QR Code", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
 		container.NewCenter(tab.qrImage),
+		container.NewHBox(tab.genQrBtn, tab.saveQrBtn),
+	)))
+
+	content := container.NewVBox(
+		header,
+		widget.NewSeparator(),
+		overviewCard,
+		ipCard,
+		qrCard,
 		widget.NewSeparator(),
 		tab.statusLabel,
 	)
@@ -255,12 +280,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 
 // updateQR refreshes the QR code image based on the current IP and port.
 func (t *NetworkTab) updateQR() {
-	data := fmt.Sprintf("airmouse://pair?ip=%s&port=%s&ws=ws://%s:%s/ws&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
-		t.ipEntry.Text,
-		t.portEntry.Text,
-		t.ipEntry.Text,
-		t.wsPortEntry.Text,
-		url.QueryEscape(t.cfg.ServerName))
+	data := buildPairingURI(t.ipEntry.Text, t.portEntry.Text, t.wsPortEntry.Text, t.cfg.ServerName)
 
 	pngBytes, err := qrcode.Encode(data, qrcode.High, 250)
 	if err != nil {
@@ -272,6 +292,25 @@ func (t *NetworkTab) updateQR() {
 	}
 	t.qrImage.Image = img
 	t.qrImage.Refresh()
+}
+
+func (t *NetworkTab) pairingSummary() string {
+	return fmt.Sprintf("Pairing URI: %s", t.pairingURI())
+}
+
+func (t *NetworkTab) pairingURI() string {
+	return buildPairingURI(t.ipEntry.Text, t.portEntry.Text, t.wsPortEntry.Text, t.cfg.ServerName)
+}
+
+func buildPairingURI(ip, port, wsPort, serverName string) string {
+	return fmt.Sprintf(
+		"airmouse://pair?ip=%s&port=%s&ws=ws://%s:%s/ws&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
+		ip,
+		port,
+		ip,
+		wsPort,
+		url.QueryEscape(serverName),
+	)
 }
 
 // testConnection attempts a TCP connection to the configured IP and port.
