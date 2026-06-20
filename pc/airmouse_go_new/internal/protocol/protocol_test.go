@@ -3,6 +3,7 @@ package protocol
 import (
     "encoding/json"
     "testing"
+    "time"
 )
 
 func TestServerInterface(t *testing.T) {
@@ -98,6 +99,31 @@ func TestErrorMessage(t *testing.T) {
         t.Errorf("Expected type error, got %v", parsed["type"])
     }
     t.Log("✓ Error message format valid")
+}
+
+func TestProtocolServerStopReturnsPromptly(t *testing.T) {
+	s := &ProtocolServer{
+		running: true,
+		callbacks: []func(ServerEvent){
+			func(event ServerEvent) {},
+		},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		s.Stop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() timed out; shutdown path may be deadlocked")
+	}
+
+	if s.IsRunning() {
+		t.Fatal("expected protocol server to be stopped")
+	}
 }
 
 func TestDecodeWireMessage(t *testing.T) {

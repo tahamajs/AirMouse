@@ -174,29 +174,15 @@ func safeTab(tab fyne.CanvasObject, name string) fyne.CanvasObject {
 func (a *App) createMenuBar() *fyne.MainMenu {
 	fileMenu := fyne.NewMenu("File",
 		fyne.NewMenuItem("Start Server", func() {
-			err := a.server.Start()
-			if err != nil {
-				if a.server.IsRunning() {
-					dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
-						"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
-				} else {
-					dialog.ShowError(err, a.window)
-				}
-			}
+			a.startServerAsync("menu")
 		}),
-		fyne.NewMenuItem("Stop Server", func() { a.server.Stop() }),
+		fyne.NewMenuItem("Stop Server", func() { a.stopServerAsync("menu") }),
 		fyne.NewMenuItem("Restart Server", func() {
-			a.server.Stop()
-			time.Sleep(500 * time.Millisecond)
-			err := a.server.Start()
-			if err != nil {
-				if a.server.IsRunning() {
-					dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
-						"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
-				} else {
-					dialog.ShowError(err, a.window)
-				}
-			}
+			go func() {
+				a.stopServerAsync("restart")
+				time.Sleep(600 * time.Millisecond)
+				a.startServerAsync("restart")
+			}()
 		}),
 		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem("Export Configuration", func() { a.exportConfig() }),
@@ -279,6 +265,44 @@ func (a *App) createToolbar() fyne.CanvasObject {
 	)
 }
 
+func (a *App) startServerAsync(source string) {
+	if a.server == nil {
+		return
+	}
+	utils.LogInfo("UI requested server start: source=%s", source)
+	go func() {
+		err := a.server.Start()
+		RunOnMain(func() {
+			if err != nil {
+				if a.server.IsRunning() {
+					dialog.ShowInformation("Server started with warnings", fmt.Sprintf(
+						"Server is running, but one or more protocols reported an issue:\n\n%v", err), a.window)
+				} else {
+					dialog.ShowError(err, a.window)
+				}
+			}
+			if a.connectionStatus != nil {
+				a.connectionStatus.SetText("🟢 Server start requested")
+			}
+		})
+	}()
+}
+
+func (a *App) stopServerAsync(source string) {
+	if a.server == nil {
+		return
+	}
+	utils.LogInfo("UI requested server stop: source=%s", source)
+	go func() {
+		a.server.Stop()
+		RunOnMain(func() {
+			if a.connectionStatus != nil {
+				a.connectionStatus.SetText("⛔ Server stop requested")
+			}
+		})
+	}()
+}
+
 // ------------------------------------------------------------
 //  Tab selection handler
 // ------------------------------------------------------------
@@ -315,17 +339,8 @@ func (a *App) connectionStatusUpdater() {
 func (a *App) onWindowClose() {
 	dialog.ShowConfirm("Quit", "Are you sure you want to quit Air Mouse Pro Server?", func(confirmed bool) {
 		if confirmed {
-			// Stop server with timeout
-			done := make(chan struct{})
-			go func() {
-				a.server.Stop()
-				close(done)
-			}()
-			select {
-			case <-done:
-			case <-time.After(2 * time.Second):
-				// force continue
-			}
+			a.stopServerAsync("window-close")
+			time.Sleep(300 * time.Millisecond)
 			if err := a.cfg.Save(); err != nil {
 				utils.LogError("Failed to save config: %v", err)
 			}
