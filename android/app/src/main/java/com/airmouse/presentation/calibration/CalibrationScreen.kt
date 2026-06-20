@@ -34,6 +34,7 @@ import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.presentation.calibration.ConfettiEffect
 import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

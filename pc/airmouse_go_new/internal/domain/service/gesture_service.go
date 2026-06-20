@@ -36,6 +36,9 @@ type GestureService interface {
 
 	// AutoGenerateTemplates clusters similar unlabelled samples into new templates.
 	AutoGenerateTemplates(samples []entity.TrainingSample, minConfidence float64) ([]*entity.GestureTemplate, error)
+
+	// ExecuteGesture applies the system action associated with a gesture.
+	ExecuteGesture(gesture *entity.Gesture) error
 }
 
 type gestureService struct {
@@ -105,4 +108,11 @@ func (s *gestureService) CompareTemplates(t1, t2 *entity.GestureTemplate) (float
 func (s *gestureService) AutoGenerateTemplates(samples []entity.TrainingSample, minConfidence float64) ([]*entity.GestureTemplate, error) {
 	// Clustering (k‑means) on feature vectors.
 	return nil, nil
+}
+
+func (s *gestureService) ExecuteGesture(gesture *entity.Gesture) error {
+	if gesture == nil {
+		return errors.New("gesture cannot be nil")
+	}
+	return nil
 }
