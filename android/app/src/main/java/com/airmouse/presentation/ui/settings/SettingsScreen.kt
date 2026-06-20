@@ -84,7 +84,6 @@ fun SettingsScreen(
     ) { paddingValues ->
         if (selectedSection == null) {
             SettingsMainScreen(
-                uiState = uiState,
                 onSectionSelected = { selectedSection = it },
                 navigationActions = navigationActions,
                 viewModel = viewModel,
@@ -107,7 +106,6 @@ fun SettingsScreen(
 
 @Composable
 fun SettingsMainScreen(
-    uiState: SettingsUiState,
     onSectionSelected: (SettingsSection) -> Unit,
     navigationActions: NavigationActions,
     viewModel: SettingsViewModel,
