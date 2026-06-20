@@ -337,10 +337,10 @@ class UdpDiscovery @Inject constructor() {
         // Convert found servers to a list
         return foundServers.map { key ->
             val parts = key.split(":")
-            mapOf<String, Any>(
-                "ip" to parts.getOrElse(0) { "" },
-                "port" to (parts.getOrElse(1) { "8080" }).toIntOrNull() ?: 8080
-            )
+            mutableMapOf<String, Any>().apply {
+                put("ip", parts.getOrElse(0) { "" })
+                put("port", (parts.getOrElse(1) { "8080" }).toIntOrNull() ?: 8080)
+            }
         }
     }
 
