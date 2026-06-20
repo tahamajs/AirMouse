@@ -252,7 +252,7 @@ class ConnectionManager @Inject constructor(
             _currentIp.value = ip
             _currentPort.value = port
         }
-        val protocolName = prefs.getString("last_protocol", "WEBSOCKET")?.uppercase() ?: "WEBSOCKET"
+        val protocolName = prefs.getString("last_protocol", "TCP")?.uppercase() ?: "TCP"
         currentProtocol = when (protocolName) {
             "TCP" -> ConnectionProtocol.TCP
             else -> ConnectionProtocol.WEBSOCKET
