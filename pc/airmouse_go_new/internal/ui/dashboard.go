@@ -35,9 +35,8 @@ type DashboardTab struct {
 	aiStatusLabel   *widget.Label
 	serverStatus    *widget.Label
 	serverNameLabel *widget.Label
-	deviceListLabel *widget.Label
 	deviceDetailBox *widget.Label
-	serverSummary   *widget.Label
+	recentLogsBox   *widget.Label
 
 	controlBtn *widget.Button
 	qrBtn      *widget.Button
@@ -45,6 +44,8 @@ type DashboardTab struct {
 
 	serverStart time.Time
 	mu          sync.Mutex
+	logMu       sync.Mutex
+	recentLogs  []string
 	mouse       control.MouseController
 	server      *protocol.ProtocolServer
 	deviceMgr   *device.Manager
@@ -78,8 +79,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	// Status displays
 	tab.statsLabel = widget.NewLabel("📊 Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
 	tab.connLabel = widget.NewLabel("📱 Connected devices: 0")
-	tab.deviceListLabel = widget.NewLabel("")
-	tab.deviceListLabel.Wrapping = fyne.TextWrapWord
 
 	tab.endpointLabel = widget.NewLabel("🔌 Endpoint: not started")
 	tab.uptimeLabel = widget.NewLabel("⏱️ Uptime: --:--:--")
@@ -90,30 +89,34 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		fyne.TextAlignCenter,
 		fyne.TextStyle{Bold: true},
 	)
-	tab.serverSummary = widget.NewLabel("Server not running.")
-	tab.serverSummary.Wrapping = fyne.TextWrapWord
 	tab.deviceDetailBox = widget.NewLabel("No connected devices yet.")
 	tab.deviceDetailBox.Wrapping = fyne.TextWrapWord
+	tab.recentLogsBox = widget.NewLabel("Waiting for logs...")
+	tab.recentLogsBox.Wrapping = fyne.TextWrapWord
+	tab.recentLogsBox.SetText("Waiting for logs...\n")
+
+	utils.AddLogHook(func(level, msg string) {
+		tab.addRecentLog(level, msg)
+	})
 
 	// Buttons
 	tab.controlBtn = widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() {
 		if server.IsRunning() {
 			tab.controlBtn.Disable()
 			tab.serverStatus.SetText("⏳ Server Status: Stopping...")
-			go func() {
-				server.Stop()
-				RunOnMain(func() {
-					tab.serverStatus.SetText("⛔ Server Status: Stopped")
-					tab.controlBtn.SetText("Start Server")
-					tab.controlBtn.SetIcon(theme.MediaPlayIcon())
-					tab.controlBtn.Enable()
-					tab.refreshBtn.Disable()
-					tab.endpointLabel.SetText("🔌 Endpoint: not started")
-					tab.uptimeLabel.SetText("⏱️ Uptime: --:--:--")
-					tab.serverSummary.SetText("Server not running.")
-					tab.deviceDetailBox.SetText("No connected devices yet.")
-				})
-			}()
+				go func() {
+					server.Stop()
+					RunOnMain(func() {
+						tab.serverStatus.SetText("⛔ Server Status: Stopped")
+						tab.controlBtn.SetText("Start Server")
+						tab.controlBtn.SetIcon(theme.MediaPlayIcon())
+						tab.controlBtn.Enable()
+						tab.refreshBtn.Disable()
+						tab.endpointLabel.SetText("🔌 Endpoint: not started")
+						tab.uptimeLabel.SetText("⏱️ Uptime: --:--:--")
+						tab.deviceDetailBox.SetText("No connected devices yet.")
+					})
+				}()
 			return
 		}
 
@@ -137,7 +140,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 						"🔌 Endpoint: %s:%d (TCP) | ws://%s:%d\n📡 UDP Discovery: port %d",
 						ip, tab.cfg.Port, ip, tab.cfg.WebSocketPort, tab.cfg.UDPPort,
 					))
-					tab.serverSummary.SetText(fmt.Sprintf("Running on %s:%d and %s:%d", ip, tab.cfg.Port, ip, tab.cfg.WebSocketPort))
 
 					if tab.cfg.EnableAISmoothing {
 						tab.aiStatusLabel.SetText("🧠 AI Smoothing: Enabled ✅")
@@ -184,7 +186,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		widget.NewSeparator(),
 		tab.statsLabel,
 		tab.connLabel,
-		tab.deviceListLabel,
 	)))
 
 	// Actions card
@@ -206,26 +207,30 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.endpointLabel,
 		tab.uptimeLabel,
 		tab.aiStatusLabel,
-		tab.serverSummary,
 	)))
 
 	deviceCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📱 Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		tab.connLabel,
-		tab.deviceListLabel,
+		widget.NewLabelWithStyle("Latest device details", fyne.TextAlignLeading, fyne.TextStyle{Bold: false}),
 		tab.deviceDetailBox,
+	)))
+
+	logsCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("📝 Recent Activity", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		container.NewScroll(tab.recentLogsBox),
 	)))
 
 	featureCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("✨ Features", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		widget.NewLabel("• Start/Stop server in one tap"),
+		widget.NewLabel("• One-tap server start/stop"),
 		widget.NewLabel("• QR pairing for instant phone setup"),
-		widget.NewLabel("• Real-time device statistics"),
-		widget.NewLabel("• Full device metadata on the dashboard"),
+		widget.NewLabel("• Live device stats and metadata"),
+		widget.NewLabel("• Recent activity feed from the shared logger"),
 		widget.NewLabel("• Pause, resume, and reset movement controls"),
-		widget.NewLabel("• Cross-protocol support for mobile and desktop"),
 	)))
 
 	hero := NewGlassCard(container.NewVBox(
@@ -246,6 +251,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		container.NewHBox(tab.refreshBtn, tab.qrBtn),
 		actionsCard,
 		deviceCard,
+		logsCard,
 		featureCard,
 		profileCard,
 	)
@@ -313,11 +319,8 @@ func (t *DashboardTab) refreshStats() {
 	devices := t.deviceMgr.GetAllDevices()
 	deviceCount := len(devices)
 
-	// Build device list string
-	var deviceNames []string
 	var deviceDetails []string
 	for _, d := range devices {
-		deviceNames = append(deviceNames, fmt.Sprintf("%s (%s)", d.Name, d.Type))
 		deviceDetails = append(deviceDetails, fmt.Sprintf(
 			"• %s [%s]\n  ID: %s\n  Status: %s\n  Connected: %s\n  Last active: %s\n  Sent: %s (%d msg)\n  Received: %s (%d msg)\n  RSSI: %d\n  IP: %s\n  MAC: %s\n  Version: %s",
 			d.Name,
@@ -334,11 +337,6 @@ func (t *DashboardTab) refreshStats() {
 			emptyOrDash(d.Version),
 		))
 	}
-	deviceListStr := "None"
-	if len(deviceNames) > 0 {
-		deviceListStr = strings.Join(deviceNames, ", ")
-	}
-
 	// Update UI in one batch
 	RunOnMain(func() {
 		t.statsLabel.SetText(fmt.Sprintf(
@@ -346,14 +344,10 @@ func (t *DashboardTab) refreshStats() {
 			clicks, dbl, right, scroll,
 		))
 		t.connLabel.SetText(fmt.Sprintf("📱 Connected devices: %d", deviceCount))
-		t.deviceListLabel.SetText(fmt.Sprintf("📱 Devices: %s", deviceListStr))
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
-			t.serverSummary.SetText(fmt.Sprintf("Server listening on %s:%d and ws://%s:%d", utils.GetLocalIP(), t.cfg.Port, utils.GetLocalIP(), t.cfg.WebSocketPort))
-			t.deviceListLabel.Wrapping = fyne.TextWrapWord
 		} else {
 			t.deviceDetailBox.SetText("No connected devices yet.")
-			t.serverSummary.SetText("Server not running or waiting for the first connection.")
 		}
 
 		t.mu.Lock()
@@ -367,6 +361,24 @@ func (t *DashboardTab) refreshStats() {
 			))
 		}
 		t.mu.Unlock()
+	})
+}
+
+func (t *DashboardTab) addRecentLog(level, msg string) {
+	t.logMu.Lock()
+	defer t.logMu.Unlock()
+
+	line := fmt.Sprintf("%s [%s] %s", time.Now().Format("15:04:05"), level, msg)
+	t.recentLogs = append(t.recentLogs, line)
+	if len(t.recentLogs) > 12 {
+		t.recentLogs = t.recentLogs[len(t.recentLogs)-12:]
+	}
+
+	text := strings.Join(t.recentLogs, "\n")
+	RunOnMain(func() {
+		if t.recentLogsBox != nil {
+			t.recentLogsBox.SetText(text)
+		}
 	})
 }
 
