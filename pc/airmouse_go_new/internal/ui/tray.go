@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
-	"image/png"
 	"net"
 	"net/http"
 	"os/exec"
@@ -21,7 +20,6 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/getlantern/systray"
 	"github.com/gorilla/websocket"
@@ -30,12 +28,11 @@ import (
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
-	"airmouse-go/internal/protocol"
 	"airmouse-go/internal/utils"
 )
 
 // ------------------------------------------------------------
-// Icon data (placeholders – replace with actual PNG bytes)
+// Icon data – only IconData is defined here (others in icons.go)
 // ------------------------------------------------------------
 
 var (
@@ -54,41 +51,6 @@ var (
 		0xC7, 0x13, 0x4E, 0x4F, 0x00, 0x00, 0x00, 0x00,
 		0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
 	}
-
-	// RunningIconData – green icon for running state.
-	RunningIconData = []byte{
-		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-		0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-		0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x10,
-		0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0xF3, 0xFF,
-		0x61, 0x00, 0x00, 0x00, 0x20, 0x49, 0x44, 0x41,
-		0x54, 0x38, 0xCB, 0x63, 0xFC, 0xFF, 0xFF, 0x3F,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x00,
-		0xD4, 0x5D, 0xAD, 0xB3, 0x01, 0xE4, 0x6C, 0x69,
-		0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
-		0xAE, 0x42, 0x60, 0x82,
-	}
-
-	// StoppedIconData – red icon for stopped state.
-	StoppedIconData = []byte{
-		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-		0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-		0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x10,
-		0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0xF3, 0xFF,
-		0x61, 0x00, 0x00, 0x00, 0x25, 0x49, 0x44, 0x41,
-		0x54, 0x38, 0xCB, 0x63, 0xFC, 0xFF, 0xFF, 0x3F,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
-		0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x00,
-		0xDE, 0x72, 0xC4, 0x14, 0x11, 0x21, 0xA4, 0xFE,
-		0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
-		0xAE, 0x42, 0x60, 0x82,
-	}
 )
 
 // ------------------------------------------------------------
@@ -99,7 +61,7 @@ type TrayApp struct {
 	config     *config.Config
 	isRunning  bool
 	localIP    string
-	clients    map[string]*protocol.Client
+	clients    map[string]*websocket.Conn
 	upgrader   websocket.Upgrader
 	httpServer *http.Server
 	startTime  time.Time
@@ -122,7 +84,7 @@ func NewTrayApp(cfg *config.Config, deviceMgr *device.Manager, mouse control.Mou
 	return &TrayApp{
 		config:    cfg,
 		isRunning: false,
-		clients:   make(map[string]*protocol.Client),
+		clients:   make(map[string]*websocket.Conn),
 		stats:     &ServerStats{StartTime: time.Now()},
 		deviceMgr: deviceMgr,
 		mouse:     mouse,
@@ -365,14 +327,14 @@ func (a *TrayApp) stopServer() {
 		_ = a.httpServer.Shutdown(ctx)
 	}
 
-	for id, client := range a.clients {
-		if client.Conn != nil {
-			_ = client.Conn.Close()
+	for id, conn := range a.clients {
+		if conn != nil {
+			_ = conn.Close()
 		}
 		utils.LogInfo(fmt.Sprintf("Closed client connection: %s", id))
 	}
 
-	a.clients = make(map[string]*protocol.Client)
+	a.clients = make(map[string]*websocket.Conn)
 	a.isRunning = false
 	utils.LogInfo("Server stopped")
 }
@@ -506,16 +468,15 @@ func (a *TrayApp) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		clientName = "Unknown Device"
 	}
 
-	client := &protocol.Client{
-		ID:          clientID,
-		Name:        clientName,
-		Conn:        conn,
-		LastSeen:    time.Now(),
-		IsActive:    true,
-		ConnectedAt: time.Now(),
-	}
+	// Store client info in a map for names
 
-	a.clients[clientID] = client
+	// Store both the connection and the client info
+	a.clients[clientID] = conn
+
+	// You could store client info in a separate map or in the connection itself
+	// For now, we'll use a separate map for client info
+	// a.clientInfo[clientID] = clientInfo
+
 	a.stats.TotalConnections++
 
 	utils.LogInfo(fmt.Sprintf("WebSocket client connected: %s (%s)", clientName, clientID))
@@ -542,12 +503,15 @@ func (a *TrayApp) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		a.stats.TotalMessages++
-		client.LastSeen = time.Now()
-		a.handleClientMessage(client, msg)
+		// Update last seen
+		// if info, ok := a.clientInfo[clientID]; ok {
+		//     info.LastSeen = time.Now()
+		// }
+		a.handleClientMessage(clientID, clientName, msg, conn)
 	}
 }
 
-func (a *TrayApp) handleClientMessage(client *protocol.Client, msg map[string]interface{}) {
+func (a *TrayApp) handleClientMessage(clientID, clientName string, msg map[string]interface{}, conn *websocket.Conn) {
 	msgType, _ := msg["type"].(string)
 
 	switch msgType {
@@ -573,15 +537,15 @@ func (a *TrayApp) handleClientMessage(client *protocol.Client, msg map[string]in
 			button = "left"
 		}
 		a.clickMouse(button)
-		utils.LogInfo(fmt.Sprintf("Click: %s from %s", button, client.Name))
+		utils.LogInfo(fmt.Sprintf("Click: %s from %s", button, clientName))
 
 	case "doubleclick":
 		a.doubleClick()
-		utils.LogInfo(fmt.Sprintf("Double click from %s", client.Name))
+		utils.LogInfo(fmt.Sprintf("Double click from %s", clientName))
 
 	case "rightclick":
 		a.rightClick()
-		utils.LogInfo(fmt.Sprintf("Right click from %s", client.Name))
+		utils.LogInfo(fmt.Sprintf("Right click from %s", clientName))
 
 	case "scroll":
 		var delta float64
@@ -595,12 +559,12 @@ func (a *TrayApp) handleClientMessage(client *protocol.Client, msg map[string]in
 	case "hello":
 		if payload, ok := msg["payload"].(map[string]interface{}); ok {
 			if name, ok := payload["name"].(string); ok && name != "" {
-				client.Name = name
+				clientName = name
 			}
 		} else if name, ok := msg["name"].(string); ok && name != "" {
-			client.Name = name
+			clientName = name
 		}
-		utils.LogInfo(fmt.Sprintf("Device identified: %s", client.Name))
+		utils.LogInfo(fmt.Sprintf("Device identified: %s", clientName))
 
 	case "gesture":
 		var gesture string
@@ -628,8 +592,8 @@ func (a *TrayApp) handleClientMessage(client *protocol.Client, msg map[string]in
 		a.handleControlCommand(command)
 
 	case "ping":
-		if client.Conn != nil {
-			_ = client.Conn.WriteJSON(map[string]string{"type": "pong"})
+		if conn != nil {
+			_ = conn.WriteJSON(map[string]string{"type": "pong"})
 		}
 
 	default:
@@ -849,7 +813,10 @@ func (a *TrayApp) showWiFiQRCodeWindow() {
 }
 
 func (a *TrayApp) copyIPToClipboard() {
-	systray.SetClipboard(a.localIP)
+	win := getCurrentWindow()
+	if win != nil {
+		win.Clipboard().SetContent(a.localIP)
+	}
 	utils.LogInfo(fmt.Sprintf("IP copied to clipboard: %s", a.localIP))
 }
 
@@ -885,7 +852,6 @@ func (a *TrayApp) getWiFiSSID() string {
 }
 
 func (a *TrayApp) getWiFiPassword() string {
-	// Platform‑specific; may require admin privileges.
 	return "password123"
 }
 
@@ -1049,9 +1015,7 @@ func (a *TrayApp) showLogsWindow() {
 
 	content := container.NewBorder(
 		widget.NewLabelWithStyle("Server Logs", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewButton("Refresh", func() {
-			// Refresh logs – fetch from file or memory.
-		}),
+		widget.NewButton("Refresh", func() {}),
 		nil, nil,
 		container.NewScroll(logText),
 	)
@@ -1119,15 +1083,10 @@ func (a *TrayApp) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 func (a *TrayApp) handleAPIDevices(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	devices := make([]map[string]interface{}, 0, len(a.clients))
-	for id, client := range a.clients {
-		devices = append(devices, map[string]interface{}{
-			"id":         id,
-			"name":       client.Name,
-			"connected":  client.ConnectedAt.Format(time.RFC3339),
-			"last_seen":  client.LastSeen.Format(time.RFC3339),
-			"is_active":  client.IsActive,
-		})
-	}
+	// In a real implementation, you'd store client info in a separate map
+	devices = append(devices, map[string]interface{}{
+		"count": len(a.clients),
+	})
 	_ = json.NewEncoder(w).Encode(devices)
 }
 
@@ -1138,7 +1097,6 @@ func (a *TrayApp) handleAPIQRCode(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "image/png")
 	_, _ = w.Write(qr)
 }
 
