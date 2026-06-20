@@ -53,9 +53,6 @@ fun HomeScreen(
     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
-    // UI State
-    var isConnected by remember { mutableStateOf(false) }
-    var mouseStatus by remember { mutableStateOf("Mouse Off") }
     var serverIp by remember { mutableStateOf("192.168.1.100") }
     var serverPort by remember { mutableIntStateOf(8080) }
     var serverName by remember { mutableStateOf("My Desktop PC") }
@@ -76,6 +73,7 @@ fun HomeScreen(
     val isConnectionPending = homeUiState.isConnecting
     val connectionStatusText = when {
         isConnectionActive && homeUiState.isCalibrated -> "Mouse active"
+        isConnectionActive -> "Connected"
         isConnectionPending -> "Waiting for server approval..."
         homeUiState.isCalibrated -> "Ready to connect"
         else -> "Calibrate first"
@@ -313,7 +311,7 @@ fun HomeScreen(
                     .padding(8.dp)
                     .background(
                         color = when {
-                            isConnected && homeUiState.isCalibrated -> Color(0xFF4CAF50)
+                            isConnectionActive && homeUiState.isCalibrated -> Color(0xFF4CAF50)
                             homeUiState.isCalibrated -> Color(0xFF2196F3)
                             else -> Color(0xFFF44336)
                         },
@@ -323,7 +321,8 @@ fun HomeScreen(
             ) {
                 Text(
                     text = when {
-                        isConnected && homeUiState.isCalibrated -> mouseStatus
+                        isConnectionActive && homeUiState.isCalibrated -> connectionStatusText
+                        isConnectionActive -> "Connected"
                         homeUiState.isCalibrated -> "Calibrated"
                         else -> "Calibrate First"
                     },

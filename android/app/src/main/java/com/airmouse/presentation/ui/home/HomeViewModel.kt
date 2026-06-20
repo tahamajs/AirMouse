@@ -263,6 +263,13 @@ class HomeViewModel @Inject constructor(
                 when (status) {
                     ConnectionManager.ConnectionStatus.CONNECTED -> {
                         addLogMessage("Connected to ${connectionManager.currentIp.value}")
+                        _uiState.update {
+                            it.copy(
+                                isConnecting = false,
+                                isActive = true,
+                                connectionStatus = ConnectionStatus.CONNECTED
+                            )
+                        }
                         updateConnectionQuality()
                         startSensors()
                         // Sync calibration when connected
@@ -270,11 +277,24 @@ class HomeViewModel @Inject constructor(
                     }
                     ConnectionManager.ConnectionStatus.DISCONNECTED -> {
                         addLogMessage("Disconnected")
+                        _uiState.update {
+                            it.copy(
+                                isConnecting = false,
+                                isActive = false,
+                                connectionStatus = ConnectionStatus.DISCONNECTED
+                            )
+                        }
                         stopSensors()
-                        _uiState.update { it.copy(isActive = false) }
                     }
                     ConnectionManager.ConnectionStatus.ERROR -> {
                         addLogMessage("Connection error")
+                        _uiState.update {
+                            it.copy(
+                                isConnecting = false,
+                                isActive = false,
+                                connectionStatus = ConnectionStatus.ERROR
+                            )
+                        }
                     }
                     else -> {}
                 }
@@ -665,7 +685,13 @@ class HomeViewModel @Inject constructor(
 
     fun disconnect() {
         connectionManager.disconnect()
-        _uiState.update { it.copy(isActive = false, isConnecting = false) }
+        _uiState.update {
+            it.copy(
+                isActive = false,
+                isConnecting = false,
+                connectionStatus = ConnectionStatus.DISCONNECTED
+            )
+        }
         stopSensors()
     }
 
