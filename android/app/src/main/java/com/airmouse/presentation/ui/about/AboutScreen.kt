@@ -1,3 +1,4 @@
+// app/src/main/java/com/airmouse/presentation/ui/about/AboutScreen.kt
 package com.airmouse.presentation.ui.about
 
 import androidx.compose.animation.*
@@ -24,12 +25,102 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.presentation.ui.accessibility.GlassCard
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+// ==========================================
+// VIEW MODEL
+// ==========================================
+
+data class AboutUiState(
+    val appName: String = "Air Mouse",
+    val versionName: String = "3.0.0",
+    val versionCode: Int = 30,
+    val buildDate: String = "2025-06-20",
+    val totalDownloads: Int = 12500,
+    val totalUsers: Int = 3400,
+    val totalGestures: Int = 87500,
+    val isUpdateAvailable: Boolean = false,
+    val isLoading: Boolean = false
+)
+
+@HiltViewModel
+class AboutViewModel @Inject constructor() : ViewModel() {
+
+    private val _uiState = MutableStateFlow(AboutUiState())
+    val uiState: StateFlow<AboutUiState> = _uiState.asStateFlow()
+
+    fun shareApp() {
+        // Implementation for sharing
+    }
+
+    fun rateApp() {
+        // Implementation for rating
+    }
+
+    fun checkForUpdates() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            // Simulate update check
+            kotlinx.coroutines.delay(1500)
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                isUpdateAvailable = true
+            )
+        }
+    }
+
+    fun openUrl(url: String) {
+        // Implementation to open URL
+    }
+}
+
+// ==========================================
+// GLASS CARD COMPOSABLE
+// ==========================================
+
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+                    )
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            content()
+        }
+    }
+}
+
+// ==========================================
+// MAIN SCREEN
+// ==========================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +128,7 @@ fun AboutScreen(
     navigationActions: NavigationActions,
     viewModel: AboutViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
     val infiniteTransition = rememberInfiniteTransition(label = "logoScale")
     val logoScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -106,6 +197,7 @@ fun AboutScreen(
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Logo
                 Surface(
                     modifier = Modifier
                         .size(120.dp)
@@ -169,9 +261,10 @@ fun AboutScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // Stats
                 GlassCard {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.padding(4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("📊 Quick Stats", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -190,8 +283,9 @@ fun AboutScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Features
                 GlassCard {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(4.dp)) {
                         Text("✨ Features", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -210,8 +304,9 @@ fun AboutScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Tech Stack
                 GlassCard {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(4.dp)) {
                         Text("🛠️ Tech Stack", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -226,8 +321,9 @@ fun AboutScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Team
                 GlassCard {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(4.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -257,8 +353,9 @@ fun AboutScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Licenses
                 GlassCard {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(4.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -297,8 +394,9 @@ fun AboutScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Links
                 GlassCard {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(4.dp)) {
                         Text("🔗 Links", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -312,8 +410,9 @@ fun AboutScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // License
                 GlassCard {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(4.dp)) {
                         Text("📄 License", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("MIT License", fontSize = 16.sp, fontWeight = FontWeight.Medium)
@@ -329,6 +428,7 @@ fun AboutScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -366,6 +466,10 @@ fun AboutScreen(
         }
     }
 }
+
+// ==========================================
+// SUB-COMPONENTS
+// ==========================================
 
 @Composable
 fun StatItem(value: String, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -461,5 +565,33 @@ fun LinkItem(title: String, icon: androidx.compose.ui.graphics.vector.ImageVecto
             Text(text = url, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+// ==========================================
+// NAVIGATION ACTIONS (stub for preview)
+// ==========================================
+
+class NavigationActions {
+    fun navigateBack() {}
+}
+
+// ==========================================
+// PREVIEWS
+// ==========================================
+
+@Preview(showBackground = true, name = "Light Mode")
+@Composable
+fun AboutScreenPreviewLight() {
+    MaterialTheme {
+        AboutScreen(navigationActions = NavigationActions())
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun AboutScreenPreviewDark() {
+    MaterialTheme {
+        AboutScreen(navigationActions = NavigationActions())
     }
 }

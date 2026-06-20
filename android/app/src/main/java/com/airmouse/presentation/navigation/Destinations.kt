@@ -1,4 +1,6 @@
 // app/src/main/java/com/airmouse/presentation/navigation/Destinations.kt
+@file:Suppress("unused")
+
 package com.airmouse.presentation.navigation
 
 import androidx.compose.material.icons.Icons
@@ -11,28 +13,6 @@ sealed class Destinations(
     val title: String,
     val icon: ImageVector
 ) {
-    object Home : Destinations(ROUTE_HOME, "Home", Icons.Filled.Home)
-    object Statistics : Destinations(ROUTE_STATISTICS, "Stats", Icons.Filled.BarChart)
-    object Settings : Destinations(ROUTE_SETTINGS, "Settings", Icons.Filled.Settings)
-    object Help : Destinations(ROUTE_HELP, "Help", Icons.AutoMirrored.Filled.Help)
-    object About : Destinations(ROUTE_ABOUT, "About", Icons.Filled.Info)
-    object Calibration : Destinations(ROUTE_CALIBRATION, "Calibrate", Icons.Filled.Tune)
-    object SensorVisualizer : Destinations(ROUTE_SENSOR_VISUALIZER, "Sensors", Icons.Filled.Sensors)
-    object GestureStudio : Destinations(ROUTE_GESTURE_STUDIO, "Gestures", Icons.Filled.Gesture)
-    object EdgeGestures : Destinations(ROUTE_EDGE_GESTURES, "Edge", Icons.Filled.Swipe)
-    object Touchpad : Destinations(ROUTE_TOUCHPAD, "Touchpad", Icons.Filled.TouchApp)
-    object NetworkDiscovery : Destinations(ROUTE_NETWORK_DISCOVERY, "Network", Icons.Filled.Wifi)
-    object ServerLogs : Destinations(ROUTE_SERVER_LOGS, "Logs", Icons.AutoMirrored.Filled.ListAlt)
-    object Proximity : Destinations(ROUTE_PROXIMITY, "Proximity", Icons.Filled.NearMe)
-    object VoiceCommands : Destinations(ROUTE_VOICE_COMMANDS, "Voice", Icons.Filled.Mic)
-    object Profiles : Destinations(ROUTE_PROFILES, "Profiles", Icons.Filled.Person)
-    object Themes : Destinations(ROUTE_THEMES, "Themes", Icons.Filled.Palette)
-    object Battery : Destinations(ROUTE_BATTERY, "Battery", Icons.Filled.BatteryFull)
-    object Accessibility : Destinations(ROUTE_ACCESSIBILITY, "Access", Icons.Filled.Accessibility)
-    object TouchpadSettings : Destinations(ROUTE_TOUCHPAD_SETTINGS, "Touchpad Settings", Icons.Filled.Settings)
-    object Onboarding : Destinations(ROUTE_ONBOARDING, "Onboarding", Icons.Filled.Apps)
-    object CalibrationResult : Destinations(ROUTE_CALIBRATION_RESULT, "Calibration Result", Icons.Filled.CheckCircle)
-
     companion object {
         const val ROUTE_HOME = "home"
         const val ROUTE_STATISTICS = "statistics"
@@ -56,13 +36,33 @@ sealed class Destinations(
         const val ROUTE_ONBOARDING = "onboarding"
         const val ROUTE_CALIBRATION_RESULT = "calibration_result"
 
-        private val bottomNavRoutes = setOf(
-            ROUTE_HOME,
-            ROUTE_STATISTICS,
-            ROUTE_SETTINGS,
-            ROUTE_HELP
-        )
-        val bottomNavDestinations = listOf(Home, Statistics, Settings, Help)
+        object Home : Destinations(ROUTE_HOME, "Home", Icons.Filled.Home)
+        object Statistics : Destinations(ROUTE_STATISTICS, "Stats", Icons.Filled.BarChart)
+        object Settings : Destinations(ROUTE_SETTINGS, "Settings", Icons.Filled.Settings)
+        object Help : Destinations(ROUTE_HELP, "Help", Icons.AutoMirrored.Filled.Help)
+        object About : Destinations(ROUTE_ABOUT, "About", Icons.Filled.Info)
+        object Calibration : Destinations(ROUTE_CALIBRATION, "Calibrate", Icons.Filled.Tune)
+        object SensorVisualizer : Destinations(ROUTE_SENSOR_VISUALIZER, "Sensors", Icons.Filled.Sensors)
+        object GestureStudio : Destinations(ROUTE_GESTURE_STUDIO, "Gestures", Icons.Filled.Gesture)
+        object EdgeGestures : Destinations(ROUTE_EDGE_GESTURES, "Edge", Icons.Filled.Swipe)
+        object Touchpad : Destinations(ROUTE_TOUCHPAD, "Touchpad", Icons.Filled.TouchApp)
+        object NetworkDiscovery : Destinations(ROUTE_NETWORK_DISCOVERY, "Network", Icons.Filled.Wifi)
+        object ServerLogs : Destinations(ROUTE_SERVER_LOGS, "Logs", Icons.AutoMirrored.Filled.ListAlt)
+        object Proximity : Destinations(ROUTE_PROXIMITY, "Proximity", Icons.Filled.NearMe)
+        object VoiceCommands : Destinations(ROUTE_VOICE_COMMANDS, "Voice", Icons.Filled.Mic)
+        object Profiles : Destinations(ROUTE_PROFILES, "Profiles", Icons.Filled.Person)
+        object Themes : Destinations(ROUTE_THEMES, "Themes", Icons.Filled.Palette)
+        object Battery : Destinations(ROUTE_BATTERY, "Battery", Icons.Filled.BatteryFull)
+        object Accessibility : Destinations(ROUTE_ACCESSIBILITY, "Access", Icons.Filled.Accessibility)
+        object TouchpadSettings : Destinations(ROUTE_TOUCHPAD_SETTINGS, "Touchpad Settings", Icons.Filled.Settings)
+        object Onboarding : Destinations(ROUTE_ONBOARDING, "Onboarding", Icons.Filled.Apps)
+        object CalibrationResult : Destinations(ROUTE_CALIBRATION_RESULT, "Calibration Result", Icons.Filled.CheckCircle)
+
+        private val bottomNavRoutes: Set<String>
+            get() = setOf(ROUTE_HOME, ROUTE_STATISTICS, ROUTE_SETTINGS, ROUTE_HELP)
+
+        val bottomNavDestinations: List<Destinations>
+            get() = listOf(Home, Statistics, Settings, Help)
 
         fun isBottomNavScreen(route: String?): Boolean {
             return route != null && bottomNavRoutes.contains(route)

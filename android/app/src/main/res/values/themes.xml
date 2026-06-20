@@ -2,9 +2,10 @@
 <resources>
     <!-- ==================== SPLASH SCREEN ==================== -->
     <style name="Theme.AirMouse.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/deep_orange_700</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_calibrate</item>
-        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="windowSplashScreenBackground">@color/background_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_air_mouse</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/background_dark</item>
+        <item name="windowSplashScreenAnimationDuration">800</item>
         <item name="postSplashScreenTheme">@style/Theme.AirMouse</item>
     </style>
 
@@ -12,18 +13,18 @@
 
     <!-- Base App Theme (AppCompat) -->
     <style name="Theme.AirMouse" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="android:statusBarColor">@color/deep_orange_700</item>
+        <item name="android:statusBarColor">@color/background_dark</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:navigationBarColor">@color/background_primary</item>
+        <item name="android:navigationBarColor">@color/background_dark</item>
 
-        <item name="colorPrimary">@color/deep_orange_500</item>
+        <item name="colorPrimary">@color/primary_dark</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryVariant">@color/deep_orange_700</item>
-        <item name="colorSecondary">@color/amber_500</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="colorSurface">@color/surface</item>
-        <item name="colorOnSurface">@color/text_primary</item>
-        <item name="android:windowBackground">@color/background_primary</item>
+        <item name="colorPrimaryVariant">@color/primary</item>
+        <item name="colorSecondary">@color/secondary_dark</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorSurface">@color/surfaceModern</item>
+        <item name="colorOnSurface">@color/onSurfaceModern</item>
+        <item name="android:windowBackground">@color/background_dark</item>
         <item name="colorError">@color/error</item>
         <item name="colorOnError">@color/white</item>
     </style>

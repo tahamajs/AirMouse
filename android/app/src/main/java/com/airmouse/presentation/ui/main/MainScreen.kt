@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.airmouse.presentation.ui.main
 import androidx.compose.ui.graphics.graphicsLayer
 

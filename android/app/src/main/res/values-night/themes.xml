@@ -2,16 +2,16 @@
 <resources>
     <!-- Base App Theme (Material 3) -->
     <style name="Theme.AirMouse" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:statusBarColor">@color/deep_orange_800</item>
+        <item name="android:statusBarColor">@color/background_dark</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:navigationBarColor">@color/background_primary</item>
-        <item name="colorPrimary">@color/deep_orange_500</item>
+        <item name="android:navigationBarColor">@color/background_dark</item>
+        <item name="colorPrimary">@color/primary_dark</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/primary_container</item>
-        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
-        <item name="colorSurface">@color/surface</item>
-        <item name="colorOnSurface">@color/text_primary</item>
-        <item name="android:windowBackground">@color/background_primary</item>
+        <item name="colorPrimaryContainer">@color/surfaceModern</item>
+        <item name="colorOnPrimaryContainer">@color/onSurfaceModern</item>
+        <item name="colorSurface">@color/surfaceModern</item>
+        <item name="colorOnSurface">@color/onSurfaceModern</item>
+        <item name="android:windowBackground">@color/background_dark</item>
         <item name="colorError">@color/error</item>
         <item name="colorOnError">@color/white</item>
     </style>

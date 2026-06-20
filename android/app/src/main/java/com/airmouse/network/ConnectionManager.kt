@@ -1,4 +1,6 @@
 // app/src/main/java/com/airmouse/network/ConnectionManager.kt
+@file:Suppress("unused")
+
 package com.airmouse.network
 
 import android.content.Context

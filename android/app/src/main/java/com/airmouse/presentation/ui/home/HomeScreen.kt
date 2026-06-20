@@ -11,14 +11,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,8 +34,6 @@ import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.airmouse.ui.components.AnimatedConnectionStatus
-import com.airmouse.presentation.ui.home.HomeViewModel
 import java.util.Locale
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -113,7 +109,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = { HomeTopBar() },
+        topBar = { HomeTopBar(navigationActions = navigationActions) },
         floatingActionButton = {
                     AnimatedVisibility(
                         visible = isConnected,
@@ -343,7 +339,8 @@ fun HomeScreen(
 }
 
 @Composable
-fun HomeTopBar() {
+fun HomeTopBar(navigationActions: NavigationActions) {
+    var overflowMenuExpanded by remember { mutableStateOf(false) }
     TopAppBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -369,18 +366,52 @@ fun HomeTopBar() {
             }
         },
         navigationIcon = {
-            IconButton(onClick = {}) {
+            IconButton(onClick = { overflowMenuExpanded = true }) {
                 Icon(Icons.Default.Menu, contentDescription = "Menu")
             }
         },
         actions = {
-            IconButton(onClick = {}) {
+            IconButton(onClick = { overflowMenuExpanded = true }) {
                 BadgedBox(badge = { Badge { Text("3") } }) {
-                    Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
                 }
             }
-            IconButton(onClick = {}) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings")
+            DropdownMenu(
+                expanded = overflowMenuExpanded,
+                onDismissRequest = { overflowMenuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Calibration") },
+                    leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateToCalibrationResult()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Profiles") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.Profiles)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Settings") },
+                    leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.Settings)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Help") },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null) },
+                    onClick = {
+                        overflowMenuExpanded = false
+                        navigationActions.navigateTo(Destinations.Help)
+                    }
+                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
