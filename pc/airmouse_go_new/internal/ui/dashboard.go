@@ -511,11 +511,17 @@ func (t *DashboardTab) showPairingQRDialog() {
 	}
 	ip := utils.GetLocalIP()
 	port := t.cfg.Port
+	wsURL := fmt.Sprintf("ws://%s:%d/ws", ip, t.cfg.WebSocketPort)
 
 	pairingData := fmt.Sprintf(
-		"airmouse://pair?ip=%s&port=%d&ws=ws://%s:%d/ws&name=%s&version=%s&protocol=WEBSOCKET",
-		ip, port, ip, t.cfg.WebSocketPort, t.cfg.ServerName, t.cfg.Version,
+		"airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&version=%s",
+		wsURL, t.cfg.ServerName, ip, port, t.cfg.Version,
 	)
+	if t.server != nil && t.server.GetAuthManager() != nil {
+		if tokenData, err := t.server.GetAuthManager().GetPairingQRData(wsURL); err == nil {
+			pairingData = tokenData
+		}
+	}
 
 	pngBytes, err := qrcode.Encode(pairingData, qrcode.High, 300)
 	if err != nil {

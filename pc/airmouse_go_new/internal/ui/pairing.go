@@ -36,8 +36,8 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	port := cfg.Port
 
 	// Create pairing data with full device info
-	pairingData := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&ws=%s&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
-		ip, port, url.QueryEscape(wsURL), url.QueryEscape(cfg.ServerName))
+	pairingData := fmt.Sprintf("airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&version=3.0",
+		url.QueryEscape(wsURL), url.QueryEscape(cfg.ServerName), ip, port)
 
 	// Generate QR code
 	pngBytes, err := qrcode.Encode(pairingData, qrcode.High, 300)
@@ -162,8 +162,8 @@ func QuickPairDialog(parent fyne.Window) {
 	cfg := config.Get()
 	ip := utils.GetLocalIP()
 
-	pairingData := fmt.Sprintf("airmouse://pair?ip=%s&port=%d&ws=ws://%s:%d/ws&name=%s&version=3.0&protocol=WEBSOCKET",
-		ip, cfg.WebSocketPort, ip, cfg.WebSocketPort, cfg.ServerName)
+	pairingData := fmt.Sprintf("airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&version=3.0",
+		url.QueryEscape(fmt.Sprintf("ws://%s:%d/ws", ip, cfg.WebSocketPort)), url.QueryEscape(cfg.ServerName), ip, cfg.WebSocketPort)
 	pngBytes, _ := qrcode.Encode(pairingData, qrcode.Medium, 200)
 	img, _ := png.Decode(bytes.NewReader(pngBytes))
 
