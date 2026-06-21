@@ -45,6 +45,7 @@ type WSClient struct {
 	BytesRecv   int64
 	UserAgent   string
 	IP          string
+	Approved    bool
 }
 
 // ------------------------------------------------------------
@@ -306,6 +307,11 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 	}
 
+	if !client.Approved && msgType != "hello" && msgType != "ping" {
+		utils.LogDebug("Ignoring WebSocket %s while waiting for approval: device=%s", msgType, client.ID)
+		return
+	}
+
 	switch msgType {
 	case "file":
 		s.processFileMessage(client, payload)
@@ -353,10 +359,12 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
 		client.Name = name
+		client.Approved = true
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.UpdateDeviceName(client.ID, name)
 		}
-		utils.LogInfo("Device approved and identified: id=%s, name=%s", client.ID, name)
+		utils.LogInfo("WebSocket approval accepted: id=%s, name=%s", client.ID, name)
+		utils.LogInfo("WebSocket client connected: id=%s, name=%s", client.ID, name)
 
 		// Send welcome response
 		cfg := config.Get()

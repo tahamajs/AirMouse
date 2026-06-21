@@ -22,29 +22,29 @@ import (
 // ------------------------------------------------------------
 
 type ProximityTab struct {
-	enableCheck      *widget.Check
-	serviceRunning   bool
-	nearSlider       *widget.Slider
-	farSlider        *widget.Slider
-	nearEntry        *widget.Entry
-	farEntry         *widget.Entry
-	calibrateBtn     *widget.Button
-	lockNowBtn       *widget.Button
-	unlockNowBtn     *widget.Button
-	statusLabel      *widget.Label
-	distanceLabel    *widget.Label
-	deviceLabel      *widget.Label
-	historyChart     *widget.Label
-	lastDistance     float64
-	distanceHistory  []float64
-	stopUpdate       chan struct{}
-	stopOnce         sync.Once
-	cfg              *config.Config
-	lastLockState    bool
+	enableCheck     *widget.Check
+	serviceRunning  bool
+	nearSlider      *widget.Slider
+	farSlider       *widget.Slider
+	nearEntry       *widget.Entry
+	farEntry        *widget.Entry
+	calibrateBtn    *widget.Button
+	lockNowBtn      *widget.Button
+	unlockNowBtn    *widget.Button
+	statusLabel     *widget.Label
+	distanceLabel   *widget.Label
+	deviceLabel     *widget.Label
+	historyChart    *widget.Label
+	lastDistance    float64
+	distanceHistory []float64
+	stopUpdate      chan struct{}
+	stopOnce        sync.Once
+	cfg             *config.Config
+	lastLockState   bool
 }
 
 // NewProximityTab creates the proximity security tab.
-func NewProximityTab() fyne.CanvasObject {
+func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 	tab := &ProximityTab{
 		stopUpdate:      make(chan struct{}),
 		cfg:             config.Get(),
@@ -162,7 +162,7 @@ func NewProximityTab() fyne.CanvasObject {
 		historyCard,
 	)
 
-	return container.NewScroll(content)
+	return container.NewScroll(content), tab
 }
 
 // ------------------------------------------------------------
@@ -194,6 +194,11 @@ func (t *ProximityTab) stopProximityService() {
 	t.statusLabel.Importance = widget.MediumImportance
 	t.distanceLabel.SetText("📏 Current distance: -- m")
 	utils.LogInfo("Proximity service stopped")
+}
+
+// Stop shuts down the proximity tab background work.
+func (t *ProximityTab) Stop() {
+	t.stopProximityService()
 }
 
 // ------------------------------------------------------------

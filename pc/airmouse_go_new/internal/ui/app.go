@@ -36,15 +36,17 @@ type App struct {
 	deviceMgr *device.Manager
 	collector *personalization.DataCollector
 
-	dashboardTab fyne.CanvasObject
-	devicesTab   fyne.CanvasObject
-	networkTab   fyne.CanvasObject
-	gesturesTab  fyne.CanvasObject
-	proximityTab fyne.CanvasObject
-	analyticsTab fyne.CanvasObject
-	settingsTab  fyne.CanvasObject
-	logsTab      fyne.CanvasObject
-	protocolTab  fyne.CanvasObject
+	dashboardTab  fyne.CanvasObject
+	devicesTab    fyne.CanvasObject
+	networkTab    fyne.CanvasObject
+	gesturesTab   fyne.CanvasObject
+	proximityTab  fyne.CanvasObject
+	analyticsTab  fyne.CanvasObject
+	settingsTab   fyne.CanvasObject
+	logsTab       fyne.CanvasObject
+	protocolTab   fyne.CanvasObject
+	dashboardCtrl interface{ Stop() }
+	proximityCtrl interface{ Stop() }
 
 	statusBar        *StatusBar
 	connectionStatus *widget.Label
@@ -101,7 +103,12 @@ func (a *App) Run() error {
 
 	// ----- Create all tabs (using safeTab to catch nil) -----
 	utils.LogInfo("Building dashboard tab...")
-	a.dashboardTab = safeTab(NewDashboardTab(a.server, a.mouse, a.deviceMgr), "Dashboard")
+	if dashboardTab, dashboardCtrl := NewDashboardTab(a.server, a.mouse, a.deviceMgr); dashboardTab != nil {
+		a.dashboardTab = safeTab(dashboardTab, "Dashboard")
+		a.dashboardCtrl = dashboardCtrl
+	} else {
+		a.dashboardTab = safeTab(nil, "Dashboard")
+	}
 	utils.LogInfo("Building devices tab...")
 	a.devicesTab = safeTab(NewDevicesTab(a.deviceMgr), "Devices")
 	utils.LogInfo("Building network tab...")
@@ -109,7 +116,12 @@ func (a *App) Run() error {
 	utils.LogInfo("Building gestures tab...")
 	a.gesturesTab = safeTab(NewGesturesTab(), "Gestures")
 	utils.LogInfo("Building proximity tab...")
-	a.proximityTab = safeTab(NewProximityTab(), "Proximity")
+	if proximityTab, proximityCtrl := NewProximityTab(); proximityTab != nil {
+		a.proximityTab = safeTab(proximityTab, "Proximity")
+		a.proximityCtrl = proximityCtrl
+	} else {
+		a.proximityTab = safeTab(nil, "Proximity")
+	}
 	utils.LogInfo("Building analytics tab...")
 	a.analyticsTab = safeTab(NewAnalyticsTab(a.collector), "Analytics")
 	utils.LogInfo("Building settings tab...")
@@ -377,7 +389,7 @@ func (a *App) refreshConnectionSummary() {
 	}
 
 	ip := utils.GetLocalIP()
-	a.connectionStatus.SetText(fmt.Sprintf("🟢 Approved: %d device(s) connected", deviceCount))
+	a.connectionStatus.SetText(fmt.Sprintf("🟢 Connected: %d device(s)", deviceCount))
 	if a.summaryStatus != nil {
 		a.summaryStatus.SetText(fmt.Sprintf(
 			"Waiting for approval on %s:%d | ws://%s:%d/ws | UDP %d | Theme: %s",
@@ -432,6 +444,12 @@ func (a *App) shutdown(force bool) {
 func (a *App) stopBackgroundUI() {
 	if a.statusBar != nil {
 		a.statusBar.Stop()
+	}
+	if a.dashboardCtrl != nil {
+		a.dashboardCtrl.Stop()
+	}
+	if a.proximityCtrl != nil {
+		a.proximityCtrl.Stop()
 	}
 }
 
@@ -573,7 +591,7 @@ func (a *App) showUserGuide() {
 		widget.NewSeparator(),
 		widget.NewLabel("1. Start the server from Dashboard and wait for approval to be ready."),
 		widget.NewLabel("2. Scan the pairing QR code with the Android app."),
-		widget.NewLabel("3. Watch the Android app show waiting for approval, then approved."),
+		widget.NewLabel("3. Watch the Android app show waiting for approval, then approved, then connected."),
 		widget.NewLabel("4. Move your phone to control the cursor after approval."),
 		widget.NewLabel("5. Use gestures for media control and proximity for auto-lock."),
 	)

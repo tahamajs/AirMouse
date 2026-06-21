@@ -24,6 +24,7 @@ type Client struct {
 	BytesSent   int64
 	BytesRecv   int64
 	IP          string
+	Approved    bool
 }
 
 type Server struct {
@@ -105,6 +106,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	s.mu.Unlock()
 
 	utils.LogInfo("TCP client connected: id=%s ip=%s", clientID, clientIP)
+	utils.LogInfo("TCP approval pending: id=%s", clientID)
 	utils.LogDebug("TCP initial client record created: id=%s name=%s", clientID, client.Name)
 	s.deviceMgr.RegisterDevice(clientID, device.TypeTCP, client.Name)
 	s.triggerEvent(TCPEvent{
@@ -174,12 +176,20 @@ func (s *Server) processLine(client *Client, line []byte) {
 
 	switch msgType {
 	case "move":
+		if !client.Approved {
+			utils.LogDebug("Ignoring TCP move while waiting for approval: client=%s", client.ID)
+			return
+		}
 		dx := firstNumber(payload, "dx", "DeltaX", "deltaX")
 		dy := firstNumber(payload, "dy", "DeltaY", "deltaY")
 		s.mouse.Move(dx, dy)
 		utils.LogDebug("TCP move forwarded: client=%s dx=%.2f dy=%.2f", client.ID, dx, dy)
 
 	case "click":
+		if !client.Approved {
+			utils.LogDebug("Ignoring TCP click while waiting for approval: client=%s", client.ID)
+			return
+		}
 		button, _ := payload["button"].(string)
 		if button == "" {
 			button = "left"
@@ -189,14 +199,26 @@ func (s *Server) processLine(client *Client, line []byte) {
 		s.writeAck(client, id)
 
 	case "doubleclick":
+		if !client.Approved {
+			utils.LogDebug("Ignoring TCP doubleclick while waiting for approval: client=%s", client.ID)
+			return
+		}
 		s.mouse.DoubleClick()
 		s.writeAck(client, id)
 
 	case "rightclick":
+		if !client.Approved {
+			utils.LogDebug("Ignoring TCP rightclick while waiting for approval: client=%s", client.ID)
+			return
+		}
 		s.mouse.Click("right")
 		s.writeAck(client, id)
 
 	case "scroll":
+		if !client.Approved {
+			utils.LogDebug("Ignoring TCP scroll while waiting for approval: client=%s", client.ID)
+			return
+		}
 		delta := int(firstNumber(payload, "delta", "Scroll", "scroll"))
 		s.mouse.Scroll(delta)
 		utils.LogDebug("TCP scroll forwarded: client=%s delta=%d", client.ID, delta)
@@ -219,6 +241,8 @@ func (s *Server) processLine(client *Client, line []byte) {
 			client.Name = name
 			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
 		}
+		client.Approved = true
+		client.IsActive = true
 
 		welcome := fmt.Sprintf(
 			`{"type":"welcome","payload":{"server":"%s","version":"%s","client_id":"%s"}}`+"\n",
@@ -228,24 +252,35 @@ func (s *Server) processLine(client *Client, line []byte) {
 		)
 		client.Conn.Write([]byte(welcome))
 		client.BytesSent += int64(len(welcome))
-		utils.LogInfo("Approval sent to device (TCP): id=%s name=%s", client.ID, client.Name)
-
-		utils.LogInfo("TCP client identified: id=%s name=%s", client.ID, client.Name)
+		utils.LogInfo("TCP approval accepted: id=%s name=%s", client.ID, client.Name)
+		utils.LogInfo("TCP client connected: id=%s name=%s", client.ID, client.Name)
 
 	case "ping":
 		client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))
 
 	case "gesture":
+		if !client.Approved {
+			utils.LogDebug("Ignoring TCP gesture while waiting for approval: client=%s", client.ID)
+			return
+		}
 		gesture, _ := payload["gesture"].(string)
 		confidence := number(payload["confidence"])
 		utils.LogInfo("TCP gesture received: client=%s gesture=%s confidence=%.2f", client.ID, gesture, confidence)
 
 	case "proximity":
+		if !client.Approved {
+			utils.LogDebug("Ignoring TCP proximity while waiting for approval: client=%s", client.ID)
+			return
+		}
 		isNear, _ := payload["is_near"].(bool)
 		distance := number(payload["distance"])
 		utils.LogInfo("TCP proximity update: client=%s near=%v distance=%.2f", client.ID, isNear, distance)
 
 	case "control":
+		if !client.Approved {
+			utils.LogDebug("Ignoring TCP control while waiting for approval: client=%s", client.ID)
+			return
+		}
 		command, _ := payload["command"].(string)
 		switch command {
 		case "pause_movement":

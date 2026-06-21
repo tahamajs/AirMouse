@@ -244,7 +244,7 @@ func (t *DevicesTab) refresh() {
 		if !exists {
 			t.selectedID = ""
 			t.updateButtons(false)
-			t.details.SetText("Device waiting for approval")
+			t.details.SetText("Waiting for approval")
 		}
 	}
 }
@@ -360,8 +360,8 @@ func (t *DevicesTab) disconnectDevice() {
 				_ = t.deviceMgr.UnregisterDevice(t.selectedID)
 				t.selectedID = ""
 				t.refresh()
-				t.statusLabel.SetText("✓ Device waiting for approval")
-				t.details.SetText("Device waiting for approval")
+				t.statusLabel.SetText("Waiting for approval")
+				t.details.SetText("Waiting for approval")
 				t.updateButtons(false)
 			}
 		},
