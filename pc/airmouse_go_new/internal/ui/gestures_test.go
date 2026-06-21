@@ -1,35 +1,23 @@
 package ui
 
-import (
-	"testing"
-
-	"fyne.io/fyne/v2/widget"
-)
+import "testing"
 
 func TestGesturesTabFiltering(t *testing.T) {
-	tab := &GesturesTab{
-		templates: []GestureTemplate{
-			{Name: "ThumbsUp", Type: "Hand", Action: "Play/Pause"},
-			{Name: "LeftSwipe", Type: "Swipe", Action: "Previous Track"},
-			{Name: "CircleCW", Type: "Circular", Action: "Volume Up"},
-		},
-		searchEntry: widget.NewEntry(),
-		filterType:  widget.NewSelect([]string{"All", "Hand", "Swipe", "Circular", "Pinch"}, nil),
+	templates := []GestureTemplate{
+		{Name: "ThumbsUp", Type: "Hand", Action: "Play/Pause"},
+		{Name: "LeftSwipe", Type: "Swipe", Action: "Previous Track"},
+		{Name: "CircleCW", Type: "Circular", Action: "Volume Up"},
 	}
-	tab.filterType.SetSelected("All")
 
-	if got := len(tab.getFilteredTemplates()); got != 3 {
+	if got := len(filterGestureTemplates(templates, "", "All")); got != 3 {
 		t.Fatalf("expected 3 templates, got %d", got)
 	}
 
-	tab.filterType.SetSelected("Swipe")
-	if got := len(tab.getFilteredTemplates()); got != 1 {
+	if got := len(filterGestureTemplates(templates, "", "Swipe")); got != 1 {
 		t.Fatalf("expected 1 swipe template, got %d", got)
 	}
 
-	tab.searchEntry.SetText("volume")
-	tab.filterType.SetSelected("All")
-	if got := len(tab.getFilteredTemplates()); got != 1 {
+	if got := len(filterGestureTemplates(templates, "volume", "All")); got != 1 {
 		t.Fatalf("expected 1 template matching search, got %d", got)
 	}
 }
