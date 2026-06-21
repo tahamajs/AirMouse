@@ -231,11 +231,22 @@ func NewGesturesTab() fyne.CanvasObject {
 
 // getFilteredTemplates returns filtered list based on search and type.
 func (t *GesturesTab) getFilteredTemplates() []GestureTemplate {
-	filtered := make([]GestureTemplate, 0)
-	searchText := strings.ToLower(t.searchEntry.Text)
-	filterType := t.filterType.Selected
+	searchText := ""
+	filterType := "All"
+	if t.searchEntry != nil {
+		searchText = t.searchEntry.Text
+	}
+	if t.filterType != nil && t.filterType.Selected != "" {
+		filterType = t.filterType.Selected
+	}
+	return filterGestureTemplates(t.templates, searchText, filterType)
+}
 
-	for _, g := range t.templates {
+func filterGestureTemplates(templates []GestureTemplate, searchText, filterType string) []GestureTemplate {
+	filtered := make([]GestureTemplate, 0)
+	searchText = strings.ToLower(searchText)
+
+	for _, g := range templates {
 		if filterType != "All" && g.Type != filterType {
 			continue
 		}
