@@ -314,7 +314,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		widget.NewLabel("Air Mouse Pro turns your phone into a smooth wireless pointer."),
 		widget.NewLabel("Start the server, pair from QR or Network, then watch live device logs below."),
 		widget.NewSeparator(),
-		container.NewGridWithColumns(4,
+		container.NewGridWithColumns(2,
 			widget.NewLabel("Ready for pairing"),
 			widget.NewLabel("Live approval + ACK tracking"),
 			widget.NewLabel(fmt.Sprintf("Theme: %s", tab.cfg.Theme)),
@@ -338,13 +338,13 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		savedCard,
 	)
 
-		rightColumn := container.NewVBox(
-			statusCard,
-			permissionCard,
-			actionsCard,
-			connectionCard,
-			logsCard,
-			featureCard,
+	rightColumn := container.NewVBox(
+		statusCard,
+		permissionCard,
+		actionsCard,
+		connectionCard,
+		logsCard,
+		featureCard,
 		profileCard,
 	)
 
@@ -427,6 +427,13 @@ func (t *DashboardTab) refreshStats() {
 	}
 	// Update UI in one batch
 	RunOnMain(func() {
+		if t.permissionHint != nil {
+			if control.HasAccessibilityPermission() {
+				t.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
+			} else {
+				t.permissionHint.SetText("⚠️ macOS Accessibility permission is required to move the mouse and click.")
+			}
+		}
 		t.statsLabel.SetText(fmt.Sprintf(
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
 			clicks, dbl, right, scroll,
@@ -434,9 +441,10 @@ func (t *DashboardTab) refreshStats() {
 		t.connLabel.SetText(fmt.Sprintf("📱 Connected devices: %d  |  Saved devices: %d", deviceCount, savedCount))
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
-			t.savedDetailBox.SetText(strings.Join(savedDetails, "\n\n"))
 			if savedCount > 0 {
 				t.savedDetailBox.SetText("Previously connected devices:\n\n" + strings.Join(savedDetails, "\n\n"))
+			} else {
+				t.savedDetailBox.SetText("No previously connected devices yet.\nConnect a phone once and it will stay here for future sessions.")
 			}
 			utils.LogDebug("Dashboard device list updated: %s", strings.Join(deviceNamesForLog(devices), ", "))
 		} else {
