@@ -42,6 +42,7 @@ type DashboardTab struct {
 	nearbyDetailBox *widget.Label
 	savedDetailBox  *widget.Label
 	recentLogsBox   *widget.Label
+	permissionHint  *widget.Label
 
 	controlBtn *widget.Button
 	qrBtn      *widget.Button
@@ -108,6 +109,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	tab.recentLogsBox = widget.NewLabel("Waiting for logs...")
 	tab.recentLogsBox.Wrapping = fyne.TextWrapWord
 	tab.recentLogsBox.SetText("Waiting for logs...\n")
+	tab.permissionHint = widget.NewLabel("⚠️ macOS Accessibility permission is required to move the mouse and click.")
+	tab.permissionHint.Wrapping = fyne.TextWrapWord
 
 	utils.AddLogHook(func(level, msg string) {
 		tab.addRecentLog(level, msg)
@@ -195,6 +198,30 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.showPairingQRDialog()
 	})
 	tab.controlBtn.Importance = widget.HighImportance
+
+	permissionCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("🔒 macOS Permissions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		tab.permissionHint,
+		container.NewHBox(
+			widget.NewButton("Open Settings", func() {
+				if err := control.OpenAccessibilitySettings(); err != nil {
+					dialog.ShowError(err, getCurrentWindow())
+				}
+			}),
+			widget.NewButton("Check Now", func() {
+				if control.HasAccessibilityPermission() {
+					tab.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
+				} else {
+					tab.permissionHint.SetText("⚠️ Permission still missing. Enable Accessibility for Air Mouse Pro Server in System Settings.")
+				}
+			}),
+		),
+	)))
+
+	if control.HasAccessibilityPermission() {
+		tab.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
+	}
 
 	// Profile card
 	profileCard := NewGlassCard(container.NewPadded(tab.createProfileCard()))
@@ -311,12 +338,13 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		savedCard,
 	)
 
-	rightColumn := container.NewVBox(
-		statusCard,
-		actionsCard,
-		connectionCard,
-		logsCard,
-		featureCard,
+		rightColumn := container.NewVBox(
+			statusCard,
+			permissionCard,
+			actionsCard,
+			connectionCard,
+			logsCard,
+			featureCard,
 		profileCard,
 	)
 

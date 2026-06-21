@@ -232,8 +232,8 @@ func StableDeviceID(parts ...string) string {
 
 // simulateDeviceDiscovery simulates discovering devices
 func (m *DeviceManager) simulateDeviceDiscovery() {
+	var discovered *DeviceEvent
 	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	// Only add if not already present and not blocked
 	addr := "AA:BB:CC:DD:EE:FF"
@@ -248,12 +248,17 @@ func (m *DeviceManager) simulateDeviceDiscovery() {
 			RSSI:        -45,
 			MACAddress:  addr,
 		}
-		m.triggerEvent(DeviceEvent{
+		discovered = &DeviceEvent{
 			Type:       "discovered",
 			DeviceID:   addr,
 			DeviceName: "AirMouse Device",
 			Timestamp:  time.Now(),
-		})
+		}
+	}
+	m.mu.Unlock()
+
+	if discovered != nil {
+		go m.triggerEvent(*discovered)
 		logInfo("Nearby device discovered: %s (%s)", "AirMouse Device", addr)
 		logDebug("BLE device discovered: AirMouse Device (%s)", addr)
 	}
@@ -546,8 +551,8 @@ func (m *DeviceManager) UpdateBLEDevice(addr, name string, rssi int32) {
 		return
 	}
 
+	var discovered *DeviceEvent
 	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	if device, exists := m.devices[addr]; exists {
 		device.RSSI = rssi
@@ -566,14 +571,19 @@ func (m *DeviceManager) UpdateBLEDevice(addr, name string, rssi int32) {
 			RSSI:        rssi,
 			MACAddress:  addr,
 		}
+		discovered = &DeviceEvent{
+			Type:       "discovered",
+			DeviceID:   addr,
+			DeviceName: name,
+			Timestamp:  time.Now(),
+		}
 	}
 	m.persistLocked()
-	go m.triggerEvent(DeviceEvent{
-		Type:       "discovered",
-		DeviceID:   addr,
-		DeviceName: name,
-		Timestamp:  time.Now(),
-	})
+	m.mu.Unlock()
+
+	if discovered != nil {
+		go m.triggerEvent(*discovered)
+	}
 	logInfo("Nearby BLE device discovered: %s (%s)", name, addr)
 	logDebug("BLE device discovered: %s (%s)", name, addr)
 }
@@ -588,21 +598,26 @@ func (m *DeviceManager) BlockDevice(id string) error {
 	}
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	m.blockedIDs[id] = true
+	var blocked *DeviceEvent
 
 	if device, exists := m.devices[id]; exists {
 		device.Status = StatusBlocked
-		go m.triggerEvent(DeviceEvent{
+		blocked = &DeviceEvent{
 			Type:       "blocked",
 			DeviceID:   id,
 			DeviceName: device.Name,
 			Timestamp:  time.Now(),
-		})
-		logInfo("Device blocked: %s (%s)", device.Name, id)
+		}
 	}
 	m.persistLocked()
+	m.mu.Unlock()
+
+	if blocked != nil {
+		go m.triggerEvent(*blocked)
+		logInfo("Device blocked: %s (%s)", blocked.DeviceName, id)
+	}
 
 	return nil
 }
