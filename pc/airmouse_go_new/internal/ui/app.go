@@ -100,14 +100,23 @@ func (a *App) Run() error {
 	a.summaryStatus.Wrapping = fyne.TextWrapWord
 
 	// ----- Create all tabs (using safeTab to catch nil) -----
+	utils.LogInfo("Building dashboard tab...")
 	a.dashboardTab = safeTab(NewDashboardTab(a.server, a.mouse, a.deviceMgr), "Dashboard")
+	utils.LogInfo("Building devices tab...")
 	a.devicesTab = safeTab(NewDevicesTab(a.deviceMgr), "Devices")
+	utils.LogInfo("Building network tab...")
 	a.networkTab = safeTab(NewNetworkTab(a.cfg), "Network")
+	utils.LogInfo("Building gestures tab...")
 	a.gesturesTab = safeTab(NewGesturesTab(), "Gestures")
+	utils.LogInfo("Building proximity tab...")
 	a.proximityTab = safeTab(NewProximityTab(), "Proximity")
+	utils.LogInfo("Building analytics tab...")
 	a.analyticsTab = safeTab(NewAnalyticsTab(a.collector), "Analytics")
+	utils.LogInfo("Building settings tab...")
 	a.settingsTab = safeTab(NewSettingsTab(a.cfg, a.mouse), "Settings")
+	utils.LogInfo("Building logs tab...")
 	a.logsTab = safeTab(NewLogsTab(), "Logs")
+	utils.LogInfo("Building protocol tab...")
 	a.protocolTab = safeTab(NewProtocolGuideTab(a.cfg, a.server), "Network Protocol")
 
 	// ----- Debug: Print tab status -----

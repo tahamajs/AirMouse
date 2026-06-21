@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -194,6 +195,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 	tab.qrImage.FillMode = canvas.ImageFillOriginal
 	tab.qrImage.SetMinSize(fyne.NewSize(250, 250))
 	tab.updateQR()
+	tab.qrImage.Refresh()
 
 	// Auto-save when fields change
 	tab.ipEntry.OnChanged = func(s string) {
@@ -280,7 +282,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 
 // updateQR refreshes the QR code image based on the current IP and port.
 func (t *NetworkTab) updateQR() {
-	data := buildPairingURI(t.ipEntry.Text, t.portEntry.Text, t.wsPortEntry.Text, t.cfg.ServerName)
+	data := buildPairingURI(t.safeIP(), t.portEntry.Text, t.wsPortEntry.Text, t.udpPortEntry.Text, t.cfg.ServerName)
 
 	pngBytes, err := qrcode.Encode(data, qrcode.High, 250)
 	if err != nil {
@@ -299,16 +301,25 @@ func (t *NetworkTab) pairingSummary() string {
 }
 
 func (t *NetworkTab) pairingURI() string {
-	return buildPairingURI(t.ipEntry.Text, t.portEntry.Text, t.wsPortEntry.Text, t.cfg.ServerName)
+	return buildPairingURI(t.safeIP(), t.portEntry.Text, t.wsPortEntry.Text, t.udpPortEntry.Text, t.cfg.ServerName)
 }
 
-func buildPairingURI(ip, port, wsPort, serverName string) string {
+func (t *NetworkTab) safeIP() string {
+	ip := strings.TrimSpace(t.ipEntry.Text)
+	if ip == "" {
+		return utils.GetLocalIP()
+	}
+	return ip
+}
+
+func buildPairingURI(ip, port, wsPort, udpPort, serverName string) string {
 	return fmt.Sprintf(
-		"airmouse://pair?ip=%s&port=%s&ws=ws://%s:%s/ws&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
-		ip,
-		port,
-		ip,
-		wsPort,
+		"airmouse://pair?ip=%s&tcp=%s&ws=ws://%s:%s/ws&udp=%s&name=%s&version=3.0&type=mobile&protocol=WEBSOCKET",
+		url.QueryEscape(ip),
+		url.QueryEscape(port),
+		url.QueryEscape(ip),
+		url.QueryEscape(wsPort),
+		url.QueryEscape(udpPort),
 		url.QueryEscape(serverName),
 	)
 }
