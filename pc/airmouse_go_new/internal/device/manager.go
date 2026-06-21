@@ -322,15 +322,14 @@ func (m *DeviceManager) RegisterDevice(id string, deviceType DeviceType, name st
 		LastActive:  now,
 	}
 
-	m.triggerEvent(DeviceEvent{
+	m.persistLocked()
+	go m.triggerEvent(DeviceEvent{
 		Type:       "registered",
 		DeviceID:   id,
 		DeviceName: name,
 		Timestamp:  now,
 	})
-
 	logInfo("Device registered: %s (%s)", name, deviceType)
-	m.persistLocked()
 	return nil
 }
 
@@ -450,15 +449,14 @@ func (m *DeviceManager) UnregisterDevice(id string) error {
 
 	delete(m.devices, id)
 
-	m.triggerEvent(DeviceEvent{
+	m.persistLocked()
+	go m.triggerEvent(DeviceEvent{
 		Type:       "unregistered",
 		DeviceID:   id,
 		DeviceName: device.Name,
 		Timestamp:  time.Now(),
 	})
-
 	logInfo("Device unregistered: %s (%s)", device.Name, device.Type)
-	m.persistLocked()
 	return nil
 }
 
@@ -482,15 +480,14 @@ func (m *DeviceManager) UpdateDeviceName(id string, name string) error {
 	device.Name = name
 	device.LastActive = time.Now()
 
-	m.triggerEvent(DeviceEvent{
+	m.persistLocked()
+	go m.triggerEvent(DeviceEvent{
 		Type:       "updated",
 		DeviceID:   id,
 		DeviceName: name,
 		Timestamp:  time.Now(),
 	})
-
 	logInfo("Device renamed: %s (%s)", name, id)
-	m.persistLocked()
 	return nil
 }
 
@@ -569,16 +566,16 @@ func (m *DeviceManager) UpdateBLEDevice(addr, name string, rssi int32) {
 			RSSI:        rssi,
 			MACAddress:  addr,
 		}
-		m.triggerEvent(DeviceEvent{
-			Type:       "discovered",
-			DeviceID:   addr,
-			DeviceName: name,
-			Timestamp:  time.Now(),
-		})
-		logInfo("Nearby BLE device discovered: %s (%s)", name, addr)
-		logDebug("BLE device discovered: %s (%s)", name, addr)
 	}
 	m.persistLocked()
+	go m.triggerEvent(DeviceEvent{
+		Type:       "discovered",
+		DeviceID:   addr,
+		DeviceName: name,
+		Timestamp:  time.Now(),
+	})
+	logInfo("Nearby BLE device discovered: %s (%s)", name, addr)
+	logDebug("BLE device discovered: %s (%s)", name, addr)
 }
 
 // BlockDevice blocks a device
@@ -597,7 +594,7 @@ func (m *DeviceManager) BlockDevice(id string) error {
 
 	if device, exists := m.devices[id]; exists {
 		device.Status = StatusBlocked
-		m.triggerEvent(DeviceEvent{
+		go m.triggerEvent(DeviceEvent{
 			Type:       "blocked",
 			DeviceID:   id,
 			DeviceName: device.Name,
