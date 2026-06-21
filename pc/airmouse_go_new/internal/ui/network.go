@@ -52,7 +52,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 
 	header := container.NewVBox(
 		widget.NewLabelWithStyle("🌐 Network Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("Use this page to discover the host IP, verify the ports, and generate a QR code for Android pairing."),
+		widget.NewLabel("Use this page to discover the host IP, verify the ports, and generate a QR code for Android approval."),
 	)
 
 	// IP Address selection
@@ -136,7 +136,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 	}
 
 	// Status label
-	tab.statusLabel = widget.NewLabel("✅ Ready")
+	tab.statusLabel = widget.NewLabel("⏳ Waiting for approval")
 	tab.statusLabel.Importance = widget.SuccessImportance
 	tab.overviewLabel = widget.NewLabel("")
 	tab.overviewLabel.Wrapping = fyne.TextWrapWord
@@ -151,7 +151,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 
 		time.AfterFunc(2*time.Second, func() {
 			RunOnMain(func() {
-				tab.statusLabel.SetText("✅ Ready")
+				tab.statusLabel.SetText("⏳ Waiting for approval")
 				tab.statusLabel.Importance = widget.SuccessImportance
 			})
 		})
@@ -168,7 +168,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		}
 		endpoint := fmt.Sprintf("ws://%s:%s/ws", tab.ipEntry.Text, tab.wsPortEntry.Text)
 		win.Clipboard().SetContent(endpoint)
-		dialog.ShowInformation("Copied", "WebSocket endpoint copied to clipboard", win)
+		dialog.ShowInformation("Copied", "WebSocket approval endpoint copied to clipboard", win)
 	})
 
 	tab.genQrBtn = widget.NewButtonWithIcon("Generate QR", theme.InfoIcon(), tab.updateQR)
@@ -239,7 +239,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		widget.NewLabel(fmt.Sprintf("Current host IP: %s", tab.ipEntry.Text)),
 		widget.NewLabel(fmt.Sprintf("TCP / WS / UDP: %s / %s / %s", tab.portEntry.Text, tab.wsPortEntry.Text, tab.udpPortEntry.Text)),
 		tab.overviewLabel,
-		widget.NewLabel("The Android app can scan the QR code below and then request a session on the selected protocol."),
+		widget.NewLabel("The Android app can scan the QR code below and then request approval on the selected protocol."),
 	)))
 
 	ipCard := NewGlassCard(container.NewPadded(container.NewVBox(
