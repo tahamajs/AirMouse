@@ -83,7 +83,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	// Status displays
 	tab.statsLabel = widget.NewLabel("📊 Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
-	tab.connLabel = widget.NewLabel("📱 Connected devices: 0")
+	tab.connLabel = widget.NewLabel("📱 Approved devices: 0")
 
 	tab.endpointLabel = widget.NewLabel("🔌 Endpoint: not started")
 	tab.protocolLabel = widget.NewLabel("🛰️ Protocols: TCP / WebSocket / UDP discovery")
@@ -98,7 +98,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		fyne.TextAlignCenter,
 		fyne.TextStyle{Bold: true},
 	)
-	tab.deviceDetailBox = widget.NewLabel("No connected devices yet.")
+	tab.deviceDetailBox = widget.NewLabel("No approved devices yet.")
 	tab.deviceDetailBox.Wrapping = fyne.TextWrapWord
 	tab.nearbyDetailBox = widget.NewLabel("Nearby device list will appear here once the server sees clients on the network.")
 	tab.nearbyDetailBox.Wrapping = fyne.TextWrapWord
@@ -357,12 +357,12 @@ func (t *DashboardTab) refreshStats() {
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
 			clicks, dbl, right, scroll,
 		))
-		t.connLabel.SetText(fmt.Sprintf("📱 Connected devices: %d", deviceCount))
+		t.connLabel.SetText(fmt.Sprintf("📱 Approved devices: %d", deviceCount))
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
 			utils.LogDebug("Dashboard device list updated: %s", strings.Join(deviceNamesForLog(devices), ", "))
 		} else {
-			t.deviceDetailBox.SetText("No connected devices yet.")
+			t.deviceDetailBox.SetText("No approved devices yet.")
 			utils.LogDebug("Dashboard device list empty")
 		}
 		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(devices))

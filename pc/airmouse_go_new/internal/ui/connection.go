@@ -42,7 +42,7 @@ func NewConnectionQualityWidget() *ConnectionQualityWidget {
 	ic.SetMinSize(fyne.NewSize(32, 32))
 	ic.Refresh()
 
-	lbl := widget.NewLabel("Disconnected")
+	lbl := widget.NewLabel("Waiting for approval")
 	lbl.Importance = widget.DangerImportance
 
 	statusLbl := widget.NewLabel("No connection")
@@ -285,7 +285,7 @@ func (w *ConnectionQualityWidget) Reset() {
 	w.history = make([]int64, 0, w.maxHistory)
 	w.status = "unknown"
 	w.lastUpdate = time.Time{}
-	w.label.SetText("Disconnected")
+	w.label.SetText("Waiting for approval")
 	w.label.Importance = widget.DangerImportance
 	w.statusLabel.SetText("No connection")
 	w.statusLabel.Importance = widget.MediumImportance
