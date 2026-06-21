@@ -49,6 +49,7 @@ type DashboardTab struct {
 	serverStart time.Time
 	mu          sync.Mutex
 	logMu       sync.Mutex
+	stopOnce    sync.Once
 	recentLogs  []string
 	mouse       control.MouseController
 	server      *protocol.ProtocolServer
@@ -598,5 +599,7 @@ func (t *DashboardTab) showPairingQRDialog() {
 
 // Stop stops the dashboard background goroutines
 func (t *DashboardTab) Stop() {
-	close(t.stopChan)
+	t.stopOnce.Do(func() {
+		close(t.stopChan)
+	})
 }
