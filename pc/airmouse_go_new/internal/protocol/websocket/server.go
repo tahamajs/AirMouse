@@ -189,6 +189,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.LogInfo("WebSocket client connected: id=%s, ip=%s", id, client.IP)
+	utils.LogInfo("WebSocket approval pending: id=%s", id)
 
 	// Send welcome message
 	welcome := WelcomeMessage(cfg.ServerName, cfg.Version)
@@ -354,7 +355,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.UpdateDeviceName(client.ID, name)
 		}
-		utils.LogInfo("Device identified: id=%s, name=%s", client.ID, name)
+		utils.LogInfo("Device approved and identified: id=%s, name=%s", client.ID, name)
 
 		// Send welcome response
 		cfg := config.Get()

@@ -575,7 +575,7 @@ func (a *App) showUserGuide() {
 		widget.NewSeparator(),
 		widget.NewLabel("1. Start the server from Dashboard and wait for it to be ready."),
 		widget.NewLabel("2. Scan the pairing QR code with the Android app."),
-		widget.NewLabel("3. Watch the Android app show approval pending, then approved."),
+		widget.NewLabel("3. Watch the Android app show waiting for approval, then approved."),
 		widget.NewLabel("4. Move your phone to control the cursor after approval."),
 		widget.NewLabel("5. Use gestures for media control and proximity for auto-lock."),
 	)
@@ -586,7 +586,7 @@ func (a *App) showAPIDocs() {
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("API Documentation", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		widget.NewLabel("WebSocket Endpoint: ws://server:8080/ws"),
+		widget.NewLabel("WebSocket Endpoint: ws://server:8081/ws"),
 		widget.NewLabel("REST API: http://server:8080/api"),
 		widget.NewLabel("Health Check: GET /health"),
 		widget.NewLabel("Status: GET /api/status"),
