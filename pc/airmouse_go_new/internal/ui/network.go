@@ -346,9 +346,9 @@ func (t *NetworkTab) testConnection() {
 				dialog.ShowError(fmt.Errorf("Cannot connect to %s:%s\n\nMake sure the server is running and firewall allows the port", ip, port), win)
 			} else {
 				_ = conn.Close()
-				t.statusLabel.SetText(fmt.Sprintf("✅ Connection successful to %s:%s", ip, port))
+				t.statusLabel.SetText(fmt.Sprintf("✅ Approval handshake successful with %s:%s", ip, port))
 				t.statusLabel.Importance = widget.SuccessImportance
-				dialog.ShowInformation("Connection Test", fmt.Sprintf("Successfully connected to %s:%s", ip, port), win)
+				dialog.ShowInformation("Connection Test", fmt.Sprintf("Approval handshake succeeded with %s:%s", ip, port), win)
 			}
 		})
 	}()

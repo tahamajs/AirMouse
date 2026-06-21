@@ -33,7 +33,7 @@ func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServ
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Network Protocol", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("This page explains how the Android app and the Go server approve, connect, and exchange control data."),
+		widget.NewLabel("This page explains how the Android app and the Go server wait for approval, approve the session, and then connect."),
 		widget.NewSeparator(),
 		widget.NewLabel(fmt.Sprintf("Server status: %s", statusText)),
 		widget.NewLabel(fmt.Sprintf("TCP port: %d", cfg.Port)),
@@ -44,7 +44,7 @@ func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServ
 		widget.NewLabel("1. Android connects over WebSocket or TCP and waits for approval."),
 		widget.NewLabel("2. Android sends hello with device name, app version, and pairing token."),
 		widget.NewLabel("3. Go replies with welcome to approve the session."),
-		widget.NewLabel("4. Cursor, click, and scroll messages begin after approval."),
+		widget.NewLabel("4. Cursor, click, and scroll messages begin after approval and the session becomes connected."),
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Message Rules", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("• move is best effort and not ACKed."),

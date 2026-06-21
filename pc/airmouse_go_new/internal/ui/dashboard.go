@@ -59,11 +59,11 @@ type DashboardTab struct {
 }
 
 // NewDashboardTab creates the dashboard tab content.
-func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) fyne.CanvasObject {
+func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) (fyne.CanvasObject, *DashboardTab) {
 	// Safety: if any dependency is nil, return a placeholder
 	if server == nil || mouse == nil || deviceMgr == nil {
 		return widget.NewLabelWithStyle("⚠️ Dashboard unavailable - dependencies missing",
-			fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+			fyne.TextAlignCenter, fyne.TextStyle{Bold: true}), nil
 	}
 
 	tab := &DashboardTab{
@@ -83,11 +83,11 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	// Status displays
 	tab.statsLabel = widget.NewLabel("📊 Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
-	tab.connLabel = widget.NewLabel("📱 Approved devices: 0")
+	tab.connLabel = widget.NewLabel("📱 Connected devices: 0")
 
 	tab.endpointLabel = widget.NewLabel("🔌 Endpoint: not started")
 	tab.protocolLabel = widget.NewLabel("🛰️ Protocols: TCP / WebSocket / UDP discovery")
-	tab.retryLabel = widget.NewLabel("🔁 ACK / Retry: waiting for approval handshake")
+	tab.retryLabel = widget.NewLabel("🔁 ACK / Retry: waiting for approval")
 	tab.uptimeLabel = widget.NewLabel("⏱️ Uptime: --:--:--")
 	tab.aiStatusLabel = widget.NewLabel("🧠 AI Smoothing: Disabled")
 	tab.summaryLabel = widget.NewLabel("Status summary will appear here once the server starts.")
@@ -98,7 +98,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		fyne.TextAlignCenter,
 		fyne.TextStyle{Bold: true},
 	)
-	tab.deviceDetailBox = widget.NewLabel("No approved devices yet.")
+	tab.deviceDetailBox = widget.NewLabel("No connected devices yet.")
 	tab.deviceDetailBox.Wrapping = fyne.TextWrapWord
 	tab.nearbyDetailBox = widget.NewLabel("Nearby device list will appear here once the server sees clients on the network.")
 	tab.nearbyDetailBox.Wrapping = fyne.TextWrapWord
@@ -293,7 +293,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	// Start background stats updater
 	go tab.statsUpdater()
 
-	return container.NewScroll(content)
+	return container.NewScroll(content), tab
 }
 
 // ------------------------------------------------------------
@@ -364,12 +364,12 @@ func (t *DashboardTab) refreshStats() {
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
 			clicks, dbl, right, scroll,
 		))
-		t.connLabel.SetText(fmt.Sprintf("📱 Approved devices: %d", deviceCount))
+		t.connLabel.SetText(fmt.Sprintf("📱 Connected devices: %d", deviceCount))
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
 			utils.LogDebug("Dashboard device list updated: %s", strings.Join(deviceNamesForLog(devices), ", "))
 		} else {
-			t.deviceDetailBox.SetText("No approved devices yet.")
+			t.deviceDetailBox.SetText("No connected devices yet.")
 			utils.LogDebug("Dashboard device list empty")
 		}
 		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(devices))
@@ -384,7 +384,7 @@ func (t *DashboardTab) refreshStats() {
 				int(uptime.Seconds())%60,
 			))
 			t.summaryLabel.SetText(fmt.Sprintf(
-				"Running on %s with %d approved device(s). Pending sessions wait for approval and live telemetry updates below.",
+				"Running on %s with %d connected device(s). Pending sessions wait for approval and live telemetry updates below.",
 				utils.GetLocalIP(),
 				deviceCount,
 			))
@@ -402,7 +402,7 @@ func (t *DashboardTab) refreshStats() {
 				t.aiStatusLabel.SetText("🧠 AI Smoothing: Disabled ⭕")
 			}
 		} else {
-			t.retryLabel.SetText("🔁 ACK / Retry: waiting for server start")
+			t.retryLabel.SetText("🔁 ACK / Retry: waiting for approval")
 		}
 	})
 }
@@ -588,7 +588,7 @@ func (t *DashboardTab) showPairingQRDialog() {
 			"1. Open Air Mouse on your phone\n" +
 			"2. Tap the QR scanner icon\n" +
 			"3. Scan this QR code\n" +
-			"4. The phone will show waiting for approval, then approved\n\n" +
+			"4. The phone will show waiting for approval, then approved, then connected\n\n" +
 			fmt.Sprintf("Server: %s\nIP: %s\nPort: %d\nVersion: %s",
 				t.cfg.ServerName, ip, port, t.cfg.Version),
 	)
