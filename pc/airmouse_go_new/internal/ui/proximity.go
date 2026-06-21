@@ -35,6 +35,9 @@ type ProximityTab struct {
 	distanceLabel   *widget.Label
 	deviceLabel     *widget.Label
 	historyChart    *widget.Label
+	overviewLabel   *widget.Label
+	modeLabel       *widget.Label
+	thresholdLabel  *widget.Label
 	lastDistance    float64
 	distanceHistory []float64
 	stopUpdate      chan struct{}
@@ -51,6 +54,11 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		distanceHistory: make([]float64, 0, 60),
 		lastLockState:   false,
 	}
+
+	tab.overviewLabel = widget.NewLabel("Proximity security can lock the screen when the phone moves away and unlock when it returns.")
+	tab.overviewLabel.Wrapping = fyne.TextWrapWord
+	tab.modeLabel = widget.NewLabel("Mode: waiting for enable")
+	tab.thresholdLabel = widget.NewLabel("")
 
 	// ----- Header -----
 	header := container.NewHBox(
@@ -80,6 +88,7 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		tab.statusLabel,
 		tab.distanceLabel,
 		tab.deviceLabel,
+		tab.modeLabel,
 	)
 
 	// ----- Thresholds -----
@@ -125,6 +134,7 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		widget.NewSeparator(),
 		widget.NewLabel("Near (Unlock):"), nearContainer,
 		widget.NewLabel("Far (Lock):"), farContainer,
+		tab.thresholdLabel,
 	)
 
 	// ----- Actions -----
@@ -140,6 +150,7 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		widget.NewLabelWithStyle("Actions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		container.NewHBox(tab.calibrateBtn, tab.lockNowBtn, tab.unlockNowBtn),
+		widget.NewLabel("Use calibration to match your room and movement habits before enabling auto lock."),
 	)
 
 	// ----- History -----
@@ -149,16 +160,27 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 	historyCard := container.NewVBox(
 		widget.NewLabelWithStyle("Distance History", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
+		widget.NewLabel("Live distance samples appear here with a simple bar visualization."),
 		container.NewScroll(tab.historyChart),
 	)
 
 	// ----- Main layout -----
+	overviewCard := container.NewVBox(
+		widget.NewLabelWithStyle("Proximity Security", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		tab.overviewLabel,
+		widget.NewLabel("This page lets you tune near/far thresholds, calibrate behavior, and watch live distance changes."),
+	)
+
+	topGrid := container.NewGridWithColumns(2, overviewCard, statusCard)
+	midGrid := container.NewGridWithColumns(2, thresholdsCard, actionsCard)
+
 	content := container.NewVBox(
 		header,
 		widget.NewSeparator(),
 		tab.enableCheck,
-		container.NewGridWithColumns(2, statusCard, thresholdsCard),
-		actionsCard,
+		topGrid,
+		midGrid,
 		historyCard,
 	)
 
@@ -176,6 +198,8 @@ func (t *ProximityTab) startProximityService() {
 	t.serviceRunning = true
 	t.statusLabel.SetText("🟢 Proximity service running")
 	t.statusLabel.Importance = widget.SuccessImportance
+	t.modeLabel.SetText("Mode: active monitoring")
+	t.thresholdLabel.SetText(fmt.Sprintf("Auto-lock when distance is above %.1f m and unlock when below %.1f m.", t.cfg.ProximityFarThreshold, t.cfg.ProximityNearThreshold))
 	utils.LogInfo("Proximity service started")
 	go t.simulateDistanceUpdates()
 }
@@ -193,6 +217,8 @@ func (t *ProximityTab) stopProximityService() {
 	t.statusLabel.SetText("⚪ Proximity service stopped")
 	t.statusLabel.Importance = widget.MediumImportance
 	t.distanceLabel.SetText("📏 Current distance: -- m")
+	t.modeLabel.SetText("Mode: service stopped")
+	t.thresholdLabel.SetText("")
 	utils.LogInfo("Proximity service stopped")
 }
 
@@ -253,6 +279,12 @@ func (t *ProximityTab) updateDistance(distance float64) {
 	RunOnMain(func() {
 		t.distanceLabel.SetText(fmt.Sprintf("📏 Current distance: %.2f m", distance))
 		t.historyChart.SetText(historyText)
+		t.modeLabel.SetText(fmt.Sprintf("Mode: %s | Near %.1f m | Far %.1f m", func() string {
+			if t.serviceRunning {
+				return "monitoring"
+			}
+			return "idle"
+		}(), t.cfg.ProximityNearThreshold, t.cfg.ProximityFarThreshold))
 
 		// Colour coding
 		if distance < t.cfg.ProximityNearThreshold {
@@ -307,6 +339,8 @@ func (t *ProximityTab) startCalibration() {
 		return
 	}
 
+	t.thresholdLabel.SetText("Calibration in progress... keep the phone at the requested distances.")
+
 	steps := []struct {
 		distance float64
 		label    string
@@ -336,6 +370,7 @@ func (t *ProximityTab) startCalibration() {
 				avgCorrection := totalCorrection / float64(len(measurements))
 				resultMsg := fmt.Sprintf("Calibration complete!\n\nCorrection factor: %.2f\n\nProximity readings will be adjusted automatically.", avgCorrection)
 				dialog.ShowInformation("Calibration Complete", resultMsg, win)
+				t.thresholdLabel.SetText(fmt.Sprintf("Calibration complete. Near %.1f m | Far %.1f m", t.cfg.ProximityNearThreshold, t.cfg.ProximityFarThreshold))
 			}
 			return
 		}
