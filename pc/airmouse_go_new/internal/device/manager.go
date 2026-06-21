@@ -3,7 +3,10 @@ package device
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -29,21 +32,30 @@ const (
 )
 
 type DeviceInfo struct {
-	ID           string       `json:"id"`
-	Name         string       `json:"name"`
-	Type         DeviceType   `json:"type"`
-	Status       DeviceStatus `json:"status"`
-	ConnectedAt  time.Time    `json:"connected_at"`
-	LastActive   time.Time    `json:"last_active"`
-	BytesSent    int64        `json:"bytes_sent"`
-	BytesRecv    int64        `json:"bytes_recv"`
-	MessagesSent int64        `json:"messages_sent"`
-	MessagesRecv int64        `json:"messages_recv"`
-	RSSI         int32        `json:"rssi,omitempty"`
-	MACAddress   string       `json:"mac_address,omitempty"`
-	IPAddress    string       `json:"ip_address,omitempty"`
-	UserAgent    string       `json:"user_agent,omitempty"`
-	Version      string       `json:"version,omitempty"`
+	ID             string       `json:"id"`
+	Fingerprint    string       `json:"fingerprint,omitempty"`
+	Name           string       `json:"name"`
+	Type           DeviceType   `json:"type"`
+	Status         DeviceStatus `json:"status"`
+	ConnectedAt    time.Time    `json:"connected_at"`
+	LastActive     time.Time    `json:"last_active"`
+	BytesSent      int64        `json:"bytes_sent"`
+	BytesRecv      int64        `json:"bytes_recv"`
+	MessagesSent   int64        `json:"messages_sent"`
+	MessagesRecv   int64        `json:"messages_recv"`
+	RSSI           int32        `json:"rssi,omitempty"`
+	MACAddress     string       `json:"mac_address,omitempty"`
+	IPAddress      string       `json:"ip_address,omitempty"`
+	UserAgent      string       `json:"user_agent,omitempty"`
+	Version        string       `json:"version,omitempty"`
+	DeviceModel    string       `json:"device_model,omitempty"`
+	AndroidVersion string       `json:"android_version,omitempty"`
+	Manufacturer   string       `json:"manufacturer,omitempty"`
+	Brand          string       `json:"brand,omitempty"`
+	DeviceName     string       `json:"device_name,omitempty"`
+	SDKInt         string       `json:"sdk_int,omitempty"`
+	Protocol       string       `json:"protocol,omitempty"`
+	Transport      string       `json:"transport,omitempty"`
 }
 
 type DeviceEvent struct {
@@ -62,6 +74,7 @@ type DeviceManager struct {
 	stopped     bool
 	stopChan    chan struct{}
 	initialized bool
+	storePath   string
 }
 
 // Manager preserves the older name used by several packages in this tree.
@@ -106,6 +119,7 @@ func logDebug(msg string, args ...interface{}) {
 // ------------------------------------------------------------
 
 func NewManager() *DeviceManager {
+	storePath := deviceStorePath()
 	m := &DeviceManager{
 		devices:     make(map[string]*DeviceInfo),
 		blockedIDs:  make(map[string]bool),
@@ -114,7 +128,9 @@ func NewManager() *DeviceManager {
 		stopChan:    make(chan struct{}),
 		stopped:     false,
 		initialized: true,
+		storePath:   storePath,
 	}
+	m.loadPersistedDevices()
 
 	// Start background services WITHOUT blocking the main thread
 	go m.startBackgroundServices()
@@ -158,6 +174,60 @@ func (m *DeviceManager) deviceDiscoveryLoop() {
 			return
 		}
 	}
+}
+
+func deviceStorePath() string {
+	if dir, err := os.UserConfigDir(); err == nil && dir != "" {
+		return filepath.Join(dir, "airmouse", "saved_devices.json")
+	}
+	return filepath.Join(os.TempDir(), "airmouse_saved_devices.json")
+}
+
+func (m *DeviceManager) loadPersistedDevices() {
+	data, err := os.ReadFile(m.storePath)
+	if err != nil {
+		return
+	}
+	var devices []*DeviceInfo
+	if err := json.Unmarshal(data, &devices); err != nil {
+		logDebug("Failed to load persisted devices: %v", err)
+		return
+	}
+	for _, d := range devices {
+		if d == nil || d.ID == "" {
+			continue
+		}
+		m.devices[d.ID] = d
+	}
+}
+
+func (m *DeviceManager) persistLocked() {
+	if m.storePath == "" {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(m.storePath), 0o755); err != nil {
+		logDebug("Failed to create device store dir: %v", err)
+		return
+	}
+	devices := make([]*DeviceInfo, 0, len(m.devices))
+	for _, d := range m.devices {
+		devices = append(devices, d)
+	}
+	data, err := json.MarshalIndent(devices, "", "  ")
+	if err != nil {
+		logDebug("Failed to persist devices: %v", err)
+		return
+	}
+	_ = os.WriteFile(m.storePath, data, 0o644)
+}
+
+func StableDeviceID(parts ...string) string {
+	h := sha256.New()
+	for _, p := range parts {
+		_, _ = h.Write([]byte(p))
+		_, _ = h.Write([]byte("|"))
+	}
+	return hex.EncodeToString(h.Sum(nil))[:16]
 }
 
 // simulateDeviceDiscovery simulates discovering devices
@@ -260,6 +330,104 @@ func (m *DeviceManager) RegisterDevice(id string, deviceType DeviceType, name st
 	})
 
 	logInfo("Device registered: %s (%s)", name, deviceType)
+	m.persistLocked()
+	return nil
+}
+
+func (m *DeviceManager) UpsertDevice(id string, deviceType DeviceType, name string, meta map[string]string) *DeviceInfo {
+	if !m.initialized || id == "" {
+		return nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now := time.Now()
+	device, exists := m.devices[id]
+	if !exists {
+		device = &DeviceInfo{
+			ID:          id,
+			Name:        name,
+			Type:        deviceType,
+			Status:      StatusConnected,
+			ConnectedAt: now,
+			LastActive:  now,
+		}
+		m.devices[id] = device
+	} else {
+		device.Type = deviceType
+		if name != "" {
+			device.Name = name
+		}
+		device.Status = StatusConnected
+		device.LastActive = now
+	}
+
+	if v := meta["fingerprint"]; v != "" {
+		device.Fingerprint = v
+	}
+	if v := meta["ip_address"]; v != "" {
+		device.IPAddress = v
+	}
+	if v := meta["user_agent"]; v != "" {
+		device.UserAgent = v
+	}
+	if v := meta["version"]; v != "" {
+		device.Version = v
+	}
+	if v := meta["device_model"]; v != "" {
+		device.DeviceModel = v
+	}
+	if v := meta["android_version"]; v != "" {
+		device.AndroidVersion = v
+	}
+	if v := meta["manufacturer"]; v != "" {
+		device.Manufacturer = v
+	}
+	if v := meta["brand"]; v != "" {
+		device.Brand = v
+	}
+	if v := meta["device_name"]; v != "" {
+		device.DeviceName = v
+	}
+	if v := meta["sdk_int"]; v != "" {
+		device.SDKInt = v
+	}
+	if v := meta["protocol"]; v != "" {
+		device.Protocol = v
+	}
+	if v := meta["transport"]; v != "" {
+		device.Transport = v
+	}
+
+	m.persistLocked()
+	return device
+}
+
+func (m *DeviceManager) RenameDeviceID(oldID, newID string) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if oldID == "" || newID == "" || oldID == newID {
+		return nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	device, exists := m.devices[oldID]
+	if !exists {
+		return fmt.Errorf("device not found: %s", oldID)
+	}
+	if _, exists := m.devices[newID]; exists {
+		existing := m.devices[newID]
+		existing.LastActive = time.Now()
+		existing.Status = StatusConnected
+		delete(m.devices, oldID)
+		m.persistLocked()
+		return nil
+	}
+	delete(m.devices, oldID)
+	device.ID = newID
+	m.devices[newID] = device
+	m.persistLocked()
 	return nil
 }
 
@@ -290,6 +458,7 @@ func (m *DeviceManager) UnregisterDevice(id string) error {
 	})
 
 	logInfo("Device unregistered: %s (%s)", device.Name, device.Type)
+	m.persistLocked()
 	return nil
 }
 
@@ -321,6 +490,7 @@ func (m *DeviceManager) UpdateDeviceName(id string, name string) error {
 	})
 
 	logInfo("Device renamed: %s (%s)", name, id)
+	m.persistLocked()
 	return nil
 }
 
@@ -346,6 +516,7 @@ func (m *DeviceManager) UpdateDeviceActivity(id string, sent, recv int64) error 
 	device.BytesRecv += recv
 	device.MessagesSent++
 	device.MessagesRecv++
+	m.persistLocked()
 
 	return nil
 }
@@ -368,6 +539,7 @@ func (m *DeviceManager) UpdateDeviceStatus(id string, status DeviceStatus) error
 	}
 
 	device.Status = status
+	m.persistLocked()
 	return nil
 }
 
@@ -406,6 +578,7 @@ func (m *DeviceManager) UpdateBLEDevice(addr, name string, rssi int32) {
 		logInfo("Nearby BLE device discovered: %s (%s)", name, addr)
 		logDebug("BLE device discovered: %s (%s)", name, addr)
 	}
+	m.persistLocked()
 }
 
 // BlockDevice blocks a device
@@ -432,6 +605,7 @@ func (m *DeviceManager) BlockDevice(id string) error {
 		})
 		logInfo("Device blocked: %s (%s)", device.Name, id)
 	}
+	m.persistLocked()
 
 	return nil
 }
@@ -454,6 +628,7 @@ func (m *DeviceManager) UnblockDevice(id string) error {
 		device.Status = StatusConnected
 		logInfo("Device unblocked: %s (%s)", device.Name, id)
 	}
+	m.persistLocked()
 
 	return nil
 }

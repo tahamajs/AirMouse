@@ -1,6 +1,6 @@
 # Air Mouse Pro Server Makefile
 
-.PHONY: build build-windows build-linux build-mac build-mac-arm build-all clean run run-debug test test-coverage bench deps lint fmt dist install uninstall docker-build docker-run docs help
+.PHONY: build build-windows build-linux build-mac build-mac-arm build-all clean run run-debug test test-coverage bench deps lint fmt dist install uninstall docker-build docker-run docs help dmg-mac
 
 # Variables
 BINARY_NAME=airmouse-server
@@ -87,6 +87,19 @@ build-mac-arm: setup
 	@echo "$(BLUE)Building for macOS Apple Silicon...$(NC)"
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 go build $(LDFLAGS) -o $(BINARY_NAME)-darwin-arm64 ./cmd/airmouse-server
 	@echo "$(GREEN)Build complete: $(BINARY_NAME)-darwin-arm64$(NC)"
+
+# Build a distributable macOS DMG
+dmg-mac: build
+	@echo "$(BLUE)Building macOS DMG...$(NC)"
+	APP_NAME="Air Mouse Pro Server" \
+	BINARY_NAME="$(BINARY_NAME)" \
+	VERSION="$(VERSION)" \
+	BUILD_DIR="$(CURDIR)/dist/macos" \
+	APP_BUNDLE_NAME="Air Mouse Pro Server.app" \
+	DMG_NAME="AirMouseProServer" \
+	VOLUME_NAME="Air Mouse Pro Server" \
+	./scripts/build_macos_dmg.sh
+	@echo "$(GREEN)DMG created in dist/macos/$(NC)"
 
 # Build for FreeBSD
 build-freebsd: setup

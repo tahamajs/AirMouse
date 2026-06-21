@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -49,7 +50,7 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 
 	// ----- Header -----
 	header := container.NewHBox(
-		widget.NewLabelWithStyle("📱 Device Management", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("📱 Connected + Previously Connected Devices", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
 	// ----- Search & Filter -----
@@ -222,6 +223,16 @@ func (t *DevicesTab) getFilteredDevices() []*device.DeviceInfo {
 		}
 		filtered = append(filtered, d)
 	}
+	sort.SliceStable(filtered, func(i, j int) bool {
+		left := filtered[i]
+		right := filtered[j]
+		leftActive := left.Status == device.StatusConnected
+		rightActive := right.Status == device.StatusConnected
+		if leftActive != rightActive {
+			return leftActive
+		}
+		return left.LastActive.After(right.LastActive)
+	})
 	return filtered
 }
 

@@ -192,8 +192,8 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 
 	// QR code display
 	tab.qrImage = canvas.NewImageFromResource(nil)
-	tab.qrImage.FillMode = canvas.ImageFillOriginal
-	tab.qrImage.SetMinSize(fyne.NewSize(250, 250))
+	tab.qrImage.FillMode = canvas.ImageFillContain
+	tab.qrImage.SetMinSize(fyne.NewSize(210, 210))
 	tab.updateQR()
 	tab.qrImage.Refresh()
 
@@ -277,7 +277,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		tab.statusLabel,
 	)
 
-	return container.NewScroll(content)
+	return container.NewScroll(container.NewPadded(content))
 }
 
 // updateQR refreshes the QR code image based on the current IP and port.

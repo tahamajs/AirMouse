@@ -6,13 +6,14 @@ import (
 )
 
 func TestNetworkTabPairingURIIncludesCurrentValues(t *testing.T) {
-	uri := buildPairingURI("192.168.1.50", "8080", "8081", "AirMouse Pro")
+	uri := buildPairingURI("192.168.1.50", "8080", "8081", "8082", "AirMouse Pro")
 
 	for _, want := range []string{
 		"airmouse://pair?",
 		"ip=192.168.1.50",
-		"port=8080",
+		"tcp=8080",
 		"ws=ws://192.168.1.50:8081/ws",
+		"udp=8082",
 		"name=AirMouse+Pro",
 		"protocol=WEBSOCKET",
 		"type=mobile",
@@ -24,7 +25,7 @@ func TestNetworkTabPairingURIIncludesCurrentValues(t *testing.T) {
 }
 
 func TestNetworkTabPairingSummaryPrefixesUri(t *testing.T) {
-	summary := "Pairing URI: " + buildPairingURI("10.0.0.12", "8080", "8081", "AirMouse Pro")
+	summary := "Pairing URI: " + buildPairingURI("10.0.0.12", "8080", "8081", "8082", "AirMouse Pro")
 	if !strings.HasPrefix(summary, "Pairing URI: ") {
 		t.Fatalf("unexpected summary prefix: %s", summary)
 	}

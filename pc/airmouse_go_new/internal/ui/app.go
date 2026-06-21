@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"image/png"
+	"os"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -51,6 +53,10 @@ type App struct {
 	statusBar        *StatusBar
 	connectionStatus *widget.Label
 	summaryStatus    *widget.Label
+
+	shutdownOnce sync.Once
+	stopChan     chan struct{}
+	stopOnce     sync.Once
 }
 
 // ------------------------------------------------------------
@@ -82,6 +88,7 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.M
 		mouse:     mouse,
 		deviceMgr: deviceMgr,
 		collector: collector,
+		stopChan:  make(chan struct{}),
 	}
 }
 
@@ -356,8 +363,13 @@ func (a *App) onTabSelected(ti *container.TabItem) {
 func (a *App) connectionStatusUpdater() {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
-	for range ticker.C {
-		RunOnMain(func() { a.refreshConnectionSummary() })
+	for {
+		select {
+		case <-ticker.C:
+			RunOnMain(func() { a.refreshConnectionSummary() })
+		case <-a.stopChan:
+			return
+		}
 	}
 }
 
@@ -408,11 +420,8 @@ func (a *App) refreshConnectionSummary() {
 // ------------------------------------------------------------
 
 func (a *App) onWindowClose() {
-	dialog.ShowConfirm("Quit", "Are you sure you want to quit Air Mouse Pro Server?", func(confirmed bool) {
-		if confirmed {
-			a.shutdown(false)
-		}
-	}, a.window)
+	utils.LogInfo("Window close requested; shutting down immediately")
+	go a.shutdown(true)
 }
 
 func (a *App) Stop() {
@@ -422,23 +431,42 @@ func (a *App) Stop() {
 // shutdown stops background work and quits the Fyne app.
 // When force is true, it skips the confirmation dialog.
 func (a *App) shutdown(force bool) {
-	if !force {
-		a.stopServerAsync("window-close")
-		time.Sleep(300 * time.Millisecond)
-	} else {
+	a.shutdownOnce.Do(func() {
+		utils.LogInfo("Shutdown sequence started (force=%v)", force)
+		a.stopAppLoops()
 		if a.server != nil {
-			a.server.Stop()
+			go a.server.Stop()
 		}
-	}
 
-	a.stopBackgroundUI()
+		a.stopBackgroundUI()
 
-	if err := a.cfg.Save(); err != nil {
-		utils.LogError("Failed to save config: %v", err)
-	}
-	if a.fyneApp != nil {
-		a.fyneApp.Quit()
-	}
+		if err := a.cfg.Save(); err != nil {
+			utils.LogError("Failed to save config: %v", err)
+		}
+
+		go func() {
+			time.Sleep(50 * time.Millisecond)
+			if a.fyneApp != nil {
+				RunOnMain(func() {
+					a.fyneApp.Quit()
+				})
+			}
+		}()
+
+		go func() {
+			time.Sleep(2 * time.Second)
+			utils.LogWarn("Forced exit after shutdown timeout")
+			os.Exit(0)
+		}()
+	})
+}
+
+func (a *App) stopAppLoops() {
+	a.stopOnce.Do(func() {
+		if a.stopChan != nil {
+			close(a.stopChan)
+		}
+	})
 }
 
 func (a *App) stopBackgroundUI() {

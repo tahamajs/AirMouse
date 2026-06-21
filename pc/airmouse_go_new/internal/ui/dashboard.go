@@ -40,6 +40,7 @@ type DashboardTab struct {
 	summaryLabel    *widget.Label
 	deviceDetailBox *widget.Label
 	nearbyDetailBox *widget.Label
+	savedDetailBox  *widget.Label
 	recentLogsBox   *widget.Label
 
 	controlBtn *widget.Button
@@ -102,6 +103,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	tab.deviceDetailBox.Wrapping = fyne.TextWrapWord
 	tab.nearbyDetailBox = widget.NewLabel("Nearby device list will appear here once the server sees clients on the network.")
 	tab.nearbyDetailBox.Wrapping = fyne.TextWrapWord
+	tab.savedDetailBox = widget.NewLabel("Saved device history will appear here after the first connection.")
+	tab.savedDetailBox.Wrapping = fyne.TextWrapWord
 	tab.recentLogsBox = widget.NewLabel("Waiting for logs...")
 	tab.recentLogsBox.Wrapping = fyne.TextWrapWord
 	tab.recentLogsBox.SetText("Waiting for logs...\n")
@@ -191,6 +194,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	tab.qrBtn = widget.NewButtonWithIcon("Show QR Code", theme.InfoIcon(), func() {
 		tab.showPairingQRDialog()
 	})
+	tab.controlBtn.Importance = widget.HighImportance
 
 	// Profile card
 	profileCard := NewGlassCard(container.NewPadded(tab.createProfileCard()))
@@ -209,6 +213,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	actionsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("⚡ Quick Actions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
+		widget.NewLabel("Pause and resume are useful while you calibrate or test approval."),
 		container.NewHBox(
 			widget.NewButton("⏸️ Pause", func() { control.SetMovementPaused(true) }),
 			widget.NewButton("▶️ Resume", func() { control.SetMovementPaused(false) }),
@@ -244,6 +249,13 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		container.NewScroll(tab.nearbyDetailBox),
 	)))
 
+	savedCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("🗂️ Previously Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel("These devices were seen before and are restored from disk when the app starts."),
+		container.NewScroll(tab.savedDetailBox),
+	)))
+
 	logsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📝 Recent Activity", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -254,15 +266,32 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		widget.NewLabelWithStyle("✨ Setup Checklist", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		widget.NewLabel("• Start the server and confirm the endpoint"),
-		widget.NewLabel("• Pair the Android device with QR or Network tab"),
+		widget.NewLabel("• Pair the Android device with QR, Network, or manual connection"),
 		widget.NewLabel("• Watch live logs, device metadata, and statistics"),
 		widget.NewLabel("• Use pause/resume when calibrating or testing"),
+		widget.NewLabel("• Keep the dashboard open when you demo; use the other tabs only when needed"),
+	)))
+
+	connectionCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("🔗 How to Connect", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel("1. Start the server from the big control button."),
+		widget.NewLabel("2. Open the Android app and stay on the same Wi-Fi network."),
+		widget.NewLabel("3. Scan the QR code or enter the TCP/WebSocket address manually."),
+		widget.NewLabel("4. Wait for approval on both sides until the dashboard shows connected."),
+		widget.NewLabel("5. After the first successful connection, the device is saved here for later sessions."),
 	)))
 
 	hero := NewGlassCard(container.NewVBox(
 		tab.serverNameLabel,
 		widget.NewLabel("Air Mouse Pro turns your phone into a smooth wireless pointer."),
 		widget.NewLabel("Start the server, pair from QR or Network, then watch live device logs below."),
+		widget.NewSeparator(),
+		container.NewGridWithColumns(3,
+			widget.NewLabel("Ready for pairing"),
+			widget.NewLabel("Live approval + ACK tracking"),
+			widget.NewLabel(fmt.Sprintf("Theme: %s", tab.cfg.Theme)),
+		),
 	))
 
 	controlCard := NewGlassCard(container.NewVBox(
@@ -285,6 +314,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		actionsCard,
 		deviceCard,
 		nearbyCard,
+		savedCard,
+		connectionCard,
 		logsCard,
 		featureCard,
 		profileCard,
@@ -352,11 +383,14 @@ func (t *DashboardTab) refreshStats() {
 	clicks, dbl, right, scroll := t.mouse.Stats()
 	devices := t.deviceMgr.GetAllDevices()
 	deviceCount := len(devices)
+	savedCount := len(devices)
 	utils.LogDebug("Dashboard refresh: clicks=%d double=%d right=%d scroll=%d devices=%d", clicks, dbl, right, scroll, deviceCount)
 
 	var deviceDetails []string
+	var savedDetails []string
 	for _, d := range devices {
 		deviceDetails = append(deviceDetails, formatDeviceDetails(d))
+		savedDetails = append(savedDetails, formatSavedDeviceDetails(d))
 	}
 	// Update UI in one batch
 	RunOnMain(func() {
@@ -364,12 +398,17 @@ func (t *DashboardTab) refreshStats() {
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
 			clicks, dbl, right, scroll,
 		))
-		t.connLabel.SetText(fmt.Sprintf("📱 Connected devices: %d", deviceCount))
+		t.connLabel.SetText(fmt.Sprintf("📱 Connected devices: %d  |  Saved devices: %d", deviceCount, savedCount))
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
+			t.savedDetailBox.SetText(strings.Join(savedDetails, "\n\n"))
+			if savedCount > 0 {
+				t.savedDetailBox.SetText("Previously connected devices:\n\n" + strings.Join(savedDetails, "\n\n"))
+			}
 			utils.LogDebug("Dashboard device list updated: %s", strings.Join(deviceNamesForLog(devices), ", "))
 		} else {
 			t.deviceDetailBox.SetText("No connected devices yet.")
+			t.savedDetailBox.SetText("No previously connected devices yet.\nConnect a phone once and it will stay here for future sessions.")
 			utils.LogDebug("Dashboard device list empty")
 		}
 		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(devices))
@@ -449,10 +488,11 @@ func truncateRecentLogs(entries []string, max int) []string {
 
 func formatDeviceDetails(d *device.DeviceInfo) string {
 	return fmt.Sprintf(
-		"• %s [%s]\n  ID: %s\n  Status: %s\n  Connected: %s\n  Last active: %s\n  Sent: %s (%d msg)\n  Received: %s (%d msg)\n  RSSI: %d\n  IP: %s\n  MAC: %s\n  Version: %s\n  User agent: %s",
+		"• %s [%s]\n  ID: %s\n  Fingerprint: %s\n  Status: %s\n  Connected: %s\n  Last active: %s\n  Sent: %s (%d msg)\n  Received: %s (%d msg)\n  RSSI: %d\n  IP: %s\n  MAC: %s\n  Version: %s\n  Model: %s\n  Android: %s\n  Transport: %s\n  User agent: %s",
 		d.Name,
 		d.Type,
 		d.ID,
+		emptyOrDash(d.Fingerprint),
 		d.Status,
 		FormatDuration(time.Since(d.ConnectedAt)),
 		FormatDuration(time.Since(d.LastActive)),
@@ -462,7 +502,28 @@ func formatDeviceDetails(d *device.DeviceInfo) string {
 		emptyOrDash(d.IPAddress),
 		emptyOrDash(d.MACAddress),
 		emptyOrDash(d.Version),
+		emptyOrDash(d.DeviceModel),
+		emptyOrDash(d.AndroidVersion),
+		emptyOrDash(d.Transport),
 		emptyOrDash(d.UserAgent),
+	)
+}
+
+func formatSavedDeviceDetails(d *device.DeviceInfo) string {
+	return fmt.Sprintf(
+		"• %s [%s]\n  Status: %s\n  ID: %s\n  Fingerprint: %s\n  IP: %s\n  MAC: %s\n  Version: %s\n  Model: %s\n  Android: %s\n  Transport: %s\n  Last active: %s",
+		d.Name,
+		d.Type,
+		d.Status,
+		d.ID,
+		emptyOrDash(d.Fingerprint),
+		emptyOrDash(d.IPAddress),
+		emptyOrDash(d.MACAddress),
+		emptyOrDash(d.Version),
+		emptyOrDash(d.DeviceModel),
+		emptyOrDash(d.AndroidVersion),
+		emptyOrDash(d.Transport),
+		FormatDuration(time.Since(d.LastActive)),
 	)
 }
 

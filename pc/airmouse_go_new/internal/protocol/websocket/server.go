@@ -35,6 +35,7 @@ var upgrader = gorilla.Upgrader{
 
 type WSClient struct {
 	ID          string
+	DeviceID    string
 	Name        string
 	Conn        *gorilla.Conn
 	Send        chan []byte
@@ -225,7 +226,11 @@ func (s *Server) readLoop(client *WSClient) {
 		delete(s.fileSessions, client.ID)
 		s.mu.Unlock()
 		if s.deviceMgr != nil {
-			_ = s.deviceMgr.UnregisterDevice(client.ID)
+			deviceID := client.DeviceID
+			if deviceID == "" {
+				deviceID = client.ID
+			}
+			_ = s.deviceMgr.UpdateDeviceStatus(deviceID, device.StatusDisconnected)
 		}
 		utils.LogInfo("WebSocket client disconnected: id=%s", client.ID)
 	}()
@@ -354,6 +359,17 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 
 	case "hello":
 		name, _ := payload["name"].(string)
+		version, _ := payload["version"].(string)
+		deviceName, _ := payload["device_name"].(string)
+		model, _ := payload["model"].(string)
+		manufacturer, _ := payload["manufacturer"].(string)
+		brand, _ := payload["brand"].(string)
+		androidVersion, _ := payload["android_version"].(string)
+		sdkInt, _ := payload["sdk_int"].(string)
+		deviceIDValue, _ := payload["device_id"].(string)
+		protocolName, _ := payload["protocol"].(string)
+		transport, _ := payload["transport"].(string)
+		fingerprint := device.StableDeviceID(deviceIDValue, name, version, deviceName, model, manufacturer, brand, androidVersion, sdkInt, protocolName, transport)
 		if name == "" {
 			name = "Unknown"
 		}
@@ -361,7 +377,23 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		client.Name = name
 		client.Approved = true
 		if s.deviceMgr != nil {
-			_ = s.deviceMgr.UpdateDeviceName(client.ID, name)
+			_ = s.deviceMgr.RenameDeviceID(client.ID, fingerprint)
+			client.DeviceID = fingerprint
+			_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeWebSocket, name, map[string]string{
+				"fingerprint":     fingerprint,
+				"ip_address":      client.IP,
+				"version":         version,
+				"device_name":     deviceName,
+				"device_model":    model,
+				"manufacturer":    manufacturer,
+				"brand":           brand,
+				"android_version": androidVersion,
+				"device_id":       deviceIDValue,
+				"sdk_int":         sdkInt,
+				"protocol":        protocolName,
+				"transport":       transport,
+				"user_agent":      client.UserAgent,
+			})
 		}
 		utils.LogInfo("WebSocket approval accepted: id=%s, name=%s", client.ID, name)
 		utils.LogInfo("WebSocket client connected: id=%s, name=%s", client.ID, name)
