@@ -22,40 +22,31 @@ type GlassCard struct {
 func NewGlassCard(content fyne.CanvasObject) *GlassCard {
 	card := &GlassCard{
 		Content:      content,
-		BorderColor:   color.RGBA{148, 163, 184, 90},
-		BgColor:       color.RGBA{15, 23, 42, 220},
-		CornerRadius:  22,
+		BorderColor:   color.RGBA{148, 163, 184, 70},
+		BgColor:       color.RGBA{9, 15, 30, 235},
+		CornerRadius:  24,
 	}
 	card.ExtendBaseWidget(card)
 	return card
 }
 
 func (c *GlassCard) CreateRenderer() fyne.WidgetRenderer {
-	// Background rectangle with rounded corners
 	bg := canvas.NewRectangle(c.BgColor)
 	bg.CornerRadius = c.CornerRadius
 
-	// Border
 	border := canvas.NewRectangle(c.BorderColor)
 	border.CornerRadius = c.CornerRadius
 	border.StrokeWidth = 1
 
-	// Shadow
-	shadow := canvas.NewRectangle(color.RGBA{0, 0, 0, 55})
+	shadow := canvas.NewRectangle(color.RGBA{0, 0, 0, 40})
 	shadow.CornerRadius = c.CornerRadius
-	shadow.Move(fyne.NewPos(6, 6))
 
-	// Main container
-	root := container.NewWithoutLayout()
-	root.Add(shadow)
-	root.Add(bg)
-	root.Add(border)
-
-	// Add content
+	items := []fyne.CanvasObject{shadow, bg, border}
 	if c.Content != nil {
-		padded := container.NewPadded(c.Content)
-		root.Add(padded)
+		items = append(items, container.NewPadded(container.NewMax(c.Content)))
 	}
+
+	root := container.NewMax(items...)
 
 	return widget.NewSimpleRenderer(root)
 }

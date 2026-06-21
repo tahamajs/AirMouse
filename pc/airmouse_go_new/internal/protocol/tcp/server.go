@@ -17,6 +17,7 @@ import (
 
 type Client struct {
 	ID          string
+	DeviceID    string
 	Name        string
 	Conn        net.Conn
 	ConnectedAt time.Time
@@ -156,7 +157,11 @@ func (s *Server) handleClient(conn net.Conn) {
 	s.mu.Unlock()
 
 	utils.LogInfo("TCP client disconnected: id=%s", clientID)
-	s.deviceMgr.UnregisterDevice(clientID)
+	deviceID := client.DeviceID
+	if deviceID == "" {
+		deviceID = clientID
+	}
+	_ = s.deviceMgr.UpdateDeviceStatus(deviceID, device.StatusDisconnected)
 	s.triggerEvent(TCPEvent{
 		Type:      "disconnected",
 		ClientID:  clientID,
@@ -226,6 +231,17 @@ func (s *Server) processLine(client *Client, line []byte) {
 
 	case "hello":
 		name, _ := payload["name"].(string)
+		version, _ := payload["version"].(string)
+		deviceName, _ := payload["device_name"].(string)
+		model, _ := payload["model"].(string)
+		manufacturer, _ := payload["manufacturer"].(string)
+		brand, _ := payload["brand"].(string)
+		androidVersion, _ := payload["android_version"].(string)
+		sdkInt, _ := payload["sdk_int"].(string)
+		deviceIDValue, _ := payload["device_id"].(string)
+		protocolName, _ := payload["protocol"].(string)
+		transport, _ := payload["transport"].(string)
+		fingerprint := device.StableDeviceID(deviceIDValue, name, version, deviceName, model, manufacturer, brand, androidVersion, sdkInt, protocolName, transport)
 		token, _ := payload["token"].(string)
 		utils.LogInfo("Handshake received from Android (TCP): id=%s name=%s", client.ID, name)
 		if config.Get().AuthEnabled {
@@ -239,10 +255,27 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 		if name != "" {
 			client.Name = name
-			s.deviceMgr.UpdateDeviceName(client.ID, client.Name)
+		}
+		if s.deviceMgr != nil {
+			_ = s.deviceMgr.RenameDeviceID(client.ID, fingerprint)
+			client.DeviceID = fingerprint
+			client.Name = name
+			s.deviceMgr.UpsertDevice(fingerprint, device.TypeTCP, client.Name, map[string]string{
+				"fingerprint":     fingerprint,
+				"ip_address":      client.IP,
+				"version":         version,
+				"device_name":     deviceName,
+				"device_model":    model,
+				"manufacturer":    manufacturer,
+				"brand":           brand,
+				"android_version": androidVersion,
+				"device_id":       deviceIDValue,
+				"sdk_int":         sdkInt,
+				"protocol":        protocolName,
+				"transport":       transport,
+			})
 		}
 		client.Approved = true
-		client.IsActive = true
 
 		welcome := fmt.Sprintf(
 			`{"type":"welcome","payload":{"server":"%s","version":"%s","client_id":"%s"}}`+"\n",

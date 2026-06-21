@@ -58,8 +58,8 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	}
 
 	qrImage := canvas.NewImageFromImage(img)
-	qrImage.FillMode = canvas.ImageFillOriginal
-	qrImage.SetMinSize(fyne.NewSize(320, 320))
+	qrImage.FillMode = canvas.ImageFillContain
+	qrImage.SetMinSize(fyne.NewSize(240, 240))
 
 	// Instructions
 	instructions := widget.NewRichTextFromMarkdown(
@@ -110,7 +110,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	qrTab := container.NewVBox(
 		widget.NewLabelWithStyle("Scan QR Code", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		qrImage,
+		container.NewCenter(qrImage),
 		widget.NewLabel("Position the QR code within the camera frame"),
 	)
 
@@ -152,7 +152,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 		serverInfo,
 	)
 
-	dialog.ShowCustom("Pairing Wizard", "Close", container.NewScroll(container.NewPadded(content)), parent)
+	dialog.ShowCustom("Pairing Wizard", "Close", container.NewScroll(container.NewPadded(container.NewMax(content))), parent)
 }
 
 // ------------------------------------------------------------
@@ -176,12 +176,12 @@ func QuickPairDialog(parent fyne.Window) {
 	img, _ := png.Decode(bytes.NewReader(pngBytes))
 
 	qrImage := canvas.NewImageFromImage(img)
-	qrImage.FillMode = canvas.ImageFillOriginal
-	qrImage.SetMinSize(fyne.NewSize(200, 200))
+	qrImage.FillMode = canvas.ImageFillContain
+	qrImage.SetMinSize(fyne.NewSize(180, 180))
 
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("Quick Pair", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		qrImage,
+		container.NewCenter(qrImage),
 		widget.NewLabel(fmt.Sprintf("WebSocket: %s:%d", ip, cfg.WebSocketPort)),
 		widget.NewLabel("If the QR looks stale, reopen this dialog after restarting the server."),
 	)
