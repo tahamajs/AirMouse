@@ -205,6 +205,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 	case "hello":
 		name, _ := payload["name"].(string)
 		token, _ := payload["token"].(string)
+		utils.LogInfo("Handshake received from Android (TCP): id=%s name=%s", client.ID, name)
 		if config.Get().AuthEnabled {
 			if token == "" || s.authMgr == nil || !s.authMgr.ValidateToken(token) {
 				errMsg := `{"type":"error","payload":{"message":"connection rejected: invalid pairing token"}}` + "\n"
@@ -227,6 +228,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 		)
 		client.Conn.Write([]byte(welcome))
 		client.BytesSent += int64(len(welcome))
+		utils.LogInfo("Approval sent to device (TCP): id=%s name=%s", client.ID, client.Name)
 
 		utils.LogInfo("TCP client identified: id=%s name=%s", client.ID, client.Name)
 

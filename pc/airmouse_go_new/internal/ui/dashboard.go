@@ -262,7 +262,15 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	hero := NewGlassCard(container.NewVBox(
 		tab.serverNameLabel,
 		widget.NewLabel("Air Mouse Pro turns your phone into a smooth wireless pointer."),
-		widget.NewLabel("Use the big control below to start or stop the server, then pair from the QR code or Network tab."),
+		widget.NewLabel("Start the server, pair from QR or Network, then watch live device logs below."),
+	))
+
+	controlCard := NewGlassCard(container.NewVBox(
+		widget.NewLabelWithStyle("⚡ Server Control", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		widget.NewLabel("Use the main action below to start or stop the desktop service."),
+		container.NewPadded(tab.controlBtn),
+		container.NewHBox(tab.refreshBtn, tab.qrBtn),
 	))
 
 	// Main layout (two columns)
@@ -273,8 +281,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 			statsCard,
 			statusCard,
 		),
-		container.NewPadded(tab.controlBtn),
-		container.NewHBox(tab.refreshBtn, tab.qrBtn),
+		controlCard,
 		actionsCard,
 		deviceCard,
 		nearbyCard,

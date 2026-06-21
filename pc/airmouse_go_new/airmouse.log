@@ -1121,3 +1121,36 @@
 2026-06-21 05:44:18.732 [INFO] manager.go:95: Bluetooth manager started: adapter=default
 2026-06-21 05:44:18.732 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
 2026-06-21 05:44:18.733 [INFO] main.go:125: Protocol lifecycle event: start
+2026-06-21 05:47:42.431 [INFO] main.go:158: Received signal: terminated
+2026-06-21 05:47:42.434 [INFO] main.go:172: Initiating graceful shutdown...
+2026-06-21 05:47:42.434 [INFO] main.go:176: Stopping protocol server...
+2026-06-21 05:47:42.454 [INFO] main.go:78: Shutting down...
+2026-06-21 05:47:44.436 [WARN] main.go:187: Protocol server stop timed out – forcing exit
+2026-06-21 05:47:44.436 [INFO] main.go:193: Stopping device manager...
+2026-06-21 05:48:32.062 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-21 05:48:32.063 [INFO] main.go:97: System Information:
+2026-06-21 05:48:32.063 [INFO] main.go:98:   OS: darwin
+2026-06-21 05:48:32.063 [INFO] main.go:99:   Arch: arm64
+2026-06-21 05:48:32.063 [INFO] main.go:100:   CPUs: 8
+2026-06-21 05:48:32.063 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-21 05:48:32.063 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-21 05:48:32.063 [INFO] main.go:103:   Git Commit: unknown
+2026-06-21 05:48:32.063 [INFO] main.go:115: Authentication disabled
+2026-06-21 05:48:32.069 [INFO] main.go:64: Application started successfully
+2026-06-21 05:48:32.069 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-21 05:48:32.069 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-21 05:48:32.069 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-21 05:48:32.069 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-21 05:48:32.069 [INFO] main.go:69: Launching desktop UI window...
+2026-06-21 05:48:32.564 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-21 05:48:32.564 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-21 05:49:15.390 [INFO] main.go:158: Received signal: interrupt
+2026-06-21 05:49:15.390 [INFO] main.go:172: Initiating graceful shutdown...
+2026-06-21 05:49:15.390 [INFO] main.go:176: Stopping protocol server...
+2026-06-21 05:49:15.391 [INFO] main.go:185: Protocol server stopped
+2026-06-21 05:49:15.391 [INFO] main.go:193: Stopping device manager...

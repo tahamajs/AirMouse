@@ -36,8 +36,14 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	port := cfg.Port
 
 	// Create pairing data with full device info
-	pairingData := fmt.Sprintf("airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&version=3.0",
-		url.QueryEscape(wsURL), url.QueryEscape(cfg.ServerName), ip, port)
+	pairingData := fmt.Sprintf(
+		"airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&udp=%d&version=3.0",
+		url.QueryEscape(wsURL),
+		url.QueryEscape(cfg.ServerName),
+		url.QueryEscape(ip),
+		port,
+		cfg.UDPPort,
+	)
 
 	// Generate QR code
 	pngBytes, err := qrcode.Encode(pairingData, qrcode.High, 300)
@@ -53,6 +59,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 
 	qrImage := canvas.NewImageFromImage(img)
 	qrImage.FillMode = canvas.ImageFillOriginal
+	qrImage.SetMinSize(fyne.NewSize(320, 320))
 
 	// Instructions
 	instructions := widget.NewRichTextFromMarkdown(
@@ -137,6 +144,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("🔗 Pair New Device", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
+		widget.NewLabel("The QR code opens the Android pairing flow with the correct WebSocket endpoint and protocol."),
 		instructions,
 		widget.NewSeparator(),
 		tabs,
@@ -144,7 +152,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 		serverInfo,
 	)
 
-	dialog.ShowCustom("Pairing Wizard", "Close", container.NewScroll(content), parent)
+	dialog.ShowCustom("Pairing Wizard", "Close", container.NewScroll(container.NewPadded(content)), parent)
 }
 
 // ------------------------------------------------------------
@@ -163,7 +171,7 @@ func QuickPairDialog(parent fyne.Window) {
 	ip := utils.GetLocalIP()
 
 	pairingData := fmt.Sprintf("airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&version=3.0",
-		url.QueryEscape(fmt.Sprintf("ws://%s:%d/ws", ip, cfg.WebSocketPort)), url.QueryEscape(cfg.ServerName), ip, cfg.WebSocketPort)
+		url.QueryEscape(fmt.Sprintf("ws://%s:%d/ws", ip, cfg.WebSocketPort)), url.QueryEscape(cfg.ServerName), url.QueryEscape(ip), cfg.WebSocketPort)
 	pngBytes, _ := qrcode.Encode(pairingData, qrcode.Medium, 200)
 	img, _ := png.Decode(bytes.NewReader(pngBytes))
 
@@ -175,6 +183,7 @@ func QuickPairDialog(parent fyne.Window) {
 		widget.NewLabelWithStyle("Quick Pair", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		qrImage,
 		widget.NewLabel(fmt.Sprintf("WebSocket: %s:%d", ip, cfg.WebSocketPort)),
+		widget.NewLabel("If the QR looks stale, reopen this dialog after restarting the server."),
 	)
 
 	dialog.ShowCustom("Quick Pair", "Close", content, parent)
