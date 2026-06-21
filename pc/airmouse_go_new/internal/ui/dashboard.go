@@ -287,10 +287,11 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		widget.NewLabel("Air Mouse Pro turns your phone into a smooth wireless pointer."),
 		widget.NewLabel("Start the server, pair from QR or Network, then watch live device logs below."),
 		widget.NewSeparator(),
-		container.NewGridWithColumns(3,
+		container.NewGridWithColumns(4,
 			widget.NewLabel("Ready for pairing"),
 			widget.NewLabel("Live approval + ACK tracking"),
 			widget.NewLabel(fmt.Sprintf("Theme: %s", tab.cfg.Theme)),
+			widget.NewLabel("Saved devices persist locally"),
 		),
 	))
 
@@ -302,23 +303,27 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		container.NewHBox(tab.refreshBtn, tab.qrBtn),
 	))
 
-	// Main layout (two columns)
-	content := container.NewVBox(
-		hero,
-		widget.NewSeparator(),
-		container.NewGridWithColumns(2,
-			statsCard,
-			statusCard,
-		),
+	leftColumn := container.NewVBox(
+		statsCard,
 		controlCard,
-		actionsCard,
 		deviceCard,
 		nearbyCard,
 		savedCard,
+	)
+
+	rightColumn := container.NewVBox(
+		statusCard,
+		actionsCard,
 		connectionCard,
 		logsCard,
 		featureCard,
 		profileCard,
+	)
+
+	content := container.NewVBox(
+		hero,
+		widget.NewSeparator(),
+		container.NewGridWithColumns(2, leftColumn, rightColumn),
 	)
 
 	// Start background stats updater
