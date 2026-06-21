@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -37,6 +38,7 @@ type ProximityTab struct {
 	lastDistance     float64
 	distanceHistory  []float64
 	stopUpdate       chan struct{}
+	stopOnce         sync.Once
 	cfg              *config.Config
 	lastLockState    bool
 }
@@ -183,8 +185,11 @@ func (t *ProximityTab) stopProximityService() {
 		return
 	}
 	t.serviceRunning = false
-	close(t.stopUpdate)
+	t.stopOnce.Do(func() {
+		close(t.stopUpdate)
+	})
 	t.stopUpdate = make(chan struct{})
+	t.stopOnce = sync.Once{}
 	t.statusLabel.SetText("⚪ Proximity service stopped")
 	t.statusLabel.Importance = widget.MediumImportance
 	t.distanceLabel.SetText("📏 Current distance: -- m")

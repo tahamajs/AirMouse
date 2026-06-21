@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -22,6 +23,7 @@ type StatusBar struct {
 	uptimeLabel    *widget.Label
 	networkLabel   *widget.Label
 	stop           chan struct{}
+	stopOnce       sync.Once
 	startTime      time.Time
 	lastCPU        time.Time
 	lastCPUSample  time.Duration
@@ -174,7 +176,9 @@ func (sb *StatusBar) getNetworkStats() (int64, int64) {
 
 // Stop stops the background updater.
 func (sb *StatusBar) Stop() {
-	close(sb.stop)
+	sb.stopOnce.Do(func() {
+		close(sb.stop)
+	})
 }
 
 // UpdateStartTime resets the uptime counter.
@@ -194,6 +198,7 @@ type AdvancedStatusBar struct {
 	uptimeLabel  *widget.Label
 	onRefresh    func() SystemMetrics
 	stop         chan struct{}
+	stopOnce     sync.Once
 	startTime    time.Time
 }
 
@@ -270,7 +275,9 @@ func (sb *AdvancedStatusBar) defaultMetrics() SystemMetrics {
 
 // Stop stops the background updater.
 func (sb *AdvancedStatusBar) Stop() {
-	close(sb.stop)
+	sb.stopOnce.Do(func() {
+		close(sb.stop)
+	})
 }
 
 // Widget returns the container for this status bar.

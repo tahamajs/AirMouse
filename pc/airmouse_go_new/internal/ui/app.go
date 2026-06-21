@@ -61,6 +61,12 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.M
 	if selectedTheme != nil {
 		a.Settings().SetTheme(selectedTheme)
 	}
+	if len(AppIconData) > 0 {
+		a.SetIcon(&fyne.StaticResource{
+			StaticName:    "app_icon.png",
+			StaticContent: AppIconData,
+		})
+	}
 
 	var collector *personalization.DataCollector
 	if cfg.EnablePersonalization {
@@ -129,6 +135,7 @@ func (a *App) Run() error {
 		container.NewTabItemWithIcon("Protocol", theme.InfoIcon(), a.protocolTab),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
+	tabs.SelectIndex(0)
 	tabs.OnSelected = func(ti *container.TabItem) {
 		a.onTabSelected(ti)
 	}
@@ -382,21 +389,52 @@ func (a *App) refreshConnectionSummary() {
 func (a *App) onWindowClose() {
 	dialog.ShowConfirm("Quit", "Are you sure you want to quit Air Mouse Pro Server?", func(confirmed bool) {
 		if confirmed {
-			a.stopServerAsync("window-close")
-			time.Sleep(300 * time.Millisecond)
-			if err := a.cfg.Save(); err != nil {
-				utils.LogError("Failed to save config: %v", err)
-			}
-			if a.statusBar != nil {
-				a.statusBar.Stop()
-			}
-			a.fyneApp.Quit()
+			a.shutdown(false)
 		}
 	}, a.window)
 }
 
 func (a *App) Stop() {
-	a.onWindowClose()
+	a.shutdown(true)
+}
+
+// shutdown stops background work and quits the Fyne app.
+// When force is true, it skips the confirmation dialog.
+func (a *App) shutdown(force bool) {
+	if !force {
+		a.stopServerAsync("window-close")
+		time.Sleep(300 * time.Millisecond)
+	} else {
+		if a.server != nil {
+			a.server.Stop()
+		}
+	}
+
+	a.stopBackgroundUI()
+
+	if err := a.cfg.Save(); err != nil {
+		utils.LogError("Failed to save config: %v", err)
+	}
+	if a.fyneApp != nil {
+		a.fyneApp.Quit()
+	}
+}
+
+func (a *App) stopBackgroundUI() {
+	if a.statusBar != nil {
+		a.statusBar.Stop()
+	}
+
+	if a.dashboardTab != nil {
+		if tab, ok := a.dashboardTab.(*DashboardTab); ok {
+			tab.Stop()
+		}
+	}
+	if a.proximityTab != nil {
+		if tab, ok := a.proximityTab.(*ProximityTab); ok {
+			tab.Stop()
+		}
+	}
 }
 
 // ------------------------------------------------------------

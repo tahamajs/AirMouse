@@ -9,9 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-
 	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
@@ -53,13 +50,7 @@ func main() {
 	protocolServer := protocol.NewProtocolServer(mouseController, deviceManager, authManager)
 	wireLifecycleLogging(protocolServer, deviceManager)
 
-	// --- 3. Create Fyne application ---
-	a := app.New()
-	if icon := loadAppIcon(); icon != nil {
-		a.SetIcon(icon)
-	}
-
-	// --- 4. Build the UI (does NOT start the event loop yet) ---
+	// --- 3. Build the UI (does NOT start the event loop yet) ---
 	appUI := ui.NewApp(cfg, protocolServer, mouseController, deviceManager)
 
 	// --- 5. Setup graceful shutdown ---
@@ -69,20 +60,21 @@ func main() {
 	// Handle OS signals in a separate goroutine
 	go handleSignals(ctx, appUI, protocolServer, deviceManager)
 
-	// --- 6. Log server endpoints ---
+	// --- 5. Log server endpoints ---
 	logger.Info("Application started successfully")
 	logger.Info("WebSocket server will listen on port %d", cfg.WebSocketPort)
 	logger.Info("TCP server will listen on port %d", cfg.Port)
 	logger.Info("UDP discovery will listen on port %d", cfg.UDPPort)
 	logger.Info("Active protocols: %v", protocolServer.GetActiveProtocols())
+	logger.Info("Launching desktop UI window...")
 
-	// --- 7. Run the UI (blocks until the window is closed) ---
+	// --- 6. Run the UI (blocks until the window is closed) ---
 	if err := appUI.Run(); err != nil {
 		logger.Error("Application error: %v", err)
 		os.Exit(1)
 	}
 
-	// --- 8. Cleanup after UI exits ---
+	// --- 7. Cleanup after UI exits ---
 	logger.Info("Shutting down...")
 	protocolServer.Stop()
 	deviceManager.Stop()
@@ -123,19 +115,6 @@ func initAuth(cfg *config.Config) *auth.Manager {
 		logger.Info("Authentication disabled")
 	}
 	return authManager
-}
-
-// loadAppIcon loads the embedded application icon (if available).
-func loadAppIcon() fyne.Resource {
-	// ui.AppIconData should be a []byte containing the PNG data.
-	if len(ui.AppIconData) > 0 {
-		return &fyne.StaticResource{
-			StaticName:    "app_icon.png",
-			StaticContent: ui.AppIconData,
-		}
-	}
-	// No icon – Fyne will use a default.
-	return nil
 }
 
 func wireLifecycleLogging(server *protocol.ProtocolServer, deviceMgr *device.DeviceManager) {
