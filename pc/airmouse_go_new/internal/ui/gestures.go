@@ -32,6 +32,8 @@ type GesturesTab struct {
 	exportBtn   *widget.Button
 	testBtn     *widget.Button
 	statusLabel *widget.Label
+	overview    *widget.Label
+	activeCount *widget.Label
 }
 
 func NewGesturesTab() fyne.CanvasObject {
@@ -50,6 +52,10 @@ func NewGesturesTab() fyne.CanvasObject {
 		},
 		selected: -1,
 	}
+
+	tab.overview = widget.NewLabel("Gestures help you map hand motion to high-level actions like media control, locking, and zooming.")
+	tab.overview.Wrapping = fyne.TextWrapWord
+	tab.activeCount = widget.NewLabel("")
 
 	// ----- Header -----
 	header := container.NewHBox(
@@ -149,32 +155,72 @@ func NewGesturesTab() fyne.CanvasObject {
 	statsCard := tab.createStatsCard()
 
 	instructions := widget.NewRichTextFromMarkdown(
-		"## Tips\n\n" +
-			"- Train gestures by performing them 5 to 10 times\n" +
-			"- Higher confidence usually means better recognition\n" +
-			"- You can map gestures to any system action")
+		"## Gesture Workflow\n\n" +
+			"1. Select a gesture type from the filter.\n" +
+			"2. Add or edit templates to match the motion you want.\n" +
+			"3. Use Test Gesture to confirm the mapping.\n" +
+			"4. Keep confidence high and actions simple for demos.\n\n" +
+			"## Best Practices\n\n" +
+			"- Train gestures 5 to 10 times for consistency.\n" +
+			"- Use distinct motions for distinct actions.\n" +
+			"- Start with media and navigation actions before advanced controls.")
+
+	summaryCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("✋ Gesture Overview", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		tab.overview,
+		tab.activeCount,
+		widget.NewLabel("Recommended mappings: swipe for navigation, circular motion for volume, pinch for zoom."),
+	)))
+
+	controlCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("🧰 Gesture Tools", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		container.NewHBox(
+			tab.addBtn,
+			tab.editBtn,
+			tab.deleteBtn,
+		),
+		container.NewHBox(
+			tab.importBtn,
+			tab.exportBtn,
+			tab.testBtn,
+		),
+		tab.statusLabel,
+	)))
 
 	// ----- Layout -----
-	toolbar := container.NewVBox(
+	searchCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("🔎 Search & Filter", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
 		container.NewHBox(
-			widget.NewLabel("🔍"), tab.searchEntry,
-			widget.NewLabel("Type:"), tab.filterType,
+			widget.NewLabel("🔍"),
+			tab.searchEntry,
 		),
 		container.NewHBox(
-			tab.addBtn, tab.editBtn, tab.deleteBtn,
-			tab.importBtn, tab.exportBtn, tab.testBtn,
+			widget.NewLabel("Type:"),
+			tab.filterType,
 		),
+	)))
+
+	leftColumn := container.NewVBox(
+		summaryCard,
+		searchCard,
+		controlCard,
+		statsCard,
 	)
 
-	content := container.NewBorder(
+	rightColumn := NewGlassCard(container.NewPadded(container.NewVBox(
+		widget.NewLabelWithStyle("📚 Template Library", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		container.NewScroll(tab.list),
+	)))
+
+	content := container.NewVBox(
 		header,
-		container.NewVBox(statsCard, instructions),
-		nil, nil,
-		container.NewBorder(
-			toolbar,
-			nil, nil, nil,
-			container.NewScroll(tab.list),
-		),
+		widget.NewSeparator(),
+		container.NewGridWithColumns(2, leftColumn, rightColumn),
+		instructions,
 	)
 
 	// Initial refresh (safe now because all widgets are initialized)
@@ -211,6 +257,9 @@ func (t *GesturesTab) refreshList() {
 		return
 	}
 	t.list.Refresh()
+	if t.activeCount != nil {
+		t.activeCount.SetText(fmt.Sprintf("Active templates shown: %d", len(t.getFilteredTemplates())))
+	}
 	t.updateButtons()
 }
 
