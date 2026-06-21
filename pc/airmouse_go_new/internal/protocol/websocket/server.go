@@ -351,6 +351,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		if name == "" {
 			name = "Unknown"
 		}
+		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
 		client.Name = name
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.UpdateDeviceName(client.ID, name)
@@ -361,6 +362,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		cfg := config.Get()
 		welcome := WelcomeMessage(cfg.ServerName, cfg.Version)
 		client.Send <- welcome
+		utils.LogInfo("Approval sent to device (WebSocket): id=%s name=%s", client.ID, name)
 
 	case "gesture":
 		gesture, _ := payload["gesture"].(string)
