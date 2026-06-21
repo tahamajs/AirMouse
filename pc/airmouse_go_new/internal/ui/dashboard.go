@@ -87,7 +87,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	tab.endpointLabel = widget.NewLabel("🔌 Endpoint: not started")
 	tab.protocolLabel = widget.NewLabel("🛰️ Protocols: TCP / WebSocket / UDP discovery")
-	tab.retryLabel = widget.NewLabel("🔁 ACK / Retry: waiting for handshake")
+	tab.retryLabel = widget.NewLabel("🔁 ACK / Retry: waiting for approval handshake")
 	tab.uptimeLabel = widget.NewLabel("⏱️ Uptime: --:--:--")
 	tab.aiStatusLabel = widget.NewLabel("🧠 AI Smoothing: Disabled")
 	tab.summaryLabel = widget.NewLabel("Status summary will appear here once the server starts.")
@@ -377,7 +377,7 @@ func (t *DashboardTab) refreshStats() {
 				int(uptime.Seconds())%60,
 			))
 			t.summaryLabel.SetText(fmt.Sprintf(
-				"Running on %s with %d connected device(s). Live telemetry and logs are updating below.",
+				"Running on %s with %d approved device(s). Pending sessions wait for approval and live telemetry updates below.",
 				utils.GetLocalIP(),
 				deviceCount,
 			))
@@ -581,7 +581,7 @@ func (t *DashboardTab) showPairingQRDialog() {
 			"1. Open Air Mouse on your phone\n" +
 			"2. Tap the QR scanner icon\n" +
 			"3. Scan this QR code\n" +
-			"4. The phone will show approval pending, then approved\n\n" +
+			"4. The phone will show waiting for approval, then approved\n\n" +
 			fmt.Sprintf("Server: %s\nIP: %s\nPort: %d\nVersion: %s",
 				t.cfg.ServerName, ip, port, t.cfg.Version),
 	)
