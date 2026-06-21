@@ -279,12 +279,7 @@ func (t *ProximityTab) updateDistance(distance float64) {
 	RunOnMain(func() {
 		t.distanceLabel.SetText(fmt.Sprintf("📏 Current distance: %.2f m", distance))
 		t.historyChart.SetText(historyText)
-		t.modeLabel.SetText(fmt.Sprintf("Mode: %s | Near %.1f m | Far %.1f m", func() string {
-			if t.serviceRunning {
-				return "monitoring"
-			}
-			return "idle"
-		}(), t.cfg.ProximityNearThreshold, t.cfg.ProximityFarThreshold))
+		t.modeLabel.SetText(fmt.Sprintf("Mode: %s | Near %.1f m | Far %.1f m", proximityModeLabel(t.serviceRunning), t.cfg.ProximityNearThreshold, t.cfg.ProximityFarThreshold))
 
 		// Colour coding
 		if distance < t.cfg.ProximityNearThreshold {
@@ -304,6 +299,13 @@ func (t *ProximityTab) updateDistance(distance float64) {
 			t.lastLockState = false
 		}
 	})
+}
+
+func proximityModeLabel(running bool) string {
+	if running {
+		return "monitoring"
+	}
+	return "idle"
 }
 
 // ------------------------------------------------------------

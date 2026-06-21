@@ -1410,3 +1410,31 @@
 2026-06-21 15:15:48.539 [INFO] main.go:36: Device manager stopped
 2026-06-21 15:15:48.539 [INFO] main.go:199: Closing UI...
 2026-06-21 15:15:48.564 [INFO] main.go:203: Shutdown complete
+2026-06-21 15:19:20.361 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-21 15:19:20.362 [INFO] main.go:97: System Information:
+2026-06-21 15:19:20.362 [INFO] main.go:98:   OS: darwin
+2026-06-21 15:19:20.362 [INFO] main.go:99:   Arch: arm64
+2026-06-21 15:19:20.362 [INFO] main.go:100:   CPUs: 8
+2026-06-21 15:19:20.362 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-21 15:19:20.362 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-21 15:19:20.362 [INFO] main.go:103:   Git Commit: unknown
+2026-06-21 15:19:20.363 [INFO] main.go:115: Authentication disabled
+2026-06-21 15:19:20.390 [INFO] main.go:64: Application started successfully
+2026-06-21 15:19:20.390 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-21 15:19:20.390 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-21 15:19:20.390 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-21 15:19:20.390 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-21 15:19:20.390 [INFO] main.go:69: Launching desktop UI window...
+2026-06-21 15:19:20.864 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-21 15:19:20.864 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-21 15:20:01.596 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-21 15:20:02.381 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-21 15:20:02.384 [INFO] main.go:125: Protocol lifecycle event: start
+2026-06-21 15:20:02.422 [INFO] main.go:36: Nearby BLE device discovered: AirMouse Device (AA:BB:CC:DD:EE:FF)
+2026-06-21 15:20:10.769 [INFO] main.go:36: Device registered: Android (WebSocket)
+2026-06-21 15:20:10.838 [INFO] main.go:140: Device lifecycle event: type=registered id=3e20dff447948c243548b0ef76469a59 name=Android
