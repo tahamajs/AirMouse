@@ -95,7 +95,7 @@ func (a *App) Run() error {
 
 	// Status bar
 	a.statusBar = NewStatusBar()
-	a.connectionStatus = widget.NewLabel("🔌 Status: Ready")
+	a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval")
 	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts.")
 	a.summaryStatus.Wrapping = fyne.TextWrapWord
 
@@ -268,7 +268,7 @@ func (a *App) createToolbar() fyne.CanvasObject {
 	})
 
 	title := widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	subtitle := widget.NewLabel("One dashboard for server control, device status, and pairing.")
+	subtitle := widget.NewLabel("One dashboard for approval, connection, and pairing status.")
 	subtitle.Wrapping = fyne.TextWrapWord
 
 	return container.NewBorder(
@@ -286,7 +286,7 @@ func (a *App) startServerAsync(source string) {
 	}
 	utils.LogInfo("UI requested server start: source=%s", source)
 	if a.connectionStatus != nil {
-		a.connectionStatus.SetText("⏳ Status: Starting server...")
+		a.connectionStatus.SetText("⏳ Status: Waiting for approval")
 	}
 	go func() {
 		err := a.server.Start()
@@ -310,7 +310,7 @@ func (a *App) stopServerAsync(source string) {
 	}
 	utils.LogInfo("UI requested server stop: source=%s", source)
 	if a.connectionStatus != nil {
-		a.connectionStatus.SetText("⏳ Status: Stopping server...")
+		a.connectionStatus.SetText("⏳ Status: Waiting for approval")
 	}
 	go func() {
 		a.server.Stop()
@@ -368,10 +368,10 @@ func (a *App) refreshConnectionSummary() {
 	}
 
 	ip := utils.GetLocalIP()
-	a.connectionStatus.SetText(fmt.Sprintf("🟢 Running: %d device(s) connected", deviceCount))
+	a.connectionStatus.SetText(fmt.Sprintf("🟢 Approved: %d device(s) connected", deviceCount))
 	if a.summaryStatus != nil {
 		a.summaryStatus.SetText(fmt.Sprintf(
-			"Listening on %s:%d | ws://%s:%d/ws | UDP %d | Theme: %s",
+			"Waiting for approval on %s:%d | ws://%s:%d/ws | UDP %d | Theme: %s",
 			ip,
 			a.cfg.Port,
 			ip,
@@ -573,7 +573,7 @@ func (a *App) showUserGuide() {
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("User Guide", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
-		widget.NewLabel("1. Start the server from Dashboard and wait for it to be ready."),
+		widget.NewLabel("1. Start the server from Dashboard and wait for approval to be ready."),
 		widget.NewLabel("2. Scan the pairing QR code with the Android app."),
 		widget.NewLabel("3. Watch the Android app show waiting for approval, then approved."),
 		widget.NewLabel("4. Move your phone to control the cursor after approval."),
