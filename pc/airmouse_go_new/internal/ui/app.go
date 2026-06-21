@@ -424,17 +424,6 @@ func (a *App) stopBackgroundUI() {
 	if a.statusBar != nil {
 		a.statusBar.Stop()
 	}
-
-	if a.dashboardTab != nil {
-		if tab, ok := a.dashboardTab.(*DashboardTab); ok {
-			tab.Stop()
-		}
-	}
-	if a.proximityTab != nil {
-		if tab, ok := a.proximityTab.(*ProximityTab); ok {
-			tab.Stop()
-		}
-	}
 }
 
 // ------------------------------------------------------------
