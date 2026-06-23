@@ -449,7 +449,7 @@ func (t *DashboardTab) refreshStats() {
 			} else {
 				t.savedDetailBox.SetText("No previously connected devices yet.\nConnect a phone once and it will stay here for future sessions.")
 			}
-			utils.LogDebug("Dashboard device list updated: %s", strings.Join(deviceNamesForLog(devices), ", "))
+			utils.LogDebug("Dashboard device list updated: %s", strings.Join(deviceNamesForLog(activeDevices), ", "))
 		} else {
 			t.deviceDetailBox.SetText("No connected devices yet.")
 			t.savedDetailBox.SetText("No previously connected devices yet.\nConnect a phone once and it will stay here for future sessions.")

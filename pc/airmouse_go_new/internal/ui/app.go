@@ -585,7 +585,7 @@ func (a *App) showGestureRecorder() {
 
 func (a *App) showNetworkDiagnostics() {
 	ip := utils.GetLocalIP()
-	devices := a.deviceMgr.GetAllDevices()
+	devices := a.deviceMgr.GetActiveDevices()
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("Network Diagnostics", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
