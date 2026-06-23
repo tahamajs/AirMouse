@@ -310,20 +310,7 @@ func (t *DevicesTab) showPairingForDevice(d *device.DeviceInfo) {
 	if win == nil || d == nil {
 		return
 	}
-
-	content := container.NewVBox(
-		widget.NewLabelWithStyle("Pair Device", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewSeparator(),
-		widget.NewLabel(fmt.Sprintf("Name: %s", d.Name)),
-		widget.NewLabel(fmt.Sprintf("Type: %s", d.Type)),
-		widget.NewLabel(fmt.Sprintf("ID: %s", d.ID)),
-		widget.NewLabel("This opens the pairing wizard using the current server QR / WebSocket endpoint."),
-		widget.NewButtonWithIcon("Open Pairing Wizard", theme.ConfirmIcon(), func() {
-			ShowPairingWizard(win, fmt.Sprintf("ws://%s:%d/ws", utils.GetLocalIP(), config.Get().WebSocketPort))
-		}),
-	)
-
-	dialog.ShowCustom("Pair Device", "Close", content, win)
+	ShowPairingWizard(win, fmt.Sprintf("ws://%s:%d/ws", utils.GetLocalIP(), config.Get().WebSocketPort))
 }
 
 // getStatusText returns a status string with emoji.

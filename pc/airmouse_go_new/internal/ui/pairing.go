@@ -59,7 +59,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 
 	qrImage := canvas.NewImageFromImage(img)
 	qrImage.FillMode = canvas.ImageFillContain
-	qrImage.SetMinSize(fyne.NewSize(240, 240))
+	qrImage.SetMinSize(fyne.NewSize(320, 320))
 
 	// Instructions
 	instructions := widget.NewRichTextFromMarkdown(
@@ -144,6 +144,9 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("🔗 Pair New Device", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
+		widget.NewRichTextFromMarkdown(
+			"**Approval required:** the Android app can discover the server, but it will not control the mouse until this server approves the session.",
+		),
 		widget.NewLabel("The QR code opens the Android pairing flow with the correct WebSocket endpoint and protocol."),
 		instructions,
 		widget.NewSeparator(),
@@ -152,7 +155,9 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 		serverInfo,
 	)
 
-	dialog.ShowCustom("Pairing Wizard", "Close", container.NewScroll(container.NewPadded(container.NewMax(content))), parent)
+	scroll := container.NewScroll(container.NewPadded(container.NewMax(content)))
+	scroll.SetMinSize(fyne.NewSize(760, 760))
+	dialog.ShowCustom("Pairing Wizard", "Close", scroll, parent)
 }
 
 // ------------------------------------------------------------
