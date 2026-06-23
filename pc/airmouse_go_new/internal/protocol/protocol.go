@@ -193,41 +193,43 @@ func (s *ProtocolServer) Stop() {
 		return
 	}
 
-	// Stop TCP server
-	if s.tcpServer != nil {
-		s.tcpServer.Stop()
+	tcpServer := s.tcpServer
+	wsServer := s.wsServer
+	udpServer := s.udpServer
+	bluetoothMgr := s.bluetoothMgr
+	usbServer := s.usbServer
+	s.running = false
+	s.mu.Unlock()
+
+	// Stop subsystems outside the protocol lock so shutdown cannot deadlock
+	// if any backend stop path needs to inspect server state or emit events.
+	if tcpServer != nil {
+		tcpServer.Stop()
 		utils.LogInfo("TCP server stopped")
 	}
 
-	// Stop WebSocket server
-	if s.wsServer != nil {
-		if err := s.wsServer.Stop(); err != nil {
+	if wsServer != nil {
+		if err := wsServer.Stop(); err != nil {
 			utils.LogError("WebSocket stop error: %v", err)
 		} else {
 			utils.LogInfo("WebSocket server stopped")
 		}
 	}
 
-	// Stop UDP server
-	if s.udpServer != nil {
-		s.udpServer.Stop()
+	if udpServer != nil {
+		udpServer.Stop()
 		utils.LogInfo("UDP server stopped")
 	}
 
-	// Stop Bluetooth manager
-	if s.bluetoothMgr != nil {
-		s.bluetoothMgr.Stop()
+	if bluetoothMgr != nil {
+		bluetoothMgr.Stop()
 		utils.LogInfo("Bluetooth manager stopped")
 	}
 
-	// Stop USB server
-	if s.usbServer != nil {
-		s.usbServer.Stop()
+	if usbServer != nil {
+		usbServer.Stop()
 		utils.LogInfo("USB server stopped")
 	}
-
-	s.running = false
-	s.mu.Unlock()
 
 	s.triggerEvent(ServerEvent{
 		Type:      "stop",
