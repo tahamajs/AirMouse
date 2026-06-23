@@ -52,7 +52,9 @@ var (
 	newWebSocketServer = func(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) websocketStartStopStats {
 		return websocket.NewServer(port, mouse, deviceMgr, authMgr)
 	}
-	newUDPServer    = func(port int, deviceMgr *device.Manager) startStopStats { return udp.NewServer(port, deviceMgr) }
+	newUDPServer = func(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) startStopStats {
+		return udp.NewServer(port, mouse, deviceMgr, authMgr)
+	}
 	newBluetoothMgr = func(adapter string, mouse control.MouseController, deviceMgr *device.Manager) bluetoothStartStopStats {
 		return bluetooth.NewManager(adapter, mouse, deviceMgr)
 	}
@@ -111,7 +113,7 @@ func (s *ProtocolServer) Start() error {
 		}
 	}
 	if cfg.EnableUDP {
-		s.udpServer = newUDPServer(cfg.UDPPort, s.deviceMgr)
+		s.udpServer = newUDPServer(cfg.UDPPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
 		if err := s.udpServer.Start(); err != nil {
 			utils.LogError("UDP server start failed", "error", err)
 		} else {
