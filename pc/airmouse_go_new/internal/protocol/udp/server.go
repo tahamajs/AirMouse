@@ -217,13 +217,13 @@ func (s *Server) sendDiscoveryResponse(clientAddr *net.UDPAddr) {
 	cfg := config.Get()
 	// Android discovery clients currently accept the legacy text format:
 	// AIRMOUSE_SERVER:<port>:<name>:<version>
-	response := fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s", cfg.Port, cfg.ServerName, cfg.Version)
+	response := fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s", cfg.UDPPort, cfg.ServerName, cfg.Version)
 	_, err := s.conn.WriteToUDP([]byte(response), clientAddr)
 	if err != nil {
 		utils.LogDebug("Failed to send discovery response: %v", err)
 		return
 	}
-	utils.LogInfo("UDP discovery response sent to %s on port %d", clientAddr.IP.String(), cfg.Port)
+	utils.LogInfo("UDP discovery response sent to %s on port %d", clientAddr.IP.String(), cfg.UDPPort)
 }
 
 func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *UDPClient, payload map[string]any) {

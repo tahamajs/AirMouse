@@ -1666,3 +1666,31 @@
 2026-06-24 02:13:02.051 [INFO] main.go:140: Device lifecycle event: type=registered id=e9a8fca7f560762a6ab674846fd7dae3 name=Unknown
 2026-06-24 02:18:29.981 [INFO] main.go:78: Shutting down...
 2026-06-24 02:18:29.982 [INFO] main.go:36: Device manager stopped
+2026-06-24 02:23:05.250 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-24 02:23:05.261 [INFO] main.go:97: System Information:
+2026-06-24 02:23:05.261 [INFO] main.go:98:   OS: darwin
+2026-06-24 02:23:05.261 [INFO] main.go:99:   Arch: arm64
+2026-06-24 02:23:05.261 [INFO] main.go:100:   CPUs: 8
+2026-06-24 02:23:05.261 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-24 02:23:05.261 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-24 02:23:05.261 [INFO] main.go:103:   Git Commit: unknown
+2026-06-24 02:23:05.264 [INFO] main.go:115: Authentication disabled
+2026-06-24 02:23:05.277 [INFO] main.go:64: Application started successfully
+2026-06-24 02:23:05.278 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-24 02:23:05.278 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-24 02:23:05.278 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-24 02:23:05.278 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-24 02:23:05.278 [INFO] main.go:69: Launching desktop UI window...
+2026-06-24 02:23:05.766 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-24 02:23:05.766 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 02:23:14.054 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-24 02:23:14.055 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 02:23:14.055 [INFO] main.go:125: Protocol lifecycle event: start
+2026-06-24 02:23:14.056 [INFO] main.go:36: Nearby BLE device discovered: AirMouse Device (AA:BB:CC:DD:EE:FF)
+2026-06-24 02:24:02.279 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 02:24:02.292 [INFO] main.go:140: Device lifecycle event: type=registered id=fee247814fdf9bcdb1461e0b36f3844d name=Unknown

@@ -85,7 +85,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	// Status displays
 	tab.statsLabel = widget.NewLabel("📊 Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
-	tab.connLabel = widget.NewLabel("📱 Connected devices: 0")
+	tab.connLabel = widget.NewLabel("📱 Active devices: 0")
 
 	tab.endpointLabel = widget.NewLabel("🔌 Endpoint: not started")
 	tab.protocolLabel = widget.NewLabel("🛰️ Protocols: TCP / WebSocket / UDP discovery")
@@ -441,7 +441,7 @@ func (t *DashboardTab) refreshStats() {
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
 			clicks, dbl, right, scroll,
 		))
-		t.connLabel.SetText(fmt.Sprintf("📱 Connected devices: %d  |  Saved devices: %d", deviceCount, savedCount))
+		t.connLabel.SetText(fmt.Sprintf("📱 Active devices: %d  |  Saved devices: %d", deviceCount, savedCount))
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
 			if savedCount > 0 {
