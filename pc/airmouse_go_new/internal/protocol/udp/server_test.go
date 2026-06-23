@@ -5,11 +5,12 @@ import (
 	"net"
 	"testing"
 
+	"airmouse-go/internal/auth"
 	"airmouse-go/internal/device"
 )
 
 func TestGetStatsReflectsRunningState(t *testing.T) {
-	s := NewServer(0, device.NewManager())
+	s := NewServer(0, nil, device.NewManager(), (*auth.Manager)(nil))
 	if got := s.GetStats()["running"]; got != false {
 		t.Fatalf("running = %v, want false", got)
 	}
