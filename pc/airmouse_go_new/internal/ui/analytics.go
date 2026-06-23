@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"io"
+	"os"
+	"path/filepath"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -13,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	"airmouse-go/internal/config"
 	"airmouse-go/internal/personalization"
 )
 
@@ -37,10 +41,10 @@ type AnalyticsTab struct {
 }
 
 type TrainingRecord struct {
-	Timestamp  time.Time
-	Samples    int
-	Accuracy   float64
-	Loss       float64
+	Timestamp time.Time
+	Samples   int
+	Accuracy  float64
+	Loss      float64
 }
 
 // NewAnalyticsTab creates the analytics / personalization tab.
@@ -306,12 +310,7 @@ func (t *AnalyticsTab) startTraining() {
 			})
 		}
 
-		var err error
-		if method, ok := interface{}(t.collector).(interface{ ForceFineTune() error }); ok {
-			err = method.ForceFineTune()
-		} else {
-			err = fmt.Errorf("ForceFineTune not implemented")
-		}
+		err := t.collector.ForceFineTune()
 
 		RunOnMain(func() {
 			t.progressBar.Hidden = true
@@ -376,7 +375,6 @@ func (t *AnalyticsTab) exportTrainingData() {
 	}, win)
 }
 
-// importModel (stub).
 func (t *AnalyticsTab) importModel() {
 	win := getCurrentWindow()
 	if win == nil {
@@ -385,7 +383,28 @@ func (t *AnalyticsTab) importModel() {
 	dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
 		if err == nil && reader != nil {
 			defer reader.Close()
-			dialog.ShowInformation("Import", "Model import feature coming soon.", win)
+			data, readErr := io.ReadAll(reader)
+			if readErr != nil {
+				dialog.ShowError(readErr, win)
+				return
+			}
+
+			cfg := config.Get()
+			if cfg == nil || cfg.MLModelPath == "" {
+				dialog.ShowInformation("Import", "No model path is configured.", win)
+				return
+			}
+
+			if err := os.MkdirAll(filepath.Dir(cfg.MLModelPath), 0o755); err != nil {
+				dialog.ShowError(err, win)
+				return
+			}
+			if err := os.WriteFile(cfg.MLModelPath, data, 0o644); err != nil {
+				dialog.ShowError(err, win)
+				return
+			}
+
+			dialog.ShowInformation("Import", "Model imported successfully.", win)
 		}
 	}, win)
 }
