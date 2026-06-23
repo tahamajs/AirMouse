@@ -260,7 +260,7 @@ func (s *ProtocolServer) GetConnectedDevices() []*device.DeviceInfo {
 	if s.deviceMgr == nil {
 		return []*device.DeviceInfo{}
 	}
-	return s.deviceMgr.GetAllDevices()
+	return s.deviceMgr.GetActiveDevices()
 }
 
 // GetDeviceCount returns the number of connected devices
@@ -268,7 +268,7 @@ func (s *ProtocolServer) GetDeviceCount() int {
 	if s.deviceMgr == nil {
 		return 0
 	}
-	return len(s.deviceMgr.GetAllDevices())
+	return len(s.deviceMgr.GetActiveDevices())
 }
 
 // GetStatistics returns statistics from all servers
@@ -296,7 +296,7 @@ func (s *ProtocolServer) GetStatistics() map[string]interface{} {
 	}
 
 	if s.deviceMgr != nil {
-		stats["devices"] = len(s.deviceMgr.GetAllDevices())
+		stats["devices"] = len(s.deviceMgr.GetActiveDevices())
 		stats["blocked"] = s.deviceMgr.GetBlockedCount()
 	}
 
