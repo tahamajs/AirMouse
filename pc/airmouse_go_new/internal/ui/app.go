@@ -338,14 +338,12 @@ func (a *App) stopServerAsync(source string) {
 	}
 	utils.LogInfo("UI requested server stop: source=%s", source)
 	if a.connectionStatus != nil {
-		a.connectionStatus.SetText("⏳ Status: Waiting for approval")
+		a.connectionStatus.SetText("⏳ Status: Stopping server...")
 	}
-	go func() {
-		a.server.Stop()
-		RunOnMain(func() {
-			a.refreshConnectionSummary()
-		})
-	}()
+	a.server.Stop()
+	RunOnMain(func() {
+		a.refreshConnectionSummary()
+	})
 }
 
 // ------------------------------------------------------------
@@ -434,30 +432,27 @@ func (a *App) shutdown(force bool) {
 	a.shutdownOnce.Do(func() {
 		utils.LogInfo("Shutdown sequence started (force=%v)", force)
 		a.stopAppLoops()
-		if a.server != nil {
-			go a.server.Stop()
-		}
-
 		a.stopBackgroundUI()
+
+		if a.server != nil {
+			a.server.Stop()
+		}
 
 		if err := a.cfg.Save(); err != nil {
 			utils.LogError("Failed to save config: %v", err)
 		}
 
 		go func() {
-			time.Sleep(50 * time.Millisecond)
-			if a.fyneApp != nil {
-				RunOnMain(func() {
-					a.fyneApp.Quit()
-				})
-			}
-		}()
-
-		go func() {
 			time.Sleep(2 * time.Second)
 			utils.LogWarn("Forced exit after shutdown timeout")
 			os.Exit(0)
 		}()
+
+		if a.fyneApp != nil {
+			RunOnMain(func() {
+				a.fyneApp.Quit()
+			})
+		}
 	})
 }
 
