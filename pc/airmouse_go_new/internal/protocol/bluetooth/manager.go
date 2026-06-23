@@ -120,21 +120,8 @@ func (m *Manager) discoveryLoop() {
 }
 
 func (m *Manager) startDiscovery() {
-	// Simulate BLE device discovery
-	simulatedDevices := []struct {
-		addr    string
-		name    string
-		rssi    int32
-		txPower int32
-	}{
-		{"AA:BB:CC:DD:EE:FF", "AirMouse Device", -55, 4},
-		{"11:22:33:44:55:66", "iPhone", -65, 6},
-		{"77:88:99:AA:BB:CC", "Android Phone", -70, 5},
-	}
-
-	for _, dev := range simulatedDevices {
-		m.handleDiscoveredDevice(dev.addr, dev.name, dev.rssi, dev.txPower)
-	}
+	// Real BLE discovery is not simulated here.
+	// The manager only updates the UI when actual adapter events are wired in.
 }
 
 func (m *Manager) handleDiscoveredDevice(addr, name string, rssi, txPower int32) {
