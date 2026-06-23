@@ -160,16 +160,12 @@ func (m *DeviceManager) deviceDiscoveryLoop() {
 	logInfo("Bluetooth manager started: adapter=default")
 	logInfo("USB serial server started: baud_rate=115200 auto_detect=true")
 
-	// Initial device discovery
-	m.simulateDeviceDiscovery()
-
 	for {
 		select {
 		case <-ticker.C:
 			if m.stopped {
 				return
 			}
-			m.simulateDeviceDiscovery()
 		case <-m.stopChan:
 			return
 		}

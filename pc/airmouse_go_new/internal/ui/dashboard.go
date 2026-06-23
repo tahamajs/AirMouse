@@ -414,15 +414,18 @@ func (t *DashboardTab) refreshStats() {
 
 	// Get stats once
 	clicks, dbl, right, scroll := t.mouse.Stats()
-	devices := t.deviceMgr.GetAllDevices()
-	deviceCount := len(devices)
-	savedCount := len(devices)
+	allDevices := t.deviceMgr.GetAllDevices()
+	activeDevices := t.deviceMgr.GetActiveDevices()
+	deviceCount := len(activeDevices)
+	savedCount := len(allDevices)
 	utils.LogDebug("Dashboard refresh: clicks=%d double=%d right=%d scroll=%d devices=%d", clicks, dbl, right, scroll, deviceCount)
 
 	var deviceDetails []string
 	var savedDetails []string
-	for _, d := range devices {
+	for _, d := range activeDevices {
 		deviceDetails = append(deviceDetails, formatDeviceDetails(d))
+	}
+	for _, d := range allDevices {
 		savedDetails = append(savedDetails, formatSavedDeviceDetails(d))
 	}
 	// Update UI in one batch
@@ -452,7 +455,7 @@ func (t *DashboardTab) refreshStats() {
 			t.savedDetailBox.SetText("No previously connected devices yet.\nConnect a phone once and it will stay here for future sessions.")
 			utils.LogDebug("Dashboard device list empty")
 		}
-		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(devices))
+		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(activeDevices))
 
 		t.mu.Lock()
 		if !t.serverStart.IsZero() {
