@@ -194,12 +194,12 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 	case "control":
 		command, _ := payload["command"].(string)
 		switch command {
-		case "pause_movement":
-			control.SetMovementPaused(true)
-			utils.LogInfo("Movement paused by UDP client: %s", clientIP)
-		case "resume_movement":
+		case "start", "touchpad_start", "resume", "resume_movement":
 			control.SetMovementPaused(false)
-			utils.LogInfo("Movement resumed by UDP client: %s", clientIP)
+			utils.LogInfo("Movement resumed by UDP client: %s command=%s", clientIP, command)
+		case "stop", "touchpad_stop", "pause", "pause_movement":
+			control.SetMovementPaused(true)
+			utils.LogInfo("Movement paused by UDP client: %s command=%s", clientIP, command)
 		default:
 			utils.LogDebug("Unknown UDP control command: %s", command)
 		}
