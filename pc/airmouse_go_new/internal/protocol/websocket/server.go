@@ -417,12 +417,12 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	case "control":
 		command, _ := payload["command"].(string)
 		switch command {
-		case "pause_movement":
-			control.SetMovementPaused(true)
-			utils.LogInfo("Movement paused by device: %s", client.ID)
-		case "resume_movement":
+		case "start", "touchpad_start", "resume", "resume_movement":
 			control.SetMovementPaused(false)
-			utils.LogInfo("Movement resumed by device: %s", client.ID)
+			utils.LogInfo("Movement resumed by device: %s command=%s", client.ID, command)
+		case "stop", "touchpad_stop", "pause", "pause_movement":
+			control.SetMovementPaused(true)
+			utils.LogInfo("Movement paused by device: %s command=%s", client.ID, command)
 		default:
 			utils.LogDebug("Unknown control command: %s", command)
 		}

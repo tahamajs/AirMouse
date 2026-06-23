@@ -316,12 +316,12 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 		command, _ := payload["command"].(string)
 		switch command {
-		case "pause_movement":
-			control.SetMovementPaused(true)
-			utils.LogInfo("Movement paused by TCP client: client=%s", client.ID)
-		case "resume_movement":
+		case "start", "touchpad_start", "resume", "resume_movement":
 			control.SetMovementPaused(false)
-			utils.LogInfo("Movement resumed by TCP client: client=%s", client.ID)
+			utils.LogInfo("Movement resumed by TCP client: client=%s command=%s", client.ID, command)
+		case "stop", "touchpad_stop", "pause", "pause_movement":
+			control.SetMovementPaused(true)
+			utils.LogInfo("Movement paused by TCP client: client=%s command=%s", client.ID, command)
 		}
 
 	default:
