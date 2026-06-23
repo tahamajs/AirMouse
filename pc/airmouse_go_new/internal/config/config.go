@@ -340,56 +340,56 @@ func (c *Config) Reload() error {
 // SetSensitivity sets mouse sensitivity
 func (c *Config) SetSensitivity(s float64) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.Sensitivity = s
+	c.mu.Unlock()
 	c.Save()
 }
 
 // SetTheme sets UI theme
 func (c *Config) SetTheme(theme string) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.Theme = theme
+	c.mu.Unlock()
 	c.Save()
 }
 
 // SetLogLevel sets log level
 func (c *Config) SetLogLevel(level string) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.LogLevel = level
+	c.mu.Unlock()
 	c.Save()
 }
 
 // SetPredictiveEnabled enables/disables predictive movement
 func (c *Config) SetPredictiveEnabled(enabled bool) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.EnablePredictive = enabled
+	c.mu.Unlock()
 	c.Save()
 }
 
 // SetPredictiveBlendFactor sets predictive blend factor
 func (c *Config) SetPredictiveBlendFactor(factor float64) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.PredictiveBlendFactor = factor
+	c.mu.Unlock()
 	c.Save()
 }
 
 // SetAISmoothingEnabled enables/disables AI smoothing
 func (c *Config) SetAISmoothingEnabled(enabled bool) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.EnableAISmoothing = enabled
+	c.mu.Unlock()
 	c.Save()
 }
 
 // SetPersonalizationEnabled enables/disables personalization
 func (c *Config) SetPersonalizationEnabled(enabled bool) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.EnablePersonalization = enabled
+	c.mu.Unlock()
 	c.Save()
 }
 
