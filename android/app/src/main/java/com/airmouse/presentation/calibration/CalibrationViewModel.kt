@@ -11,11 +11,13 @@ import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.domain.usecase.CalibrationUseCase
 import com.airmouse.utils.PreferencesManager
+import com.airmouse.presentation.ui.calibration.CalibrationPhase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @HiltViewModel
@@ -53,6 +55,7 @@ class CalibrationViewModel @Inject constructor(
     val calibrationProgress: StateFlow<Int> = _calibrationProgress.asStateFlow()
 
     private var calibrationJob: Job? = null
+    private var preparationJob: Job? = null
     private var gyroSamples = mutableListOf<Triple<Float, Float, Float>>()
     private var magSamples = mutableListOf<Triple<Float, Float, Float>>()
     private val accelPositions = mutableMapOf<Int, List<Triple<Float, Float, Float>>>()
@@ -94,13 +97,64 @@ class CalibrationViewModel @Inject constructor(
     private fun loadExistingCalibration() {
         viewModelScope.launch {
             try {
-                val data = calibrationRepository.getCalibrationData()
-                if (data.isCalibrated) {
+                val data = withTimeoutOrNull(2000L) {
+                    calibrationRepository.getCalibrationData()
+                }
+
+                if (data?.isCalibrated == true) {
                     _calibrationData.value = data
-                    _uiState.update { it.copy(isComplete = true, progress = 100, calibrationData = data) }
+                    _uiState.update {
+                        it.copy(
+                            currentStep = 3,
+                            calibrationPhase = CalibrationPhase.INTRO,
+                            isComplete = true,
+                            isCalibrating = false,
+                            isCollecting = false,
+                            progress = 100,
+                            statusMessage = "Calibration already saved",
+                            stepInstruction = "You can continue to the app or recalibrate if needed",
+                            calibrationData = data
+                        )
+                    }
+                    prefs.setCalibrated(true)
+                    prefs.setCalibrationTimestamp(data.timestamp)
+                } else {
+                    _calibrationData.value = null
+                    _uiState.update {
+                        it.copy(
+                            currentStep = 0,
+                            calibrationPhase = CalibrationPhase.INTRO,
+                            isComplete = false,
+                            isCalibrating = false,
+                            isCollecting = false,
+                            progress = 0,
+                            statusMessage = if (data == null) {
+                                "No saved calibration found"
+                            } else {
+                                "Saved calibration is incomplete"
+                            },
+                            stepInstruction = "Tap Start to begin calibration",
+                            calibrationData = null
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load calibration", e)
+                _calibrationData.value = null
+                _uiState.update {
+                    it.copy(
+                        currentStep = 0,
+                        calibrationPhase = CalibrationPhase.INTRO,
+                        isComplete = false,
+                        isCalibrating = false,
+                        isCollecting = false,
+                        progress = 0,
+                        statusMessage = "Calibration check failed",
+                        stepInstruction = "Tap Start to begin calibration",
+                        errorMessage = e.message ?: "Unable to read saved calibration",
+                        calibrationData = null
+                    )
+                }
             }
         }
     }
@@ -110,10 +164,41 @@ class CalibrationViewModel @Inject constructor(
         resetCalibrationState()
         _uiState.update { it.copy(
             currentStep = 1, 
+            calibrationPhase = CalibrationPhase.INTRO,
             statusMessage = "Step 1: Gyroscope",
-            stepInstruction = "Place device on a flat surface"
+            stepInstruction = "Watch the motion preview, then tap Start to begin sampling"
         ) }
-        startCurrentStep()
+    }
+
+    fun beginCurrentStep() {
+        if (_isCalibrating.value) return
+        if (_uiState.value.calibrationPhase == CalibrationPhase.SAMPLING) return
+
+        preparationJob?.cancel()
+        _uiState.update {
+            it.copy(
+                calibrationPhase = CalibrationPhase.COUNTDOWN,
+                statusMessage = "Preparing ${stepLabel(_uiState.value.currentStep)}...",
+                stepInstruction = "Hold the phone as shown. Sampling starts automatically in a moment."
+            )
+        }
+
+        preparationJob = viewModelScope.launch {
+            delay(1400)
+            if (_uiState.value.isComplete) return@launch
+            _uiState.update {
+                it.copy(
+                    calibrationPhase = CalibrationPhase.SAMPLING,
+                    statusMessage = "Sampling ${stepLabel(_uiState.value.currentStep)}...",
+                    stepInstruction = when (_uiState.value.currentStep) {
+                        1 -> "Keep the phone flat and still while we sample gyro bias."
+                        2 -> "Keep the phone steady through the magnetometer sweep."
+                        else -> "Rotate through each orientation and hold each pose still."
+                    }
+                )
+            }
+            startCurrentStep()
+        }
     }
 
     /**
@@ -148,7 +233,7 @@ class CalibrationViewModel @Inject constructor(
         calibrationJob = viewModelScope.launch {
             Trace.beginSection("Calibration#gyroSampling")
             try {
-            _uiState.update { it.copy(isCalibrating = true, isCollecting = true, statusMessage = "Sampling Gyro...") }
+            _uiState.update { it.copy(isCalibrating = true, isCollecting = true, calibrationPhase = CalibrationPhase.SAMPLING, statusMessage = "Sampling Gyro...") }
             var count = 0
             while (count < GYRO_SAMPLES_NEEDED) {
                 val data = getSensorData()
@@ -159,7 +244,7 @@ class CalibrationViewModel @Inject constructor(
             }
             saveGyroData()
             _isCalibrating.value = false
-            _uiState.update { it.copy(isCalibrating = false, isCollecting = false, statusMessage = "Gyroscope Complete ✓", stepInstruction = "Keep device ready for Magnetometer") }
+            _uiState.update { it.copy(isCalibrating = false, isCollecting = false, calibrationPhase = CalibrationPhase.INTRO, statusMessage = "Gyroscope Complete ✓", stepInstruction = "Next up: magnetometer. Watch the next animation before starting.") }
             calibrationRepository.updateCalibrationStatus(CalibrationStatus.GYRO_COMPLETE)
             nextStep()
             } finally {
@@ -185,7 +270,7 @@ class CalibrationViewModel @Inject constructor(
         calibrationJob = viewModelScope.launch {
             Trace.beginSection("Calibration#magSampling")
             try {
-            _uiState.update { it.copy(isCalibrating = true, isCollecting = true, statusMessage = "Sampling Mag...") }
+            _uiState.update { it.copy(isCalibrating = true, isCollecting = true, calibrationPhase = CalibrationPhase.SAMPLING, statusMessage = "Sampling Mag...") }
             var count = 0
             while (count < MAG_SAMPLES_NEEDED) {
                 val data = getSensorData()
@@ -196,7 +281,7 @@ class CalibrationViewModel @Inject constructor(
             }
             saveMagData()
             _isCalibrating.value = false
-            _uiState.update { it.copy(isCalibrating = false, isCollecting = false, statusMessage = "Magnetometer Complete ✓", stepInstruction = "Prepare for Accelerometer") }
+            _uiState.update { it.copy(isCalibrating = false, isCollecting = false, calibrationPhase = CalibrationPhase.INTRO, statusMessage = "Magnetometer Complete ✓", stepInstruction = "Next up: accelerometer. Watch the next animation before starting.") }
             calibrationRepository.updateCalibrationStatus(CalibrationStatus.MAG_COMPLETE)
             nextStep()
             } finally {
@@ -220,7 +305,17 @@ class CalibrationViewModel @Inject constructor(
         calibrationJob = viewModelScope.launch {
             Trace.beginSection("Calibration#accelerometerSampling")
             try {
-            _uiState.update { it.copy(isCalibrating = true, isCollecting = true, statusMessage = "Sampling: ${accelPositionsList[currentPos]}") }
+            _uiState.update {
+                it.copy(
+                    isCalibrating = true,
+                    isCollecting = false,
+                    calibrationPhase = CalibrationPhase.COUNTDOWN,
+                    statusMessage = "Prepare: ${accelPositionsList[currentPos]}",
+                    stepInstruction = "Hold the phone in position and wait for sampling to begin."
+                )
+            }
+            delay(900)
+            _uiState.update { it.copy(isCollecting = true, calibrationPhase = CalibrationPhase.SAMPLING, statusMessage = "Sampling: ${accelPositionsList[currentPos]}") }
             val samples = mutableListOf<Triple<Float, Float, Float>>()
             var count = 0
             while (count < ACCEL_SAMPLES_PER_POS) {
@@ -239,6 +334,7 @@ class CalibrationViewModel @Inject constructor(
                 currentPosition = nextPos,
                 progress = (nextPos * 100 / ACCEL_POSITIONS_NEEDED),
                 statusMessage = if (nextPos < ACCEL_POSITIONS_NEEDED) "Pos $nextPos Captured ✓" else "Accelerometer Done ✓",
+                calibrationPhase = if (nextPos < ACCEL_POSITIONS_NEEDED) CalibrationPhase.COUNTDOWN else CalibrationPhase.INTRO,
                 stepInstruction = if (nextPos < ACCEL_POSITIONS_NEEDED) "Next: ${accelPositionsList.getOrNull(nextPos)}" else "All orientations completed"
             ) }
             if (nextPos >= ACCEL_POSITIONS_NEEDED) {
@@ -262,11 +358,11 @@ class CalibrationViewModel @Inject constructor(
                 currentStep = current + 1, 
                 progress = 0, 
                 stepProgress = 0f, 
+                calibrationPhase = CalibrationPhase.INTRO,
                 statusMessage = "Ready for ${if(next==2) "Magnetometer" else "Accelerometer"}",
-                stepInstruction = "Tap Begin to start"
+                stepInstruction = "Review the animation, then tap Start to sample the next sensor"
             ) }
             _calibrationProgress.value = 0
-            startCurrentStep()
         } else if (current == 3 && _uiState.value.currentPosition >= ACCEL_POSITIONS_NEEDED) {
             completeCalibration()
         }
@@ -280,6 +376,8 @@ class CalibrationViewModel @Inject constructor(
             delay(TRANSITION_DELAY)
             val data = CalibrationData(isCalibrated = true, quality = CalibrationQuality.EXCELLENT, timestamp = System.currentTimeMillis())
             calibrationRepository.saveCalibrationData(data)
+            prefs.setCalibrated(true)
+            prefs.setCalibrationTimestamp(data.timestamp)
             calibrationRepository.updateCalibrationStatus(CalibrationStatus.COMPLETED)
             _uiState.update { it.copy(isComplete = true, isCalibrating = false, isCollecting = false, progress = 100, calibrationData = data) }
             } finally {
@@ -328,6 +426,7 @@ class CalibrationViewModel @Inject constructor(
 
     private fun resetCalibrationState() {
         calibrationJob?.cancel()
+        preparationJob?.cancel()
         _isCalibrating.value = false
         gyroSamples.clear()
         magSamples.clear()
@@ -335,7 +434,17 @@ class CalibrationViewModel @Inject constructor(
         _uiState.update { CalibrationUiState.initial() }
     }
 
+    private fun stepLabel(step: Int): String {
+        return when (step) {
+            1 -> "gyroscope"
+            2 -> "magnetometer"
+            3 -> "accelerometer"
+            else -> "calibration"
+        }
+    }
+
     override fun onCleared() {
         calibrationJob?.cancel()
+        preparationJob?.cancel()
     }
 }

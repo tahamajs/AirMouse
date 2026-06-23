@@ -32,7 +32,7 @@ fun CircularProgressWithLabel(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // Background circle
+            
             drawCircle(
                 color = backgroundColor,
                 radius = size / 2f,
@@ -40,7 +40,7 @@ fun CircularProgressWithLabel(
                 style = Stroke(width = strokeWidth.toFloat())
             )
             
-            // Progress arc
+            
             drawArc(
                 color = color,
                 startAngle = -90f,

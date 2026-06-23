@@ -18,7 +18,7 @@ class EnhancedGestureDetectorTest {
 
     @Before
     fun setup() {
-        // Set up default thresholds
+        
         whenever(mockPrefs.getClickThreshold()).thenReturn(5.0f)
         whenever(mockPrefs.getDoubleClickInterval()).thenReturn(400L)
         whenever(mockPrefs.getScrollThreshold()).thenReturn(8.0f)
@@ -38,14 +38,14 @@ class EnhancedGestureDetectorTest {
 
     @Test
     fun `fast gyro Y tilt triggers CLICK`() {
-        // Exceed clickSpeedThreshold (5.0)
+        
         val gesture = detector.detect(10f, 0f, 0f)
         assertEquals(EnhancedGestureDetector.Gesture.CLICK, gesture)
     }
 
     @Test
     fun `high vertical accel triggers SCROLL_DOWN`() {
-        // Exceed scrollSpeedThreshold (8.0)
+        
         val gesture = detector.detect(0f, 15f, 0f)
         assertEquals(EnhancedGestureDetector.Gesture.SCROLL_DOWN, gesture)
     }

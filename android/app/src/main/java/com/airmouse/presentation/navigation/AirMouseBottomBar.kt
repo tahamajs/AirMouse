@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/navigation/AirMouseBottomBar.kt
+
 package com.airmouse.presentation.navigation
 
 import androidx.compose.foundation.layout.fillMaxWidth

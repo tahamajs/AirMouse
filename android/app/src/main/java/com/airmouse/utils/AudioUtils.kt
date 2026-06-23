@@ -40,44 +40,44 @@ class AudioUtils(private val context: Context) {
     }
 
     private fun loadSounds() {
-        // In real app, load actual sound resources
-        // clickSoundId = soundPool.load(context, R.raw.click, 1)
-        // For now, using placeholder
+        
+        
+        
     }
 
     fun playClick() {
         if (!isEnabled) return
-        // playSound(clickSoundId)
+        
     }
 
     fun playDoubleClick() {
         if (!isEnabled) return
-        // playSound(doubleClickSoundId)
+        
     }
 
     fun playRightClick() {
         if (!isEnabled) return
-        // playSound(rightClickSoundId)
+        
     }
 
     fun playScroll() {
         if (!isEnabled) return
-        // playSound(scrollSoundId)
+        
     }
 
     fun playConnect() {
         if (!isEnabled) return
-        // playSound(connectSoundId)
+        
     }
 
     fun playDisconnect() {
         if (!isEnabled) return
-        // playSound(disconnectSoundId)
+        
     }
 
     fun playError() {
         if (!isEnabled) return
-        // playSound(errorSoundId)
+        
     }
 
     private fun playSound(soundId: Int) {

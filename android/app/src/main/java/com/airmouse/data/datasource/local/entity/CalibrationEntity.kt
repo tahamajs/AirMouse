@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/entity/CalibrationEntity.kt
+
 package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
@@ -12,7 +12,7 @@ data class CalibrationEntity(
     @PrimaryKey
     val id: String = "default",
 
-    // Gyroscope Calibration
+    
     @ColumnInfo(name = "gyro_bias_x")
     val gyroBiasX: Float = 0f,
 
@@ -31,7 +31,7 @@ data class CalibrationEntity(
     @ColumnInfo(name = "gyro_variance_z")
     val gyroVarianceZ: Float = 0f,
 
-    // Accelerometer Calibration
+    
     @ColumnInfo(name = "accel_offset_x")
     val accelOffsetX: Float = 0f,
 
@@ -50,7 +50,7 @@ data class CalibrationEntity(
     @ColumnInfo(name = "accel_scale_z")
     val accelScaleZ: Float = 1f,
 
-    // Magnetometer Calibration
+    
     @ColumnInfo(name = "mag_offset_x")
     val magOffsetX: Float = 0f,
 
@@ -69,7 +69,7 @@ data class CalibrationEntity(
     @ColumnInfo(name = "mag_scale_z")
     val magScaleZ: Float = 1f,
 
-    // Status
+    
     @ColumnInfo(name = "is_calibrated")
     val isCalibrated: Boolean = false,
 

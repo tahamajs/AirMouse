@@ -3,6 +3,7 @@ package com.airmouse.presentation.ui.touchpad
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,17 +38,19 @@ fun TouchpadScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val effect by viewModel.effect.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    // Handle effects
     LaunchedEffect(effect) {
-        when (effect) {
+        when (val currentEffect = effect) {
             is TouchpadEffect.NavigateBack -> navigationActions.navigateBack()
             is TouchpadEffect.NavigateToSettings -> navigationActions.navigateToSettings()
             is TouchpadEffect.ShowToast -> {
-                // Show toast
-                viewModel.clearEffect()
+                Toast.makeText(context, currentEffect.message, Toast.LENGTH_SHORT).show()
             }
             else -> { /* Other effects handled by connection manager */ }
+        }
+        if (effect != null) {
+            viewModel.clearEffect()
         }
     }
 
@@ -87,6 +92,9 @@ fun TouchpadScreen(
         ) {
             item {
                 TouchpadHeroCard(uiState)
+            }
+            item {
+                TouchpadDomainSummaryCard(uiState)
             }
             item {
                 TouchpadSurface(
@@ -284,6 +292,29 @@ fun TouchpadScreen(
     }
 }
 
+@Composable
+private fun TouchpadDomainSummaryCard(uiState: TouchpadUiState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Domain snapshot", fontWeight = FontWeight.Bold)
+            Text(
+                "Profile, preferences, and session stats now come from shared models.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(onClick = { }, label = { Text("Sensitivity ${"%.1f".format(uiState.mouseProfile.sensitivity)}") })
+                AssistChip(onClick = { }, label = { Text("Clicks ${uiState.mouseStatistics.totalClicks}") })
+                AssistChip(onClick = { }, label = { Text("Auto connect ${if (uiState.userPreferences.autoConnect) "On" else "Off"}") })
+            }
+        }
+    }
+}
+
 // ==========================================
 // UI COMPONENTS
 // ==========================================
@@ -296,6 +327,11 @@ fun TouchpadSurface(
     onLongPress: () -> Unit,
     onGestureEnd: () -> Unit
 ) {
+    val surfaceFill = if (uiState.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f) else MaterialTheme.colorScheme.surfaceVariant
+    val gridAccent = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+    val gridLine = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -331,10 +367,7 @@ fun TouchpadSurface(
                 }
             },
         colors = CardDefaults.cardColors(
-            containerColor = if (uiState.isActive)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f)
-            else
-                MaterialTheme.colorScheme.surfaceVariant
+            containerColor = surfaceFill
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         shape = RoundedCornerShape(28.dp)
@@ -342,19 +375,19 @@ fun TouchpadSurface(
         Box(modifier = Modifier.fillMaxSize()) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 drawRoundRect(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                    color = gridAccent,
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(24f, 24f)
                 )
                 val centerY = size.height / 2f
                 val centerX = size.width / 2f
                 drawLine(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    color = gridLine,
                     start = Offset(0f, centerY),
                     end = Offset(size.width, centerY),
                     strokeWidth = 2f
                 )
                 drawLine(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    color = gridLine,
                     start = Offset(centerX, 0f),
                     end = Offset(centerX, size.height),
                     strokeWidth = 2f
@@ -391,23 +424,23 @@ fun TouchpadSurface(
                         Icons.Default.TouchApp,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = labelColor
                     )
                     Text(
                         "Touchpad Inactive\nPress Start to enable",
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = labelColor
                     )
                 }
             } else if (uiState.touchPoints.isEmpty()) {
                 Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(42.dp))
                     Spacer(Modifier.height(8.dp))
-                    Text("Touchpad Active", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Touchpad Active", color = labelColor)
                     Text(
                         "Swipe, tap, two-finger scroll, and long press for click actions.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = labelColor
                     )
                 }
             }

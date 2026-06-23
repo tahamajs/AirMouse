@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/GestureRecognitionFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.CustomGestureTemplate
@@ -113,7 +113,7 @@ class GestureRecognitionFeature @Inject constructor(
     }
 
     suspend fun resetTraining() {
-        // Reset gesture training data
+        
     }
 
     private suspend fun refreshTemplates() {

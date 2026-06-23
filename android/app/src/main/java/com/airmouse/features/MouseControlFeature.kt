@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/MouseControlFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.MouseButton
@@ -44,13 +44,13 @@ class MouseControlFeature @Inject constructor(
             return Result.success(false)
         }
 
-        // Update speed
+        
         val speed = kotlin.math.sqrt(dx * dx + dy * dy)
         _currentSpeed.value = speed
 
         val result = sendMovementUseCase(dx, dy)
         if (result.isSuccess) {
-            // Update state
+            
             _state.value = _state.value.copy(
                 currentSpeed = speed
             )

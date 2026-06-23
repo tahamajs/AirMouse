@@ -28,7 +28,7 @@ fun TypewriterText(
         }
     }
     
-    // Blinking cursor
+    
     LaunchedEffect(Unit) {
         while (true) {
             delay(500)

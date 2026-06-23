@@ -11,9 +11,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/**
- * Glassmorphism Card - Frosted glass effect card
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GlassCard(

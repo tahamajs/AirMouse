@@ -24,6 +24,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,30 +46,49 @@ fun AboutScreen(
     val effect by viewModel.effect.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // Handle side effects
+    fun openUrl(url: String) {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
+        }.onFailure {
+            android.widget.Toast.makeText(context, "Cannot open link", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun shareApp() {
+        runCatching {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "Air Mouse Pro")
+                putExtra(Intent.EXTRA_TEXT, "Try Air Mouse Pro: https://github.com/airmouse")
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Share Air Mouse Pro"))
+        }.onFailure {
+            android.widget.Toast.makeText(context, "Sharing is unavailable", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     LaunchedEffect(effect) {
-        val currentEffect = effect
-        when (currentEffect) {
+        when (val currentEffect = effect) {
             is AboutEffect.OpenUrl -> {
-                val url = currentEffect.url
-                // Open URL - implementation depends on your navigation
-                navigationActions.navigateTo(url)
-                viewModel.clearEffect()
+                openUrl(currentEffect.url)
             }
             is AboutEffect.ShowToast -> {
-                // Show toast - implementation depends on your Toast system
                 android.widget.Toast.makeText(context, currentEffect.message, android.widget.Toast.LENGTH_SHORT).show()
-                viewModel.clearEffect()
             }
             is AboutEffect.NavigateBack -> {
                 navigationActions.navigateBack()
-                viewModel.clearEffect()
             }
             is AboutEffect.ShowUpdateDialog -> {
-                // Show update dialog - implementation depends on your dialog system
-                viewModel.clearEffect()
+                android.widget.Toast.makeText(context, "Update available", android.widget.Toast.LENGTH_SHORT).show()
             }
             null -> { /* No effect */ }
+        }
+        if (effect != null) {
+            viewModel.clearEffect()
         }
     }
 
@@ -95,10 +116,10 @@ fun AboutScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.onEvent(AboutEvent.ShareApp) }) {
+                    IconButton(onClick = { shareApp() }) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
-                    IconButton(onClick = { viewModel.onEvent(AboutEvent.RateApp) }) {
+                    IconButton(onClick = { openUrl("market://details?id=com.airmouse.app") }) {
                         Icon(Icons.Default.Star, contentDescription = "Rate")
                     }
                 },
@@ -273,9 +294,9 @@ fun AboutScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("👥 Team", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            TextButton(onClick = { showContributors = !showContributors }) {
-                                Text(if (showContributors) "Show Less" else "Show More")
-                            }
+                        TextButton(onClick = { showContributors = !showContributors }) {
+                            Text(if (showContributors) "Show Less" else "Show More")
+                        }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -344,19 +365,19 @@ fun AboutScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         LinkItem("GitHub Repository", Icons.Default.Code, "github.com/airmouse") {
-                            viewModel.onEvent(AboutEvent.OpenUrl("https://github.com/airmouse"))
+                            openUrl("https://github.com/airmouse")
                         }
                         LinkItem("Website", Icons.Default.Language, "www.airmouse.io") {
-                            viewModel.onEvent(AboutEvent.OpenUrl("https://www.airmouse.io"))
+                            openUrl("https://www.airmouse.io")
                         }
                         LinkItem("Documentation", Icons.Default.Description, "docs.airmouse.io") {
-                            viewModel.onEvent(AboutEvent.OpenUrl("https://docs.airmouse.io"))
+                            openUrl("https://docs.airmouse.io")
                         }
                         LinkItem("Support", Icons.Default.SupportAgent, "support@airmouse.io") {
-                            viewModel.onEvent(AboutEvent.OpenUrl("mailto:support@airmouse.io"))
+                            openUrl("mailto:support@airmouse.io")
                         }
                         LinkItem("Discord Community", Icons.AutoMirrored.Filled.Chat, "discord.gg/airmouse") {
-                            viewModel.onEvent(AboutEvent.OpenUrl("https://discord.gg/airmouse"))
+                            openUrl("https://discord.gg/airmouse")
                         }
                     }
                 }

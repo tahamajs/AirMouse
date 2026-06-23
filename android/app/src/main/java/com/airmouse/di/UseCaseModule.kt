@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/di/UseCaseModule.kt
+
 package com.airmouse.di
 
 import android.content.Context
@@ -45,4 +45,4 @@ object UseCaseModule {
         return CalibrationUseCase(calibrationRepo)
     }
 }
-// app/src/main/java/com/airmouse/di/UseCaseModule.kt
+

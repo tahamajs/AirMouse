@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/extensions/ComposableExtensions.kt
+
 package com.airmouse.presentation.extensions
 
 import androidx.compose.foundation.clickable
@@ -36,7 +36,7 @@ fun Modifier.thenIf(condition: Boolean, modifier: Modifier): Modifier {
     }
 }
 
-// Color extensions
+
 fun Color.toArgb(): Int {
     return android.graphics.Color.argb(
         (alpha * 255).toInt(),
@@ -50,7 +50,7 @@ fun Int.toColor(): Color {
     return Color(this)
 }
 
-// Dp extensions
+
 val Int.dp: Dp
     get() = this.dp
 

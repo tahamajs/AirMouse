@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/StringUtils.kt
+
 package com.airmouse.utils
 
 import java.util.regex.Pattern
@@ -32,12 +32,12 @@ object StringUtils {
 
     fun toCamelCase(str: String): String {
         val words = str.split("_", " ", "-")
-        // Fixed: Call capitalizeFirst by passing the string as an argument
+        
         return words.joinToString("") { capitalizeFirst(it) }
     }
 
     fun toSnakeCase(str: String): String {
-        // Fixed: Corrected the regex pattern that was split by the error text
+        
         return str.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase()
     }
 }

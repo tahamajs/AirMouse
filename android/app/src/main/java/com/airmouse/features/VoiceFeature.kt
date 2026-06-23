@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/VoiceFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.VoiceCommand
@@ -42,7 +42,7 @@ class VoiceFeature @Inject constructor(
     }
 
     private fun observeState() {
-        // Observe voice command state
+        
     }
 
     suspend fun processVoiceInput(text: String): Result<VoiceCommand?> {

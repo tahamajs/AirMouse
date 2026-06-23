@@ -6,14 +6,11 @@ import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import androidx.core.content.ContextCompat
 import com.airmouse.utils.PreferencesManager
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/**
- * Gesture detector for click, double click, right click, and scroll gestures.
- * Uses gyroscope and accelerometer data to detect user gestures.
- */
 class GestureDetector(
     private val context: Context,
     private val prefs: PreferencesManager
@@ -22,7 +19,7 @@ class GestureDetector(
         NONE, CLICK, DOUBLE_CLICK, RIGHT_CLICK, SCROLL_UP, SCROLL_DOWN
     }
 
-    // State
+    
     private var lastClickTime = 0L
     private var potentialDoubleClick = false
     private var pendingClickRunnable: Runnable? = null
@@ -30,12 +27,12 @@ class GestureDetector(
     private var rightClickTriggered = false
     private var scrollInProgress = false
 
-    // Gyro offsets
+    
     private var gyroOffsetX = 0f
     private var gyroOffsetY = 0f
     private var gyroOffsetZ = 0f
 
-    // Thresholds (will be loaded from preferences)
+    
     private var clickSpeedThreshold: Float = 8f
     private var doubleClickMaxInterval: Long = 400L
     private var scrollSpeedThreshold: Float = 6f
@@ -71,33 +68,29 @@ class GestureDetector(
         gyroOffsetZ = z
     }
 
-    /**
-     * Detect a gesture from gyro Y, accel Y, and roll.
-     * @return Gesture detected (or NONE)
-     */
     fun detect(gyroX: Float, gyroY: Float, gyroZ: Float, accelX: Float, accelY: Float, accelZ: Float): Gesture {
         val now = System.currentTimeMillis()
 
-        // Apply calibration offsets
+        
         val calibratedGyroX = gyroX - gyroOffsetX
         val calibratedGyroY = gyroY - gyroOffsetY
         val calibratedGyroZ = gyroZ - gyroOffsetZ
 
-        // Calculate angular speed (magnitude of gyro)
+        
         val angularSpeed = sqrt(calibratedGyroX * calibratedGyroX + calibratedGyroY * calibratedGyroY + calibratedGyroZ * calibratedGyroZ)
 
-        // --- Click / Double-click detection ---
+        
         if (angularSpeed > clickSpeedThreshold && now - lastClickTime > doubleClickMaxInterval) {
             lastClickTime = now
             if (potentialDoubleClick) {
-                // Second flick within window → double click
+                
                 potentialDoubleClick = false
                 pendingClickRunnable?.let { handler.removeCallbacks(it) }
                 pendingClickRunnable = null
                 vibrate(50)
                 return Gesture.DOUBLE_CLICK
             } else {
-                // First flick → potential double click
+                
                 potentialDoubleClick = true
                 val runnable = Runnable {
                     if (potentialDoubleClick) {
@@ -112,8 +105,8 @@ class GestureDetector(
             }
         }
 
-        // --- Right Click (long tilt) detection ---
-        val roll = calibratedGyroX // Use gyro X as roll indicator
+        
+        val roll = calibratedGyroX 
         if (abs(roll) > rightClickTiltThreshold && !rightClickTriggered) {
             if (rightClickStartTime == 0L) {
                 rightClickStartTime = now
@@ -127,7 +120,7 @@ class GestureDetector(
             rightClickTriggered = false
         }
 
-        // --- Scroll detection ---
+        
         val speed = abs(accelY)
         if (speed > scrollSpeedThreshold && !scrollInProgress) {
             scrollInProgress = true
@@ -142,12 +135,17 @@ class GestureDetector(
 
     private fun vibrate(duration: Long) {
         if (prefs.getBoolean("haptic_enabled", true)) {
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(duration)
+            val vibrator = ContextCompat.getSystemService(context, Vibrator::class.java) ?: return
+            if (!vibrator.hasVibrator()) return
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(duration)
+                }
+            } catch (_: SecurityException) {
+                
             }
         }
     }

@@ -7,6 +7,11 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.airmouse.domain.model.AppPreferences
+import com.airmouse.domain.model.ConnectionConfig
+import com.airmouse.domain.model.MouseStatistics
+import com.airmouse.domain.model.MovementProfile
+import com.airmouse.domain.model.UserPreferences
 import com.airmouse.features.MouseControlFeature
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +46,53 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun loadSettings() {
+        val connectionConfig = ConnectionConfig(
+            ip = prefs.getString("last_ip", ""),
+            port = prefs.getInt("last_port", 0),
+            autoReconnect = prefs.getBoolean("auto_connect", true),
+            timeoutMs = prefs.getInt("connection_timeout", 5000).toLong()
+        ).normalized()
+        val mouseProfile = MovementProfile(
+            sensitivity = prefs.getFloat("sensitivity", 0.5f),
+            smoothingEnabled = prefs.getBoolean("smoothing_enabled", true),
+            accelerationEnabled = prefs.getBoolean("acceleration_enabled", false),
+            accelerationFactor = prefs.getFloat("acceleration_factor", 1.5f),
+            invertX = prefs.getBoolean("invert_x", false),
+            invertY = prefs.getBoolean("invert_y", false),
+            deadband = prefs.getFloat("deadband", 0.5f),
+            maxSpeed = prefs.getFloat("max_speed", 100f),
+            minSpeed = prefs.getFloat("min_speed", 0.5f),
+            predictiveBlend = prefs.getFloat("predictive_blend", 0.6f),
+            smoothingAlpha = prefs.getFloat("smoothing_alpha", 0.3f)
+        )
+        val appPreferences = AppPreferences(
+            theme = normalizeThemeId(prefs.getString("theme", "system")),
+            language = prefs.getLanguage(),
+            autoStart = prefs.getBoolean("auto_start_server", false),
+            showTrayIcon = true,
+            soundEnabled = prefs.getBoolean("sound_enabled", true),
+            notificationsEnabled = prefs.getBoolean("notifications_enabled", true),
+            analyticsEnabled = prefs.getBoolean("analytics_enabled", true),
+            crashReportingEnabled = prefs.getBoolean("crash_reporting", true)
+        )
+        val userPreferences = UserPreferences(
+            username = prefs.getUserName(),
+            serverName = prefs.getString("server_name", "Air Mouse Pro"),
+            serverIp = connectionConfig.ip,
+            serverPort = connectionConfig.port,
+            autoConnect = connectionConfig.autoReconnect,
+            rememberCredentials = prefs.getBoolean("remember_credentials", true)
+        )
+        val mouseStatistics = MouseStatistics(
+            totalClicks = prefs.getInt("stat_clicks", 0),
+            totalDoubleClicks = prefs.getInt("stat_double_clicks", 0),
+            totalRightClicks = prefs.getInt("stat_right_clicks", 0),
+            totalScrolls = prefs.getInt("stat_scrolls", 0),
+            totalMovement = prefs.getFloat("movement_distance", 0f),
+            movementCount = prefs.getInt("movement_samples", 0),
+            averageSpeed = prefs.getFloat("movement_average_speed", 0f),
+            lastUpdated = prefs.getLong("movement_last_updated", System.currentTimeMillis())
+        )
         _uiState.update {
             val savedTheme = prefs.getString("theme", "system")
             it.copy(
@@ -120,7 +172,13 @@ class SettingsViewModel @Inject constructor(
                 presentationModeEnabled = prefs.getBoolean("presentation_mode_enabled", false),
                 laserPointerSpeed = prefs.getFloat("laser_pointer_speed", 1.0f),
                 showPresentationTimer = prefs.getBoolean("show_presentation_timer", true),
-                autoHideLaser = prefs.getBoolean("auto_hide_laser", true)
+                autoHideLaser = prefs.getBoolean("auto_hide_laser", true),
+
+                connectionConfig = connectionConfig,
+                mouseProfile = mouseProfile,
+                appPreferences = appPreferences,
+                userPreferences = userPreferences,
+                mouseStatistics = mouseStatistics
             )
         }
     }
@@ -141,6 +199,10 @@ class SettingsViewModel @Inject constructor(
     private suspend fun showToast(message: String) {
         _effect.value = SettingsEffect.ShowToast(message)
         delay(3000)
+        _effect.value = null
+    }
+
+    fun clearEffect() {
         _effect.value = null
     }
 

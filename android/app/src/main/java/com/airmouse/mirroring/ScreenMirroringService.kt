@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/mirroring/ScreenMirroringService.kt
+
 package com.airmouse.mirroring
 
 import android.app.*
@@ -40,8 +40,8 @@ class ScreenMirroringService : Service() {
     private var projectionManager: MediaProjectionManager? = null
     private var isStreaming = false
     private var displayMetrics: DisplayMetrics? = null
-    private var frameRate = 15 // frames per second
-    private var quality = 50 // JPEG quality (0-100)
+    private var frameRate = 15 
+    private var quality = 50 
 
     companion object {
         private const val TAG = "ScreenMirroring"
@@ -50,7 +50,7 @@ class ScreenMirroringService : Service() {
         private const val VIRTUAL_DISPLAY_NAME = "ScreenMirroringDisplay"
         private const val REQUEST_CODE = 1001
 
-        // Used to start the service with projection permission
+        
         fun start(context: Context, resultCode: Int, data: Intent, serverUrl: String = "") {
             val intent = Intent(context, ScreenMirroringService::class.java).apply {
                 putExtra("resultCode", resultCode)
@@ -151,7 +151,7 @@ class ScreenMirroringService : Service() {
             val data = stream.toByteArray()
             stream.close()
 
-            // Send over WebSocket (or TCP)
+            
             val frameMessage = """{"type":"frame","data":"${android.util.Base64.encodeToString(data, android.util.Base64.NO_WRAP)}"}"""
             webSocketManager.send(frameMessage)
         }

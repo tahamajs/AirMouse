@@ -1,11 +1,8 @@
-// app/src/main/java/com/airmouse/utils/Constants.kt
+
 package com.airmouse.utils
 
-/**
- * Application‑wide constants. Change these values to adjust default behaviour.
- */
 object Constants {
-    // Network Constants
+    
     const val DEFAULT_PORT = 8080
     const val DEFAULT_WS_PORT = 8081
     const val DEFAULT_UDP_PORT = 8082
@@ -15,13 +12,13 @@ object Constants {
     const val MAX_RECONNECT_ATTEMPTS = 5
     const val KEEP_ALIVE_INTERVAL_MS = 30000L
 
-    // Sensor Constants
+    
     const val SENSOR_DELAY_US = 20000
     const val GYRO_SAMPLE_COUNT = 500
     const val ACCEL_SAMPLES_PER_POSITION = 100
     const val MAG_SAMPLE_DURATION_MS = 15000L
 
-    // Gesture Constants
+    
     const val DEFAULT_SENSITIVITY = 0.5f
     const val CLICK_SPEED_THRESHOLD = 8f
     const val SCROLL_SPEED_THRESHOLD = 6f
@@ -32,31 +29,31 @@ object Constants {
     const val SWIPE_THRESHOLD = 15f
     const val GESTURE_COOLDOWN_MS = 500L
 
-    // UI Constants
+    
     const val ANIMATION_DURATION_MS = 300
     const val SNACKBAR_DURATION_MS = 3000
     const val DEBOUNCE_DELAY_MS = 500
     const val TYPING_DELAY_MS = 1000
 
-    // Database Constants
+    
     const val DATABASE_NAME = "airmouse_db"
     const val DATABASE_VERSION = 1
 
-    // Logging Constants
+    
     const val MAX_LOG_ENTRIES = 500
-    const val LOG_FILE_MAX_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
+    const val LOG_FILE_MAX_SIZE_BYTES = 10 * 1024 * 1024 
 
-    // Performance Constants
+    
     const val MOVEMENT_THROTTLE_MS = 10L
     const val SENSOR_FUSION_RATE_HZ = 50
     const val MAX_MESSAGE_QUEUE_SIZE = 1000
 
-    // Calibration Constants
+    
     const val CALIBRATION_GYRO_SAMPLES = 500
     const val CALIBRATION_ACCEL_SAMPLES = 100
     const val CALIBRATION_MAG_DURATION_MS = 15000L
 
-    // Feature Flags
+    
     const val ENABLE_AI_SMOOTHING = false
     const val ENABLE_PREDICTIVE_MOVEMENT = true
     const val ENABLE_BATTERY_SAVER = true

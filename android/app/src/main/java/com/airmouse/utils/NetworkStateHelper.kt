@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/network/NetworkStateHelper.kt
+
 package com.airmouse.network
 
 import android.content.Context

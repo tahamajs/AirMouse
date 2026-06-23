@@ -46,7 +46,7 @@ fun SlideUpPanel(
                     .background(MaterialTheme.colorScheme.surface)
                     .clickable(enabled = false) { }
             ) {
-                // Drag handle
+                
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

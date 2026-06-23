@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/auth/AuthManager.kt
+
 package com.airmouse.auth
 
 import android.content.Context
@@ -29,7 +29,7 @@ class AuthManager @Inject constructor(
     suspend fun authenticate(token: String): Boolean {
         _authState.value = AuthState.AUTHENTICATING
         return try {
-            // Validate token with server
+            
             val isValid = validateToken(token)
             if (isValid) {
                 _authToken.value = token
@@ -46,7 +46,7 @@ class AuthManager @Inject constructor(
     }
 
     suspend fun validateToken(token: String): Boolean {
-        // In production, validate with server
+        
         return token.isNotEmpty()
     }
 

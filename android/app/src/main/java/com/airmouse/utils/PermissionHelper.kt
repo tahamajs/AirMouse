@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/PermissionHelper.kt
+
 package com.airmouse.utils
 
 import android.Manifest
@@ -14,9 +14,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 
-/**
- * Helper for requesting and checking runtime permissions.
- */
 object PermissionHelper {
 
     private const val PERMISSION_REQUEST_CODE = 100
@@ -24,7 +21,7 @@ object PermissionHelper {
     private const val BLUETOOTH_REQUEST_CODE = 102
     private const val LOCATION_REQUEST_CODE = 103
 
-    // Required permissions for the app
+    
     val requiredPermissions = listOf(
         Manifest.permission.INTERNET,
         Manifest.permission.VIBRATE,
@@ -32,7 +29,7 @@ object PermissionHelper {
         Manifest.permission.RECORD_AUDIO
     )
 
-    // Bluetooth permissions (Android 12+)
+    
     val bluetoothPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         listOf(
             Manifest.permission.BLUETOOTH_SCAN,
@@ -46,36 +43,27 @@ object PermissionHelper {
         )
     }
 
-    // Location permission (required for Bluetooth scanning on older Android)
+    
     val locationPermissions = listOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION
     )
 
-    /**
-     * Checks if all required permissions are granted.
-     */
     fun hasRequiredPermissions(context: Context): Boolean {
         return requiredPermissions.all {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
-    /**
-     * Checks if Bluetooth permissions are granted.
-     */
     fun hasBluetoothPermissions(context: Context): Boolean {
         return bluetoothPermissions.all {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
-    /**
-     * Checks if location permissions are granted (required for Bluetooth on older Android).
-     */
     fun hasLocationPermissions(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+ doesn't need location for Bluetooth
+            
             return true
         }
         return locationPermissions.any {
@@ -83,9 +71,6 @@ object PermissionHelper {
         }
     }
 
-    /**
-     * Requests all required permissions from an Activity.
-     */
     fun requestPermissions(activity: Activity, requestCode: Int = PERMISSION_REQUEST_CODE) {
         val permissionsToRequest = requiredPermissions.filter {
             ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED
@@ -96,9 +81,6 @@ object PermissionHelper {
         }
     }
 
-    /**
-     * Requests permissions from a Fragment.
-     */
     fun requestPermissions(fragment: Fragment, requestCode: Int = PERMISSION_REQUEST_CODE) {
         val permissionsToRequest = requiredPermissions.filter {
             ContextCompat.checkSelfPermission(fragment.requireContext(), it) != PackageManager.PERMISSION_GRANTED
@@ -109,9 +91,6 @@ object PermissionHelper {
         }
     }
 
-    /**
-     * Requests Bluetooth permissions.
-     */
     fun requestBluetoothPermissions(activity: Activity, requestCode: Int = BLUETOOTH_REQUEST_CODE) {
         val permissionsToRequest = bluetoothPermissions.filter {
             ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED
@@ -122,9 +101,6 @@ object PermissionHelper {
         }
     }
 
-    /**
-     * Requests location permissions (for Bluetooth on older Android).
-     */
     fun requestLocationPermissions(activity: Activity, requestCode: Int = LOCATION_REQUEST_CODE) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
 
@@ -137,18 +113,12 @@ object PermissionHelper {
         }
     }
 
-    /**
-     * Checks if overlay permission (for debug overlay) is granted.
-     */
     fun hasOverlayPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(context)
         } else true
     }
 
-    /**
-     * Requests overlay permission from an Activity.
-     */
     fun requestOverlayPermission(activity: Activity, requestCode: Int = OVERLAY_REQUEST_CODE) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(activity)) {
             val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
@@ -158,9 +128,6 @@ object PermissionHelper {
         }
     }
 
-    /**
-     * Show permission denied dialog with option to go to settings.
-     */
     fun showPermissionDeniedDialog(
         context: Context,
         title: String = "Permission Required",
@@ -181,18 +148,12 @@ object PermissionHelper {
             .show()
     }
 
-    /**
-     * Check if we should show permission rationale.
-     */
     fun shouldShowRationale(activity: Activity): Boolean {
         return requiredPermissions.any {
             ActivityCompat.shouldShowRequestPermissionRationale(activity, it)
         }
     }
 
-    /**
-     * Get denied permissions list.
-     */
     fun getDeniedPermissions(activity: Activity): List<String> {
         return requiredPermissions.filter {
             ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED

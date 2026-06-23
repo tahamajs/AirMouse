@@ -25,7 +25,7 @@ class OnboardingViewModel @Inject constructor(
     private val onboardingItems = OnboardingItem.getDefaultItems()
 
     init {
-        // If onboarding already completed, set flag
+        
         if (prefs.isOnboardingCompleted()) {
             _uiState.update { it.copy(hasCompleted = true) }
         }
@@ -65,14 +65,14 @@ class OnboardingViewModel @Inject constructor(
 
     fun completeOnboarding() {
         val state = _uiState.value
-        // Save preferences
+        
         prefs.setTheme(state.selectedTheme)
         prefs.setHapticEnabled(state.hapticEnabled)
         prefs.setAutoConnect(state.autoConnect)
         prefs.putBoolean("allow_analytics", state.allowAnalytics)
 
         prefs.setOnboardingCompleted(true)
-        // Optional: store onboarding version
+        
         prefs.putInt("onboarding_version", 1)
 
         _uiState.update { it.copy(hasCompleted = true) }

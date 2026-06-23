@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/MathUtils.kt
+
 package com.airmouse.utils
 
 import kotlin.math.*

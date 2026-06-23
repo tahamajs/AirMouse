@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/ProfileDataSourceImpl.kt
+
 package com.airmouse.data.datasource.local
 
 import com.airmouse.domain.model.ProfileSettings
@@ -43,7 +43,7 @@ class ProfileDataSourceImpl @Inject constructor(
         profiles.removeAll { it.id == id }
         saveProfilesToPrefs(profiles)
 
-        // If deleted profile was default, clear default
+        
         if (getDefaultProfile()?.id == id) {
             prefs.remove(defaultProfileKey)
         }
@@ -122,7 +122,7 @@ class ProfileDataSourceImpl @Inject constructor(
                 list.add(profile)
             }
         } catch (e: Exception) {
-            // Return empty list
+            
         }
         return list
     }

@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,6 +34,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
 import com.airmouse.presentation.ui.components.ParticleBackground
+import android.content.Intent
+import android.net.Uri
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpScreen(
@@ -41,6 +44,7 @@ fun HelpScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val filteredSections = viewModel.getFilteredSections()
+    val context = LocalContext.current
     val infiniteTransition = rememberInfiniteTransition(label = "SearchScale")
     val searchBarScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -53,6 +57,32 @@ fun HelpScreen(
 
     var showContactDialog by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
+
+    fun openUrl(url: String) {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
+        }.onFailure {
+            android.widget.Toast.makeText(context, "Cannot open link", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun sendEmail(to: String, subject: String, body: String = "") {
+        runCatching {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:")
+                putExtra(Intent.EXTRA_EMAIL, arrayOf(to))
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, body)
+            }
+            context.startActivity(intent)
+        }.onFailure {
+            android.widget.Toast.makeText(context, "Email app unavailable", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -214,7 +244,18 @@ fun HelpScreen(
                                 isExpanded = uiState.expandedSections.contains(section.id),
                                 isFavorite = uiState.favoriteSections.contains(section.id),
                                 onToggle = { viewModel.toggleSection(section.id) },
-                                onToggleFavorite = { viewModel.toggleFavorite(section.id) }
+                                onToggleFavorite = { viewModel.toggleFavorite(section.id) },
+                                onRelatedTopicClick = { topic ->
+                                    when {
+                                        topic.contains("Connection", ignoreCase = true) -> navigationActions.navigateToNetworkDiscovery()
+                                        topic.contains("Calibration", ignoreCase = true) -> navigationActions.navigateToCalibration()
+                                        topic.contains("Gesture", ignoreCase = true) -> navigationActions.navigateToGestureStudio()
+                                        topic.contains("Voice", ignoreCase = true) -> navigationActions.navigateToVoiceCommands()
+                                        topic.contains("Accessibility", ignoreCase = true) -> navigationActions.navigateToAccessibility()
+                                        topic.contains("Troubleshooting", ignoreCase = true) -> viewModel.selectCategory(HelpCategory.TROUBLESHOOTING)
+                                        else -> viewModel.selectCategory(HelpCategory.ALL)
+                                    }
+                                }
                             )
                         }
                     }
@@ -228,11 +269,27 @@ fun HelpScreen(
     }
 
     if (showContactDialog) {
-        ContactDialog(onDismiss = { showContactDialog = false })
+        ContactDialog(
+            onDismiss = { showContactDialog = false },
+            onEmail = { sendEmail("support@airmouse.io", "Air Mouse Pro Support") },
+            onDiscord = { openUrl("https://discord.gg/airmouse") },
+            onGithub = { openUrl("https://github.com/airmouse") },
+            onWebsite = { openUrl("https://www.airmouse.io") }
+        )
     }
 
     if (showFeedbackDialog) {
-        FeedbackDialog(onDismiss = { showFeedbackDialog = false })
+        FeedbackDialog(
+            onDismiss = { showFeedbackDialog = false },
+            onSubmit = { rating, message ->
+                val body = buildString {
+                    appendLine("Rating: $rating/5")
+                    appendLine()
+                    appendLine(message.ifBlank { "No message provided." })
+                }
+                sendEmail("support@airmouse.io", "Air Mouse Pro Feedback", body)
+            }
+        )
     }
 }
 
@@ -242,8 +299,10 @@ fun HelpSectionCard(
     isExpanded: Boolean,
     isFavorite: Boolean,
     onToggle: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onRelatedTopicClick: (String) -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -394,7 +453,7 @@ fun HelpSectionCard(
                         )
                         section.relatedTopics.forEach { topic ->
                             TextButton(
-                                onClick = { /* Navigate to related topic */ },
+                                onClick = { onRelatedTopicClick(topic) },
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
                                 Text(topic, fontSize = 13.sp)
@@ -413,13 +472,17 @@ fun HelpSectionCard(
                         Text("Was this helpful?", fontSize = 13.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             IconButton(
-                                onClick = { /* Mark as helpful */ },
+                                onClick = {
+                                    android.widget.Toast.makeText(context, "Thanks for the feedback", android.widget.Toast.LENGTH_SHORT).show()
+                                },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(Icons.Default.ThumbUp, contentDescription = "Yes", modifier = Modifier.size(18.dp))
                             }
                             IconButton(
-                                onClick = { /* Mark as not helpful */ },
+                                onClick = {
+                                    android.widget.Toast.makeText(context, "We’ll improve this article", android.widget.Toast.LENGTH_SHORT).show()
+                                },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(Icons.Default.ThumbDown, contentDescription = "No", modifier = Modifier.size(18.dp))
@@ -475,7 +538,13 @@ fun EmptyHelpState(onClearFilters: () -> Unit) {
 }
 
 @Composable
-fun ContactDialog(onDismiss: () -> Unit) {
+fun ContactDialog(
+    onDismiss: () -> Unit,
+    onEmail: () -> Unit,
+    onDiscord: () -> Unit,
+    onGithub: () -> Unit,
+    onWebsite: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Contact Support") },
@@ -490,28 +559,28 @@ fun ContactDialog(onDismiss: () -> Unit) {
                     icon = Icons.Default.Email,
                     title = "Email Support",
                     description = "support@airmouse.io",
-                    onClick = { /* Open email */ }
+                    onClick = onEmail
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 ContactOption(
                     icon = Icons.AutoMirrored.Filled.Chat,
                     title = "Discord Community",
                     description = "Join our Discord server",
-                    onClick = { /* Open Discord */ }
+                    onClick = onDiscord
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 ContactOption(
                     icon = Icons.Default.Code,
                     title = "GitHub Issues",
                     description = "Report bugs on GitHub",
-                    onClick = { /* Open GitHub */ }
+                    onClick = onGithub
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 ContactOption(
                     icon = Icons.Default.Language,
                     title = "Website",
                     description = "www.airmouse.io",
-                    onClick = { /* Open Website */ }
+                    onClick = onWebsite
                 )
             }
         },
@@ -549,7 +618,10 @@ fun ContactOption(icon: androidx.compose.ui.graphics.vector.ImageVector, title: 
 }
 
 @Composable
-fun FeedbackDialog(onDismiss: () -> Unit) {
+fun FeedbackDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (rating: Int, message: String) -> Unit
+) {
     var rating by remember { mutableIntStateOf(0) }
     var feedbackText by remember { mutableStateOf("") }
 
@@ -586,7 +658,10 @@ fun FeedbackDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(
-                onClick = { onDismiss() }
+                onClick = {
+                    onSubmit(rating, feedbackText)
+                    onDismiss()
+                }
             ) {
                 Text("Submit")
             }

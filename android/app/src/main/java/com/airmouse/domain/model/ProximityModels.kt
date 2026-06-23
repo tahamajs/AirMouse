@@ -3,9 +3,6 @@ package com.airmouse.domain.model
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * Proximity state based on Bluetooth RSSI.
- */
 @Parcelize
 data class ProximityState(
     val isNear: Boolean,
@@ -21,9 +18,6 @@ data class ProximityState(
     }
 }
 
-/**
- * Proximity configuration.
- */
 @Parcelize
 data class ProximityConfig(
     val enabled: Boolean = false,
@@ -36,9 +30,6 @@ data class ProximityConfig(
     val deviceAddress: String = ""
 ) : Parcelable
 
-/**
- * Proximity calibration status.
- */
 @Parcelize
 data class ProximityCalibration(
     val isCalibrated: Boolean,
@@ -73,9 +64,6 @@ data class ProximityCalibration(
     }
 }
 
-/**
- * Detailed calibration status for UI.
- */
 enum class ProximityCalibrationStatus {
     NOT_CALIBRATED,
     CALIBRATED

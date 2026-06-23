@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/GestureDataSourceImpl.kt
+
 package com.airmouse.data.datasource.local
 
 import com.airmouse.domain.model.CustomGestureTemplate
@@ -22,7 +22,7 @@ class GestureDataSourceImpl @Inject constructor(
     private val confidenceThresholdKey = "gesture_confidence_threshold"
     private val cooldownMsKey = "gesture_cooldown_ms"
 
-    // ==================== Gesture Templates ====================
+    
 
     override suspend fun saveGestureTemplate(template: CustomGestureTemplate) {
         val templates = getAllGestureTemplates().toMutableList()
@@ -54,7 +54,7 @@ class GestureDataSourceImpl @Inject constructor(
         saveGestureTemplate(template)
     }
 
-    // ==================== Favorite Gestures ====================
+    
 
     override suspend fun toggleFavorite(id: String) {
         val favorites = getFavorites().toMutableList()
@@ -77,7 +77,7 @@ class GestureDataSourceImpl @Inject constructor(
         return gson.fromJson(json, type)
     }
 
-    // ==================== Training Data ====================
+    
 
     override suspend fun saveTrainingSamples(gestureName: String, samples: List<FloatArray>) {
         val key = trainingKeyPrefix + gestureName
@@ -97,7 +97,7 @@ class GestureDataSourceImpl @Inject constructor(
         prefs.remove(trainingKeyPrefix + gestureName)
     }
 
-    // ==================== Statistics ====================
+    
 
     override suspend fun updateGestureStats(stats: GestureTrainingStats) {
         val json = gson.toJson(stats)
@@ -110,7 +110,7 @@ class GestureDataSourceImpl @Inject constructor(
         return gson.fromJson(json, type) ?: GestureTrainingStats()
     }
 
-    // ==================== Detection Tracking ====================
+    
 
     override suspend fun incrementGestureCount(gestureName: String, confidence: Float) {
         val stats = getGestureStats()
@@ -141,7 +141,7 @@ class GestureDataSourceImpl @Inject constructor(
         return templates.sortedByDescending { it.usageCount }.take(limit)
     }
 
-    // ==================== Configuration ====================
+    
 
     override suspend fun setConfidenceThreshold(threshold: Float) {
         prefs.putFloat(confidenceThresholdKey, threshold)
@@ -159,7 +159,7 @@ class GestureDataSourceImpl @Inject constructor(
         return prefs.getLong(cooldownMsKey, 500L)
     }
 
-    // ==================== Reset ====================
+    
 
     override suspend fun resetAllStats() {
         prefs.remove(statsKey)
@@ -167,7 +167,7 @@ class GestureDataSourceImpl @Inject constructor(
         allKeys.filter { it.startsWith("detection_count_") }.forEach { prefs.remove(it) }
     }
 
-    // ==================== Private Helpers ====================
+    
 
     private fun parseTemplatesFromJson(json: String): List<CustomGestureTemplate> {
         val type = object : TypeToken<List<CustomGestureTemplate>>() {}.type

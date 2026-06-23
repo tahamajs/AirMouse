@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/SensorModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * Sensor data
- */
 @Parcelize
 data class SensorData(
     val gyroX: Float = 0f,
@@ -24,9 +21,6 @@ data class SensorData(
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable
 
-/**
- * Orientation data
- */
 @Parcelize
 data class OrientationData(
     val roll: Float,
@@ -46,9 +40,6 @@ data class OrientationData(
     )
 }
 
-/**
- * Calibration status enum (moved here to avoid conflict)
- */
 enum class SensorCalibrationStatus {
     NOT_CALIBRATED,
     CALIBRATING,
@@ -56,9 +47,6 @@ enum class SensorCalibrationStatus {
     NEEDS_RECALIBRATION
 }
 
-/**
- * Sensor info
- */
 data class SensorInfo(
     val name: String,
     val vendor: String,
@@ -69,9 +57,6 @@ data class SensorInfo(
     val isAvailable: Boolean
 )
 
-/**
- * Sensor event
- */
 data class SensorEventData(
     val type: String,
     val values: FloatArray,

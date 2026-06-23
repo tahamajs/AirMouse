@@ -2,9 +2,6 @@ package com.airmouse.network
 
 import org.json.JSONObject
 
-/**
- * DTO for messages sent to/received from the server.
- */
 sealed class NetworkMessage {
     data class Move(
         val dx: Float,

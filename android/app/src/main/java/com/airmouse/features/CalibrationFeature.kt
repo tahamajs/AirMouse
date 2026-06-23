@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/CalibrationFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.CalibrationData
@@ -43,7 +43,7 @@ class CalibrationFeature @Inject constructor(
     }
 
     private fun observeStatus() {
-        // Observe calibration status
+        
     }
 
     suspend fun startFullCalibration(onProgress: (Int) -> Unit): Result<Boolean> {

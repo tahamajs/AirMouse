@@ -50,7 +50,7 @@ fun InteractiveTutorialCard(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Icon
+            
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -67,7 +67,7 @@ fun InteractiveTutorialCard(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Title
+            
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
@@ -76,7 +76,7 @@ fun InteractiveTutorialCard(
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            // Description
+            
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
@@ -86,7 +86,7 @@ fun InteractiveTutorialCard(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Progress indicator
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -108,7 +108,7 @@ fun InteractiveTutorialCard(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Buttons
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)

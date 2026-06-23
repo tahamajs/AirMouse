@@ -1,9 +1,6 @@
-// app/src/main/java/com/airmouse/domain/model/ErrorModels.kt
+
 package com.airmouse.domain.model
 
-/**
- * Error type
- */
 enum class ErrorType {
     NETWORK,
     CONNECTION,
@@ -17,9 +14,6 @@ enum class ErrorType {
     UNKNOWN
 }
 
-/**
- * Application error
- */
 data class AppError(
     val type: ErrorType,
     val message: String,

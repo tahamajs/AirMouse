@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/analytics/AnalyticsManager.kt
+
 package com.airmouse.analytics
 
 import android.content.Context
@@ -29,10 +29,10 @@ class AnalyticsManager @Inject constructor(
         if (!prefs.getBoolean("analytics_enabled", true)) return
 
         scope.launch {
-            // In production, send to analytics backend
+            
             android.util.Log.d("Analytics", "Event: ${event.name}, Properties: ${event.properties}")
 
-            // Store locally for offline
+            
             storeEventLocally(event)
         }
     }

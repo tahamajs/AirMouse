@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/gaming/GameProfilesManager.kt
+
 package com.airmouse.gaming
 
 import android.app.usage.UsageStatsManager
@@ -15,10 +15,6 @@ import org.json.JSONObject
 import java.io.File
 import java.util.*
 
-/**
- * Manages game-specific profiles with custom sensitivity and gesture mappings.
- * Automatically detects the foreground game and applies the corresponding profile.
- */
 class GameProfilesManager(private val context: Context, private val prefs: PreferencesManager) {
 
     companion object {
@@ -26,7 +22,7 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         private const val PROFILES_DIR = "game_profiles"
         private const val GAME_DB_FILE = "games_database.json"
 
-        // Permission required for foreground detection on Android 5.0+
+        
         private const val PACKAGE_USAGE_STATS_PERMISSION = "android.permission.PACKAGE_USAGE_STATS"
     }
 
@@ -98,9 +94,6 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         startGameDetection()
     }
 
-    /**
-     * Loads all profiles from disk into memory.
-     */
     private fun loadProfiles() {
         val profilesDir = File(context.filesDir, PROFILES_DIR)
         if (!profilesDir.exists()) {
@@ -226,9 +219,6 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         return mappings
     }
 
-    /**
-     * Saves a single profile to disk and updates the in‑memory list.
-     */
     fun saveProfile(profile: GameProfile) {
         val json = JSONObject().apply {
             put("id", profile.id)
@@ -267,7 +257,7 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         val file = File(context.filesDir, "$PROFILES_DIR/${profile.id}.json")
         file.writeText(json.toString())
 
-        // Update memory
+        
         val updatedProfiles = _profiles.value.toMutableList()
         val index = updatedProfiles.indexOfFirst { it.id == profile.id }
         if (index >= 0) {
@@ -278,9 +268,6 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         _profiles.value = updatedProfiles
     }
 
-    /**
-     * Deletes a profile by its ID.
-     */
     fun deleteProfile(profileId: String) {
         val file = File(context.filesDir, "$PROFILES_DIR/$profileId.json")
         file.delete()
@@ -291,18 +278,11 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         }
     }
 
-    /**
-     * Returns the currently active game profile based on the foreground package.
-     */
     fun detectCurrentGame(): GameProfile? {
         val foregroundPackage = getForegroundPackage() ?: return null
         return _profiles.value.find { it.packageName == foregroundPackage && it.enabled }
     }
 
-    /**
-     * Gets the package name of the currently visible app.
-     * Uses UsageStatsManager (requires permission) or falls back to a placeholder.
-     */
     private fun getForegroundPackage(): String? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
@@ -312,7 +292,7 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
                     return null
                 }
                 val endTime = System.currentTimeMillis()
-                val beginTime = endTime - 10000 // last 10 seconds
+                val beginTime = endTime - 10000 
                 val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, endTime)
                 if (stats != null) {
                     var recentTask: android.app.usage.UsageStats? = null
@@ -330,14 +310,10 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
             }
         }
 
-        // Fallback – no reliable method without permission
+        
         return null
     }
 
-    /**
-     * Starts periodic game detection in a coroutine.
-     * Updates play time when a game is running.
-     */
     private fun startGameDetection() {
         detectionJob?.cancel()
         detectionJob = scope.launch {
@@ -347,7 +323,7 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
                 val now = System.currentTimeMillis()
 
                 if (currentPackage != null && currentPackage == lastForegroundPackage) {
-                    // Same game still in foreground → accumulate play time
+                    
                     val elapsed = now - gameStartTime
                     if (elapsed > 0) {
                         val updatedProfile = detectedGame.copy(
@@ -355,20 +331,20 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
                             lastPlayed = now
                         )
                         saveProfile(updatedProfile)
-                        // Update the state flow if this is the current game
+                        
                         if (_currentGame.value?.id == detectedGame.id) {
                             _currentGame.value = updatedProfile
                         }
                     }
                     gameStartTime = now
                 } else if (detectedGame != null) {
-                    // New supported game detected
+                    
                     gameStartTime = now
                     lastForegroundPackage = currentPackage
                     _currentGame.value = detectedGame
                     applyGameSettings(detectedGame)
                 } else {
-                    // No supported game detected
+                    
                     if (lastForegroundPackage != null) {
                         lastForegroundPackage = null
                         _currentGame.value = null
@@ -381,9 +357,6 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         }
     }
 
-    /**
-     * Applies the settings of a game profile to the global preferences.
-     */
     private fun applyGameSettings(profile: GameProfile) {
         prefs.putFloat("sensitivity", profile.settings.sensitivity)
         prefs.putBoolean("acceleration_enabled", profile.settings.accelerationEnabled)
@@ -425,17 +398,11 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         android.util.Log.i(TAG, "Reset to default settings")
     }
 
-    /**
-     * Returns the game action associated with a gesture for the currently active game.
-     */
     fun getActionForGesture(gesture: String): GameAction? {
         val mappings = _currentGame.value?.gestureMappings ?: return null
         return mappings.find { it.gesture == gesture && it.enabled }?.action
     }
 
-    /**
-     * Stops the detection coroutine and cleans up resources.
-     */
     fun stopDetection() {
         detectionJob?.cancel()
         scope.cancel()

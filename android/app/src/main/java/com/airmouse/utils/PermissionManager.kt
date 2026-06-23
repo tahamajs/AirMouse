@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/PermissionManager.kt
+
 package com.airmouse.utils
 
 import android.Manifest

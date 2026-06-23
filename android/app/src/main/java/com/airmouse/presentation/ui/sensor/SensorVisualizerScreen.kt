@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.airmouse.ui.components.LineChart
 import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,7 +42,7 @@ import kotlin.math.sqrt
 import androidx.compose.ui.draw.clip
 import kotlin.math.pow
 
-// ==================== DATA CLASSES ====================
+
 
 data class SensorVisualizerUiState(
     val roll: Float = 0f,
@@ -162,7 +163,7 @@ data class SensorStatistics(
     val sampleCount: Int = 0
 )
 
-// ==================== MAIN SCREEN ====================
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,6 +176,9 @@ fun SensorVisualizerScreen(
     var uiState by remember { mutableStateOf(SensorVisualizerUiState()) }
     var history by remember { mutableStateOf(SensorHistory()) }
     var statistics by remember { mutableStateOf(SensorStatistics()) }
+    var gyroHistory by remember { mutableStateOf(listOf<Float>()) }
+    var accelHistory by remember { mutableStateOf(listOf<Float>()) }
+    var magHistory by remember { mutableStateOf(listOf<Float>()) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
     fun updateStatistics() {
@@ -190,7 +194,7 @@ fun SensorVisualizerScreen(
                 minRoll = rolls.minOrNull() ?: 0f,
                 maxRoll = rolls.maxOrNull() ?: 0f,
                 avgRoll = rolls.average().toFloat(),
-                // ... map the rest of your fields
+                
                 stabilityScore = stability.coerceIn(0f, 1f),
                 sampleCount = points.size
             )
@@ -235,21 +239,42 @@ fun SensorVisualizerScreen(
                             )
                         }
                     }
-                    Sensor.TYPE_GYROSCOPE -> uiState = uiState.copy(
-                        gyroX = event.values[0],
-                        gyroY = event.values[1],
-                        gyroZ = event.values[2]
-                    )
-                    Sensor.TYPE_ACCELEROMETER -> uiState = uiState.copy(
-                        accelX = event.values[0],
-                        accelY = event.values[1],
-                        accelZ = event.values[2]
-                    )
-                    Sensor.TYPE_MAGNETIC_FIELD -> uiState = uiState.copy(
-                        magX = event.values[0],
-                        magY = event.values[1],
-                        magZ = event.values[2]
-                    )
+                    Sensor.TYPE_GYROSCOPE -> {
+                        uiState = uiState.copy(
+                            gyroX = event.values[0],
+                            gyroY = event.values[1],
+                            gyroZ = event.values[2]
+                        )
+                        gyroHistory = (gyroHistory + sqrt(
+                            event.values[0] * event.values[0] +
+                                event.values[1] * event.values[1] +
+                                event.values[2] * event.values[2]
+                        )).takeLast(40)
+                    }
+                    Sensor.TYPE_ACCELEROMETER -> {
+                        uiState = uiState.copy(
+                            accelX = event.values[0],
+                            accelY = event.values[1],
+                            accelZ = event.values[2]
+                        )
+                        accelHistory = (accelHistory + sqrt(
+                            event.values[0] * event.values[0] +
+                                event.values[1] * event.values[1] +
+                                event.values[2] * event.values[2]
+                        )).takeLast(40)
+                    }
+                    Sensor.TYPE_MAGNETIC_FIELD -> {
+                        uiState = uiState.copy(
+                            magX = event.values[0],
+                            magY = event.values[1],
+                            magZ = event.values[2]
+                        )
+                        magHistory = (magHistory + sqrt(
+                            event.values[0] * event.values[0] +
+                                event.values[1] * event.values[1] +
+                                event.values[2] * event.values[2]
+                        )).takeLast(40)
+                    }
                     Sensor.TYPE_GRAVITY -> uiState = uiState.copy(
                         gravityX = event.values[0],
                         gravityY = event.values[1],
@@ -293,7 +318,7 @@ fun SensorVisualizerScreen(
                 val pitches = points.map { it.pitch }
                 val yaws = points.map { it.yaw }
 
-// Ensure stability and intensity are explicitly Floats
+
                 val stability = (1f - (rolls.std() + pitches.std() + yaws.std()) / 3f).toFloat()
                 val intensity = ((rolls.map { abs(it) }.average() +
                         pitches.map { abs(it) }.average() +
@@ -315,7 +340,7 @@ fun SensorVisualizerScreen(
                 )            }
         }
 
-        // Register all sensors
+        
         fun registerSensor(type: Int) {
             sensorManager.getDefaultSensor(type)?.let {
                 sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME)
@@ -343,7 +368,7 @@ fun SensorVisualizerScreen(
         onDispose { sensorManager.unregisterListener(listener) }
     }
 
-    // Recording timer
+    
     LaunchedEffect(history.isRecording) {
         if (history.isRecording) {
             while (history.isRecording) {
@@ -420,12 +445,12 @@ fun SensorVisualizerScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Signal Quality Indicator
+            
             item {
                 SignalQualityCard(quality = uiState.signalQuality, calibration = uiState.calibrationStatus)
             }
 
-            // 3D Cube Visualization
+            
             if (uiState.show3DModel) {
                 item {
                     GlowingCard(
@@ -478,7 +503,7 @@ fun SensorVisualizerScreen(
                 }
             }
 
-            // Sensor Selection Tabs
+            
             item {
                 SensorTypeSelector(
                     selectedSensor = uiState.activeSensor,
@@ -486,7 +511,15 @@ fun SensorVisualizerScreen(
                 )
             }
 
-            // Sensor Data Display
+            item {
+                SensorChartsCard(
+                    gyroHistory = gyroHistory,
+                    accelHistory = accelHistory,
+                    magHistory = magHistory
+                )
+            }
+
+            
             item {
                 SensorDataCard(
                     uiState = uiState,
@@ -494,14 +527,14 @@ fun SensorVisualizerScreen(
                 )
             }
 
-            // Raw Data Display
+            
             if (uiState.showRawData) {
                 item {
                     RawDataCard(uiState = uiState)
                 }
             }
 
-            // Recording Status
+            
             if (history.isRecording) {
                 item {
                     RecordingCard(
@@ -511,7 +544,7 @@ fun SensorVisualizerScreen(
                 }
             }
 
-            // History Chart
+            
             if (history.dataPoints.isNotEmpty()) {
                 item {
                     HistoryChartCard(
@@ -521,7 +554,7 @@ fun SensorVisualizerScreen(
                 }
             }
 
-            // Statistics Card
+            
             if (statistics.sampleCount > 0) {
                 item {
                     StatisticsCard(statistics = statistics)
@@ -530,7 +563,7 @@ fun SensorVisualizerScreen(
         }
     }
 
-    // Export Dialog
+    
     if (showExportDialog) {
         ExportDialog(
             onDismiss = { showExportDialog = false },
@@ -541,7 +574,7 @@ fun SensorVisualizerScreen(
         )
     }
 
-    // Statistics Dialog
+    
     if (showStatsDialog) {
         StatisticsDialog(
             statistics = statistics,
@@ -551,7 +584,7 @@ fun SensorVisualizerScreen(
     }
 }
 
-// ==================== COMPONENTS ====================
+
 
 @Composable
 fun SignalQualityCard(quality: SignalQuality, calibration: CalibrationStatus) {
@@ -691,6 +724,94 @@ fun SensorDataCard(uiState: SensorVisualizerUiState, activeSensor: ActiveSensor)
 }
 
 @Composable
+fun SensorChartsCard(
+    gyroHistory: List<Float>,
+    accelHistory: List<Float>,
+    magHistory: List<Float>
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(
+                text = "📈 Separate Sensor Charts",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Each graph tracks a single sensor family so you can see drift and movement at a glance.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            SensorChartBlock(
+                title = "Gyroscope",
+                subtitle = "Angular speed magnitude",
+                data = gyroHistory,
+                color = Color(0xFF38BDF8)
+            )
+            SensorChartBlock(
+                title = "Accelerometer",
+                subtitle = "Acceleration magnitude",
+                data = accelHistory,
+                color = Color(0xFF22C55E)
+            )
+            SensorChartBlock(
+                title = "Magnetometer",
+                subtitle = "Magnetic field magnitude",
+                data = magHistory,
+                color = Color(0xFFF59E0B)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SensorChartBlock(
+    title: String,
+    subtitle: String,
+    data: List<Float>,
+    color: Color
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            AssistChip(onClick = { }, label = { Text("${data.size} samples") })
+        }
+
+        if (data.isNotEmpty()) {
+            LineChart(
+                data = data,
+                color = color,
+                animated = false,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Waiting for sensor samples...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
 fun RawDataCard(uiState: SensorVisualizerUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -759,7 +880,7 @@ fun RecordingCard(duration: Long, sampleCount: Int) {
                 Box(
                     modifier = Modifier
                         .size(12.dp)
-                        .graphicsLayer { // Use graphicsLayer for smoother performance
+                        .graphicsLayer { 
                             scaleX = pulse
                             scaleY = pulse
                         }
@@ -1032,7 +1153,7 @@ fun SmoothLineChart(dataPoints: List<SensorDataPoint>) {
             Offset(x, y)
         }
 
-        // Area fill
+        
         val path = Path().apply {
             moveTo(0f, height)
             points.forEach { lineTo(it.x, it.y) }
@@ -1049,7 +1170,7 @@ fun SmoothLineChart(dataPoints: List<SensorDataPoint>) {
             )
         )
 
-        // Line
+        
         for (i in 0 until points.size - 1) {
             drawLine(
                 color = Color(0xFFFF5722).copy(alpha = animatedAlpha),
@@ -1060,12 +1181,12 @@ fun SmoothLineChart(dataPoints: List<SensorDataPoint>) {
             )
         }
 
-        // Points
+        
         points.forEach { point ->
             drawCircle(color = Color(0xFFFF5722), radius = 3f, center = point)
         }
 
-        // Grid
+        
         for (i in 0..4) {
             val y = height * i / 4
             drawLine(
@@ -1098,7 +1219,7 @@ fun StatisticsRow(label: String, value: String) {
     }
 }
 
-// ==================== HELPER FUNCTIONS ====================
+
 
 private fun formatDuration(millis: Long): String {
     val seconds = (millis / 1000) % 60

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/ThemeManager.kt
+
 package com.airmouse.utils
 
 import android.content.Context
@@ -18,10 +18,6 @@ class ThemeManager(private val context: Context) {
         val THEME_KEY = stringPreferencesKey("theme_mode")
     }
 
-    /**
-     * Exposes the theme state as a clean observable cold stream flow
-     * for seamless Jetpack Compose integrations.
-     */
     val themeModeFlow: Flow<String> = context.themeDataStore.data.map { preferences ->
         preferences[THEME_KEY] ?: "system"
     }

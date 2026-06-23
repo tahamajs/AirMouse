@@ -83,7 +83,7 @@ class ServerLogsViewModel @Inject constructor(
     }
 
     private fun setupLogCapture() {
-        // Capture connection manager logs
+        
         viewModelScope.launch {
             connectionManager.connectionStatus.collect { status ->
                 addLogEntry(
@@ -112,12 +112,12 @@ class ServerLogsViewModel @Inject constructor(
             }
         }
         
-        // Capture custom logs from other components
+        
         setupCustomLogCapture()
     }
 
     private fun setupCustomLogCapture() {
-        // This would capture logs from various components
+        
         addLogEntry(LogLevel.INFO, "System", "Log viewer initialized", "Version 3.0.0")
         addLogEntry(LogLevel.DEBUG, "Storage", "Log retention: ${_uiState.value.logRetentionDays} days")
     }
@@ -214,7 +214,7 @@ class ServerLogsViewModel @Inject constructor(
                 }
                 prefs.putString(SAVED_LOGS_KEY, jsonArray.toString())
             } catch (e: Exception) {
-                // Log error but don't crash
+                
             }
         }
     }
@@ -312,7 +312,7 @@ class ServerLogsViewModel @Inject constructor(
 
     fun refreshLogs() {
         _uiState.update { it.copy(isRefreshing = true) }
-        // Simulate refresh - in production, fetch from server
+        
         addLogEntry(LogLevel.DEBUG, "System", "Manual log refresh")
         viewModelScope.launch {
             delay(500)
@@ -668,7 +668,7 @@ class ServerLogsViewModel @Inject constructor(
                 
                 val uri = FileProvider.getUriForFile(
                     context,
-                    "${context.packageName}.fileprovider",
+                    "${context.packageName}.file_provider",
                     file
                 )
                 

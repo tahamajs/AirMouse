@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/domain/usecase/ConnectToServerUseCase.kt
+
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.ConnectionConfig
@@ -8,16 +8,10 @@ import com.airmouse.domain.repository.IConnectionRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-/**
- * Use case for connecting to the Air Mouse server
- */
 class ConnectToServerUseCase @Inject constructor(
     private val connectionRepository: IConnectionRepository
 ) {
 
-    /**
-     * Connect to server with configuration
-     */
     suspend operator fun invoke(config: ConnectionConfig): Result<Boolean> {
         return try {
             val result = connectionRepository.connect(config)
@@ -27,21 +21,19 @@ class ConnectToServerUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Connect to server with IP and port
-     */
-    suspend fun connect(ip: String, port: Int = 8080, protocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET): Result<Boolean> {
+    suspend fun connect(
+        ip: String,
+        port: Int = ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
+        protocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET
+    ): Result<Boolean> {
         val config = ConnectionConfig(
             ip = ip,
             port = port,
             protocol = protocol
-        )
+        ).normalized()
         return invoke(config)
     }
 
-    /**
-     * Connect to last used server
-     */
     suspend fun connectToLastServer(): Result<Boolean> {
         return try {
             val config = connectionRepository.getConnectionConfig()
@@ -52,30 +44,18 @@ class ConnectToServerUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Observe connection status
-     */
     fun observeConnectionStatus(): Flow<ConnectionStatus> {
         return connectionRepository.observeConnectionStatus()
     }
 
-    /**
-     * Get current connection status
-     */
     suspend fun getConnectionStatus(): ConnectionStatus {
         return connectionRepository.getConnectionStatus()
     }
 
-    /**
-     * Disconnect from server
-     */
     suspend fun disconnect() {
         connectionRepository.disconnect()
     }
 
-    /**
-     * Reconnect to server
-     */
     suspend fun reconnect(): Result<Boolean> {
         return try {
             val result = connectionRepository.reconnect()
@@ -85,9 +65,6 @@ class ConnectToServerUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Check if connected
-     */
     suspend fun isConnected(): Boolean {
         return connectionRepository.getConnectionStatus() == ConnectionStatus.CONNECTED
     }

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/DialogHelper.kt
+
 package com.airmouse.utils
 
 import android.app.Activity

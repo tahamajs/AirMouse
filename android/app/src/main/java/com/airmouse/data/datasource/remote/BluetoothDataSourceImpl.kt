@@ -19,8 +19,8 @@ class BluetoothDataSourceImpl @Inject constructor(
     private val stateChannel = Channel<Boolean>(Channel.BUFFERED)
 
     override fun startScanning() {
-        // Bluetooth discovery is intentionally stubbed in the offline build.
-        // The app keeps the API surface so the UI and docs remain complete.
+        
+        
         stateChannel.trySend(false)
     }
 
@@ -38,7 +38,7 @@ class BluetoothDataSourceImpl @Inject constructor(
     }
 
     override fun send(data: ByteArray) {
-        // No-op in the offline build.
+        
     }
 
     override fun observeDevices(): Flow<BluetoothDevice> = deviceChannel.receiveAsFlow()

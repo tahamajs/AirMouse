@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/MouseModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * Mouse button types
- */
 enum class MouseButton {
     LEFT,
     RIGHT,
@@ -15,18 +12,12 @@ enum class MouseButton {
     FORWARD
 }
 
-/**
- * Scroll direction
- */
 enum class ScrollDirection {
     UP,
     DOWN,
     NONE
 }
 
-/**
- * Mouse event sealed class
- */
 sealed class MouseEvent {
     data class Move(val dx: Float, val dy: Float) : MouseEvent()
     data class Click(val button: MouseButton, val repeat: Int = 1) : MouseEvent()
@@ -36,9 +27,6 @@ sealed class MouseEvent {
     object MiddleClick : MouseEvent()
 }
 
-/**
- * Mouse movement profile
- */
 @Parcelize
 data class MovementProfile(
     val sensitivity: Float = 1.0f,
@@ -55,9 +43,6 @@ data class MovementProfile(
     val smoothingAlpha: Float = 0.3f
 ) : Parcelable
 
-/**
- * Mouse statistics
- */
 @Parcelize
 data class MouseStatistics(
     val totalClicks: Int = 0,

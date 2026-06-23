@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/repository/ProximityRepositoryImpl.kt
+
 package com.airmouse.data.repository
 
 import android.bluetooth.BluetoothAdapter
@@ -71,7 +71,7 @@ class ProximityRepositoryImpl @Inject constructor(
     private fun loadCalibrationData() {
         val txPower = prefs.getInt("proximity_tx_power", -59)
         val pathLoss = prefs.getFloat("proximity_path_loss", 2.5f)
-        // Store for later use
+        
     }
 
     private fun startMonitoringIfEnabled() {
@@ -105,17 +105,17 @@ class ProximityRepositoryImpl @Inject constructor(
                         lastUpdate = System.currentTimeMillis()
                     )
 
-                    // Send to server via ConnectionManager
+                    
                     connectionManager.sendProximity(isNear, distance)
 
-                    // Auto lock/unlock based on proximity
+                    
                     if (_config.value.autoLockEnabled || _config.value.autoUnlockEnabled) {
                         handleAutoLock(isNear)
                     }
 
                     delay(_config.value.scanInterval)
                 } catch (e: Exception) {
-                    // Handle error
+                    
                 }
             }
         }
@@ -158,7 +158,7 @@ class ProximityRepositoryImpl @Inject constructor(
             val distances = listOf(0.5f, 1.0f, 2.0f, 3.0f, 5.0f)
 
             for ((index, distance) in distances.withIndex()) {
-                // Wait for user to place device at distance
+                
                 delay(3000)
                 val rssi = getAverageRssi()
                 if (rssi != -100) {
@@ -180,7 +180,7 @@ class ProximityRepositoryImpl @Inject constructor(
     }
 
     private fun calculateCalibrationParameters(samples: List<Pair<Int, Float>>) {
-        // Linear regression to find txPower and path loss exponent
+        
         val n = samples.size
         var sumRssi = 0.0
         var sumDist = 0.0
@@ -201,7 +201,7 @@ class ProximityRepositoryImpl @Inject constructor(
         val denominator = n * sumLogDistSq - sumLogDist * sumLogDist
         val pathLoss = if (denominator != 0.0) -10 * numerator / denominator else 2.5
 
-        // Calculate txPower (RSSI at 1 meter)
+        
         val avgRssiAt1m = samples.filter { it.second == 1.0f }.map { it.first }.average()
         val txPower = if (avgRssiAt1m > 0) avgRssiAt1m else -59.0
 
@@ -275,8 +275,8 @@ class ProximityRepositoryImpl @Inject constructor(
     }
 
     private fun getCurrentRssi(): Int {
-        // In real implementation, read from BluetoothDevice
-        // For now, return simulated value
+        
+        
         return (-80..-30).random()
     }
 

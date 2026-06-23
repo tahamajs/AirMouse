@@ -1,9 +1,10 @@
-// app/src/main/java/com/airmouse/utils/PreferencesManager.kt
+
 package com.airmouse.utils
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.airmouse.PreferencesManager as PreferencesManagerContract
 import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
@@ -13,21 +14,16 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Central preferences manager for the Air Mouse app.
- * Handles all user settings, calibration data, statistics, profiles, and more.
- * Thread‑safe, backed by Android SharedPreferences.
- */
 @Singleton
 class PreferencesManager @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : PreferencesManagerContract {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
     companion object {
         private const val PREF_NAME = "airmouse_prefs"
 
-        // ==================== Default Values ====================
+        
         private const val DEFAULT_SENSITIVITY = 0.5f
         private const val DEFAULT_CLICK_THRESHOLD = 8f
         private const val DEFAULT_DOUBLE_CLICK_INTERVAL = 400L
@@ -66,27 +62,27 @@ class PreferencesManager @Inject constructor(
         private const val DEFAULT_LOG_LEVEL = "INFO"
     }
 
-    // ==================== Basic Operations ====================
-    fun putString(key: String, value: String) = prefs.edit { putString(key, value) }
-    fun getString(key: String, defaultValue: String = ""): String = prefs.getString(key, defaultValue) ?: defaultValue
+    
+    override fun putString(key: String, value: String) = prefs.edit { putString(key, value) }
+    override fun getString(key: String, defaultValue: String): String = prefs.getString(key, defaultValue) ?: defaultValue
 
-    fun putInt(key: String, value: Int) = prefs.edit { putInt(key, value) }
-    fun getInt(key: String, defaultValue: Int = 0): Int = prefs.getInt(key, defaultValue)
+    override fun putInt(key: String, value: Int) = prefs.edit { putInt(key, value) }
+    override fun getInt(key: String, defaultValue: Int): Int = prefs.getInt(key, defaultValue)
 
-    fun putLong(key: String, value: Long) = prefs.edit { putLong(key, value) }
-    fun getLong(key: String, defaultValue: Long = 0L): Long = prefs.getLong(key, defaultValue)
+    override fun putLong(key: String, value: Long) = prefs.edit { putLong(key, value) }
+    override fun getLong(key: String, defaultValue: Long): Long = prefs.getLong(key, defaultValue)
 
-    fun putFloat(key: String, value: Float) = prefs.edit { putFloat(key, value) }
-    fun getFloat(key: String, defaultValue: Float = 0f): Float = prefs.getFloat(key, defaultValue)
+    override fun putFloat(key: String, value: Float) = prefs.edit { putFloat(key, value) }
+    override fun getFloat(key: String, defaultValue: Float): Float = prefs.getFloat(key, defaultValue)
 
-    fun putBoolean(key: String, value: Boolean) = prefs.edit { putBoolean(key, value) }
-    fun getBoolean(key: String, defaultValue: Boolean = false): Boolean = prefs.getBoolean(key, defaultValue)
+    override fun putBoolean(key: String, value: Boolean) = prefs.edit { putBoolean(key, value) }
+    override fun getBoolean(key: String, defaultValue: Boolean): Boolean = prefs.getBoolean(key, defaultValue)
 
     fun contains(key: String): Boolean = prefs.contains(key)
     fun remove(key: String) = prefs.edit { remove(key) }
     fun clear() = prefs.edit { clear() }
 
-    // ==================== Cursor / Mouse Settings ====================
+    
     fun getSensitivity(): Float = getFloat("sensitivity", DEFAULT_SENSITIVITY)
     fun setSensitivity(value: Float) = putFloat("sensitivity", value.coerceIn(0.2f, 2.0f))
 
@@ -138,7 +134,7 @@ class PreferencesManager @Inject constructor(
     fun getCursorSpeed(): Float = getFloat("cursor_speed", DEFAULT_CURSOR_SPEED)
     fun setCursorSpeed(value: Float) = putFloat("cursor_speed", value.coerceIn(0.5f, 3.0f))
 
-    // ==================== Connection Settings ====================
+    
     fun getLastServerIp(): String = getString("last_server_ip", "")
     fun setLastServerIp(ip: String) = putString("last_server_ip", ip)
 
@@ -183,7 +179,7 @@ class PreferencesManager @Inject constructor(
     fun isUdpDiscoveryEnabled(): Boolean = getBoolean("use_udp_discovery", DEFAULT_USE_UDP_DISCOVERY)
     fun setUdpDiscoveryEnabled(enabled: Boolean) = putBoolean("use_udp_discovery", enabled)
 
-    // ==================== Theme / Appearance ====================
+    
     fun getTheme(): String = getString("theme", DEFAULT_THEME)
     fun setTheme(theme: String) = putString("theme", theme)
 
@@ -208,9 +204,9 @@ class PreferencesManager @Inject constructor(
     fun isShowFps(): Boolean = getBoolean("show_fps", false)
     fun setShowFps(enabled: Boolean) = putBoolean("show_fps", enabled)
 
-    // ==================== CALIBRATION METHODS ====================
+    
 
-    // --- Complete Calibration Data ---
+    
     fun saveCalibrationData(data: CalibrationData) {
         putFloat("gyro_bias_x", data.gyroBias.offsetX)
         putFloat("gyro_bias_y", data.gyroBias.offsetY)
@@ -222,6 +218,7 @@ class PreferencesManager @Inject constructor(
         putFloat("mag_offset_y", data.magOffset.offsetY)
         putFloat("mag_offset_z", data.magOffset.offsetZ)
         putBoolean("calibration_complete", data.isCalibrated)
+        putBoolean("is_calibrated", data.isCalibrated)
         putString("calibration_quality", data.quality.name)
         putLong("calibration_timestamp", data.timestamp)
     }
@@ -253,8 +250,11 @@ class PreferencesManager @Inject constructor(
         )
     }
 
-    fun isCalibrated(): Boolean = getBoolean("calibration_complete", false)
-    fun setCalibrated(calibrated: Boolean) = putBoolean("calibration_complete", calibrated)
+    fun isCalibrated(): Boolean = getBoolean("calibration_complete", false) || getBoolean("is_calibrated", false)
+    fun setCalibrated(calibrated: Boolean) {
+        putBoolean("calibration_complete", calibrated)
+        putBoolean("is_calibrated", calibrated)
+    }
 
     fun getCalibrationQuality(): CalibrationQuality {
         return try {
@@ -276,7 +276,7 @@ class PreferencesManager @Inject constructor(
     fun decrementCalibrationAttempts() { setCalibrationAttempts(getCalibrationAttempts() - 1) }
     fun resetCalibrationAttempts() { setCalibrationAttempts(5) }
 
-    // --- Gyroscope Calibration ---
+    
     fun saveGyroBias(x: Float, y: Float, z: Float) {
         putFloat("gyro_bias_x", x)
         putFloat("gyro_bias_y", y)
@@ -310,7 +310,7 @@ class PreferencesManager @Inject constructor(
     fun isGyroCalibrated(): Boolean = getBoolean("gyro_calibrated", false)
     fun setGyroCalibrated(calibrated: Boolean) = putBoolean("gyro_calibrated", calibrated)
 
-    // --- Accelerometer Calibration ---
+    
     fun saveAccelOffset(x: Float, y: Float, z: Float) {
         putFloat("accel_offset_x", x)
         putFloat("accel_offset_y", y)
@@ -362,7 +362,7 @@ class PreferencesManager @Inject constructor(
     fun isAccelCalibrated(): Boolean = getBoolean("accel_calibrated", false)
     fun setAccelCalibrated(calibrated: Boolean) = putBoolean("accel_calibrated", calibrated)
 
-    // --- Magnetometer Calibration ---
+    
     fun saveMagOffset(x: Float, y: Float, z: Float) {
         putFloat("mag_offset_x", x)
         putFloat("mag_offset_y", y)
@@ -393,7 +393,7 @@ class PreferencesManager @Inject constructor(
     fun isMagCalibrated(): Boolean = getBoolean("mag_calibrated", false)
     fun setMagCalibrated(calibrated: Boolean) = putBoolean("mag_calibrated", calibrated)
 
-    // --- Calibration Status ---
+    
     fun getCalibrationStatus(): CalibrationStatus {
         val status = getString("calibration_status", "NOT_STARTED")
         return try {
@@ -410,7 +410,7 @@ class PreferencesManager @Inject constructor(
     fun getCurrentCalibrationStep(): Int = getInt("calibration_current_step", 0)
     fun setCurrentCalibrationStep(step: Int) = putInt("calibration_current_step", step.coerceIn(0, 3))
 
-    // ==================== AI & Predictive ====================
+    
     fun isAiSmoothingEnabled(): Boolean = getBoolean("ai_smoothing", false)
     fun setAiSmoothingEnabled(enabled: Boolean) = putBoolean("ai_smoothing", enabled)
 
@@ -426,7 +426,7 @@ class PreferencesManager @Inject constructor(
     fun isKalmanEnabled(): Boolean = getBoolean("kalman_enabled", true)
     fun setKalmanEnabled(enabled: Boolean) = putBoolean("kalman_enabled", enabled)
 
-    // ==================== Feedback / Haptic ====================
+    
     fun isSoundEnabled(): Boolean = getBoolean("sound_enabled", true)
     fun setSoundEnabled(enabled: Boolean) = putBoolean("sound_enabled", enabled)
 
@@ -439,7 +439,7 @@ class PreferencesManager @Inject constructor(
     fun getHapticStrength(): String = getString("haptic_strength", DEFAULT_HAPTIC_STRENGTH)
     fun setHapticStrength(strength: String) = putString("haptic_strength", strength)
 
-    // ==================== Proximity ====================
+    
     fun isProximityEnabled(): Boolean = getBoolean("proximity_enabled", false)
     fun setProximityEnabled(enabled: Boolean) = putBoolean("proximity_enabled", enabled)
 
@@ -458,7 +458,7 @@ class PreferencesManager @Inject constructor(
     fun getProximityDeviceMac(): String = getString("proximity_device_mac", "")
     fun setProximityDeviceMac(mac: String) = putString("proximity_device_mac", mac)
 
-    // ==================== Voice Commands ====================
+    
     fun isVoiceEnabled(): Boolean = getBoolean("voice_enabled", false)
     fun setVoiceEnabled(enabled: Boolean) = putBoolean("voice_enabled", enabled)
 
@@ -489,7 +489,7 @@ class PreferencesManager @Inject constructor(
     fun getVoiceCommandHistory(): String = getString("voice_command_history", "")
     fun setVoiceCommandHistory(history: String) = putString("voice_command_history", history)
 
-    // ==================== Edge Gestures ====================
+    
     fun isEdgeGesturesEnabled(): Boolean = getBoolean("edge_gestures_enabled", false)
     fun setEdgeGesturesEnabled(enabled: Boolean) = putBoolean("edge_gestures_enabled", enabled)
 
@@ -505,14 +505,14 @@ class PreferencesManager @Inject constructor(
     fun getEdgeSensitivity(): Float = getFloat("edge_gestures_sensitivity", DEFAULT_EDGE_SENSITIVITY)
     fun setEdgeSensitivity(sensitivity: Float) = putFloat("edge_gestures_sensitivity", sensitivity.coerceIn(0.1f, 0.5f))
 
-    // ==================== Battery Saver ====================
+    
     fun isBatterySaverEnabled(): Boolean = getBoolean("battery_saver_enabled", true)
     fun setBatterySaverEnabled(enabled: Boolean) = putBoolean("battery_saver_enabled", enabled)
 
     fun getBatterySaverIdleTime(): Long = getLong("battery_saver_idle_time", DEFAULT_BATTERY_SAVER_IDLE_TIME)
     fun setBatterySaverIdleTime(time: Long) = putLong("battery_saver_idle_time", time.coerceIn(5000L, 30000L))
 
-    // ==================== Accessibility ====================
+    
     fun isAnnounceMovementEnabled(): Boolean = getBoolean("announce_movement", false)
     fun setAnnounceMovementEnabled(enabled: Boolean) = putBoolean("announce_movement", enabled)
 
@@ -531,7 +531,7 @@ class PreferencesManager @Inject constructor(
     fun getColorBlindMode(): String = getString("color_blind_mode", DEFAULT_COLOR_BLIND_MODE)
     fun setColorBlindMode(mode: String) = putString("color_blind_mode", mode.uppercase())
 
-    // ==================== Privacy ====================
+    
     fun isAnonymousStatsEnabled(): Boolean = getBoolean("anonymous_stats", true)
     fun setAnonymousStatsEnabled(enabled: Boolean) = putBoolean("anonymous_stats", enabled)
 
@@ -550,7 +550,7 @@ class PreferencesManager @Inject constructor(
     fun getAppVersion(): Int = getInt("app_version", DEFAULT_APP_VERSION)
     fun setAppVersion(version: Int) = putInt("app_version", version)
 
-    // ==================== Statistics ====================
+    
     fun getSessionStats(): StatisticsSummary {
         return StatisticsSummary(
             totalClicks = getInt("session_clicks", 0),
@@ -625,7 +625,7 @@ class PreferencesManager @Inject constructor(
     fun getTotalGestures(): Int = getInt("stat_gestures", 0)
     fun incrementTotalGestures() = putInt("stat_gestures", getTotalGestures() + 1)
 
-    // ==================== Profiles ====================
+    
     fun getLastUsedProfile(): String = getString("last_used_profile", "Default")
     fun setLastUsedProfile(profile: String) = putString("last_used_profile", profile)
 
@@ -665,7 +665,7 @@ class PreferencesManager @Inject constructor(
         deleteProfile(oldName)
     }
 
-    // ==================== Custom Gestures ====================
+    
     fun saveCustomGesture(name: String, data: String) = putString("gesture_$name", data)
     fun getCustomGesture(name: String): String = getString("gesture_$name", "")
     fun deleteCustomGesture(name: String) = remove("gesture_$name")
@@ -675,7 +675,7 @@ class PreferencesManager @Inject constructor(
             .associate { it.removePrefix("gesture_") to getString(it, "") }
     }
 
-    // ==================== Recorded Gestures (for training) ====================
+    
     fun getRecordedGestures(): List<String> = getString("recorded_gestures", "").split(",").filter { it.isNotEmpty() }
     fun addRecordedGesture(fileName: String) {
         val current = getRecordedGestures()
@@ -686,7 +686,7 @@ class PreferencesManager @Inject constructor(
     }
     fun clearRecordedGestures() = putString("recorded_gestures", "")
 
-    // ==================== Developer Settings ====================
+    
     fun isDeveloperModeEnabled(): Boolean = getBoolean("developer_mode", false)
     fun setDeveloperModeEnabled(enabled: Boolean) = putBoolean("developer_mode", enabled)
 
@@ -696,7 +696,7 @@ class PreferencesManager @Inject constructor(
     fun getLogLevel(): String = getString("log_level", DEFAULT_LOG_LEVEL)
     fun setLogLevel(level: String) = putString("log_level", level.uppercase())
 
-    // ==================== Touchpad Settings ====================
+    
     fun isTouchpadActive(): Boolean = getBoolean("touchpad_active", false)
     fun setTouchpadActive(active: Boolean) = putBoolean("touchpad_active", active)
 
@@ -754,7 +754,7 @@ class PreferencesManager @Inject constructor(
     fun isTouchpadRotateToRotate(): Boolean = getBoolean("touchpad_rotate_to_rotate", false)
     fun setTouchpadRotateToRotate(enabled: Boolean) = putBoolean("touchpad_rotate_to_rotate", enabled)
 
-    // ==================== Export / Import ====================
+    
     fun exportSettings(): String {
         return buildString {
             appendLine("AIRMOUSE_SETTINGS_EXPORT")
@@ -850,6 +850,22 @@ class PreferencesManager @Inject constructor(
             true
         } catch (e: Exception) {
             false
+        }
+    }
+
+    override fun getGyroBias(): FloatArray {
+        return floatArrayOf(
+            getFloat("gyro_bias_x", 0f),
+            getFloat("gyro_bias_y", 0f),
+            getFloat("gyro_bias_z", 0f)
+        )
+    }
+
+    override fun saveGyroBias(values: FloatArray) {
+        if (values.size >= 3) {
+            putFloat("gyro_bias_x", values[0])
+            putFloat("gyro_bias_y", values[1])
+            putFloat("gyro_bias_z", values[2])
         }
     }
 }

@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/ConnectionModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * Connection status enum
- */
 enum class ConnectionStatus {
     DISCONNECTED,
     CONNECTING,
@@ -16,18 +13,12 @@ enum class ConnectionStatus {
     TIMEOUT
 }
 
-/**
- * Connection protocol enum
- */
 enum class ConnectionProtocol {
     TCP,
     WEBSOCKET,
     UDP
 }
 
-/**
- * Connection configuration
- */
 data class ConnectionConfig(
     val ip: String = "",
     val port: Int = 8080,
@@ -36,11 +27,30 @@ data class ConnectionConfig(
     val authToken: String? = null,
     val autoReconnect: Boolean = true,
     val timeoutMs: Long = 10000L
-)
+) {
+    fun normalized(): ConnectionConfig {
+        val effectivePort = when {
+            protocol == ConnectionProtocol.WEBSOCKET && (port <= 0 || port == DEFAULT_TCP_PORT || port == DEFAULT_UDP_PORT) ->
+                DEFAULT_WEBSOCKET_PORT
+            protocol == ConnectionProtocol.TCP && (port <= 0 || port == DEFAULT_WEBSOCKET_PORT || port == DEFAULT_UDP_PORT) ->
+                DEFAULT_TCP_PORT
+            protocol == ConnectionProtocol.UDP && (port <= 0 || port == DEFAULT_TCP_PORT || port == DEFAULT_WEBSOCKET_PORT) ->
+                DEFAULT_UDP_PORT
+            port > 0 ->
+                port
+            else ->
+                DEFAULT_TCP_PORT
+        }
+        return copy(port = effectivePort)
+    }
 
-/**
- * Connection quality metrics
- */
+    companion object {
+        const val DEFAULT_TCP_PORT = 8080
+        const val DEFAULT_WEBSOCKET_PORT = 8081
+        const val DEFAULT_UDP_PORT = 8082
+    }
+}
+
 @Parcelize
 data class ConnectionQuality(
     val rssi: Int = 0,
@@ -71,9 +81,6 @@ data class ConnectionQuality(
     fun isHealthy(): Boolean = ping < 200 && packetLoss < 0.1f
 }
 
-/**
- * Connection test result
- */
 data class TestResult(
     val success: Boolean,
     val message: String,
@@ -81,9 +88,6 @@ data class TestResult(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-/**
- * Server discovery result
- */
 data class DiscoveredServer(
     val ip: String,
     val port: Int,

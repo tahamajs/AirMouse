@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/BluetoothUtils.kt
+
 package com.airmouse.utils
 
 import android.Manifest
@@ -14,9 +14,6 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
 
-/**
- * Bluetooth utilities for device discovery and connection management.
- */
 class BluetoothUtils(private val context: Context) {
 
     companion object {
@@ -44,7 +41,7 @@ class BluetoothUtils(private val context: Context) {
 
     @Suppress("DEPRECATION")
     fun enableBluetooth(): Boolean {
-        // Enforced explicit permission check to satisfy lint security guards
+        
         if (!hasBluetoothPermission()) return false
         return try {
             bluetoothAdapter?.enable() == true
@@ -97,9 +94,6 @@ class BluetoothUtils(private val context: Context) {
         }
     }
 
-    /**
-     * Start scanning for Bluetooth devices
-     */
     fun startScanning(
         onDeviceFound: (BluetoothDevice, Int) -> Unit,
         onComplete: () -> Unit
@@ -124,7 +118,7 @@ class BluetoothUtils(private val context: Context) {
         onScanCompleteListener = onComplete
         isScanning = true
 
-        // Cleaned up obsolete legacy SDK checks since SDK_INT is always modern
+        
         startLeScan()
 
         handler.postDelayed({

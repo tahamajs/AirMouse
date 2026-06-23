@@ -1,19 +1,19 @@
-// app/src/main/java/com/airmouse/presentation/ui/statistics/StatisticsUiState.kt
+
 package com.airmouse.presentation.ui.statistics
 
 import java.util.Date
 import java.util.Locale
+import com.airmouse.domain.model.StatisticsSummary
+import com.airmouse.domain.model.MouseStatistics
+import com.airmouse.domain.model.AppPreferences
 
-/**
- * Complete UI state for the statistics screen.
- */
 data class StatisticsUiState(
-    // Session
-    val sessionTime: Long = 0,                    // seconds
+    
+    val sessionTime: Long = 0,                    
     val sessionStartTime: Long = System.currentTimeMillis(),
     val lastActivityTime: Long = System.currentTimeMillis(),
 
-    // Gesture Stats
+    
     val clicks: Int = 0,
     val doubleClicks: Int = 0,
     val rightClicks: Int = 0,
@@ -21,44 +21,73 @@ data class StatisticsUiState(
     val gesturesDetected: Int = 0,
     val customGesturesUsed: Int = 0,
 
-    // Movement Stats
+    
     val totalDistanceMoved: Float = 0f,
     val averageSpeed: Float = 0f,
     val peakSpeed: Float = 0f,
     val totalMovements: Int = 0,
 
-    // Connection Stats
+    
     val connectionAttempts: Int = 0,
     val successfulConnections: Int = 0,
     val failedConnections: Int = 0,
     val averagePing: Int = 0,
 
-    // Calibration Stats
+    
     val lastCalibrationTime: Long = 0,
     val calibrationCount: Int = 0,
     val calibrationSuccessRate: Float = 0f,
 
-    // Device / Performance
+    val isTracking: Boolean = false,
+    val calibrationComplete: Boolean = false,
+    val touchpadActive: Boolean = false,
+    val presentationModeEnabled: Boolean = false,
+    val autoConnect: Boolean = false,
+    val useWebSocket: Boolean = true,
+    val useUdpDiscovery: Boolean = true,
+    val theme: String = "system",
+    val language: String = "en",
+
+    
     val batteryUsage: Int = 0,
     val cpuUsage: Float = 0f,
     val memoryUsage: Float = 0f,
     val temperature: Float = 0f,
 
-    // History & Breakdown
+    val mostUsedGesture: String = "",
+    val mostUsedGestureCount: Int = 0,
+    val gestureTypeCount: Int = 0,
+    val customGestureCount: Int = 0,
+
+    
     val dailyStats: List<DailyStats> = emptyList(),
     val gestureBreakdown: Map<String, Int> = emptyMap(),
 
-    // UI State
+    
     val isLoading: Boolean = false,
     val timeRange: TimeRange = TimeRange.ALL_TIME,
     val selectedChart: ChartType = ChartType.GESTURES,
     val showExportDialog: Boolean = false,
     val showResetDialog: Boolean = false,
     val error: String? = null,
-    val success: String? = null
+    val success: String? = null,
+    val summaryStats: StatisticsSummary = StatisticsSummary(),
+    val mouseStatistics: MouseStatistics = MouseStatistics(),
+    val appPreferences: AppPreferences = AppPreferences()
 ) {
-    // Helper functions
-    fun getTotalGestures(): Int = clicks + doubleClicks + rightClicks + scrolls + gesturesDetected
+    val summary: StatisticsSummary = StatisticsSummary(
+        totalClicks = clicks,
+        totalDoubleClicks = doubleClicks,
+        totalRightClicks = rightClicks,
+        totalScrolls = scrolls,
+        totalMovements = totalMovements,
+        totalDistance = totalDistanceMoved,
+        averageSpeed = averageSpeed,
+        maxSpeed = peakSpeed,
+        sessionDuration = sessionTime
+    )
+    
+    fun getTotalGestures(): Int = clicks + doubleClicks + rightClicks + scrolls + gesturesDetected + customGesturesUsed
 
     fun getSuccessRate(): Float {
         return if (connectionAttempts > 0) {
@@ -91,9 +120,6 @@ data class StatisticsUiState(
     }
 }
 
-/**
- * Daily aggregated statistics for a single day.
- */
 data class DailyStats(
     val date: Date,
     val clicks: Int = 0,
@@ -112,9 +138,6 @@ data class DailyStats(
     }
 }
 
-/**
- * Time range filter options.
- */
 enum class TimeRange(val displayName: String, val days: Int) {
     TODAY("Today", 1),
     WEEK("This Week", 7),
@@ -129,9 +152,6 @@ enum class TimeRange(val displayName: String, val days: Int) {
     }
 }
 
-/**
- * Chart types for the statistics screen.
- */
 enum class ChartType(val displayName: String) {
     GESTURES("Gesture Distribution"),
     MOVEMENT("Movement Over Time"),
@@ -145,47 +165,26 @@ enum class ChartType(val displayName: String) {
     }
 }
 
-/**
- * Statistics summary for quick view
- */
-data class StatisticsSummary(
-    val totalClicks: Int = 0,
-    val totalDoubleClicks: Int = 0,
-    val totalRightClicks: Int = 0,
-    val totalScrolls: Int = 0,
-    val totalMovements: Int = 0,
-    val totalDistance: Float = 0f,
-    val averageSpeed: Float = 0f,
-    val maxSpeed: Float = 0f,
-    val sessionDuration: Long = 0,
-    val gesturesDetected: Int = 0,
-    val customGesturesUsed: Int = 0
-) {
-    val totalActions: Int get() = totalClicks + totalDoubleClicks + totalRightClicks + totalScrolls + totalMovements + gesturesDetected
-    val totalClicksAll: Int get() = totalClicks + totalDoubleClicks + totalRightClicks
+val StatisticsSummary.totalActions: Int
+    get() = totalClicks + totalDoubleClicks + totalRightClicks + totalScrolls + totalMovements
 
-    fun getAverageSpeedFormatted(): String {
-        return String.format(Locale.US, "%.1f", averageSpeed)
-    }
+val StatisticsSummary.totalClicksAll: Int
+    get() = totalClicks + totalDoubleClicks + totalRightClicks
 
-    fun getTotalDistanceFormatted(): String {
-        return String.format(Locale.US, "%.1f", totalDistance)
-    }
+fun StatisticsSummary.getAverageSpeedFormatted(): String {
+    return String.format(Locale.US, "%.1f", averageSpeed)
+}
 
-    fun getSessionDurationFormatted(): String {
-        val hours = sessionDuration / 3600
-        val minutes = (sessionDuration % 3600) / 60
-        val seconds = sessionDuration % 60
-        return when {
-            hours > 0 -> String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-            else -> String.format(Locale.US, "%02d:%02d", minutes, seconds)
-        }
+fun StatisticsSummary.getSessionDurationFormatted(): String {
+    val hours = sessionDuration / 3600
+    val minutes = (sessionDuration % 3600) / 60
+    val seconds = sessionDuration % 60
+    return when {
+        hours > 0 -> String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+        else -> String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }
 
-/**
- * Historical statistics
- */
 data class HistoricalStatistics(
     val totalGestures: Int = 0,
     val gesturesByType: Map<String, Int> = emptyMap(),
@@ -202,9 +201,6 @@ data class HistoricalStatistics(
     }
 }
 
-/**
- * Gesture statistics
- */
 data class GestureStatistics(
     val gestureName: String = "",
     val detectionCount: Int = 0,
@@ -218,9 +214,6 @@ data class GestureStatistics(
     }
 }
 
-/**
- * Export options
- */
 enum class ExportFormat(val displayName: String, val extension: String) {
     JSON("JSON", "json"),
     CSV("CSV", "csv"),

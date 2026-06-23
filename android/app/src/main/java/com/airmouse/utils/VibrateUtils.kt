@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,8 +14,8 @@ class VibrateUtils @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
-    private val vibrator: Vibrator by lazy {
-        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    private val vibrator: Vibrator? by lazy {
+        ContextCompat.getSystemService(context, Vibrator::class.java)
     }
 
     fun vibrateShort() {
@@ -34,41 +35,57 @@ class VibrateUtils @Inject constructor(
     }
 
     fun vibrateDoubleClick() {
-        // FIXED: Using longArrayOf() instead of arrayOf()
+        
         vibrate(longArrayOf(20L, 50L, 20L))
     }
 
     fun vibrateError() {
-        // FIXED: Using longArrayOf() instead of arrayOf()
+        
         vibrate(longArrayOf(100L, 50L, 100L))
     }
 
     fun vibrateSuccess() {
-        // FIXED: Using longArrayOf() instead of arrayOf()
+        
         vibrate(longArrayOf(20L, 30L, 50L))
     }
 
     private fun vibrate(duration: Long) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(duration)
+        val safeVibrator = vibrator ?: return
+        if (!safeVibrator.hasVibrator()) return
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                safeVibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                safeVibrator.vibrate(duration)
+            }
+        } catch (_: SecurityException) {
+            
         }
     }
 
     private fun vibrate(pattern: LongArray) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(pattern, -1)
+        val safeVibrator = vibrator ?: return
+        if (!safeVibrator.hasVibrator()) return
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                safeVibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
+            } else {
+                @Suppress("DEPRECATION")
+                safeVibrator.vibrate(pattern, -1)
+            }
+        } catch (_: SecurityException) {
+            
         }
     }
 
     fun cancel() {
-        vibrator.cancel()
+        try {
+            vibrator?.cancel()
+        } catch (_: SecurityException) {
+            
+        }
     }
 
-    fun hasVibrator(): Boolean = vibrator.hasVibrator()
+    fun hasVibrator(): Boolean = vibrator?.hasVibrator() == true
 }

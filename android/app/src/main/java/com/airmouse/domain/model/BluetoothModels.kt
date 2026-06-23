@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/BluetoothModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * Bluetooth device info
- */
 @Parcelize
 data class BluetoothDeviceInfo(
     val address: String = "",
@@ -19,9 +16,6 @@ data class BluetoothDeviceInfo(
     val bondState: Int = 0
 ) : Parcelable
 
-/**
- * BLE service
- */
 @Parcelize
 data class BLEService(
     val uuid: String = "",
@@ -29,9 +23,6 @@ data class BLEService(
     val characteristics: List<BLECharacteristic> = emptyList()
 ) : Parcelable
 
-/**
- * BLE characteristic
- */
 @Parcelize
 data class BLECharacteristic(
     val uuid: String = "",

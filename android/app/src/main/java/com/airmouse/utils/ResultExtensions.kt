@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/ResultExtensions.kt
+
 package com.airmouse.utils
 
 fun <T> Result<T>.getOrNull(): T? {

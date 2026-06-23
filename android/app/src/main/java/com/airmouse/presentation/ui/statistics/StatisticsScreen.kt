@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/statistics/StatisticsScreen.kt
+
 package com.airmouse.presentation.ui.statistics
 
 import androidx.compose.animation.*
@@ -77,7 +77,7 @@ fun StatisticsScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Time Range Selector
+
                 item {
                     AnimatedContent(targetState = uiState.timeRange) { _ ->
                         Card(
@@ -116,7 +116,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Loading State
+
                 if (uiState.isLoading) {
                     item {
                         Box(
@@ -130,7 +130,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Error State
+
                 uiState.error?.let { error ->
                     item {
                         Card(
@@ -159,7 +159,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Success State
+
                 uiState.success?.let { message ->
                     item {
                         Card(
@@ -188,7 +188,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Overview Stats
+
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -196,6 +196,12 @@ fun StatisticsScreen(
                                 text = "📈 Session Overview",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Live session metrics, connection quality, and calibration state.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(
@@ -208,21 +214,112 @@ fun StatisticsScreen(
                                     color = Color(0xFF2196F3)
                                 )
                                 StatCircle(
-                                    value = uiState.gesturesDetected.toString(),
-                                    label = "Total Gestures",
+                                    value = uiState.summaryStats.totalActions.toString(),
+                                    label = "Total Actions",
                                     color = Color(0xFF4CAF50)
                                 )
                                 StatCircle(
-                                    value = String.format(Locale.getDefault(), "%.1f%%", uiState.calibrationSuccessRate),
-                                    label = "Calibration Rate",
+                                    value = uiState.gesturesDetected.toString(),
+                                    label = "Gestures",
                                     color = Color(0xFFFF9800)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Success Rate", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        String.format(Locale.getDefault(), "%.1f%%", uiState.getSuccessRate()),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Avg Ping", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        if (uiState.averagePing > 0) "${uiState.averagePing} ms" else "No data",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Last Activity", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(uiState.lastActivityTime)),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Shared summary", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text(
+                                "This uses the domain StatisticsSummary model now.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                StatCircle(
+                                    value = uiState.summaryStats.totalActions.toString(),
+                                    label = "Actions",
+                                    color = Color(0xFF6366F1)
+                                )
+                                StatCircle(
+                                    value = uiState.summaryStats.totalClicksAll.toString(),
+                                    label = "Clicks",
+                                    color = Color(0xFF10B981)
+                                )
+                                StatCircle(
+                                    value = uiState.summaryStats.getSessionDurationFormatted(),
+                                    label = "Duration",
+                                    color = Color(0xFFF59E0B)
                                 )
                             }
                         }
                     }
                 }
 
-                // Gesture Distribution
+                item {
+                    GlassCard {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                text = "Domain summary",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "The screen now reflects the shared statistics model used by the app.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                StatCircle(
+                                    value = uiState.summaryStats.totalClicksAll.toString(),
+                                    label = "Clicks",
+                                    color = Color(0xFF22C55E)
+                                )
+                                StatCircle(
+                                    value = uiState.summaryStats.totalScrolls.toString(),
+                                    label = "Scrolls",
+                                    color = Color(0xFF38BDF8)
+                                )
+                                StatCircle(
+                                    value = uiState.summaryStats.getAverageSpeedFormatted(),
+                                    label = "Avg Speed",
+                                    color = Color(0xFFF59E0B)
+                                )
+                            }
+                        }
+                    }
+                }
+
+
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -274,7 +371,7 @@ fun StatisticsScreen(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                // Pie Chart
+
                                 Canvas(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -310,7 +407,7 @@ fun StatisticsScreen(
                                         startAngle += sweepAngle
                                     }
 
-                                    // Center hole for donut chart
+
                                     drawCircle(
                                         color = surfaceColor,
                                         radius = radius * 0.5f,
@@ -322,7 +419,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Movement Stats
+
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -361,7 +458,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Connection Stats
+
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -404,7 +501,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Daily Activity Chart
+
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -446,7 +543,7 @@ fun StatisticsScreen(
                                         )
                                     }
 
-                                    // Draw line
+
                                     for (i in 0 until points.size - 1) {
                                         drawLine(
                                             color = Color(0xFF00BCD4),
@@ -456,7 +553,7 @@ fun StatisticsScreen(
                                         )
                                     }
 
-                                    // Fill area
+
                                     val path = Path().apply {
                                         moveTo(0f, height)
                                         points.forEach { lineTo(it.x, it.y) }
@@ -465,7 +562,7 @@ fun StatisticsScreen(
                                     }
                                     drawPath(path, Color(0xFF00BCD4).copy(alpha = 0.2f))
 
-                                    // Draw points
+
                                     points.forEach { point ->
                                         drawCircle(
                                             color = Color(0xFF00BCD4),
@@ -479,7 +576,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Performance Metrics
+
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -502,7 +599,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Session Info
+
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -543,7 +640,7 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Footer spacing
+
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -551,9 +648,9 @@ fun StatisticsScreen(
         }
     }
 
-    // ==================== DIALOGS ====================
 
-    // Reset Dialog
+
+
     if (uiState.showResetDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showResetDialog(false) },
@@ -594,7 +691,7 @@ fun StatisticsScreen(
         )
     }
 
-    // Export Dialog
+
     if (uiState.showExportDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showExportDialog(false) },
@@ -643,7 +740,7 @@ fun StatisticsScreen(
     }
 }
 
-// ==================== UI COMPONENTS ====================
+
 
 @Composable
 fun GlassCard(

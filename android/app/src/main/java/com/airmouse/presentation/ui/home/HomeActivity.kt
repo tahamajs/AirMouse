@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/home/HomeActivity.kt
+
 package com.airmouse.presentation.ui.home
 
 import android.Manifest
@@ -33,6 +33,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.airmouse.presentation.theme.AirMouseTheme
 import com.airmouse.presentation.ui.main.MainScreen
+import com.airmouse.sensors.SensorService
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -44,11 +45,14 @@ class HomeActivity : ComponentActivity() {
     @Inject
     lateinit var prefs: PreferencesManager
 
+    @Inject
+    lateinit var sensorService: SensorService
+
     private var isReady = false
     private var permissionGranted = false
     private var isInitialLaunch = true
 
-    // Permission launchers
+    
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -83,21 +87,22 @@ class HomeActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Install splash screen
+        
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { !isReady }
 
         super.onCreate(savedInstanceState)
 
-        // Check if it's first launch
+        
         isInitialLaunch = prefs.getBoolean("is_first_launch", true)
         if (isInitialLaunch) {
             prefs.putBoolean("is_first_launch", false)
         }
 
+        sensorService.start()
         applyTheme()
 
-        // Check if permissions are already granted
+        
         val missingPerms = getMissingPermissions()
         if (missingPerms.isEmpty()) {
             permissionGranted = true
@@ -106,7 +111,7 @@ class HomeActivity : ComponentActivity() {
             requestPermissions()
         }
 
-        // Simulate a short loading time for splash screen
+        
         Handler(Looper.getMainLooper()).postDelayed({
             if (permissionGranted && !isReady) {
                 proceedToMain()
@@ -175,13 +180,13 @@ class HomeActivity : ComponentActivity() {
     private fun getMissingPermissions(): List<String> {
         val perms = mutableListOf<String>()
 
-        // Camera permission
+        
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.CAMERA)
         }
 
-        // Bluetooth permissions (Android 12+)
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -196,7 +201,7 @@ class HomeActivity : ComponentActivity() {
                 perms.add(Manifest.permission.BLUETOOTH_ADVERTISE)
             }
         } else {
-            // Legacy Bluetooth permissions
+            
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BLUETOOTH)
@@ -205,7 +210,7 @@ class HomeActivity : ComponentActivity() {
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BLUETOOTH_ADMIN)
             }
-            // Location is required for Bluetooth on older Android
+            
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -216,13 +221,13 @@ class HomeActivity : ComponentActivity() {
             }
         }
 
-        // Microphone permission
+        
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.RECORD_AUDIO)
         }
 
-        // Notifications (Android 13+)
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -230,7 +235,7 @@ class HomeActivity : ComponentActivity() {
             }
         }
 
-        // Body sensors (Android 12+)
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -271,6 +276,11 @@ class HomeActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        sensorService.stop()
+        super.onDestroy()
     }
 
     @Composable
@@ -339,7 +349,7 @@ class HomeActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Permission list
+                        
                         PermissionItem(
                             icon = "📷",
                             name = "Camera",
@@ -425,7 +435,7 @@ class HomeActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // If permissions were granted while app was in background
+        
         if (!isReady && getMissingPermissions().isEmpty()) {
             permissionGranted = true
             proceedToMain()

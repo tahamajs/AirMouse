@@ -30,7 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
 import java.util.Locale
 
-// --- Target Data Models to satisfy your UI Architecture requirements ---
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,7 +42,7 @@ fun VoiceCommandsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // Check microphone permission directly
+    
     val hasPermission = ContextCompat.checkSelfPermission(
         context,
         Manifest.permission.RECORD_AUDIO
@@ -75,7 +75,7 @@ fun VoiceCommandsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Microphone Permission Warning
+            
             if (!hasPermission && !uiState.microphonePermissionGranted) {
                 item {
                     Card(
@@ -106,17 +106,17 @@ fun VoiceCommandsScreen(
                 }
             }
 
-            // Voice Control Card
+            
             item {
                 VoiceControlCard(uiState, viewModel)
             }
 
-            // Status Card
+            
             item {
                 StatusCard(uiState)
             }
 
-            // Available Commands Section
+            
             item {
                 Text(
                     text = "Available Commands",
@@ -130,7 +130,7 @@ fun VoiceCommandsScreen(
                 CommandCard(command)
             }
 
-            // Custom Commands Section
+            
             if (uiState.customCommands.isNotEmpty()) {
                 item {
                     Text(
@@ -150,17 +150,17 @@ fun VoiceCommandsScreen(
                 }
             }
 
-            // Add Custom Command Button
+            
             item {
                 AddCustomCommandButton(viewModel)
             }
 
-            // Settings Section
+            
             item {
                 SettingsSection(viewModel, uiState)
             }
 
-            // Command History
+            
             if (uiState.commandHistory.isNotEmpty()) {
                 item {
                     Text(

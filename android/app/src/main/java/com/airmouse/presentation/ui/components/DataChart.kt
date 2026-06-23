@@ -42,7 +42,7 @@ fun LineChart(
         val stepX = width / (data.size - 1).coerceAtLeast(1)
         val maxValue = animatedData.maxOrNull()?.coerceAtLeast(1f) ?: 1f
         
-        // Grid lines
+        
         val gridColor = Color.White.copy(alpha = 0.05f)
         for (i in 0..4) {
             val y = height * i / 4
@@ -54,7 +54,7 @@ fun LineChart(
             )
         }
         
-        // Area fill
+        
         val fillPath = Path().apply {
             moveTo(0f, height)
             animatedData.forEachIndexed { index, value ->
@@ -72,7 +72,7 @@ fun LineChart(
             style = Stroke(width = 0f)
         )
         
-        // Line
+        
         val linePath = Path().apply {
             animatedData.forEachIndexed { index, value ->
                 val x = index * stepX
@@ -87,7 +87,7 @@ fun LineChart(
             style = Stroke(width = 3f, cap = StrokeCap.Round)
         )
         
-        // Points
+        
         animatedData.forEachIndexed { index, value ->
             val x = index * stepX
             val y = height - (value / maxValue) * height
@@ -126,7 +126,7 @@ fun DonutChart(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val strokeWidth = size / 6f
             
-            // Background
+            
             drawArc(
                 color = backgroundColor,
                 startAngle = -90f,
@@ -137,7 +137,7 @@ fun DonutChart(
                 style = Stroke(width = strokeWidth)
             )
             
-            // Progress
+            
             drawArc(
                 color = color,
                 startAngle = -90f,

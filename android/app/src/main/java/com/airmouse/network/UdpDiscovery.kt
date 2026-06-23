@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/network/UdpDiscovery.kt
+
 package com.airmouse.network
 
 import android.util.Log
@@ -8,43 +8,12 @@ import java.net.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * UDP Discovery Service – Discovers Air Mouse servers on the local network.
- *
- * This class sends a broadcast message and listens for responses from
- * Air Mouse servers. It can be used to find available servers without
- * manual IP configuration.
- *
- * **Compatibility with Go Server:**
- * - The Go server (internal/protocol/udp/server.go) expects the discovery
- *   message to be exactly "AIRMOUSE_DISCOVER" (no trailing 'Y').
- * - The Go server responds with a JSON object:
- *   {"type":"discovery_response", "port":8080, "ip":"192.168.1.x"}
- *
- * Response formats supported (for compatibility):
- * - JSON: {"type":"discovery_response","port":8080,"ip":"192.168.1.100"}
- * - Legacy: "AIRMOUSE_SERVER:port:name:version"
- * - Simple: "ip:port:name:version"
- *
- * Usage:
- * ```
- * udpDiscovery.onServerFound = { ip, port, name, version ->
- *     // Connect to server
- * }
- * udpDiscovery.startDiscovery()
- * ```
- */
 @Singleton
 class UdpDiscovery @Inject constructor() {
 
     companion object {
         private const val TAG = "UdpDiscovery"
 
-        /**
-         * IMPORTANT: Must match the Go server's expected discovery message.
-         * The Go server in internal/protocol/udp/server.go checks for
-         * "AIRMOUSE_DISCOVER" (note: no trailing 'Y').
-         */
         private const val DISCOVERY_MESSAGE = "AIRMOUSE_DISCOVER"
 
         private const val DISCOVERY_PORT = 8082
@@ -53,7 +22,7 @@ class UdpDiscovery @Inject constructor() {
         private const val MAX_PACKET_SIZE = 2048
         private const val MAX_SERVERS = 10
 
-        // Different broadcast addresses to try for wider network discovery
+        
         private val BROADCAST_ADDRESSES = listOf(
             "255.255.255.255",
             "192.168.1.255",
@@ -71,18 +40,13 @@ class UdpDiscovery @Inject constructor() {
     private var foundServers = mutableSetOf<String>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Callbacks
+    
     var onServerFound: ((ip: String, port: Int, name: String, version: String) -> Unit)? = null
     var onScanComplete: (() -> Unit)? = null
     var onError: ((String) -> Unit)? = null
     var onScanStart: (() -> Unit)? = null
     var onScanProgress: ((progress: Int, found: Int) -> Unit)? = null
 
-    /**
-     * Start discovering Air Mouse servers on the network.
-     * Results will be delivered via onServerFound callback.
-     * Scan completes after SCAN_DURATION_MS or when stopped.
-     */
     fun startDiscovery() {
         if (isScanning) {
             Log.d(TAG, "Discovery already in progress")
@@ -103,10 +67,10 @@ class UdpDiscovery @Inject constructor() {
                     reuseAddress = true
                 }
 
-                // Send discovery broadcast to all network interfaces
+                
                 sendDiscoveryBroadcasts()
 
-                // Listen for responses
+                
                 val buffer = ByteArray(MAX_PACKET_SIZE)
                 val startTime = System.currentTimeMillis()
 
@@ -118,7 +82,7 @@ class UdpDiscovery @Inject constructor() {
                         val message = String(receivePacket.data, 0, receivePacket.length)
                         val ip = receivePacket.address.hostAddress
 
-                        // Parse the response (supports JSON and legacy formats)
+                        
                         val (port, name, version) = parseResponse(message, ip)
 
                         val serverKey = "$ip:$port"
@@ -135,7 +99,7 @@ class UdpDiscovery @Inject constructor() {
                             Log.i(TAG, "Found server: $ip:$port ($name) v$version")
                         }
                     } catch (e: SocketTimeoutException) {
-                        // Timeout is expected, continue scanning
+                        
                         val progress = ((System.currentTimeMillis() - startTime) * 100 / SCAN_DURATION_MS).toInt()
                         withContext(Dispatchers.Main) {
                             onScanProgress?.invoke(progress, discoveredServers)
@@ -168,9 +132,6 @@ class UdpDiscovery @Inject constructor() {
         }
     }
 
-    /**
-     * Send discovery broadcasts to multiple addresses
-     */
     private fun sendDiscoveryBroadcasts() {
         val sendData = DISCOVERY_MESSAGE.toByteArray()
 
@@ -186,30 +147,17 @@ class UdpDiscovery @Inject constructor() {
         }
     }
 
-    /**
-     * Parse response from server.
-     *
-     * Supports multiple formats:
-     * 1. JSON (Go server format):
-     *    {"type":"discovery_response","port":8080,"ip":"192.168.1.100"}
-     *
-     * 2. Legacy (Air Mouse v2):
-     *    "AIRMOUSE_SERVER:8080:Air Mouse:3.0"
-     *
-     * 3. Simple format:
-     *    "192.168.1.100:8080:Air Mouse:3.0"
-     */
     private fun parseResponse(message: String, defaultIp: String): Triple<Int, String, String> {
-        // Format 1: JSON response (Go server format)
+        
         if (message.startsWith("{") && message.endsWith("}")) {
             try {
                 val json = JSONObject(message)
                 val type = json.optString("type", "")
 
-                // Only parse if it's a discovery response or if we don't care about type
+                
                 if (type.isEmpty() || type == "discovery_response") {
                     val port = json.optInt("port", 8080)
-                    // The Go server's JSON does NOT include name or version, so use defaults
+                    
                     val name = json.optString("name", "Air Mouse Server")
                     val version = json.optString("version", "3.0")
                     return Triple(port, name, version)
@@ -219,7 +167,7 @@ class UdpDiscovery @Inject constructor() {
             }
         }
 
-        // Format 2: Legacy "AIRMOUSE_SERVER:port:name:version"
+        
         if (message.startsWith("AIRMOUSE_SERVER")) {
             val parts = message.split(":")
             val port = when {
@@ -237,7 +185,7 @@ class UdpDiscovery @Inject constructor() {
             return Triple(port, name, version)
         }
 
-        // Format 3: Simple "ip:port:name:version"
+        
         if (message.contains(":")) {
             val parts = message.split(":")
             when (parts.size) {
@@ -248,13 +196,10 @@ class UdpDiscovery @Inject constructor() {
             }
         }
 
-        // Default fallback
+        
         return Triple(8080, "Air Mouse Server", "3.0")
     }
 
-    /**
-     * Stop the current discovery scan.
-     */
     fun stopDiscovery() {
         if (!isScanning) {
             Log.d(TAG, "Discovery not active")
@@ -275,14 +220,8 @@ class UdpDiscovery @Inject constructor() {
         Log.d(TAG, "Discovery stopped")
     }
 
-    /**
-     * Check if discovery is currently running.
-     */
     fun isScanning(): Boolean = isScanning
 
-    /**
-     * Perform a quick scan (shorter duration).
-     */
     fun quickScan() {
         if (isScanning) {
             stopDiscovery()
@@ -290,11 +229,6 @@ class UdpDiscovery @Inject constructor() {
         startDiscovery()
     }
 
-    /**
-     * Send a discovery request to a specific IP (unicast).
-     * @param ip Target IP address
-     * @param port Target port (default DISCOVERY_PORT)
-     */
     suspend fun probeServer(ip: String, port: Int = DISCOVERY_PORT): Boolean {
         return withContext(Dispatchers.IO) {
             try {
@@ -330,11 +264,8 @@ class UdpDiscovery @Inject constructor() {
         }
     }
 
-    /**
-     * Get all discovered servers
-     */
     fun getDiscoveredServers(): List<Map<String, Any>> {
-        // Convert found servers to a list
+        
         return foundServers.map { key ->
             val parts = key.split(":")
             mutableMapOf<String, Any>().apply {
@@ -344,16 +275,10 @@ class UdpDiscovery @Inject constructor() {
         }
     }
 
-    /**
-     * Clear discovered servers list
-     */
     fun clearDiscoveredServers() {
         foundServers.clear()
     }
 
-    /**
-     * Get the current socket status
-     */
     fun getSocketStatus(): Map<String, Any> {
         return mapOf(
             "is_scanning" to isScanning,
@@ -365,21 +290,12 @@ class UdpDiscovery @Inject constructor() {
         )
     }
 
-    /**
-     * Get the number of found servers
-     */
     fun getFoundServerCount(): Int = foundServers.size
 
-    /**
-     * Check if a server was found at the given IP and port
-     */
     fun isServerFound(ip: String, port: Int = 8080): Boolean {
         return foundServers.contains("$ip:$port")
     }
 
-    /**
-     * Get the list of found server IPs
-     */
     fun getFoundServerIPs(): List<String> {
         return foundServers.map { key ->
             key.substringBefore(":")

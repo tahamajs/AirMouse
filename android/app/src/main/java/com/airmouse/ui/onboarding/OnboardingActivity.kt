@@ -30,10 +30,15 @@ class OnboardingActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        binding = ActivityOnboardingBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        try {
+            binding = ActivityOnboardingBinding.inflate(layoutInflater)
+            setContentView(binding.root)
+        } catch (e: Exception) {
+            startMainActivity()
+            return
+        }
 
-        prefs = PreferencesManager(this)
+        prefs = PreferencesManager(applicationContext)
 
         if (prefs.isOnboardingCompleted()) {
             startMainActivity()
@@ -78,7 +83,12 @@ class OnboardingActivity : AppCompatActivity() {
         adapter = OnboardingPagerAdapter(onboardingItems)
         binding.viewPager.adapter = adapter
         binding.viewPager.offscreenPageLimit = 3
-        binding.viewPager.setPageTransformer(ParallaxPageTransformer())
+        binding.viewPager.setPageTransformer { page, position ->
+            page.alpha = 1f - kotlin.math.abs(position).coerceIn(0f, 1f)
+            page.scaleX = 0.96f + (1f - kotlin.math.abs(position).coerceIn(0f, 1f)) * 0.04f
+            page.scaleY = page.scaleX
+            page.translationX = -position * page.width * 0.18f
+        }
 
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { _, _ -> }.attach()
     }
@@ -121,7 +131,9 @@ class OnboardingActivity : AppCompatActivity() {
             ContextCompat.getColor(this, R.color.onboarding_4_bg)
         )
 
-        val colorAnim = ValueAnimator.ofObject(ArgbEvaluator(), colors[position])
+        val fromColor = binding.root.solidBackgroundColorOrNull ?: colors[position]
+        val toColor = colors[position]
+        val colorAnim = ValueAnimator.ofObject(ArgbEvaluator(), fromColor, toColor)
         colorAnim.duration = 300
         colorAnim.addUpdateListener { animator ->
             binding.root.setBackgroundColor(animator.animatedValue as Int)
@@ -185,17 +197,5 @@ class OnboardingActivity : AppCompatActivity() {
     }
 }
 
-class ParallaxPageTransformer : ViewPager2.PageTransformer {
-    override fun transformPage(page: View, position: Float) {
-        page.apply {
-            val absPos = kotlin.math.abs(position)
-            alpha = 1f - absPos.coerceIn(0f, 1f)
-            scaleX = 0.95f + (1f - absPos.coerceIn(0f, 1f)) * 0.05f
-            scaleY = scaleX
-
-            // 🛠️ FIXED ID HERE MATCHING YOUR XML:
-            val imageView = page.findViewById<android.widget.ImageView>(R.id.onboarding_image)
-            imageView?.translationX = -position * width * 0.3f
-        }
-    }
-}
+private val View.solidBackgroundColorOrNull: Int?
+    get() = (background as? android.graphics.drawable.ColorDrawable)?.color

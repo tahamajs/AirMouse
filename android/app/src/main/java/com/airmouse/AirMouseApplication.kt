@@ -381,10 +381,6 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
         } catch (_: Exception) { /* ignore */ }
     }
 
-    // ==========================================
-    // PUBLIC API METHODS
-    // ==========================================
-
     fun isAppInForegroundState(): Boolean = isAppInForeground
 
     fun getAppExecutionUptime(): Long = System.currentTimeMillis() - appStartTime
@@ -400,17 +396,11 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
     fun getDeviceInfo(): String = "${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE})"
 }
 
-// ==========================================
-// CRASH REPORTING TREE
-// ==========================================
 
 class CrashReportingTree : Timber.Tree() {
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
         if (priority == android.util.Log.ERROR) {
             if (t != null) {
-                // Uncomment when you have crash reporting
-                // FirebaseCrashlytics.getInstance().recordException(t)
-                // FirebaseCrashlytics.getInstance().log("[$tag] $message")
                 Timber.e(t, "[$tag] $message")
             } else {
                 Timber.e("[$tag] $message")

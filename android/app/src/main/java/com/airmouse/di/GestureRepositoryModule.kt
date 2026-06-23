@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/di/GestureRepositoryModule.kt
+
 package com.airmouse.di
 
 import android.content.Context
@@ -15,10 +15,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-/**
- * Module that provides gesture-related repository bindings.
- * This is the single source of truth for IGestureRepository.
- */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class GestureRepositoryModule {
@@ -30,18 +26,10 @@ abstract class GestureRepositoryModule {
     ): IGestureRepository
 }
 
-/**
- * Providers for gesture repository dependencies.
- * Includes data source provider to satisfy all dependencies.
- */
 @Module
 @InstallIn(SingletonComponent::class)
 object GestureRepositoryProvidersModule {
 
-    /**
-     * Provides IGestureDataSource implementation.
-     * This resolves the MissingBinding error.
-     */
     @Provides
     @Singleton
     fun provideGestureDataSource(

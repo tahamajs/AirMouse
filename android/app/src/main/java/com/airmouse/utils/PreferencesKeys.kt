@@ -1,15 +1,11 @@
-// app/src/main/java/com/airmouse/utils/PreferencesKeys.kt
+
 package com.airmouse.utils
 
-/**
- * Centralized preferences keys for all app settings.
- * Follows a consistent naming convention for maintainability.
- */
 object PreferencesKeys {
 
-    // ==========================================
-    // CONNECTION KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_LAST_IP = "last_ip"
     const val KEY_LAST_PORT = "last_port"
@@ -26,9 +22,9 @@ object PreferencesKeys {
     const val KEY_LAST_PROTOCOL = "last_protocol"
     const val KEY_CONNECTION_STATUS = "connection_status"
 
-    // ==========================================
-    // CALIBRATION KEYS - GYROSCOPE
-    // ==========================================
+    
+    
+    
 
     const val KEY_GYRO_BIAS_X = "gyro_bias_x"
     const val KEY_GYRO_BIAS_Y = "gyro_bias_y"
@@ -42,9 +38,9 @@ object PreferencesKeys {
     const val KEY_GYRO_OFFSET_Y = "gyro_offset_y"
     const val KEY_GYRO_OFFSET_Z = "gyro_offset_z"
 
-    // ==========================================
-    // CALIBRATION KEYS - ACCELEROMETER
-    // ==========================================
+    
+    
+    
 
     const val KEY_ACCEL_OFFSET_X = "accel_offset_x"
     const val KEY_ACCEL_OFFSET_Y = "accel_offset_y"
@@ -55,9 +51,9 @@ object PreferencesKeys {
     const val KEY_ACCEL_CALIBRATED = "accel_calibrated"
     const val KEY_ACCEL_POSITIONS_COMPLETED = "accel_positions_completed"
 
-    // ==========================================
-    // CALIBRATION KEYS - MAGNETOMETER
-    // ==========================================
+    
+    
+    
 
     const val KEY_MAG_OFFSET_X = "mag_offset_x"
     const val KEY_MAG_OFFSET_Y = "mag_offset_y"
@@ -68,9 +64,9 @@ object PreferencesKeys {
     const val KEY_MAG_SAMPLES = "mag_samples"
     const val KEY_MAG_CALIBRATED = "mag_calibrated"
 
-    // ==========================================
-    // CALIBRATION KEYS - ACCELEROMETER POSITIONS
-    // ==========================================
+    
+    
+    
 
     const val KEY_ACCEL_POS_0_X = "accel_pos_0_x"
     const val KEY_ACCEL_POS_0_Y = "accel_pos_0_y"
@@ -91,9 +87,9 @@ object PreferencesKeys {
     const val KEY_ACCEL_POS_5_Y = "accel_pos_5_y"
     const val KEY_ACCEL_POS_5_Z = "accel_pos_5_z"
 
-    // ==========================================
-    // CALIBRATION KEYS - STATUS & PROGRESS
-    // ==========================================
+    
+    
+    
 
     const val KEY_CALIBRATION_STATUS = "calibration_status"
     const val KEY_CALIBRATION_QUALITY = "calibration_quality"
@@ -109,9 +105,9 @@ object PreferencesKeys {
     const val KEY_CALIBRATION_ANDROID_VERSION = "calibration_android_version"
     const val KEY_CALIBRATION_ATTEMPTS = "calibration_attempts"
 
-    // ==========================================
-    // MOUSE SETTINGS KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_SENSITIVITY = "sensitivity"
     const val KEY_SMOOTHING_ENABLED = "smoothing_enabled"
@@ -131,9 +127,9 @@ object PreferencesKeys {
     const val KEY_CURSOR_SPEED = "cursor_speed"
     const val KEY_GESTURE_DEBOUNCE = "gesture_debounce"
 
-    // ==========================================
-    // AI & PREDICTIVE KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_AI_SMOOTHING = "ai_smoothing"
     const val KEY_AI_BLEND_FACTOR = "ai_blend_factor"
@@ -141,9 +137,9 @@ object PreferencesKeys {
     const val KEY_PREDICTION_STRENGTH = "prediction_strength"
     const val KEY_KALMAN_ENABLED = "kalman_enabled"
 
-    // ==========================================
-    // HAPTIC & FEEDBACK KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_HAPTIC_ENABLED = "haptic_enabled"
     const val KEY_HAPTIC_STRENGTH = "haptic_strength"
@@ -151,9 +147,9 @@ object PreferencesKeys {
     const val KEY_VISUAL_FEEDBACK = "visual_feedback"
     const val KEY_NOTIFICATION_ON_GESTURE = "notification_on_gesture"
 
-    // ==========================================
-    // DISPLAY & THEME KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_THEME = "theme"
     const val KEY_ACCENT_COLOR = "accent_color"
@@ -164,9 +160,9 @@ object PreferencesKeys {
     const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
     const val KEY_SHOW_FPS = "show_fps"
 
-    // ==========================================
-    // TOUCHPAD KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_TOUCHPAD_ACTIVE = "touchpad_active"
     const val KEY_TOUCHPAD_SENSITIVITY = "touchpad_sensitivity"
@@ -188,9 +184,9 @@ object PreferencesKeys {
     const val KEY_TOUCHPAD_HAPTIC_FEEDBACK = "touchpad_haptic_feedback"
     const val KEY_TOUCHPAD_SHOW_TOUCH_POINTS = "touchpad_show_touch_points"
 
-    // ==========================================
-    // PRIVACY & DATA KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_ANONYMOUS_STATS = "anonymous_stats"
     const val KEY_CRASH_REPORTING = "crash_reporting"
@@ -199,25 +195,25 @@ object PreferencesKeys {
     const val KEY_FIRST_LAUNCH = "first_launch"
     const val KEY_APP_VERSION = "app_version"
 
-    // ==========================================
-    // PRESENTATION KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_PRESENTATION_MODE_ENABLED = "presentation_mode_enabled"
     const val KEY_LASER_POINTER_SPEED = "laser_pointer_speed"
     const val KEY_SHOW_PRESENTATION_TIMER = "show_presentation_timer"
     const val KEY_AUTO_HIDE_LASER = "auto_hide_laser"
 
-    // ==========================================
-    // ONBOARDING KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_ONBOARDING_COMPLETE = "onboarding_completed"
     const val KEY_ONBOARDING_VERSION = "onboarding_version"
 
-    // ==========================================
-    // VOICE COMMAND KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_VOICE_ENABLED = "voice_enabled"
     const val KEY_VOICE_WAKE_WORD = "wake_word"
@@ -231,9 +227,9 @@ object PreferencesKeys {
     const val KEY_VOICE_LANGUAGE = "voice_language"
     const val KEY_VOICE_SENSITIVITY = "voice_sensitivity"
 
-    // ==========================================
-    // PROXIMITY KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_PROXIMITY_ENABLED = "proximity_enabled"
     const val KEY_PROXIMITY_DEVICE_MAC = "proximity_device_mac"
@@ -246,9 +242,9 @@ object PreferencesKeys {
     const val KEY_PROXIMITY_VIBRATION = "proximity_vibration"
     const val KEY_PROXIMITY_NOTIFICATION = "proximity_notification"
 
-    // ==========================================
-    // EDGE GESTURES KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_EDGE_GESTURES_ENABLED = "edge_gestures_enabled"
     const val KEY_EDGE_GESTURES_VOLUME_UP = "edge_gestures_volume_up"
@@ -256,16 +252,16 @@ object PreferencesKeys {
     const val KEY_EDGE_GESTURES_LONG_PRESS = "edge_gestures_long_press"
     const val KEY_EDGE_GESTURES_SENSITIVITY = "edge_gestures_sensitivity"
 
-    // ==========================================
-    // BATTERY SAVER KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_BATTERY_SAVER_ENABLED = "battery_saver_enabled"
     const val KEY_BATTERY_SAVER_IDLE_TIME = "battery_saver_idle_time"
 
-    // ==========================================
-    // ACCESSIBILITY KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_ANNOUNCE_MOVEMENT = "announce_movement"
     const val KEY_ANNOUNCE_CLICKS = "announce_clicks"
@@ -274,9 +270,9 @@ object PreferencesKeys {
     const val KEY_REDUCE_MOTION = "reduce_motion"
     const val KEY_COLOR_BLIND_MODE = "color_blind_mode"
 
-    // ==========================================
-    // STATISTICS KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_STAT_CLICKS = "stat_clicks"
     const val KEY_STAT_DOUBLE_CLICKS = "stat_double_clicks"
@@ -296,9 +292,9 @@ object PreferencesKeys {
     const val KEY_SESSION_MAX_SPEED = "session_max_speed"
     const val KEY_SESSION_START = "session_start"
 
-    // ==========================================
-    // PROFILES KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_LAST_USED_PROFILE = "last_used_profile"
     const val KEY_PROFILE_PREFIX = "profile_"
@@ -307,28 +303,25 @@ object PreferencesKeys {
     const val KEY_PROFILE_SCROLL_THRESHOLD_SUFFIX = "_scroll_threshold"
     const val KEY_PROFILE_LAST_USED_SUFFIX = "_last_used"
 
-    // ==========================================
-    // CUSTOM GESTURES KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_GESTURE_PREFIX = "gesture_"
     const val KEY_RECORDED_GESTURES = "recorded_gestures"
 
-    // ==========================================
-    // DEVELOPER KEYS
-    // ==========================================
+    
+    
+    
 
     const val KEY_DEVELOPER_MODE = "developer_mode"
     const val KEY_EXPERIMENTAL_FEATURES = "experimental_features"
     const val KEY_LOG_LEVEL = "log_level"
 
-    // ==========================================
-    // CALIBRATION HELPER FUNCTIONS
-    // ==========================================
+    
+    
+    
 
-    /**
-     * Gets the preference key for a specific accelerometer position and axis.
-     */
     fun getAccelPositionKey(position: Int, axis: String): String {
         return when (axis.lowercase()) {
             "x" -> when (position) {
@@ -362,9 +355,6 @@ object PreferencesKeys {
         }
     }
 
-    /**
-     * Checks if a key is related to calibration.
-     */
     fun isCalibrationKey(key: String): Boolean {
         return key.startsWith("gyro_") ||
                 key.startsWith("accel_") ||
@@ -372,17 +362,14 @@ object PreferencesKeys {
                 key.startsWith("calibration_")
     }
 
-    /**
-     * Gets all calibration-related keys.
-     */
     fun getCalibrationKeys(): List<String> {
         return listOf(
-            // Gyroscope
+            
             KEY_GYRO_BIAS_X, KEY_GYRO_BIAS_Y, KEY_GYRO_BIAS_Z,
             KEY_GYRO_VARIANCE_X, KEY_GYRO_VARIANCE_Y, KEY_GYRO_VARIANCE_Z,
             KEY_GYRO_SAMPLES, KEY_GYRO_CALIBRATED,
             KEY_GYRO_OFFSET_X, KEY_GYRO_OFFSET_Y, KEY_GYRO_OFFSET_Z,
-            // Accelerometer
+            
             KEY_ACCEL_OFFSET_X, KEY_ACCEL_OFFSET_Y, KEY_ACCEL_OFFSET_Z,
             KEY_ACCEL_SCALE_X, KEY_ACCEL_SCALE_Y, KEY_ACCEL_SCALE_Z,
             KEY_ACCEL_CALIBRATED, KEY_ACCEL_POSITIONS_COMPLETED,
@@ -392,11 +379,11 @@ object PreferencesKeys {
             KEY_ACCEL_POS_3_X, KEY_ACCEL_POS_3_Y, KEY_ACCEL_POS_3_Z,
             KEY_ACCEL_POS_4_X, KEY_ACCEL_POS_4_Y, KEY_ACCEL_POS_4_Z,
             KEY_ACCEL_POS_5_X, KEY_ACCEL_POS_5_Y, KEY_ACCEL_POS_5_Z,
-            // Magnetometer
+            
             KEY_MAG_OFFSET_X, KEY_MAG_OFFSET_Y, KEY_MAG_OFFSET_Z,
             KEY_MAG_SCALE_X, KEY_MAG_SCALE_Y, KEY_MAG_SCALE_Z,
             KEY_MAG_SAMPLES, KEY_MAG_CALIBRATED,
-            // Status
+            
             KEY_CALIBRATION_STATUS, KEY_CALIBRATION_QUALITY,
             KEY_CALIBRATION_QUALITY_FLOAT,
             KEY_CALIBRATION_PROGRESS, KEY_CALIBRATION_COMPLETE,
@@ -407,9 +394,6 @@ object PreferencesKeys {
         )
     }
 
-    /**
-     * Gets all profile-related keys for a specific profile name.
-     */
     fun getProfileKeys(profileName: String): List<String> {
         return listOf(
             "$KEY_PROFILE_PREFIX${profileName}$KEY_PROFILE_SENSITIVITY_SUFFIX",
@@ -419,17 +403,11 @@ object PreferencesKeys {
         )
     }
 
-    /**
-     * Gets all gesture-related keys.
-     */
     fun getGestureKeys(): List<String> {
-        // This would need to be dynamic - returns all keys starting with KEY_GESTURE_PREFIX
+        
         return emptyList()
     }
 
-    /**
-     * Gets all statistical keys.
-     */
     fun getStatKeys(): List<String> {
         return listOf(
             KEY_STAT_CLICKS, KEY_STAT_DOUBLE_CLICKS, KEY_STAT_RIGHT_CLICKS,
@@ -438,9 +416,6 @@ object PreferencesKeys {
         )
     }
 
-    /**
-     * Gets all session keys.
-     */
     fun getSessionKeys(): List<String> {
         return listOf(
             KEY_SESSION_CLICKS, KEY_SESSION_DOUBLE_CLICKS, KEY_SESSION_RIGHT_CLICKS,
@@ -449,9 +424,6 @@ object PreferencesKeys {
         )
     }
 
-    /**
-     * Gets all touchpad keys.
-     */
     fun getTouchpadKeys(): List<String> {
         return listOf(
             KEY_TOUCHPAD_ACTIVE, KEY_TOUCHPAD_SENSITIVITY, KEY_TOUCHPAD_CURSOR_SPEED,
@@ -466,9 +438,6 @@ object PreferencesKeys {
         )
     }
 
-    /**
-     * Gets all voice command keys.
-     */
     fun getVoiceKeys(): List<String> {
         return listOf(
             KEY_VOICE_ENABLED, KEY_VOICE_WAKE_WORD, KEY_VOICE_WAKE_WORD_ENABLED,
@@ -479,9 +448,6 @@ object PreferencesKeys {
         )
     }
 
-    /**
-     * Gets all proximity keys.
-     */
     fun getProximityKeys(): List<String> {
         return listOf(
             KEY_PROXIMITY_ENABLED, KEY_PROXIMITY_DEVICE_MAC,
@@ -492,9 +458,6 @@ object PreferencesKeys {
         )
     }
 
-    /**
-     * Gets all accessibility keys.
-     */
     fun getAccessibilityKeys(): List<String> {
         return listOf(
             KEY_ANNOUNCE_MOVEMENT, KEY_ANNOUNCE_CLICKS,
@@ -503,9 +466,6 @@ object PreferencesKeys {
         )
     }
 
-    /**
-     * Gets all edge gesture keys.
-     */
     fun getEdgeGestureKeys(): List<String> {
         return listOf(
             KEY_EDGE_GESTURES_ENABLED, KEY_EDGE_GESTURES_VOLUME_UP,

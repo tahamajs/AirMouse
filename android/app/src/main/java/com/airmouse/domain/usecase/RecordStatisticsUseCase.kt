@@ -1,19 +1,13 @@
-// app/src/main/java/com/airmouse/domain/usecase/RecordStatisticsUseCase.kt
+
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.repository.IStatisticsRepository
 import javax.inject.Inject
 
-/**
- * Use case for recording statistics
- */
 class RecordStatisticsUseCase @Inject constructor(
     private val statisticsRepository: IStatisticsRepository
 ) {
 
-    /**
-     * Record a click
-     */
     suspend operator fun invoke(type: String, data: Any? = null): Result<Unit> {
         return try {
             when (type) {
@@ -41,9 +35,6 @@ class RecordStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Record click
-     */
     suspend fun recordClick(): Result<Unit> {
         return try {
             statisticsRepository.recordClick()
@@ -53,9 +44,6 @@ class RecordStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Record double click
-     */
     suspend fun recordDoubleClick(): Result<Unit> {
         return try {
             statisticsRepository.recordDoubleClick()
@@ -65,9 +53,6 @@ class RecordStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Record right click
-     */
     suspend fun recordRightClick(): Result<Unit> {
         return try {
             statisticsRepository.recordRightClick()
@@ -77,9 +62,6 @@ class RecordStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Record scroll
-     */
     suspend fun recordScroll(delta: Int): Result<Unit> {
         return try {
             statisticsRepository.recordScroll(delta)
@@ -89,9 +71,6 @@ class RecordStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Record movement
-     */
     suspend fun recordMovement(distance: Float, duration: Long): Result<Unit> {
         return try {
             statisticsRepository.recordMovement(distance, duration)
@@ -101,9 +80,6 @@ class RecordStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Record gesture
-     */
     suspend fun recordGesture(gesture: String, confidence: Float): Result<Unit> {
         return try {
             statisticsRepository.recordGesture(gesture, confidence)

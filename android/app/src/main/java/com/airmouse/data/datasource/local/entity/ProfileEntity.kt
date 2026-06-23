@@ -69,7 +69,7 @@ data class ProfileEntity(
     @ColumnInfo(name = "is_favorite")
     val isFavorite: Boolean = false,
 
-    // IMPORTANT: needed for ProfileDao queries
+    
     @ColumnInfo(name = "is_active")
     val isActive: Boolean = true,
 

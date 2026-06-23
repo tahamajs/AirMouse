@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/ProfileModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * User profile with all settings
- */
 @Parcelize
 data class UserProfile(
     val id: String = "",
@@ -23,9 +20,6 @@ data class UserProfile(
     val usageCount: Int = 0
 ) : Parcelable
 
-/**
- * Profile settings
- */
 @Parcelize
 data class ProfileSettings(
     val sensitivity: Float = 1.0f,
@@ -45,9 +39,6 @@ data class ProfileSettings(
     val voiceCommandsEnabled: Boolean = false
 ) : Parcelable
 
-/**
- * Profile sort options
- */
 enum class ProfileSort {
     NAME,
     LAST_USED,
@@ -55,9 +46,6 @@ enum class ProfileSort {
     FAVORITE
 }
 
-/**
- * View mode for profiles
- */
 enum class ViewMode {
     GRID,
     LIST

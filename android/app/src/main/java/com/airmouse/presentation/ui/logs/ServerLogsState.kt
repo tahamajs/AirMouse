@@ -24,7 +24,7 @@ data class ServerLogsUiState(
     val sortOrder: SortOrder = SortOrder.NEWEST_FIRST,
     val isRefreshing: Boolean = false,
     val autoRefreshEnabled: Boolean = true,
-    val autoRefreshInterval: Int = 5, // seconds
+    val autoRefreshInterval: Int = 5, 
     val logRetentionDays: Int = 7,
     val showTimestamps: Boolean = true,
     val showTags: Boolean = true,

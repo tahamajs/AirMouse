@@ -1,22 +1,19 @@
-// app/src/main/java/com/airmouse/data/datasource/remote/IConnectionDataSource.kt
+
 package com.airmouse.data.datasource.remote
 
 import com.airmouse.domain.model.ConnectionQuality
 import com.airmouse.domain.model.DiscoveredServer
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Remote data source for network connections
- */
 interface IConnectionDataSource {
 
-    // Connection management
+    
     suspend fun connect(ip: String, port: Int, useSSL: Boolean = false): Boolean
     suspend fun disconnect()
     suspend fun reconnect(): Boolean
     suspend fun isConnected(): Boolean
 
-    // Messaging
+    
     suspend fun sendMessage(message: String): Boolean
     suspend fun sendMessage(message: ByteArray): Boolean
     suspend fun sendMove(dx: Float, dy: Float): Boolean
@@ -31,16 +28,16 @@ interface IConnectionDataSource {
     suspend fun sendPing(): Boolean
     suspend fun sendPong(): Boolean
 
-    // Discovery
+    
     suspend fun discoverServers(): List<DiscoveredServer>
     suspend fun startDiscovery(onServerFound: (DiscoveredServer) -> Unit)
     suspend fun stopDiscovery()
 
-    // Quality
+    
     suspend fun getConnectionQuality(): ConnectionQuality
     fun observeConnectionQuality(): Flow<ConnectionQuality>
 
-    // Callbacks
+    
     fun setOnMessageListener(listener: (String) -> Unit)
     fun setOnBinaryMessageListener(listener: (ByteArray) -> Unit)
     fun setOnDisconnectedListener(listener: () -> Unit)

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/di/ViewModelModule.kt
+
 package com.airmouse.di
 
 import androidx.lifecycle.ViewModel
@@ -115,4 +115,4 @@ abstract class ViewModelModule {
     abstract fun bindOnboardingViewModel(viewModel: OnboardingViewModel): ViewModel
 }
 
-// app/src/main/java/com/airmouse/di/ViewModelModule.kt
+

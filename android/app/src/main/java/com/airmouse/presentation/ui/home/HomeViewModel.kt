@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/home/HomeViewModel.kt
+
 @file:Suppress("unused")
 
 package com.airmouse.presentation.ui.home
@@ -18,10 +18,19 @@ import android.os.Trace
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.data.datasource.local.ICalibrationDataSource
+import com.airmouse.domain.model.AppPreferences
+import com.airmouse.domain.model.CalibrationState
+import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.ConnectionStatus
 import com.airmouse.domain.model.CalibrationQuality
+import com.airmouse.domain.model.MouseStatistics
+import com.airmouse.domain.model.MovementProfile
+import com.airmouse.domain.model.UserPreferences
 import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.model.ConnectionProtocol
+import com.airmouse.files.FileTransferService
+import com.airmouse.presentation.PresentationModeService
+import com.airmouse.notifications.NotificationManager
 import com.airmouse.network.ConnectionManager
 import com.airmouse.utils.QRScanner
 import com.airmouse.utils.PreferencesManager
@@ -43,11 +52,14 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: PreferencesManager,
     val connectionManager: ConnectionManager,
+    private val presentationModeService: PresentationModeService,
+    private val fileTransferService: FileTransferService,
     private val calibrationRepository: ICalibrationRepository,
-    private val calibrationDataSource: ICalibrationDataSource
+    private val calibrationDataSource: ICalibrationDataSource,
+    private val notificationManager: NotificationManager
 ) : ViewModel() {
 
-    // ==================== STATE ====================
+    
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -55,13 +67,16 @@ class HomeViewModel @Inject constructor(
     private val _sensorState = MutableStateFlow(SensorState())
     val sensorState: StateFlow<SensorState> = _sensorState.asStateFlow()
 
+    val presentationState: StateFlow<PresentationModeService.PresentationState> = presentationModeService.state
+    val transferState: StateFlow<FileTransferService.TransferState> = fileTransferService.state
+
     private val _connectionQuality = MutableStateFlow(ConnectionQuality.UNKNOWN)
     val connectionQuality: StateFlow<ConnectionQuality> = _connectionQuality.asStateFlow()
 
     private val _calibrationStatus = MutableStateFlow<CalibrationQuality>(CalibrationQuality.UNKNOWN)
     val calibrationStatus: StateFlow<CalibrationQuality> = _calibrationStatus.asStateFlow()
 
-    // ==================== SENSOR SETUP ====================
+    
 
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val gyroscope: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
@@ -78,7 +93,7 @@ class HomeViewModel @Inject constructor(
     private var stationarySamples = 0
     private var lastMoveSentAt = 0L
 
-    // Orientation tracking
+    
     private var yaw = 0f
     private var pitch = 0f
     private var roll = 0f
@@ -87,7 +102,7 @@ class HomeViewModel @Inject constructor(
     private val rotationMatrix = FloatArray(9)
     private val orientation = FloatArray(3)
 
-    // Gesture detection state
+    
     private var lastClickTime = 0L
     private var lastDoubleClickTime = 0L
     private var lastScrollTime = 0L
@@ -96,19 +111,25 @@ class HomeViewModel @Inject constructor(
     private val doubleClickMaxInterval = 400L
     private val maxLogs = 50
 
-    // Performance tracking
+    
     private var samplesProcessed = 0
     private var lastSampleTime = 0L
     private var currentFps = 0
 
-    // Motion history for pattern detection
+    
     private val motionHistory = mutableListOf<MotionSample>()
     private val maxMotionHistory = 30
 
-    // Calibration data
+    
     private var calibrationData: com.airmouse.domain.model.CalibrationData? = null
+    private var calibrationState: CalibrationState = CalibrationState()
+    private var connectionConfig: ConnectionConfig = ConnectionConfig()
+    private var mouseProfile: MovementProfile = MovementProfile()
+    private var appPreferences: AppPreferences = AppPreferences()
+    private var userPreferences: UserPreferences = UserPreferences()
+    private var mouseStatistics: MouseStatistics = MouseStatistics()
 
-    // ==================== SENSOR LISTENER ====================
+    
 
     private val sensorListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
@@ -121,13 +142,39 @@ class HomeViewModel @Inject constructor(
                 lastSampleTime = timestamp
 
                 when (event.sensor.type) {
-                    Sensor.TYPE_GYROSCOPE -> processGyroscope(event.values, dt)
+                    Sensor.TYPE_GYROSCOPE -> {
+                        updateSensorSeries(
+                            gyroHistory = listOf(
+                                hypot(event.values[0].toDouble(), event.values[1].toDouble()).toFloat(),
+                                abs(event.values[2])
+                            ),
+                            accelHistory = null,
+                            magHistory = null
+                        )
+                        processGyroscope(event.values, dt)
+                    }
                     Sensor.TYPE_ACCELEROMETER -> {
                         System.arraycopy(event.values, 0, gravity, 0, 3)
+                        updateSensorSeries(
+                            gyroHistory = null,
+                            accelHistory = listOf(hypot(
+                                hypot(event.values[0].toDouble(), event.values[1].toDouble()),
+                                event.values[2].toDouble()
+                            ).toFloat()),
+                            magHistory = null
+                        )
                         updateOrientationFromAccelMag()
                     }
                     Sensor.TYPE_MAGNETIC_FIELD -> {
                         System.arraycopy(event.values, 0, magnetic, 0, 3)
+                        updateSensorSeries(
+                            gyroHistory = null,
+                            accelHistory = null,
+                            magHistory = listOf(hypot(
+                                hypot(event.values[0].toDouble(), event.values[1].toDouble()),
+                                event.values[2].toDouble()
+                            ).toFloat())
+                        )
                         updateOrientationFromAccelMag()
                     }
                     Sensor.TYPE_ROTATION_VECTOR -> processRotationVector(event.values)
@@ -135,7 +182,8 @@ class HomeViewModel @Inject constructor(
 
                 samplesProcessed++
                 if (samplesProcessed % 60 == 0) {
-                    val fps = ((samplesProcessed * 1000L) / (System.currentTimeMillis() - lastSampleTime)).coerceAtMost(120L).toInt()
+                    val elapsedMs = (System.currentTimeMillis() - lastSampleTime).coerceAtLeast(1L)
+                    val fps = ((samplesProcessed * 1000L) / elapsedMs).coerceAtMost(120L).toInt()
                     _sensorState.update { it.copy(fps = fps) }
                     samplesProcessed = 0
                 }
@@ -146,7 +194,7 @@ class HomeViewModel @Inject constructor(
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
     }
 
-    // ==================== INITIALIZATION ====================
+    
 
     init {
         loadSettingsAndCalibration()
@@ -156,25 +204,13 @@ class HomeViewModel @Inject constructor(
         startPerformanceMonitor()
         loadCalibrationStatus()
 
-        // Auto-connect if enabled
-        if (prefs.getBoolean("auto_connect", true)) {
-            viewModelScope.launch {
-                val ip = _uiState.value.serverIp
-                val port = _uiState.value.serverPort
-                if (ip.isNotBlank()) {
-                    connectionManager.connect(ip, port)
-                    addLogMessage("Auto-connecting to $ip:$port")
-                }
-            }
-        }
-
-        // Start sensor listener if already active
+        
         if (_uiState.value.isActive) {
             startSensors()
         }
     }
 
-    // ==================== CALIBRATION LOADING ====================
+    
 
     private fun loadCalibrationStatus() {
         viewModelScope.launch {
@@ -185,18 +221,36 @@ class HomeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isCalibrated = data.isCalibrated,
-                        calibrationQuality = data.quality.name
+                        calibrationQuality = data.quality.name,
+                        calibrationState = calibrationState
                     )
                 }
                 if (data.isCalibrated) {
+                    prefs.putBoolean("calibration_complete", true)
+                    prefs.putBoolean("is_calibrated", true)
+                    calibrationState = CalibrationState(
+                        gyroCalibrated = data.gyroBias.offsetX != 0f || data.gyroBias.offsetY != 0f || data.gyroBias.offsetZ != 0f,
+                        accelCalibrated = data.accelOffset.offsetX != 0f || data.accelOffset.offsetY != 0f || data.accelOffset.offsetZ != 0f,
+                        magCalibrated = data.magOffset.offsetX != 0f || data.magOffset.offsetY != 0f || data.magOffset.offsetZ != 0f,
+                        lastCalibrationDate = data.timestamp,
+                        calibrationQuality = when (data.quality) {
+                            CalibrationQuality.EXCELLENT -> 1f
+                            CalibrationQuality.GOOD -> 0.85f
+                            CalibrationQuality.FAIR -> 0.65f
+                            CalibrationQuality.POOR -> 0.35f
+                            CalibrationQuality.UNKNOWN -> 0f
+                        },
+                        needsRecalibration = data.quality == CalibrationQuality.POOR || data.quality == CalibrationQuality.UNKNOWN,
+                        recommendedActions = if (data.quality == CalibrationQuality.POOR) listOf("Recalibrate before demo") else emptyList()
+                    )
                     addLogMessage("Calibration loaded: ${data.quality.name}")
                 }
             } catch (e: Exception) {
-                // Handle error
+                
             }
         }
 
-        // Also observe calibration quality
+        
         viewModelScope.launch {
             calibrationRepository.observeCalibrationQuality().collect { quality ->
                 _calibrationStatus.value = quality
@@ -207,28 +261,88 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ==================== SETTINGS & CALIBRATION ====================
+    
 
     private fun loadSettingsAndCalibration() {
+        connectionConfig = ConnectionConfig(
+            ip = prefs.getString("last_ip", ""),
+            port = prefs.getInt("last_port", 0),
+            protocol = try {
+                ConnectionProtocol.valueOf(prefs.getString("last_protocol", "WEBSOCKET").uppercase())
+            } catch (_: Exception) {
+                ConnectionProtocol.WEBSOCKET
+            },
+            autoReconnect = prefs.getBoolean("auto_connect", true),
+            timeoutMs = prefs.getInt("connection_timeout", 5000).toLong()
+        ).normalized()
+        mouseProfile = MovementProfile(
+            sensitivity = prefs.getSensitivity(),
+            smoothingEnabled = prefs.getBoolean("smoothing_enabled", true),
+            accelerationEnabled = prefs.getBoolean("acceleration_enabled", true),
+            invertX = prefs.getBoolean("invert_x", false),
+            invertY = prefs.getBoolean("invert_y", false),
+            swapAxes = prefs.getBoolean("swap_axes", false),
+            deadband = prefs.getFloat("deadband", 0.5f),
+            maxSpeed = prefs.getFloat("max_speed", 100f),
+            minSpeed = prefs.getFloat("min_speed", 0.5f),
+            predictiveBlend = prefs.getFloat("predictive_blend", 0.6f),
+            smoothingAlpha = prefs.getFloat("smoothing_alpha", 0.3f)
+        )
+        appPreferences = AppPreferences(
+            theme = prefs.getString("theme", "dark"),
+            language = prefs.getLanguage(),
+            autoStart = prefs.getBoolean("auto_start_server", false),
+            showTrayIcon = true,
+            soundEnabled = prefs.isSoundEnabled(),
+            notificationsEnabled = prefs.getBoolean("notifications_enabled", true),
+            analyticsEnabled = prefs.getBoolean("analytics_enabled", true),
+            crashReportingEnabled = prefs.getBoolean("crash_reporting", true)
+        )
+        userPreferences = UserPreferences(
+            username = prefs.getUserName(),
+            serverName = prefs.getString("server_name", "Air Mouse Pro"),
+            serverIp = connectionConfig.ip,
+            serverPort = connectionConfig.port,
+            autoConnect = connectionConfig.autoReconnect,
+            rememberCredentials = prefs.getBoolean("remember_credentials", true)
+        )
+        mouseStatistics = MouseStatistics(
+            totalClicks = prefs.getInt("stat_clicks", 0),
+            totalDoubleClicks = prefs.getInt("stat_double_clicks", 0),
+            totalRightClicks = prefs.getInt("stat_right_clicks", 0),
+            totalScrolls = prefs.getInt("stat_scrolls", 0),
+            totalMovement = prefs.getFloat("movement_distance", 0f),
+            movementCount = prefs.getInt("movement_samples", 0),
+            averageSpeed = prefs.getFloat("movement_average_speed", 0f),
+            lastUpdated = prefs.getLong("movement_last_updated", System.currentTimeMillis())
+        )
         _uiState.update {
             it.copy(
-                serverIp = prefs.getString("last_ip", ""),
-                serverPort = prefs.getInt("last_port", 8080),
+                serverIp = connectionConfig.ip,
+                serverPort = if (connectionConfig.port > 0) connectionConfig.port else ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
+                selectedProtocol = connectionConfig.protocol,
                 controlMode = prefs.getString("control_mode", "motion"),
-                isCalibrated = prefs.getBoolean("calibration_complete", false),
+                isCalibrated = prefs.getBoolean("calibration_complete", false) ||
+                        prefs.getBoolean("is_calibrated", false),
                 aiSmoothingEnabled = prefs.getBoolean("ai_smoothing_enabled", false),
                 predictiveEnabled = prefs.getBoolean("predictive_enabled", true),
                 userName = prefs.getUserName(),
-                theme = prefs.getString("theme", "dark")
+                theme = appPreferences.theme,
+                calibrationState = calibrationState,
+                connectionConfig = connectionConfig,
+                mouseProfile = mouseProfile,
+                appPreferences = appPreferences,
+                userPreferences = userPreferences,
+                mouseStatistics = mouseStatistics
             )
         }
 
-        // Load gyro offsets
+        
         gyroOffsetX = prefs.getFloat("gyro_offset_x", 0f)
         gyroOffsetY = prefs.getFloat("gyro_offset_y", 0f)
         gyroOffsetZ = prefs.getFloat("gyro_offset_z", 0f)
 
-        // Calculate calibration progress
+        
         val gyroOk = gyroOffsetX != 0f || gyroOffsetY != 0f || gyroOffsetZ != 0f
         val accelOk = prefs.getFloat("accel_offset_x", 0f) != 0f ||
                 prefs.getFloat("accel_offset_y", 0f) != 0f ||
@@ -241,14 +355,12 @@ class HomeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 sensorsCalibrated = calibratedCount,
-                calibrationProgress = if (it.totalSensors > 0) {
-                    (calibratedCount * 100 / it.totalSensors)
-                } else 0
+                calibrationProgress = percentageOf(calibratedCount, it.totalSensors)
             )
         }
     }
 
-    // ==================== CONNECTION OBSERVER ====================
+    
 
     private fun observeConnection() {
         viewModelScope.launch {
@@ -273,9 +385,13 @@ class HomeViewModel @Inject constructor(
                 when (status) {
                     ConnectionManager.ConnectionStatus.CONNECTING -> {
                         addLogMessage("Waiting for server approval...")
+                        notificationManager.showConnectionPendingNotification(connectionManager.serverName.value.ifBlank { connectionManager.currentIp.value })
                     }
                     ConnectionManager.ConnectionStatus.CONNECTED -> {
                         addLogMessage("Connected to ${connectionManager.currentIp.value}")
+                        notificationManager.showConnectedNotification(
+                            connectionManager.serverName.value.ifBlank { connectionManager.currentIp.value }
+                        )
                         _uiState.update {
                             it.copy(
                                 isConnecting = false,
@@ -285,11 +401,12 @@ class HomeViewModel @Inject constructor(
                         }
                         updateConnectionQuality()
                         startSensors()
-                        // Sync calibration when connected
+                        
                         syncCalibrationToServer()
                     }
                     ConnectionManager.ConnectionStatus.DISCONNECTED -> {
                         addLogMessage("Disconnected")
+                        notificationManager.showDisconnectedNotification()
                         _uiState.update {
                             it.copy(
                                 isConnecting = false,
@@ -301,6 +418,7 @@ class HomeViewModel @Inject constructor(
                     }
                     ConnectionManager.ConnectionStatus.ERROR -> {
                         addLogMessage(connectionManager.lastError.value ?: "Connection error")
+                        notificationManager.showConnectionErrorNotification(connectionManager.lastError.value ?: "Connection error")
                         _uiState.update {
                             it.copy(
                                 isConnecting = false,
@@ -314,7 +432,7 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        // Observe connection quality
+        
         viewModelScope.launch {
             connectionManager.connectionQuality.collect { quality ->
                 val mapped = when {
@@ -332,11 +450,11 @@ class HomeViewModel @Inject constructor(
 
     private fun updateConnectionQuality() {
         viewModelScope.launch {
-            // Connection quality is updated via the observer above
+            
         }
     }
 
-    // ==================== CALIBRATION SYNC ====================
+    
 
     private fun syncCalibrationToServer() {
         viewModelScope.launch {
@@ -380,7 +498,7 @@ class HomeViewModel @Inject constructor(
         """.trimIndent()
     }
 
-    // ==================== SENSOR PROCESSING ====================
+    
 
     private fun processGyroscope(values: FloatArray, dt: Float) {
         Trace.beginSection("AirMouse#processGyroscope")
@@ -413,7 +531,7 @@ class HomeViewModel @Inject constructor(
             stationarySamples = 0
         }
 
-        // Apply smoothing (EMA)
+        
         if (smoothingEnabled) {
             filteredDx = filteredDx * (1 - smoothingFactor) + dx * smoothingFactor
             filteredDy = filteredDy * (1 - smoothingFactor) + dy * smoothingFactor
@@ -424,11 +542,11 @@ class HomeViewModel @Inject constructor(
             filteredDy = dy
         }
 
-        // Deadband
+        
         if (abs(dx) < moveDeadzone) dx = 0f
         if (abs(dy) < moveDeadzone) dy = 0f
 
-        // Reduce bursty packets from tiny wrist adjustments
+        
         val now = System.currentTimeMillis()
         if (dx == 0f && dy == 0f) {
             _sensorState.update {
@@ -446,7 +564,7 @@ class HomeViewModel @Inject constructor(
             addMotionSample(dx, dy, dt)
         }
 
-        // Detect gestures
+        
         val magnitude = sqrt(
             (values[0] - gyroOffsetX).pow(2) +
                     (values[1] - gyroOffsetY).pow(2) +
@@ -510,7 +628,27 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ==================== GESTURE DETECTION ====================
+    private fun updateSensorSeries(
+        gyroHistory: List<Float>? = null,
+        accelHistory: List<Float>? = null,
+        magHistory: List<Float>? = null
+    ) {
+        val maxPoints = 24
+        _sensorState.update { state ->
+            state.copy(
+                gyroSeries = gyroHistory?.let { trimToSeries(it, state.gyroSeries, maxPoints) } ?: state.gyroSeries,
+                accelSeries = accelHistory?.let { trimToSeries(it, state.accelSeries, maxPoints) } ?: state.accelSeries,
+                magSeries = magHistory?.let { trimToSeries(it, state.magSeries, maxPoints) } ?: state.magSeries
+            )
+        }
+    }
+
+    private fun trimToSeries(values: List<Float>, current: List<Float>, maxPoints: Int): List<Float> {
+        val combined = (current + values).takeLast(maxPoints)
+        return combined.map { it.coerceIn(-50f, 50f) }
+    }
+
+    
 
     private fun detectGesture(magnitude: Float, now: Long = System.currentTimeMillis()) {
         Trace.beginSection("AirMouse#detectGesture")
@@ -540,7 +678,7 @@ class HomeViewModel @Inject constructor(
             clickStrength >= clickThreshold || clickStrength > clickAxisThreshold && movementStrength < scrollAxisThreshold -> {
                 val timeSinceLastClick = now - lastClickTime
                 if (timeSinceLastClick < doubleClickInterval && timeSinceLastClick > 100) {
-                    // Double click
+                    
                     connectionManager.sendDoubleClick()
                     updateGestureStats("double_click")
                     addLogMessage("Double click")
@@ -548,7 +686,7 @@ class HomeViewModel @Inject constructor(
                     lastDoubleClickTime = now
                     lastClickTime = 0
                 } else {
-                    // Single click
+                    
                     connectionManager.sendClick("left")
                     updateGestureStats("click")
                     addLogMessage("Click")
@@ -576,7 +714,7 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        // Right click detection (tilt)
+        
         if (abs(roll) > rightClickTilt && now - lastRightClickTime > 2000) {
             connectionManager.sendRightClick()
             updateGestureStats("right_click")
@@ -616,7 +754,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ==================== SENSOR CONTROL ====================
+    
 
     fun startSensors() {
         if (isSensorsActive) return
@@ -648,7 +786,7 @@ class HomeViewModel @Inject constructor(
         addLogMessage("Sensors stopped")
     }
 
-    // ==================== AIR MOUSE CONTROL ====================
+    
 
     fun startAirMouse() {
         if (!_uiState.value.isCalibrated) {
@@ -682,33 +820,68 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ==================== CONNECTION CONTROL ====================
+    
 
     fun updateIp(ip: String) {
-        _uiState.update { it.copy(serverIp = ip) }
+        prefs.putString("last_ip", ip)
+        _uiState.update {
+            it.copy(
+                serverIp = ip,
+                connectionConfig = it.connectionConfig.copy(ip = ip)
+            )
+        }
     }
 
     fun updatePort(port: Int) {
-        _uiState.update { it.copy(serverPort = port) }
+        prefs.putInt("last_port", port)
+        _uiState.update {
+            it.copy(
+                serverPort = port,
+                connectionConfig = it.connectionConfig.copy(port = port)
+            )
+        }
+    }
+
+    fun updateConnectionProtocol(protocol: ConnectionProtocol) {
+        val normalizedPort = ConnectionConfig(
+            ip = _uiState.value.serverIp,
+            port = _uiState.value.serverPort,
+            protocol = protocol
+        ).normalized().port
+        prefs.putString("last_protocol", protocol.name)
+        _uiState.update {
+            it.copy(
+                selectedProtocol = protocol,
+                serverPort = normalizedPort,
+                connectionConfig = it.connectionConfig.copy(protocol = protocol, port = normalizedPort)
+            )
+        }
+        addLogMessage("Connection type set to ${protocol.name.lowercase(Locale.US)}")
     }
 
     fun applyScannedConnection(data: QRScanner.ConnectionData) {
+        val protocol = runCatching { ConnectionProtocol.valueOf(data.protocol.uppercase(Locale.US)) }
+            .getOrDefault(ConnectionProtocol.WEBSOCKET)
         _uiState.update {
             it.copy(
                 serverIp = data.ip,
                 serverPort = data.port,
+                selectedProtocol = protocol,
+                connectionConfig = it.connectionConfig.copy(protocol = protocol),
                 isConnecting = true
             )
         }
         prefs.putString("last_ip", data.ip)
-        prefs.putInt("last_port", data.port)
-        prefs.putString("connection_protocol", data.protocol)
+        prefs.putString("connection_protocol", protocol.name)
+        prefs.putString("last_protocol", protocol.name)
         data.token?.let { prefs.putString("auth_token", it) }
         viewModelScope.launch {
-            val protocol = when (data.protocol.uppercase(Locale.US)) {
-                "TCP" -> ConnectionProtocol.TCP
-                else -> ConnectionProtocol.WEBSOCKET
-            }
+            val normalized = ConnectionConfig(
+                ip = data.ip,
+                port = data.port,
+                protocol = protocol
+            ).normalized()
+            prefs.putInt("last_port", normalized.port)
             connectionManager.setProtocol(
                 if (protocol == ConnectionProtocol.TCP) {
                     ConnectionManager.ConnectionProtocol.TCP
@@ -716,7 +889,7 @@ class HomeViewModel @Inject constructor(
                     ConnectionManager.ConnectionProtocol.WEBSOCKET
                 }
             )
-            val success = connectionManager.connect(data.ip, data.port)
+            val success = connectionManager.connect(normalized.ip, normalized.port)
             if (success) {
                 addLogMessage("Connected to ${data.name}")
                 _uiState.update { it.copy(isConnecting = false) }
@@ -736,25 +909,32 @@ class HomeViewModel @Inject constructor(
             return
         }
 
-        val protocol = when (prefs.getString("last_protocol", "WEBSOCKET").uppercase(Locale.US)) {
-            "TCP" -> ConnectionProtocol.TCP
-            else -> ConnectionProtocol.WEBSOCKET
-        }
+        val protocol = _uiState.value.selectedProtocol
+        _uiState.update { it.copy(connectionConfig = it.connectionConfig.copy(protocol = protocol)) }
+        prefs.putString("last_protocol", protocol.name)
         connectionManager.setProtocol(
             if (protocol == ConnectionProtocol.TCP) {
                 ConnectionManager.ConnectionProtocol.TCP
+            } else if (protocol == ConnectionProtocol.UDP) {
+                ConnectionManager.ConnectionProtocol.UDP
             } else {
                 ConnectionManager.ConnectionProtocol.WEBSOCKET
             }
         )
+        val normalizedPort = when {
+            _uiState.value.serverPort > 0 -> _uiState.value.serverPort
+            protocol == ConnectionProtocol.WEBSOCKET -> ConnectionConfig.DEFAULT_WEBSOCKET_PORT
+            protocol == ConnectionProtocol.UDP -> ConnectionConfig.DEFAULT_UDP_PORT
+            else -> ConnectionConfig.DEFAULT_TCP_PORT
+        }
 
         _uiState.update { it.copy(isConnecting = true) }
-        addLogMessage("Connecting to $ip:${_uiState.value.serverPort}...")
+        addLogMessage("Waiting for desktop approval...")
 
         viewModelScope.launch {
-            val success = connectionManager.connect(ip, _uiState.value.serverPort)
+            val success = connectionManager.connect(ip, normalizedPort)
             if (!success) {
-                addLogMessage("Connection failed")
+                addLogMessage(connectionManager.lastError.value ?: "Connection failed")
                 _uiState.update { it.copy(isConnecting = false) }
             }
         }
@@ -783,7 +963,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ==================== SETTINGS ====================
+    
 
     fun setControlMode(mode: String) {
         prefs.putString("control_mode", mode)
@@ -821,7 +1001,7 @@ class HomeViewModel @Inject constructor(
         addLogMessage("Gesture statistics reset")
     }
 
-    // ==================== LOGGING ====================
+    
 
     fun addLogMessage(message: String) {
         val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date())
@@ -838,7 +1018,29 @@ class HomeViewModel @Inject constructor(
         addLogMessage("Recent gestures cleared")
     }
 
-    // ==================== MONITORING ====================
+    fun togglePresentationMode() {
+        if (presentationState.value.isActive) {
+            presentationModeService.disablePresentationMode()
+            addLogMessage("Presentation mode disabled")
+        } else {
+            presentationModeService.enablePresentationMode()
+            addLogMessage("Presentation mode enabled")
+        }
+    }
+
+    fun clearPresentationOverlay() {
+        presentationModeService.clearScreenOverlay()
+        addLogMessage("Presentation overlay cleared")
+    }
+
+    fun clearCompletedTransfers() {
+        fileTransferService.clearCompletedTransfers()
+        addLogMessage("Completed file transfers cleared")
+    }
+
+    fun getTransferFolderPath(): String = fileTransferService.openTransferFolder().absolutePath
+
+    
 
     private fun startBatteryMonitoring() {
         viewModelScope.launch {
@@ -851,13 +1053,13 @@ class HomeViewModel @Inject constructor(
                     val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
                     val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
                     val batteryLevel = if (level >= 0 && scale > 0) {
-                        (level * 100 / scale)
+                        percentageOf(level, scale)
                     } else 100
                     _uiState.update { it.copy(batteryLevel = batteryLevel) }
                 } catch (_: Exception) {
-                    // Ignore
+                    
                 }
-                delay(60000) // Update every minute
+                delay(60000) 
             }
         }
     }
@@ -873,14 +1075,14 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         memoryUsage = usedMemory,
                         totalMemory = totalMemory,
-                        cpuUsage = 0f // Would need external library for accurate CPU usage
+                        cpuUsage = 0f 
                     )
                 }
             }
         }
     }
 
-    // ==================== UTILITY FUNCTIONS ====================
+    
 
     fun getUserName(): String = prefs.getUserName()
 
@@ -917,8 +1119,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun getAverageLatency(): Long {
-        // Calculate average latency from connection
-        return 0L // Placeholder
+        if (motionHistory.isEmpty()) return 0L
+        return motionHistory.map { (it.dt * 1000f).toLong() }.average().toLong()
     }
 
     fun getGestureStats(): GestureStats = _uiState.value.gestureStats
@@ -927,7 +1129,12 @@ class HomeViewModel @Inject constructor(
 
     fun isCalibrated(): Boolean = _uiState.value.isCalibrated
 
-    // ==================== LIFE CYCLE ====================
+    private fun percentageOf(part: Int, total: Int): Int {
+        if (total <= 0) return 0
+        return (part * 100 / total).coerceIn(0, 100)
+    }
+
+    
 
     override fun onCleared() {
         super.onCleared()
@@ -935,7 +1142,7 @@ class HomeViewModel @Inject constructor(
         addLogMessage("ViewModel cleared")
     }
 
-    // ==================== DATA CLASSES ====================
+    
 
     data class MotionSample(
         val timestamp: Long,
@@ -954,13 +1161,17 @@ class HomeViewModel @Inject constructor(
         val fps: Int = 0,
         val memoryUsage: Long = 0,
         val totalMemory: Long = 0,
-        val cpuUsage: Float = 0f
+        val cpuUsage: Float = 0f,
+        val gyroSeries: List<Float> = emptyList(),
+        val accelSeries: List<Float> = emptyList(),
+        val magSeries: List<Float> = emptyList()
     )
 
     data class HomeUiState(
         val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
         val serverIp: String = "",
-        val serverPort: Int = 8080,
+        val serverPort: Int = ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
+        val selectedProtocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET,
         val calibrationProgress: Int = 0,
         val sensorsCalibrated: Int = 0,
         val totalSensors: Int = 3,
@@ -981,7 +1192,13 @@ class HomeViewModel @Inject constructor(
         val isConnecting: Boolean = false,
         val userName: String = "",
         val theme: String = "dark",
-        val calibrationQuality: String = "UNKNOWN"
+        val calibrationQuality: String = "UNKNOWN",
+        val calibrationState: CalibrationState = CalibrationState(),
+        val connectionConfig: ConnectionConfig = ConnectionConfig(),
+        val mouseProfile: MovementProfile = MovementProfile(),
+        val appPreferences: AppPreferences = AppPreferences(),
+        val userPreferences: UserPreferences = UserPreferences(),
+        val mouseStatistics: MouseStatistics = MouseStatistics()
     )
 
     data class GestureStats(

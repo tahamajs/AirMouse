@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/edge/EdgeGesturesUiState.kt
+
 package com.airmouse.presentation.ui.edge
 
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -11,7 +11,7 @@ data class EdgeGesturesUiState(
     val isEnabled: Boolean = false,
     val volumeUpAction: EdgeAction = EdgeAction.LEFT_CLICK,
     val volumeDownAction: EdgeAction = EdgeAction.RIGHT_CLICK,
-    // FIXED: Changed from SCROLL to SCROLL_UP to match existing enum values
+    
     val longPressAction: EdgeAction = EdgeAction.SCROLL_UP,
     val doublePressAction: EdgeAction = EdgeAction.DOUBLE_CLICK,
     val vibrationFeedback: Boolean = true,
@@ -32,7 +32,7 @@ enum class EdgeAction(
     DOUBLE_CLICK("Double Click", "Simulate double click", Icons.Default.Cached),
     SCROLL_UP("Scroll Up", "Scroll up", Icons.Default.ArrowUpward),
     SCROLL_DOWN("Scroll Down", "Scroll down", Icons.Default.ArrowDownward),
-    // FIXED: Swapped to non-deprecated AutoMirrored assets
+    
     VOLUME_UP("Volume Up", "Increase system volume", Icons.AutoMirrored.Filled.VolumeUp),
     VOLUME_DOWN("Volume Down", "Decrease system volume", Icons.AutoMirrored.Filled.VolumeDown),
     PREV_TRACK("Previous Track", "Previous media track", Icons.Default.SkipPrevious),

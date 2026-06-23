@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/ILocalDataSource.kt
+
 package com.airmouse.data.datasource.local
 
 import com.airmouse.domain.model.*
@@ -6,24 +6,24 @@ import kotlinx.coroutines.flow.Flow
 
 interface ILocalDataSource {
 
-    // Calibration
+    
     suspend fun saveCalibrationData(data: CalibrationData)
     suspend fun getCalibrationData(): CalibrationData
     suspend fun resetCalibrationData()
 
-    // Gestures
+    
     suspend fun saveGestureTemplate(template: CustomGestureTemplate)
     suspend fun getGestureTemplate(id: String): CustomGestureTemplate?
     suspend fun getAllGestureTemplates(): List<CustomGestureTemplate>
     suspend fun deleteGestureTemplate(id: String)
     suspend fun updateGestureTemplate(template: CustomGestureTemplate)
 
-    // Training
+    
     suspend fun saveTrainingSamples(gestureName: String, samples: List<FloatArray>)
     suspend fun getTrainingSamples(gestureName: String): List<FloatArray>
     suspend fun clearTrainingData(gestureName: String)
 
-    // Profiles
+    
     suspend fun saveProfile(profile: UserProfile)
     suspend fun getProfile(id: String): UserProfile?
     suspend fun getAllProfiles(): List<UserProfile>
@@ -34,7 +34,7 @@ interface ILocalDataSource {
     suspend fun getFavoriteProfiles(): List<UserProfile>
     suspend fun toggleFavorite(id: String)
 
-    // Statistics
+    
     suspend fun saveSessionStats(stats: StatisticsSummary)
     suspend fun getSessionStats(): StatisticsSummary
     suspend fun resetSessionStats()

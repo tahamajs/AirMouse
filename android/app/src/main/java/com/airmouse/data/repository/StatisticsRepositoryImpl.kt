@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/repository/StatisticsRepositoryImpl.kt
+
 package com.airmouse.data.repository
 
 import com.airmouse.domain.model.*
@@ -69,7 +69,7 @@ class StatisticsRepositoryImpl @Inject constructor(
                 _historicalStats.value = _historicalStats.value.copy(gesturesByType = byType)
             }
         } catch (e: Exception) {
-            // Use defaults
+            
         }
     }
 
@@ -89,7 +89,7 @@ class StatisticsRepositoryImpl @Inject constructor(
             }
             _gestureStats.value = stats
         } catch (e: Exception) {
-            // Use defaults
+            
         }
     }
 

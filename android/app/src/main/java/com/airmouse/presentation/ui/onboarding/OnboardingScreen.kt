@@ -49,7 +49,7 @@ fun OnboardingScreen(
     val pagerState = rememberPagerState(pageCount = { onboardingItems.size })
     val coroutineScope = rememberCoroutineScope()
 
-    // Auto-advance animation for welcome page
+    
     LaunchedEffect(uiState.currentPage, uiState.showWelcomeAnimation) {
         if (uiState.currentPage == 0 && uiState.showWelcomeAnimation) {
             delay(3000)
@@ -62,7 +62,7 @@ fun OnboardingScreen(
         }
     }
 
-    // Sync pager with ViewModel state
+    
     LaunchedEffect(uiState.currentPage) {
         if (pagerState.currentPage != uiState.currentPage) {
             pagerState.scrollToPage(uiState.currentPage)
@@ -95,7 +95,7 @@ fun OnboardingScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Top bar with skip button and progress
+                
                 TopBar(
                     currentPage = uiState.currentPage,
                     totalPages = onboardingItems.size,
@@ -106,7 +106,7 @@ fun OnboardingScreen(
                     }
                 )
 
-                // Horizontal Pager
+                
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.weight(1f),
@@ -134,7 +134,7 @@ fun OnboardingScreen(
                     }
                 }
 
-                // Bottom Navigation
+                
                 BottomNavigation(
                     currentPage = uiState.currentPage,
                     totalPages = onboardingItems.size,

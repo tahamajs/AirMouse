@@ -36,7 +36,10 @@ class MainViewModel @Inject constructor(
     data class MainUiState(
         val controlMode: String = "motion",
         val isLoading: Boolean = false,
-        val error: String? = null
+        val error: String? = null,
+        val isRegistered: Boolean = false,
+        val isCalibrated: Boolean = false,
+        val userName: String = ""
     )
 
     init {
@@ -70,7 +73,11 @@ class MainViewModel @Inject constructor(
 
         _uiState.update {
             it.copy(
-                controlMode = prefs.getString("control_mode", "motion")
+                controlMode = prefs.getString("control_mode", "motion"),
+                isRegistered = !prefs.isFirstLaunch() && prefs.getUserName().isNotBlank(),
+                isCalibrated = prefs.getBoolean("calibration_complete", false) ||
+                        prefs.getBoolean("is_calibrated", false),
+                userName = prefs.getUserName()
             )
         }
     }
@@ -93,7 +100,7 @@ class MainViewModel @Inject constructor(
     }
     
     fun showArmCalibrationDialog() {
-        // Show arm calibration dialog
+        
         _uiState.update { it.copy(error = "Arm calibration coming soon") }
     }
     

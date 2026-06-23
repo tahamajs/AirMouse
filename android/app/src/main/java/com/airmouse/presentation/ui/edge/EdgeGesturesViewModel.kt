@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/edge/EdgeGesturesViewModel.kt
+
 package com.airmouse.presentation.ui.edge
 
 import androidx.lifecycle.ViewModel
@@ -24,7 +24,7 @@ class EdgeGesturesViewModel @Inject constructor(
     val stats: StateFlow<EdgeGesturesStats> = _stats.asStateFlow()
 
     private val _gestureDetected = MutableSharedFlow<EdgeGestureEvent>()
-    // Changed visibility to internal or kept if used externally by background hardware services
+    
     val gestureDetected: SharedFlow<EdgeGestureEvent> = _gestureDetected.asSharedFlow()
 
     init {
@@ -40,7 +40,7 @@ class EdgeGesturesViewModel @Inject constructor(
                     isEnabled = prefs.getBoolean("edge_gestures_enabled", false),
                     volumeUpAction = getActionFromString(prefs.getString("edge_gestures_volume_up", "LEFT_CLICK")),
                     volumeDownAction = getActionFromString(prefs.getString("edge_gestures_volume_down", "RIGHT_CLICK")),
-                    // FIXED: Replaced default string with SCROLL_UP to avoid compilation break
+                    
                     longPressAction = getActionFromString(prefs.getString("edge_gestures_long_press", "SCROLL_UP")),
                     doublePressAction = getActionFromString(prefs.getString("edge_gestures_double_press", "DOUBLE_CLICK")),
                     vibrationFeedback = prefs.getBoolean("edge_gestures_vibration", true),
@@ -125,7 +125,7 @@ class EdgeGesturesViewModel @Inject constructor(
 
             executeAction(action)
 
-            // FIXED: Removed the empty vibration state layout checking block
+            
         }
     }
 
@@ -208,7 +208,7 @@ class EdgeGesturesViewModel @Inject constructor(
         prefs.putBoolean("edge_gestures_enabled", false)
         prefs.putString("edge_gestures_volume_up", EdgeAction.LEFT_CLICK.name)
         prefs.putString("edge_gestures_volume_down", EdgeAction.RIGHT_CLICK.name)
-        // FIXED: Replaced SCROLL with SCROLL_UP
+        
         prefs.putString("edge_gestures_long_press", EdgeAction.SCROLL_UP.name)
         prefs.putString("edge_gestures_double_press", EdgeAction.DOUBLE_CLICK.name)
         prefs.putBoolean("edge_gestures_vibration", true)
@@ -241,7 +241,7 @@ class EdgeGesturesViewModel @Inject constructor(
         return try {
             EdgeAction.valueOf(name)
         } catch (_: Exception) {
-            // FIXED: Suppressed or ignored the unused exception variable payload
+            
             EdgeAction.LEFT_CLICK
         }
     }

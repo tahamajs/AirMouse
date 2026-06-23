@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/repository/ProfileRepositoryImpl.kt
+
 package com.airmouse.data.repository
 
 import com.airmouse.data.datasource.local.dao.ProfileDao
@@ -21,7 +21,7 @@ class ProfileRepositoryImpl @Inject constructor(
     private val prefs: PreferencesManager
 ) : IProfileRepository {
 
-    // ==================== CRUD Operations ====================
+    
 
     override suspend fun createProfile(profile: UserProfile): String {
         val id = profile.id.ifEmpty { UUID.randomUUID().toString() }
@@ -43,7 +43,7 @@ class ProfileRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteProfile(id: String) {
-        // Don't delete default profile
+        
         val default = getDefaultProfile()
         if (default?.id == id) {
             return
@@ -61,7 +61,7 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    // ==================== Default Profile ====================
+    
 
     override suspend fun getDefaultProfile(): UserProfile? {
         val entity = profileDao.getDefaultProfile()
@@ -74,7 +74,7 @@ class ProfileRepositoryImpl @Inject constructor(
         prefs.putString("default_profile_id", id)
     }
 
-    // ==================== Favorites ====================
+    
 
     override suspend fun toggleFavorite(id: String) {
         val profile = profileDao.getProfileById(id)
@@ -93,7 +93,7 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    // ==================== Settings ====================
+    
 
     override suspend fun getSettings(profileId: String): ProfileSettings? {
         val profile = getProfile(profileId)
@@ -108,13 +108,13 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    // ==================== Search ====================
+    
 
     override suspend fun searchProfiles(query: String): List<UserProfile> {
         return profileDao.searchProfiles(query).map { mapToDomain(it) }
     }
 
-    // ==================== Export/Import ====================
+    
 
     override suspend fun exportProfile(id: String): String {
         val profile = getProfile(id) ?: return ""
@@ -194,7 +194,7 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    // ==================== Statistics ====================
+    
 
     override suspend fun getProfileCount(): Int {
         return profileDao.getProfileCount()
@@ -205,7 +205,7 @@ class ProfileRepositoryImpl @Inject constructor(
         return profiles.associate { it.name to it.usageCount }
     }
 
-    // ==================== Mapping Functions ====================
+    
 
     private fun mapToEntity(domain: UserProfile): ProfileEntity {
         return ProfileEntity(

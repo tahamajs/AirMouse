@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/main/MainNavHost.kt
+
 @file:Suppress("unused")
 
 package com.airmouse.presentation.ui.main
@@ -7,10 +7,12 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActions
 import com.airmouse.presentation.navigation.NavigationActionsImpl
@@ -40,7 +42,8 @@ import com.airmouse.presentation.ui.voice.VoiceCommandsScreen
 fun MainNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Destinations.Home.route
+    startDestination: String = Destinations.Home.route,
+    onOpenDrawer: (() -> Unit)? = null
 ) {
     val navigationActions = NavigationActionsImpl(navController)
 
@@ -65,12 +68,15 @@ fun MainNavHost(
                     slideOutHorizontally(animationSpec = tween(300)) { it }
         }
     ) {
-        // ==========================================
-        // MAIN BOTTOM NAVIGATION SCREENS
-        // ==========================================
+
+
+
 
         composable(Destinations.Home.route) {
-            HomeScreen(navigationActions = navigationActions)
+            HomeScreen(
+                navigationActions = navigationActions,
+                onOpenDrawer = onOpenDrawer
+            )
         }
 
         composable(Destinations.Statistics.route) {
@@ -88,28 +94,35 @@ fun MainNavHost(
             HelpScreen(navigationActions = navigationActions)
         }
 
-        // ==========================================
-        // INFO SCREENS
-        // ==========================================
+
+
+
 
         composable(Destinations.About.route) {
             AboutScreen(navigationActions = navigationActions)
         }
 
-        // ==========================================
-        // CALIBRATION & SENSORS
-        // ==========================================
+
+
+
 
         composable(Destinations.Calibration.route) {
             CalibrationScreen(
                 navigationActions = navigationActions,
-                onComplete = {
-                    navigationActions.navigateToHome()
-                }
+                onComplete = { }
             )
         }
 
-        composable(Destinations.CalibrationResult.route) {
+        composable(
+            route = "${Destinations.ROUTE_CALIBRATION_RESULT}?quality={quality}",
+            arguments = listOf(
+                navArgument("quality") {
+                    type = NavType.StringType
+                    defaultValue = "UNKNOWN"
+                    nullable = false
+                }
+            )
+        ) {
             CalibrationResultScreen(
                 navigationActions = navigationActions,
                 onContinue = { navigationActions.navigateToHome() },
@@ -121,9 +134,9 @@ fun MainNavHost(
             SensorVisualizerScreen(navigationActions = navigationActions)
         }
 
-        // ==========================================
-        // GESTURE & TOUCH
-        // ==========================================
+
+
+
 
         composable(Destinations.GestureStudio.route) {
             GestureStudioScreen(navigationActions = navigationActions)
@@ -137,9 +150,9 @@ fun MainNavHost(
             TouchpadScreen(navigationActions = navigationActions)
         }
 
-        // ==========================================
-        // CONNECTIVITY
-        // ==========================================
+
+
+
 
         composable(Destinations.NetworkDiscovery.route) {
             NetworkDiscoveryScreen(navigationActions = navigationActions)
@@ -149,9 +162,9 @@ fun MainNavHost(
             ServerLogsScreen(navigationActions = navigationActions)
         }
 
-        // ==========================================
-        // SECURITY & PRIVACY
-        // ==========================================
+
+
+
 
         composable(Destinations.Proximity.route) {
             ProximityScreen(navigationActions = navigationActions)
@@ -161,9 +174,9 @@ fun MainNavHost(
             VoiceCommandsScreen(navigationActions = navigationActions)
         }
 
-        // ==========================================
-        // CUSTOMIZATION
-        // ==========================================
+
+
+
 
         composable(Destinations.Profiles.route) {
             ProfilesScreen(
@@ -176,9 +189,9 @@ fun MainNavHost(
             ThemesScreen(navigationActions = navigationActions)
         }
 
-        // ==========================================
-        // SYSTEM
-        // ==========================================
+
+
+
 
         composable(Destinations.Battery.route) {
             BatteryScreen(navigationActions = navigationActions)
@@ -188,9 +201,9 @@ fun MainNavHost(
             AccessibilityScreen(navigationActions = navigationActions)
         }
 
-        // ==========================================
-        // ONBOARDING
-        // ==========================================
+
+
+
 
         composable(Destinations.Onboarding.route) {
             OnboardingScreen(navigationActions = navigationActions)

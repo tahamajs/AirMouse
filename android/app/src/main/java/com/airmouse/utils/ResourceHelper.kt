@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/ResourceHelper.kt
+
 package com.airmouse.utils
 
 import android.content.Context

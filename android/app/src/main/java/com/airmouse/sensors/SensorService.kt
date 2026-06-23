@@ -9,23 +9,18 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.PowerManager
 import android.util.Log
-import com.airmouse.domain.model.CalibrationStatus
+import com.airmouse.SensorService as AirMouseSensorService
 import kotlinx.coroutines.*
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
-/**
- * Main sensor service that handles all sensor data processing.
- * Manages gyroscope, accelerometer, and magnetometer to provide
- * orientation data and gesture detection for cursor control.
- */
 class SensorService(
     private val context: Context,
     private val calibrationHelper: CalibrationHelper,
     private val gestureDetector: EnhancedGestureDetector,
     private val preferences: com.airmouse.utils.PreferencesManager
-) : SensorEventListener {
+) : SensorEventListener, AirMouseSensorService {
 
     companion object {
         private const val TAG = "SensorService"
@@ -33,27 +28,27 @@ class SensorService(
         private const val STABILITY_THRESHOLD = 0.05f
     }
 
-    // Sensor Manager
+    
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
-    // Sensors
+    
     private var gyroscope: Sensor? = null
     private var accelerometer: Sensor? = null
     private var magnetometer: Sensor? = null
     private var rotationVector: Sensor? = null
 
-    // Sensor fusion
+    
     private val madgwick = MadgwickAHRS(beta = 0.1f)
     private var lastTimestamp = 0L
     private var dt = 0.01f
 
-    // State
+    
     private var isRunning = false
     private var isCalibrated = false
     private var isStable = false
     private var stabilityCounter = 0
 
-    // Raw sensor values (calibrated)
+    
     private var calibratedGyroX = 0f
     private var calibratedGyroY = 0f
     private var calibratedGyroZ = 0f
@@ -64,30 +59,30 @@ class SensorService(
     private var calibratedMagY = 0f
     private var calibratedMagZ = 0f
 
-    // Orientation
-    private var yaw = 0f      // Rotation around Z (horizontal cursor)
-    private var pitch = 0f    // Rotation around Y (not used)
-    private var roll = 0f     // Rotation around X (vertical cursor)
+    
+    private var yaw = 0f      
+    private var pitch = 0f    
+    private var roll = 0f     
 
-    // Stability tracking
+    
     private var lastRoll = 0f
     private var lastYaw = 0f
     private var stableStartTime = 0L
 
-    // Background thread for sensor processing
+    
     private val sensorThread = HandlerThread("SensorThread").apply { start() }
     private val sensorHandler = Handler(sensorThread.looper)
 
-    // Coroutine scope for async operations
+    
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    // Callbacks
+    
     var onOrientationChanged: ((roll: Float, yaw: Float) -> Unit)? = null
     var onGestureDetected: ((EnhancedGestureDetector.Gesture) -> Unit)? = null
     var onStabilityChanged: ((isStable: Boolean) -> Unit)? = null
     var onSensorData: ((gyroX: Float, gyroY: Float, gyroZ: Float, accelX: Float, accelY: Float, accelZ: Float) -> Unit)? = null
 
-    // Movement smoothing
+    
     private var filteredRoll = 0f
     private var filteredYaw = 0f
     private val smoothingAlpha = 0.6f
@@ -111,12 +106,9 @@ class SensorService(
     }
 
     private fun loadCalibrationStatus() {
-        isCalibrated = calibrationHelper.loadCalibrationStatus() == CalibrationStatus.COMPLETED
+        isCalibrated = calibrationHelper.loadCalibrationStatus()
     }
 
-    /**
-     * Start sensor monitoring
-     */
     fun start() {
         if (isRunning) return
 
@@ -147,9 +139,6 @@ class SensorService(
         Log.i(TAG, "Sensor service started")
     }
 
-    /**
-     * Stop sensor monitoring
-     */
     fun stop() {
         if (!isRunning) return
 
@@ -158,9 +147,6 @@ class SensorService(
         Log.i(TAG, "Sensor service stopped")
     }
 
-    /**
-     * Change sensor sampling rate (used by battery saver)
-     */
     fun setSamplingRate(delay: Int) {
         if (!isRunning) return
 
@@ -197,7 +183,7 @@ class SensorService(
             }
         }
 
-        // Run sensor fusion
+        
         if (isCalibrated) {
             madgwick.update(
                 calibratedGyroX, calibratedGyroY, calibratedGyroZ,
@@ -206,24 +192,24 @@ class SensorService(
                 dt
             )
 
-            // Get orientation
+            
             roll = madgwick.getRoll()
             yaw = madgwick.getYaw()
 
-            // Apply smoothing
+            
             filteredRoll = smoothingAlpha * roll + (1 - smoothingAlpha) * filteredRoll
             filteredYaw = smoothingAlpha * yaw + (1 - smoothingAlpha) * filteredYaw
 
-            // Check stability
+            
             checkStability()
 
-            // Send orientation to callback
+            
             onOrientationChanged?.invoke(filteredRoll, filteredYaw)
 
-            // Detect gestures
+            
             detectGestures()
 
-            // Send raw data for debug
+            
             onSensorData?.invoke(
                 calibratedGyroX, calibratedGyroY, calibratedGyroZ,
                 calibratedAccelX, calibratedAccelY, calibratedAccelZ
@@ -232,7 +218,7 @@ class SensorService(
     }
 
     private fun processGyroscope(values: FloatArray, dt: Float) {
-        // Apply calibration offsets
+        
         calibratedGyroX = calibrationHelper.correctGyro(values[0], 0)
         calibratedGyroY = calibrationHelper.correctGyro(values[1], 1)
         calibratedGyroZ = calibrationHelper.correctGyro(values[2], 2)
@@ -253,8 +239,8 @@ class SensorService(
     }
 
     private fun processRotationVector(values: FloatArray) {
-        // Rotation vector gives direct orientation without fusion
-        // We still use Madgwick for consistency, but could use this directly
+        
+        
         val rotationMatrix = FloatArray(9)
         SensorManager.getRotationMatrixFromVector(rotationMatrix, values)
         val orientation = FloatArray(3)
@@ -264,8 +250,8 @@ class SensorService(
         val directPitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
         val directRoll = Math.toDegrees(orientation[2].toDouble()).toFloat()
 
-        // Can use direct values for faster response
-        // We'll stick with Madgwick for consistency
+        
+        
     }
 
     private fun checkStability() {
@@ -294,7 +280,7 @@ class SensorService(
     }
 
     private fun detectGestures() {
-        // Use gyro Y for click detection (fast rotation around Y axis)
+        
         val gesture = gestureDetector.detect(
             calibratedGyroX, calibratedGyroY, calibratedGyroZ,
             calibratedAccelX, calibratedAccelY, calibratedAccelZ,
@@ -310,40 +296,22 @@ class SensorService(
         Log.d(TAG, "Accuracy changed for sensor ${sensor?.name}: $accuracy")
     }
 
-    /**
-     * Get current orientation (roll, yaw) in degrees
-     */
     fun getCurrentOrientation(): Pair<Float, Float> = Pair(filteredRoll, filteredYaw)
 
-    /**
-     * Get raw sensor data
-     */
     fun getRawGyro(): Triple<Float, Float, Float> = Triple(calibratedGyroX, calibratedGyroY, calibratedGyroZ)
     fun getRawAccel(): Triple<Float, Float, Float> = Triple(calibratedAccelX, calibratedAccelY, calibratedAccelZ)
     fun getRawMag(): Triple<Float, Float, Float> = Triple(calibratedMagX, calibratedMagY, calibratedMagZ)
 
-    /**
-     * Check if device is stable (not moving)
-     */
     fun isStable(): Boolean = isStable
 
-    /**
-     * Check if calibration is complete
-     */
     fun isCalibrated(): Boolean = isCalibrated
 
-    /**
-     * Recalibrate sensors
-     */
     fun recalibrate() {
         calibrationHelper.resetCalibration()
         isCalibrated = false
         Log.i(TAG, "Calibration reset, please recalibrate")
     }
 
-    /**
-     * Clean up resources
-     */
     fun destroy() {
         stop()
         sensorThread.quitSafely()

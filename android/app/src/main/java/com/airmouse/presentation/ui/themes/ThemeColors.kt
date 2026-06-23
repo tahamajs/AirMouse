@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/themes/ThemeColors.kt
+
 package com.airmouse.presentation.ui.themes
 
 import androidx.compose.runtime.Composable
@@ -6,9 +6,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// ==========================================
-// THEME COLOR SCHEMES
-// ==========================================
+
+
+
 
 data class ThemeColorScheme(
     val background: Color,
@@ -44,7 +44,7 @@ data class ThemeColorScheme(
 
 object ThemeColorSchemes {
 
-    // ===== LIGHT THEME =====
+    
     fun lightTheme(accent: AccentColor): ThemeColorScheme {
         val accentColor = Color(accent.colorCode)
         val accentLight = Color(accent.lightColor)
@@ -83,7 +83,7 @@ object ThemeColorSchemes {
         )
     }
 
-    // ===== DARK THEME =====
+    
     fun darkTheme(accent: AccentColor): ThemeColorScheme {
         val accentColor = Color(accent.colorCode)
         val accentLight = Color(accent.lightColor)
@@ -121,7 +121,7 @@ object ThemeColorSchemes {
         )
     }
 
-    // ===== PURE BLACK THEME =====
+    
     fun pureBlackTheme(accent: AccentColor): ThemeColorScheme {
         val accentColor = Color(accent.colorCode)
         val accentLight = Color(accent.lightColor)
@@ -159,7 +159,7 @@ object ThemeColorSchemes {
         )
     }
 
-    // ===== OCEAN THEME =====
+    
     fun oceanTheme(accent: AccentColor): ThemeColorScheme {
         val accentColor = Color(accent.colorCode)
         val accentLight = Color(accent.lightColor)
@@ -197,7 +197,7 @@ object ThemeColorSchemes {
         )
     }
 
-    // ===== SUNSET THEME =====
+    
     fun sunsetTheme(accent: AccentColor): ThemeColorScheme {
         val accentColor = Color(accent.colorCode)
         val accentLight = Color(accent.lightColor)
@@ -236,9 +236,9 @@ object ThemeColorSchemes {
     }
 }
 
-// ==========================================
-// COMPOSITION LOCAL FOR THEME
-// ==========================================
+
+
+
 
 val LocalThemeColors = staticCompositionLocalOf { ThemeColorSchemes.darkTheme(AccentColor.ORANGE) }
 
@@ -249,9 +249,9 @@ fun ProvideThemeColors(colors: ThemeColorScheme, content: @Composable () -> Unit
     }
 }
 
-// ==========================================
-// THEME COLOR GETTER
-// ==========================================
+
+
+
 
 @Composable
 fun getThemeColors(): ThemeColorScheme {

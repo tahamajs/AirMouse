@@ -757,7 +757,7 @@ fun StatisticsRow(label: String, value: String) {
     }
 }
 
-// ==================== CUSTOM ADDED COMPONENTS TO RESOLVE COMPILATION ERRORS ====================
+
 
 @Suppress("unused")
 @Composable

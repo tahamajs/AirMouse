@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/GestureModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * Gesture types
- */
 enum class GestureType {
     NONE,
     CLICK,
@@ -28,9 +25,6 @@ enum class GestureType {
     CUSTOM
 }
 
-/**
- * Gesture event
- */
 data class GestureEvent(
     val type: GestureType,
     val name: String = "",
@@ -44,9 +38,6 @@ data class GestureEvent(
     fun getAction(): String = GestureActionMap.getAction(type)
 }
 
-/**
- * Gesture action mapping
- */
 object GestureActionMap {
     private val actions = mapOf(
         GestureType.THUMBS_UP to "play_pause",
@@ -68,9 +59,6 @@ object GestureActionMap {
     fun getAction(type: GestureType): String = actions[type] ?: "none"
 }
 
-/**
- * Custom gesture template
- */
 @Parcelize
 data class CustomGestureTemplate(
     val id: String = "",
@@ -98,9 +86,6 @@ val CustomGestureTemplate.isFavorite: Boolean
 val CustomGestureTemplate.duration: Float
     get() = ((updatedAt - createdAt).coerceAtLeast(0L) / 1000f)
 
-/**
- * Gesture training statistics
- */
 data class GestureTrainingStats(
     val totalGestures: Int = 0,
     val gesturesByType: Map<GestureType, Int> = emptyMap(),
@@ -113,9 +98,6 @@ data class GestureTrainingStats(
     fun getMostUsedCustomGesture(): String = customGestureUsage.maxByOrNull { it.value }?.key ?: ""
 }
 
-/**
- * Gesture detection result
- */
 data class GestureDetectionResult(
     val gesture: GestureType,
     val confidence: Float,

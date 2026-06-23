@@ -1,9 +1,10 @@
-// app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationResultScreen.kt
+
 package com.airmouse.presentation.ui.calibration
 
 import android.os.Build
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,7 +59,7 @@ fun CalibrationResultScreen(
         value = calibrationDataState ?: viewModel.loadCalibrationData()
     }
 
-    // Animation states
+    
     var animationTriggered by remember { mutableStateOf(false) }
     var confettiActive by remember { mutableStateOf(false) }
 
@@ -144,7 +147,7 @@ fun CalibrationResultScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Success header
+                
                 item {
                     SuccessHeader(
                         qualityConfig = qualityConfig,
@@ -155,8 +158,15 @@ fun CalibrationResultScreen(
                     )
                 }
 
-                // Quality metrics card
+                
                 if (data != null) {
+                    item {
+                        CalibrationStatusPills(
+                            calibrationData = data,
+                            qualityConfig = qualityConfig
+                        )
+                    }
+
                     item {
                         QualityMetricsCard(
                             qualityConfig = qualityConfig,
@@ -164,12 +174,12 @@ fun CalibrationResultScreen(
                         )
                     }
 
-                    // Sensor calibration details
+                    
                     item {
                         SensorCalibrationDetailsCard(calibrationData = data)
                     }
 
-                    // Calibration summary
+                    
                     item {
                         CalibrationSummaryCard(
                             calibrationData = data,
@@ -178,7 +188,7 @@ fun CalibrationResultScreen(
                     }
                 }
 
-                // Action buttons
+                
                 item {
                     ActionButtonsRow(
                         onContinue = onContinue,
@@ -192,13 +202,14 @@ fun CalibrationResultScreen(
                     )
                 }
 
-                // Footer
+                
                 item {
                     Text(
-                        text = "Air Mouse v3.0.0",
+                        text = "Air Mouse v3.0.0  •  Calibration saved locally and ready for control",
                         fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.3f),
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        color = Color.White.copy(alpha = 0.42f),
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -206,9 +217,9 @@ fun CalibrationResultScreen(
     }
 }
 
-// ==========================================
-// SUCCESS HEADER
-// ==========================================
+
+
+
 
 @Composable
 fun SuccessHeader(
@@ -224,32 +235,42 @@ fun SuccessHeader(
             .graphicsLayer { alpha = fadeIn },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Success animation circle
         Box(
             modifier = Modifier
-                .size(120.dp)
+                .size(144.dp)
                 .scale(scale)
                 .clip(CircleShape)
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            qualityConfig.color.copy(alpha = 0.3f),
-                            qualityConfig.color.copy(alpha = 0.1f)
+                            qualityConfig.color.copy(alpha = 0.28f),
+                            qualityConfig.color.copy(alpha = 0.08f),
+                            Color.Transparent
                         )
                     )
                 ),
             contentAlignment = Alignment.Center
         ) {
+            Canvas(modifier = Modifier.size(136.dp)) {
+                drawCircle(
+                    color = qualityConfig.color.copy(alpha = 0.18f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 10f, cap = StrokeCap.Round)
+                )
+                drawCircle(
+                    color = qualityConfig.color.copy(alpha = 0.45f),
+                    radius = size.minDimension / 2.5f
+                )
+            }
             Box(
                 modifier = Modifier
-                    .size(90.dp)
+                    .size(96.dp)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(Color(0xFF0F172A)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = qualityConfig.emoji,
-                    fontSize = 48.sp,
+                    fontSize = 46.sp,
                     modifier = Modifier.scale(if (animationTriggered) 1f else 0.5f)
                 )
             }
@@ -278,7 +299,7 @@ fun SuccessHeader(
         if (calibrationData != null && calibrationData.isCalibrated) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "✓ Successfully calibrated and saved",
+                text = "✓ Successfully calibrated, saved, and ready for motion control",
                 fontSize = 14.sp,
                 color = Color(0xFF10B981),
                 textAlign = TextAlign.Center
@@ -287,9 +308,59 @@ fun SuccessHeader(
     }
 }
 
-// ==========================================
-// QUALITY METRICS CARD
-// ==========================================
+@Composable
+fun CalibrationStatusPills(
+    calibrationData: CalibrationData,
+    qualityConfig: CalibrationQualityConfig
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        StatusPill(
+            label = "Saved",
+            value = if (calibrationData.isCalibrated) "Yes" else "No",
+            accent = Color(0xFF10B981),
+            modifier = Modifier.weight(1f)
+        )
+        StatusPill(
+            label = "Quality",
+            value = calibrationData.quality.name,
+            accent = qualityConfig.color,
+            modifier = Modifier.weight(1f)
+        )
+        StatusPill(
+            label = "Mode",
+            value = "Ready",
+            accent = Color(0xFF60A5FA),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun StatusPill(
+    label: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = Color.White.copy(alpha = 0.06f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.28f))
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, fontSize = 10.sp, color = Color.White.copy(alpha = 0.55f))
+            Text(value, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+    }
+}
+
+
+
+
 
 @Composable
 fun QualityMetricsCard(
@@ -343,9 +414,9 @@ fun QualityMetricsCard(
     }
 }
 
-// ==========================================
-// SENSOR CALIBRATION DETAILS CARD
-// ==========================================
+
+
+
 
 @Composable
 fun SensorCalibrationDetailsCard(calibrationData: CalibrationData) {
@@ -371,7 +442,7 @@ fun SensorCalibrationDetailsCard(calibrationData: CalibrationData) {
                 color = Color.White
             )
 
-            // Gyroscope
+            
             SensorDetailRow(
                 label = "Gyroscope",
                 values = listOf(
@@ -383,7 +454,7 @@ fun SensorCalibrationDetailsCard(calibrationData: CalibrationData) {
                 labelPrefix = "Bias"
             )
 
-            // Accelerometer
+            
             SensorDetailRow(
                 label = "Accelerometer",
                 values = listOf(
@@ -395,7 +466,7 @@ fun SensorCalibrationDetailsCard(calibrationData: CalibrationData) {
                 labelPrefix = "Offset"
             )
 
-            // Magnetometer
+            
             SensorDetailRow(
                 label = "Magnetometer",
                 values = listOf(
@@ -443,9 +514,9 @@ fun SensorDetailRow(
     }
 }
 
-// ==========================================
-// CALIBRATION SUMMARY CARD
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationSummaryCard(
@@ -519,9 +590,9 @@ fun SummaryRow(label: String, value: String) {
     }
 }
 
-// ==========================================
-// ACTION BUTTONS ROW
-// ==========================================
+
+
+
 
 @Composable
 fun ActionButtonsRow(
@@ -548,6 +619,20 @@ fun ActionButtonsRow(
             Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Continue to Air Mouse", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Next steps", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("1. Connect to the desktop using the IP and port on the home screen.", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                Text("2. Watch the green motion preview square move with device rotation.", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                Text("3. Test click and scroll gestures after calibration.", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+            }
         }
 
         Row(
@@ -612,9 +697,9 @@ fun ActionButtonsRow(
     }
 }
 
-// ==========================================
-// QUALITY METRIC ITEM
-// ==========================================
+
+
+
 
 @Composable
 fun QualityMetricItem(label: String, value: String, color: Color) {
@@ -633,9 +718,9 @@ fun QualityMetricItem(label: String, value: String, color: Color) {
     }
 }
 
-// ==========================================
-// CONFETTI EFFECT
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationResultConfettiEffect() {
@@ -687,9 +772,9 @@ fun getQualityScore(quality: CalibrationQuality): Int {
     }
 }
 
-// ==========================================
-// PREVIEW
-// ==========================================
+
+
+
 
 @Preview(showBackground = true)
 @Composable

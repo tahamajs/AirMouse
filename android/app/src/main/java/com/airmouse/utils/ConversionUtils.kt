@@ -3,20 +3,16 @@ package com.airmouse.utils
 import java.util.Locale
 import kotlin.math.*
 
-/**
- * Comprehensive unit conversion utilities for Air Mouse Pro.
- * Provides conversions for UI, time, data, networking, sensors, and more.
- */
 object ConversionUtils {
 
-    // ==================== UI / Display Conversions ====================
+    
 
     fun pxToDp(px: Int, density: Float): Int = (px / density).toInt()
     fun dpToPx(dp: Int, density: Float): Int = (dp * density).toInt()
     fun spToPx(sp: Int, scaledDensity: Float): Int = (sp * scaledDensity).toInt()
     fun pxToSp(px: Int, scaledDensity: Float): Int = (px / scaledDensity).toInt()
 
-    // ==================== Time Conversions ====================
+    
 
     fun msToSeconds(ms: Long): Float = ms / 1000f
     fun secondsToMs(seconds: Float): Long = (seconds * 1000).toLong()
@@ -50,7 +46,7 @@ object ConversionUtils {
         }
     }
 
-    // ==================== Data Size Conversions ====================
+    
 
     fun bytesToMB(bytes: Long): Float = bytes / (1024f * 1024f)
     fun bytesToKB(bytes: Long): Float = bytes / 1024f
@@ -67,7 +63,7 @@ object ConversionUtils {
         }
     }
 
-    // ==================== Data Rate / Network Conversions ====================
+    
 
     fun bpsToMbps(bps: Long): Float = bps / 1_000_000f
     fun bpsToKbps(bps: Long): Float = bps / 1000f
@@ -85,7 +81,7 @@ object ConversionUtils {
         }
     }
 
-    // ==================== Angle Conversions ====================
+    
 
     fun radToDeg(rad: Double): Double = rad * 180.0 / Math.PI
     fun degToRad(deg: Double): Double = deg * Math.PI / 180.0
@@ -106,7 +102,7 @@ object ConversionUtils {
         return a
     }
 
-    // ==================== Sensor Data Conversions ====================
+    
 
     fun mps2ToG(ms2: Float): Float = ms2 / GRAVITY
     fun gToMps2(g: Float): Float = g * GRAVITY
@@ -115,7 +111,7 @@ object ConversionUtils {
     fun vectorMagnitude3D(x: Float, y: Float, z: Float): Float = sqrt(x * x + y * y + z * z)
     fun vectorMagnitude2D(x: Float, y: Float): Float = sqrt(x * x + y * y)
 
-    // ==================== Coordinate Conversions ====================
+    
 
     fun rotationVectorToEuler(rotationVector: FloatArray): Triple<Double, Double, Double> {
         val q0 = rotationVector[3].toDouble()
@@ -145,35 +141,35 @@ object ConversionUtils {
         )
     }
 
-    // ==================== Temperature Conversions ====================
+    
 
     fun celsiusToFahrenheit(celsius: Float): Float = (celsius * 9f / 5f) + 32f
     fun fahrenheitToCelsius(fahrenheit: Float): Float = (fahrenheit - 32f) * 5f / 9f
 
-    // ==================== Pressure Conversions ====================
+    
 
     fun hpaToMmhg(hpa: Float): Float = hpa * 0.7500616f
     fun mmhgToHpa(mmhg: Float): Float = mmhg / 0.7500616f
 
-    // ==================== Speed Conversions ====================
+    
 
     fun mpsToKmh(mps: Float): Float = mps * 3.6f
     fun kmhToMps(kmh: Float): Float = kmh / 3.6f
 
-    // ==================== Distance Conversions ====================
+    
 
     fun metersToFeet(meters: Float): Float = meters * 3.28084f
     fun feetToMeters(feet: Float): Float = feet / 3.28084f
     fun metersToMiles(meters: Float): Float = meters / 1609.34f
 
-    // ==================== Constants ====================
+    
 
     const val GRAVITY: Float = 9.80665f
     const val PI_FLOAT: Float = 3.1415927f
     const val SPEED_OF_LIGHT: Float = 299792458f
     const val STANDARD_ATMOSPHERE: Float = 1013.25f
 
-    // ==================== Android / Sensor Helpers ====================
+    
 
     fun sensorTimestampToMs(nanoseconds: Long): Long = nanoseconds / 1_000_000
     fun sensorTimestampToSeconds(nanoseconds: Long): Double = nanoseconds / 1_000_000_000.0

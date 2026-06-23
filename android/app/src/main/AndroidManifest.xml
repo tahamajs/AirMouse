@@ -82,7 +82,7 @@
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
+            android:screenOrientation="fullSensor"
             android:configChanges="orientation|screenSize|keyboardHidden|keyboard|locale|uiMode"
             android:theme="@style/Theme.AirMouse.Splash"
             android:windowSoftInputMode="adjustResize">
@@ -105,87 +105,25 @@
             </intent-filter>
         </activity>
 
-        <!-- ==================== SERVICES (keep only those you actually have) ==================== -->
-        <service
-            android:name=".service.SensorService"
-            android:enabled="true"
+        <activity
+            android:name=".presentation.ui.home.HomeActivity"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:screenOrientation="fullSensor"
+            android:configChanges="orientation|screenSize|keyboardHidden|keyboard|locale|uiMode"
+            android:theme="@style/Theme.AirMouse.Splash"
+            android:windowSoftInputMode="adjustResize" />
 
-        <service
-            android:name=".service.GestureInferenceService"
-            android:enabled="true"
+        <!-- ==================== ONBOARDING ACTIVITY ==================== -->
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".service.GestureRecorderService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".service.BluetoothHidService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
-
-        <service
-            android:name=".service.ProximityService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".service.ProximityAwareService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".service.UsbHidService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".service.UsbSerialService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".service.VoiceCommandService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
-
-        <service
-            android:name=".service.OrientationMonitorService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <service
-            android:name=".service.EdgeGestureService"
-            android:enabled="true"
-            android:exported="false" />
-
-        <service
-            android:name=".service.DebugOverlayService"
-            android:enabled="true"
-            android:exported="false" />
-
-        <service
-            android:name=".service.ForegroundServiceManager"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:screenOrientation="fullSensor"
+            android:theme="@style/Theme.AirMouse" />
 
         <!-- ==================== PROVIDERS ==================== -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
+            android:authorities="${applicationId}.file_provider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

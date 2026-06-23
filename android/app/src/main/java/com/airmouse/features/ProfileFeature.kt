@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/ProfileFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.ProfileSettings
@@ -68,7 +68,7 @@ class ProfileFeature @Inject constructor(
 
         if (result.isSuccess) {
             refreshProfiles()
-            // Update current profile if it's the one being updated
+            
             if (profile.id == _state.value.currentProfile?.id) {
                 _state.value = _state.value.copy(currentProfile = profile)
             }
@@ -85,7 +85,7 @@ class ProfileFeature @Inject constructor(
 
         if (result.isSuccess) {
             refreshProfiles()
-            // Clear current profile if deleted
+            
             if (id == _state.value.currentProfile?.id) {
                 _state.value = _state.value.copy(currentProfile = null)
             }
@@ -123,7 +123,7 @@ class ProfileFeature @Inject constructor(
         val result = manageProfileUseCase.updateSettings(profileId, settings)
         if (result.isSuccess) {
             refreshProfiles()
-            // Update current profile settings
+            
             if (profileId == _state.value.currentProfile?.id) {
                 val current = _state.value.currentProfile
                 _state.value = _state.value.copy(

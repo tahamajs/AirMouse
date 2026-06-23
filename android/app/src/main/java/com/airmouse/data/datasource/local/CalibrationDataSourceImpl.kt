@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/CalibrationDataSourceImpl.kt
+
 package com.airmouse.data.datasource.local
 
 import com.airmouse.domain.model.CalibrationData
@@ -89,9 +89,9 @@ class CalibrationDataSourceImpl @Inject constructor(
         }
     }
 
-    // ==========================================
-    // Gyroscope
-    // ==========================================
+    
+    
+    
 
     override suspend fun saveGyroBias(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
@@ -141,9 +141,9 @@ class CalibrationDataSourceImpl @Inject constructor(
         }
     }
 
-    // ==========================================
-    // Accelerometer
-    // ==========================================
+    
+    
+    
 
     override suspend fun saveAccelOffset(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
@@ -220,9 +220,9 @@ class CalibrationDataSourceImpl @Inject constructor(
         }
     }
 
-    // ==========================================
-    // Magnetometer
-    // ==========================================
+    
+    
+    
 
     override suspend fun saveMagOffset(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
@@ -272,9 +272,9 @@ class CalibrationDataSourceImpl @Inject constructor(
         }
     }
 
-    // ==========================================
-    // Calibration Status & Progress
-    // ==========================================
+    
+    
+    
 
     override suspend fun setCalibrationStatus(status: CalibrationStatus) {
         withContext(Dispatchers.IO) {
@@ -337,12 +337,14 @@ class CalibrationDataSourceImpl @Inject constructor(
     override suspend fun setCalibrationComplete(complete: Boolean) {
         withContext(Dispatchers.IO) {
             prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_COMPLETE, complete)
+            prefs.putBoolean("is_calibrated", complete)
         }
     }
 
     override suspend fun isCalibrationComplete(): Boolean {
         return withContext(Dispatchers.IO) {
-            prefs.getBoolean(PreferencesKeys.KEY_CALIBRATION_COMPLETE, false)
+            prefs.getBoolean(PreferencesKeys.KEY_CALIBRATION_COMPLETE, false) ||
+                    prefs.getBoolean("is_calibrated", false)
         }
     }
 
@@ -358,9 +360,9 @@ class CalibrationDataSourceImpl @Inject constructor(
         }
     }
 
-    // ==========================================
-    // Helper Methods
-    // ==========================================
+    
+    
+    
 
     override suspend fun hasCalibrationData(): Boolean {
         return withContext(Dispatchers.IO) {

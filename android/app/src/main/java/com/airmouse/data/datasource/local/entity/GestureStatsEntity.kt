@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/entity/GestureStatsEntity.kt
+
 package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo

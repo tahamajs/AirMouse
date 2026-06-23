@@ -1,4 +1,4 @@
-// app/src/test/java/com/airmouse/sensor/GestureDetectorTest.kt
+
 package com.airmouse.sensor
 
 import com.airmouse.sensors.EnhancedGestureDetector
@@ -26,7 +26,7 @@ class GestureDetectorTest {
         mockPrefs = mockk(relaxed = true)
         mockVibrator = mockk(relaxed = true)
         
-        // Mock threshold values
+        
         every { mockPrefs.getClickThreshold() } returns 8f
         every { mockPrefs.getDoubleClickInterval() } returns 400L
         every { mockPrefs.getScrollThreshold() } returns 6f
@@ -59,10 +59,10 @@ class GestureDetectorTest {
 
     @Test
     fun testDetectDoubleClick() {
-        // First click
+        
         gestureDetector.detect(gyroY = 10f, accelY = 0f, roll = 0f)
         
-        // Second click within window (simulate by calling again)
+        
         val result = gestureDetector.detect(gyroY = 10f, accelY = 0f, roll = 0f)
         
         assertEquals("Should detect double click", EnhancedGestureDetector.Gesture.DOUBLE_CLICK, result)
@@ -70,18 +70,18 @@ class GestureDetectorTest {
 
     @Test
     fun testDetectRightClick() {
-        // Hold tilt for more than duration
+        
         val startTime = System.currentTimeMillis()
         
-        // Simulate multiple detections to reach duration threshold
+        
         var result = EnhancedGestureDetector.Gesture.NONE
         for (i in 0 until 10) {
             result = gestureDetector.detect(gyroY = 0f, accelY = 0f, roll = 50f)
-            Thread.sleep(100) // Simulate time passing
+            Thread.sleep(100) 
         }
         
-        // Note: Right click detection requires holding tilt over multiple frames
-        // This test may need adjustment based on implementation
+        
+        
     }
 
     @Test
@@ -105,8 +105,8 @@ class GestureDetectorTest {
         
         gestureDetector.reloadThresholds()
         
-        // Verify via behavior or use reflection if needed
-        // For now, just ensure no exception
+        
+        
         assertTrue(true)
     }
 }

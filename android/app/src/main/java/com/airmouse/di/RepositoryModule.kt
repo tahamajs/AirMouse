@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/di/RepositoryModule.kt
+
 package com.airmouse.di
 
 import android.bluetooth.BluetoothAdapter
@@ -35,7 +35,7 @@ abstract class RepositoryModule {
         impl: ConnectionRepositoryImpl
     ): IConnectionRepository
 
-    // ❌ REMOVED DUPLICATE: IGestureRepository is now bound ONLY in GestureRepositoryModule
+    
 
     @Binds
     @Singleton

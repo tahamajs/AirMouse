@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/repository/MouseRepositoryImpl.kt
+
 package com.airmouse.data.repository
 
 import com.airmouse.domain.model.*
@@ -75,21 +75,21 @@ class MouseRepositoryImpl @Inject constructor(
     override suspend fun move(dx: Float, dy: Float): Boolean {
         val profile = _profile.value
 
-        // Apply sensitivity
+        
         var scaledX = dx * profile.sensitivity
         var scaledY = dy * profile.sensitivity
 
-        // Apply deadband
+        
         if (abs(scaledX) < profile.deadband) scaledX = 0f
         if (abs(scaledY) < profile.deadband) scaledY = 0f
 
         if (scaledX == 0f && scaledY == 0f) return false
 
-        // Apply inversion
+        
         if (profile.invertX) scaledX = -scaledX
         if (profile.invertY) scaledY = -scaledY
 
-        // Apply swapping
+        
         if (profile.swapAxes) {
             val temp = scaledX
             scaledX = scaledY
@@ -99,7 +99,7 @@ class MouseRepositoryImpl @Inject constructor(
         val result = connectionManager.sendMove(scaledX, scaledY)
 
         if (result) {
-            // Update statistics
+            
             val distance = kotlin.math.sqrt(scaledX * scaledX + scaledY * scaledY)
             updateStatistics(distance)
         }
@@ -192,12 +192,12 @@ class MouseRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getPosition(): Pair<Int, Int> {
-        // Would get from platform-specific API
+        
         return Pair(0, 0)
     }
 
     override suspend fun setPosition(x: Int, y: Int): Boolean {
-        // Would use platform-specific API to set cursor position
+        
         return true
     }
 
@@ -233,7 +233,7 @@ class MouseRepositoryImpl @Inject constructor(
     }
 
     override suspend fun clearEvents() {
-        // SharedFlow does not retain history; clearing is a no-op.
+        
     }
 
     private fun updateStatistics(distance: Float) {

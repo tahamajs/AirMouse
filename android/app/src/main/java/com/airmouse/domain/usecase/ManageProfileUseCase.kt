@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/domain/usecase/ManageProfileUseCase.kt
+
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.ProfileSettings
@@ -7,16 +7,10 @@ import com.airmouse.domain.repository.IProfileRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-/**
- * Use case for managing user profiles
- */
 class ManageProfileUseCase @Inject constructor(
     private val profileRepository: IProfileRepository
 ) {
 
-    /**
-     * Create new profile
-     */
     suspend operator fun invoke(profile: UserProfile): Result<String> {
         return try {
             val id = profileRepository.createProfile(profile)
@@ -26,30 +20,18 @@ class ManageProfileUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Get profile by ID
-     */
     suspend fun getProfile(id: String): UserProfile? {
         return profileRepository.getProfile(id)
     }
 
-    /**
-     * Get all profiles
-     */
     suspend fun getAllProfiles(): List<UserProfile> {
         return profileRepository.getAllProfiles()
     }
 
-    /**
-     * Observe profiles
-     */
     fun observeProfiles(): Flow<List<UserProfile>> {
         return profileRepository.observeProfiles()
     }
 
-    /**
-     * Update profile
-     */
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
             profileRepository.updateProfile(profile)
@@ -59,9 +41,6 @@ class ManageProfileUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Delete profile
-     */
     suspend fun deleteProfile(id: String): Result<Unit> {
         return try {
             profileRepository.deleteProfile(id)
@@ -71,16 +50,10 @@ class ManageProfileUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Get default profile
-     */
     suspend fun getDefaultProfile(): UserProfile? {
         return profileRepository.getDefaultProfile()
     }
 
-    /**
-     * Set default profile
-     */
     suspend fun setDefaultProfile(id: String): Result<Unit> {
         return try {
             profileRepository.setDefaultProfile(id)
@@ -90,9 +63,6 @@ class ManageProfileUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Toggle favorite
-     */
     suspend fun toggleFavorite(id: String): Result<Unit> {
         return try {
             profileRepository.toggleFavorite(id)
@@ -106,16 +76,10 @@ class ManageProfileUseCase @Inject constructor(
         return profileRepository.getFavoriteProfiles()
     }
 
-    /**
-     * Get settings for profile
-     */
     suspend fun getSettings(profileId: String): ProfileSettings? {
         return profileRepository.getSettings(profileId)
     }
 
-    /**
-     * Update settings for profile
-     */
     suspend fun updateSettings(profileId: String, settings: ProfileSettings): Result<Unit> {
         return try {
             profileRepository.updateSettings(profileId, settings)
@@ -125,16 +89,10 @@ class ManageProfileUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Search profiles
-     */
     suspend fun searchProfiles(query: String): List<UserProfile> {
         return profileRepository.searchProfiles(query)
     }
 
-    /**
-     * Export profile
-     */
     suspend fun exportProfile(id: String): Result<String> {
         return try {
             val json = profileRepository.exportProfile(id)
@@ -144,9 +102,6 @@ class ManageProfileUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Import profile
-     */
     suspend fun importProfile(json: String): Result<Boolean> {
         return try {
             val result = profileRepository.importProfile(json)

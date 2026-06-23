@@ -1,11 +1,8 @@
-// app/src/main/java/com/airmouse/presentation/ui/about/AboutState.kt
+
 package com.airmouse.presentation.ui.about
 
 import androidx.compose.ui.graphics.vector.ImageVector
 
-/**
- * UI state for the About screen
- */
 data class AboutUiState(
     val appName: String = "Air Mouse",
     val versionName: String = "3.0.0",
@@ -19,9 +16,6 @@ data class AboutUiState(
     val errorMessage: String? = null
 )
 
-/**
- * UI events for the About screen
- */
 sealed class AboutEvent {
     object ShareApp : AboutEvent()
     object RateApp : AboutEvent()
@@ -30,9 +24,6 @@ sealed class AboutEvent {
     object NavigateBack : AboutEvent()
 }
 
-/**
- * Side effects for the About screen
- */
 sealed class AboutEffect {
     data class OpenUrl(val url: String) : AboutEffect()
     data class ShowToast(val message: String) : AboutEffect()

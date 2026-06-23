@@ -16,17 +16,8 @@ import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 import org.json.JSONObject
+import org.json.JSONArray
 
-/**
- * Complete file transfer service supporting upload/download with binary WebSocket.
- * Features:
- * - Upload files from phone to PC (via content URI)
- * - Download files from PC to phone
- * - Queue management
- * - Progress reporting
- * - MD5 checksum verification
- * - Resumable transfers (optional)
- */
 @Singleton
 class FileTransferService @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -35,8 +26,9 @@ class FileTransferService @Inject constructor(
 
     companion object {
         private const val TAG = "FileTransferService"
-        private const val CHUNK_SIZE = 64 * 1024       // 64 KB
+        private const val CHUNK_SIZE = 64 * 1024       
         private const val TRANSFER_DIR = "transfers"
+        private const val HISTORY_FILE = "transfer_history.json"
         private const val PROTOCOL_VERSION = 1
     }
 
@@ -72,8 +64,9 @@ class FileTransferService @Inject constructor(
     private var transferJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val transfersDir = File(context.filesDir, TRANSFER_DIR)
+    private val historyFile = File(transfersDir, HISTORY_FILE)
 
-    // For binary message handling during download
+    
     private var downloadCallback: ((ByteArray) -> Unit)? = null
     private var currentDownloadId: String? = null
     private var currentDownloadStream: FileOutputStream? = null
@@ -98,16 +91,72 @@ class FileTransferService @Inject constructor(
     }
 
     private fun loadTransferHistory() {
-        // Load from PreferencesManager – simplified
+        if (!historyFile.exists()) return
+        try {
+            val payload = historyFile.readText().trim()
+            if (payload.isBlank()) return
+            val array = JSONArray(payload)
+            val completed = buildList {
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val direction = runCatching {
+                        TransferInfo.Direction.valueOf(item.optString("direction", "UPLOAD"))
+                    }.getOrDefault(TransferInfo.Direction.UPLOAD)
+                    val status = runCatching {
+                        TransferInfo.Status.valueOf(item.optString("status", "COMPLETED"))
+                    }.getOrDefault(TransferInfo.Status.COMPLETED)
+                    add(
+                        TransferInfo(
+                            id = item.optString("id", UUID.randomUUID().toString()),
+                            fileName = item.optString("fileName", "unknown"),
+                            fileSize = item.optLong("fileSize", 0L),
+                            transferred = item.optLong("transferred", 0L),
+                            progress = item.optDouble("progress", 0.0).toFloat(),
+                            direction = direction,
+                            status = status,
+                            startTime = item.optLong("startTime", System.currentTimeMillis()),
+                            endTime = if (item.has("endTime") && !item.isNull("endTime")) item.optLong("endTime") else null,
+                            error = if (item.has("error") && !item.isNull("error")) item.optString("error") else null,
+                            md5 = if (item.has("md5") && !item.isNull("md5")) item.optString("md5") else null
+                        )
+                    )
+                }
+            }
+            _state.value = _state.value.copy(completedTransfers = completed.takeLast(50))
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to load transfer history: ${e.message}")
+        }
     }
 
     private fun saveTransferHistory() {
-        // Save completed transfers (last 50) to SharedPreferences
+        try {
+            val array = JSONArray()
+            _state.value.completedTransfers.take(50).forEach { transfer ->
+                array.put(
+                    JSONObject().apply {
+                        put("id", transfer.id)
+                        put("fileName", transfer.fileName)
+                        put("fileSize", transfer.fileSize)
+                        put("transferred", transfer.transferred)
+                        put("progress", transfer.progress)
+                        put("direction", transfer.direction.name)
+                        put("status", transfer.status.name)
+                        put("startTime", transfer.startTime)
+                        if (transfer.endTime != null) put("endTime", transfer.endTime)
+                        if (transfer.error != null) put("error", transfer.error)
+                        if (transfer.md5 != null) put("md5", transfer.md5)
+                    }
+                )
+            }
+            historyFile.writeText(array.toString())
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to save transfer history: ${e.message}")
+        }
     }
 
-    // ----------------------------------------------------------------------
-    // Public API
-    // ----------------------------------------------------------------------
+    
+    
+    
 
     fun queueFileForUpload(fileUri: Uri, fileName: String) {
         val file = getFileFromUri(fileUri, fileName) ?: return
@@ -177,9 +226,9 @@ class FileTransferService @Inject constructor(
         return if (file.exists()) file else null
     }
 
-    // ----------------------------------------------------------------------
-    // Transfer management
-    // ----------------------------------------------------------------------
+    
+    
+    
 
     private fun startNextTransfer() {
         if (transferQueue.isEmpty()) return
@@ -216,7 +265,7 @@ class FileTransferService @Inject constructor(
         val fileSize = file.length()
         updateTransferSize(transfer.id, fileSize)
 
-        // Send metadata
+        
         val meta = JSONObject().apply {
             put("type", "file")
             put("action", "start")
@@ -247,7 +296,7 @@ class FileTransferService @Inject constructor(
 
                 transferred += bytesRead
                 updateTransferProgress(transfer.id, transferred, fileSize)
-                delay(5) // small yield to avoid flooding
+                delay(5) 
             }
 
             inputStream.close()
@@ -385,9 +434,9 @@ class FileTransferService @Inject constructor(
         }
     }
 
-    // ----------------------------------------------------------------------
-    // File utilities
-    // ----------------------------------------------------------------------
+    
+    
+    
 
     private fun getFileFromUri(uri: Uri, fileName: String): File? {
         val contentResolver = context.contentResolver
@@ -428,9 +477,9 @@ class FileTransferService @Inject constructor(
         }
     }
 
-    // ----------------------------------------------------------------------
-    // State updaters
-    // ----------------------------------------------------------------------
+    
+    
+    
 
     private fun updateQueueState() {
         _state.value = _state.value.copy(queueSize = transferQueue.size)
@@ -443,7 +492,7 @@ class FileTransferService @Inject constructor(
             activeTransfer = activeTransfer?.copy(transferred = transferred, progress = progress)
             _state.value = _state.value.copy(currentTransfer = activeTransfer)
         }
-        // Update in completed list if present
+        
         val updatedCompleted = _state.value.completedTransfers.map {
             if (it.id == transferId) it.copy(transferred = transferred, progress = progress) else it
         }

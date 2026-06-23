@@ -2,9 +2,6 @@ package com.airmouse.sensors
 
 import kotlin.math.*
 
-/**
- * Analyzes motion patterns for gesture recognition and activity detection
- */
 class MotionAnalyzer {
 
     data class MotionFeatures(
@@ -39,9 +36,6 @@ class MotionAnalyzer {
     private val runningThreshold = 15f
     private val gestureThreshold = 20f
 
-    /**
-     * Analyze motion features from sensor data
-     */
     fun analyzeMotion(
         accelX: Float, accelY: Float, accelZ: Float,
         gyroX: Float, gyroY: Float, gyroZ: Float,
@@ -49,28 +43,28 @@ class MotionAnalyzer {
     ): MotionFeatures {
         val dt = if (lastTimestamp > 0) (timestamp - lastTimestamp) / 1000f else 0.016f
 
-        // Calculate acceleration magnitude
+        
         val accelMagnitude = SensorDataProcessor.magnitude(accelX, accelY, accelZ)
 
-        // Calculate jerk (derivative of acceleration)
+        
         val jerkX = SensorDataProcessor.derivative(accelX, lastAccelX, dt)
         val jerkY = SensorDataProcessor.derivative(accelY, lastAccelY, dt)
         val jerkZ = SensorDataProcessor.derivative(accelZ, lastAccelZ, dt)
         val jerk = SensorDataProcessor.magnitude(jerkX, jerkY, jerkZ)
 
-        // Calculate rotation speed
+        
         val rotationSpeed = SensorDataProcessor.magnitude(gyroX, gyroY, gyroZ)
 
-        // Calculate direction
+        
         val direction = atan2(accelY, accelX)
 
-        // Calculate stability (inverse of variance over time)
+        
         val stability = 1f / (1f + jerk)
 
-        // Determine if moving
+        
         val isMoving = accelMagnitude > idleThreshold
 
-        // Determine dominant axis
+        
         val absX = abs(accelX)
         val absY = abs(accelY)
         val absZ = abs(accelZ)
@@ -96,9 +90,6 @@ class MotionAnalyzer {
         )
     }
 
-    /**
-     * Detect activity type from motion features
-     */
     fun detectActivity(features: MotionFeatures, timestamp: Long): Activity {
         val now = System.currentTimeMillis()
         var newActivity = currentActivity
@@ -137,23 +128,14 @@ class MotionAnalyzer {
         return Activity(newActivity, confidence, duration)
     }
 
-    /**
-     * Detect if device is stationary
-     */
     fun isStationary(features: MotionFeatures): Boolean {
         return features.acceleration < 0.3f && features.rotationSpeed < 0.2f
     }
 
-    /**
-     * Detect sudden movement (impulse)
-     */
     fun isSuddenMovement(features: MotionFeatures): Boolean {
         return features.jerk > 30f
     }
 
-    /**
-     * Detect shaking motion
-     */
     fun isShaking(features: MotionFeatures, history: List<MotionFeatures>): Boolean {
         if (history.size < 10) return false
 
@@ -162,27 +144,18 @@ class MotionAnalyzer {
         val minAccel = recentAccel.minOrNull() ?: 0f
         val amplitude = maxAccel - minAccel
 
-        // Shaking is characterized by rapid, alternating acceleration
+        
         return amplitude > 15f && features.acceleration > 10f
     }
 
-    /**
-     * Detect rotation gesture
-     */
     fun detectRotation(gyroZ: Float, duration: Long): Boolean {
         return abs(gyroZ) > 8f && duration > 200
     }
 
-    /**
-     * Detect tap gesture
-     */
     fun detectTap(features: MotionFeatures): Boolean {
         return features.jerk > 15f && features.acceleration > 5f
     }
 
-    /**
-     * Reset analyzer state
-     */
     fun reset() {
         lastAccelX = 0f
         lastAccelY = 0f

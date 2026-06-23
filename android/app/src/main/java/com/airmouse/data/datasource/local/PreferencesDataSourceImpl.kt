@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/PreferencesDataSourceImpl.kt
+
 package com.airmouse.data.datasource.local
 
 import android.content.Context
@@ -18,7 +18,7 @@ class PreferencesDataSourceImpl @Inject constructor(
 
     private val prefs: SharedPreferences = context.getSharedPreferences("airmouse_prefs", Context.MODE_PRIVATE)
 
-    // Flow for calibration status
+    
     private val _isCalibrated = MutableStateFlow(prefs.getBoolean("is_calibrated", false))
 
     override suspend fun setCalibrated(calibrated: Boolean) {
@@ -192,7 +192,7 @@ class PreferencesDataSourceImpl @Inject constructor(
 
     override suspend fun getConnectionTimeout(): Int = prefs.getInt("connection_timeout", 5000)
 
-    // Statistics Methods
+    
     override suspend fun incrementClick() = incrementCount("stat_clicks")
     override suspend fun incrementDoubleClick() = incrementCount("stat_double_clicks")
     override suspend fun incrementRightClick() = incrementCount("stat_right_clicks")

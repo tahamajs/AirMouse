@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/QRScanner.kt
+
 package com.airmouse.utils
 
 import android.Manifest
@@ -14,10 +14,6 @@ import androidx.fragment.app.Fragment
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
-/**
- * QR Code scanner utility for fragments.
- * Handles permission requests and scanning with ZXing.
- */
 class QRScanner(private val fragment: Fragment) {
 
     companion object {
@@ -33,7 +29,12 @@ class QRScanner(private val fragment: Fragment) {
             val name = uri.getQueryParameter("name") ?: "Air Mouse Server"
             val ws = uri.getQueryParameter("ws")
             val token = uri.getQueryParameter("token")
-            val protocol = uri.getQueryParameter("protocol") ?: if (!ws.isNullOrBlank()) "WEBSOCKET" else "TCP"
+            val protocol = uri.getQueryParameter("protocol") ?: when {
+                !ws.isNullOrBlank() -> "WEBSOCKET"
+                uri.getQueryParameter("udp")?.equals("true", ignoreCase = true) == true -> "UDP"
+                port == 8082 -> "UDP"
+                else -> "TCP"
+            }
             val useSSL = uri.getQueryParameter("ssl")?.equals("true", ignoreCase = true) == true
             return ConnectionData(ip, port, name, ws, token, protocol, useSSL)
         }
@@ -67,26 +68,23 @@ class QRScanner(private val fragment: Fragment) {
     var onScanComplete: ((String?, Boolean) -> Unit)? = null
     var onPermissionDenied: (() -> Unit)? = null
 
-    /**
-     * Start QR code scanning
-     */
     fun startScan() {
         val context = fragment.requireContext()
 
-        // Check if camera hardware exists
+        
         if (!hasCameraHardware(context)) {
             showCameraUnavailableDialog()
             onScanFailed?.invoke()
             return
         }
 
-        // Check camera permission
+        
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
             return
         }
 
-        // Configure scan options
+        
         val options = ScanOptions().apply {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
             setPrompt("Position the QR code within the frame")
@@ -132,9 +130,6 @@ class QRScanner(private val fragment: Fragment) {
             .show()
     }
 
-    /**
-     * Check if camera permission is granted
-     */
     fun hasCameraPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             fragment.requireContext(),
@@ -142,9 +137,6 @@ class QRScanner(private val fragment: Fragment) {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    /**
-     * Data class for parsed connection information
-     */
     data class ConnectionData(
         val ip: String,
         val port: Int,

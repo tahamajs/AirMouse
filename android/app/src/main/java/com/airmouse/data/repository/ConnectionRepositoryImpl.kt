@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/repository/ConnectionRepositoryImpl.kt
+
 package com.airmouse.data.repository
 
 import com.airmouse.domain.model.*
@@ -57,7 +57,7 @@ class ConnectionRepositoryImpl @Inject constructor(
         } catch (e: IllegalArgumentException) {
             ConnectionProtocol.TCP
         }
-        _config.value = ConnectionConfig(ip = ip, port = port, protocol = protocolEnum)
+        _config.value = ConnectionConfig(ip = ip, port = port, protocol = protocolEnum).normalized()
     }
 
     private fun observeConnectionManagerStatus() {
@@ -98,17 +98,18 @@ class ConnectionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun connect(config: ConnectionConfig): Boolean {
-        _config.value = config
-        saveConnectionConfig(config)
-        val protocol = config.protocol
+        val normalized = config.normalized()
+        _config.value = normalized
+        saveConnectionConfig(normalized)
+        val protocol = normalized.protocol
         connectionManager.setProtocol(
             when (protocol) {
                 ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
-                ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.TCP
+                ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
                 ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
             }
         )
-        return connectionManager.connect(config.ip, config.port)
+        return connectionManager.connect(normalized.ip, normalized.port)
     }
 
     override suspend fun disconnect() {
@@ -125,13 +126,14 @@ class ConnectionRepositoryImpl @Inject constructor(
     override suspend fun getConnectionConfig(): ConnectionConfig = _config.value
 
     override suspend fun saveConnectionConfig(config: ConnectionConfig) {
-        _config.value = config
-        prefs.putString("last_ip", config.ip)
-        prefs.putInt("last_port", config.port)
-        prefs.putString("connection_protocol", config.protocol.name)
-        prefs.putBoolean("use_ssl", config.useSSL)
-        if (config.authToken != null) {
-            prefs.putString("auth_token", config.authToken)
+        val normalized = config.normalized()
+        _config.value = normalized
+        prefs.putString("last_ip", normalized.ip)
+        prefs.putInt("last_port", normalized.port)
+        prefs.putString("connection_protocol", normalized.protocol.name)
+        prefs.putBoolean("use_ssl", normalized.useSSL)
+        if (normalized.authToken != null) {
+            prefs.putString("auth_token", normalized.authToken)
         }
     }
 
@@ -169,6 +171,13 @@ class ConnectionRepositoryImpl @Inject constructor(
     override suspend fun testConnection(ip: String, port: Int): TestResult {
         return try {
             val startTime = System.currentTimeMillis()
+            connectionManager.setProtocol(_config.value.protocol.let {
+                when (it) {
+                    ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
+                    ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
+                    ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+                }
+            })
             connectionManager.connect(ip, port)
             val latency = System.currentTimeMillis() - startTime
             connectionManager.disconnect()
@@ -181,7 +190,7 @@ class ConnectionRepositoryImpl @Inject constructor(
     override suspend fun ping(): Long {
         val startTime = System.currentTimeMillis()
         connectionManager.sendPing()
-        // Wait for pong
+        
         delay(1000)
         return System.currentTimeMillis() - startTime
     }

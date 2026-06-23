@@ -12,10 +12,6 @@ import kotlinx.coroutines.*
 import java.util.Locale
 import kotlin.math.abs
 
-/**
- * Debug overlay for real-time sensor visualization
- * Shows gyroscope, accelerometer, orientation data with live graphs
- */
 class DebugOverlay(private val context: Context) {
 
     companion object {
@@ -33,13 +29,13 @@ class DebugOverlay(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var updateJob: Job? = null
 
-    // Data storage for graphs
+    
     private val gyroHistory = mutableListOf<Float>()
     private val accelHistory = mutableListOf<Float>()
     private val orientationHistory = mutableListOf<Float>()
     private var lastTimestamp = 0L
 
-    // UI elements
+    
     private lateinit var gyroTextView: TextView
     private lateinit var accelTextView: TextView
     private lateinit var orientationTextView: TextView
@@ -48,9 +44,6 @@ class DebugOverlay(private val context: Context) {
     private lateinit var fpsTextView: TextView
     private lateinit var graphCanvas: GraphCanvas
 
-    /**
-     * Initialize the debug overlay
-     */
     fun initialize() {
         windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createOverlayView()
@@ -84,7 +77,7 @@ class DebugOverlay(private val context: Context) {
         fpsTextView = overlayView!!.findViewById(R.id.debug_fps)
         graphCanvas = overlayView!!.findViewById(R.id.debug_graph)
 
-        // Make overlay draggable
+        
         setupDraggable(params)
 
         windowManager?.addView(overlayView, params)
@@ -116,9 +109,6 @@ class DebugOverlay(private val context: Context) {
         }
     }
 
-    /**
-     * Set sensor service to monitor
-     */
     fun setSensorService(service: SensorService) {
         sensorService = service
         startMonitoring()
@@ -134,7 +124,7 @@ class DebugOverlay(private val context: Context) {
                 updateSensorDisplay()
                 updateGraphs()
 
-                // Calculate FPS
+                
                 frameCount++
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastFrameTime >= 1000) {
@@ -166,12 +156,12 @@ class DebugOverlay(private val context: Context) {
 
         connectionTextView.text = if (service.isStable()) "Stable" else "Moving"
 
-        // Add to history
-        gyroHistory.add(gyro.second)  // Use gyro Y for click detection
-        accelHistory.add(accel.second) // Use accel Y for scroll
-        orientationHistory.add(orientation.first) // Use roll
+        
+        gyroHistory.add(gyro.second)  
+        accelHistory.add(accel.second) 
+        orientationHistory.add(orientation.first) 
 
-        // Limit history size
+        
         val maxHistory = (GRAPH_DURATION_MS / UPDATE_INTERVAL_MS).toInt()
         while (gyroHistory.size > maxHistory) gyroHistory.removeAt(0)
         while (accelHistory.size > maxHistory) accelHistory.removeAt(0)
@@ -183,9 +173,6 @@ class DebugOverlay(private val context: Context) {
         graphCanvas.invalidate()
     }
 
-    /**
-     * Show debug overlay
-     */
     fun show() {
         if (isVisible) return
         isVisible = true
@@ -193,9 +180,6 @@ class DebugOverlay(private val context: Context) {
         startMonitoring()
     }
 
-    /**
-     * Hide debug overlay
-     */
     fun hide() {
         if (!isVisible) return
         isVisible = false
@@ -203,21 +187,12 @@ class DebugOverlay(private val context: Context) {
         updateJob?.cancel()
     }
 
-    /**
-     * Toggle debug overlay visibility
-     */
     fun toggle() {
         if (isVisible) hide() else show()
     }
 
-    /**
-     * Check if overlay is visible
-     */
     fun isVisible(): Boolean = isVisible
 
-    /**
-     * Clean up resources
-     */
     fun destroy() {
         hide()
         updateJob?.cancel()
@@ -225,33 +200,30 @@ class DebugOverlay(private val context: Context) {
         try {
             windowManager?.removeView(overlayView)
         } catch (e: Exception) {
-            // View already removed
+            
         }
         overlayView = null
     }
 
-    /**
-     * Custom view for real-time graphs
-     */
     inner class GraphCanvas(context: Context) : View(context) {
         private var gyroData = listOf<Float>()
         private var accelData = listOf<Float>()
         private var orientationData = listOf<Float>()
 
         private val paintGyro = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.rgb(255, 87, 34)  // Deep Orange
+            color = Color.rgb(255, 87, 34)  
             strokeWidth = 2f
             style = Paint.Style.STROKE
         }
 
         private val paintAccel = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.rgb(33, 150, 243)  // Blue
+            color = Color.rgb(33, 150, 243)  
             strokeWidth = 2f
             style = Paint.Style.STROKE
         }
 
         private val paintOrientation = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.rgb(76, 175, 80)   // Green
+            color = Color.rgb(76, 175, 80)   
             strokeWidth = 2f
             style = Paint.Style.STROKE
         }
@@ -278,14 +250,14 @@ class DebugOverlay(private val context: Context) {
             val width = width.toFloat()
             val height = height.toFloat()
 
-            // Draw grid
+            
             for (i in 0..4) {
                 val y = height * i / 4
                 canvas.drawLine(0f, y, width, y, paintGrid)
             }
             canvas.drawLine(width / 2, 0f, width / 2, height, paintGrid)
 
-            // Draw graphs
+            
             drawGraph(canvas, gyroData, paintGyro, -30f, 30f)
             drawGraph(canvas, accelData, paintAccel, -20f, 20f)
             drawGraph(canvas, orientationData, paintOrientation, -90f, 90f)

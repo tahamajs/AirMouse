@@ -1,6 +1,7 @@
 // app/src/main/java/com/airmouse/presentation/ui/settings/SettingsScreen.kt
 package com.airmouse.presentation.ui.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import com.airmouse.presentation.navigation.NavigationActions
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,28 +37,27 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val effect by viewModel.effect.collectAsStateWithLifecycle()
     var selectedSection by remember { mutableStateOf<SettingsSection?>(null) }
 
-    // Handle effects
     LaunchedEffect(effect) {
-        val currentEffect = effect
-        when (currentEffect) {
+        when (val currentEffect = effect) {
             is SettingsEffect.ShowToast -> {
-                // Show toast - handled by scaffold
-                viewModel.handleEvent(SettingsEvent.ShowToast(""))
+                Toast.makeText(context, currentEffect.message, Toast.LENGTH_SHORT).show()
             }
             is SettingsEffect.NavigateBack -> onBack()
             is SettingsEffect.NavigateTo -> {
-                // Navigate to route
                 navigationActions.navigateTo(currentEffect.route)
             }
             is SettingsEffect.OpenUrl -> {
-                // Open URL
-                viewModel.handleEvent(SettingsEvent.OpenWebsite)
+                Toast.makeText(context, currentEffect.url, Toast.LENGTH_SHORT).show()
             }
             null -> { /* No effect */ }
+        }
+        if (effect != null) {
+            viewModel.clearEffect()
         }
     }
 
@@ -745,7 +746,13 @@ fun TouchpadSettings(
             title = "Touchpad Active",
             description = "Enable touchpad mode on the phone",
             checked = uiState.touchpadActive,
-            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadActive) }
+                onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadActive) }
+        )
+        SettingsSwitch(
+            title = "Show Touch Points",
+            description = "Display visible touch markers while using touchpad mode",
+            checked = uiState.touchpadShowTouchPoints,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadShowTouchPoints) }
         )
         SettingsSlider(
             title = "Touchpad Sensitivity",
@@ -864,12 +871,6 @@ fun TouchpadSettings(
             checked = uiState.touchpadHapticFeedback,
             onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadHapticFeedback) }
         )
-        SettingsSwitch(
-            title = "Show Touch Points",
-            description = "Display contact points on the touchpad",
-            checked = uiState.touchpadShowTouchPoints,
-            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadShowTouchPoints) }
-        )
     }
 }
 
@@ -886,7 +887,7 @@ fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
         )
         SettingsSwitch(
             title = "Use WebSocket",
-            description = "Use WebSocket protocol (fallback to TCP)",
+            description = "Use WebSocket protocol for live control messages",
             checked = uiState.useWebSocket,
             onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleUseWebSocket) }
         )
@@ -969,6 +970,21 @@ fun PrivacySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
                     Text("Export Settings")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { viewModel.handleEvent(SettingsEvent.OpenSystemSettings) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("System")
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.handleEvent(SettingsEvent.OpenAccessibilitySettings) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Accessibility")
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = { viewModel.handleEvent(SettingsEvent.ClearAllData) },
                     modifier = Modifier.fillMaxWidth(),
@@ -1020,19 +1036,32 @@ fun PresentationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
                 Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { /* Start presentation */ }, modifier = Modifier.weight(1f)) {
+                    Button(
+                        onClick = {
+                            if (!uiState.presentationModeEnabled) {
+                                viewModel.handleEvent(SettingsEvent.TogglePresentationMode)
+                            }
+                        },
+                        enabled = !uiState.presentationModeEnabled,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Start")
+                        Text("Enable")
                     }
                     Button(
-                        onClick = { /* Stop presentation */ },
+                        onClick = {
+                            if (uiState.presentationModeEnabled) {
+                                viewModel.handleEvent(SettingsEvent.TogglePresentationMode)
+                            }
+                        },
+                        enabled = uiState.presentationModeEnabled,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
                         Icon(Icons.Default.Stop, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Stop")
+                        Text("Disable")
                     }
                 }
             }
