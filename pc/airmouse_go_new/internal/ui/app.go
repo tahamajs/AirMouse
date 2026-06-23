@@ -585,7 +585,10 @@ func (a *App) showGestureRecorder() {
 
 func (a *App) showNetworkDiagnostics() {
 	ip := utils.GetLocalIP()
-	devices := a.deviceMgr.GetActiveDevices()
+	deviceCount := 0
+	if a.deviceMgr != nil {
+		deviceCount = len(a.deviceMgr.GetActiveDevices())
+	}
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("Network Diagnostics", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -593,7 +596,7 @@ func (a *App) showNetworkDiagnostics() {
 		widget.NewLabel(fmt.Sprintf("TCP Port: %d", a.cfg.Port)),
 		widget.NewLabel(fmt.Sprintf("WebSocket Port: %d", a.cfg.WebSocketPort)),
 		widget.NewLabel(fmt.Sprintf("UDP Port: %d", a.cfg.UDPPort)),
-		widget.NewLabel(fmt.Sprintf("Connected Devices: %d", len(devices))),
+		widget.NewLabel(fmt.Sprintf("Connected Devices: %d", deviceCount)),
 		widget.NewButton("Run Tests", func() {}),
 	)
 	dialog.ShowCustom("Network Diagnostics", "Close", content, a.window)
