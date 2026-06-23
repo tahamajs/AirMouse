@@ -434,7 +434,7 @@ func (t *DashboardTab) refreshStats() {
 			if control.HasAccessibilityPermission() {
 				t.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 			} else {
-				t.permissionHint.SetText("⚠️ macOS Accessibility permission is required to move the mouse and click.")
+				t.permissionHint.SetText("⛔ Accessibility permission is missing. Mouse control is blocked until you enable it in System Settings.")
 			}
 		}
 		t.statsLabel.SetText(fmt.Sprintf(
@@ -471,6 +471,9 @@ func (t *DashboardTab) refreshStats() {
 				utils.GetLocalIP(),
 				deviceCount,
 			))
+			if !control.HasAccessibilityPermission() {
+				t.summaryLabel.SetText("Mouse control is unavailable until Accessibility permission is granted on this Mac.")
+			}
 		}
 		t.mu.Unlock()
 
