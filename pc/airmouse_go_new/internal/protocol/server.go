@@ -172,7 +172,7 @@ func (s *ProtocolServer) Stop() {
 }
 
 func (s *ProtocolServer) GetConnectedDevices() []*device.DeviceInfo {
-	return s.deviceMgr.GetAllDevices()
+	return s.deviceMgr.GetActiveDevices()
 }
 
 func (s *ProtocolServer) GetStatistics() map[string]interface{} {
@@ -192,6 +192,6 @@ func (s *ProtocolServer) GetStatistics() map[string]interface{} {
 	if s.usbServer != nil {
 		stats["usb"] = s.usbServer.GetStats()
 	}
-	stats["devices"] = len(s.deviceMgr.GetAllDevices())
+	stats["devices"] = len(s.deviceMgr.GetActiveDevices())
 	return stats
 }
