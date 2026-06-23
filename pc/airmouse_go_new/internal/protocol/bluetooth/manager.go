@@ -242,21 +242,27 @@ func (m *Manager) DisconnectDevice(addr string) error {
 }
 
 func (m *Manager) readHIDReports(conn *BLEConnection) {
-    for {
-        select {
-        case <-conn.stopChan:
-            return
-        default:
-            time.Sleep(10 * time.Millisecond)
-            // Simulate HID report
-            report := HIDReport{
-                X:      int16(rand.Intn(20) - 10),
-                Y:      int16(rand.Intn(20) - 10),
-                Buttons: 0,
-            }
-            conn.HIDReport <- report
-        }
-    }
+	for {
+		select {
+		case <-conn.stopChan:
+			return
+		default:
+			time.Sleep(10 * time.Millisecond)
+			// Simulate HID report
+			report := HIDReport{
+				X:       int16(rand.Intn(20) - 10),
+				Y:       int16(rand.Intn(20) - 10),
+				Buttons: 0,
+			}
+			select {
+			case <-conn.stopChan:
+				return
+			case conn.HIDReport <- report:
+			default:
+				// Drop stale reports if the reader falls behind.
+			}
+		}
+	}
 }
 
 func (m *Manager) processHIDReports() {
