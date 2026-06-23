@@ -1630,3 +1630,9 @@
 2026-06-24 01:54:19.197 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
 2026-06-24 01:54:19.202 [INFO] main.go:125: Protocol lifecycle event: start
 2026-06-24 01:54:19.202 [INFO] main.go:36: Nearby BLE device discovered: AirMouse Device (AA:BB:CC:DD:EE:FF)
+2026-06-24 01:59:19.278 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 01:59:19.281 [INFO] main.go:140: Device lifecycle event: type=registered id=a1688b112184f487b13425370b16681f name=Unknown
+2026-06-24 01:59:52.159 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 01:59:52.162 [INFO] main.go:140: Device lifecycle event: type=registered id=001f4c8a7a39ddd72d16d48156d861dc name=Unknown
+2026-06-24 02:01:36.665 [INFO] main.go:78: Shutting down...
+2026-06-24 02:01:36.666 [INFO] main.go:36: Device manager stopped
