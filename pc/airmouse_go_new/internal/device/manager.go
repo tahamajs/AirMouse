@@ -699,7 +699,7 @@ func (m *DeviceManager) GetDeviceByMAC(mac string) *DeviceInfo {
 	return nil
 }
 
-// GetActiveDevices returns active devices
+// GetActiveDevices returns devices that are still connected and recently active.
 func (m *DeviceManager) GetActiveDevices() []*DeviceInfo {
 	if !m.initialized {
 		return []*DeviceInfo{}
@@ -711,7 +711,7 @@ func (m *DeviceManager) GetActiveDevices() []*DeviceInfo {
 	threshold := 30 * time.Second
 
 	for _, d := range m.devices {
-		if time.Since(d.LastActive) < threshold {
+		if d.Status == StatusConnected && time.Since(d.LastActive) < threshold {
 			active = append(active, d)
 		}
 	}

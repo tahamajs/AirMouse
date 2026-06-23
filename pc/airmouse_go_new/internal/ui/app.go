@@ -401,7 +401,7 @@ func (a *App) refreshConnectionSummary() {
 	}
 
 	ip := utils.GetLocalIP()
-	a.connectionStatus.SetText(fmt.Sprintf("🟢 Connected: %d device(s)", deviceCount))
+	a.connectionStatus.SetText(fmt.Sprintf("🟢 Active devices: %d", deviceCount))
 	if a.summaryStatus != nil {
 		a.summaryStatus.SetText(fmt.Sprintf(
 			"Waiting for approval on %s:%d | ws://%s:%d/ws | UDP %d | Theme: %s",
@@ -596,7 +596,7 @@ func (a *App) showNetworkDiagnostics() {
 		widget.NewLabel(fmt.Sprintf("TCP Port: %d", a.cfg.Port)),
 		widget.NewLabel(fmt.Sprintf("WebSocket Port: %d", a.cfg.WebSocketPort)),
 		widget.NewLabel(fmt.Sprintf("UDP Port: %d", a.cfg.UDPPort)),
-		widget.NewLabel(fmt.Sprintf("Connected Devices: %d", deviceCount)),
+		widget.NewLabel(fmt.Sprintf("Active Devices: %d", deviceCount)),
 		widget.NewButton("Run Tests", func() {}),
 	)
 	dialog.ShowCustom("Network Diagnostics", "Close", content, a.window)
