@@ -380,7 +380,7 @@ func (a *App) refreshConnectionSummary() {
 
 	deviceCount := 0
 	if a.deviceMgr != nil {
-		deviceCount = len(a.deviceMgr.GetAllDevices())
+		deviceCount = len(a.deviceMgr.GetActiveDevices())
 	}
 	utils.LogDebug("Refreshing connection summary: server_nil=%t running=%t devices=%d", a.server == nil, a.server != nil && a.server.IsRunning(), deviceCount)
 

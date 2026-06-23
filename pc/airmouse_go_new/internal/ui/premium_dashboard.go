@@ -195,7 +195,7 @@ func (d *PremiumDashboard) updateStats() {
 		return
 	}
 	clicks, dbl, right, scroll := d.mouse.Stats()
-	devices := d.deviceMgr.GetAllDevices()
+	devices := d.deviceMgr.GetActiveDevices()
 	deviceCount := len(devices)
 
 	// Update device info
