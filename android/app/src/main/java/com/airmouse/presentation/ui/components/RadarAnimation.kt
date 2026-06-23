@@ -48,7 +48,7 @@ fun RadarAnimation(
             val centerY = size / 2f
             val radius = size / 2f - 10f
             
-            // Background circles
+            
             drawCircle(
                 color = Color(0xFF00BCD4).copy(alpha = 0.1f),
                 radius = radius,
@@ -70,7 +70,7 @@ fun RadarAnimation(
                 style = Stroke(width = 1f)
             )
             
-            // Cross lines
+            
             drawLine(
                 color = Color(0xFF00BCD4).copy(alpha = 0.2f),
                 start = Offset(centerX, centerY - radius),
@@ -84,7 +84,7 @@ fun RadarAnimation(
                 strokeWidth = 1f
             )
             
-            // Rotating radar beam
+            
             val angleRad = Math.toRadians(rotation.toDouble()).toFloat()
             val endX = centerX + radius * cos(angleRad)
             val endY = centerY + radius * sin(angleRad)
@@ -96,7 +96,7 @@ fun RadarAnimation(
                 strokeWidth = 2f
             )
             
-            // Radar sweep
+            
             drawArc(
                 color = Color(0xFF00BCD4).copy(alpha = 0.15f),
                 startAngle = rotation - 15f,
@@ -106,14 +106,14 @@ fun RadarAnimation(
                 size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
             )
             
-            // Center dot
+            
             drawCircle(
                 color = Color(0xFF00BCD4),
                 radius = 4f,
                 center = Offset(centerX, centerY)
             )
             
-            // Pulse ring
+            
             if (isActive) {
                 drawCircle(
                     color = Color(0xFF00BCD4).copy(alpha = 0.3f * (1 - pulse)),

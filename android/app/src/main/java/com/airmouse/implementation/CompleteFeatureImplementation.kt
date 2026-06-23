@@ -200,12 +200,17 @@ class CompleteFeatureImplementation @Inject constructor(
 
 
         private fun vibrate(duration: Long) {
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(duration)
+            val vibrator = ContextCompat.getSystemService(context, Vibrator::class.java) ?: return
+            if (!vibrator.hasVibrator()) return
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(duration)
+                }
+            } catch (_: SecurityException) {
+                // Ignore when vibration is not allowed.
             }
         }
     }

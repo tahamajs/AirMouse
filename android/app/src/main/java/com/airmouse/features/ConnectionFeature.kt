@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/ConnectionFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.ConnectionConfig
@@ -33,7 +33,7 @@ class ConnectionFeature @Inject constructor(
     private val _lastUsedServer = MutableStateFlow<ConnectionConfig?>(null)
     val lastUsedServer: StateFlow<ConnectionConfig?> = _lastUsedServer.asStateFlow()
 
-    // Combined state
+    
     data class ConnectionFeatureState(
         val status: ConnectionStatus = ConnectionStatus.DISCONNECTED,
         val quality: ConnectionQuality = ConnectionQuality(),
@@ -53,22 +53,26 @@ class ConnectionFeature @Inject constructor(
     }
 
     private fun observeStatus() {
-        // Combine status and other flows
-        // In production, would use combine operator
+        
+        
     }
 
     private fun observeQuality() {
-        // Observe quality changes
+        
     }
 
     private fun loadLastServer() {
-        // Load last used server from preferences
+        
     }
 
-    suspend fun connect(ip: String, port: Int = 8080, protocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET): Result<Boolean> {
+    suspend fun connect(
+        ip: String,
+        port: Int = ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
+        protocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET
+    ): Result<Boolean> {
         val result = connectToServerUseCase.connect(ip, port, protocol)
         if (result.isSuccess) {
-            _lastUsedServer.value = ConnectionConfig(ip, port, protocol)
+            _lastUsedServer.value = ConnectionConfig(ip, port, protocol).normalized()
         }
         return result
     }

@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
 
-// --- Target Data Models to satisfy your UI Architecture and ViewModel ---
+
 
 data class VoiceCommand(
     val keyword: String,
@@ -149,7 +149,7 @@ class VoiceCommandsViewModel @Inject constructor(
                 }
                 _uiState.update { it.copy(customCommands = commands) }
             } catch (e: Exception) {
-                // Ignore parsing errors
+                
             }
         }
     }
@@ -213,7 +213,7 @@ class VoiceCommandsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            delay(5000) // Simulate listening for 5 seconds
+            delay(5000) 
             if (_uiState.value.isListening) {
                 processVoiceInput("click", 0.9f)
                 if (!_uiState.value.continuousListening) {
@@ -449,7 +449,7 @@ class VoiceCommandsViewModel @Inject constructor(
                 toneGenerator.release()
             }
         } catch (e: Exception) {
-            // Ignore
+            
         }
     }
 
@@ -459,7 +459,7 @@ class VoiceCommandsViewModel @Inject constructor(
             toneGenerator.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 150)
             toneGenerator.release()
         } catch (e: Exception) {
-            // Ignore
+            
         }
     }
 
@@ -468,17 +468,22 @@ class VoiceCommandsViewModel @Inject constructor(
         try {
             textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
         } catch (e: Exception) {
-            // TTS handling recovery fallback
+            
         }
     }
 
     private fun vibrate(duration: Long) {
-        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(duration)
+        val vibrator = ContextCompat.getSystemService(context, Vibrator::class.java) ?: return
+        if (!vibrator.hasVibrator()) return
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(duration)
+            }
+        } catch (_: SecurityException) {
+            
         }
     }
 

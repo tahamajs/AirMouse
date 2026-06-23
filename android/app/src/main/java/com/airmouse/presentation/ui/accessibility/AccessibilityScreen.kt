@@ -75,7 +75,7 @@ fun AccessibilityScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Category Tabs using modern Enum entries API
+                
                 ScrollableTabRow(
                     selectedTabIndex = selectedCategory.ordinal,
                     containerColor = Color.Transparent,
@@ -103,7 +103,7 @@ fun AccessibilityScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Fixed: Wrapped dynamic composable functions inside item {} block closures
+                
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
@@ -124,7 +124,7 @@ fun AccessibilityScreen(
     }
 }
 
-// ----- Custom Essential UI Architecture Atoms -----
+
 
 @Composable
 fun GlassCard(
@@ -194,7 +194,7 @@ fun AnimatedSwitch(
     }
 }
 
-// ----- PascalCase Corrected Layout Components -----
+
 
 @Composable
 private fun DisplaySettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {

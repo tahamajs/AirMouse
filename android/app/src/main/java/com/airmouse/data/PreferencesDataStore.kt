@@ -10,15 +10,11 @@ import kotlinx.coroutines.runBlocking
 
 private val Context.dataStore by preferencesDataStore(name = "airmouse")
 
-/**
- * Central preferences manager using DataStore.
- * Contains all user settings, calibration data, gesture counters, profiles, themes, etc.
- */
 class PreferencesDataStore(context: Context) {
 
     private val dataStore = context.dataStore
 
-    // -------------------- Settings --------------------
+    
     private val SENSITIVITY = floatPreferencesKey("sensitivity")
     private val CLICK_THRESHOLD = floatPreferencesKey("click_threshold")
     private val DOUBLE_CLICK_INTERVAL = longPreferencesKey("double_click_interval")
@@ -29,7 +25,7 @@ class PreferencesDataStore(context: Context) {
     private val HAPTIC_ENABLED = booleanPreferencesKey("haptic_enabled")
     private val LAST_IP = stringPreferencesKey("last_ip")
 
-    // -------------------- Calibration data --------------------
+    
     private val GYRO_BIAS_X = floatPreferencesKey("gyro_bias_x")
     private val GYRO_BIAS_Y = floatPreferencesKey("gyro_bias_y")
     private val GYRO_BIAS_Z = floatPreferencesKey("gyro_bias_z")
@@ -47,35 +43,35 @@ class PreferencesDataStore(context: Context) {
     private val MAG_SCALE_Z = floatPreferencesKey("mag_scale_z")
     private val IS_CALIBRATED = booleanPreferencesKey("is_calibrated")
 
-    // -------------------- Gesture counters --------------------
+    
     private val CLICK_COUNT = intPreferencesKey("click_count")
     private val SCROLL_COUNT = intPreferencesKey("scroll_count")
     private val RIGHT_CLICK_COUNT = intPreferencesKey("right_click_count")
     private val DOUBLE_CLICK_COUNT = intPreferencesKey("double_click_count")
 
-    // -------------------- Themes --------------------
+    
     private val THEME = stringPreferencesKey("theme")
 
-    // -------------------- Accessibility --------------------
+    
     private val ANNOUNCE_MOVEMENT = booleanPreferencesKey("announce_movement")
     private val ANNOUNCE_CLICKS = booleanPreferencesKey("announce_clicks")
 
-    // -------------------- Edge gestures --------------------
+    
     private val EDGE_GESTURES_ENABLED = booleanPreferencesKey("edge_gestures_enabled")
 
-    // -------------------- Custom gestures (stored as JSON strings) --------------------
+    
     private fun customGestureKey(action: String) = stringPreferencesKey("custom_gesture_${action.replace(" ", "_")}")
 
-    // -------------------- Profiles (stored as JSON strings) --------------------
+    
     private fun profileKey(name: String) = stringPreferencesKey("profile_$name")
 
-    // -------------------- Server logs --------------------
+    
     private val SERVER_LOGS = stringPreferencesKey("server_logs")
 
-    // -------------------- Onboarding --------------------
+    
     private val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
-    // ==================== FLOWS (observable) ====================
+    
     val lastIpFlow: Flow<String> = dataStore.data.map { it[LAST_IP] ?: "" }
     val sensitivityFlow: Flow<Float> = dataStore.data.map { it[SENSITIVITY] ?: 0.5f }
     val clickThresholdFlow: Flow<Float> = dataStore.data.map { it[CLICK_THRESHOLD] ?: 5.0f }
@@ -91,7 +87,7 @@ class PreferencesDataStore(context: Context) {
     val edgeGesturesEnabledFlow: Flow<Boolean> = dataStore.data.map { it[EDGE_GESTURES_ENABLED] ?: false }
     val isCalibratedFlow: Flow<Boolean> = dataStore.data.map { it[IS_CALIBRATED] ?: false }
 
-    // ==================== SUSPEND GETTERS (read once) ====================
+    
     suspend fun getSensitivity(): Float = dataStore.data.map { it[SENSITIVITY] ?: 0.5f }.first()
     suspend fun getClickThreshold(): Float = dataStore.data.map { it[CLICK_THRESHOLD] ?: 5.0f }.first()
     suspend fun getDoubleClickInterval(): Long = dataStore.data.map { it[DOUBLE_CLICK_INTERVAL] ?: 400L }.first()
@@ -107,7 +103,7 @@ class PreferencesDataStore(context: Context) {
     suspend fun isEdgeGesturesEnabled(): Boolean = dataStore.data.map { it[EDGE_GESTURES_ENABLED] ?: false }.first()
     suspend fun isOnboardingCompleted(): Boolean = dataStore.data.map { it[ONBOARDING_COMPLETED] ?: false }.first()
 
-    // Calibration data
+    
     suspend fun getGyroBias(): FloatArray = floatArrayOf(
         dataStore.data.map { it[GYRO_BIAS_X] ?: 0f }.first(),
         dataStore.data.map { it[GYRO_BIAS_Y] ?: 0f }.first(),
@@ -135,30 +131,30 @@ class PreferencesDataStore(context: Context) {
     )
     suspend fun isCalibrated(): Boolean = dataStore.data.map { it[IS_CALIBRATED] ?: false }.first()
 
-    // Gesture counters
+    
     suspend fun getClickCount(): Int = dataStore.data.map { it[CLICK_COUNT] ?: 0 }.first()
     suspend fun getScrollCount(): Int = dataStore.data.map { it[SCROLL_COUNT] ?: 0 }.first()
     suspend fun getRightClickCount(): Int = dataStore.data.map { it[RIGHT_CLICK_COUNT] ?: 0 }.first()
     suspend fun getDoubleClickCount(): Int = dataStore.data.map { it[DOUBLE_CLICK_COUNT] ?: 0 }.first()
 
-    // Server logs
+    
     suspend fun getServerLogs(): List<String> {
         val joined = dataStore.data.map { it[SERVER_LOGS] ?: "" }.first()
         return if (joined.isBlank()) emptyList() else joined.split("\n")
     }
 
-    // Custom gesture value
+    
     suspend fun getCustomGesture(action: String): Float {
         val key = customGestureKey(action)
         return dataStore.data.map { it[key]?.toFloatOrNull() ?: 0f }.first()
     }
 
-    // Profile data (as JSON string, parse later)
+    
     suspend fun getProfile(name: String): String? {
         return dataStore.data.map { it[profileKey(name)] }.first()
     }
 
-    // ==================== SUSPEND SETTERS ====================
+    
     suspend fun setSensitivity(value: Float) = dataStore.edit { it[SENSITIVITY] = value }
     suspend fun setClickThreshold(value: Float) = dataStore.edit { it[CLICK_THRESHOLD] = value }
     suspend fun setDoubleClickInterval(value: Long) = dataStore.edit { it[DOUBLE_CLICK_INTERVAL] = value }
@@ -221,7 +217,7 @@ class PreferencesDataStore(context: Context) {
         return all.asMap().keys.filter { it.name.startsWith("profile_") }.map { it.name.removePrefix("profile_") }
     }
 
-    // Blocking versions for compatibility with old code (use sparingly)
+    
     fun setSensitivityBlocking(value: Float) = runBlocking { setSensitivity(value) }
     fun setClickThresholdBlocking(value: Float) = runBlocking { setClickThreshold(value) }
     fun setLastIpBlocking(ip: String) = runBlocking { setLastIp(ip) }

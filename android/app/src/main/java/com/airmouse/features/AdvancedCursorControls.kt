@@ -1,4 +1,4 @@
-// AdvancedCursorControls.kt
+
 package com.airmouse.features
 
 import android.content.Context
@@ -8,24 +8,18 @@ import kotlin.math.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Advanced cursor controls: speed curves, sensitivity zones, edge scrolling,
- * momentum/inertia, and snap‑to‑grid.
- *
- * All settings are persisted in PreferencesManager and applied in real time.
- */
 @Singleton
 class AdvancedCursorControls @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val prefs: PreferencesManager
 ) {
 
-    // ==================== 1. Speed curves ====================
+    
     enum class SpeedCurve {
-        LINEAR,      // Direct 1:1 mapping
-        EXPONENTIAL, // Faster as you tilt more
-        LOGARITHMIC, // Fine control near center
-        CUSTOM       // User-defined curve via points
+        LINEAR,      
+        EXPONENTIAL, 
+        LOGARITHMIC, 
+        CUSTOM       
     }
 
     var speedCurve: SpeedCurve
@@ -50,9 +44,9 @@ class AdvancedCursorControls @Inject constructor(
         prefs.putString("cursor_curve_points", str)
     }
 
-    // ==================== 2. Sensitivity zones ====================
+    
     data class SensitivityZone(
-        val angleStart: Float,   // degrees
+        val angleStart: Float,   
         val angleEnd: Float,
         val multiplier: Float,
         val acceleration: Float
@@ -92,11 +86,11 @@ class AdvancedCursorControls @Inject constructor(
         SensitivityZone(45f, 90f, 4f, 2f)
     )
 
-    // ==================== 3. Edge scrolling (screen edges) ====================
+    
     data class EdgeScrollConfig(
         val enabled: Boolean = true,
         val sensitivity: Float = 1.5f,
-        val deadzone: Int = 50,        // pixels from edge
+        val deadzone: Int = 50,        
         val maxSpeed: Int = 20
     )
 
@@ -114,7 +108,7 @@ class AdvancedCursorControls @Inject constructor(
             prefs.putInt("edge_scroll_max_speed", value.maxSpeed)
         }
 
-    // ==================== 4. Momentum / inertia ====================
+    
     data class MomentumConfig(
         val enabled: Boolean = true,
         val friction: Float = 0.95f,
@@ -136,7 +130,7 @@ class AdvancedCursorControls @Inject constructor(
             prefs.putLong("momentum_duration", value.duration)
         }
 
-    // ==================== 5. Snap to grid / magnetic edges ====================
+    
     data class SnapConfig(
         val enabled: Boolean = false,
         val gridSize: Int = 10,
@@ -155,25 +149,21 @@ class AdvancedCursorControls @Inject constructor(
             prefs.putFloat("snap_strength", value.strength)
         }
 
-    // ==================== Core method: apply to raw deltas ====================
-    /**
-     * Apply all enabled cursor enhancements to raw movement deltas (dx, dy).
-     * Returns the final (dx, dy) to be sent over the network.
-     */
+    
     fun apply(dx: Float, dy: Float, tiltAngle: Float = 0f, screenX: Int = 0, screenY: Int = 0): Pair<Float, Float> {
         var newDx = dx
         var newDy = dy
 
-        // 1. Speed curve mapping (per‑axis) – if custom curve, interpolate
+        
         newDx = applyCurve(newDx)
         newDy = applyCurve(newDy)
 
-        // 2. Sensitivity zones based on tilt angle (e.g., angle of phone)
+        
         val multiplier = getZoneMultiplier(tiltAngle)
         newDx *= multiplier
         newDy *= multiplier
 
-        // 3. Edge scrolling (if enabled and finger near screen edge – used in touchpad mode)
+        
         if (edgeScrollConfig.enabled && screenX != 0 && screenY != 0) {
             val screenWidth = context.resources.displayMetrics.widthPixels
             val screenHeight = context.resources.displayMetrics.heightPixels
@@ -183,7 +173,7 @@ class AdvancedCursorControls @Inject constructor(
             newDy += edgeDy
         }
 
-        // 4. Snap to grid (if enabled)
+        
         if (snapConfig.enabled) {
             newDx = snapToGrid(newDx, snapConfig.gridSize, snapConfig.strength)
             newDy = snapToGrid(newDy, snapConfig.gridSize, snapConfig.strength)
@@ -192,7 +182,7 @@ class AdvancedCursorControls @Inject constructor(
         return newDx to newDy
     }
 
-    // Helper: apply curve to a single axis value
+    
     private fun applyCurve(value: Float): Float {
         val signValue = sign(value)
         val absVal = abs(value)
@@ -200,7 +190,7 @@ class AdvancedCursorControls @Inject constructor(
             SpeedCurve.LINEAR -> value
             SpeedCurve.EXPONENTIAL -> signValue * (absVal.pow(1.5f))
             SpeedCurve.LOGARITHMIC -> {
-                // Fixed log calculations to explicitly operate over Floats
+                
                 val logNumerator = ln(1f + absVal * 10f)
                 val logDenominator = ln(11f)
                 signValue * (logNumerator / logDenominator) * absVal

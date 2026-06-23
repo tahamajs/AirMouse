@@ -7,36 +7,28 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsetsController
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.airmouse.utils.PreferencesManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
-/**
- * Base Activity for all UI screens in Air Mouse app.
- * Provides common functionality:
- * - Permission handling
- * - Loading states
- * - Error handling
- * - Theme management
- * - Debug overlay support
- */
 abstract class BaseActivity : AppCompatActivity() {
 
     protected lateinit var prefs: PreferencesManager
 
-    // Debug overlay
+    
     private var debugOverlay: DebugOverlay? = null
     protected var isDebugOverlayEnabled = false
 
-    // Loading state
+    
     private var loadingView: View? = null
     protected var isShowingLoading = false
 
@@ -44,7 +36,6 @@ abstract class BaseActivity : AppCompatActivity() {
         private const val DEBUG_OVERLAY_PREF = "debug_overlay_enabled"
     }
 
-    // FIXED: Permission Launchers must be initialized during creation phase, not dynamically in a function
     private var singlePermissionCallback: (() -> Unit)? = null
     private var singlePermissionDeniedCallback: (() -> Unit)? = null
     private val requestSinglePermissionLauncher = registerForActivityResult(
@@ -74,7 +65,7 @@ abstract class BaseActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         prefs = PreferencesManager(this)
-        isDebugOverlayEnabled = prefs.getBoolean(DEBUG_OVERLAY_PREF, false)
+        isDebugOverlayEnabled = prefs.getBoolean(DEBUG_OVERLAY_PREF, defaultValue = false)
 
         initDebugOverlay()
     }
@@ -97,7 +88,7 @@ abstract class BaseActivity : AppCompatActivity() {
         hideLoading()
     }
 
-    // ==================== THEME MANAGEMENT ====================
+    
 
     private fun applyTheme() {
         val theme = prefs.getTheme()
@@ -112,7 +103,7 @@ abstract class BaseActivity : AppCompatActivity() {
         recreate()
     }
 
-    // ==================== DEBUG OVERLAY ====================
+    
 
     private fun initDebugOverlay() {
         debugOverlay = DebugOverlay(this).apply {
@@ -133,11 +124,7 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
-    protected fun setSensorServiceForDebug(service: com.airmouse.sensors.SensorService) {
-        debugOverlay?.setSensorService(service)
-    }
-
-    // ==================== PERMISSION HANDLING ====================
+    
 
     protected fun checkPermission(permission: String): Boolean {
         return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
@@ -174,7 +161,7 @@ abstract class BaseActivity : AppCompatActivity() {
         requestMultiplePermissionsLauncher.launch(missingPermissions)
     }
 
-    // ==================== LOADING STATE ====================
+    
 
     protected fun showLoading(containerId: Int = android.R.id.content) {
         if (isShowingLoading) return
@@ -197,7 +184,7 @@ abstract class BaseActivity : AppCompatActivity() {
         isShowingLoading = false
     }
 
-    // ==================== TOAST & SNACKBAR ====================
+    
 
     protected fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
         Toast.makeText(this, message, duration).show()
@@ -215,7 +202,7 @@ abstract class BaseActivity : AppCompatActivity() {
         snackbar.show()
     }
 
-    // ==================== DIALOGS ====================
+    
 
     protected fun showConfirmDialog(
         title: String,
@@ -231,75 +218,23 @@ abstract class BaseActivity : AppCompatActivity() {
             .show()
     }
 
-    protected fun showInfoDialog(title: String, message: String) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-    // ==================== UTILITIES ====================
-
-    protected fun <T> safeCall(block: () -> T, onError: ((Exception) -> Unit)? = null): T? {
-        return try {
-            block()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            onError?.invoke(e)
-            showToast("Error: ${e.message}")
-            null
-        }
-    }
+    
 
     protected fun setFullScreen() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    )
-        }
+        WindowCompat.setDecorFitsSystemWindows(window, false)
     }
 
     protected fun setStatusBarColor(colorResId: Int) {
         window.statusBarColor = ContextCompat.getColor(this, colorResId)
         val isLight = isColorLight(ContextCompat.getColor(this, colorResId))
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val controller = window.insetsController
-            if (controller != null) {
-                if (isLight) {
-                    controller.setSystemBarsAppearance(
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                    )
-                } else {
-                    controller.setSystemBarsAppearance(
-                        0,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                    )
-                }
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            if (isLight) {
-                window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-            } else {
-                window.decorView.systemUiVisibility = window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
-            }
-        }
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = isLight
     }
 
     private fun isColorLight(color: Int): Boolean {
         val darkness = 1 - (0.299 * android.graphics.Color.red(color) + 0.587 * android.graphics.Color.green(color) + 0.114 * android.graphics.Color.blue(color)) / 255
         return darkness < 0.5
     }
-
-    // ==================== NETWORK STATUS ====================
 
     protected fun isNetworkAvailable(): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
@@ -309,8 +244,6 @@ abstract class BaseActivity : AppCompatActivity() {
                 capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
                 capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
     }
-
-    // ==================== LIFECYCLE SCOPE HELPERS ====================
 
     protected fun launchCoroutine(block: suspend () -> Unit) {
         lifecycleScope.launch {

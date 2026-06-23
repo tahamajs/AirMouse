@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/ProximityFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.ProximityConfig
@@ -44,7 +44,7 @@ class ProximityFeature @Inject constructor(
     }
 
     private fun startObservingProximityState() {
-        // In production, observe proximity state
+        
     }
 
     suspend fun getProximityState(): ProximityState {

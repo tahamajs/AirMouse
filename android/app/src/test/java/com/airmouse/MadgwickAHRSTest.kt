@@ -28,19 +28,19 @@ class MadgwickAHRSTest {
     @Test
     fun `6-axis mode fallback when magnetometer is zero`() {
         val madgwick = MadgwickAHRS(beta = 1.0f)
-        // Simulate a rotation without magnetometer
+        
         madgwick.update(1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0.1f)
         
-        // Should have updated roll
+        
         assertNotEquals(0f, madgwick.getRoll(), 0.001f)
     }
 
     @Test
     fun `pitch is clamped correctly`() {
         val madgwick = MadgwickAHRS()
-        // Madgwick internal state update that would result in high pitch
-        // We'll just verify the getter doesn't return NaN for extreme inputs
-        // (This tests the max(-1f, min(1f, ...)) fix I added)
+        
+        
+        
         assertTrue(!madgwick.getPitch().isNaN())
     }
 

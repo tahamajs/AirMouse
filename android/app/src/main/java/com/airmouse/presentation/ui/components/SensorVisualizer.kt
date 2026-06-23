@@ -67,7 +67,7 @@ fun SensorVisualizer(
             .size(visualizerSize)
             .padding(16.dp)
     ) {
-        // 3D Phone representation
+        
         Canvas(modifier = Modifier.fillMaxSize()) {
             val canvasWidth = this.size.width
             val canvasHeight = this.size.height
@@ -76,7 +76,7 @@ fun SensorVisualizer(
             val phoneWidth = canvasWidth * 0.7f
             val phoneHeight = canvasHeight * 0.8f
             
-            // Phone shadow
+            
             drawRoundRect(
                 color = Color.Black.copy(alpha = 0.3f),
                 topLeft = Offset(centerX - phoneWidth/2 + 4, centerY - phoneHeight/2 + 4),
@@ -84,9 +84,9 @@ fun SensorVisualizer(
                 cornerRadius = CornerRadius(20f)
             )
             
-            // Apply 3D rotation
+            
             rotate(degrees = animatedYaw) {
-                // Phone body
+                
                 drawRoundRect(
                     color = Color(0xFF1A1D24),
                     topLeft = Offset(centerX - phoneWidth/2, centerY - phoneHeight/2),
@@ -94,7 +94,7 @@ fun SensorVisualizer(
                     cornerRadius = CornerRadius(20f)
                 )
                 
-                // Border glow
+                
                 drawRoundRect(
                     color = Color(0xFF00BCD4).copy(alpha = 0.3f),
                     topLeft = Offset(centerX - phoneWidth/2, centerY - phoneHeight/2),
@@ -103,7 +103,7 @@ fun SensorVisualizer(
                     style = Stroke(width = 2f)
                 )
                 
-                // Screen
+                
                 drawRoundRect(
                     color = Color(0xFF0F1115),
                     topLeft = Offset(centerX - phoneWidth/2 + 8, centerY - phoneHeight/2 + 8),
@@ -111,7 +111,7 @@ fun SensorVisualizer(
                     cornerRadius = CornerRadius(12f)
                 )
                 
-                // Crosshair
+                
                 drawLine(
                     color = Color.White.copy(alpha = 0.2f),
                     start = Offset(centerX - 30f, centerY),
@@ -125,7 +125,7 @@ fun SensorVisualizer(
                     strokeWidth = 1f
                 )
                 
-                // Orientation indicator dot
+                
                 val dotX = centerX + (animatedRoll / 45f) * (phoneWidth / 3)
                 val dotY = centerY + (animatedPitch / 45f) * (phoneHeight / 3)
                 
@@ -138,7 +138,7 @@ fun SensorVisualizer(
                     )
                 )
                 
-                // Dot glow
+                
                 drawCircle(
                     color = Color(0xFF4CAF50).copy(alpha = 0.3f),
                     radius = 14f,
@@ -150,7 +150,7 @@ fun SensorVisualizer(
             }
         }
 
-        // Labels
+        
         if (showLabels) {
             Column(
                 modifier = Modifier
@@ -261,7 +261,7 @@ fun GyroAxisIndicator(label: String, value: Float, maxRange: Float, color: Color
             )
         }
         
-        // Indicator arrow
+        
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween

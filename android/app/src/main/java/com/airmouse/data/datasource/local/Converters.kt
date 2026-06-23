@@ -6,7 +6,7 @@ import com.google.gson.reflect.TypeToken
 import com.airmouse.domain.model.GestureType
 import java.util.Date
 
-// Import the moved data classes
+
 import com.airmouse.data.datasource.local.CalibrationPrefsData
 import com.airmouse.data.datasource.local.SensorData
 import com.airmouse.data.datasource.local.GestureData
@@ -16,7 +16,7 @@ class Converters {
 
     private val gson = Gson()
 
-    // ==================== Date Converters ====================
+    
 
     @TypeConverter
     fun fromTimestamp(value: Long?): Date? {
@@ -28,7 +28,7 @@ class Converters {
         return date?.time
     }
 
-    // ==================== String List Converters ====================
+    
 
     @TypeConverter
     fun fromStringList(value: String?): List<String>? {
@@ -43,7 +43,7 @@ class Converters {
         return gson.toJson(list)
     }
 
-    // ==================== Float Array Converters ====================
+    
 
     @TypeConverter
     fun fromFloatArray(value: String?): FloatArray? {
@@ -59,7 +59,7 @@ class Converters {
         return gson.toJson(array.toList())
     }
 
-    // ==================== Float Array List Converters ====================
+    
 
     @TypeConverter
     fun fromFloatArrayList(value: String?): List<FloatArray>? {
@@ -76,7 +76,7 @@ class Converters {
         return gson.toJson(outerList)
     }
 
-    // ==================== Int List Converters ====================
+    
 
     @TypeConverter
     fun fromIntList(value: String?): List<Int>? {
@@ -91,7 +91,7 @@ class Converters {
         return gson.toJson(list)
     }
 
-    // ==================== Long List Converters ====================
+    
 
     @TypeConverter
     fun fromLongList(value: String?): List<Long>? {
@@ -106,7 +106,7 @@ class Converters {
         return gson.toJson(list)
     }
 
-    // ==================== Double List Converters ====================
+    
 
     @TypeConverter
     fun fromDoubleList(value: String?): List<Double>? {
@@ -121,7 +121,7 @@ class Converters {
         return gson.toJson(list)
     }
 
-    // ==================== Map Converters ====================
+    
 
     @TypeConverter
     fun fromStringMap(value: String?): Map<String, String>? {
@@ -149,7 +149,7 @@ class Converters {
         return gson.toJson(map)
     }
 
-    // ==================== Gesture Type Converters ====================
+    
 
     @TypeConverter
     fun fromGestureType(value: String?): GestureType? {
@@ -165,7 +165,7 @@ class Converters {
         return type?.name
     }
 
-    // ==================== Boolean Converters ====================
+    
 
     @TypeConverter
     fun fromBoolean(value: Int?): Boolean? {
@@ -177,7 +177,7 @@ class Converters {
         return value?.let { if (it) 1 else 0 }
     }
 
-    // ==================== Float Converters ====================
+    
 
     @TypeConverter
     fun fromFloat(value: String?): Float? {
@@ -189,7 +189,7 @@ class Converters {
         return value?.toString()
     }
 
-    // ==================== Double Converters ====================
+    
 
     @TypeConverter
     fun fromDouble(value: String?): Double? {
@@ -201,7 +201,7 @@ class Converters {
         return value?.toString()
     }
 
-    // ==================== Pair Converters ====================
+    
 
     @TypeConverter
     fun fromPair(value: String?): Pair<Float, Float>? {
@@ -217,7 +217,7 @@ class Converters {
         return gson.toJson(listOf(pair.first, pair.second))
     }
 
-    // ==================== Triple Converters ====================
+    
 
     @TypeConverter
     fun fromTriple(value: String?): Triple<Float, Float, Float>? {
@@ -233,7 +233,7 @@ class Converters {
         return gson.toJson(listOf(triple.first, triple.second, triple.third))
     }
 
-    // ==================== Quadruple Converters ====================
+    
 
     @TypeConverter
     fun fromQuadruple(value: String?): Quadruple<Float, Float, Float, Float>? {
@@ -249,7 +249,7 @@ class Converters {
         return gson.toJson(listOf(quad.first, quad.second, quad.third, quad.fourth))
     }
 
-    // ==================== Calibration Data Converters ====================
+    
 
     @TypeConverter
     fun fromCalibrationData(value: String?): CalibrationPrefsData? {
@@ -263,7 +263,7 @@ class Converters {
         return gson.toJson(data)
     }
 
-    // ==================== Sensor Data Converters ====================
+    
 
     @TypeConverter
     fun fromSensorData(value: String?): SensorData? {
@@ -277,7 +277,7 @@ class Converters {
         return gson.toJson(data)
     }
 
-    // ==================== Gesture Data Converters ====================
+    
 
     @TypeConverter
     fun fromGestureData(value: String?): GestureData? {

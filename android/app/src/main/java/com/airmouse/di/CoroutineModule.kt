@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/di/CoroutineModule.kt
+
 package com.airmouse.di
 
 import dagger.Module
@@ -40,4 +40,4 @@ object CoroutineModule {
     @MainDispatcher
     @Provides
     fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
-}// app/src/main/java/com/airmouse/di/CoroutineModule.kt
+}

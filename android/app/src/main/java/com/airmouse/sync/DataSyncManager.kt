@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/sync/DataSyncManager.kt
+
 package com.airmouse.sync
 
 import com.airmouse.data.datasource.local.LocalDataSourceImpl
@@ -15,7 +15,7 @@ class DataSyncManager @Inject constructor(
 ) {
     private val scope = CoroutineScope(Dispatchers.IO)
     private var isSyncing = false
-    private var syncIntervalMs = 300000L // 5 minutes
+    private var syncIntervalMs = 300000L 
 
     data class SyncResult(
         val success: Boolean,
@@ -44,16 +44,16 @@ class DataSyncManager @Inject constructor(
         var itemsSynced = 0
 
         try {
-            // Sync calibration data
+            
             itemsSynced += syncCalibration()
 
-            // Sync gesture templates
+            
             itemsSynced += syncGestures()
 
-            // Sync statistics
+            
             itemsSynced += syncStatistics()
 
-            // Sync profiles
+            
             itemsSynced += syncProfiles()
 
         } catch (e: Exception) {
@@ -70,22 +70,22 @@ class DataSyncManager @Inject constructor(
     }
 
     private suspend fun syncCalibration(): Int {
-        // Sync calibration data with remote
+        
         return 0
     }
 
     private suspend fun syncGestures(): Int {
-        // Sync gesture templates
+        
         return 0
     }
 
     private suspend fun syncStatistics(): Int {
-        // Sync statistics data
+        
         return 0
     }
 
     private suspend fun syncProfiles(): Int {
-        // Sync user profiles
+        
         return 0
     }
 

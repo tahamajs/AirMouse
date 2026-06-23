@@ -4,9 +4,6 @@ import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
 import com.airmouse.R
 
-/**
- * Data class representing a single onboarding page
- */
 data class OnboardingItem(
     @DrawableRes val imageRes: Int,
     val title: String,

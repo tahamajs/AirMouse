@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/SensorUtils.kt
+
 package com.airmouse.utils
 
 import android.content.Context

@@ -1,4 +1,4 @@
-// app/src/test/java/com/airmouse/sensor/CalibrationHelperTest.kt
+
 package com.airmouse.sensor
 
 import android.content.Context
@@ -25,7 +25,7 @@ class CalibrationHelperTest {
         mockContext = mockk(relaxed = true)
         mockPrefs = mockk(relaxed = true)
         
-        // Mock PreferencesManager methods
+        
         every { mockPrefs.getFloat(any(), any()) } returns 0f
         every { mockPrefs.putFloat(any(), any()) } just runs
         every { mockPrefs.getBoolean(any(), any()) } returns false

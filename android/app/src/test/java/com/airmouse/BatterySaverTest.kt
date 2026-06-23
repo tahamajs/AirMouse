@@ -27,7 +27,7 @@ class BatterySaverTest {
 
     @Test
     fun `movement triggers normal sampling rate`() {
-        // Even if not in low power, calling onMovement should ensure SENSOR_DELAY_GAME
+        
         batterySaver.onMovement()
         verify(mockSensorService, atLeastOnce()).setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
         assertFalse(batterySaver.isLowPowerMode())
@@ -36,7 +36,7 @@ class BatterySaverTest {
     @Test
     fun `updateMovement with large delta triggers onMovement`() {
         batterySaver.updateMovement(0f, 0f)
-        batterySaver.updateMovement(0.5f, 0.5f) // Significant change
+        batterySaver.updateMovement(0.5f, 0.5f) 
         
         verify(mockSensorService, atLeastOnce()).setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
     }

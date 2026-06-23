@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/StatisticsDataSourceImpl.kt
+
 package com.airmouse.data.datasource.local
 
 import com.airmouse.domain.model.DailyStats
@@ -88,8 +88,8 @@ class StatisticsDataSourceImpl @Inject constructor(
     }
 
     override suspend fun getDailyStatsForRange(startDate: String, endDate: String): List<DailyStats> {
-        // In production, would query database
-        // For now, return empty list
+        
+        
         return emptyList()
     }
 
@@ -170,7 +170,7 @@ class StatisticsDataSourceImpl @Inject constructor(
                 ))
             }
         } catch (e: Exception) {
-            // Return empty list
+            
         }
         return list
     }
@@ -202,7 +202,7 @@ class StatisticsDataSourceImpl @Inject constructor(
         prefs.remove(sessionKey)
         prefs.remove(historicalKey)
         prefs.remove(gestureStatsKey)
-        // Remove all daily stats
+        
         val allKeys = prefs.getAllKeys()
         allKeys.filter { it.startsWith(dailyPrefix) }.forEach { key ->
             prefs.remove(key)

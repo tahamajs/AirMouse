@@ -1,3 +1,3 @@
-// DUPLICATE FILE - DEPRECATED
-// The active PreferencesManager is located at com.airmouse.utils.PreferencesManager
-// package com.airmouse.data.datasource.local
+package com.airmouse.data.datasource.local
+
+typealias PreferencesManager = com.airmouse.utils.PreferencesManager

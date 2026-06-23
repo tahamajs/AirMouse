@@ -1,12 +1,12 @@
-// app/src/main/java/com/airmouse/presentation/theme/Colors.kt
+
 package com.airmouse.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 
-// ==================== PRIMARY BRAND COLORS ====================
 
-// Deep Orange (Primary)
+
+
 val DeepOrange50 = Color(0xFFFBE9E7)
 val DeepOrange100 = Color(0xFFFFCCBC)
 val DeepOrange200 = Color(0xFFFFAB91)
@@ -18,9 +18,9 @@ val DeepOrange700 = Color(0xFFE64A19)
 val DeepOrange800 = Color(0xFFD84315)
 val DeepOrange900 = Color(0xFFBF360C)
 
-// ==================== SECONDARY / ACCENT COLORS ====================
 
-// Amber (Secondary)
+
+
 val Amber50 = Color(0xFFFFF8E1)
 val Amber100 = Color(0xFFFFECB3)
 val Amber200 = Color(0xFFFFE082)
@@ -32,9 +32,9 @@ val Amber700 = Color(0xFFFFA000)
 val Amber800 = Color(0xFFFF8F00)
 val Amber900 = Color(0xFFF57F17)
 
-// ==================== TERTIARY COLORS ====================
 
-// Teal (Tertiary)
+
+
 val Teal50 = Color(0xFFE0F2F1)
 val Teal100 = Color(0xFFB2DFDB)
 val Teal200 = Color(0xFF80CBC4)
@@ -46,9 +46,9 @@ val Teal700 = Color(0xFF00796B)
 val Teal800 = Color(0xFF00695C)
 val Teal900 = Color(0xFF004D40)
 
-// ==================== ADDITIONAL ACCENT COLORS ====================
 
-// Purple (Alternative Accent)
+
+
 val Purple50 = Color(0xFFF3E5F5)
 val Purple100 = Color(0xFFE1BEE7)
 val Purple200 = Color(0xFFCE93D8)
@@ -60,7 +60,7 @@ val Purple700 = Color(0xFF7B1FA2)
 val Purple800 = Color(0xFF6A1B9A)
 val Purple900 = Color(0xFF4A148C)
 
-// Blue (Alternative Accent)
+
 val Blue50 = Color(0xFFE3F2FD)
 val Blue100 = Color(0xFFBBDEFB)
 val Blue200 = Color(0xFF90CAF9)
@@ -72,7 +72,7 @@ val Blue700 = Color(0xFF1976D2)
 val Blue800 = Color(0xFF1565C0)
 val Blue900 = Color(0xFF0D47A1)
 
-// Green (Alternative Accent)
+
 val Green50 = Color(0xFFE8F5E9)
 val Green100 = Color(0xFFC8E6C9)
 val Green200 = Color(0xFFA5D6A7)
@@ -84,7 +84,7 @@ val Green700 = Color(0xFF388E3C)
 val Green800 = Color(0xFF2E7D32)
 val Green900 = Color(0xFF1B5E20)
 
-// Pink (Alternative Accent)
+
 val Pink50 = Color(0xFFFCE4EC)
 val Pink100 = Color(0xFFF8BBD0)
 val Pink200 = Color(0xFFF48FB1)
@@ -96,9 +96,9 @@ val Pink700 = Color(0xFFC2185B)
 val Pink800 = Color(0xFFAD1457)
 val Pink900 = Color(0xFF880E4F)
 
-// ==================== NEUTRAL COLORS ====================
 
-// Dark Theme Neutral Colors
+
+
 val DarkBackground = Color(0xFF0F1115)
 val DarkSurface = Color(0xFF1D2430)
 val DarkSurfaceVariant = Color(0xFF2B3341)
@@ -109,7 +109,7 @@ val DarkOnSurfaceMedium = Color(0xFF9CA3AF)
 val DarkOnSurfaceVariant = Color(0xFF96A0AE)
 val DarkOnSurfaceDisabled = Color(0xFF6B7280)
 
-// Light Theme Neutral Colors
+
 val LightBackground = Color(0xFFF8FAFC)
 val LightSurface = Color(0xFFFFFFFF)
 val LightSurfaceVariant = Color(0xFFF1F5F9)
@@ -120,7 +120,7 @@ val LightOnSurfaceMedium = Color(0xFF64748B)
 val LightOnSurfaceVariant = Color(0xFF94A3B8)
 val LightOnSurfaceDisabled = Color(0xFFCBD5E1)
 
-// Pure Black Theme
+
 val PureBlack = Color(0xFF000000)
 val PureBlackSurface = Color(0xFF0A0A0A)
 val PureBlackSurfaceVariant = Color(0xFF141414)
@@ -129,7 +129,7 @@ val PureBlackOnSurface = Color(0xFFF0F0F0)
 val PureBlackOnSurfaceMedium = Color(0xFFA0A0A0)
 val PureBlackOnSurfaceVariant = Color(0xFF808080)
 
-// High Contrast Theme
+
 val HighContrastPrimary = Color(0xFF000000)
 val HighContrastOnPrimary = Color(0xFFFFFFFF)
 val HighContrastBackground = Color(0xFFFFFFFF)
@@ -139,9 +139,9 @@ val HighContrastOnSurface = Color(0xFF000000)
 val HighContrastOnSurfaceMedium = Color(0xFF333333)
 val HighContrastOnSurfaceVariant = Color(0xFF666666)
 
-// ==================== SEMANTIC COLORS ====================
 
-// Status Colors
+
+
 val Success = Color(0xFF10B981)
 val SuccessLight = Color(0xFFD1FAE5)
 val SuccessDark = Color(0xFF065F46)
@@ -155,7 +155,7 @@ val Info = Color(0xFF3B82F6)
 val InfoLight = Color(0xFFDBEAFE)
 val InfoDark = Color(0xFF1E3A5F)
 
-// ==================== GRADIENT COLORS ====================
+
 
 object Gradients {
     val primaryGradient = listOf(DeepOrange500, DeepOrange700)
@@ -169,11 +169,11 @@ object Gradients {
     val lightGradient = listOf(LightSurface, LightSurfaceDim)
 }
 
-// ==================== THEME COLOR SCHEMES ====================
+
 
 object ThemeColors {
 
-    // ==================== DARK THEME ====================
+    
     val Dark = ColorScheme(
         primary = DeepOrange500,
         primaryContainer = DeepOrange900,
@@ -201,7 +201,7 @@ object ThemeColors {
         onWarning = Color.Black
     )
 
-    // ==================== LIGHT THEME ====================
+    
     val Light = ColorScheme(
         primary = DeepOrange700,
         primaryContainer = DeepOrange200,
@@ -229,7 +229,7 @@ object ThemeColors {
         onWarning = Color.Black
     )
 
-    // ==================== PURE BLACK THEME ====================
+    
     val PureBlackTheme = ColorScheme(
         primary = DeepOrange500,
         primaryContainer = DeepOrange900,
@@ -257,7 +257,7 @@ object ThemeColors {
         onWarning = Color.Black
     )
 
-    // ==================== HIGH CONTRAST THEME ====================
+    
     val HighContrast = ColorScheme(
         primary = HighContrastPrimary,
         primaryContainer = HighContrastPrimary,
@@ -286,7 +286,7 @@ object ThemeColors {
     )
 }
 
-// ==================== COLOR SCHEME DATA CLASS ====================
+
 
 data class ColorScheme(
     val primary: Color,
@@ -315,7 +315,7 @@ data class ColorScheme(
     val onWarning: Color
 )
 
-// ==================== HELPER FUNCTIONS ====================
+
 
 fun getAccentColorFromTheme(themeName: String): Color {
     return when (themeName) {
@@ -363,7 +363,7 @@ fun Color.withBrightness(factor: Float): Color {
     return Color(r, g, b, this.alpha)
 }
 
-// ==================== PREVIEW COLORS ====================
+
 
 object PreviewColors {
     val allPrimary = listOf(

@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/PreferencesModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * App preferences
- */
 @Parcelize
 data class AppPreferences(
     val theme: String = "dark",
@@ -19,9 +16,6 @@ data class AppPreferences(
     val crashReportingEnabled: Boolean = true
 ) : Parcelable
 
-/**
- * User preferences
- */
 @Parcelize
 data class UserPreferences(
     val username: String = "",

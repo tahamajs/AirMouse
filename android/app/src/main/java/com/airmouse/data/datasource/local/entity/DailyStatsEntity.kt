@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/entity/DailyStatsEntity.kt
+
 package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "daily_stats")
 data class DailyStatsEntity(
     @PrimaryKey
-    val date: String, // Format: yyyy-MM-dd
+    val date: String, 
 
     @ColumnInfo(name = "clicks")
     val clicks: Int = 0,

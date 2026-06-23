@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/network/TcpClient.kt
+
 package com.airmouse.network
 
 import kotlinx.coroutines.*
@@ -14,10 +14,6 @@ import java.net.SocketTimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * @deprecated Use ConnectionManager instead. This class is kept for backward compatibility
- * and will be removed in a future version.
- */
 @Deprecated(
     message = "Use ConnectionManager instead. This class is deprecated and will be removed.",
     replaceWith = ReplaceWith("ConnectionManager")
@@ -30,7 +26,7 @@ class TcpClient @Inject constructor() {
         private const val BUFFER_SIZE = 8192
         private const val DEPRECATION_WARNING = "TcpClient is deprecated. Please use ConnectionManager instead."
 
-        // Default timeouts
+        
         private const val DEFAULT_CONNECT_TIMEOUT = 5000
         private const val DEFAULT_READ_TIMEOUT = 30000
         private const val DEFAULT_WRITE_TIMEOUT = 5000
@@ -49,13 +45,13 @@ class TcpClient @Inject constructor() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Callbacks
+    
     var onConnected: (() -> Unit)? = null
     var onDisconnected: (() -> Unit)? = null
     var onError: ((String) -> Unit)? = null
     var onMessage: ((String) -> Unit)? = null
     var onReconnecting: ((Int) -> Unit)? = null
-    var onConnectionQuality: ((Int) -> Unit)? = null // ping in ms
+    var onConnectionQuality: ((Int) -> Unit)? = null 
 
     init {
         Timber.w(DEPRECATION_WARNING)
@@ -77,11 +73,11 @@ class TcpClient @Inject constructor() {
                     keepAlive = true
                     receiveBufferSize = BUFFER_SIZE
                     sendBufferSize = BUFFER_SIZE
-                    setPerformancePreferences(0, 2, 1) // Fixed signature layout evaluation
+                    setPerformancePreferences(0, 2, 1) 
                 }
                 socket = currentSocket
 
-                writer = PrintWriter(requireNotNull(currentSocket.getOutputStream()), true) // Type-mismatch resolved safely
+                writer = PrintWriter(requireNotNull(currentSocket.getOutputStream()), true) 
                 reader = BufferedReader(InputStreamReader(currentSocket.getInputStream()))
                 isConnected = true
                 reconnectAttempts = 0
@@ -131,7 +127,7 @@ class TcpClient @Inject constructor() {
                         }
                     }
                 } catch (e: SocketTimeoutException) {
-                    // Timeout is expected, continue
+                    
                     Timber.d("Read timeout, continuing...")
                 } catch (e: Exception) {
                     Timber.e(e, "Read error: %s", e.message)
@@ -144,7 +140,7 @@ class TcpClient @Inject constructor() {
         heartbeatJob?.cancel()
         heartbeatJob = scope.launch {
             while (isConnected) {
-                delay(30000) // 30 seconds
+                delay(30000) 
                 if (isConnected) {
                     sendPing()
                 }
@@ -171,7 +167,7 @@ class TcpClient @Inject constructor() {
                 }
             }
         } catch (e: Exception) {
-            // Not JSON, ignore safely
+            
         }
     }
 

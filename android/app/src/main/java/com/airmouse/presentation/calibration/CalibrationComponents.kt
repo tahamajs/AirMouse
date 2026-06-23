@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/calibration/CalibrationComponents.kt
+
 package com.airmouse.presentation.calibration
 
 import androidx.compose.animation.core.*
@@ -29,9 +29,9 @@ import androidx.compose.ui.unit.sp
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
 
-// ==========================================
-// GLASS CARD
-// ==========================================
+
+
+
 
 @Composable
 fun GlassCard(
@@ -52,9 +52,9 @@ fun GlassCard(
     }
 }
 
-// ==========================================
-// PROGRESS INDICATOR
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationProgressIndicator(
@@ -139,9 +139,9 @@ fun CalibrationStepConnector(
     )
 }
 
-// ==========================================
-// STATUS CHIP - Enhanced with Model Support
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationStatusChip(
@@ -273,9 +273,9 @@ fun CalibrationStatusChipText(
     }
 }
 
-// ==========================================
-// QUALITY INDICATOR - Enhanced with Model
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationQualityIndicator(
@@ -311,9 +311,9 @@ fun CalibrationQualityIndicator(
     }
 }
 
-// ==========================================
-// ANIMATED CHECKMARK
-// ==========================================
+
+
+
 
 @Composable
 fun AnimatedCheckmark(
@@ -353,9 +353,9 @@ fun AnimatedCheckmark(
     }
 }
 
-// ==========================================
-// LOADING SPINNER
-// ==========================================
+
+
+
 
 @Composable
 fun AnimatedLoadingSpinner(
@@ -390,9 +390,9 @@ fun AnimatedLoadingSpinner(
     }
 }
 
-// ==========================================
-// INSTRUCTION CARD
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationInstructionCard(
@@ -445,9 +445,9 @@ fun CalibrationInstructionCard(
     }
 }
 
-// ==========================================
-// PULSE ANIMATION
-// ==========================================
+
+
+
 
 @Composable
 fun PulseAnimation(
@@ -491,9 +491,9 @@ fun PulseAnimation(
     )
 }
 
-// ==========================================
-// SENSOR VISUALIZER
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationSensorVisualizer(
@@ -579,9 +579,9 @@ fun CalibrationSensorVisualizer(
     }
 }
 
-// ==========================================
-// STATS ROW
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationStatsRow(
@@ -662,9 +662,9 @@ fun CalibrationStatItem(
     }
 }
 
-// ==========================================
-// ACTION BUTTON
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationActionButton(
@@ -703,9 +703,9 @@ fun CalibrationActionButton(
     }
 }
 
-// ==========================================
-// STEPS GUIDE
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationStepsGuide(
@@ -776,9 +776,9 @@ fun CalibrationStepsGuide(
     }
 }
 
-// ==========================================
-// CALIBRATION SUMMARY CARD - Enhanced with Repository Data
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationSummaryCard(
@@ -843,9 +843,9 @@ fun CalibrationSummaryCard(
     }
 }
 
-// ==========================================
-// CONFETTI EFFECT
-// ==========================================
+
+
+
 
 @Composable
 fun ConfettiEffect() {
@@ -887,9 +887,9 @@ fun ConfettiEffect() {
     }
 }
 
-// ==========================================
-// CALIBRATION STATUS CARD
-// ==========================================
+
+
+
 
 @Composable
 fun CalibrationStatusCard(
@@ -1008,9 +1008,9 @@ fun CalibrationStatusCard(
     }
 }
 
-// ==========================================
-// PREVIEWS
-// ==========================================
+
+
+
 
 @Preview(showBackground = true)
 @Composable

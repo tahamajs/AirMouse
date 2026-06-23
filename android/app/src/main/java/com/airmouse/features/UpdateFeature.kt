@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/UpdateFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.UpdateProgress
@@ -39,15 +39,15 @@ class UpdateFeature @Inject constructor(
     }
 
     private fun loadCurrentVersion() {
-        // Load current version from build config
+        
     }
 
     private fun observeUpdateStatusInternal() {
-        // Observe update status
+        
     }
 
     private fun observeDownloadProgressInternal() {
-        // Observe download progress
+        
     }
 
     suspend fun checkForUpdates(): Result<UpdateResult> {

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/NetworkUtils.kt
+
 package com.airmouse.utils
 
 import android.content.Context
@@ -8,14 +8,8 @@ import android.os.Build
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
-/**
- * Network state utilities, especially WiFi availability.
- */
 object NetworkUtils {
 
-    /**
-     * Checks whether the device has an active WiFi or Ethernet connection.
-     */
     fun isWifiConnected(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -31,9 +25,6 @@ object NetworkUtils {
         }
     }
 
-    /**
-     * Returns the current IP address of the device.
-     */
     fun getLocalIpAddress(): String? {
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces()
@@ -53,9 +44,6 @@ object NetworkUtils {
         return null
     }
 
-    /**
-     * Check if internet is available.
-     */
     fun isInternetAvailable(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -69,9 +57,6 @@ object NetworkUtils {
         }
     }
 
-    /**
-     * Get network type name.
-     */
     fun getNetworkType(context: Context): String {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

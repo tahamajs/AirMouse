@@ -1,4 +1,4 @@
-// app/src/test/java/com/airmouse/protocol/MessageProtocolTest.kt
+
 package com.airmouse.protocol
 
 import org.json.JSONObject
@@ -111,7 +111,7 @@ class MessageProtocolTest {
 
     @Test
     fun testFlatMessageFormat() {
-        // Test the flat format (no nested payload)
+        
         val json = JSONObject().apply {
             put("type", "move")
             put("dx", 10.0)

@@ -21,10 +21,13 @@ class NavigationGraphSanityTest {
             if (parser.eventType != XmlPullParser.START_TAG) continue
 
             when (parser.name) {
-                "navigation" -> startDestination = parser.getAttributeValue("http://schemas.android.com/apk/res/android", "startDestination")
+                "navigation" -> startDestination = parser.getAttributeValue(
+                    "http://schemas.android.com/apk/res/android", "startDestination"
+                )
                 "fragment", "activity" -> {
-                    parser.getAttributeValue("http://schemas.android.com/apk/res/android", "name")
-                        ?.let(destinations::add)
+                    parser.getAttributeValue(
+                        "http://schemas.android.com/apk/res/android", "name"
+                    )?.let(destinations::add)
                 }
             }
         }

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/theme/AirMouseTheme.kt
+
 package com.airmouse.presentation.theme
 
 import android.app.Activity
@@ -21,7 +21,7 @@ import com.airmouse.presentation.ui.themes.AccentColor
 import com.airmouse.presentation.ui.themes.ThemeColorScheme
 import com.airmouse.presentation.ui.themes.getThemeColorScheme
 
-// ==================== Typography ====================
+
 
 private val InterFontFamily = FontFamily.SansSerif
 
@@ -43,7 +43,7 @@ val AirMouseTypography = Typography(
     labelSmall = Typography().labelSmall.copy(fontFamily = InterFontFamily)
 )
 
-// ==================== Shapes ====================
+
 
 val AirMouseShapes = Shapes(
     extraSmall = RoundedCornerShape(4.dp),
@@ -53,7 +53,7 @@ val AirMouseShapes = Shapes(
     extraLarge = RoundedCornerShape(24.dp)
 )
 
-// ==================== Legacy Color Schemes (for backward compatibility) ====================
+
 
 val DarkColorScheme = darkColorScheme(
     primary = Color(0xFF00BCD4),
@@ -135,7 +135,7 @@ val HighContrastColorScheme = darkColorScheme(
     onSecondaryContainer = Color(0xFFFFFFFF)
 )
 
-// ==================== Main Theme Composable ====================
+
 
 @Composable
 fun AirMouseTheme(
@@ -149,12 +149,12 @@ fun AirMouseTheme(
     val context = LocalContext.current
     val view = LocalView.current
 
-    // Get theme colors if not provided
+    
     val colors = themeColors ?: remember(themeId, accentColor) {
         getThemeColorScheme(themeId, accentColor)
     }
 
-    // Build color scheme
+    
     val colorScheme = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
@@ -225,7 +225,7 @@ fun AirMouseTheme(
         }
     }
 
-    // Update system bars
+    
     SideEffect {
         val window = (view.context as? Activity)?.window
         if (window != null) {
@@ -248,7 +248,7 @@ fun AirMouseTheme(
     )
 }
 
-// ==================== Legacy Theme Function (Backward Compatibility) ====================
+
 
 @Composable
 fun AirMouseThemeLegacy(
@@ -310,7 +310,7 @@ fun AirMouseThemeLegacy(
     )
 }
 
-// ==================== Theme State Management ====================
+
 
 @Composable
 fun rememberThemeState(
@@ -361,13 +361,13 @@ class ThemeState(
     }
 }
 
-// ==================== AppTheme Enum ====================
+
 
 enum class AppTheme {
     SYSTEM, LIGHT, DARK, PURE_BLACK, HIGH_CONTRAST, DYNAMIC
 }
 
-// ==================== Helper Functions ====================
+
 
 fun getThemeFromString(theme: String): AppTheme {
     return when (theme.lowercase()) {
@@ -414,7 +414,7 @@ fun getAdaptiveColorScheme(
     }
 }
 
-// ==================== Theme Preview Helpers ====================
+
 
 @Composable
 fun AirMouseThemePreview(
@@ -452,7 +452,7 @@ fun ThemePreview() {
     }
 }
 
-// ==================== Default Theme Config ====================
+
 
 object DefaultThemeConfig {
     const val DEFAULT_THEME = "system"

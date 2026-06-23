@@ -32,15 +32,15 @@ import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ==================== HELPER FUNCTIONS ====================
+
 
 fun getBatteryColor(level: Int): Color {
     return when {
-        level >= 80 -> Color(0xFF4CAF50)  // Green
-        level >= 60 -> Color(0xFF8BC34A)  // Light Green
-        level >= 40 -> Color(0xFFFFC107)  // Amber
-        level >= 20 -> Color(0xFFFF9800)  // Orange
-        else -> Color(0xFFF44336)         // Red
+        level >= 80 -> Color(0xFF4CAF50)  
+        level >= 60 -> Color(0xFF8BC34A)  
+        level >= 40 -> Color(0xFFFFC107)  
+        level >= 20 -> Color(0xFFFF9800)  
+        else -> Color(0xFFF44336)         
     }
 }
 
@@ -52,7 +52,7 @@ fun getHealthColor(healthPercent: Int): Color {
     }
 }
 
-// ==================== COMPONENTS ====================
+
 
 @Composable
 fun BatteryLevelIndicator(
@@ -72,7 +72,7 @@ fun BatteryLevelIndicator(
             val strokeWidth = width * 0.08f
             val radius = (width / 2) - strokeWidth / 2
 
-            // Background circle
+            
             drawCircle(
                 color = Color.White.copy(alpha = 0.1f),
                 radius = radius,
@@ -80,7 +80,7 @@ fun BatteryLevelIndicator(
                 style = Stroke(width = strokeWidth)
             )
 
-            // Progress circle
+            
             val sweepAngle = (level / 100f) * 360f
             drawArc(
                 color = color,
@@ -92,7 +92,7 @@ fun BatteryLevelIndicator(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
 
-            // Charging indicator
+            
             if (isCharging) {
                 drawCircle(
                     color = Color.White.copy(alpha = 0.3f),
@@ -100,7 +100,7 @@ fun BatteryLevelIndicator(
                     center = Offset(width / 2, height / 2),
                     style = Stroke(width = 2f)
                 )
-                // Draw lightning bolt using lines
+                
                 val boltSize = 30f
                 drawLine(
                     color = Color.White,
@@ -117,7 +117,7 @@ fun BatteryLevelIndicator(
             }
         }
 
-        // Percentage text
+        
         Text(
             text = if (isCharging) "⚡" else "${level}%",
             fontSize = if (isCharging) 32.sp else 28.sp,
@@ -149,7 +149,7 @@ fun GlassCard(
     }
 }
 
-// ==================== MAIN SCREEN ====================
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -221,7 +221,7 @@ fun BatteryScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Animated Battery Level Card
+                
                 item {
                     AnimatedBatteryCard(
                         level = uiState.level,
@@ -232,7 +232,7 @@ fun BatteryScreen(
                     )
                 }
 
-                // Quick Stats Row
+                
                 item {
                     QuickStatsRow(
                         temperature = uiState.temperature,
@@ -242,7 +242,7 @@ fun BatteryScreen(
                     )
                 }
 
-                // Tabs
+                
                 item {
                     ScrollableTabRow(
                         selectedTabIndex = selectedTab.ordinal,
@@ -270,7 +270,7 @@ fun BatteryScreen(
                     }
                 }
 
-                // Tab Content
+                
                 when (selectedTab) {
                     BatteryTab.DETAILS -> {
                         item { DetailsContent(uiState) }
@@ -290,7 +290,7 @@ fun BatteryScreen(
     }
 }
 
-// ==================== SUB-COMPONENTS ====================
+
 
 @Composable
 fun AnimatedBatteryCard(
@@ -298,7 +298,7 @@ fun AnimatedBatteryCard(
     isCharging: Boolean,
     temperature: Float,
     voltage: Float,
-    pulse: Float // Kept for API compatibility but used for animation
+    pulse: Float 
 ) {
     GlassCard {
         Column(
@@ -307,7 +307,7 @@ fun AnimatedBatteryCard(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Battery Icon
+            
             BatteryLevelIndicator(
                 level = level,
                 isCharging = isCharging,
@@ -550,7 +550,7 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
         val height = size.height
         val stepX = width / (history.size - 1).coerceAtLeast(1)
 
-        // Draw grid lines
+        
         val gridColor = Color.White.copy(alpha = 0.05f)
         for (i in 0..4) {
             val y = height * i / 4
@@ -562,7 +562,7 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
             )
         }
 
-        // Draw level line
+        
         val path = Path()
         history.forEachIndexed { index, entry ->
             val x = index * stepX
@@ -576,7 +576,7 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
             style = Stroke(width = 3f, cap = StrokeCap.Round)
         )
 
-        // Fill area under curve
+        
         val fillPath = Path().apply {
             moveTo(0f, height)
             history.forEachIndexed { index, entry ->
@@ -593,7 +593,7 @@ fun BatteryHistoryChart(history: List<BatteryHistoryEntry>) {
             color = getBatteryColor(history.last().level).copy(alpha = 0.1f)
         )
 
-        // Draw data points
+        
         history.forEachIndexed { index, entry ->
             val x = index * stepX
             val y = height - ((entry.level - minLevel) / levelRange) * height

@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.VibrationEffect
 import android.os.Vibrator
+import androidx.core.content.ContextCompat
 import com.airmouse.utils.PreferencesManager
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.MadgwickAHRS
@@ -16,36 +17,34 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.Dispatchers
 
-/**
- * Repository that provides a flow of fused orientation data (roll, yaw)
- * and also allows calibration and haptic feedback.
- */
 class SensorRepository(context: Context) {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    private val vibrator = ContextCompat.getSystemService(context, Vibrator::class.java)
     private val preferences = PreferencesManager(context)
     private val calibrationHelper = CalibrationHelper(context, preferences)
 
-    // ✅ FIXED: Adjusted signatures to match CalibrationHelper's actual 0-argument expectations
-    // Note: Check CalibrationHelper to see if the gyro method is named differently (e.g., calibrateGyroscopes)
+    
+    
     suspend fun calibrateGyro(): Boolean = calibrationHelper.calibrateGyroscope()
     suspend fun calibrateMagnetometer(): Boolean = calibrationHelper.calibrateMagnetometer()
     suspend fun calibrateAccelerometer(): Boolean = calibrationHelper.calibrateAccelerometer()
 
     fun vibrate(duration: Long) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(duration)
+        val safeVibrator = vibrator ?: return
+        if (!safeVibrator.hasVibrator()) return
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                safeVibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                safeVibrator.vibrate(duration)
+            }
+        } catch (_: SecurityException) {
+            
         }
     }
 
-    /**
-     * Flow that emits sensor data at ~50 Hz.
-     * The flow runs on a background dispatcher to avoid blocking the main thread.
-     */
     val sensorEvents: Flow<SensorData> = callbackFlow {
         val madgwick = MadgwickAHRS(beta = 0.1f)
         var lastTimestamp = 0L
@@ -68,7 +67,7 @@ class SensorRepository(context: Context) {
                         lastAccelY = ay
                     }
                     Sensor.TYPE_GYROSCOPE -> {
-                        // Assuming 0, 1, 2 map to X, Y, Z axes respectively
+                        
                         val gx = calibrationHelper.correctGyro(event.values[0], 0)
                         val gy = calibrationHelper.correctGyro(event.values[1], 1)
                         val gz = calibrationHelper.correctGyro(event.values[2], 2)
@@ -110,9 +109,9 @@ class SensorRepository(context: Context) {
     }.flowOn(Dispatchers.IO)
 
     data class SensorData(
-        val roll: Float,   // radians, around X axis → vertical movement
-        val yaw: Float,    // radians, around Z axis → horizontal movement
-        val gyroY: Float,  // rad/s, for click detection
-        val accelY: Float  // m/s², for scroll detection
+        val roll: Float,   
+        val yaw: Float,    
+        val gyroY: Float,  
+        val accelY: Float  
     )
 }

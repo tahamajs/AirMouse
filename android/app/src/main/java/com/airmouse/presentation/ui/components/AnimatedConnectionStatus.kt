@@ -63,7 +63,7 @@ fun AnimatedConnectionStatus(
         modifier = modifier.size(if (showDetails) 100.dp else 80.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Animated radar scan effect (when scanning)
+        
         if (!isConnected) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val scanAngle = rotate % 360f
@@ -78,7 +78,7 @@ fun AnimatedConnectionStatus(
             }
         }
 
-        // Ripple effect (when connected)
+        
         if (isConnected) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val radius = size.minDimension / 2 * (0.5f + ripple * 0.5f)
@@ -95,7 +95,7 @@ fun AnimatedConnectionStatus(
             }
         }
 
-        // Pulse ring
+        
         Canvas(modifier = Modifier.fillMaxSize()) {
             val ringRadius = size.minDimension / 2 * (0.85f + pulse * 0.05f)
             val ringColor = when {
@@ -111,7 +111,7 @@ fun AnimatedConnectionStatus(
                 style = Stroke(width = if (isConnected) 3f else 2f)
             )
             
-            // Inner ring
+            
             drawCircle(
                 color = ringColor.copy(alpha = 0.5f),
                 radius = ringRadius * 0.7f,
@@ -120,7 +120,7 @@ fun AnimatedConnectionStatus(
             )
         }
 
-        // Center icon
+        
         Icon(
             imageVector = when {
                 isConnected -> Icons.Filled.Wifi
@@ -137,7 +137,7 @@ fun AnimatedConnectionStatus(
             }
         )
 
-        // Signal strength bars
+        
         if (isConnected && signalStrength > 0 && showDetails) {
             Row(
                 modifier = Modifier
@@ -161,7 +161,7 @@ fun AnimatedConnectionStatus(
             }
         }
 
-        // Details text
+        
         if (showDetails && !isConnected && ping > 0) {
             Text(
                 text = "${ping}ms",
@@ -195,7 +195,7 @@ fun ConnectionQualityIndicator(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Animated icon
+        
         AnimatedConnectionStatus(
             isConnected = true,
             signalStrength = quality.level(),

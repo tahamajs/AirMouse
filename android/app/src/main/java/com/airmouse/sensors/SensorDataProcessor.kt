@@ -2,14 +2,8 @@ package com.airmouse.sensors
 
 import kotlin.math.*
 
-/**
- * Process raw sensor data for filtering, smoothing, and feature extraction
- */
 object SensorDataProcessor {
 
-    /**
-     * Low-pass filter for smoothing sensor data
-     */
     class LowPassFilter(private val alpha: Float = 0.2f) {
         private var filteredX = 0f
         private var filteredY = 0f
@@ -40,9 +34,6 @@ object SensorDataProcessor {
         }
     }
 
-    /**
-     * High-pass filter for removing DC bias
-     */
     class HighPassFilter(private val alpha: Float = 0.1f) {
         private var previousX = 0f
         private var previousY = 0f
@@ -77,9 +68,6 @@ object SensorDataProcessor {
         }
     }
 
-    /**
-     * Moving average filter
-     */
     class MovingAverageFilter(private val windowSize: Int = 10) {
         private val bufferX = mutableListOf<Float>()
         private val bufferY = mutableListOf<Float>()
@@ -110,9 +98,6 @@ object SensorDataProcessor {
         }
     }
 
-    /**
-     * Complementary filter for sensor fusion
-     */
     class ComplementaryFilter(private val alpha: Float = 0.98f) {
         private var filteredX = 0f
         private var filteredY = 0f
@@ -120,19 +105,19 @@ object SensorDataProcessor {
         private var initialized = false
 
         fun filter(gyroX: Float, gyroY: Float, gyroZ: Float, accelX: Float, accelY: Float, accelZ: Float, dt: Float): Triple<Float, Float, Float> {
-            // Integrate gyroscope
+            
             val gyroAngleX = if (initialized) filteredX + gyroX * dt else 0f
             val gyroAngleY = if (initialized) filteredY + gyroY * dt else 0f
             val gyroAngleZ = if (initialized) filteredZ + gyroZ * dt else 0f
 
-            // Calculate angle from accelerometer
+            
             val accelAngleX = atan2(accelY, accelZ)
             val accelAngleY = atan2(-accelX, sqrt(accelY * accelY + accelZ * accelZ))
 
-            // Complementary filter
+            
             val resultX = alpha * gyroAngleX + (1 - alpha) * accelAngleX
             val resultY = alpha * gyroAngleY + (1 - alpha) * accelAngleY
-            val resultZ = gyroAngleZ // Yaw from gyro only
+            val resultZ = gyroAngleZ 
 
             filteredX = resultX
             filteredY = resultY
@@ -150,19 +135,16 @@ object SensorDataProcessor {
         }
     }
 
-    /**
-     * Kalman filter for sensor data
-     */
     class KalmanFilter(private val processNoise: Float = 0.01f, private val measurementNoise: Float = 0.1f) {
         private var estimate = 0f
         private var error = 1f
 
         fun filter(measurement: Float): Float {
-            // Prediction
+            
             val prediction = estimate
             val predictionError = error + processNoise
 
-            // Update
+            
             val kalmanGain = predictionError / (predictionError + measurementNoise)
             estimate = prediction + kalmanGain * (measurement - prediction)
             error = (1 - kalmanGain) * predictionError
@@ -176,9 +158,6 @@ object SensorDataProcessor {
         }
     }
 
-    /**
-     * Butterworth filter for low-pass filtering
-     */
     class ButterworthFilter(private val cutoffFreq: Float, private val sampleRate: Float) {
         private var a1: Float = 0f
         private var a2: Float = 0f
@@ -237,16 +216,10 @@ object SensorDataProcessor {
         }
     }
 
-    /**
-     * Calculate magnitude of vector
-     */
     fun magnitude(x: Float, y: Float, z: Float): Float {
         return sqrt(x * x + y * y + z * z)
     }
 
-    /**
-     * Calculate angle between two vectors
-     */
     fun angleBetween(v1x: Float, v1y: Float, v1z: Float, v2x: Float, v2y: Float, v2z: Float): Float {
         val dot = v1x * v2x + v1y * v2y + v1z * v2z
         val mag1 = magnitude(v1x, v1y, v1z)
@@ -258,17 +231,11 @@ object SensorDataProcessor {
         return acos(cosTheta)
     }
 
-    /**
-     * Calculate derivative (rate of change)
-     */
     fun derivative(current: Float, previous: Float, dt: Float): Float {
         if (dt <= 0f) return 0f
         return (current - previous) / dt
     }
 
-    /**
-     * Calculate integral
-     */
     fun integral(value: Float, dt: Float, cumulative: Float): Float {
         return cumulative + value * dt
     }

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/SensorFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.OrientationData
@@ -37,15 +37,15 @@ class SensorFeature @Inject constructor(
     }
 
     private fun startObservingSensorData() {
-        // Observe sensor data
+        
     }
 
     private fun startObservingOrientation() {
-        // Observe orientation
+        
     }
 
     private fun startObservingCalibrationStatus() {
-        // Observe calibration status
+        
     }
 
     suspend fun getCurrentSensorData(): SensorData {
@@ -83,7 +83,7 @@ class SensorFeature @Inject constructor(
     }
 
     suspend fun getSensorInfo() {
-        // Get sensor info
+        
     }
 
     suspend fun calibrateSensors(): Boolean {

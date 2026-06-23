@@ -1,4 +1,4 @@
-// OnboardingUiState.kt
+
 package com.airmouse.presentation.ui.onboarding
 
 data class OnboardingUiState(

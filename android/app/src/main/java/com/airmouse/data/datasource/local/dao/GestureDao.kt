@@ -8,7 +8,7 @@ import androidx.room.Update
 import com.airmouse.data.datasource.local.entity.GestureTemplateEntity
 import kotlinx.coroutines.flow.Flow
 
-// Result class for type distribution
+
 data class GestureTypeCount(
     val type: String,
     val count: Int
@@ -17,7 +17,7 @@ data class GestureTypeCount(
 @Dao
 interface GestureDao {
 
-    // Insert/Update
+    
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemplate(template: GestureTemplateEntity)
 
@@ -27,7 +27,7 @@ interface GestureDao {
     @Update
     suspend fun updateTemplate(template: GestureTemplateEntity)
 
-    // Get All
+    
     @Query("SELECT * FROM gesture_templates ORDER BY name ASC")
     suspend fun getAllTemplates(): List<GestureTemplateEntity>
 
@@ -37,14 +37,14 @@ interface GestureDao {
     @Query("SELECT * FROM gesture_templates ORDER BY detection_count DESC")
     suspend fun getAllTemplatesByUsage(): List<GestureTemplateEntity>
 
-    // By ID
+    
     @Query("SELECT * FROM gesture_templates WHERE id = :id")
     suspend fun getTemplateById(id: String): GestureTemplateEntity?
 
     @Query("SELECT * FROM gesture_templates WHERE id = :id")
     fun observeTemplateById(id: String): Flow<GestureTemplateEntity?>
 
-    // By Name
+    
     @Query("SELECT * FROM gesture_templates WHERE name = :name")
     suspend fun getTemplateByName(name: String): GestureTemplateEntity?
 
@@ -54,14 +54,14 @@ interface GestureDao {
     @Query("SELECT * FROM gesture_templates WHERE name LIKE '%' || :query || '%'")
     fun observeSearchTemplates(query: String): Flow<List<GestureTemplateEntity>>
 
-    // By Type
+    
     @Query("SELECT * FROM gesture_templates WHERE type = :type")
     suspend fun getTemplatesByType(type: String): List<GestureTemplateEntity>
 
     @Query("SELECT * FROM gesture_templates WHERE type = :type")
     fun observeTemplatesByType(type: String): Flow<List<GestureTemplateEntity>>
 
-    // Status
+    
     @Query("SELECT * FROM gesture_templates WHERE is_enabled = 1")
     suspend fun getEnabledTemplates(): List<GestureTemplateEntity>
 
@@ -71,7 +71,7 @@ interface GestureDao {
     @Query("SELECT * FROM gesture_templates WHERE is_enabled = 0")
     suspend fun getDisabledTemplates(): List<GestureTemplateEntity>
 
-    // Custom / System
+    
     @Query("SELECT * FROM gesture_templates WHERE is_custom = 1")
     suspend fun getCustomTemplates(): List<GestureTemplateEntity>
 
@@ -84,14 +84,14 @@ interface GestureDao {
     @Query("SELECT * FROM gesture_templates WHERE is_system = 1")
     fun observeSystemTemplates(): Flow<List<GestureTemplateEntity>>
 
-    // Favorites
+    
     @Query("SELECT * FROM gesture_templates WHERE is_favorite = 1")
     suspend fun getFavoriteTemplates(): List<GestureTemplateEntity>
 
     @Query("SELECT * FROM gesture_templates WHERE is_favorite = 1")
     fun observeFavoriteTemplates(): Flow<List<GestureTemplateEntity>>
 
-    // Update Operations
+    
     @Query("UPDATE gesture_templates SET detection_count = detection_count + 1, last_detected = :timestamp WHERE id = :id")
     suspend fun incrementDetectionCount(id: String, timestamp: Long)
 
@@ -113,7 +113,7 @@ interface GestureDao {
     @Query("UPDATE gesture_templates SET metadata = :metadata WHERE id = :id")
     suspend fun updateMetadata(id: String, metadata: String)
 
-    // Delete
+    
     @Query("DELETE FROM gesture_templates WHERE id = :id")
     suspend fun deleteTemplate(id: String)
 
@@ -123,7 +123,7 @@ interface GestureDao {
     @Query("DELETE FROM gesture_templates WHERE is_custom = 1 AND is_system = 0")
     suspend fun deleteAllCustomTemplates()
 
-    // Counts
+    
     @Query("SELECT COUNT(*) FROM gesture_templates")
     suspend fun getTemplateCount(): Int
 
@@ -136,11 +136,11 @@ interface GestureDao {
     @Query("SELECT COUNT(*) FROM gesture_templates WHERE is_favorite = 1")
     suspend fun getFavoriteTemplateCount(): Int
 
-    // Type Distribution
+    
     @Query("SELECT type, COUNT(*) as count FROM gesture_templates GROUP BY type")
     suspend fun getTypeDistribution(): List<GestureTypeCount>
 
-    // Statistics
+    
     @Query("SELECT SUM(detection_count) FROM gesture_templates")
     suspend fun getTotalDetections(): Int
 
@@ -150,7 +150,7 @@ interface GestureDao {
     @Query("SELECT MAX(detection_count) FROM gesture_templates")
     suspend fun getMaxDetectionCount(): Int
 
-    // Bulk
+    
     @Query("SELECT * FROM gesture_templates WHERE id IN (:ids)")
     suspend fun getTemplatesByIds(ids: List<String>): List<GestureTemplateEntity>
 

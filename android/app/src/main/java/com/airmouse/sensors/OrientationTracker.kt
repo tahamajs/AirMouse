@@ -3,9 +3,6 @@ package com.airmouse.sensors
 import android.hardware.SensorManager
 import kotlin.math.*
 
-/**
- * Tracks device orientation using sensor fusion
- */
 class OrientationTracker {
 
     data class Orientation(
@@ -31,9 +28,6 @@ class OrientationTracker {
     private val rotationMatrix = FloatArray(9)
     private val orientationValues = FloatArray(3)
 
-    /**
-     * Update orientation from rotation vector
-     */
     fun updateFromRotationVector(rotationVector: FloatArray, timestamp: Long): Orientation {
         SensorManager.getRotationMatrixFromVector(rotationMatrix, rotationVector)
         SensorManager.getOrientation(rotationMatrix, orientationValues)
@@ -50,9 +44,6 @@ class OrientationTracker {
         return Orientation(yaw, pitch, roll, rotationVector.clone(), 0.95f)
     }
 
-    /**
-     * Update orientation from gyroscope and accelerometer
-     */
     fun updateFromSensors(
         gyroX: Float, gyroY: Float, gyroZ: Float,
         accelX: Float, accelY: Float, accelZ: Float,
@@ -60,12 +51,12 @@ class OrientationTracker {
     ): Orientation {
         val dt = if (lastTimestamp > 0) (timestamp - lastTimestamp) / 1000f else 0.016f
 
-        // Integrate gyroscope
+        
         val yaw = lastYaw + gyroZ * dt
         val pitch = lastPitch + gyroY * dt
         val roll = lastRoll + gyroX * dt
 
-        // Calculate complementary filter with accelerometer
+        
         val accelPitch = atan2(accelY, sqrt(accelX * accelX + accelZ * accelZ)) * 180f / PI.toFloat()
         val accelRoll = atan2(-accelX, accelZ) * 180f / PI.toFloat()
 
@@ -78,15 +69,12 @@ class OrientationTracker {
         lastRoll = filteredRoll
         lastTimestamp = timestamp
 
-        // Convert to quaternion
+        
         val quat = eulerToQuaternion(filteredPitch, filteredRoll, yaw)
 
         return Orientation(yaw, filteredPitch, filteredRoll, quat, 0.85f)
     }
 
-    /**
-     * Calculate rotation delta since last update
-     */
     fun getRotationDelta(): RotationDelta {
         return RotationDelta(
             deltaYaw = lastYaw - lastYaw,
@@ -96,9 +84,6 @@ class OrientationTracker {
         )
     }
 
-    /**
-     * Convert Euler angles to quaternion
-     */
     private fun eulerToQuaternion(pitch: Float, roll: Float, yaw: Float): FloatArray {
         val cy = cos(Math.toRadians(yaw.toDouble()) / 2).toFloat()
         val sy = sin(Math.toRadians(yaw.toDouble()) / 2).toFloat()
@@ -115,16 +100,10 @@ class OrientationTracker {
         return floatArrayOf(w, x, y, z)
     }
 
-    /**
-     * Get rotation matrix for OpenGL
-     */
     fun getRotationMatrix(): FloatArray {
         return rotationMatrix.clone()
     }
 
-    /**
-     * Reset orientation tracking
-     */
     fun reset() {
         lastYaw = 0f
         lastPitch = 0f

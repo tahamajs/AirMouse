@@ -1,20 +1,14 @@
-// app/src/main/java/com/airmouse/domain/usecase/SendMovementUseCase.kt
+
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.MouseButton
 import com.airmouse.domain.repository.IMouseRepository
 import javax.inject.Inject
 
-/**
- * Use case for sending mouse movements and clicks
- */
 class SendMovementUseCase @Inject constructor(
     private val mouseRepository: IMouseRepository
 ) {
 
-    /**
-     * Send cursor movement
-     */
     suspend operator fun invoke(dx: Float, dy: Float): Result<Boolean> {
         return try {
             val result = mouseRepository.move(dx, dy)
@@ -24,9 +18,6 @@ class SendMovementUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Send smooth cursor movement
-     */
     suspend fun sendSmoothMovement(points: List<Pair<Float, Float>>, durationMs: Int = 100): Result<Boolean> {
         return try {
             val result = mouseRepository.moveSmooth(points, durationMs)
@@ -36,9 +27,6 @@ class SendMovementUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Send click
-     */
     suspend fun sendClick(button: MouseButton = MouseButton.LEFT): Result<Boolean> {
         return try {
             val result = mouseRepository.click(button)
@@ -48,9 +36,6 @@ class SendMovementUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Send double click
-     */
     suspend fun sendDoubleClick(): Result<Boolean> {
         return try {
             val result = mouseRepository.doubleClick()
@@ -60,9 +45,6 @@ class SendMovementUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Send right click
-     */
     suspend fun sendRightClick(): Result<Boolean> {
         return try {
             val result = mouseRepository.rightClick()
@@ -72,9 +54,6 @@ class SendMovementUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Send scroll
-     */
     suspend fun sendScroll(delta: Int): Result<Boolean> {
         return try {
             val result = mouseRepository.scroll(delta)
@@ -84,9 +63,6 @@ class SendMovementUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Send gesture
-     */
     suspend fun sendGesture(gesture: String, confidence: Float): Result<Boolean> {
         return try {
             val result = mouseRepository.sendGesture(gesture, confidence)
@@ -96,9 +72,6 @@ class SendMovementUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Pause movement
-     */
     suspend fun pauseMovement(): Result<Boolean> {
         return try {
             mouseRepository.stopMovement()
@@ -108,9 +81,6 @@ class SendMovementUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Resume movement
-     */
     suspend fun resumeMovement(): Result<Boolean> {
         return try {
             mouseRepository.resumeMovement()

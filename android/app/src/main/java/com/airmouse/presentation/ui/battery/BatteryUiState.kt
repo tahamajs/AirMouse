@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/battery/BatteryUiState.kt
+
 package com.airmouse.presentation.ui.battery
 
 import androidx.compose.ui.graphics.vector.ImageVector

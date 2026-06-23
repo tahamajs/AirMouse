@@ -69,7 +69,7 @@ fun GlitchText(
     )
     
     Box(modifier = modifier) {
-        // Red channel
+        
         Text(
             text = text,
             modifier = Modifier.offset(x = glitchOffset.dp, y = 0.dp),
@@ -78,7 +78,7 @@ fun GlitchText(
             )
         )
         
-        // Blue channel
+        
         Text(
             text = text,
             modifier = Modifier.offset(x = (-glitchOffset).dp, y = 0.dp),
@@ -87,7 +87,7 @@ fun GlitchText(
             )
         )
         
-        // Main text
+        
         Text(
             text = text,
             style = style,

@@ -44,7 +44,7 @@ fun ServerLogsScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showFilterDialog by remember { mutableStateOf(false) }
 
-    // Auto-scroll to bottom when new logs arrive
+    
     LaunchedEffect(uiState.filteredLogs.size) {
         if (uiState.isAutoScroll && uiState.filteredLogs.isNotEmpty() && uiState.currentPage == 0) {
             coroutineScope.launch {
@@ -71,15 +71,15 @@ fun ServerLogsScreen(
                     }
                 },
                 actions = {
-                    // Statistics button
+                    
                     IconButton(onClick = { showStatsDialog = true }) {
                         Icon(Icons.Default.Assessment, contentDescription = "Statistics")
                     }
-                    // Settings button
+                    
                     IconButton(onClick = { showSettingsDialog = true }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
-                    // Filter button
+                    
                     IconButton(onClick = { showFilterDialog = true }) {
                         Badge(
                             containerColor = if (uiState.filter.isNotEmpty() || uiState.level != "All") 
@@ -89,21 +89,21 @@ fun ServerLogsScreen(
                             Icon(Icons.Default.FilterList, contentDescription = "Filter")
                         }
                     }
-                    // Selection mode toggle
+                    
                     IconButton(onClick = { viewModel.toggleSelectionMode() }) {
                         Icon(
                             if (uiState.isSelectionMode) Icons.Outlined.CheckBox else Icons.Outlined.CheckBox,
                             contentDescription = "Select"
                         )
                     }
-                    // Auto-scroll toggle
+                    
                     IconButton(onClick = { viewModel.toggleAutoScroll() }) {
                         Icon(
                             if (uiState.isAutoScroll) Icons.Outlined.VerticalAlignBottom else Icons.Outlined.VerticalAlignBottom,
                             contentDescription = "Auto-scroll"
                         )
                     }
-                    // Refresh button
+                    
                     IconButton(onClick = { viewModel.refreshLogs() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
@@ -131,7 +131,7 @@ fun ServerLogsScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Search Bar
+            
             OutlinedTextField(
                 value = uiState.filter,
                 onValueChange = viewModel::setFilter,
@@ -151,7 +151,7 @@ fun ServerLogsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Stats Bar
+            
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -187,7 +187,7 @@ fun ServerLogsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Level Filters
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -229,7 +229,7 @@ fun ServerLogsScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Logs List
+            
             Card(
                 modifier = Modifier.fillMaxSize(),
                 colors = CardDefaults.cardColors(
@@ -265,7 +265,7 @@ fun ServerLogsScreen(
                             )
                         }
                         
-                        // Pagination
+                        
                         if (uiState.totalPages > 1) {
                             item {
                                 PaginationControls(
@@ -281,7 +281,7 @@ fun ServerLogsScreen(
                 }
             }
 
-            // Messages
+            
             if (uiState.successMessage != null) {
                 Snackbar(
                     modifier = Modifier.padding(8.dp),
@@ -313,7 +313,7 @@ fun ServerLogsScreen(
         }
     }
 
-    // Statistics Dialog
+    
     if (showStatsDialog) {
         StatisticsDialog(
             statistics = statistics,
@@ -321,7 +321,7 @@ fun ServerLogsScreen(
         )
     }
 
-    // Settings Dialog
+    
     if (showSettingsDialog) {
         SettingsDialog(
             uiState = uiState,
@@ -339,7 +339,7 @@ fun ServerLogsScreen(
         )
     }
 
-    // Filter Dialog
+    
     if (showFilterDialog) {
         FilterDialog(
             currentFilter = uiState.filter,
@@ -389,7 +389,7 @@ fun LogEntryItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            // Selection indicator
+            
             if (isSelectionMode) {
                 Checkbox(
                     checked = isSelected,
@@ -399,13 +399,13 @@ fun LogEntryItem(
                 Spacer(modifier = Modifier.width(8.dp))
             }
             
-            // Log content
+            
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Level indicator
+                    
                     Box(
                         modifier = Modifier
                             .size(8.dp)
@@ -413,7 +413,7 @@ fun LogEntryItem(
                             .background(log.levelColor)
                     )
                     
-                    // Level text
+                    
                     Text(
                         text = log.levelIcon + " " + log.level.displayName,
                         fontSize = if (compactView) 9.sp else 11.sp,
@@ -422,7 +422,7 @@ fun LogEntryItem(
                         fontFamily = FontFamily.Monospace
                     )
                     
-                    // Tag
+                    
                     if (showTags) {
                         Surface(
                             modifier = Modifier.clickable { onTagClick(log.tag) },
@@ -438,7 +438,7 @@ fun LogEntryItem(
                         }
                     }
                     
-                    // Timestamp
+                    
                     if (showTimestamps) {
                         Text(
                             text = log.formattedTime,
@@ -451,7 +451,7 @@ fun LogEntryItem(
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 
-                // Message
+                
                 Text(
                     text = log.message,
                     fontSize = fontSize.sp,
@@ -461,7 +461,7 @@ fun LogEntryItem(
                     maxLines = if (compactView && !wordWrap) 2 else Int.MAX_VALUE
                 )
                 
-                // Details
+                
                 if (log.details != null && !compactView) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -472,7 +472,7 @@ fun LogEntryItem(
                     )
                 }
                 
-                // Stack trace (collapsible)
+                
                 if (log.stackTrace != null && !compactView) {
                     var expanded by remember { mutableStateOf(false) }
                     Row(
@@ -660,7 +660,7 @@ fun SettingsDialog(
                     .verticalScroll(rememberScrollState())
                     .padding(vertical = 8.dp)
             ) {
-                // Auto Refresh
+                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -687,7 +687,7 @@ fun SettingsDialog(
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
-                // Display Settings
+                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -747,7 +747,7 @@ fun SettingsDialog(
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
-                // Retention
+                
                 Text("Log Retention (days)", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 Slider(
                     value = uiState.logRetentionDays.toFloat(),
@@ -759,7 +759,7 @@ fun SettingsDialog(
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
-                // Export Options
+                
                 Text("Export Format", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -781,7 +781,7 @@ fun SettingsDialog(
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
-                // Danger Zone
+                
                 Text("Danger Zone", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -825,7 +825,7 @@ fun FilterDialog(
                     .verticalScroll(rememberScrollState())
                     .padding(vertical = 8.dp)
             ) {
-                // Search
+                
                 OutlinedTextField(
                     value = currentFilter,
                     onValueChange = onFilterChange,
@@ -837,7 +837,7 @@ fun FilterDialog(
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                // Level Filter
+                
                 Text("Log Level", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -855,7 +855,7 @@ fun FilterDialog(
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                // Sort Order
+                
                 Text("Sort By", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 Row(
                     modifier = Modifier.fillMaxWidth(),

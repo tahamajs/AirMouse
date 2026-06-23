@@ -13,17 +13,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.*
 
-/**
- * Utility class to log raw sensor data to a CSV file for offline analysis.
- * Useful for debugging, performance analysis, and answering Perfetto questions.
- *
- * Features:
- * - Logs accelerometer, gyroscope, magnetometer, and other sensors
- * - Automatic file rotation to prevent huge files
- * - Configurable sampling rate
- * - Timestamp with millisecond precision
- * - Battery-friendly batch writing
- */
 class SensorDataLogger(private val context: Context) : SensorEventListener {
 
     enum class SensorType(val typeName: String) {
@@ -41,8 +30,8 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
 
     companion object {
         private const val TAG = "SensorDataLogger"
-        private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
-        private const val BUFFER_SIZE = 100 // Write to file every 100 samples
+        private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 
+        private const val BUFFER_SIZE = 100 
         private const val LOG_PREFIX = "sensor_log"
         private const val LOG_EXTENSION = ".csv"
     }
@@ -82,7 +71,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
         sampleCount = 0
         logStartTime = System.currentTimeMillis()
 
-        // ✅ FIXED: Use proper delay constants
+        
         if (enabledSensors.contains(SensorType.ACCELEROMETER)) {
             sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
@@ -149,7 +138,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
 
         if (enabledSensors.contains(SensorType.PROXIMITY)) {
             sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)?.let {
-                // ✅ FIXED: Use SENSOR_DELAY_NORMAL instead of SENSELESS_DELAY_NORMAL
+                
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
                 activeSensors.add(it.type)
                 Timber.i("Registered proximity sensor")
@@ -426,9 +415,6 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
     }
 }
 
-/**
- * Builder class for easy configuration of SensorDataLogger
- */
 class SensorDataLoggerBuilder(private val context: Context) {
     private var sensors: Set<SensorDataLogger.SensorType> = SensorDataLogger.SensorType.entries.toSet()
     private var autoFlushInterval: Long = 1000L

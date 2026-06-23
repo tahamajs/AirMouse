@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/VoiceCommandModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * Voice command
- */
 @Parcelize
 data class VoiceCommand(
     val id: String = "",
@@ -18,9 +15,6 @@ data class VoiceCommand(
     val createdAt: Long = System.currentTimeMillis()
 ) : Parcelable
 
-/**
- * Voice command history
- */
 @Parcelize
 data class VoiceCommandHistory(
     val text: String = "",
@@ -30,9 +24,6 @@ data class VoiceCommandHistory(
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable
 
-/**
- * Voice command configuration
- */
 data class VoiceCommandConfig(
     val wakeWord: String = "hey air mouse",
     val wakeWordConfidence: Float = 0.7f,

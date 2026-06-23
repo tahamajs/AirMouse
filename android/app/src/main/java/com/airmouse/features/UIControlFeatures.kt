@@ -1,10 +1,11 @@
-// UIControlFeatures.kt
+
 package com.airmouse.features
 
 import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -33,17 +34,12 @@ import kotlinx.coroutines.delay
 import kotlin.math.*
 import kotlin.random.Random
 
-/**
- * UI control features: floating panel, radial menu, gesture training UI,
- * sensitivity curve editor, on‑screen keyboard.
- * All components are Compose‑based and can be displayed as overlays.
- */
 class UIControlFeatures {
 
-    // ==================== 1. Floating control panel ====================
+    
     data class FloatingPanelConfig(
         val position: PanelPosition = PanelPosition.TOP_RIGHT,
-        val size: Float = 0.15f,      // percentage of screen width
+        val size: Float = 0.15f,      
         val opacity: Float = 0.8f,
         val autoHideDelay: Long = 3000L,
         val buttons: List<PanelButton> = emptyList()
@@ -80,9 +76,9 @@ class UIControlFeatures {
         val screenHeight = configuration.screenHeightDp.dp
 
         val panelWidth = (screenWidth.value * config.size).dp
-        val panelHeight = panelWidth // square
+        val panelHeight = panelWidth 
 
-        // Auto‑hide
+        
         LaunchedEffect(visible) {
             if (visible && config.autoHideDelay > 0) {
                 delay(config.autoHideDelay)
@@ -90,7 +86,7 @@ class UIControlFeatures {
             }
         }
 
-        // Initial position based on config.position
+        
         LaunchedEffect(config.position) {
             offsetX = when (config.position) {
                 PanelPosition.TOP_LEFT -> 0f
@@ -163,7 +159,7 @@ class UIControlFeatures {
         }
     }
 
-    // ==================== 2. Quick action radial menu ====================
+    
     data class RadialMenuItem(val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String, val action: () -> Unit)
 
     data class RadialMenuConfig(
@@ -244,7 +240,7 @@ class UIControlFeatures {
             }
     }
 
-    // ==================== 3. Gesture training UI ====================
+    
     data class GestureTrainingConfig(
         val targetGesture: String,
         val requiredConfidence: Float = 0.8f,
@@ -346,7 +342,7 @@ class UIControlFeatures {
         }
     }
 
-    // ==================== 4. Real-time sensitivity curve editor ====================
+    
     data class Point(val x: Float, val y: Float)
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -472,7 +468,7 @@ class UIControlFeatures {
         return x
     }
 
-    // ==================== 5. On-screen keyboard ====================
+    
     data class OnScreenKeyboardConfig(
         val layout: KeyboardLayout = KeyboardLayout.QWERTY,
         val keySize: Int = 40,
@@ -509,7 +505,7 @@ class UIControlFeatures {
         val context = androidx.compose.ui.platform.LocalContext.current
         val vibrator = remember(config.hapticOnKeyPress) {
             if (config.hapticOnKeyPress) {
-                context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                ContextCompat.getSystemService(context, Vibrator::class.java)
             } else null
         }
 
@@ -540,11 +536,15 @@ class UIControlFeatures {
                                         " " -> onKeyPress(" ")
                                         else -> onKeyPress(displayKey)
                                     }
-                                    if (Build.VERSION.SDK_INT >= 26) {
-                                        vibrator?.vibrate(VibrationEffect.createOneShot(20L, VibrationEffect.DEFAULT_AMPLITUDE))
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        vibrator?.vibrate(20L)
+                                    try {
+                                        if (Build.VERSION.SDK_INT >= 26) {
+                                            vibrator?.vibrate(VibrationEffect.createOneShot(20L, VibrationEffect.DEFAULT_AMPLITUDE))
+                                        } else {
+                                            @Suppress("DEPRECATION")
+                                            vibrator?.vibrate(20L)
+                                        }
+                                    } catch (_: SecurityException) {
+                                        
                                     }
                                 },
                                 modifier = Modifier.padding(4.dp).size(config.keySize.dp)
@@ -559,5 +559,5 @@ class UIControlFeatures {
     }
 }
 
-// Extension to bridge local layouts
+
 private fun Int.bindWindowPadding() = this

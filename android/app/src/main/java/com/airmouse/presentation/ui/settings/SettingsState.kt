@@ -1,12 +1,17 @@
-// app/src/main/java/com/airmouse/presentation/ui/settings/SettingsState.kt
+
 package com.airmouse.presentation.ui.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.airmouse.domain.model.AppPreferences
+import com.airmouse.domain.model.ConnectionConfig
+import com.airmouse.domain.model.MouseStatistics
+import com.airmouse.domain.model.MovementProfile
+import com.airmouse.domain.model.UserPreferences
 
-// ==================== ENUMS ====================
+
 
 enum class SettingsSection(
     val title: String,
@@ -32,10 +37,10 @@ enum class HapticStrength(val displayName: String, val duration: Long) {
     STRONG("Strong", 80)
 }
 
-// ==================== UI STATE ====================
+
 
 data class SettingsUiState(
-    // Cursor Settings
+    
     val sensitivity: Float = 0.5f,
     val accelerationEnabled: Boolean = false,
     val accelerationFactor: Float = 1.5f,
@@ -44,7 +49,7 @@ data class SettingsUiState(
     val smoothingEnabled: Boolean = true,
     val smoothingFactor: Float = 0.5f,
 
-    // Gesture Settings
+    
     val clickThreshold: Float = 10f,
     val doubleClickInterval: Long = 300,
     val scrollThreshold: Float = 5f,
@@ -52,21 +57,21 @@ data class SettingsUiState(
     val rightClickDuration: Long = 500,
     val gestureDebounce: Long = 100,
 
-    // AI & Predictive Settings
+    
     val aiSmoothing: Boolean = false,
     val aiBlendFactor: Float = 0.7f,
     val predictive: Boolean = true,
     val predictionStrength: Float = 0.5f,
     val kalmanEnabled: Boolean = true,
 
-    // Haptic & Feedback
+    
     val hapticEnabled: Boolean = true,
     val hapticStrength: HapticStrength = HapticStrength.MEDIUM,
     val soundEnabled: Boolean = false,
     val visualFeedback: Boolean = true,
     val notificationOnGesture: Boolean = false,
 
-    // Display Settings
+    
     val theme: String = "system",
     val useDynamicColors: Boolean = true,
     val fontSize: Float = 16f,
@@ -74,7 +79,7 @@ data class SettingsUiState(
     val keepScreenOn: Boolean = false,
     val showFps: Boolean = false,
 
-    // Touchpad Settings
+    
     val touchpadActive: Boolean = false,
     val touchpadSensitivity: Float = 1.0f,
     val touchpadCursorSpeed: Float = 1.0f,
@@ -95,35 +100,42 @@ data class SettingsUiState(
     val touchpadHapticFeedback: Boolean = true,
     val touchpadShowTouchPoints: Boolean = false,
 
-    // Connection Settings
+    
     val autoConnect: Boolean = true,
     val reconnectAttempts: Int = 5,
     val connectionTimeout: Int = 5000,
     val useWebSocket: Boolean = true,
     val useUdpDiscovery: Boolean = true,
 
-    // Privacy & Data
+    
     val anonymousStats: Boolean = true,
     val crashReporting: Boolean = true,
     val clearDataOnExit: Boolean = false,
 
-    // Presentation Settings
+    
     val presentationModeEnabled: Boolean = false,
     val laserPointerSpeed: Float = 1.0f,
     val showPresentationTimer: Boolean = true,
     val autoHideLaser: Boolean = true,
 
-    // Status
+    
     val isLoading: Boolean = false,
     val error: String? = null,
     val success: String? = null,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
+
+    
+    val connectionConfig: ConnectionConfig = ConnectionConfig(),
+    val mouseProfile: MovementProfile = MovementProfile(),
+    val appPreferences: AppPreferences = AppPreferences(),
+    val userPreferences: UserPreferences = UserPreferences(),
+    val mouseStatistics: MouseStatistics = MouseStatistics()
 )
 
-// ==================== EVENTS ====================
+
 
 sealed class SettingsEvent {
-    // Cursor Events
+    
     data class UpdateSensitivity(val value: Float) : SettingsEvent()
     object ToggleAcceleration : SettingsEvent()
     data class UpdateAccelerationFactor(val value: Float) : SettingsEvent()
@@ -132,28 +144,28 @@ sealed class SettingsEvent {
     object ToggleSmoothing : SettingsEvent()
     data class UpdateSmoothingFactor(val value: Float) : SettingsEvent()
 
-    // Gesture Events
+    
     data class UpdateClickThreshold(val value: Float) : SettingsEvent()
     data class UpdateDoubleClickInterval(val value: Long) : SettingsEvent()
     data class UpdateScrollThreshold(val value: Float) : SettingsEvent()
     data class UpdateRightClickTilt(val value: Float) : SettingsEvent()
     data class UpdateRightClickDuration(val value: Long) : SettingsEvent()
 
-    // AI Events
+    
     object ToggleAiSmoothing : SettingsEvent()
     data class UpdateAiBlendFactor(val value: Float) : SettingsEvent()
     object TogglePredictive : SettingsEvent()
     data class UpdatePredictionStrength(val value: Float) : SettingsEvent()
     object ToggleKalman : SettingsEvent()
 
-    // Haptic Events
+    
     object ToggleHaptic : SettingsEvent()
     data class UpdateHapticStrength(val strength: HapticStrength) : SettingsEvent()
     object ToggleSound : SettingsEvent()
     object ToggleVisualFeedback : SettingsEvent()
     object ToggleNotificationOnGesture : SettingsEvent()
 
-    // Display Events
+    
     data class UpdateTheme(val theme: String) : SettingsEvent()
     object ToggleDynamicColors : SettingsEvent()
     data class UpdateFontSize(val value: Float) : SettingsEvent()
@@ -161,7 +173,7 @@ sealed class SettingsEvent {
     object ToggleKeepScreenOn : SettingsEvent()
     object ToggleShowFps : SettingsEvent()
 
-    // Touchpad Events
+    
     object ToggleTouchpadActive : SettingsEvent()
     data class UpdateTouchpadSensitivity(val value: Float) : SettingsEvent()
     data class UpdateTouchpadCursorSpeed(val value: Float) : SettingsEvent()
@@ -182,25 +194,25 @@ sealed class SettingsEvent {
     object ToggleTouchpadHapticFeedback : SettingsEvent()
     object ToggleTouchpadShowTouchPoints : SettingsEvent()
 
-    // Connection Events
+    
     object ToggleAutoConnect : SettingsEvent()
     data class UpdateReconnectAttempts(val value: Int) : SettingsEvent()
     data class UpdateConnectionTimeout(val value: Int) : SettingsEvent()
     object ToggleUseWebSocket : SettingsEvent()
     object ToggleUdpDiscovery : SettingsEvent()
 
-    // Privacy Events
+    
     object ToggleAnonymousStats : SettingsEvent()
     object ToggleCrashReporting : SettingsEvent()
     object ToggleClearDataOnExit : SettingsEvent()
 
-    // Presentation Events
+    
     object TogglePresentationMode : SettingsEvent()
     data class UpdateLaserPointerSpeed(val value: Float) : SettingsEvent()
     object ToggleShowPresentationTimer : SettingsEvent()
     object ToggleAutoHideLaser : SettingsEvent()
 
-    // Actions
+    
     object SaveSettings : SettingsEvent()
     object ResetDefaults : SettingsEvent()
     object ExportSettings : SettingsEvent()
@@ -220,7 +232,7 @@ sealed class SettingsEvent {
     data class ShowError(val message: String) : SettingsEvent()
 }
 
-// ==================== EFFECTS ====================
+
 
 sealed class SettingsEffect {
     data class ShowToast(val message: String) : SettingsEffect()

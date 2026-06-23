@@ -7,8 +7,9 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.VibrationEffect
 import android.os.Vibrator
+import androidx.core.content.ContextCompat
+import com.airmouse.PreferencesManager
 import com.airmouse.domain.model.CalibrationStatus
-import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,18 +18,6 @@ import kotlin.math.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-/**
- * Complete Calibration Helper - Professional sensor calibration for Air Mouse
- * 
- * Features:
- * - Gyroscope bias calibration (6-point stationary sampling)
- * - Magnetometer hard/soft iron calibration (ellipsoid fitting)
- * - Accelerometer 6-point calibration (gravity alignment)
- * - Real-time progress tracking with StateFlow
- * - Haptic feedback during calibration steps
- * - Calibration persistence and validation
- * - Visual instructions for user guidance
- */
 class CalibrationHelper(
     private val context: Context,
     private val prefs: PreferencesManager
@@ -36,21 +25,21 @@ class CalibrationHelper(
     companion object {
         private const val TAG = "CalibrationHelper"
         
-        // Gyroscope calibration
+        
         private const val GYRO_SAMPLES_REQUIRED = 1000
         private const val GYRO_STABILITY_THRESHOLD = 0.05f
         
-        // Magnetometer calibration
+        
         private const val MAG_SAMPLES_REQUIRED = 500
         private const val MAG_CALIBRATION_DURATION_MS = 10000L
         
-        // Accelerometer calibration
+        
         private const val ACCEL_SAMPLES_PER_ORIENTATION = 100
         private const val GRAVITY_EARTH = 9.81f
         private const val ACCEL_TOLERANCE = 0.2f
     }
 
-    // Calibration state flows for reactive UI
+    
     private val _calibrationState = MutableStateFlow(CalibrationState.IDLE)
     val calibrationState: StateFlow<CalibrationState> = _calibrationState.asStateFlow()
     
@@ -66,7 +55,7 @@ class CalibrationHelper(
     private val _calibrationQuality = MutableStateFlow(CalibrationQuality.UNKNOWN)
     val calibrationQuality: StateFlow<CalibrationQuality> = _calibrationQuality.asStateFlow()
 
-    // Calibration data
+    
     private var gyroBiasX = 0f
     private var gyroBiasY = 0f
     private var gyroBiasZ = 0f
@@ -91,7 +80,7 @@ class CalibrationHelper(
     private var magEllipsoidB = 0f
     private var magEllipsoidC = 0f
 
-    // Temporary storage for calibration
+    
     private val gyroSamples = mutableListOf<Triple<Float, Float, Float>>()
     private val magSamples = mutableListOf<Triple<Float, Float, Float>>()
     private val accelSamples = mutableListOf<Triple<Float, Float, Float>>()
@@ -107,9 +96,6 @@ class CalibrationHelper(
         validateCalibrationQuality()
     }
 
-    /**
-     * Calibration state enum
-     */
     enum class CalibrationState {
         IDLE,
         CALIBRATING,
@@ -118,9 +104,6 @@ class CalibrationHelper(
         VALIDATING
     }
 
-    /**
-     * Calibration step enum
-     */
     enum class CalibrationStep {
         NONE,
         GYROSCOPE,
@@ -135,9 +118,6 @@ class CalibrationHelper(
         VALIDATING
     }
 
-    /**
-     * Calibration quality enum
-     */
     enum class CalibrationQuality {
         EXCELLENT,
         GOOD,
@@ -146,9 +126,6 @@ class CalibrationHelper(
         UNKNOWN
     }
 
-    /**
-     * Load saved calibration data from preferences
-     */
     private fun loadCalibrationData() {
         gyroBiasX = prefs.getFloat("gyro_bias_x", 0f)
         gyroBiasY = prefs.getFloat("gyro_bias_y", 0f)
@@ -175,9 +152,6 @@ class CalibrationHelper(
         magEllipsoidC = prefs.getFloat("mag_ellipsoid_c", 1f)
     }
 
-    /**
-     * Save calibration data to preferences
-     */
     fun saveCalibrationData() {
         prefs.putFloat("gyro_bias_x", gyroBiasX)
         prefs.putFloat("gyro_bias_y", gyroBiasY)
@@ -204,12 +178,10 @@ class CalibrationHelper(
         prefs.putFloat("mag_ellipsoid_c", magEllipsoidC)
         
         prefs.putBoolean("calibration_complete", true)
+        prefs.putBoolean("is_calibrated", true)
         prefs.putLong("calibration_timestamp", System.currentTimeMillis())
     }
 
-    /**
-     * Validate calibration quality based on variance
-     */
     private fun validateCalibrationQuality() {
         val avgVariance = (gyroVarianceX + gyroVarianceY + gyroVarianceZ) / 3f
         
@@ -222,14 +194,11 @@ class CalibrationHelper(
         }
     }
 
-    /**
-     * Start full calibration process
-     */
     suspend fun startFullCalibration(onInstruction: (String, Int) -> Unit): Boolean {
         _calibrationState.value = CalibrationState.CALIBRATING
         _calibrationProgress.value = 0
         
-        // Step 1: Gyroscope calibration
+        
         onInstruction("Place device on a flat, stationary surface", 10)
         if (!calibrateGyroscope()) {
             _calibrationState.value = CalibrationState.FAILED
@@ -238,7 +207,7 @@ class CalibrationHelper(
         
         _calibrationProgress.value = 30
         
-        // Step 2: Magnetometer calibration
+        
         onInstruction("Move device in a figure-8 pattern", 40)
         if (!calibrateMagnetometer()) {
             _calibrationState.value = CalibrationState.FAILED
@@ -247,7 +216,7 @@ class CalibrationHelper(
         
         _calibrationProgress.value = 60
         
-        // Step 3: Accelerometer calibration
+        
         onInstruction("Place device flat facing up", 70)
         if (!calibrateAccelerometer()) {
             _calibrationState.value = CalibrationState.FAILED
@@ -262,9 +231,6 @@ class CalibrationHelper(
         return true
     }
 
-    /**
-     * Calibrate gyroscope - collect stationary samples
-     */
     suspend fun calibrateGyroscope(): Boolean = suspendCoroutine { continuation ->
         gyroSamples.clear()
         _calibrationStep.value = CalibrationStep.GYROSCOPE
@@ -291,7 +257,7 @@ class CalibrationHelper(
         
         sensorManager?.registerListener(listener, gyroscope, SensorManager.SENSOR_DELAY_FASTEST)
         
-        // Timeout after 10 seconds
+        
         mainScope.launch {
             delay(10000)
             if (gyroSamples.size < GYRO_SAMPLES_REQUIRED) {
@@ -301,9 +267,6 @@ class CalibrationHelper(
         }
     }
 
-    /**
-     * Calculate gyroscope bias from collected samples
-     */
     private fun calculateGyroBias() {
         var sumX = 0f
         var sumY = 0f
@@ -326,15 +289,12 @@ class CalibrationHelper(
         gyroBiasY = sumY / n
         gyroBiasZ = sumZ / n
         
-        // Calculate variance for quality assessment
+        
         gyroVarianceX = (sumSqX / n) - (gyroBiasX * gyroBiasX)
         gyroVarianceY = (sumSqY / n) - (gyroBiasY * gyroBiasY)
         gyroVarianceZ = (sumSqZ / n) - (gyroBiasZ * gyroBiasZ)
     }
 
-    /**
-     * Calibrate magnetometer using ellipsoid fitting
-     */
     suspend fun calibrateMagnetometer(): Boolean = suspendCoroutine { continuation ->
         magSamples.clear()
         _calibrationStep.value = CalibrationStep.MAGNETOMETER
@@ -390,18 +350,15 @@ class CalibrationHelper(
         }
     }
 
-    /**
-     * Calculate magnetometer calibration parameters using ellipsoid fitting
-     */
     private fun calculateMagnetometerCalibration(
         minX: Float, maxX: Float, minY: Float, maxY: Float, minZ: Float, maxZ: Float
     ) {
-        // Hard-iron offsets (center of ellipsoid)
+        
         magOffsetX = (minX + maxX) / 2f
         magOffsetY = (minY + maxY) / 2f
         magOffsetZ = (minZ + maxZ) / 2f
         
-        // Soft-iron scale factors (ellipsoid radii)
+        
         val rangeX = maxX - minX
         val rangeY = maxY - minY
         val rangeZ = maxZ - minZ
@@ -411,15 +368,12 @@ class CalibrationHelper(
         magScaleY = if (rangeY > 0) avgRange / rangeY else 1f
         magScaleZ = if (rangeZ > 0) avgRange / rangeZ else 1f
         
-        // Ellipsoid parameters for advanced correction
+        
         magEllipsoidA = rangeX / 2f
         magEllipsoidB = rangeY / 2f
         magEllipsoidC = rangeZ / 2f
     }
 
-    /**
-     * Calibrate accelerometer using 6-point method
-     */
     suspend fun calibrateAccelerometer(): Boolean {
         _calibrationStep.value = CalibrationStep.ACCELEROMETER_FLAT
         val orientations = listOf(
@@ -436,7 +390,7 @@ class CalibrationHelper(
         for ((expected, step) in orientations) {
             _calibrationStep.value = step
             vibrate(100)
-            delay(2000) // Give user time to position device
+            delay(2000) 
             
             val sample = collectAccelerometerSamples()
             if (sample == null) return false
@@ -449,9 +403,6 @@ class CalibrationHelper(
         return true
     }
 
-    /**
-     * Collect accelerometer samples for current orientation
-     */
     private suspend fun collectAccelerometerSamples(): Triple<Float, Float, Float>? = suspendCoroutine { continuation ->
         val accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         if (accelerometer == null) {
@@ -487,14 +438,11 @@ class CalibrationHelper(
         }
     }
 
-    /**
-     * Calculate accelerometer calibration parameters
-     */
     private fun calculateAccelerometerCalibration(
         measurements: List<Triple<Float, Float, Float>>,
         expected: List<Triple<Float, Float, Float>>
     ) {
-        // Calculate scale factors using least squares
+        
         var sumXx = 0f
         var sumYy = 0f
         var sumZz = 0f
@@ -518,7 +466,7 @@ class CalibrationHelper(
         accelScaleY = if (sumY > 0) sumYy / sumY else 1f
         accelScaleZ = if (sumZ > 0) sumZz / sumZ else 1f
         
-        // Calculate offsets
+        
         var sumOx = 0f
         var sumOy = 0f
         var sumOz = 0f
@@ -536,16 +484,10 @@ class CalibrationHelper(
         accelOffsetZ = sumOz / measurements.size
     }
 
-    /**
-     * Apply gyroscope bias correction
-     */
     fun correctGyro(x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
         return Triple(x - gyroBiasX, y - gyroBiasY, z - gyroBiasZ)
     }
 
-    /**
-     * Apply gyroscope bias correction (single axis)
-     */
     fun correctGyro(value: Float, axis: Int): Float {
         return when (axis) {
             0 -> value - gyroBiasX
@@ -554,9 +496,6 @@ class CalibrationHelper(
         }
     }
 
-    /**
-     * Apply accelerometer calibration
-     */
     fun correctAccelerometer(x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
         return Triple(
             (x - accelOffsetX) / accelScaleX,
@@ -565,16 +504,13 @@ class CalibrationHelper(
         )
     }
 
-    /**
-     * Apply magnetometer calibration (hard and soft iron)
-     */
     fun correctMagnetometer(x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
-        // Apply hard-iron offset
+        
         val dx = x - magOffsetX
         val dy = y - magOffsetY
         val dz = z - magOffsetZ
         
-        // Apply soft-iron scale
+        
         return Triple(
             dx * magScaleX,
             dy * magScaleY,
@@ -582,21 +518,18 @@ class CalibrationHelper(
         )
     }
 
-    /**
-     * Advanced magnetometer correction with ellipsoid fitting
-     */
     fun correctMagnetometerAdvanced(x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
-        // Hard-iron offset
+        
         val hx = x - magOffsetX
         val hy = y - magOffsetY
         val hz = z - magOffsetZ
         
-        // Soft-iron correction using ellipsoid parameters
+        
         val sx = hx / magEllipsoidA
         val sy = hy / magEllipsoidB
         val sz = hz / magEllipsoidC
         
-        // Normalize to unit sphere
+        
         val norm = sqrt(sx * sx + sy * sy + sz * sz)
         return if (norm > 0) {
             Triple(sx / norm, sy / norm, sz / norm)
@@ -605,9 +538,6 @@ class CalibrationHelper(
         }
     }
 
-    /**
-     * Get calibration statistics for debugging
-     */
     fun getCalibrationStats(): Map<String, Any> {
         return mapOf(
             "gyro_bias_x" to gyroBiasX,
@@ -649,15 +579,14 @@ class CalibrationHelper(
 
     fun isDeviceCalibrated(): Boolean = isCalibrated()
 
-    fun loadCalibrationStatus(): CalibrationStatus = when {
+    fun loadCalibrationStatus(): Boolean = isCalibrated()
+
+    fun getCalibrationStatus(): CalibrationStatus = when {
         !isCalibrated() -> CalibrationStatus.NOT_STARTED
         _calibrationQuality.value == CalibrationQuality.UNKNOWN -> CalibrationStatus.COMPLETED
         else -> CalibrationStatus.COMPLETED
     }
 
-    /**
-     * Reset all calibration data
-     */
     fun resetCalibration() {
         gyroBiasX = 0f
         gyroBiasY = 0f
@@ -684,6 +613,7 @@ class CalibrationHelper(
         magEllipsoidC = 1f
         
         prefs.putBoolean("calibration_complete", false)
+        prefs.putBoolean("is_calibrated", false)
         saveCalibrationData()
         
         _calibrationState.value = CalibrationState.IDLE
@@ -691,14 +621,27 @@ class CalibrationHelper(
         _calibrationMessage.value = "Calibration reset"
     }
 
-    /**
-     * Check if device is calibrated
-     */
-    fun isCalibrated(): Boolean = prefs.getBoolean("calibration_complete", false)
+    fun isCalibrated(): Boolean = prefs.getBoolean("calibration_complete", false) || prefs.getBoolean("is_calibrated", false)
 
-    /**
-     * Get calibration quality description
-     */
+    fun loadGyroOffsets(): Triple<Float, Float, Float> {
+        return Triple(
+            prefs.getFloat("gyro_offset_x", 0f),
+            prefs.getFloat("gyro_offset_y", 0f),
+            prefs.getFloat("gyro_offset_z", 0f)
+        )
+    }
+
+    fun setGyroOffsets(x: Float, y: Float, z: Float) {
+        prefs.putFloat("gyro_offset_x", x)
+        prefs.putFloat("gyro_offset_y", y)
+        prefs.putFloat("gyro_offset_z", z)
+    }
+
+    fun applyCalibration(x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
+        val (offsetX, offsetY, offsetZ) = loadGyroOffsets()
+        return Triple(x - offsetX, y - offsetY, z - offsetZ)
+    }
+
     fun getQualityDescription(): String {
         return when (_calibrationQuality.value) {
             CalibrationQuality.EXCELLENT -> "Excellent - Perfect sensor tracking"
@@ -709,24 +652,23 @@ class CalibrationHelper(
         }
     }
 
-    /**
-     * Vibrate for haptic feedback
-     */
     private fun vibrate(duration: Long) {
         if (!prefs.isHapticEnabled()) return
-        
-        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(duration)
+
+        val vibrator = ContextCompat.getSystemService(context, Vibrator::class.java) ?: return
+        if (!vibrator.hasVibrator()) return
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(duration)
+            }
+        } catch (_: SecurityException) {
+            
         }
     }
 
-    /**
-     * Clean up resources
-     */
     fun destroy() {
         calibrationJob?.cancel()
         scope.cancel()

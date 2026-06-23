@@ -19,10 +19,6 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-/**
- * Macro recorder for recording and playing back sequences of actions.
- * Fully integrated with ConnectionManager to send commands to the PC.
- */
 @Singleton
 class MacroRecorder @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -65,9 +61,9 @@ class MacroRecorder @Inject constructor(
     }
 
     enum class RecordingMode {
-        STANDARD,    // Record all actions
-        SMART,       // Only record important actions
-        GESTURE_ONLY // Record only gestures
+        STANDARD,    
+        SMART,       
+        GESTURE_ONLY 
     }
 
     private val _macros = MutableStateFlow<List<Macro>>(emptyList())
@@ -85,7 +81,7 @@ class MacroRecorder @Inject constructor(
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    // Callbacks
+    
     var onRecordingStarted: (() -> Unit)? = null
     var onRecordingStopped: ((Macro) -> Unit)? = null
     var onPlaybackStarted: (() -> Unit)? = null
@@ -533,7 +529,7 @@ class MacroRecorder @Inject constructor(
                         onActionExecuted?.invoke(action)
                     }
                     is MacroAction.KeyPress -> {
-                        // Modifiers are not directly supported by ConnectionManager; send key press with modifiers as text command.
+                        
                         val modifiersStr = action.modifiers.joinToString("+")
                         val cmd = if (modifiersStr.isNotEmpty()) "$modifiersStr+${action.keyCode}" else action.keyCode.toString()
                         connectionManager.send("""{"type":"keypress","keycode":${action.keyCode},"modifiers":${JSONArray(action.modifiers)}}""")
@@ -548,7 +544,7 @@ class MacroRecorder @Inject constructor(
                         onActionExecuted?.invoke(action)
                     }
                     is MacroAction.Type -> {
-                        // Send each character with small delay
+                        
                         action.text.forEach { ch ->
                             connectionManager.send("""{"type":"type","char":"$ch"}""")
                             delay(50)
@@ -579,7 +575,7 @@ class MacroRecorder @Inject constructor(
                 }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Error executing action $action", e)
-                // Continue with next action? Or stop playback? We'll continue.
+                
             }
         }
     }
@@ -592,7 +588,7 @@ class MacroRecorder @Inject constructor(
         android.util.Log.i(TAG, "Playback stopped")
     }
 
-    // Helper to wait for a click from the user (simulated)
+    
     private suspend fun waitForClick(timeout: Long) {
         suspendCoroutine<Unit> { continuation ->
             val timeoutRunnable = Runnable {
@@ -605,13 +601,13 @@ class MacroRecorder @Inject constructor(
                 }
             }
             handler.postDelayed(timeoutRunnable, timeout)
-            // In a real implementation you would register a global click listener.
-            // For now we just wait the timeout.
+            
+            
         }
     }
 
     private suspend fun checkPixelColor(x: Int, y: Int, color: Int): Boolean {
-        // Requires screen capture permission. Stub for now – always returns false.
+        
         return false
     }
 

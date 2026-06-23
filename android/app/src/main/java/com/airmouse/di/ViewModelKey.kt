@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/di/ViewModelKey.kt
+
 package com.airmouse.di
 
 import androidx.lifecycle.ViewModel
@@ -11,4 +11,4 @@ import kotlin.reflect.KClass
 annotation class ViewModelKey(val value: KClass<out ViewModel>)
 
 
-// app/src/main/java/com/airmouse/di/ViewModelKey.kt
+

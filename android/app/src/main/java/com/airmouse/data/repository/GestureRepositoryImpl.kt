@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/repository/GestureRepositoryImpl.kt
+
 package com.airmouse.data.repository
 
 import android.content.Context
@@ -23,7 +23,7 @@ class GestureRepositoryImpl @Inject constructor(
     private val dataSource: IGestureDataSource
 ) : IGestureRepository {
 
-    // ==================== State Flows ====================
+    
 
     private val _customGestures = MutableStateFlow<List<CustomGestureTemplate>>(emptyList())
     override fun observeCustomGestures(): Flow<List<CustomGestureTemplate>> = _customGestures.asStateFlow()
@@ -36,7 +36,7 @@ class GestureRepositoryImpl @Inject constructor(
 
     private val _detectedGestures = MutableStateFlow<List<GestureEvent>>(emptyList())
 
-    // ==================== Initialization ====================
+    
 
     init {
         loadData()
@@ -49,21 +49,21 @@ class GestureRepositoryImpl @Inject constructor(
     }
 
     private fun loadCustomGestures() {
-        // Load from data source
-        // _customGestures.value = dataSource.getAllGestureTemplates()
+        
+        
     }
 
     private fun loadGestureStats() {
-        // Load from data source
-        // _gestureStats.value = dataSource.getGestureStats()
+        
+        
     }
 
     private fun loadFavoriteGestures() {
-        // Load from data source
-        // _favoriteGestures.value = dataSource.getFavoriteTemplates()
+        
+        
     }
 
-    // ==================== Gesture Detection ====================
+    
 
     override suspend fun detectGesture(sensorData: FloatArray): GestureEvent {
         val gesture = gestureDetector.detect(
@@ -73,7 +73,7 @@ class GestureRepositoryImpl @Inject constructor(
         )
 
         val gestureType = mapToGestureType(gesture)
-        val confidence = 0.9f // Would get from detector
+        val confidence = 0.9f 
 
         val event = GestureEvent(
             type = gestureType,
@@ -83,13 +83,13 @@ class GestureRepositoryImpl @Inject constructor(
         )
 
         if (gestureType != GestureType.NONE && confidence >= getConfidenceThreshold()) {
-            // Update statistics
+            
             updateGestureStats(gestureType.name, confidence)
 
-            // Increment detection count
+            
             dataSource.incrementGestureCount(gestureType.name, confidence)
 
-            // Update detected gestures list
+            
             val current = _detectedGestures.value.toMutableList()
             current.add(event)
             if (current.size > 100) {
@@ -116,14 +116,14 @@ class GestureRepositoryImpl @Inject constructor(
         }
     }
 
-    // ==================== Custom Gesture CRUD ====================
+    
 
     override suspend fun addCustomGesture(gesture: CustomGestureTemplate): String {
         val id = java.util.UUID.randomUUID().toString()
         val newGesture = gesture.copy(id = id)
         dataSource.saveGestureTemplate(newGesture)
 
-        // Update local cache
+        
         val current = _customGestures.value.toMutableList()
         current.add(newGesture)
         _customGestures.value = current
@@ -158,30 +158,30 @@ class GestureRepositoryImpl @Inject constructor(
         return _customGestures.value
     }
 
-    // ==================== Gesture Training ====================
+    
 
     override suspend fun trainGesture(gestureName: String, samples: List<FloatArray>): Boolean {
-        // Save training samples
+        
         dataSource.saveTrainingSamples(gestureName, samples)
 
-        // Update statistics
+        
         updateGestureStats(gestureName, 0.85f)
 
         return true
     }
 
     override suspend fun trainAllGestures(): Boolean {
-        // Train all gestures using stored samples
+        
         return true
     }
 
-    // ==================== Gesture Statistics ====================
+    
 
     override suspend fun getGestureStats(): GestureTrainingStats {
         return dataSource.getGestureStats()
     }
 
-    // ==================== Gesture Templates ====================
+    
 
     override suspend fun loadGestureTemplates(): List<CustomGestureTemplate> {
         return _customGestures.value
@@ -199,7 +199,7 @@ class GestureRepositoryImpl @Inject constructor(
         deleteCustomGesture(id)
     }
 
-    // ==================== Recognition Configuration ====================
+    
 
     override suspend fun setConfidenceThreshold(threshold: Float) {
         dataSource.setConfidenceThreshold(threshold)
@@ -221,7 +221,7 @@ class GestureRepositoryImpl @Inject constructor(
         return _gestureStats.value.totalGestures > 0
     }
 
-    // ==================== Favorite Gestures ====================
+    
 
     override suspend fun toggleFavorite(id: String) {
         dataSource.toggleFavorite(id)
@@ -232,7 +232,7 @@ class GestureRepositoryImpl @Inject constructor(
         return dataSource.getFavoriteTemplates()
     }
 
-    // ==================== Gesture Analytics ====================
+    
 
     override suspend fun getMostUsedGestures(limit: Int): List<CustomGestureTemplate> {
         return dataSource.getMostUsedGestures(limit)
@@ -251,7 +251,7 @@ class GestureRepositoryImpl @Inject constructor(
         _gestureStats.value = GestureTrainingStats()
     }
 
-    // ==================== Private Helpers ====================
+    
 
     private fun mapToGestureType(gesture: EnhancedGestureDetector.Gesture): GestureType {
         return when (gesture) {

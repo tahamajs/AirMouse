@@ -18,15 +18,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * BatteryViewModel - Manages battery state and monitoring
- */
 @HiltViewModel
 class BatteryViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    // ==================== UI State ====================
+    
 
     private val _uiState = MutableStateFlow(BatteryUiState())
     val uiState: StateFlow<BatteryUiState> = _uiState.asStateFlow()
@@ -37,14 +34,14 @@ class BatteryViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // ==================== Initialization ====================
+    
 
     init {
         refreshBatteryInfo()
         startBatteryMonitoring()
     }
 
-    // ==================== Monitoring ====================
+    
 
     private fun startBatteryMonitoring() {
         viewModelScope.launch {
@@ -55,7 +52,7 @@ class BatteryViewModel @Inject constructor(
         }
     }
 
-    // ==================== Data Collection ====================
+    
 
     fun refreshBatteryInfo() {
         _isLoading.value = true
@@ -63,16 +60,16 @@ class BatteryViewModel @Inject constructor(
         try {
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
 
-            // Register a sticky receiver to catch hardware broadcast properties cleanly
+            
             val batteryStatusIntent: Intent? = context.registerReceiver(
                 null,
                 IntentFilter(Intent.ACTION_BATTERY_CHANGED)
             )
 
-            // 1. Level & Capacity
+            
             val level = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
 
-            // 2. Extracted Hardware Status Keys via Receiver Intent fallbacks
+            
             val status = batteryStatusIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN)
                 ?: batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
 
@@ -83,21 +80,21 @@ class BatteryViewModel @Inject constructor(
             val voltage = (batteryStatusIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0) / 1000f
             val isPresent = batteryStatusIntent?.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true) ?: true
 
-            // 3. Extracted Structural Properties via BatteryManager API
+            
             val chargeCounter = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
 
-            // Only available on API 31+ (Android 12+)
+            
             val energyCounter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 batteryManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_ENERGY_COUNTER)
             } else 0L
 
             val currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) / 1000f
 
-            // Determine charging state
+            
             val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
                     status == BatteryManager.BATTERY_STATUS_FULL
 
-            // Convert health code to string
+            
             val healthString = when (health) {
                 BatteryManager.BATTERY_HEALTH_GOOD -> "Good"
                 BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Overheat"
@@ -107,7 +104,7 @@ class BatteryViewModel @Inject constructor(
                 else -> "Unknown"
             }
 
-            // Convert status code to string Map
+            
             val statusString = when (status) {
                 BatteryManager.BATTERY_STATUS_CHARGING -> "Charging"
                 BatteryManager.BATTERY_STATUS_FULL -> "Full"
@@ -116,7 +113,7 @@ class BatteryViewModel @Inject constructor(
                 else -> "Unknown"
             }
 
-            // Determine explicit plugged context power source
+            
             val plugged = batteryStatusIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: -1
             val pluggedString = when (plugged) {
                 BatteryManager.BATTERY_PLUGGED_AC -> "AC"
@@ -125,11 +122,11 @@ class BatteryViewModel @Inject constructor(
                 else -> "None"
             }
 
-            // Check battery saver mode status
+            
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             val batterySaverEnabled = powerManager.isPowerSaveMode
 
-            // Update UI state securely
+            
             _uiState.update {
                 it.copy(
                     level = level,
@@ -153,7 +150,7 @@ class BatteryViewModel @Inject constructor(
             updateTopApps()
 
         } catch (ignored: Exception) {
-            // Unused exceptions caught cleanly to prevent crash logs inside the sampling loop
+            
         } finally {
             _isLoading.value = false
         }
@@ -196,7 +193,7 @@ class BatteryViewModel @Inject constructor(
         )
     }
 
-    // ==================== Settings Navigators ====================
+    
 
     fun openBatterySettings() {
         try {
@@ -226,7 +223,7 @@ class BatteryViewModel @Inject constructor(
         }
     }
 
-    // ==================== Utility Methods ====================
+    
 
     fun isBatteryLow(): Boolean = _uiState.value.level < 15
 

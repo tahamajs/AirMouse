@@ -41,14 +41,14 @@ fun AnimatedCheckbox(
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                // Background
+                
                 drawCircle(
                     color = if (checked) Color(0xFF00BCD4) else Color(0xFF96A0AE),
                     radius = 12f,
                     center = Offset(12f, 12f)
                 )
                 
-                // Checkmark
+                
                 if (animatedProgress > 0f) {
                     val startX = 6f
                     val startY = 12f

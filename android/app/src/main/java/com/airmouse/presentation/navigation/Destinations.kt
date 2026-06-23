@@ -127,7 +127,7 @@ sealed class Destinations(
     object ServerLogs : Destinations(
         route = ROUTE_SERVER_LOGS,
         title = "Logs",
-        icon = Icons.AutoMirrored.Filled.ListAlt
+        icon = Icons.Filled.List
     )
 
     /** Proximity settings */

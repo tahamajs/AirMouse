@@ -1,12 +1,9 @@
-// app/src/main/java/com/airmouse/domain/model/UpdateModels.kt
+
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-/**
- * Update result
- */
 data class UpdateResult(
     val isAvailable: Boolean = false,
     val version: String? = null,
@@ -15,9 +12,6 @@ data class UpdateResult(
     val downloadUrl: String? = null
 )
 
-/**
- * Version info
- */
 @Parcelize
 data class VersionInfo(
     val versionName: String = "1.0.0",
@@ -26,9 +20,6 @@ data class VersionInfo(
     val minSupportedVersion: String = "1.0.0"
 ) : Parcelable
 
-/**
- * Update info
- */
 @Parcelize
 data class UpdateInfo(
     val version: String = "",
@@ -37,9 +28,6 @@ data class UpdateInfo(
     val isAvailable: Boolean = false
 ) : Parcelable
 
-/**
- * Update progress
- */
 data class UpdateProgress(
     val progress: Float = 0f,
     val bytesDownloaded: Long = 0,

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/di/AppModule.kt
+
 package com.airmouse.di
 
 import android.bluetooth.BluetoothAdapter
@@ -6,7 +6,9 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.hardware.usb.UsbManager
 import android.os.Vibrator
+import com.airmouse.presentation.PresentationModeService
 import com.airmouse.network.WebSocketManager
+import com.airmouse.network.ConnectionManager
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.EnhancedGestureDetector
 import com.airmouse.sensors.GestureDetector
@@ -21,8 +23,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-
-    // ==================== Core Utilities ====================
 
     @Provides
     @Singleton
@@ -67,9 +67,6 @@ object AppModule {
         return BluetoothUtils(context)
     }
 
-    // ==================== Sensor Components ====================
-
-    // ❌ REMOVED: SensorManager is provided in SensorModule – keep only there.
 
     @Provides
     @Singleton
@@ -101,11 +98,21 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun providePresentationModeService(
+        @ApplicationContext context: Context,
+        connectionManager: ConnectionManager,
+        preferencesManager: PreferencesManager
+    ): PresentationModeService {
+        return PresentationModeService(context, connectionManager, preferencesManager)
+    }
+
+    @Provides
+    @Singleton
     fun provideBatterySaver(): BatterySaver {
         return BatterySaver()
     }
 
-    // ==================== Bluetooth Components ====================
+
 
     @Provides
     @Singleton
@@ -114,25 +121,19 @@ object AppModule {
         return bluetoothManager.adapter
     }
 
-    // ==================== Network Components ====================
 
-    // ❌ REMOVED: ConnectionManager is provided in NetworkModule – keep only there.
 
     @Provides
     @Singleton
     fun provideWebSocketManager(): WebSocketManager {
-        return WebSocketManager  // object, just return it
+        return WebSocketManager
     }
-
-    // ==================== USB Manager ====================
 
     @Provides
     @Singleton
     fun provideUsbManager(@ApplicationContext context: Context): UsbManager {
         return context.getSystemService(UsbManager::class.java)
     }
-
-    // ==================== Application Context ====================
 
     @Provides
     @Singleton

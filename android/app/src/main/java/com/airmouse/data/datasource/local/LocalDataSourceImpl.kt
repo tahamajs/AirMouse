@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/LocalDataSourceImpl.kt
+
 package com.airmouse.data.datasource.local
 
 import com.airmouse.domain.model.*
@@ -33,7 +33,7 @@ class LocalDataSourceImpl @Inject constructor(
     private val gestureStatsDao: GestureStatsDao
 ) : ILocalDataSource {
 
-    // ==================== Calibration ====================
+    
 
     override suspend fun saveCalibrationData(data: CalibrationData) {
         val entity = CalibrationEntity(
@@ -101,7 +101,7 @@ class LocalDataSourceImpl @Inject constructor(
         calibrationDao.deleteAll()
     }
 
-    // ==================== Gestures ====================
+    
 
     override suspend fun saveGestureTemplate(template: CustomGestureTemplate) {
         val entity = GestureTemplateEntity(
@@ -178,7 +178,7 @@ class LocalDataSourceImpl @Inject constructor(
         trainingSampleDao.deleteSamplesByGesture(gestureName)
     }
 
-    // ==================== Profiles ====================
+    
 
     override suspend fun saveProfile(profile: UserProfile) {
         val entity = mapToProfileEntity(profile)
@@ -223,7 +223,7 @@ class LocalDataSourceImpl @Inject constructor(
         }
     }
 
-    // ==================== Statistics ====================
+    
 
     override suspend fun saveSessionStats(stats: StatisticsSummary) {
         val entity = StatisticsEntity(
@@ -393,10 +393,10 @@ class LocalDataSourceImpl @Inject constructor(
     override suspend fun resetAllStats() {
         statisticsDao.deleteOldSessions(System.currentTimeMillis())
         gestureStatsDao.deleteAllGestureStats()
-        // Keep daily stats for historical tracking
+        
     }
 
-    // ==================== Mapping Functions ====================
+    
 
     private fun mapToCustomGesture(entity: GestureTemplateEntity): CustomGestureTemplate {
         return CustomGestureTemplate(

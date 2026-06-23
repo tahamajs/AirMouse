@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/domain/usecase/CalibrationUseCase.kt
+
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.CalibrationData
@@ -14,7 +14,7 @@ class CalibrationUseCase @Inject constructor(
 
     suspend fun startFullCalibration(onProgress: (Int) -> Unit): Result<Boolean> {
         return try {
-            // Step 1: Gyroscope
+            
             val gyroSuccess = calibrationRepository.calibrateGyroscope { progress ->
                 onProgress(progress / 3)
             }
@@ -22,7 +22,7 @@ class CalibrationUseCase @Inject constructor(
                 return Result.failure(Exception("Gyroscope calibration failed"))
             }
 
-            // Step 2: Magnetometer
+            
             val magSuccess = calibrationRepository.calibrateMagnetometer { progress ->
                 onProgress(33 + (progress / 3))
             }
@@ -30,9 +30,9 @@ class CalibrationUseCase @Inject constructor(
                 return Result.failure(Exception("Magnetometer calibration failed"))
             }
 
-            // Step 3: Accelerometer
+            
             val accelSuccess = calibrationRepository.calibrateAccelerometer { instruction ->
-                // Instruction callback
+                
             }
             if (!accelSuccess) {
                 return Result.failure(Exception("Accelerometer calibration failed"))

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/features/StatisticsFeature.kt
+
 package com.airmouse.features
 
 import com.airmouse.domain.model.DailyStats
@@ -7,10 +7,15 @@ import com.airmouse.domain.model.HistoricalStatistics
 import com.airmouse.domain.model.StatisticsSummary
 import com.airmouse.domain.usecase.GetStatisticsUseCase
 import com.airmouse.domain.usecase.RecordStatisticsUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,13 +37,35 @@ class StatisticsFeature @Inject constructor(
 
     private val _state = MutableStateFlow(StatisticsFeatureState())
     val state: StateFlow<StatisticsFeatureState> = _state.asStateFlow()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     init {
         observeStats()
     }
 
     private fun observeStats() {
-        // Observe statistics
+        scope.launch {
+            getStatisticsUseCase.observeSessionStats().collect { sessionStats ->
+                _state.value = _state.value.copy(
+                    sessionStats = sessionStats,
+                    sessionDuration = sessionStats.sessionDuration
+                )
+            }
+        }
+
+        scope.launch {
+            getStatisticsUseCase.observeGestureStats().collect { gestureStats ->
+                _state.value = _state.value.copy(gestureStats = gestureStats)
+            }
+        }
+
+        scope.launch {
+            _state.value = _state.value.copy(
+                historicalStats = getStatisticsUseCase.getHistoricalStats(),
+                todayStats = getStatisticsUseCase.getTodayStats(),
+                isTracking = getStatisticsUseCase.isTracking()
+            )
+        }
     }
 
     suspend fun getSessionStats(): StatisticsSummary {

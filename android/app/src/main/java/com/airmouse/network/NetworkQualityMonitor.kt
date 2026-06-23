@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/network/NetworkQualityMonitor.kt
+
 package com.airmouse.network
 
 import android.content.Context
@@ -49,14 +49,14 @@ class NetworkQualityMonitor @Inject constructor(
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) -> NetworkType.BLUETOOTH
                 else -> NetworkType.UNKNOWN
             }
-            // Estimate signal strength from network capabilities
+            
             _signalStrength.value = estimateSignalStrength(caps)
         }
     }
 
     private fun estimateSignalStrength(caps: NetworkCapabilities): Int {
-        // This would require platform-specific implementation
-        return 70 // Default value
+        
+        return 70 
     }
 
     fun getNetworkQuality(): NetworkQuality {

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/repository/SettingsRepositoryImpl.kt
+
 package com.airmouse.data.repository
 
 import com.airmouse.domain.model.MovementProfile
@@ -17,7 +17,7 @@ class SettingsRepositoryImpl @Inject constructor(
     private val prefs: PreferencesManager
 ) : ISettingsRepository {
 
-    // ==================== State Flows ====================
+    
 
     private val _sensitivity = MutableStateFlow(prefs.getSensitivity())
     override fun observeSensitivity(): Flow<Float> = _sensitivity.asStateFlow()
@@ -169,7 +169,7 @@ class SettingsRepositoryImpl @Inject constructor(
     private val _movementProfile = MutableStateFlow(MovementProfile())
     override fun observeMovementProfile(): Flow<MovementProfile> = _movementProfile.asStateFlow()
 
-    // ==================== Sensitivity ====================
+    
 
     override suspend fun getSensitivity(): Float {
         return prefs.getSensitivity()
@@ -183,7 +183,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Smoothing ====================
+    
 
     override suspend fun isSmoothingEnabled(): Boolean {
         return prefs.isSmoothingEnabled()
@@ -196,7 +196,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Acceleration ====================
+    
 
     override suspend fun isAccelerationEnabled(): Boolean {
         return prefs.isAccelerationEnabled()
@@ -219,7 +219,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Invert Axes ====================
+    
 
     override suspend fun isInvertX(): Boolean {
         return prefs.isInvertX()
@@ -243,7 +243,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Swap Axes ====================
+    
 
     override suspend fun isSwapAxes(): Boolean {
         return prefs.getBoolean("swap_axes", false)
@@ -255,7 +255,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Deadband ====================
+    
 
     override suspend fun getDeadband(): Float {
         return prefs.getFloat("deadband", 0.5f)
@@ -268,7 +268,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Max Speed ====================
+    
 
     override suspend fun getMaxSpeed(): Float {
         return prefs.getFloat("max_speed", 100f)
@@ -281,7 +281,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Min Speed ====================
+    
 
     override suspend fun getMinSpeed(): Float {
         return prefs.getFloat("min_speed", 0.5f)
@@ -294,7 +294,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Predictive Blend ====================
+    
 
     override suspend fun getPredictiveBlend(): Float {
         return prefs.getFloat("predictive_blend", 0.6f)
@@ -307,7 +307,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Smoothing Alpha ====================
+    
 
     override suspend fun getSmoothingAlpha(): Float {
         return prefs.getFloat("smoothing_alpha", 0.3f)
@@ -320,7 +320,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Theme ====================
+    
 
     override suspend fun getTheme(): String {
         return prefs.getTheme()
@@ -340,7 +340,7 @@ class SettingsRepositoryImpl @Inject constructor(
         )
     }
 
-    // ==================== Dynamic Colors ====================
+    
 
     override suspend fun isDynamicColorsEnabled(): Boolean {
         return prefs.getBoolean("dynamic_colors", true)
@@ -351,7 +351,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _dynamicColors.value = enabled
     }
 
-    // ==================== Font Size ====================
+    
 
     override suspend fun getFontSize(): Float {
         return prefs.getFloat("font_size", 16f)
@@ -363,7 +363,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _fontSize.value = clamped
     }
 
-    // ==================== Debug Info ====================
+    
 
     override suspend fun isDebugInfoEnabled(): Boolean {
         return prefs.getBoolean("show_debug_info", false)
@@ -374,7 +374,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _debugInfo.value = enabled
     }
 
-    // ==================== Keep Screen On ====================
+    
 
     override suspend fun isKeepScreenOn(): Boolean {
         return prefs.getBoolean("keep_screen_on", false)
@@ -385,7 +385,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _keepScreenOn.value = enabled
     }
 
-    // ==================== Show FPS ====================
+    
 
     override suspend fun isShowFpsEnabled(): Boolean {
         return prefs.getBoolean("show_fps", false)
@@ -396,7 +396,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _showFps.value = enabled
     }
 
-    // ==================== Haptic ====================
+    
 
     override suspend fun isHapticEnabled(): Boolean {
         return prefs.isHapticEnabled()
@@ -421,7 +421,7 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
-    // ==================== Sound ====================
+    
 
     override suspend fun isSoundEnabled(): Boolean {
         return prefs.getBoolean("sound_enabled", false)
@@ -432,7 +432,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _soundEnabled.value = enabled
     }
 
-    // ==================== Visual Feedback ====================
+    
 
     override suspend fun isVisualFeedbackEnabled(): Boolean {
         return prefs.getBoolean("visual_feedback", true)
@@ -443,7 +443,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _visualFeedback.value = enabled
     }
 
-    // ==================== Notification on Gesture ====================
+    
 
     override suspend fun isNotificationOnGestureEnabled(): Boolean {
         return prefs.getBoolean("notification_on_gesture", false)
@@ -454,7 +454,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _notificationOnGesture.value = enabled
     }
 
-    // ==================== Language ====================
+    
 
     override suspend fun getLanguage(): String {
         return prefs.getLanguage()
@@ -469,7 +469,7 @@ class SettingsRepositoryImpl @Inject constructor(
         return listOf("en", "fa", "es", "fr", "de", "zh", "ja", "ko", "ru", "ar")
     }
 
-    // ==================== Auto-Start ====================
+    
 
     override suspend fun isAutoStartServer(): Boolean {
         return prefs.isAutoStartServer()
@@ -480,7 +480,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _autoStartServer.value = enabled
     }
 
-    // ==================== Auto-Connect ====================
+    
 
     override suspend fun isAutoConnect(): Boolean {
         return prefs.getBoolean("auto_connect", true)
@@ -491,7 +491,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _autoConnect.value = enabled
     }
 
-    // ==================== Reconnect Attempts ====================
+    
 
     override suspend fun getReconnectAttempts(): Int {
         return prefs.getInt("reconnect_attempts", 5)
@@ -503,7 +503,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _reconnectAttempts.value = clamped
     }
 
-    // ==================== Connection Timeout ====================
+    
 
     override suspend fun getConnectionTimeout(): Int {
         return prefs.getInt("connection_timeout", 5000)
@@ -515,7 +515,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _connectionTimeout.value = clamped
     }
 
-    // ==================== Use WebSocket ====================
+    
 
     override suspend fun isWebSocketEnabled(): Boolean {
         return prefs.getBoolean("use_websocket", true)
@@ -526,7 +526,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _useWebSocket.value = enabled
     }
 
-    // ==================== UDP Discovery ====================
+    
 
     override suspend fun isUdpDiscoveryEnabled(): Boolean {
         return prefs.getBoolean("use_udp_discovery", true)
@@ -537,7 +537,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _useUdpDiscovery.value = enabled
     }
 
-    // ==================== Log Level ====================
+    
 
     override suspend fun getLogLevel(): String {
         return prefs.getLogLevel()
@@ -556,7 +556,7 @@ class SettingsRepositoryImpl @Inject constructor(
         return listOf("debug", "info", "warn", "error")
     }
 
-    // ==================== Movement Profile ====================
+    
 
     override suspend fun getMovementProfile(): MovementProfile {
         return MovementProfile(
@@ -596,7 +596,7 @@ class SettingsRepositoryImpl @Inject constructor(
         setMovementProfile(default)
     }
 
-    // ==================== Click Detection ====================
+    
 
     override suspend fun getClickThreshold(): Float {
         return prefs.getFloat("click_threshold", 5.0f)
@@ -663,7 +663,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _gestureDebounce.value = clamped
     }
 
-    // ==================== AI & Predictive ====================
+    
 
     override suspend fun isAiSmoothingEnabled(): Boolean {
         return prefs.getBoolean("ai_smoothing", false)
@@ -714,7 +714,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _kalmanEnabled.value = enabled
     }
 
-    // ==================== Privacy ====================
+    
 
     override suspend fun isAnonymousStatsEnabled(): Boolean {
         return prefs.getBoolean("anonymous_stats", true)
@@ -743,7 +743,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _clearDataOnExit.value = enabled
     }
 
-    // ==================== Presentation ====================
+    
 
     override suspend fun isPresentationModeEnabled(): Boolean {
         return prefs.getBoolean("presentation_mode_enabled", false)
@@ -782,7 +782,7 @@ class SettingsRepositoryImpl @Inject constructor(
         _autoHideLaser.value = enabled
     }
 
-    // ==================== Profile Settings ====================
+    
 
     override suspend fun getProfileSettings(): ProfileSettings {
         return ProfileSettings(
@@ -823,10 +823,10 @@ class SettingsRepositoryImpl @Inject constructor(
         _profileSettings.value = settings
     }
 
-    // ==================== Reset ====================
+    
 
     override suspend fun resetAllSettings() {
-        // Reset all settings to defaults
+        
         setSensitivity(1.0f)
         setSmoothingEnabled(true)
         setAccelerationEnabled(true)
@@ -888,7 +888,7 @@ class SettingsRepositoryImpl @Inject constructor(
         updateMovementProfile()
     }
 
-    // ==================== Private Helpers ====================
+    
 
     private suspend fun updateProfileSettings() {
         _profileSettings.value = getProfileSettings()

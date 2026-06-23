@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/AnimationUtils.kt
+
 package com.airmouse.utils
 
 import android.animation.Animator

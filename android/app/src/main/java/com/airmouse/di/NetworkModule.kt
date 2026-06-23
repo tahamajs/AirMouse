@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/di/NetworkModule.kt
+
 package com.airmouse.di
 
 import android.content.Context
@@ -19,9 +19,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    /**
-     * Provides OkHttpClient with logging and timeouts.
-     */
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
@@ -38,26 +35,20 @@ object NetworkModule {
             .build()
     }
 
-    /**
-     * Provides ConnectionManager for WebSocket/TCP communication.
-     */
     @Provides
     @Singleton
     fun provideConnectionManager(
         @ApplicationContext context: Context,
         prefs: PreferencesManager
     ): ConnectionManager {
-        // ConnectionManager expects Context and PreferencesManager
+        
         return ConnectionManager(context, prefs)
     }
 
-    /**
-     * Provides UdpDiscovery for server discovery on the network.
-     */
     @Provides
     @Singleton
     fun provideUdpDiscovery(): UdpDiscovery {
-        // UdpDiscovery has no-arg constructor
+        
         return UdpDiscovery()
     }
 }

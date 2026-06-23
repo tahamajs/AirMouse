@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/gesture/GestureStudioScreen.kt
+
 package com.airmouse.presentation.ui.gesture
 
 import androidx.compose.animation.*
@@ -97,7 +97,7 @@ fun GestureStudioScreen(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Recording Section
+                
                 item {
                     RecordingCard(
                         uiState = uiState,
@@ -109,7 +109,7 @@ fun GestureStudioScreen(
                     )
                 }
 
-                // Training Progress
+                
                 if (uiState.isTraining) {
                     item {
                         TrainingProgressCard(
@@ -120,7 +120,7 @@ fun GestureStudioScreen(
                     }
                 }
 
-                // Recognition Result
+                
                 if (uiState.lastRecognizedGesture != null && uiState.lastRecognizedGesture != "none") {
                     item {
                         RecognitionResultCard(
@@ -131,14 +131,14 @@ fun GestureStudioScreen(
                     }
                 }
 
-                // Statistics Header
+                
                 if (uiState.savedGestures.isNotEmpty()) {
                     item {
                         StatisticsHeader(stats = uiState.trainingStats ?: GestureTrainingStats())
                     }
                 }
 
-                // Gesture List Header
+                
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -158,7 +158,7 @@ fun GestureStudioScreen(
                     }
                 }
 
-                // Gesture List
+                
                 if (uiState.savedGestures.isEmpty()) {
                     item {
                         EmptyGesturesCard(
@@ -181,9 +181,9 @@ fun GestureStudioScreen(
                 }
             }
 
-            // ==================== Dialogs ====================
+            
 
-            // Add Gesture Dialog
+            
             if (uiState.showAddGestureDialog) {
                 AddGestureDialog(
                     name = uiState.newGestureName,
@@ -198,7 +198,7 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Edit Gesture Dialog
+            
             if (uiState.showEditGestureDialog && uiState.editGesture != null) {
                 EditGestureDialog(
                     gesture = uiState.editGesture!!,
@@ -219,7 +219,7 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Delete Dialog
+            
             if (uiState.showDeleteDialog && uiState.deleteGestureId != null) {
                 val gesture = uiState.savedGestures.find { it.id == uiState.deleteGestureId }
                 DeleteGestureDialog(
@@ -231,7 +231,7 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Train All Dialog
+            
             if (uiState.showTrainDialog) {
                 TrainAllDialog(
                     gestureCount = uiState.savedGestures.size,
@@ -243,7 +243,7 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Export Dialog
+            
             if (uiState.showExportDialog) {
                 ExportDialog(
                     onConfirm = {
@@ -254,7 +254,7 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Import Dialog
+            
             if (uiState.showImportDialog) {
                 ImportDialog(
                     onConfirm = { path ->
@@ -267,7 +267,7 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Details Dialog
+            
             if (uiState.showDetailsDialog && uiState.selectedGesture != null) {
                 GestureDetailsDialog(
                     gesture = uiState.selectedGesture!!,
@@ -275,7 +275,7 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Playback Dialog
+            
             if (uiState.showPlaybackDialog && uiState.selectedGesture != null) {
                 PlaybackDialog(
                     gesture = uiState.selectedGesture!!,
@@ -285,7 +285,7 @@ fun GestureStudioScreen(
                 )
             }
 
-            // Error/Success Messages
+            
             if (uiState.errorMessage != null) {
                 Snackbar(
                     modifier = Modifier
@@ -320,7 +320,7 @@ fun GestureStudioScreen(
     }
 }
 
-// ==================== Recording Card ====================
+
 
 @Composable
 fun RecordingCard(
@@ -349,7 +349,7 @@ fun RecordingCard(
                 AnimatedRecordingIndicator()
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Recording timer
+                
                 Text(
                     text = formatTime(uiState.recordingTime),
                     fontSize = 24.sp,
@@ -397,7 +397,7 @@ fun RecordingCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Waveform Preview
+            
             if (uiState.showWaveform && uiState.waveformData.samples.isNotEmpty()) {
                 WaveformVisualizer(
                     data = uiState.waveformData,
@@ -485,7 +485,7 @@ fun RecordingCard(
     }
 }
 
-// ==================== Waveform Visualizer ====================
+
 
 @Composable
 fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifier: Modifier = Modifier) {
@@ -514,7 +514,7 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
             Color(0xFF00BCD4)
         )
 
-        // Draw grid lines
+        
         for (i in 1..3) {
             val y = (height / 4) * i
             drawLine(
@@ -525,7 +525,7 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
             )
         }
 
-        // Draw waveform
+        
         val path = Path()
         var isFirst = true
 
@@ -548,7 +548,7 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
             style = Stroke(width = 2.5f, cap = StrokeCap.Round)
         )
 
-        // Fill under curve
+        
         val fillPath = Path().apply {
             val firstX = 0f
             val lastX = width
@@ -581,7 +581,7 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
     }
 }
 
-// ==================== Animated Recording Indicator ====================
+
 
 @Composable
 fun AnimatedRecordingIndicator() {
@@ -617,7 +617,7 @@ fun AnimatedRecordingIndicator() {
     }
 }
 
-// ==================== Statistics Header ====================
+
 
 @Composable
 fun StatisticsHeader(stats: GestureTrainingStats) {
@@ -651,7 +651,7 @@ fun StatItem(label: String, value: String, icon: String) {
     }
 }
 
-// ==================== Training Progress Card ====================
+
 
 @Composable
 fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: Int) {
@@ -691,7 +691,7 @@ fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: I
     }
 }
 
-// ==================== Recognition Result Card ====================
+
 
 @Composable
 fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> Unit) {
@@ -742,7 +742,7 @@ fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> U
     }
 }
 
-// ==================== Empty Gestures Card ====================
+
 
 @Composable
 fun EmptyGesturesCard(onAddClick: () -> Unit) {
@@ -785,7 +785,7 @@ fun EmptyGesturesCard(onAddClick: () -> Unit) {
     }
 }
 
-// ==================== Gesture Card ====================
+
 
 @Composable
 fun GestureCard(
@@ -909,7 +909,7 @@ fun GestureCard(
     }
 }
 
-// ==================== Dialogs ====================
+
 
 @Composable
 fun AddGestureDialog(
@@ -1230,7 +1230,7 @@ fun PlaybackDialog(
     )
 }
 
-// ==================== Helper Functions ====================
+
 
 private fun formatTime(millis: Int): String {
     val seconds = millis / 1000

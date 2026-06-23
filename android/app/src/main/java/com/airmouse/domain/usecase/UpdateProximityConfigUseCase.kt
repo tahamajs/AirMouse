@@ -1,20 +1,14 @@
-// app/src/main/java/com/airmouse/domain/usecase/UpdateProximityConfigUseCase.kt
+
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.ProximityConfig
 import com.airmouse.domain.repository.IProximityRepository
 import javax.inject.Inject
 
-/**
- * Use case for updating proximity configuration
- */
 class UpdateProximityConfigUseCase @Inject constructor(
     private val proximityRepository: IProximityRepository
 ) {
 
-    /**
-     * Update proximity configuration
-     */
     suspend operator fun invoke(config: ProximityConfig): Result<Unit> {
         return try {
             proximityRepository.updateConfig(config)
@@ -24,9 +18,6 @@ class UpdateProximityConfigUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Set device address
-     */
     suspend fun setDeviceAddress(address: String): Result<Unit> {
         return try {
             proximityRepository.setDeviceAddress(address)
@@ -36,9 +27,6 @@ class UpdateProximityConfigUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Update thresholds
-     */
     suspend fun updateThresholds(near: Float, far: Float): Result<Unit> {
         return try {
             val config = proximityRepository.getConfig()
@@ -52,9 +40,6 @@ class UpdateProximityConfigUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Toggle proximity
-     */
     suspend fun toggleProximity(enabled: Boolean): Result<Unit> {
         return try {
             val config = proximityRepository.getConfig()
@@ -65,9 +50,6 @@ class UpdateProximityConfigUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Calibrate proximity
-     */
     suspend fun calibrate(): Result<Boolean> {
         return try {
             val result = proximityRepository.calibrate()

@@ -33,7 +33,7 @@ class OnboardingPagerAdapter(
             binding.onboardingTitle.text = item.title
             binding.onboardingDescription.text = item.description
 
-            // Transition animations
+            
             binding.onboardingImage.alpha = 0f
             binding.onboardingImage.translationY = 50f
             binding.onboardingImage.animate()

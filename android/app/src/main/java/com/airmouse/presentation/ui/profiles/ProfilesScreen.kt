@@ -53,9 +53,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 
-// ==========================================
-// UI DATA MODELS (no conflict with domain)
-// ==========================================
+
+
+
 
 data class UserProfile(
     val id: String = UUID.randomUUID().toString(),
@@ -136,9 +136,9 @@ data class ProfileStats(
     val mostUsedProfile: String? = null
 )
 
-// ==========================================
-// UI STATE
-// ==========================================
+
+
+
 
 data class ProfileUiState(
     val profiles: List<UserProfile> = emptyList(),
@@ -157,9 +157,9 @@ data class ProfileUiState(
     val successMessage: String? = null
 )
 
-// ==========================================
-// VIEW MODEL
-// ==========================================
+
+
+
 
 @HiltViewModel
 class ProfilesViewModel @Inject constructor(
@@ -388,7 +388,7 @@ class ProfilesViewModel @Inject constructor(
             color = "#6366F1",
             isDefault = domainProfile.isDefault,
             isFavorite = domainProfile.isFavorite,
-            usageCount = domainProfile.usageCount,  // Ensure domain model has this
+            usageCount = domainProfile.usageCount,  
             createdAt = domainProfile.createdAt,
             lastUsedAt = domainProfile.updatedAt,
             tags = domainProfile.tags
@@ -413,9 +413,9 @@ class ProfilesViewModel @Inject constructor(
     }
 }
 
-// ==========================================
-// MAIN SCREEN
-// ==========================================
+
+
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -515,7 +515,7 @@ fun ProfilesScreen(
         }
     }
 
-    // Dialogs
+    
     if (uiState.showCreateDialog) {
         CreateProfileDialog(
             profileName = uiState.newProfileName,
@@ -571,9 +571,9 @@ fun ProfilesScreen(
     }
 }
 
-// ==========================================
-// TOP BAR
-// ==========================================
+
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -690,9 +690,9 @@ fun ProfilesTopBar(
     }
 }
 
-// ==========================================
-// PROFILE LIST CONTENT
-// ==========================================
+
+
+
 
 @Composable
 fun ProfileListContent(
@@ -757,9 +757,9 @@ fun ProfileListContent(
     }
 }
 
-// ==========================================
-// PROFILE CARDS
-// ==========================================
+
+
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1019,9 +1019,9 @@ fun ProfileCompactRow(
     }
 }
 
-// ==========================================
-// PROFILE AVATAR
-// ==========================================
+
+
+
 
 @Composable
 fun ProfileAvatar(
@@ -1045,9 +1045,9 @@ fun ProfileAvatar(
     }
 }
 
-// ==========================================
-// DIALOGS
-// ==========================================
+
+
+
 
 @Composable
 fun CreateProfileDialog(
@@ -1405,9 +1405,9 @@ fun ProfileStatItem(
     }
 }
 
-// ==========================================
-// COLOR PICKER
-// ==========================================
+
+
+
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -1464,9 +1464,9 @@ fun ColorPicker(
     }
 }
 
-// ==========================================
-// EMPTY STATE
-// ==========================================
+
+
+
 
 @Composable
 fun EmptyState(
@@ -1513,9 +1513,9 @@ fun EmptyState(
     }
 }
 
-// ==========================================
-// STATS BAR
-// ==========================================
+
+
+
 
 @Composable
 fun StatsBar(

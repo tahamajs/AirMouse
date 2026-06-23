@@ -5,17 +5,11 @@ import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
-import com.airmouse.utils.PreferencesManager
+import androidx.core.content.ContextCompat
+import com.airmouse.PreferencesManager
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/**
- * Enhanced gesture detector with single click, double click, right click, and scroll.
- * All thresholds are read from PreferencesManager and can be updated at runtime.
- *
- * This detector uses sensor fusion data (gyro, accelerometer, orientation) to detect
- * various gestures with high accuracy and configurable sensitivity.
- */
 class EnhancedGestureDetector(
     private val context: Context,
     private val preferences: PreferencesManager,
@@ -34,7 +28,7 @@ class EnhancedGestureDetector(
         SWIPE_DOWN
     }
 
-    // State tracking
+    
     private var lastClickTime = 0L
     private var potentialDoubleClick = false
     private var pendingClickRunnable: Runnable? = null
@@ -44,12 +38,12 @@ class EnhancedGestureDetector(
     private var lastSwipeTime = 0L
     private var swipeCooldownMs = 300L
 
-    // Gyro offsets for calibration
+    
     private var gyroOffsetX = 0f
     private var gyroOffsetY = 0f
     private var gyroOffsetZ = 0f
 
-    // Thresholds (loaded from preferences)
+    
     private var clickSpeedThreshold: Float = 8f
     private var doubleClickMaxInterval: Long = 400L
     private var scrollSpeedThreshold: Float = 6f
@@ -65,7 +59,7 @@ class EnhancedGestureDetector(
         null
     }
 
-    // Callback interface for gesture events (optional)
+    
     var onGestureDetected: ((Gesture) -> Unit)? = null
 
     init {
@@ -96,17 +90,6 @@ class EnhancedGestureDetector(
         gyroOffsetZ = z
     }
 
-    /**
-     * Detect a gesture from sensor data
-     * @param gyroX Gyroscope X-axis (rad/s)
-     * @param gyroY Gyroscope Y-axis (rad/s) - used for click detection
-     * @param gyroZ Gyroscope Z-axis (rad/s) - used for horizontal swipes
-     * @param accelX Accelerometer X-axis (m/s²)
-     * @param accelY Accelerometer Y-axis (m/s²) - used for scroll detection
-     * @param accelZ Accelerometer Z-axis (m/s²)
-     * @param roll Orientation roll (radians) - used for right click
-     * @return Gesture detected (or NONE)
-     */
     fun detect(
         gyroX: Float,
         gyroY: Float,
@@ -118,23 +101,23 @@ class EnhancedGestureDetector(
     ): Gesture {
         val now = System.currentTimeMillis()
 
-        // Apply calibration offsets
+        
         val calibratedGyroX = gyroX - gyroOffsetX
         val calibratedGyroY = gyroY - gyroOffsetY
         val calibratedGyroZ = gyroZ - gyroOffsetZ
 
-        // Calculate angular speeds
+        
         val angularSpeedY = abs(calibratedGyroY)
         val angularSpeedX = abs(calibratedGyroX)
         val angularSpeedZ = abs(calibratedGyroZ)
         val totalAngularSpeed = sqrt(calibratedGyroX * calibratedGyroX + calibratedGyroY * calibratedGyroY + calibratedGyroZ * calibratedGyroZ)
 
-        // ==================== CLICK / DOUBLE-CLICK DETECTION ====================
+        
         if (angularSpeedY > clickSpeedThreshold && now - lastClickTime > doubleClickMaxInterval) {
             lastClickTime = now
 
             if (potentialDoubleClick) {
-                // Second flick within window → DOUBLE CLICK
+                
                 potentialDoubleClick = false
                 pendingClickRunnable?.let { handler?.removeCallbacks(it) }
                 pendingClickRunnable = null
@@ -142,7 +125,7 @@ class EnhancedGestureDetector(
                 onGestureDetected?.invoke(Gesture.DOUBLE_CLICK)
                 return Gesture.DOUBLE_CLICK
             } else {
-                // First flick → potential double click
+                
                 potentialDoubleClick = true
                 val runnable = Runnable {
                     if (potentialDoubleClick) {
@@ -159,7 +142,7 @@ class EnhancedGestureDetector(
             }
         }
 
-        // ==================== RIGHT CLICK (Long Tilt) ====================
+        
         val rollDegrees = Math.toDegrees(roll.toDouble()).toFloat()
 
         if (abs(rollDegrees) > rightClickTiltThreshold && !rightClickTriggered) {
@@ -176,7 +159,7 @@ class EnhancedGestureDetector(
             rightClickTriggered = false
         }
 
-        // ==================== SCROLL DETECTION ====================
+        
         val speed = abs(accelY)
 
         if (speed > scrollSpeedThreshold && !scrollInProgress) {
@@ -189,7 +172,7 @@ class EnhancedGestureDetector(
             scrollInProgress = false
         }
 
-        // ==================== SWIPE DETECTION ====================
+        
         if (now - lastSwipeTime > swipeCooldownMs) {
             when {
                 angularSpeedZ > swipeThreshold -> {
@@ -212,16 +195,10 @@ class EnhancedGestureDetector(
         return Gesture.NONE
     }
 
-    /**
-     * Simplified detect method for backward compatibility
-     */
     fun detect(gyroY: Float, accelY: Float, roll: Float): Gesture {
         return detect(0f, gyroY, 0f, 0f, accelY, 0f, roll)
     }
 
-    /**
-     * Reset all gesture states (useful when deactivating)
-     */
     fun reset() {
         lastClickTime = 0L
         potentialDoubleClick = false
@@ -233,16 +210,10 @@ class EnhancedGestureDetector(
         lastSwipeTime = 0L
     }
 
-    /**
-     * Update thresholds from preferences (useful when settings change)
-     */
     fun updateThresholds() {
         reloadThresholds()
     }
 
-    /**
-     * Get current configuration for debugging
-     */
     fun getConfig(): Map<String, Any> {
         return mapOf(
             "clickSpeedThreshold" to clickSpeedThreshold,
@@ -263,14 +234,16 @@ class EnhancedGestureDetector(
         if (!hapticEnabled) return
 
         try {
+            val safeVibrator = ContextCompat.getSystemService(context, Vibrator::class.java) ?: return
+            if (!safeVibrator.hasVibrator()) return
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+                safeVibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
                 @Suppress("DEPRECATION")
-                vibrator.vibrate(duration)
+                safeVibrator.vibrate(duration)
             }
-        } catch (e: Exception) {
-            // Ignore vibration errors
+        } catch (_: SecurityException) {
+            
         }
     }
 

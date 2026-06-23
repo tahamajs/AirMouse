@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/themes/ThemesScreen.kt
+
 package com.airmouse.presentation.ui.themes
 
 import androidx.compose.animation.*
@@ -86,12 +86,12 @@ fun ThemesScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Current Theme Indicator
+            
             item {
                 CurrentThemeCard(uiState, viewModel, colors)
             }
 
-            // Theme Options
+            
             item {
                 Text(
                     text = "Themes",
@@ -114,7 +114,7 @@ fun ThemesScreen(
                 )
             }
 
-            // Accent Colors Section
+            
             if (uiState.isCustomizing) {
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -159,7 +159,7 @@ fun ThemesScreen(
                 }
             }
 
-            // Premium Section
+            
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -180,7 +180,7 @@ fun ThemesScreen(
                 )
             }
 
-            // Info Section
+            
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 InfoCard(colors)
@@ -188,7 +188,7 @@ fun ThemesScreen(
         }
     }
 
-    // Success/Error messages
+    
     if (uiState.success != null) {
         Snackbar(
             modifier = Modifier.padding(16.dp),
@@ -342,7 +342,7 @@ fun ThemeOptionCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Color preview
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -358,7 +358,7 @@ fun ThemeOptionCard(
                 }
             }
 
-            // Preview button
+            
             AnimatedVisibility(visible = !isPreviewing) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -384,7 +384,7 @@ fun ThemeOptionCard(
         }
     }
 
-    // Preview overlay
+    
     AnimatedVisibility(visible = isPreviewing) {
         Card(
             modifier = Modifier

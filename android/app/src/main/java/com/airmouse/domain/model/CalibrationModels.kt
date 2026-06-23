@@ -5,9 +5,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.parcelize.Parcelize
 
-/**
- * Gyroscope bias (offset) for each axis.
- */
 @Entity(tableName = "gyro_bias")
 @Parcelize
 data class GyroBias(
@@ -18,9 +15,6 @@ data class GyroBias(
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable
 
-/**
- * Accelerometer calibration parameters (offset and scale for each axis).
- */
 @Entity(tableName = "accel_calibration")
 @Parcelize
 data class AccelCalibration(
@@ -34,9 +28,6 @@ data class AccelCalibration(
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable
 
-/**
- * Magnetometer hard-iron calibration.
- */
 @Entity(tableName = "mag_calibration")
 @Parcelize
 data class MagCalibration(
@@ -50,9 +41,6 @@ data class MagCalibration(
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable
 
-/**
- * Overall calibration state.
- */
 @Parcelize
 data class CalibrationState(
     val gyroCalibrated: Boolean = false,
@@ -64,9 +52,6 @@ data class CalibrationState(
     val recommendedActions: List<String> = emptyList()
 ) : Parcelable
 
-/**
- * Calibration progress for UI.
- */
 @Parcelize
 data class CalibrationProgress(
     val step: CalibrationStep,

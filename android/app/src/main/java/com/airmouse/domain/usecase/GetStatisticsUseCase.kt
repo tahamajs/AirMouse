@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/domain/usecase/GetStatisticsUseCase.kt
+
 package com.airmouse.domain.usecase
 
 import com.airmouse.domain.model.DailyStats
@@ -9,23 +9,14 @@ import com.airmouse.domain.repository.IStatisticsRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-/**
- * Use case for getting statistics
- */
 class GetStatisticsUseCase @Inject constructor(
     private val statisticsRepository: IStatisticsRepository
 ) {
 
-    /**
-     * Get session statistics
-     */
     suspend operator fun invoke(): StatisticsSummary {
         return statisticsRepository.getCurrentSession()
     }
 
-    /**
-     * Observe session statistics
-     */
     fun observeSessionStats(): Flow<StatisticsSummary> {
         return statisticsRepository.observeCurrentSession()
     }
@@ -34,37 +25,22 @@ class GetStatisticsUseCase @Inject constructor(
         return statisticsRepository.getCurrentSession()
     }
 
-    /**
-     * Get historical statistics
-     */
     suspend fun getHistoricalStats(): HistoricalStatistics {
         return statisticsRepository.getHistoricalStats()
     }
 
-    /**
-     * Get today's statistics
-     */
     suspend fun getTodayStats(): DailyStats {
         return statisticsRepository.getTodayStats()
     }
 
-    /**
-     * Get week statistics
-     */
     suspend fun getWeekStats(): List<DailyStats> {
         return statisticsRepository.getWeekStats()
     }
 
-    /**
-     * Get month statistics
-     */
     suspend fun getMonthStats(): List<DailyStats> {
         return statisticsRepository.getMonthStats()
     }
 
-    /**
-     * Get gesture statistics
-     */
     suspend fun getGestureStats(): List<GestureStatistics> {
         return statisticsRepository.getGestureStats()
     }
@@ -73,16 +49,10 @@ class GetStatisticsUseCase @Inject constructor(
         return statisticsRepository.isTracking()
     }
 
-    /**
-     * Observe gesture statistics
-     */
     fun observeGestureStats(): Flow<List<GestureStatistics>> {
         return statisticsRepository.observeGestureStats()
     }
 
-    /**
-     * Start tracking
-     */
     suspend fun startTracking(): Result<Unit> {
         return try {
             statisticsRepository.startTracking()
@@ -92,9 +62,6 @@ class GetStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Stop tracking
-     */
     suspend fun stopTracking(): Result<Unit> {
         return try {
             statisticsRepository.stopTracking()
@@ -104,9 +71,6 @@ class GetStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Reset statistics
-     */
     suspend fun resetStats(): Result<Unit> {
         return try {
             statisticsRepository.resetStats()
@@ -116,9 +80,6 @@ class GetStatisticsUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Export statistics
-     */
     suspend fun exportStats(format: String = "json"): Result<String> {
         return try {
             val result = statisticsRepository.exportStats(format)

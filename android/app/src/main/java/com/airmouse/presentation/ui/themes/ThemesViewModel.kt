@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/themes/ThemesViewModel.kt
+
 package com.airmouse.presentation.ui.themes
 
 import androidx.lifecycle.ViewModel
@@ -50,10 +50,10 @@ class ThemesViewModel @Inject constructor(
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
-                // Save theme preference
+                
                 prefs.putString("theme", themeId)
 
-                // Update state
+                
                 _uiState.update {
                     it.copy(
                         currentTheme = themeId,
@@ -63,7 +63,7 @@ class ThemesViewModel @Inject constructor(
                     )
                 }
 
-                // Clear success message after delay
+                
                 delay(3000)
                 _uiState.update { it.copy(success = null) }
 

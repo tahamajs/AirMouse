@@ -62,7 +62,7 @@ fun GestureWaveform(
             val maxAmplitude = height / 2 - 10f
             
             if (dataPoints.isEmpty()) {
-                // Draw placeholder when no data
+                
                 drawLine(
                     color = color.copy(alpha = 0.3f),
                     start = Offset(0f, centerY),
@@ -74,7 +74,7 @@ fun GestureWaveform(
             
             val stepX = width / (dataPoints.size - 1).coerceAtLeast(1)
             
-            // Draw background grid
+            
             val gridColor = Color.White.copy(alpha = 0.05f)
             for (i in 0..4) {
                 val y = centerY - maxAmplitude + (maxAmplitude * 2 * i / 4)
@@ -86,7 +86,7 @@ fun GestureWaveform(
                 )
             }
             
-            // Draw zero line
+            
             drawLine(
                 color = color.copy(alpha = 0.5f),
                 start = Offset(0f, centerY),
@@ -95,7 +95,7 @@ fun GestureWaveform(
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
             )
             
-            // Draw main waveform
+            
             val path = Path().apply {
                 moveTo(0f, centerY - dataPoints.first().coerceIn(-maxAmplitude, maxAmplitude))
                 dataPoints.forEachIndexed { index, value ->
@@ -111,7 +111,7 @@ fun GestureWaveform(
                 style = Stroke(width = 3f)
             )
             
-            // Fill area under curve
+            
             val fillPath = Path().apply {
                 moveTo(0f, centerY)
                 dataPoints.forEachIndexed { index, value ->
@@ -129,7 +129,7 @@ fun GestureWaveform(
                 style = Stroke(width = 0f)
             )
             
-            // Draw peak markers
+            
             if (showPeaks && dataPoints.isNotEmpty()) {
                 val maxValue = dataPoints.maxOrNull() ?: 0f
                 val minValue = dataPoints.minOrNull() ?: 0f
@@ -149,7 +149,7 @@ fun GestureWaveform(
             }
         }
         
-        // Animated glow overlay
+        
         if (animated && dataPoints.isNotEmpty()) {
             Box(
                 modifier = Modifier
@@ -168,7 +168,7 @@ fun GestureWaveform(
             )
         }
         
-        // Peak labels
+        
         if (showPeaks && dataPoints.isNotEmpty()) {
             val maxValue = dataPoints.maxOrNull() ?: 0f
             val minValue = dataPoints.minOrNull() ?: 0f

@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/ICalibrationDataSource.kt
+
 package com.airmouse.data.datasource.local
 
 import com.airmouse.domain.model.CalibrationData
@@ -7,16 +7,16 @@ import com.airmouse.domain.model.CalibrationStatus
 
 interface ICalibrationDataSource {
 
-    // ==========================================
-    // Complete Calibration Data
-    // ==========================================
+    
+    
+    
 
     suspend fun saveCalibrationData(data: CalibrationData)
     suspend fun getCalibrationData(): CalibrationData
 
-    // ==========================================
-    // Gyroscope Calibration
-    // ==========================================
+    
+    
+    
 
     suspend fun saveGyroBias(x: Float, y: Float, z: Float)
     suspend fun getGyroBias(): Triple<Float, Float, Float>
@@ -25,9 +25,9 @@ interface ICalibrationDataSource {
     suspend fun saveGyroSampleCount(count: Int)
     suspend fun getGyroSampleCount(): Int
 
-    // ==========================================
-    // Accelerometer Calibration
-    // ==========================================
+    
+    
+    
 
     suspend fun saveAccelOffset(x: Float, y: Float, z: Float)
     suspend fun getAccelOffset(): Triple<Float, Float, Float>
@@ -39,9 +39,9 @@ interface ICalibrationDataSource {
     suspend fun saveAccelPositionsCompleted(count: Int)
     suspend fun getAccelPositionsCompleted(): Int
 
-    // ==========================================
-    // Magnetometer Calibration
-    // ==========================================
+    
+    
+    
 
     suspend fun saveMagOffset(x: Float, y: Float, z: Float)
     suspend fun getMagOffset(): Triple<Float, Float, Float>
@@ -50,9 +50,9 @@ interface ICalibrationDataSource {
     suspend fun saveMagSampleCount(count: Int)
     suspend fun getMagSampleCount(): Int
 
-    // ==========================================
-    // Calibration Status & Progress
-    // ==========================================
+    
+    
+    
 
     suspend fun setCalibrationStatus(status: CalibrationStatus)
     suspend fun getCalibrationStatus(): CalibrationStatus
@@ -67,9 +67,9 @@ interface ICalibrationDataSource {
     suspend fun setCalibrationTimestamp(timestamp: Long)
     suspend fun getCalibrationTimestamp(): Long
 
-    // ==========================================
-    // Helper Methods
-    // ==========================================
+    
+    
+    
 
     suspend fun hasCalibrationData(): Boolean
     suspend fun resetAll()

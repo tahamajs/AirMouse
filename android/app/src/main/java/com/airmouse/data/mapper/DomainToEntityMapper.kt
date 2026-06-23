@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/mapper/DomainToEntityMapper.kt
+
 package com.airmouse.data.mapper
 
 import com.airmouse.data.datasource.local.entity.CalibrationEntity
@@ -22,11 +22,11 @@ import com.airmouse.domain.model.StatisticsSummary
 import com.airmouse.domain.model.UserProfile
 import java.util.UUID
 
-// ==================== Domain to Entity Mapper ====================
+
 
 object DomainToEntityMapper {
 
-    // ==================== Calibration ====================
+    
 
     fun mapToEntity(data: CalibrationData): CalibrationEntity {
         return CalibrationEntity(
@@ -54,7 +54,7 @@ object DomainToEntityMapper {
         )
     }
 
-    // ==================== Statistics ====================
+    
 
     fun mapToEntity(stats: StatisticsSummary): StatisticsEntity {
         val sessionId = UUID.randomUUID().toString()
@@ -127,7 +127,7 @@ object DomainToEntityMapper {
         )
     }
 
-    // ==================== Profile ====================
+    
 
     fun mapToEntity(profile: UserProfile): ProfileEntity {
         return ProfileEntity(
@@ -159,7 +159,7 @@ object DomainToEntityMapper {
         )
     }
 
-    // ==================== Gesture Template ====================
+    
 
     fun mapToEntity(template: CustomGestureTemplate): GestureTemplateEntity {
         return GestureTemplateEntity(
@@ -184,7 +184,7 @@ object DomainToEntityMapper {
         )
     }
 
-    // ==================== Training Sample ====================
+    
 
     fun mapToEntity(gestureName: String, sample: FloatArray, confidence: Float): TrainingSampleEntity {
         return TrainingSampleEntity(
@@ -206,7 +206,7 @@ object DomainToEntityMapper {
         )
     }
 
-    // ==================== Batch Mappers ====================
+    
 
     fun mapUserProfilesToEntityList(profiles: List<UserProfile>): List<ProfileEntity> {
         return profiles.map { mapToEntity(it) }
@@ -221,11 +221,11 @@ object DomainToEntityMapper {
     }
 }
 
-// ==================== Entity to Domain Mapper ====================
+
 
 object EntityToDomainMapper {
 
-    // ==================== Calibration ====================
+    
 
     fun mapToDomain(entity: CalibrationEntity): CalibrationData {
         return CalibrationData(
@@ -257,7 +257,7 @@ object EntityToDomainMapper {
         )
     }
 
-    // ==================== Statistics ====================
+    
 
     fun mapToDomain(entity: StatisticsEntity): StatisticsSummary {
         return StatisticsSummary(
@@ -302,7 +302,7 @@ object EntityToDomainMapper {
         return entities.map { mapToDomain(it) }
     }
 
-    // ==================== Profile ====================
+    
 
     fun mapToDomain(entity: ProfileEntity): UserProfile {
         return UserProfile(
@@ -340,7 +340,7 @@ object EntityToDomainMapper {
         return entities.map { mapToDomain(it) }
     }
 
-    // ==================== Gesture Template ====================
+    
 
     fun mapToDomain(entity: GestureTemplateEntity): CustomGestureTemplate {
         return CustomGestureTemplate(
@@ -360,7 +360,7 @@ object EntityToDomainMapper {
         return entities.map { mapToDomain(it) }
     }
 
-    // ==================== Training Sample ====================
+    
 
     fun mapToDomain(entity: TrainingSampleEntity): FloatArray {
         return floatArrayOf(
@@ -380,7 +380,7 @@ object EntityToDomainMapper {
         return entities.map { mapToDomain(it) }
     }
 
-    // ==================== Gesture Data ====================
+    
 
     fun mapGestureDataToDomain(
         entities: List<GestureTemplateEntity>,
@@ -392,7 +392,7 @@ object EntityToDomainMapper {
         )
     }
 
-    // ==================== Complete Profile with Settings ====================
+    
 
     fun mapToDomainWithSettings(profile: ProfileEntity, settings: ProfileSettings): UserProfile {
         return UserProfile(
@@ -410,7 +410,7 @@ object EntityToDomainMapper {
         )
     }
 
-    // ==================== Full Calibration Data ====================
+    
 
     fun mapToFullDomain(
         calibration: CalibrationEntity,

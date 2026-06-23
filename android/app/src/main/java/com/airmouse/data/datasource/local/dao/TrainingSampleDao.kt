@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/data/datasource/local/TrainingSampleDao.kt
+
 package com.airmouse.data.datasource.local.dao
 
 import androidx.room.Dao

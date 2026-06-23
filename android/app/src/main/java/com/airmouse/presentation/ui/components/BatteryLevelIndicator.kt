@@ -26,7 +26,7 @@ fun BatteryLevelIndicator(
         val strokeWidth = size * 0.1f
         val radius = size / 2f - strokeWidth / 2
 
-        // Background circle
+        
         drawCircle(
             color = Color.White.copy(alpha = 0.1f),
             radius = radius,
@@ -34,7 +34,7 @@ fun BatteryLevelIndicator(
             style = Stroke(width = strokeWidth)
         )
 
-        // Level arc
+        
         val sweepAngle = 360f * (level / 100f)
         drawArc(
             color = batteryColor,
@@ -46,7 +46,7 @@ fun BatteryLevelIndicator(
             style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
         )
 
-        // Charging indicator
+        
         if (isCharging) {
             drawCircle(
                 color = Color(0xFFFFC107),

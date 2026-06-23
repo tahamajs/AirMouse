@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/ErrorHandler.kt
+
 package com.airmouse.utils
 
 import android.content.Context
@@ -16,14 +16,14 @@ class ErrorHandler @Inject constructor(
     private val errorListeners = mutableListOf<(AppError) -> Unit>()
 
     fun handleError(error: AppError) {
-        // Log error
+        
         android.util.Log.e("AppError", "Error: ${error.message}", error.cause)
 
-        // Show user-friendly message
+        
         val userMessage = getUserFriendlyMessage(error)
         Toast.makeText(context, userMessage, Toast.LENGTH_LONG).show()
 
-        // Notify listeners
+        
         errorListeners.forEach { it(error) }
     }
 

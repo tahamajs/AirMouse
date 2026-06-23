@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.airmouse.network.ConnectionManager
+import com.airmouse.notifications.NotificationManager
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -25,7 +26,8 @@ import javax.inject.Inject
 class NetworkDiscoveryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: PreferencesManager,
-    private val connectionManager: ConnectionManager
+    private val connectionManager: ConnectionManager,
+    private val notificationManager: NotificationManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NetworkDiscoveryUiState())
@@ -115,7 +117,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 }
                 _uiState.update { it.copy(savedServers = servers) }
             } catch (_: Exception) {
-                // Ignore parse errors
+                
             }
         }
     }
@@ -160,7 +162,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 }
                 _uiState.update { it.copy(connectionHistory = history.sortedByDescending { it.timestamp }) }
             } catch (_: Exception) {
-                // Ignore parse errors
+                
             }
         }
     }
@@ -311,7 +313,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                             val key = "$serverIp:$port"
                             if (!discoveredServersMap.containsKey(key)) {
                                 val ping = calculatePing(serverIp)
-                                discoveredServersMap[key] = DiscoveredServer(
+                                val discovered = DiscoveredServer(
                                     id = UUID.randomUUID().toString(),
                                     ip = serverIp,
                                     port = port,
@@ -320,13 +322,29 @@ class NetworkDiscoveryViewModel @Inject constructor(
                                     ping = ping,
                                     signalStrength = calculateSignalStrength(ping),
                                     deviceType = detectDeviceType(name),
-                                    protocol = if (port == 8081) Protocol.WEBSOCKET else Protocol.TCP
+                                    protocol = when (port) {
+                                        8081 -> Protocol.WEBSOCKET
+                                        8082 -> Protocol.UDP
+                                        else -> Protocol.TCP
+                                    }
+                                )
+                                discoveredServersMap[key] = discovered
+                                _uiState.update {
+                                    it.copy(
+                                        status = "Nearby server found: ${discovered.name} at ${discovered.ip}:${discovered.port}"
+                                    )
+                                }
+                                notificationManager.showDiscoveryNotification(
+                                    serverName = discovered.name,
+                                    ip = discovered.ip,
+                                    port = discovered.port,
+                                    protocol = discovered.protocol.displayName
                                 )
                                 updateDiscoveredServers()
                             }
                         }
                     } catch (_: SocketTimeoutException) {
-                        // Continue scanning
+                        
                     }
                 }
             } catch (e: Exception) {
@@ -361,19 +379,35 @@ class NetworkDiscoveryViewModel @Inject constructor(
                         val key = "$testIp:$port"
                         if (!discoveredServersMap.containsKey(key)) {
                             val ping = calculatePing(testIp)
-                            discoveredServersMap[key] = DiscoveredServer(
+                            val discovered = DiscoveredServer(
                                 id = UUID.randomUUID().toString(),
                                 ip = testIp,
                                 port = port,
                                 ping = ping,
                                 signalStrength = calculateSignalStrength(ping),
                                 isReachable = true,
-                                protocol = if (port == 8081) Protocol.WEBSOCKET else Protocol.TCP
+                                protocol = when (port) {
+                                    8081 -> Protocol.WEBSOCKET
+                                    8082 -> Protocol.UDP
+                                    else -> Protocol.TCP
+                                }
+                            )
+                            discoveredServersMap[key] = discovered
+                            _uiState.update {
+                                it.copy(
+                                    status = "Nearby server found: ${discovered.ip}:${discovered.port}"
+                                )
+                            }
+                            notificationManager.showDiscoveryNotification(
+                                serverName = discovered.name,
+                                ip = discovered.ip,
+                                port = discovered.port,
+                                protocol = discovered.protocol.displayName
                             )
                             updateDiscoveredServers()
                         }
                     } catch (_: IOException) {
-                        // Port not open
+                        
                     }
                 }
             }
@@ -447,7 +481,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 }
             }
         } catch (_: Exception) {
-            // Ignore
+            
         }
         return null
     }
@@ -502,6 +536,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
         connectionManager.setProtocol(
             when (server.protocol) {
                 Protocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
+                Protocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
                 else -> ConnectionManager.ConnectionProtocol.WEBSOCKET
             }
         )
@@ -526,7 +561,11 @@ class NetworkDiscoveryViewModel @Inject constructor(
             ip = ip,
             port = port,
             name = "Manual Entry",
-            protocol = Protocol.WEBSOCKET
+            protocol = when (port) {
+                8082 -> Protocol.UDP
+                8080 -> Protocol.TCP
+                else -> Protocol.WEBSOCKET
+            }
         )
         connectToServer(server)
     }

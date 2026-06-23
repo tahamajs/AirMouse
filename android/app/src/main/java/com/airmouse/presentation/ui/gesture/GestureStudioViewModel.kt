@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/gesture/GestureStudioViewModel.kt
+
 package com.airmouse.presentation.ui.gesture
 
 import androidx.lifecycle.ViewModel
@@ -36,7 +36,7 @@ class GestureStudioViewModel @Inject constructor(
         loadData()
     }
 
-    // ==================== Observation ====================
+    
 
     private fun observeGestures() {
         viewModelScope.launch {
@@ -56,7 +56,7 @@ class GestureStudioViewModel @Inject constructor(
         }
     }
 
-    // ==================== Data Loading ====================
+    
 
     private fun loadData() {
         viewModelScope.launch {
@@ -86,13 +86,13 @@ class GestureStudioViewModel @Inject constructor(
         }
     }
 
-    // ==================== Filtering & Sorting ====================
+    
 
     private fun updateFilteredGestures() {
         val state = _uiState.value
         var filtered = _gestures.value
 
-        // Filter by search query
+        
         if (state.searchQuery.isNotEmpty()) {
             filtered = filtered.filter { gesture ->
                 gesture.name.contains(state.searchQuery, ignoreCase = true) ||
@@ -100,17 +100,17 @@ class GestureStudioViewModel @Inject constructor(
             }
         }
 
-        // Filter by type
+        
         if (state.filterType != null) {
             filtered = filtered.filter { it.type == state.filterType }
         }
 
-        // Filter favorites
+        
         if (state.showFavoritesOnly) {
-            // Would need favorite tracking
+            
         }
 
-        // Sort
+        
         filtered = when (state.sortBy) {
             GestureSort.NAME -> filtered.sortedBy { it.name }
             GestureSort.USAGE -> filtered.sortedByDescending { it.usageCount }
@@ -122,7 +122,7 @@ class GestureStudioViewModel @Inject constructor(
         _uiState.update { it.copy(filteredGestures = filtered) }
     }
 
-    // ==================== Recording ====================
+    
 
     fun startRecording(name: String = _uiState.value.gestureName) {
         if (name.isEmpty()) {
@@ -146,7 +146,7 @@ class GestureStudioViewModel @Inject constructor(
             )
         }
 
-        // Start recording timer
+        
         viewModelScope.launch {
             var time = 0
             while (_uiState.value.isRecording) {
@@ -161,7 +161,7 @@ class GestureStudioViewModel @Inject constructor(
                     )
                 }
 
-                // Update quality based on samples
+                
                 val sampleCount = _uiState.value.samplesCollected
                 if (sampleCount > 30) {
                     _uiState.update {
@@ -225,7 +225,7 @@ class GestureStudioViewModel @Inject constructor(
         }
     }
 
-    // ==================== Gesture CRUD ====================
+    
 
     fun addGesture(name: String, action: String) {
         if (name.isEmpty() || action.isEmpty()) {
@@ -383,7 +383,7 @@ class GestureStudioViewModel @Inject constructor(
         _uiState.update { it.copy(playbackSpeed = speed) }
     }
 
-    // ==================== Training ====================
+    
 
     fun startTraining() {
         viewModelScope.launch {
@@ -395,7 +395,7 @@ class GestureStudioViewModel @Inject constructor(
                 )
             }
 
-            // Simulate training progress
+            
             for (i in 1..100) {
                 delay(50)
                 _uiState.update {
@@ -406,7 +406,7 @@ class GestureStudioViewModel @Inject constructor(
                 }
             }
 
-            // Perform actual training
+            
             val success = gestureRepository.trainAllGestures()
             _uiState.update {
                 it.copy(
@@ -425,7 +425,7 @@ class GestureStudioViewModel @Inject constructor(
         }
     }
 
-    // ==================== Recognition ====================
+    
 
     fun detectGesture(sensorData: FloatArray) {
         viewModelScope.launch {
@@ -452,7 +452,7 @@ class GestureStudioViewModel @Inject constructor(
         }
     }
 
-    // ==================== Settings ====================
+    
 
     fun setConfidenceThreshold(threshold: Float) {
         viewModelScope.launch {
@@ -494,14 +494,14 @@ class GestureStudioViewModel @Inject constructor(
         }
     }
 
-    // ==================== Export/Import ====================
+    
 
     fun exportGestures(format: ExportFormat) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val gestures = gestureRepository.getAllCustomGestures()
-                // Export logic here
+                
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -531,7 +531,7 @@ class GestureStudioViewModel @Inject constructor(
                 )
             }
 
-            // Simulate import
+            
             for (i in 1..100) {
                 delay(20)
                 _uiState.update { it.copy(importProgress = i) }
@@ -553,7 +553,7 @@ class GestureStudioViewModel @Inject constructor(
         importGestures()
     }
 
-    // ==================== UI State Management ====================
+    
 
     fun updateSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
@@ -583,7 +583,7 @@ class GestureStudioViewModel @Inject constructor(
         _uiState.update { it.copy(selectedGesture = gesture) }
     }
 
-    // ==================== Dialog Management ====================
+    
 
     fun showAddDialog() {
         _uiState.update {
@@ -681,7 +681,7 @@ class GestureStudioViewModel @Inject constructor(
         }
     }
 
-    // ==================== Reset ====================
+    
 
     fun resetStats() {
         viewModelScope.launch {
@@ -703,15 +703,15 @@ class GestureStudioViewModel @Inject constructor(
         loadData()
     }
 
-    // ==================== Cleanup ====================
+    
 
     override fun onCleared() {
         super.onCleared()
-        // Clean up any resources
+        
     }
 }
 
-// Extension functions for UI state
+
 fun GestureStudioUiState.isRecordingActive(): Boolean = isRecording
 fun GestureStudioUiState.hasGestures(): Boolean = savedGestures.isNotEmpty()
 fun GestureStudioUiState.hasFilteredGestures(): Boolean = filteredGestures.isNotEmpty()

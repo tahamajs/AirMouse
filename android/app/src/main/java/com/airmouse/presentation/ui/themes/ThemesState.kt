@@ -1,11 +1,11 @@
-// app/src/main/java/com/airmouse/presentation/ui/themes/ThemesState.kt
+
 package com.airmouse.presentation.ui.themes
 
 import androidx.compose.ui.graphics.Color
 
-// ==========================================
-// UI STATE
-// ==========================================
+
+
+
 
 data class ThemesUiState(
     val currentTheme: String = "system",
@@ -18,9 +18,9 @@ data class ThemesUiState(
     val themeApplied: Boolean = false
 )
 
-// ==========================================
-// ACCENT COLORS
-// ==========================================
+
+
+
 
 enum class AccentColor(
     val displayName: String,
@@ -44,9 +44,9 @@ enum class AccentColor(
     GREY("Grey", 0xFF607D8B, 0xFF90A4AE, 0xFF263238)
 }
 
-// ==========================================
-// THEME OPTIONS
-// ==========================================
+
+
+
 
 data class ThemeOption(
     val id: String,
@@ -57,9 +57,9 @@ data class ThemeOption(
     val isSystem: Boolean = false
 )
 
-// ==========================================
-// THEME DEFINITIONS
-// ==========================================
+
+
+
 
 object ThemeDefinitions {
     val themes = listOf(
@@ -148,7 +148,7 @@ object ThemeDefinitions {
             description = "Bright sky blue",
             previewColors = listOf(0xFF0D47A1, 0xFF1565C0, 0xFF1E88E5)
         ),
-        // Premium Themes
+        
         ThemeOption(
             id = "midnight",
             name = "Midnight",

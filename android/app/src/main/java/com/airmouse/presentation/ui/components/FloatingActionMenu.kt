@@ -25,7 +25,7 @@ fun FloatingActionMenu(
     var expanded by remember { mutableStateOf(false) }
     
     Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
-        // Menu items
+        
         items.forEachIndexed { index, item ->
             val delayMillis = (index * 50L).toInt()
             AnimatedVisibility(
@@ -55,7 +55,7 @@ fun FloatingActionMenu(
             }
         }
         
-        // Main FAB
+        
         FloatingActionButton(
             onClick = { expanded = !expanded },
             containerColor = if (expanded) Color(0xFFF44336) else MaterialTheme.colorScheme.primary,

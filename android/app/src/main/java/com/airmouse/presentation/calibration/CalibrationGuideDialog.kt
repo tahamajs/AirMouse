@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationGuideDialog.kt
+
 package com.airmouse.presentation.ui.calibration
 
 import androidx.compose.animation.*
@@ -44,7 +44,7 @@ fun CalibrationGuideDialog(
     val isCalibrating by viewModel.isCalibrating.collectAsStateWithLifecycle()
     val calibrationProgress by viewModel.calibrationProgress.collectAsStateWithLifecycle()
 
-    // Determine current display step (0: Gyro, 1: Mag, 2: Accel, 3: Success)
+    
     val step = when {
         uiState.isComplete -> 3
         uiState.currentStep > 0 -> (uiState.currentStep - 1).coerceIn(0, 2)
@@ -53,7 +53,7 @@ fun CalibrationGuideDialog(
 
     var currentImageIndex by remember { mutableStateOf(0) }
     
-    // Auto-advance internal instruction frames for the animations
+    
     LaunchedEffect(step) {
         currentImageIndex = 0
         while (true) {
@@ -79,7 +79,7 @@ fun CalibrationGuideDialog(
             elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
             Box {
-                // Close button at top-right corner
+                
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
@@ -91,7 +91,7 @@ fun CalibrationGuideDialog(
                     modifier = Modifier.fillMaxWidth().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 1. Animated Illustration
+                    
                     Box(
                         modifier = Modifier
                             .size(180.dp)
@@ -118,7 +118,7 @@ fun CalibrationGuideDialog(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 2. Title & Status
+                    
                     Text(
                         text = when (step) {
                             0 -> "🧭 Gyroscope"
@@ -133,7 +133,7 @@ fun CalibrationGuideDialog(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // 3. Dynamic Instructions
+                    
                     Text(
                         text = if (uiState.statusMessage.isNotEmpty()) uiState.statusMessage else uiState.stepInstruction,
                         fontSize = 16.sp,
@@ -143,7 +143,7 @@ fun CalibrationGuideDialog(
                         modifier = Modifier.heightIn(min = 48.dp)
                     )
 
-                    // 4. Progress Bar
+                    
                     if ((isCalibrating || uiState.isCollecting) && !uiState.isComplete) {
                         Spacer(modifier = Modifier.height(16.dp))
                         LinearProgressIndicator(
@@ -162,7 +162,7 @@ fun CalibrationGuideDialog(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 5. Action Buttons
+                    
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)

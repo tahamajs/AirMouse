@@ -1,13 +1,10 @@
-// app/src/main/java/com/airmouse/presentation/ui/network/NetworkModels.kt
+
 package com.airmouse.presentation.ui.network
 
 import java.util.UUID
 
-// ==================== CORE DATA CLASSES ====================
 
-/**
- * Represents a discovered Air Mouse server on the network
- */
+
 data class DiscoveredServer(
     val id: String = UUID.randomUUID().toString(),
     val ip: String,
@@ -40,9 +37,6 @@ data class DiscoveredServer(
     }
 }
 
-/**
- * Connection history record
- */
 data class ConnectionHistoryItem(
     val id: String = UUID.randomUUID().toString(),
     val serverId: String,
@@ -53,9 +47,6 @@ data class ConnectionHistoryItem(
     val status: String = "Disconnected"
 )
 
-/**
- * UI State for Network Discovery screen
- */
 data class NetworkDiscoveryUiState(
     val isScanning: Boolean = false,
     val scanProgress: Int = 0,
@@ -75,11 +66,8 @@ data class NetworkDiscoveryUiState(
     val customPort: Int = 8080
 )
 
-// ==================== ENUMS ====================
 
-/**
- * Device types for server identification
- */
+
 enum class DeviceType(val displayName: String, val icon: String) {
     UNKNOWN("Unknown", "🖥️"),
     PC("PC", "💻"),
@@ -95,9 +83,6 @@ enum class DeviceType(val displayName: String, val icon: String) {
     }
 }
 
-/**
- * Communication protocols
- */
 enum class Protocol(val displayName: String) {
     WEBSOCKET("WebSocket"),
     TCP("TCP"),
@@ -111,9 +96,6 @@ enum class Protocol(val displayName: String) {
     }
 }
 
-/**
- * Signal quality levels
- */
 enum class SignalQuality(val displayName: String, val color: Long) {
     EXCELLENT("Excellent", 0xFF4CAF50),
     GOOD("Good", 0xFF8BC34A),
@@ -124,9 +106,6 @@ enum class SignalQuality(val displayName: String, val color: Long) {
     fun getColor(): Int = color.toInt()
 }
 
-/**
- * Sort options for server list
- */
 enum class SortBy(val displayName: String) {
     IP("IP Address"),
     NAME("Name"),
@@ -142,9 +121,6 @@ enum class SortBy(val displayName: String) {
     }
 }
 
-/**
- * Discovery tabs
- */
 enum class DiscoveryTab {
     DISCOVERED,
     SAVED,

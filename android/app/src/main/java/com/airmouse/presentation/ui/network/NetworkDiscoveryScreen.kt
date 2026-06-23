@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/presentation/ui/network/NetworkDiscoveryScreen.kt
+
 package com.airmouse.presentation.ui.network
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ==================== MAIN SCREEN ====================
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -116,7 +116,7 @@ fun NetworkDiscoveryScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Sort Dropdown
+            
             DropdownMenu(
                 expanded = showSortMenu,
                 onDismissRequest = { showSortMenu = false }
@@ -140,7 +140,7 @@ fun NetworkDiscoveryScreen(
                 }
             }
 
-            // Manual Connect Dialog
+            
             if (showManualConnectDialog) {
                 ManualConnectDialog(
                     onDismiss = { showManualConnectDialog = false },
@@ -155,7 +155,7 @@ fun NetworkDiscoveryScreen(
                 )
             }
 
-            // Search Bar
+            
             OutlinedTextField(
                 value = uiState.filterText,
                 onValueChange = viewModel::setFilterText,
@@ -187,7 +187,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Network Info Card
+            
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -242,7 +242,39 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Scan Button
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Nearby device message", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            uiState.status,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Icon(
+                        imageVector = if (uiState.isScanning) Icons.Default.GraphicEq else Icons.Default.Notifications,
+                        contentDescription = "Discovery message",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            
             Button(
                 onClick = { viewModel.scanNetwork() },
                 modifier = Modifier.fillMaxWidth(),
@@ -279,7 +311,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Status and Error
+            
             val errorMessage = uiState.errorMessage
             if (errorMessage != null) {
                 Surface(
@@ -317,7 +349,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tabs
+            
             ScrollableTabRow(
                 selectedTabIndex = when (uiState.activeTab) {
                     DiscoveryTab.DISCOVERED -> 0
@@ -396,13 +428,46 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Content Switching
+            
             when (uiState.activeTab) {
                 DiscoveryTab.DISCOVERED -> {
                     val filteredServers = uiState.discoveredServers.filter { server ->
                         uiState.filterText.isEmpty() ||
                                 server.name.contains(uiState.filterText, ignoreCase = true) ||
                                 server.ip.contains(uiState.filterText, ignoreCase = true)
+                    }
+                    if (uiState.discoveredServers.isNotEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MarkEmailUnread,
+                                    contentDescription = "Nearby devices",
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "Nearby devices found",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                    Text(
+                                        "Tap Request Pairing to open the connection request flow.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                     if (filteredServers.isNotEmpty()) {
                         LazyColumn(
@@ -520,7 +585,7 @@ fun NetworkDiscoveryScreen(
     }
 }
 
-// ==================== COMPONENTS ====================
+
 
 @Composable
 fun DiscoveredServerItem(
@@ -538,77 +603,96 @@ fun DiscoveredServerItem(
             else
                 MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(server.deviceType.icon, fontSize = 20.sp)
-                    Text(server.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    StatusChip(isReachable = server.isReachable, ping = server.ping.toLong())
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(
+                        imageVector = when (server.protocol) {
+                            Protocol.WEBSOCKET -> Icons.Default.Wifi
+                            Protocol.UDP -> Icons.Default.SettingsEthernet
+                            Protocol.TCP -> Icons.Default.Computer
+                            else -> Icons.Default.DeviceHub
+                        },
+                        contentDescription = "Protocol",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(10.dp)
+                    )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "${server.ip}:${server.port}",
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (server.ping > 0) {
-                        Text(
-                            "Ping: ${server.ping}ms",
-                            fontSize = 11.sp,
-                            color = Color(server.pingColor.toInt())
-                        )
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(server.deviceType.icon, fontSize = 18.sp)
+                        Text(server.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "v${server.version}",
-                        fontSize = 11.sp,
+                        "${server.ip}:${server.port}",
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (server.signalStrength > 0) {
-                        SignalStrengthBar(strength = server.signalStrength)
-                    }
-                }
-            }
-            Row {
-                IconButton(onClick = onSave) {
-                    Icon(
-                        imageVector = Icons.Default.BookmarkAdd,
-                        contentDescription = "Save Server",
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                if (isConnecting) {
-                    CircularProgressIndicator(
-                        progress = { connectionProgress / 100f },
-                        modifier = Modifier.size(32.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    IconButton(onClick = onConnect) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Connect to Server",
-                            tint = MaterialTheme.colorScheme.primary
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        StatusChip(isReachable = server.isReachable, ping = server.ping.toLong())
+                        if (server.ping > 0) {
+                            Text(
+                                "Ping ${server.ping}ms",
+                                fontSize = 11.sp,
+                                color = Color(server.pingColor.toInt())
+                            )
+                        }
+                        Text(
+                            "v${server.version}",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
-        }
-        if (isConnecting) {
-            LinearProgressIndicator(
-                progress = { connectionProgress / 100f },
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Tap Request Pairing to open the connection request flow.",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                FilledTonalButton(onClick = onConnect, enabled = !isConnecting) {
+                    if (isConnecting) {
+                        CircularProgressIndicator(
+                            progress = { connectionProgress / 100f },
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Requesting...")
+                    } else {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Request Pairing")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Request Pairing")
+                    }
+                }
+                OutlinedButton(onClick = onSave) {
+                    Icon(imageVector = Icons.Default.BookmarkAdd, contentDescription = "Save Server")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Save")
+                }
+            }
+            if (isConnecting) {
+                Spacer(modifier = Modifier.height(12.dp))
+                LinearProgressIndicator(
+                    progress = { connectionProgress / 100f },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }
@@ -712,7 +796,7 @@ fun SavedServerItem(
     }
 }
 
-// ==================== PLACEHOLDER COMPONENTS ====================
+
 
 @Composable
 fun StatusChip(isReachable: Boolean, ping: Long) {

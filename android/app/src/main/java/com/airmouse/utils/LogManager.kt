@@ -1,4 +1,4 @@
-// app/src/main/java/com/airmouse/utils/LogManager.kt
+
 package com.airmouse.utils
 
 import android.content.Context
@@ -49,7 +49,7 @@ object LogManager {
         }
         _logEntries.postValue(entries.toList())
 
-        // Also write to Android log
+        
         when (level.uppercase()) {
             "ERROR" -> Log.e(tag, message)
             "WARN" -> Log.w(tag, message)
@@ -57,7 +57,7 @@ object LogManager {
             else -> Log.i(tag, message)
         }
 
-        // Write to file
+        
         writeToFile(entry)
     }
 
@@ -65,7 +65,7 @@ object LogManager {
         try {
             logFile?.appendText("[${entry.timestamp}] [${entry.level}] [${entry.tag}] ${entry.message}\n")
         } catch (e: Exception) {
-            // Ignore file write errors
+            
         }
     }
 

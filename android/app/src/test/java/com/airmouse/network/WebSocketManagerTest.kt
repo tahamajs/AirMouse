@@ -1,4 +1,4 @@
-// app/src/test/java/com/airmouse/network/WebSocketManagerTest.kt
+
 package com.airmouse.network
 
 import okhttp3.*
@@ -64,7 +64,7 @@ class WebSocketManagerTest {
 
         WebSocketManager.connect(mockServer.url("/ws").toString())
         
-        Thread.sleep(500) // Wait for connection
+        Thread.sleep(500) 
         
         WebSocketManager.sendMove(10.5f, -3.2f)
         
@@ -118,7 +118,7 @@ class WebSocketManagerTest {
 
     @Test
     fun testReconnectionOnFailure() {
-        val latch = CountDownLatch(2) // Expect two connection attempts
+        val latch = CountDownLatch(2) 
         var connectionCount = 0
         
         val webSocketListener = object : okhttp3.mockwebserver.WebSocketListener() {
@@ -143,12 +143,12 @@ class WebSocketManagerTest {
     fun testMessageQueueWhenDisconnected() {
         WebSocketManager.disconnect()
         
-        // Should not crash
+        
         WebSocketManager.sendMove(1f, 1f)
         WebSocketManager.sendClick("left")
         WebSocketManager.sendGesture("Test", 0.5f)
         
-        // No assertion needed - test passes if no exception
+        
         assertTrue(true)
     }
 }

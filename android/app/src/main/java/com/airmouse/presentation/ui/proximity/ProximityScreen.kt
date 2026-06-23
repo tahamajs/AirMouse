@@ -49,7 +49,7 @@ import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.math.log10
 
-// ==================== DATA CLASSES ====================
+
 
 data class ProximityUiState(
     val isEnabled: Boolean = false,
@@ -91,7 +91,7 @@ data class ProximityHistoryEntry(
     val rssi: Int
 )
 
-// ==================== VIEW MODEL ====================
+
 
 @HiltViewModel
 class ProximityViewModel @Inject constructor(
@@ -146,7 +146,7 @@ class ProximityViewModel @Inject constructor(
 
     @Suppress("DEPRECATION")
     private fun initializeBluetooth() {
-        // Check Bluetooth permission
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
@@ -171,18 +171,39 @@ class ProximityViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
+            val savedMac = prefs.getString("proximity_device_mac", "")
+            val trustedMac = if (savedMac.isNotBlank()) {
+                val bonded = bluetoothAdapter?.bondedDevices?.map { it.address }?.toSet().orEmpty()
+                if (bonded.contains(savedMac)) savedMac else ""
+            } else {
+                ""
+            }
+
+            if (savedMac.isNotBlank() && trustedMac.isBlank()) {
+                prefs.putString("proximity_device_mac", "")
+            }
+
             _uiState.update {
                 it.copy(
                     isEnabled = prefs.getBoolean("proximity_enabled", false),
                     nearThreshold = prefs.getFloat("proximity_near_threshold", 1.5f),
                     farThreshold = prefs.getFloat("proximity_far_threshold", 3.0f),
-                    deviceMac = prefs.getString("proximity_device_mac", ""),
+                    deviceMac = trustedMac,
                     lockActionEnabled = prefs.getBoolean("proximity_lock_action", true),
                     unlockActionEnabled = prefs.getBoolean("proximity_unlock_action", true),
                     lockScreenTimeout = prefs.getInt("proximity_lock_timeout", 0),
                     vibrationOnLock = prefs.getBoolean("proximity_vibration", true),
                     notificationOnLock = prefs.getBoolean("proximity_notification", true)
                 )
+            }
+            if (trustedMac.isBlank()) {
+                _uiState.update {
+                    it.copy(
+                        isEnabled = false,
+                        status = "No trusted Bluetooth device selected",
+                        statusColor = 0xFFF59E0B
+                    )
+                }
             }
         }
     }
@@ -314,14 +335,25 @@ class ProximityViewModel @Inject constructor(
         isScanning = false
     }
 
-    // ==================== PUBLIC METHODS ====================
+    
 
     fun toggleService(enabled: Boolean) {
         viewModelScope.launch {
+            if (enabled && _uiState.value.deviceMac.isBlank()) {
+                _uiState.update {
+                    it.copy(
+                        isEnabled = false,
+                        status = "Select a trusted Bluetooth device first",
+                        statusColor = 0xFFF59E0B
+                    )
+                }
+                saveSettings()
+                return@launch
+            }
             _uiState.update { it.copy(isEnabled = enabled) }
             if (enabled) {
                 startScanning()
-                _uiState.update { it.copy(status = "Service starting...") }
+                _uiState.update { it.copy(status = "Service waiting for trusted device approval...") }
             } else {
                 stopScanning()
                 _uiState.update {
@@ -473,7 +505,7 @@ class ProximityViewModel @Inject constructor(
     }
 }
 
-// ==================== SCREEN ====================
+
 
 @Composable
 fun ProximityScreen(
@@ -501,7 +533,7 @@ fun ProximityScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Main Control Card
+            
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -609,7 +641,7 @@ fun ProximityScreen(
             }
 
             if (uiState.isEnabled) {
-                // Threshold Settings Card
+                
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -649,7 +681,7 @@ fun ProximityScreen(
                     }
                 }
 
-                // Calibration Card
+                
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -692,7 +724,7 @@ fun ProximityScreen(
                     }
                 }
 
-                // Advanced Settings Card
+                
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -769,7 +801,7 @@ fun ProximityScreen(
                     }
                 }
 
-                // History Card
+                
                 if (uiState.history.isNotEmpty()) {
                     item {
                         Card(
@@ -797,7 +829,7 @@ fun ProximityScreen(
                 }
             }
 
-            // Info Card
+            
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
