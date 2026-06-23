@@ -97,8 +97,15 @@ func NewPremiumDashboard(server *protocol.ProtocolServer, mouse control.MouseCon
 	d.startBtn.Importance = widget.HighImportance
 
 	d.stopBtn = widget.NewButtonWithIcon("⏹ Stop Server", theme.MediaStopIcon(), func() {
-		server.Stop()
-		d.updateUI(false)
+		d.stopBtn.Disable()
+		d.statusLabel.SetText("⏳ Stopping...")
+		go func() {
+			server.Stop()
+			RunOnMain(func() {
+				d.updateUI(false)
+				d.stopBtn.Enable()
+			})
+		}()
 	})
 	d.stopBtn.Disable()
 
