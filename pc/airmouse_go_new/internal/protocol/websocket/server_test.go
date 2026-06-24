@@ -51,6 +51,22 @@ func TestWebSocketProcessMessage_SimulatedAndroidSession(t *testing.T) {
 		"version": "3.0",
 	}, nil)
 
+	if client.Approved {
+		t.Fatal("expected client to remain pending until approved")
+	}
+	select {
+	case msg := <-client.Send:
+		t.Fatalf("did not expect welcome before approval, got %q", string(msg))
+	default:
+	}
+
+	client.DeviceID = "device-1"
+	s.mu.Lock()
+	s.clients["ws-1"] = client
+	s.mu.Unlock()
+	if err := s.ApproveDevice("device-1"); err != nil {
+		t.Fatalf("approve device: %v", err)
+	}
 	select {
 	case msg := <-client.Send:
 		if got := string(msg); got == "" || got[0] != '{' {

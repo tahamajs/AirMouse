@@ -43,6 +43,10 @@ type DashboardTab struct {
 	savedDetailBox  *widget.Label
 	recentLogsBox   *widget.Label
 	permissionHint  *widget.Label
+	approvalTitle   *widget.Label
+	approvalBanner  *widget.Label
+	approvalDetail  *widget.Label
+	approvalCount   *widget.Label
 
 	controlBtn *widget.Button
 	qrBtn      *widget.Button
@@ -89,10 +93,10 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	tab.endpointLabel = widget.NewLabel("🔌 Endpoint: not started")
 	tab.protocolLabel = widget.NewLabel("🛰️ Protocols: TCP / WebSocket / UDP discovery")
-	tab.retryLabel = widget.NewLabel("🔁 ACK / Retry: waiting for approval")
+	tab.retryLabel = widget.NewLabel("🔁 ACK / Retry: waiting for server approval")
 	tab.uptimeLabel = widget.NewLabel("⏱️ Uptime: --:--:--")
 	tab.aiStatusLabel = widget.NewLabel("🧠 AI Smoothing: Disabled")
-	tab.summaryLabel = widget.NewLabel("Status summary will appear here once the server starts.")
+	tab.summaryLabel = widget.NewLabel("Status summary will appear here once the server starts. Pending phones will wait for approval in Devices.")
 	tab.summaryLabel.Wrapping = fyne.TextWrapWord
 
 	tab.serverStatus = widget.NewLabelWithStyle(
@@ -111,6 +115,12 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	tab.recentLogsBox.SetText("Waiting for logs...\n")
 	tab.permissionHint = widget.NewLabel("⚠️ macOS Accessibility permission is required to move the mouse and click.")
 	tab.permissionHint.Wrapping = fyne.TextWrapWord
+	tab.approvalTitle = widget.NewLabelWithStyle("✅ Approval Center", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+	tab.approvalBanner = widget.NewLabel("Waiting for a device to ask for approval.")
+	tab.approvalBanner.Wrapping = fyne.TextWrapWord
+	tab.approvalDetail = widget.NewLabel("Approve pending Android connections from the Devices tab. The pending device will stay here until you tap Approve.")
+	tab.approvalDetail.Wrapping = fyne.TextWrapWord
+	tab.approvalCount = widget.NewLabel("⏳ Pending approvals: 0")
 
 	utils.AddLogHook(func(level, msg string) {
 		tab.addRecentLog(level, msg)
@@ -261,6 +271,22 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.aiStatusLabel,
 	)))
 
+	approvalCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		tab.approvalTitle,
+		widget.NewSeparator(),
+		tab.approvalBanner,
+		tab.approvalDetail,
+		tab.approvalCount,
+		container.NewHBox(
+			widget.NewButton("Open Devices", func() {
+				tab.showDeviceManagerHint()
+			}),
+			widget.NewButton("Show QR Code", func() {
+				tab.showPairingQRDialog()
+			}),
+		),
+	)))
+
 	deviceCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📱 Nearby / Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -340,6 +366,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 
 	rightColumn := container.NewVBox(
 		statusCard,
+		approvalCard,
 		permissionCard,
 		actionsCard,
 		connectionCard,
@@ -382,6 +409,18 @@ func (t *DashboardTab) createProfileCard() fyne.CanvasObject {
 		serverName,
 		version,
 		editBtn,
+	)
+}
+
+func (t *DashboardTab) showDeviceManagerHint() {
+	win := getCurrentWindow()
+	if win == nil {
+		return
+	}
+	dialog.ShowInformation(
+		"Approve in Devices",
+		"Open the Devices tab and tap Approve on the pending phone. The approval card above will update as soon as the server accepts it.",
+		win,
 	)
 }
 
@@ -428,6 +467,12 @@ func (t *DashboardTab) refreshStats() {
 	for _, d := range allDevices {
 		savedDetails = append(savedDetails, formatSavedDeviceDetails(d))
 	}
+	pendingDevices := make([]*device.DeviceInfo, 0)
+	for _, d := range allDevices {
+		if d.Status == device.StatusPendingApproval {
+			pendingDevices = append(pendingDevices, d)
+		}
+	}
 	// Update UI in one batch
 	RunOnMain(func() {
 		if t.permissionHint != nil {
@@ -456,6 +501,27 @@ func (t *DashboardTab) refreshStats() {
 			utils.LogDebug("Dashboard device list empty")
 		}
 		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(activeDevices))
+		if t.approvalCount != nil {
+			t.approvalCount.SetText(fmt.Sprintf("⏳ Pending approvals: %d", len(pendingDevices)))
+		}
+		if t.approvalBanner != nil {
+			if len(pendingDevices) == 0 {
+				t.approvalBanner.SetText("No devices are waiting right now. When Android connects, approve it here.")
+			} else {
+				names := deviceNamesForLog(pendingDevices)
+				if len(names) > 3 {
+					names = names[:3]
+				}
+				t.approvalBanner.SetText(fmt.Sprintf("Pending approval: %s", strings.Join(names, ", ")))
+			}
+		}
+		if t.approvalDetail != nil {
+			if len(pendingDevices) == 0 {
+				t.approvalDetail.SetText("The approval queue is empty. Open the Devices tab when a phone connects and use the big Approve button.")
+			} else {
+				t.approvalDetail.SetText("Tap Approve in the Devices tab to send welcome and unlock mouse control. The Android app will keep waiting until you do.")
+			}
+		}
 
 		t.mu.Lock()
 		if !t.serverStart.IsZero() {
@@ -585,7 +651,7 @@ func deviceNamesForLog(devices []*device.DeviceInfo) []string {
 func (t *DashboardTab) deviceSummaryLabel() fyne.CanvasObject {
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Latest device details", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("Device name, type, IP, version, and connection state are shown below."),
+		widget.NewLabel("Device name, type, IP, version, approval state, and connection state are shown below."),
 	)
 }
 
@@ -610,7 +676,7 @@ func (t *DashboardTab) buildNearbyDeviceSummary(devices []*device.DeviceInfo) st
 			FormatBytes(d.BytesRecv),
 		)
 	}
-	b.WriteString("Use the Network tab QR code or the Pair button on a device row to open the pairing wizard.")
+	b.WriteString("Use the Network tab QR code, the Pair button on a device row, or the Approve button in Devices to finish the connection.")
 	return b.String()
 }
 

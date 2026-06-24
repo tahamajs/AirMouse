@@ -25,10 +25,11 @@ const (
 type DeviceStatus string
 
 const (
-	StatusConnected    DeviceStatus = "connected"
-	StatusDisconnected DeviceStatus = "disconnected"
-	StatusIdle         DeviceStatus = "idle"
-	StatusBlocked      DeviceStatus = "blocked"
+	StatusConnected       DeviceStatus = "connected"
+	StatusDisconnected    DeviceStatus = "disconnected"
+	StatusIdle            DeviceStatus = "idle"
+	StatusPendingApproval DeviceStatus = "pending_approval"
+	StatusBlocked         DeviceStatus = "blocked"
 )
 
 type DeviceInfo struct {

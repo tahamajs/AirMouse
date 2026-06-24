@@ -110,6 +110,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	utils.LogInfo("TCP approval pending: id=%s", clientID)
 	utils.LogDebug("TCP initial client record created: id=%s name=%s", clientID, client.Name)
 	s.deviceMgr.RegisterDevice(clientID, device.TypeTCP, client.Name)
+	_ = s.deviceMgr.UpdateDeviceStatus(clientID, device.StatusPendingApproval)
 	s.triggerEvent(TCPEvent{
 		Type:      "connected",
 		ClientID:  clientID,
@@ -176,7 +177,6 @@ func (s *Server) processLine(client *Client, line []byte) {
 		utils.LogDebug("Invalid TCP message: %v", err)
 		return
 	}
-	cfg := config.Get()
 	utils.LogDebug("TCP message parsed: client=%s type=%s payload_keys=%d", client.ID, msgType, len(payload))
 
 	switch msgType {
@@ -276,19 +276,11 @@ func (s *Server) processLine(client *Client, line []byte) {
 				"transport":       transport,
 			})
 		}
-		client.Approved = true
-
-		welcome := fmt.Sprintf(
-			`{"type":"welcome","payload":{"server":"%s","version":"%s","client_id":"%s"}}`+"\n",
-			cfg.ServerName,
-			cfg.Version,
-			client.ID,
-		)
-		client.Conn.Write([]byte(welcome))
-		client.BytesSent += int64(len(welcome))
-		utils.LogInfo("TCP approval accepted: id=%s name=%s", client.ID, client.Name)
-		utils.LogInfo("TCP client connected: id=%s name=%s", client.ID, client.Name)
-		utils.LogDebug("TCP approval state set: id=%s approved=%v device_id=%s", client.ID, client.Approved, client.DeviceID)
+		if s.deviceMgr != nil {
+			_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusPendingApproval)
+		}
+		utils.LogInfo("TCP client awaiting approval: id=%s name=%s", client.ID, client.Name)
+		utils.LogDebug("TCP approval state pending: id=%s approved=%v device_id=%s", client.ID, client.Approved, client.DeviceID)
 
 	case "ping":
 		client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))
@@ -336,6 +328,50 @@ func (s *Server) writeAck(client *Client, id *string) {
 		client.Conn.Write(ack)
 		client.BytesSent += int64(len(ack))
 	}
+}
+
+// ApproveDevice approves a pending TCP client and sends the welcome message.
+func (s *Server) ApproveDevice(deviceID string) error {
+	s.mu.RLock()
+	var client *Client
+	for _, c := range s.clients {
+		if c.DeviceID == deviceID || c.ID == deviceID {
+			client = c
+			break
+		}
+	}
+	s.mu.RUnlock()
+
+	if client == nil {
+		return fmt.Errorf("tcp client not found: %s", deviceID)
+	}
+
+	if client.Approved {
+		return nil
+	}
+
+	cfg := config.Get()
+	welcome := fmt.Sprintf(
+		`{"type":"welcome","payload":{"server":"%s","version":"%s","client_id":"%s"}}`+"\n",
+		cfg.ServerName,
+		cfg.Version,
+		client.ID,
+	)
+	if _, err := client.Conn.Write([]byte(welcome)); err != nil {
+		return err
+	}
+	client.BytesSent += int64(len(welcome))
+	client.Approved = true
+	control.SetMovementPaused(false)
+	if s.deviceMgr != nil {
+		deviceIDToUpdate := client.DeviceID
+		if deviceIDToUpdate == "" {
+			deviceIDToUpdate = client.ID
+		}
+		_ = s.deviceMgr.UpdateDeviceStatus(deviceIDToUpdate, device.StatusConnected)
+	}
+	utils.LogInfo("TCP approval accepted: device=%s", deviceID)
+	return nil
 }
 
 func (s *Server) Stop() {
