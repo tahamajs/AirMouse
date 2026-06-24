@@ -8,26 +8,26 @@ type MLPredictor struct{}
 type MLPredictorStats struct{}
 
 type MLPredictionConfig struct {
-	ModelPath     string
-	SequenceLength int
-	BlendFactor    float64
-	MinConfidence  float64
-	UseFallback    bool
-	MaxHistory     int
+    ModelPath      string
+    SequenceLength int
+    BlendFactor    float64
+    MinConfidence  float64
+    UseFallback    bool
+    MaxHistory     int
 }
 
 func NewMLPredictor(cfg MLPredictionConfig) (*MLPredictor, error) {
-	return &MLPredictor{}, nil
+    return &MLPredictor{}, nil
 }
 
 func (m *MLPredictor) AddPoint(x, y float64) {}
 
 func (m *MLPredictor) PredictDelta() (dx, dy float64, confidence float64, err error) {
-	return 0, 0, 0, nil
+    return 0, 0, 0, nil
 }
 
 func (m *MLPredictor) PredictWithBlend(rawDx, rawDy float64) (dx, dy float64) {
-	return rawDx, rawDy
+    return rawDx, rawDy
 }
 
 func (m *MLPredictor) SetEnabled(enabled bool) {}
@@ -49,9 +49,9 @@ type TrainingSample struct{}
 func (m *MLPredictor) Train(samples []TrainingSample) error { return nil }
 
 func (m *MLPredictor) GetModelInfo() map[string]interface{} {
-	return map[string]interface{}{
-		"enabled": false,
-	}
+    return map[string]interface{}{
+        "enabled": false,
+    }
 }
 
 func (m *MLPredictor) Close() error { return nil }
