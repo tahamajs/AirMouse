@@ -174,7 +174,6 @@ func (a *App) Run() error {
 // ============================================================
 
 func (a *App) buildTabs() {
-	// Recover from any panic in tab creation
 	defer func() {
 		if r := recover(); r != nil {
 			utils.LogError("Panic during tab creation: %v", r)
@@ -223,8 +222,9 @@ func (a *App) buildTabs() {
 	a.logsTab = safeTab(NewLogsTab(), "Logs")
 	fmt.Println("Logs tab done")
 
+	// ✅ Real Protocol tab – now safe to use
 	fmt.Println("Building protocol tab...")
-	a.protocolTab = widget.NewLabel("Protocol Guide (coming soon)")
+	a.protocolTab = safeTab(NewProtocolGuideTab(a.cfg, a.server), "Network Protocol")
 	fmt.Println("Protocol tab done")
 
 	// Safety net: ensure no tab is nil

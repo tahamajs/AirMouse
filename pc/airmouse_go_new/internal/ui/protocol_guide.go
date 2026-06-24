@@ -16,29 +16,23 @@ func NewProtocolGuideTab(cfg *config.Config, server *protocol.ProtocolServer) fy
 	if cfg == nil {
 		return widget.NewLabel("Network protocol guide unavailable")
 	}
-	// Use a simple function to build content; avoid any blocking calls.
 	return container.NewScroll(buildProtocolGuideContent(cfg, server))
 }
 
 func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServer) fyne.CanvasObject {
-	// Safely check if server is running without potential deadlock
 	running := false
 	if server != nil {
-		// Non‑blocking check – assume false if any issue
 		defer func() {
 			if r := recover(); r != nil {
-				// If panic, treat as not running
+				// ignore panic, just show stopped
 			}
 		}()
 		running = server.IsRunning()
 	}
-
 	statusText := "Stopped"
 	if running {
 		statusText = "Running"
 	}
-
-	// Build content without using markdown (which might cause issues)
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Network Protocol", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("This page explains how the Android app and the Go server wait for approval, approve the session, and then connect."),
