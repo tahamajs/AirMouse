@@ -12,12 +12,23 @@ import (
 )
 
 // ---------------------------------------------------------------------
+// AppIconData – main application icon (generated once)
+// ---------------------------------------------------------------------
+
+// AppIconData is the byte slice of the generated application icon (PNG).
+var AppIconData []byte
+
+func init() {
+	AppIconData = generateAppIcon()
+}
+
+// ---------------------------------------------------------------------
 // Generated application icon (256×256)
 // ---------------------------------------------------------------------
 
 var (
 	appIconOnce sync.Once
-	appIconData []byte
+	appIconData []byte // cached for GetAppIcon()
 )
 
 // generateAppIcon creates a nice application icon as a PNG byte slice.

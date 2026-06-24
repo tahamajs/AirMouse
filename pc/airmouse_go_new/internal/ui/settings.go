@@ -1,7 +1,9 @@
 package ui
+
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -10,15 +12,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"airmouse-go/internal/config"
-	mctl mctl "airmouse-go/control/mouse"
+	mctl "airmouse-go/control/mouse"
 )
 
-
-//  SettingsTab
-// ------------------------------------------------------------
-
 type SettingsTab struct {
-	// Core settings
 	sensitivitySlider     *widget.Slider
 	sensitivityLabel      *widget.Label
 	themeSelect           *widget.Select
@@ -26,13 +23,9 @@ type SettingsTab struct {
 	smoothingCheck        *widget.Check
 	accelCheck            *widget.Check
 	aiCheck               *widget.Check
-
-	// Predictive settings
 	predictiveCheck       *widget.Check
 	predictiveBlendSlider *widget.Slider
 	predictiveBlendLabel  *widget.Label
-
-	// Personalization
 	personalizationCheck  *widget.Check
 	personalizationBuf    *widget.Slider
 	personalizationLbl    *widget.Label
@@ -40,8 +33,6 @@ type SettingsTab struct {
 	intervalLbl           *widget.Label
 	autoSwapCheck         *widget.Check
 	serverURLEntry        *widget.Entry
-
-	// Click detection
 	clickThresholdSlider  *widget.Slider
 	clickThresholdLabel   *widget.Label
 	scrollThresholdSlider *widget.Slider
@@ -50,8 +41,6 @@ type SettingsTab struct {
 	doubleClickLabel      *widget.Label
 	rightClickTiltSlider  *widget.Slider
 	rightClickTiltLabel   *widget.Label
-
-	// Additional features
 	hapticCheck           *widget.Check
 	jitterCheck           *widget.Check
 	jitterBlendSlider     *widget.Slider
@@ -60,37 +49,25 @@ type SettingsTab struct {
 	proximityNearLabel    *widget.Label
 	proximityFarSlider    *widget.Slider
 	proximityFarLabel     *widget.Label
-
-	// Server settings
 	serverNameEntry       *widget.Entry
 	autoStartCheck        *widget.Check
 	logLevelSelect        *widget.Select
-
-	// Network settings
 	portEntry             *widget.Entry
 	wsPortEntry           *widget.Entry
 	udpPortEntry          *widget.Entry
-
-	// Buttons
 	saveBtn               *widget.Button
 	resetBtn              *widget.Button
 	exportBtn             *widget.Button
 	importBtn             *widget.Button
 	helpBtn               *widget.Button
 	statusLabel           *widget.Label
-
 	cfg                   *config.Config
 	mouse                 mctl.Controller
 }
 
-// NewSettingsTab creates the settings tab.
 func NewSettingsTab(cfg *config.Config, mouse mctl.Controller) fyne.CanvasObject {
-	tab := &SettingsTab{
-		cfg:   cfg,
-		mouse: mouse,
-	}
+	tab := &SettingsTab{cfg: cfg, mouse: mouse}
 
-	// Build sections
 	serverSection := tab.createServerSection()
 	cursorSection := tab.createCursorSection()
 	clickSection := tab.createClickSection()
@@ -101,41 +78,25 @@ func NewSettingsTab(cfg *config.Config, mouse mctl.Controller) fyne.CanvasObject
 	appearanceSection := tab.createAppearanceSection()
 	advancedSection := tab.createAdvancedSection()
 
-	// Action buttons (status label initially hidden)
 	tab.statusLabel = widget.NewLabel("")
 	tab.statusLabel.Hidden = true
 
 	tab.saveBtn = widget.NewButtonWithIcon("Save Settings", theme.DocumentSaveIcon(), tab.saveSettings)
 	tab.saveBtn.Importance = widget.HighImportance
-	tab.saveBtn.ToolTip = "Save all settings to disk"
 
 	tab.resetBtn = widget.NewButtonWithIcon("Reset to Defaults", theme.ViewRefreshIcon(), tab.resetSettings)
-	tab.resetBtn.ToolTip = "Reset all settings to default values"
-
 	tab.exportBtn = widget.NewButtonWithIcon("Export", theme.DownloadIcon(), tab.exportSettings)
-	tab.exportBtn.ToolTip = "Export settings to a JSON file"
-
 	tab.importBtn = widget.NewButtonWithIcon("Import", theme.UploadIcon(), tab.importSettings)
-	tab.importBtn.ToolTip = "Import settings from a JSON file"
-
 	tab.helpBtn = widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
-		win := getCurrentWindow()
-		if win != nil {
+		if win := getCurrentWindow(); win != nil {
 			ShowContextHelp(win, "settings")
 		}
 	})
-	tab.helpBtn.ToolTip = "Show help for settings"
 
 	actionButtons := container.NewHBox(
-		tab.saveBtn,
-		tab.resetBtn,
-		tab.exportBtn,
-		tab.importBtn,
-		tab.helpBtn,
-		tab.statusLabel,
+		tab.saveBtn, tab.resetBtn, tab.exportBtn, tab.importBtn, tab.helpBtn, tab.statusLabel,
 	)
 
-	// Tabs
 	settingsTabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Server", theme.ComputerIcon(), serverSection),
 		container.NewTabItemWithIcon("Cursor", theme.ComputerIcon(), cursorSection),
@@ -154,14 +115,10 @@ func NewSettingsTab(cfg *config.Config, mouse mctl.Controller) fyne.CanvasObject
 		nil, nil,
 		settingsTabs,
 	)
-
 	return container.NewScroll(content)
 }
 
-// ------------------------------------------------------------
-//  Section builders
-// ------------------------------------------------------------
-
+// ---------- Section builders (no tooltips) ----------
 func (t *SettingsTab) createServerSection() fyne.CanvasObject {
 	t.serverNameEntry = widget.NewEntry()
 	t.serverNameEntry.SetText(t.cfg.ServerName)
@@ -171,20 +128,17 @@ func (t *SettingsTab) createServerSection() fyne.CanvasObject {
 			t.cfg.ServerName = s
 		}
 	}
-	t.serverNameEntry.ToolTip = "The name of this server as seen by clients"
 
 	t.autoStartCheck = widget.NewCheck("Auto-start server on launch", func(on bool) {
 		t.cfg.AutoStartServer = on
 	})
 	t.autoStartCheck.SetChecked(t.cfg.AutoStartServer)
-	t.autoStartCheck.ToolTip = "Automatically start the server when the app launches"
 
 	logLevels := []string{"debug", "info", "warn", "error"}
 	t.logLevelSelect = widget.NewSelect(logLevels, func(level string) {
 		t.cfg.LogLevel = level
 	})
 	t.logLevelSelect.SetSelected(t.cfg.LogLevel)
-	t.logLevelSelect.ToolTip = "Log verbosity level"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Server Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -206,7 +160,6 @@ func (t *SettingsTab) createCursorSection() fyne.CanvasObject {
 		}
 		t.sensitivityLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", v))
 	}
-	t.sensitivitySlider.ToolTip = "Cursor speed multiplier"
 
 	t.smoothingCheck = widget.NewCheck("Mouse Smoothing (EMA)", func(b bool) {
 		if t.mouse != nil {
@@ -215,7 +168,6 @@ func (t *SettingsTab) createCursorSection() fyne.CanvasObject {
 		t.cfg.SmoothingEnabled = b
 	})
 	t.smoothingCheck.SetChecked(t.cfg.SmoothingEnabled)
-	t.smoothingCheck.ToolTip = "Apply exponential moving average smoothing"
 
 	t.accelCheck = widget.NewCheck("Mouse Acceleration", func(b bool) {
 		if t.mouse != nil {
@@ -224,7 +176,6 @@ func (t *SettingsTab) createCursorSection() fyne.CanvasObject {
 		t.cfg.AccelerationEnabled = b
 	})
 	t.accelCheck.SetChecked(t.cfg.AccelerationEnabled)
-	t.accelCheck.ToolTip = "Enable pointer acceleration"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Cursor Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -243,7 +194,6 @@ func (t *SettingsTab) createClickSection() fyne.CanvasObject {
 		t.cfg.ClickThreshold = v
 		t.clickThresholdLabel.SetText(fmt.Sprintf("Click speed: %.1f rad/s", v))
 	}
-	t.clickThresholdSlider.ToolTip = "Angular speed required to trigger a click"
 
 	t.doubleClickSlider = widget.NewSlider(200, 1000)
 	t.doubleClickSlider.Step = 10
@@ -253,7 +203,6 @@ func (t *SettingsTab) createClickSection() fyne.CanvasObject {
 		t.cfg.DoubleClickInterval = int64(v)
 		t.doubleClickLabel.SetText(fmt.Sprintf("Double click interval: %d ms", int(v)))
 	}
-	t.doubleClickSlider.ToolTip = "Maximum time between two clicks for double‑click"
 
 	t.rightClickTiltSlider = widget.NewSlider(0, 90)
 	t.rightClickTiltSlider.Step = 1
@@ -263,7 +212,6 @@ func (t *SettingsTab) createClickSection() fyne.CanvasObject {
 		t.cfg.RightClickTilt = v
 		t.rightClickTiltLabel.SetText(fmt.Sprintf("Right click tilt: %.0f°", v))
 	}
-	t.rightClickTiltSlider.ToolTip = "Tilt angle required for right‑click"
 
 	t.scrollThresholdSlider = widget.NewSlider(0, 20)
 	t.scrollThresholdSlider.Step = 0.5
@@ -273,13 +221,11 @@ func (t *SettingsTab) createClickSection() fyne.CanvasObject {
 		t.cfg.ScrollThreshold = v
 		t.scrollThresholdLabel.SetText(fmt.Sprintf("Scroll speed: %.1f m/s²", v))
 	}
-	t.scrollThresholdSlider.ToolTip = "Acceleration required to trigger scroll"
 
 	t.hapticCheck = widget.NewCheck("Haptic Feedback", func(b bool) {
 		t.cfg.HapticEnabled = b
 	})
 	t.hapticCheck.SetChecked(t.cfg.HapticEnabled)
-	t.hapticCheck.ToolTip = "Enable vibration feedback on gesture detection"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Click & Gesture Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -299,7 +245,6 @@ func (t *SettingsTab) createAISection() fyne.CanvasObject {
 		t.cfg.EnableAISmoothing = b
 	})
 	t.aiCheck.SetChecked(t.cfg.EnableAISmoothing)
-	t.aiCheck.ToolTip = "Use ONNX AI model for movement smoothing"
 
 	t.predictiveCheck = widget.NewCheck("Predictive Movement (Kalman)", func(b bool) {
 		t.cfg.EnablePredictive = b
@@ -308,7 +253,6 @@ func (t *SettingsTab) createAISection() fyne.CanvasObject {
 		}
 	})
 	t.predictiveCheck.SetChecked(t.cfg.EnablePredictive)
-	t.predictiveCheck.ToolTip = "Use Kalman filter for predictive movement"
 
 	t.predictiveBlendLabel = widget.NewLabel(fmt.Sprintf("Prediction blend: %.2f", t.cfg.PredictiveBlendFactor))
 	t.predictiveBlendSlider = widget.NewSlider(0, 1)
@@ -321,13 +265,11 @@ func (t *SettingsTab) createAISection() fyne.CanvasObject {
 		}
 		t.predictiveBlendLabel.SetText(fmt.Sprintf("Prediction blend: %.2f", v))
 	}
-	t.predictiveBlendSlider.ToolTip = "How much prediction to blend with raw movement"
 
 	t.jitterCheck = widget.NewCheck("Enable Jitter Compensation", func(b bool) {
 		t.cfg.EnableJitterCompensation = b
 	})
 	t.jitterCheck.SetChecked(t.cfg.EnableJitterCompensation)
-	t.jitterCheck.ToolTip = "Reduce jitter in movement"
 
 	t.jitterBlendLabel = widget.NewLabel(fmt.Sprintf("Jitter blend: %.2f", t.cfg.JitterBlendFactor))
 	t.jitterBlendSlider = widget.NewSlider(0, 1)
@@ -337,7 +279,6 @@ func (t *SettingsTab) createAISection() fyne.CanvasObject {
 		t.cfg.JitterBlendFactor = v
 		t.jitterBlendLabel.SetText(fmt.Sprintf("Jitter blend: %.2f", v))
 	}
-	t.jitterBlendSlider.ToolTip = "Strength of jitter compensation"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("AI & Prediction", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -354,7 +295,6 @@ func (t *SettingsTab) createPersonalizationSection() fyne.CanvasObject {
 		t.cfg.EnablePersonalization = b
 	})
 	t.personalizationCheck.SetChecked(t.cfg.EnablePersonalization)
-	t.personalizationCheck.ToolTip = "Learn your movement patterns for smoother control"
 
 	t.personalizationLbl = widget.NewLabel(fmt.Sprintf("Buffer size: %d samples", t.cfg.PersonalizationBuffer))
 	t.personalizationBuf = widget.NewSlider(500, 5000)
@@ -364,7 +304,6 @@ func (t *SettingsTab) createPersonalizationSection() fyne.CanvasObject {
 		t.cfg.PersonalizationBuffer = int(v)
 		t.personalizationLbl.SetText(fmt.Sprintf("Buffer size: %d samples", t.cfg.PersonalizationBuffer))
 	}
-	t.personalizationBuf.ToolTip = "Number of samples to keep for training"
 
 	t.intervalLbl = widget.NewLabel(fmt.Sprintf("Retrain interval: %d seconds", t.cfg.PersonalizationInterval))
 	t.intervalSlider = widget.NewSlider(600, 86400)
@@ -374,13 +313,11 @@ func (t *SettingsTab) createPersonalizationSection() fyne.CanvasObject {
 		t.cfg.PersonalizationInterval = int(v)
 		t.intervalLbl.SetText(fmt.Sprintf("Retrain interval: %d seconds", t.cfg.PersonalizationInterval))
 	}
-	t.intervalSlider.ToolTip = "How often to retrain the model (seconds)"
 
 	t.autoSwapCheck = widget.NewCheck("Auto-swap trained model", func(b bool) {
 		t.cfg.AutoSwapModel = b
 	})
 	t.autoSwapCheck.SetChecked(t.cfg.AutoSwapModel)
-	t.autoSwapCheck.ToolTip = "Automatically swap to the newly trained model"
 
 	t.serverURLEntry = widget.NewEntry()
 	t.serverURLEntry.SetText(t.cfg.PersonalizationServerURL)
@@ -388,7 +325,6 @@ func (t *SettingsTab) createPersonalizationSection() fyne.CanvasObject {
 	t.serverURLEntry.OnChanged = func(s string) {
 		t.cfg.PersonalizationServerURL = s
 	}
-	t.serverURLEntry.ToolTip = "URL of the personalization training server"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Personalization", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -409,7 +345,6 @@ func (t *SettingsTab) createProximitySection() fyne.CanvasObject {
 		t.cfg.ProximityNearThreshold = v
 		t.proximityNearLabel.SetText(fmt.Sprintf("Near threshold: %.1f m", v))
 	}
-	t.proximityNearSlider.ToolTip = "Distance below which the device is considered near (unlock)"
 
 	t.proximityFarLabel = widget.NewLabel(fmt.Sprintf("Far threshold: %.1f m", t.cfg.ProximityFarThreshold))
 	t.proximityFarSlider = widget.NewSlider(1.0, 10.0)
@@ -419,7 +354,6 @@ func (t *SettingsTab) createProximitySection() fyne.CanvasObject {
 		t.cfg.ProximityFarThreshold = v
 		t.proximityFarLabel.SetText(fmt.Sprintf("Far threshold: %.1f m", v))
 	}
-	t.proximityFarSlider.ToolTip = "Distance above which the device is considered far (lock)"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Proximity Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -444,7 +378,6 @@ func (t *SettingsTab) createNetworkSection() fyne.CanvasObject {
 			t.cfg.Port = p
 		}
 	}
-	t.portEntry.ToolTip = "TCP port for mouse control (default 8080)"
 
 	t.wsPortEntry = widget.NewEntry()
 	t.wsPortEntry.SetText(fmt.Sprintf("%d", t.cfg.WebSocketPort))
@@ -461,7 +394,6 @@ func (t *SettingsTab) createNetworkSection() fyne.CanvasObject {
 			t.cfg.WebSocketPort = p
 		}
 	}
-	t.wsPortEntry.ToolTip = "WebSocket port for pairing (default 8081)"
 
 	t.udpPortEntry = widget.NewEntry()
 	t.udpPortEntry.SetText(fmt.Sprintf("%d", t.cfg.UDPPort))
@@ -478,7 +410,6 @@ func (t *SettingsTab) createNetworkSection() fyne.CanvasObject {
 			t.cfg.UDPPort = p
 		}
 	}
-	t.udpPortEntry.ToolTip = "UDP port for device discovery (default 8082)"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Network Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -497,14 +428,12 @@ func (t *SettingsTab) createAppearanceSection() fyne.CanvasObject {
 		}
 	})
 	t.themeSelect.SetSelected(t.cfg.Theme)
-	t.themeSelect.ToolTip = "Application colour theme"
 
 	languages := []string{"English", "Persian", "Spanish", "French", "German", "Chinese"}
 	t.languageSelect = widget.NewSelect(languages, func(lang string) {
 		t.cfg.Language = lang
 	})
 	t.languageSelect.SetSelected(t.cfg.Language)
-	t.languageSelect.ToolTip = "UI language (currently only English is fully supported)"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Appearance", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -518,13 +447,11 @@ func (t *SettingsTab) createAdvancedSection() fyne.CanvasObject {
 		t.cfg.DebugMode = on
 	})
 	debugCheck.SetChecked(t.cfg.DebugMode)
-	debugCheck.ToolTip = "Enable additional debug logging"
 
 	metricsCheck := widget.NewCheck("Enable Metrics Collection", func(on bool) {
 		t.cfg.MetricsEnabled = on
 	})
 	metricsCheck.SetChecked(t.cfg.MetricsEnabled)
-	metricsCheck.ToolTip = "Collect anonymous usage metrics"
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Advanced Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -533,10 +460,7 @@ func (t *SettingsTab) createAdvancedSection() fyne.CanvasObject {
 	)
 }
 
-// ------------------------------------------------------------
-//  Action methods
-// ------------------------------------------------------------
-
+// ---------- Action methods ----------
 func (t *SettingsTab) saveSettings() {
 	win := getCurrentWindow()
 	if win == nil {
@@ -569,20 +493,16 @@ func (t *SettingsTab) resetSettings() {
 		win)
 }
 
-// refreshUI updates all widgets to reflect the current config.
 func (t *SettingsTab) refreshUI() {
-	// Server
 	t.serverNameEntry.SetText(t.cfg.ServerName)
 	t.autoStartCheck.SetChecked(t.cfg.AutoStartServer)
 	t.logLevelSelect.SetSelected(t.cfg.LogLevel)
 
-	// Cursor
 	t.sensitivitySlider.Value = t.cfg.Sensitivity
 	t.sensitivityLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", t.cfg.Sensitivity))
 	t.smoothingCheck.SetChecked(t.cfg.SmoothingEnabled)
 	t.accelCheck.SetChecked(t.cfg.AccelerationEnabled)
 
-	// Click
 	t.clickThresholdSlider.Value = t.cfg.ClickThreshold
 	t.clickThresholdLabel.SetText(fmt.Sprintf("Click speed: %.1f rad/s", t.cfg.ClickThreshold))
 	t.doubleClickSlider.Value = float64(t.cfg.DoubleClickInterval)
@@ -593,7 +513,6 @@ func (t *SettingsTab) refreshUI() {
 	t.scrollThresholdLabel.SetText(fmt.Sprintf("Scroll speed: %.1f m/s²", t.cfg.ScrollThreshold))
 	t.hapticCheck.SetChecked(t.cfg.HapticEnabled)
 
-	// AI
 	t.aiCheck.SetChecked(t.cfg.EnableAISmoothing)
 	t.predictiveCheck.SetChecked(t.cfg.EnablePredictive)
 	t.predictiveBlendSlider.Value = t.cfg.PredictiveBlendFactor
@@ -602,7 +521,6 @@ func (t *SettingsTab) refreshUI() {
 	t.jitterBlendSlider.Value = t.cfg.JitterBlendFactor
 	t.jitterBlendLabel.SetText(fmt.Sprintf("Jitter blend: %.2f", t.cfg.JitterBlendFactor))
 
-	// Personalization
 	t.personalizationCheck.SetChecked(t.cfg.EnablePersonalization)
 	t.personalizationBuf.Value = float64(t.cfg.PersonalizationBuffer)
 	t.personalizationLbl.SetText(fmt.Sprintf("Buffer size: %d samples", t.cfg.PersonalizationBuffer))
@@ -611,18 +529,15 @@ func (t *SettingsTab) refreshUI() {
 	t.autoSwapCheck.SetChecked(t.cfg.AutoSwapModel)
 	t.serverURLEntry.SetText(t.cfg.PersonalizationServerURL)
 
-	// Proximity
 	t.proximityNearSlider.Value = t.cfg.ProximityNearThreshold
 	t.proximityNearLabel.SetText(fmt.Sprintf("Near threshold: %.1f m", t.cfg.ProximityNearThreshold))
 	t.proximityFarSlider.Value = t.cfg.ProximityFarThreshold
 	t.proximityFarLabel.SetText(fmt.Sprintf("Far threshold: %.1f m", t.cfg.ProximityFarThreshold))
 
-	// Network
 	t.portEntry.SetText(fmt.Sprintf("%d", t.cfg.Port))
 	t.wsPortEntry.SetText(fmt.Sprintf("%d", t.cfg.WebSocketPort))
 	t.udpPortEntry.SetText(fmt.Sprintf("%d", t.cfg.UDPPort))
 
-	// Appearance
 	t.themeSelect.SetSelected(t.cfg.Theme)
 	if app := fyne.CurrentApp(); app != nil {
 		app.Settings().SetTheme(getThemeByName(t.cfg.Theme))
@@ -682,12 +597,10 @@ func (t *SettingsTab) importSettings() {
 	}, win)
 }
 
-// setStatus updates the status label with a message and importance.
 func (t *SettingsTab) setStatus(msg string, importance widget.Importance) {
 	t.statusLabel.SetText(msg)
 	t.statusLabel.Importance = importance
 	t.statusLabel.Hidden = false
-	// Clear after 5 seconds
 	time.AfterFunc(5*time.Second, func() {
 		RunOnMain(func() {
 			if t.statusLabel != nil {

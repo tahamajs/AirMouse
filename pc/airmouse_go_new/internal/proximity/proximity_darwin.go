@@ -4,6 +4,7 @@ package proximity
 
 import (
     "os/exec"
+    "strconv"
 )
 
 type DarwinProximity struct {
@@ -26,8 +27,8 @@ func (dp *DarwinProximity) PreventSleep(durationSec int) error {
     if !dp.caffeinateAvailable {
         return nil
     }
-    
-    cmd := exec.Command("caffeinate", "-t", string(rune(durationSec)))
+    // Use strconv.Itoa to convert the integer to a string
+    cmd := exec.Command("caffeinate", "-t", strconv.Itoa(durationSec))
     return cmd.Start()
 }
 
@@ -37,13 +38,12 @@ func (dp *DarwinProximity) IsDisplaySleeping() (bool, error) {
     if err != nil {
         return false, err
     }
-    
-    // Parse output to check display state
+    // For now, return false (not sleeping) – implement proper parsing if needed
     return false, nil
 }
 
 func (dp *DarwinProximity) WakeDisplay() error {
-    // Simulate mouse movement to wake display
-    // This would use CGEventPost in real implementation
+    // In production, you would use CGEventPost to move the mouse.
+    // For now, this is a no‑op.
     return nil
 }

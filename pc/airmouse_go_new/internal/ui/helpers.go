@@ -31,9 +31,6 @@ func IsDarkTheme() bool {
 }
 
 // GetWindowSize returns a size that works well across platforms.
-func GetWindowSize() (width, height float32) {
-	return 1200, 800
-}
 
 // CenterWindow centers a window on screen.
 func CenterWindow(w fyne.Window) {
@@ -352,14 +349,7 @@ func toLower(s string) string {
 // Window / Platform Helpers
 // ============================================================
 
-// RunOnMain executes fn on the UI thread.
-func RunOnMain(fn func()) {
-	if driver, ok := fyne.CurrentApp().Driver().(interface{ RunOnMain(func()) }); ok {
-		driver.RunOnMain(fn)
-	} else {
-		fn()
-	}
-}
+
 
 // getCurrentWindow returns the first application window, or nil if none.
 func getCurrentWindow() fyne.Window {

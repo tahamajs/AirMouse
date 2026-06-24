@@ -5,7 +5,6 @@ package sysaction
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 )
 
 func init() {

@@ -1,13 +1,14 @@
 package ui
 
-
 import (
+
 	"bytes"
 	"fmt"
 	"image/png"
 	"strings"
 	"sync"
 	"time"
+	"airmouse-go/control"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -17,10 +18,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 	qrcode "github.com/skip2/go-qrcode"
 
-	"airmouse-go/internal/config"
-	"airmouse-go/control/mouse" 
 	"airmouse-go/control/common"
-	"airmouse-go/control/syscmd"
+	"airmouse-go/control/mouse"
+	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/protocol"
 	"airmouse-go/internal/utils"
@@ -237,12 +237,12 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		tab.permissionHint,
 		container.NewHBox(
 			widget.NewButton("Open Settings", func() {
-	if err := mctl.OpenAccessibilitySettings(); err != nil {
+				if err := control.OpenAccessibilitySettings(); err != nil {
 					dialog.ShowError(err, getCurrentWindow())
 				}
 			}),
 			widget.NewButton("Check Now", func() {
-				if mouse.HasAccessibilityPermission() {
+				if control.HasAccessibilityPermission() {
 					tab.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 				} else {
 					tab.permissionHint.SetText("⚠️ Permission still missing. Enable Accessibility for Air Mouse Pro Server in System Settings.")
@@ -251,7 +251,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		),
 	)))
 
-	if mouse.HasAccessibilityPermission() {
+	if control.HasAccessibilityPermission() {
 		tab.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 	}
 
@@ -522,7 +522,7 @@ func (t *DashboardTab) refreshStats() {
 	RunOnMain(func() {
 		// Update permission hint
 		if t.permissionHint != nil {
-			if mouse.HasAccessibilityPermission() {
+			if control.HasAccessibilityPermission() {
 				t.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 			} else {
 				t.permissionHint.SetText("⛔ Accessibility permission is missing. Mouse control is blocked until you enable it in System Settings.")
@@ -624,7 +624,7 @@ func (t *DashboardTab) refreshStats() {
 				utils.GetLocalIP(),
 				deviceCount,
 			))
-			if !mouse.HasAccessibilityPermission() {
+			if !control.HasAccessibilityPermission() {
 				t.summaryLabel.SetText("Mouse control is unavailable until Accessibility permission is granted on this Mac.")
 			}
 		}

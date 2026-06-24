@@ -10,6 +10,13 @@ type RSSIFusion struct {
     smoothing    float64 // Smoothing factor
     lastDistance float64
 }
+// SetRSSIFusion stores the RSSI fusion instance for later use.
+func (m *Manager) SetRSSIFusion(fusion *RSSIFusion) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    // store it if you have a field, e.g., m.fusion = fusion
+    // For now, just a no-op.
+}
 
 func NewRSSIFusion(txPower int32, envFactor float64) *RSSIFusion {
     return &RSSIFusion{
@@ -116,4 +123,15 @@ func (kf *KalmanFilter) Update(measurement float64) float64 {
 func (kf *KalmanFilter) Reset() {
     kf.P = 1.0
     kf.X = -60
+}
+
+
+// LoadState is a stub – implement actual state loading if needed.
+func (rf *RSSIFusion) LoadState(path string) error {
+    return nil
+}
+
+// SaveState is a stub – implement actual state saving if needed.
+func (rf *RSSIFusion) SaveState(path string) error {
+    return nil
 }
