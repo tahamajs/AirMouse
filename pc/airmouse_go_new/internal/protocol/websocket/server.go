@@ -18,6 +18,7 @@ import (
 	gorilla "github.com/gorilla/websocket"
 
 	"airmouse-go/control/common"
+	"airmouse-go/control/mouse"
 	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
@@ -50,7 +51,7 @@ type WSClient struct {
 	BytesRecv   int64
 	UserAgent   string
 	IP          string
-	Approved    atomic.Bool // atomic for safe concurrent access
+	Approved    atomic.Bool
 }
 
 // ------------------------------------------------------------
@@ -61,25 +62,16 @@ type Server struct {
 	port         int
 	listener     net.Listener
 	clients      map[string]*WSClient
-	mouse        MouseController // use a local interface; we'll define it below
+	mouse        mouse.Controller
 	deviceMgr    *device.Manager
 	authMgr      *auth.Manager
-	proxMgr      *proximity.Manager // optional
+	proxMgr      *proximity.Manager
 	mu           sync.RWMutex
 	server       *http.Server
 	running      bool
 	totalClients int64
 	startTime    time.Time
 	fileSessions map[string]*fileSession
-}
-
-// We need a local interface for MouseController (to avoid a heavy import)
-type MouseController interface {
-	Move(dx, dy float64)
-	Click(button string)
-	DoubleClick()
-	Scroll(delta int)
-	// ... other methods not used in this file
 }
 
 type fileSession struct {
@@ -96,11 +88,11 @@ type fileSession struct {
 }
 
 // NewServer creates a new WebSocket server.
-func NewServer(port int, mouse MouseController, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *Server {
+func NewServer(port int, mouseCtrl mouse.Controller, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *Server {
 	return &Server{
 		port:         port,
 		clients:      make(map[string]*WSClient),
-		mouse:        mouse,
+		mouse:        mouseCtrl,
 		deviceMgr:    deviceMgr,
 		authMgr:      authMgr,
 		proxMgr:      proxMgr,
@@ -156,7 +148,6 @@ func (s *Server) Stop() error {
 	if s.listener != nil {
 		_ = s.listener.Close()
 	}
-
 	if s.server != nil {
 		_ = s.server.Close()
 	}
@@ -414,12 +405,12 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
 		utils.LogDebug("WebSocket hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
 
-		// Auto-approve if device was previously approved
+		// Auto-approve if trusted
 		if s.autoApproveWSClient(client, fingerprint) {
 			break
 		}
 
-		// Otherwise, mark as pending approval
+		// Otherwise mark pending
 		s.mu.Lock()
 		client.Name = name
 		if s.deviceMgr != nil {
@@ -505,6 +496,39 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	}
 }
 
+// autoApproveWSClient checks if the device is trusted and auto-approves.
+func (s *Server) autoApproveWSClient(client *WSClient, fingerprint string) bool {
+	if s.deviceMgr == nil || fingerprint == "" {
+		return false
+	}
+	// Use config trusted list
+	if !config.Get().IsTrustedDevice(fingerprint) {
+		return false
+	}
+	// Update device manager to connected state
+	_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeWebSocket, client.Name, map[string]string{
+		"fingerprint": fingerprint,
+		"ip_address":  client.IP,
+		"user_agent":  client.UserAgent,
+	})
+	_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
+
+	cfg := config.Get()
+	welcomeMsg := WelcomeMessage(cfg.ServerName, cfg.Version)
+	select {
+	case client.Send <- welcomeMsg:
+		client.Approved.Store(true)
+		client.DeviceID = fingerprint
+		common.SetMovementPaused(false)
+		common.ClearPause()
+		utils.LogInfo("WebSocket auto-approved trusted device: %s (fingerprint: %s)", client.ID, fingerprint)
+		return true
+	default:
+		utils.LogWarn("WebSocket auto-approve welcome send blocked: %s", client.ID)
+		return false
+	}
+}
+
 // ApproveDevice approves a pending WebSocket client and sends the welcome message.
 func (s *Server) ApproveDevice(deviceID string) error {
 	s.mu.Lock()
@@ -542,23 +566,6 @@ func (s *Server) ApproveDevice(deviceID string) error {
 		utils.LogWarn("WebSocket approval accepted but welcome send blocked (channel full): device=%s", deviceID)
 	}
 	return nil
-}
-
-// autoApproveWSClient checks if the device is known and auto-approves it.
-func (s *Server) autoApproveWSClient(client *WSClient, fingerprint string) bool {
-	if s.deviceMgr == nil {
-		return false
-	}
-	if s.deviceMgr.IsDeviceApproved(fingerprint) {
-		_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
-		cfg := config.Get()
-		client.Send <- WelcomeMessage(cfg.ServerName, cfg.Version)
-		client.Approved.Store(true)
-		client.DeviceID = fingerprint
-		utils.LogInfo("WebSocket auto-approved known device: %s (fingerprint: %s)", client.ID, fingerprint)
-		return true
-	}
-	return false
 }
 
 // ---------------------------------------------------------------------

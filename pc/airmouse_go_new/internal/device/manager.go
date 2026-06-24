@@ -563,6 +563,23 @@ func (m *DeviceManager) UnblockDevice(id string) error {
 	return nil
 }
 
+// ClearAll removes all devices and blocked entries, then persists.
+func (m *DeviceManager) ClearAll() {
+	if !m.initialized {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.devices = make(map[string]*DeviceInfo)
+	m.blockedIDs = make(map[string]bool)
+	m.persistLocked()
+	logInfo("All devices cleared")
+	go m.triggerEvent(DeviceEvent{
+		Type:      "cleared",
+		Timestamp: time.Now(),
+	})
+}
+
 // IsBlocked checks if a device is blocked.
 func (m *DeviceManager) IsBlocked(id string) bool {
 	if !m.initialized || id == "" {

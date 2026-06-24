@@ -18,7 +18,6 @@ import (
 	"airmouse-go/internal/utils"
 )
 
-// Server – UDP discovery server
 type Server struct {
 	port      int
 	conn      *net.UDPConn
@@ -26,12 +25,11 @@ type Server struct {
 	mouse     mouse.Controller
 	authMgr   *auth.Manager
 	running   bool
-	mu        sync.RWMutex // protects clients map and running
+	mu        sync.RWMutex
 	clients   map[string]*UDPClient
 	callbacks []func(event UDPEvent)
 }
 
-// UDPClient – a discovered client
 type UDPClient struct {
 	Address    *net.UDPAddr
 	LastSeen   time.Time
@@ -43,7 +41,6 @@ type UDPClient struct {
 	mu         sync.RWMutex
 }
 
-// UDPEvent – event for callbacks
 type UDPEvent struct {
 	Type      string
 	ClientIP  string
@@ -259,6 +256,7 @@ func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *
 		}
 	}
 
+	// Auto‑approval check
 	if s.autoApproveUDPClient(clientKey, client, fingerprint) {
 		return
 	}
@@ -369,20 +367,30 @@ func (s *Server) ApproveDevice(deviceID string) error {
 	return nil
 }
 
+// autoApproveUDPClient checks if the fingerprint is trusted and auto‑approves.
 func (s *Server) autoApproveUDPClient(clientKey string, client *UDPClient, fingerprint string) bool {
-	if s.deviceMgr == nil {
+	if s.deviceMgr == nil || fingerprint == "" {
 		return false
 	}
-	if s.deviceMgr.IsDeviceApproved(fingerprint) {
-		_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
-		cfg := config.Get()
-		welcome := websocketpkg.WelcomeMessage(cfg.ServerName, cfg.Version)
-		if err := s.writeToClient(clientKey, client.Address, welcome); err == nil {
-			client.Approved = true
-			client.DeviceID = fingerprint
-			utils.LogInfo("UDP auto-approved known device: %s (fingerprint: %s)", client.Address.String(), fingerprint)
-			return true
-		}
+	if !config.Get().IsTrustedDevice(fingerprint) {
+		return false
+	}
+	_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeUDP, client.DeviceName, map[string]string{
+		"fingerprint": fingerprint,
+		"ip_address":  client.Address.IP.String(),
+	})
+	_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
+	cfg := config.Get()
+	welcome := websocketpkg.WelcomeMessage(cfg.ServerName, cfg.Version)
+	if err := s.writeToClient(clientKey, client.Address, welcome); err == nil {
+		client.mu.Lock()
+		client.Approved = true
+		client.DeviceID = fingerprint
+		client.mu.Unlock()
+		utils.LogInfo("UDP auto-approved trusted device: %s (fingerprint: %s)", client.Address.String(), fingerprint)
+		common.SetMovementPaused(false)
+		common.ClearPause()
+		return true
 	}
 	return false
 }

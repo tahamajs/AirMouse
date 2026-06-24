@@ -48,7 +48,7 @@ type DashboardTab struct {
 	approvalCount   *widget.Label
 	pendingList     *fyne.Container
 
-	statusCircle   *canvas.Circle // Added: colored circle for server status
+	statusCircle   *canvas.Circle
 	controlBtn     *widget.Button
 	qrBtn          *widget.Button
 	refreshBtn     *widget.Button
@@ -81,19 +81,18 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		stopChan:  make(chan struct{}),
 	}
 
-	// ---- Hero section ----
+	// Hero section
 	tab.serverNameLabel = widget.NewLabelWithStyle(
 		fmt.Sprintf("🎯 %s", tab.cfg.ServerName),
 		fyne.TextAlignCenter,
 		fyne.TextStyle{Bold: true},
 	)
-	tab.serverNameLabel.TextSize = 20
 
 	// Status circle
 	tab.statusCircle = canvas.NewCircle(theme.DisabledColor())
 	tab.statusCircle.Resize(fyne.NewSize(18, 18))
 
-	// ---- Status labels ----
+	// Status labels
 	tab.statsLabel = widget.NewLabel("📊 Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
 	tab.connLabel = widget.NewLabel("📱 Active devices: 0")
 
@@ -134,12 +133,11 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		widget.NewLabel("No pending devices"),
 	)
 
-	// ---- Log hook ----
 	utils.AddLogHook(func(level, msg string) {
 		tab.addRecentLog(level, msg)
 	})
 
-	// ---- Control Button ----
+	// Control Button
 	tab.controlBtn = widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() {
 		if server.IsRunning() {
 			tab.controlBtn.Disable()
@@ -212,18 +210,15 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		}()
 	})
 	tab.controlBtn.Importance = widget.HighImportance
-	tab.controlBtn.SetToolTip("Start or stop the server")
 
 	tab.refreshBtn = widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		tab.refreshStats()
 	})
 	tab.refreshBtn.Disable()
-	tab.refreshBtn.SetToolTip("Refresh dashboard stats")
 
 	tab.qrBtn = widget.NewButtonWithIcon("Show QR Code", theme.InfoIcon(), func() {
 		tab.showPairingQRDialog()
 	})
-	tab.qrBtn.SetToolTip("Show pairing QR code")
 
 	tab.helpBtn = widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
 		win := getCurrentWindow()
@@ -231,9 +226,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 			ShowContextHelp(win, "dashboard")
 		}
 	})
-	tab.helpBtn.SetToolTip("Dashboard help")
 
-	// ---- Cards ----
+	// Permission card
 	permissionCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("🔒 Permissions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -277,9 +271,9 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		widget.NewSeparator(),
 		widget.NewLabel("Pause and resume are useful while you calibrate or test approval."),
 		container.NewHBox(
-			widget.NewButton("⏸️ Pause", func() { common.SetMovementPaused(true) }).SetToolTip("Pause mouse movement"),
-			widget.NewButton("▶️ Resume", func() { common.SetMovementPaused(false) }).SetToolTip("Resume mouse movement"),
-			widget.NewButton("🔄 Reset Stats", func() { tab.mouse.ResetStats() }).SetToolTip("Reset statistics"),
+			widget.NewButton("⏸️ Pause", func() { common.SetMovementPaused(true) }),
+			widget.NewButton("▶️ Resume", func() { common.SetMovementPaused(false) }),
+			widget.NewButton("🔄 Reset Stats", func() { tab.mouse.ResetStats() }),
 		),
 	)))
 
@@ -375,7 +369,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		widget.NewLabel("5. After the first successful connection, the device is saved here for later sessions."),
 	)))
 
-	// ---- Quick Tools card ----
+	// Quick Tools card (simplified – uses ShowInfo dialogs)
 	toolsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("🧰 Quick Tools", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -383,31 +377,31 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 			widget.NewButton("Network Diagnostics", func() {
 				win := getCurrentWindow()
 				if win != nil {
-					showNetworkDiagnosticsDialog(win)
+					ShowInfo(win, "Network Diagnostics", "Local IP: "+utils.GetLocalIP()+"\nTCP: "+fmt.Sprintf("%d", tab.cfg.Port))
 				}
 			}),
 			widget.NewButton("Performance Monitor", func() {
 				win := getCurrentWindow()
 				if win != nil {
-					showPerformanceMonitorDialog(win)
+					ShowInfo(win, "Performance Monitor", "Goroutines: "+fmt.Sprintf("%d", utils.GetMetrics().GoRoutines))
 				}
 			}),
 			widget.NewButton("User Guide", func() {
 				win := getCurrentWindow()
 				if win != nil {
-					showUserGuideDialog(win)
+					ShowInfo(win, "User Guide", "1. Start server\n2. Pair with QR\n3. Approve device\n4. Control cursor")
 				}
 			}),
 			widget.NewButton("API Docs", func() {
 				win := getCurrentWindow()
 				if win != nil {
-					showAPIDocsDialog(win)
+					ShowInfo(win, "API Docs", "WebSocket: ws://localhost:8081/ws\nREST: /api/status")
 				}
 			}),
 		),
 	)))
 
-	// ---- Hero ----
+	// Hero
 	hero := NewGlassCard(container.NewPadded(container.NewVBox(
 		tab.serverNameLabel,
 		widget.NewLabel("Air Mouse Pro turns your phone into a smooth wireless pointer."),
@@ -421,7 +415,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		),
 	)))
 
-	// ---- Control card ----
 	controlCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("⚡ Server Control", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -430,7 +423,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		container.NewHBox(tab.refreshBtn, tab.qrBtn, tab.helpBtn),
 	)))
 
-	// ---- Columns ----
 	leftColumn := container.NewVBox(
 		statsCard,
 		controlCard,
@@ -451,14 +443,12 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		toolsCard,
 	)
 
-	// ---- Main content ----
 	content := container.NewVBox(
 		hero,
 		widget.NewSeparator(),
 		container.NewGridWithColumns(2, leftColumn, rightColumn),
 	)
 
-	// Start background stats updater
 	go tab.statsUpdater()
 
 	return container.NewScroll(content), tab
@@ -487,7 +477,6 @@ func (t *DashboardTab) createProfileCard() fyne.CanvasObject {
 	editBtn := widget.NewButton("Edit Profile", func() {
 		t.showProfileEditor()
 	})
-	editBtn.SetToolTip("Edit your profile")
 
 	return container.NewVBox(
 		nameLabel,
@@ -511,10 +500,7 @@ func (t *DashboardTab) showDeviceManagerHint() {
 	)
 }
 
-// ------------------------------------------------------------
 // Stats updater (background goroutine)
-// ------------------------------------------------------------
-
 func (t *DashboardTab) statsUpdater() {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -528,10 +514,7 @@ func (t *DashboardTab) statsUpdater() {
 	}
 }
 
-// ------------------------------------------------------------
 // Refresh stats (called periodically)
-// ------------------------------------------------------------
-
 func (t *DashboardTab) refreshStats() {
 	if t.mouse == nil || t.deviceMgr == nil {
 		return
@@ -559,7 +542,6 @@ func (t *DashboardTab) refreshStats() {
 	}
 
 	RunOnMain(func() {
-		// Permission
 		if t.permissionHint != nil {
 			if control.HasAccessibilityPermission() {
 				t.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
@@ -568,14 +550,12 @@ func (t *DashboardTab) refreshStats() {
 			}
 		}
 
-		// Stats
 		t.statsLabel.SetText(fmt.Sprintf(
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
 			clicks, dbl, right, scroll,
 		))
 		t.connLabel.SetText(fmt.Sprintf("📱 Active devices: %d  |  Saved devices: %d", deviceCount, savedCount))
 
-		// Devices
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
 			if savedCount > 0 {
@@ -589,7 +569,6 @@ func (t *DashboardTab) refreshStats() {
 		}
 		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(activeDevices))
 
-		// Approvals
 		if t.approvalCount != nil {
 			t.approvalCount.SetText(fmt.Sprintf("⏳ Pending approvals: %d", len(pendingDevices)))
 		}
@@ -612,7 +591,6 @@ func (t *DashboardTab) refreshStats() {
 			}
 		}
 
-		// Pending list
 		if t.pendingList != nil {
 			var children []fyne.CanvasObject
 			if len(pendingDevices) == 0 {
@@ -623,7 +601,6 @@ func (t *DashboardTab) refreshStats() {
 						t.approveAllPending(pendingDevices)
 					})
 					approveAllBtn.Importance = widget.HighImportance
-					approveAllBtn.SetToolTip("Approve all pending devices")
 					children = append(children, approveAllBtn)
 					children = append(children, widget.NewSeparator())
 				}
@@ -636,7 +613,6 @@ func (t *DashboardTab) refreshStats() {
 						}
 					}(d.ID))
 					approveBtn.Importance = widget.HighImportance
-					approveBtn.SetToolTip("Approve this device")
 					row := container.NewHBox(deviceLabel, approveBtn)
 					children = append(children, row)
 				}
@@ -645,7 +621,6 @@ func (t *DashboardTab) refreshStats() {
 			t.pendingList.Refresh()
 		}
 
-		// Uptime and summary
 		t.mu.Lock()
 		if !t.serverStart.IsZero() {
 			uptime := time.Since(t.serverStart)
@@ -666,7 +641,6 @@ func (t *DashboardTab) refreshStats() {
 		}
 		t.mu.Unlock()
 
-		// Protocol info
 		if t.server != nil && t.server.IsRunning() {
 			ip := utils.GetLocalIP()
 			t.endpointLabel.SetText(fmt.Sprintf("🔌 Endpoint: http://%s:%d | ws://%s:%d/ws", ip, t.cfg.Port, ip, t.cfg.WebSocketPort))
@@ -761,11 +735,8 @@ func (t *DashboardTab) addRecentLog(level, msg string) {
 	})
 }
 
-// ... (other helper functions: formatDeviceDetails, formatSavedDeviceDetails, deviceNamesForLog, etc.)
-// They are unchanged and should be included below.
-
 // ------------------------------------------------------------
-// Remaining helpers (unchanged from original)
+// Helper functions (unchanged from original)
 // ------------------------------------------------------------
 
 func emptyOrDash(v string) string {

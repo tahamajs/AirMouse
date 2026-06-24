@@ -191,26 +191,35 @@ func (s *Server) handleClient(conn net.Conn) {
 	s.triggerEvent(TCPEvent{Type: "disconnected", ClientID: clientID, ClientIP: clientIP, Timestamp: time.Now()})
 }
 
+// autoApproveTCPClient checks if the fingerprint is trusted and auto‑approves.
 func (s *Server) autoApproveTCPClient(client *Client, fingerprint string) bool {
-	if s.deviceMgr == nil {
+	if s.deviceMgr == nil || fingerprint == "" {
 		return false
 	}
-	if s.deviceMgr.IsDeviceApproved(fingerprint) {
-		_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
-		cfg := config.Get()
-		welcome := fmt.Sprintf(`{"type":"welcome","payload":{"server":"%s","version":"%s","client_id":"%s"}}`+"\n",
-			cfg.ServerName, cfg.Version, client.ID)
-		if _, err := client.Conn.Write([]byte(welcome)); err == nil {
-			client.mu.Lock()
-			client.Approved = true
-			client.DeviceID = fingerprint
-			client.BytesSent += int64(len(welcome))
-			client.mu.Unlock()
-			common.SetMovementPaused(false)
-			common.ClearPause()
-			utils.LogInfo("TCP auto-approved known device: %s (fingerprint: %s)", client.ID, fingerprint)
-			return true
-		}
+	// Use the config trusted list
+	if !config.Get().IsTrustedDevice(fingerprint) {
+		return false
+	}
+	// Update device manager to connected state
+	_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeTCP, client.Name, map[string]string{
+		"fingerprint": fingerprint,
+		"ip_address":  client.IP,
+	})
+	_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
+	cfg := config.Get()
+	welcome := fmt.Sprintf(`{"type":"welcome","payload":{"server":"%s","version":"%s","client_id":"%s"}}`+"\n",
+		cfg.ServerName, cfg.Version, client.ID)
+	_ = client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	if _, err := client.Conn.Write([]byte(welcome)); err == nil {
+		client.mu.Lock()
+		client.Approved = true
+		client.DeviceID = fingerprint
+		client.BytesSent += int64(len(welcome))
+		client.mu.Unlock()
+		common.SetMovementPaused(false)
+		common.ClearPause()
+		utils.LogInfo("TCP auto-approved trusted device: %s (fingerprint: %s)", client.ID, fingerprint)
+		return true
 	}
 	return false
 }
@@ -317,6 +326,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 			}
 		}
 
+		// Auto‑approval check
 		if s.autoApproveTCPClient(client, fingerprint) {
 			break
 		}
