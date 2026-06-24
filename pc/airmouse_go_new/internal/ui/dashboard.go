@@ -1,14 +1,12 @@
 package ui
 
 import (
-
 	"bytes"
 	"fmt"
 	"image/png"
 	"strings"
 	"sync"
 	"time"
-	"airmouse-go/control"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -18,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	qrcode "github.com/skip2/go-qrcode"
 
+	"airmouse-go/control"
 	"airmouse-go/control/common"
 	"airmouse-go/control/mouse"
 	"airmouse-go/internal/config"
@@ -26,7 +25,7 @@ import (
 	"airmouse-go/internal/utils"
 )
 
-// ... rest of the file (the entire DashboardTab implementation) ...// ------------------------------------------------------------
+// ------------------------------------------------------------
 //  DashboardTab – Optimized version without chart to prevent hangs
 // ------------------------------------------------------------
 
@@ -57,7 +56,7 @@ type DashboardTab struct {
 	controlBtn *widget.Button
 	qrBtn      *widget.Button
 	refreshBtn *widget.Button
-	helpBtn    *widget.Button // Help button for context help
+	helpBtn    *widget.Button
 
 	serverStart time.Time
 	mu          sync.Mutex
@@ -73,7 +72,6 @@ type DashboardTab struct {
 
 // NewDashboardTab creates the dashboard tab content.
 func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, deviceMgr *device.Manager) (fyne.CanvasObject, *DashboardTab) {
-	// Safety: if any dependency is nil, return a placeholder
 	if server == nil || mouse == nil || deviceMgr == nil {
 		return widget.NewLabelWithStyle("⚠️ Dashboard unavailable - dependencies missing",
 			fyne.TextAlignCenter, fyne.TextStyle{Bold: true}), nil
@@ -87,14 +85,12 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		stopChan:  make(chan struct{}),
 	}
 
-	// Header with server name
 	tab.serverNameLabel = widget.NewLabelWithStyle(
 		fmt.Sprintf("🎯 %s", tab.cfg.ServerName),
 		fyne.TextAlignLeading,
 		fyne.TextStyle{Bold: true},
 	)
 
-	// Status displays
 	tab.statsLabel = widget.NewLabel("📊 Clicks: 0  |  Double: 0  |  Right: 0  |  Scroll: 0")
 	tab.connLabel = widget.NewLabel("📱 Active devices: 0")
 
@@ -129,7 +125,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 	tab.approvalDetail.Wrapping = fyne.TextWrapWord
 	tab.approvalCount = widget.NewLabel("⏳ Pending approvals: 0")
 
-	// Create dynamic pending list (initially empty)
 	tab.pendingList = container.NewVBox(
 		widget.NewLabel("No pending devices"),
 	)
@@ -138,7 +133,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		tab.addRecentLog(level, msg)
 	})
 
-	// Buttons
+	// Control button
 	tab.controlBtn = widget.NewButtonWithIcon("Start Server", theme.MediaPlayIcon(), func() {
 		if server.IsRunning() {
 			tab.controlBtn.Disable()
@@ -221,7 +216,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		tab.showPairingQRDialog()
 	})
 
-	// Help button – opens context help for dashboard
 	tab.helpBtn = widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
 		win := getCurrentWindow()
 		if win != nil {
@@ -230,7 +224,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 	})
 	tab.helpBtn.Importance = widget.MediumImportance
 
-	// ---- Build permission card ----
+	// ---- Cards ----
 	permissionCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("🔒 macOS Permissions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -238,7 +232,10 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		container.NewHBox(
 			widget.NewButton("Open Settings", func() {
 				if err := control.OpenAccessibilitySettings(); err != nil {
-					dialog.ShowError(err, getCurrentWindow())
+					win := getCurrentWindow()
+					if win != nil {
+						dialog.ShowError(err, win)
+					}
 				}
 			}),
 			widget.NewButton("Check Now", func() {
@@ -255,10 +252,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		tab.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 	}
 
-	// ---- Profile card ----
 	profileCard := NewGlassCard(container.NewPadded(tab.createProfileCard()))
 
-	// ---- Stats card ----
 	statsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📊 Statistics", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -268,7 +263,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		),
 	)))
 
-	// ---- Quick Actions card ----
 	actionsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("⚡ Quick Actions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -280,7 +274,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		),
 	)))
 
-	// ---- Status card ----
 	statusCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📡 Server Status", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -293,8 +286,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		tab.aiStatusLabel,
 	)))
 
-	// ---- Approval card with dynamic pending list ----
-	// Add a small refresh and help button inside the approval card
 	approvalHeader := container.NewHBox(
 		tab.approvalTitle,
 		container.NewHBox(
@@ -327,7 +318,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		),
 	)))
 
-	// ---- Device cards ----
 	deviceCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📱 Nearby / Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -389,7 +379,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		),
 	))
 
-	// ---- Control card with help button ----
 	controlCard := NewGlassCard(container.NewVBox(
 		widget.NewLabelWithStyle("⚡ Server Control", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -398,7 +387,6 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		container.NewHBox(tab.refreshBtn, tab.qrBtn, tab.helpBtn),
 	))
 
-	// ---- Left and right columns ----
 	leftColumn := container.NewVBox(
 		statsCard,
 		controlCard,
@@ -418,14 +406,12 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, de
 		profileCard,
 	)
 
-	// ---- Main content ----
 	content := container.NewVBox(
 		hero,
 		widget.NewSeparator(),
 		container.NewGridWithColumns(2, leftColumn, rightColumn),
 	)
 
-	// Start background stats updater
 	go tab.statsUpdater()
 
 	return container.NewScroll(content), tab
@@ -469,17 +455,17 @@ func (t *DashboardTab) showDeviceManagerHint() {
 }
 
 // ------------------------------------------------------------
-//  Stats updater (background goroutine) – with rate limiting
+//  Stats updater (background goroutine)
 // ------------------------------------------------------------
 
 func (t *DashboardTab) statsUpdater() {
-	ticker := time.NewTicker(2 * time.Second) // Reduced from 1s to 2s to reduce load
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			t.refreshStats()
+			t.refreshStats() // refreshStats already uses RunOnMain internally
 		case <-t.stopChan:
 			return
 		}
@@ -495,7 +481,6 @@ func (t *DashboardTab) refreshStats() {
 		return
 	}
 
-	// Get stats once
 	clicks, dbl, right, scroll := t.mouse.Stats()
 	allDevices := t.deviceMgr.GetAllDevices()
 	activeDevices := t.deviceMgr.GetActiveDevices()
@@ -518,9 +503,9 @@ func (t *DashboardTab) refreshStats() {
 		}
 	}
 
-	// Update UI in one batch
+	// All UI updates inside RunOnMain (which uses fyne.Do)
 	RunOnMain(func() {
-		// Update permission hint
+		// Permission hint
 		if t.permissionHint != nil {
 			if control.HasAccessibilityPermission() {
 				t.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
@@ -529,14 +514,12 @@ func (t *DashboardTab) refreshStats() {
 			}
 		}
 
-		// Update stats labels
 		t.statsLabel.SetText(fmt.Sprintf(
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
 			clicks, dbl, right, scroll,
 		))
 		t.connLabel.SetText(fmt.Sprintf("📱 Active devices: %d  |  Saved devices: %d", deviceCount, savedCount))
 
-		// Update device details
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
 			if savedCount > 0 {
@@ -544,15 +527,12 @@ func (t *DashboardTab) refreshStats() {
 			} else {
 				t.savedDetailBox.SetText("No previously connected devices yet.\nConnect a phone once and it will stay here for future sessions.")
 			}
-			utils.LogDebug("Dashboard device list updated: %s", strings.Join(deviceNamesForLog(activeDevices), ", "))
 		} else {
 			t.deviceDetailBox.SetText("No connected devices yet.")
 			t.savedDetailBox.SetText("No previously connected devices yet.\nConnect a phone once and it will stay here for future sessions.")
-			utils.LogDebug("Dashboard device list empty")
 		}
 		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(activeDevices))
 
-		// Update approval count and banner
 		if t.approvalCount != nil {
 			t.approvalCount.SetText(fmt.Sprintf("⏳ Pending approvals: %d", len(pendingDevices)))
 		}
@@ -575,13 +555,12 @@ func (t *DashboardTab) refreshStats() {
 			}
 		}
 
-		// ----- Dynamic pending list -----
+		// Pending list
 		if t.pendingList != nil {
 			var children []fyne.CanvasObject
 			if len(pendingDevices) == 0 {
 				children = append(children, widget.NewLabel("✅ No pending devices"))
 			} else {
-				// Add an "Approve All" button if more than one
 				if len(pendingDevices) > 1 {
 					approveAllBtn := widget.NewButtonWithIcon("✅ Approve All", theme.ConfirmIcon(), func() {
 						t.approveAllPending(pendingDevices)
@@ -590,8 +569,6 @@ func (t *DashboardTab) refreshStats() {
 					children = append(children, approveAllBtn)
 					children = append(children, widget.NewSeparator())
 				}
-
-				// List each pending device with an Approve button
 				for _, d := range pendingDevices {
 					deviceLabel := widget.NewLabel(fmt.Sprintf("📱 %s [%s] - %s", d.Name, d.Type, d.ID[:8]))
 					deviceLabel.Wrapping = fyne.TextWrapWord
@@ -609,7 +586,6 @@ func (t *DashboardTab) refreshStats() {
 			t.pendingList.Refresh()
 		}
 
-		// Update uptime and summary
 		t.mu.Lock()
 		if !t.serverStart.IsZero() {
 			uptime := time.Since(t.serverStart)
@@ -630,7 +606,6 @@ func (t *DashboardTab) refreshStats() {
 		}
 		t.mu.Unlock()
 
-		// Update protocol/status labels
 		if t.server != nil && t.server.IsRunning() {
 			ip := utils.GetLocalIP()
 			t.endpointLabel.SetText(fmt.Sprintf("🔌 Endpoint: http://%s:%d | ws://%s:%d/ws", ip, t.cfg.Port, ip, t.cfg.WebSocketPort))
@@ -661,9 +636,7 @@ func (t *DashboardTab) approvePending(deviceID string) {
 		utils.LogError("ApproveDevice failed: %v", err)
 		return
 	}
-	// Refresh stats to update UI
 	t.refreshStats()
-	// Show a brief success message in the approval banner
 	RunOnMain(func() {
 		if t.approvalBanner != nil {
 			t.approvalBanner.SetText(fmt.Sprintf("✅ Device %s approved successfully!", deviceID[:8]))
@@ -695,15 +668,19 @@ func (t *DashboardTab) approveAllPending(pending []*device.DeviceInfo) {
 			t.refreshStats()
 			if len(errs) > 0 {
 				if win != nil {
-					dialog.ShowInformation("Approval Complete",
-						fmt.Sprintf("Approved %d devices, but %d failed:\n%s", len(pending)-len(errs), len(errs), strings.Join(errs, "\n")),
-						win)
+					RunOnMain(func() {
+						dialog.ShowInformation("Approval Complete",
+							fmt.Sprintf("Approved %d devices, but %d failed:\n%s", len(pending)-len(errs), len(errs), strings.Join(errs, "\n")),
+							win)
+					})
 				}
 			} else {
 				if win != nil {
-					dialog.ShowInformation("Approval Complete",
-						fmt.Sprintf("All %d devices approved successfully!", len(pending)),
-						win)
+					RunOnMain(func() {
+						dialog.ShowInformation("Approval Complete",
+							fmt.Sprintf("All %d devices approved successfully!", len(pending)),
+							win)
+					})
 				}
 			}
 		}, win)
@@ -809,7 +786,6 @@ func (t *DashboardTab) buildNearbyDeviceSummary(devices []*device.DeviceInfo) st
 	if len(devices) == 0 {
 		return "No nearby devices found yet.\n\nOnce an Android app scans the LAN or sends a hello packet, it will appear here."
 	}
-
 	var b strings.Builder
 	for _, d := range devices {
 		fmt.Fprintf(&b,

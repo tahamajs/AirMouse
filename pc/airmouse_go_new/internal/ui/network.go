@@ -51,7 +51,7 @@ type NetworkTab struct {
 func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 	tab := &NetworkTab{
 		cfg:    cfg,
-		ipData: getIPList(),
+		ipData: []string{"Loading..."}, // placeholder while loading
 	}
 
 	header := container.NewVBox(
@@ -84,11 +84,8 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 				if len(hbox.Objects) >= 2 {
 					icon := hbox.Objects[0].(*widget.Label)
 					label := hbox.Objects[1].(*widget.Label)
-
 					icon.SetText("🌐")
 					label.SetText(tab.ipData[id])
-
-					// Highlight active IP
 					if tab.ipData[id] == tab.ipEntry.Text {
 						label.TextStyle = fyne.TextStyle{Bold: true}
 					} else {
@@ -148,17 +145,26 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 
 	// Buttons
 	tab.refreshBtn = widget.NewButtonWithIcon("Refresh IPs", theme.ViewRefreshIcon(), func() {
-		tab.ipData = getIPList()
-		tab.ipList.Refresh()
-		tab.statusLabel.SetText("🔄 IP list refreshed")
-		tab.statusLabel.Importance = widget.MediumImportance
-
-		time.AfterFunc(2*time.Second, func() {
+		tab.statusLabel.SetText("🔄 Refreshing IP list...")
+		tab.statusLabel.Importance = widget.WarningImportance
+		go func() {
+			ips := getIPList()
 			RunOnMain(func() {
-				tab.statusLabel.SetText("⏳ Waiting for approval")
+				tab.ipData = ips
+				tab.ipList.Refresh()
+				if len(ips) > 0 {
+					tab.ipEntry.SetText(ips[0])
+				}
+				tab.statusLabel.SetText("✅ IP list refreshed")
 				tab.statusLabel.Importance = widget.SuccessImportance
+				time.AfterFunc(2*time.Second, func() {
+					RunOnMain(func() {
+						tab.statusLabel.SetText("⏳ Waiting for approval")
+						tab.statusLabel.Importance = widget.SuccessImportance
+					})
+				})
 			})
-		})
+		}()
 	})
 
 	tab.testConnBtn = widget.NewButtonWithIcon("Test Connection", theme.ConfirmIcon(), func() {
@@ -306,11 +312,23 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		tab.statusLabel,
 	)
 
+	// Load IPs asynchronously so UI doesn't block
+	go func() {
+		ips := getIPList()
+		RunOnMain(func() {
+			tab.ipData = ips
+			tab.ipList.Refresh()
+			if len(ips) > 0 {
+				tab.ipEntry.SetText(ips[0])
+				tab.updateQR()
+			}
+		})
+	}()
+
 	return container.NewScroll(container.NewPadded(content))
 }
 
 // updateQR refreshes the QR code image based on the current IP and port.
-// If generation fails, a placeholder image is displayed and an error dialog is shown.
 func (t *NetworkTab) updateQR() {
 	data := buildPairingURI(t.safeIP(), t.portEntry.Text, t.wsPortEntry.Text, t.udpPortEntry.Text, t.cfg.ServerName)
 
@@ -340,10 +358,9 @@ func (t *NetworkTab) updateQR() {
 	t.qrImage.Refresh()
 }
 
-// generatePlaceholderQR returns a simple placeholder image (gray rectangle with text).
+// generatePlaceholderQR returns a simple placeholder image.
 func generatePlaceholderQR() image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, 250, 250))
-	// Fill with gray
 	for x := 0; x < 250; x++ {
 		for y := 0; y < 250; y++ {
 			img.Set(x, y, color.RGBA{200, 200, 200, 255})
@@ -380,7 +397,7 @@ func buildPairingURI(ip, port, wsPort, udpPort, serverName string) string {
 	)
 }
 
-// testConnection attempts a TCP connection to the configured IP and port.
+// testConnection attempts a TCP connection.
 func (t *NetworkTab) testConnection() {
 	win := getCurrentWindow()
 	if win == nil {
@@ -410,8 +427,7 @@ func (t *NetworkTab) testConnection() {
 	}()
 }
 
-// getIPList returns a list of all non‑loopback IPv4 addresses on the machine,
-// with the most likely LAN IP (private, non‑loopback) placed first.
+// getIPList returns all non‑loopback IPv4 addresses, with private IPs first.
 func getIPList() []string {
 	var ips []string
 	ifaces, err := net.Interfaces()
@@ -432,12 +448,10 @@ func getIPList() []string {
 			}
 		}
 	}
-	// If no IPs found, fallback to loopback
 	if len(ips) == 0 {
 		ips = append(ips, "127.0.0.1")
 	}
-	// Sort: put private IPs first (e.g., 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-	// Simple: prefer IPs that are not in the 169.254.x.x (link-local) range.
+	// Prefer non‑link‑local (169.254.x.x) addresses
 	var preferred, others []string
 	for _, ip := range ips {
 		if strings.HasPrefix(ip, "169.254.") {
@@ -446,7 +460,5 @@ func getIPList() []string {
 			preferred = append(preferred, ip)
 		}
 	}
-	// Combine preferred first, then others
-	result := append(preferred, others...)
-	return result
+	return append(preferred, others...)
 }
