@@ -51,7 +51,7 @@ func TestWebSocketProcessMessage_SimulatedAndroidSession(t *testing.T) {
 		"version": "3.0",
 	}, nil)
 
-	if client.Approved {
+	if client.Approved.Load() {
 		t.Fatal("expected client to remain pending until approved")
 	}
 	select {

@@ -2309,3 +2309,217 @@
 2026-06-24 06:09:38.217 [INFO] main.go:127: Protocol lifecycle event: stop
 2026-06-24 06:09:38.228 [INFO] main.go:78: Shutting down...
 2026-06-24 06:09:38.228 [INFO] main.go:36: Device manager stopped
+2026-06-24 07:01:30.698 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-24 07:01:30.698 [INFO] main.go:97: System Information:
+2026-06-24 07:01:30.698 [INFO] main.go:98:   OS: darwin
+2026-06-24 07:01:30.698 [INFO] main.go:99:   Arch: arm64
+2026-06-24 07:01:30.698 [INFO] main.go:100:   CPUs: 8
+2026-06-24 07:01:30.698 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-24 07:01:30.698 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-24 07:01:30.698 [INFO] main.go:103:   Git Commit: unknown
+2026-06-24 07:01:30.699 [INFO] main.go:115: Authentication disabled
+2026-06-24 07:01:30.705 [INFO] main.go:64: Application started successfully
+2026-06-24 07:01:30.705 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-24 07:01:30.705 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-24 07:01:30.705 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-24 07:01:30.705 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-24 07:01:30.705 [INFO] main.go:69: Launching desktop UI window...
+2026-06-24 07:01:31.201 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-24 07:01:31.201 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:01:47.207 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-24 07:01:47.207 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:01:47.207 [INFO] main.go:126: Protocol lifecycle event: start
+2026-06-24 07:03:48.567 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 07:03:48.569 [INFO] main.go:141: Device lifecycle event: type=registered id=8b87155043837c4b1976f3a1cb552fd9 name=Unknown
+2026-06-24 07:04:27.098 [INFO] manager.go:368: Bluetooth manager stopped
+2026-06-24 07:04:27.099 [INFO] server.go:381: USB serial server stopped
+2026-06-24 07:04:27.099 [INFO] main.go:128: Protocol lifecycle event: stop
+2026-06-24 07:04:27.125 [INFO] main.go:78: Shutting down...
+2026-06-24 07:04:27.125 [INFO] main.go:36: Device manager stopped
+2026-06-24 07:21:29.424 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-24 07:21:29.425 [INFO] main.go:97: System Information:
+2026-06-24 07:21:29.426 [INFO] main.go:98:   OS: darwin
+2026-06-24 07:21:29.426 [INFO] main.go:99:   Arch: arm64
+2026-06-24 07:21:29.426 [INFO] main.go:100:   CPUs: 8
+2026-06-24 07:21:29.426 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-24 07:21:29.426 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-24 07:21:29.426 [INFO] main.go:103:   Git Commit: unknown
+2026-06-24 07:21:29.431 [INFO] main.go:115: Authentication disabled
+2026-06-24 07:21:29.470 [INFO] main.go:64: Application started successfully
+2026-06-24 07:21:29.472 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-24 07:21:29.473 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-24 07:21:29.473 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-24 07:21:29.473 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-24 07:21:29.473 [INFO] main.go:69: Launching desktop UI window...
+2026-06-24 07:21:29.960 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-24 07:21:29.962 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:21:54.447 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-24 07:21:54.454 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:21:54.643 [INFO] main.go:126: Protocol lifecycle event: start
+2026-06-24 07:22:12.466 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 07:22:12.468 [INFO] main.go:141: Device lifecycle event: type=registered id=bce1dee2421d817cf924b3ee0e731217 name=Unknown
+2026-06-24 07:22:46.639 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 07:22:46.648 [INFO] main.go:141: Device lifecycle event: type=registered id=deb2161b5b429e05d0e01c58704d7d1f name=Unknown
+2026-06-24 07:25:13.542 [INFO] manager.go:368: Bluetooth manager stopped
+2026-06-24 07:25:13.542 [INFO] server.go:381: USB serial server stopped
+2026-06-24 07:25:13.544 [INFO] main.go:128: Protocol lifecycle event: stop
+2026-06-24 07:25:13.586 [INFO] main.go:78: Shutting down...
+2026-06-24 07:25:13.586 [INFO] main.go:36: Device manager stopped
+2026-06-24 07:25:29.773 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-24 07:25:29.773 [INFO] main.go:97: System Information:
+2026-06-24 07:25:29.773 [INFO] main.go:98:   OS: darwin
+2026-06-24 07:25:29.773 [INFO] main.go:99:   Arch: arm64
+2026-06-24 07:25:29.773 [INFO] main.go:100:   CPUs: 8
+2026-06-24 07:25:29.773 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-24 07:25:29.773 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-24 07:25:29.773 [INFO] main.go:103:   Git Commit: unknown
+2026-06-24 07:25:29.775 [INFO] main.go:115: Authentication disabled
+2026-06-24 07:25:29.784 [INFO] main.go:64: Application started successfully
+2026-06-24 07:25:29.784 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-24 07:25:29.784 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-24 07:25:29.784 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-24 07:25:29.784 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-24 07:25:29.784 [INFO] main.go:69: Launching desktop UI window...
+2026-06-24 07:25:30.276 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-24 07:25:30.277 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:25:34.615 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-24 07:25:34.615 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:25:34.615 [INFO] main.go:126: Protocol lifecycle event: start
+2026-06-24 07:25:40.727 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 07:25:40.728 [INFO] main.go:141: Device lifecycle event: type=registered id=0efc969c5bb3a61c74064198c9bdbf13 name=Unknown
+2026-06-24 07:26:14.471 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 07:26:14.472 [INFO] main.go:141: Device lifecycle event: type=registered id=37ecc1c1d24a2b194e95f6699ab56af3 name=Unknown
+2026-06-24 07:26:42.580 [INFO] main.go:159: Received signal: interrupt
+2026-06-24 07:26:42.580 [INFO] main.go:173: Initiating graceful shutdown...
+2026-06-24 07:26:42.580 [INFO] main.go:177: Stopping protocol server...
+2026-06-24 07:26:42.582 [INFO] manager.go:368: Bluetooth manager stopped
+2026-06-24 07:26:42.583 [INFO] server.go:381: USB serial server stopped
+2026-06-24 07:26:42.583 [INFO] main.go:185: Protocol server stopped
+2026-06-24 07:26:42.583 [INFO] main.go:193: Stopping device manager...
+2026-06-24 07:26:42.583 [INFO] main.go:128: Protocol lifecycle event: stop
+2026-06-24 07:26:42.583 [INFO] main.go:36: Device manager stopped
+2026-06-24 07:26:42.583 [INFO] main.go:199: Closing UI...
+2026-06-24 07:26:42.589 [INFO] main.go:203: Shutdown complete
+2026-06-24 07:27:31.784 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-24 07:27:31.784 [INFO] main.go:97: System Information:
+2026-06-24 07:27:31.784 [INFO] main.go:98:   OS: darwin
+2026-06-24 07:27:31.784 [INFO] main.go:99:   Arch: arm64
+2026-06-24 07:27:31.784 [INFO] main.go:100:   CPUs: 8
+2026-06-24 07:27:31.784 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-24 07:27:31.784 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-24 07:27:31.784 [INFO] main.go:103:   Git Commit: unknown
+2026-06-24 07:27:31.784 [INFO] main.go:115: Authentication disabled
+2026-06-24 07:27:31.788 [INFO] main.go:64: Application started successfully
+2026-06-24 07:27:31.788 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-24 07:27:31.788 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-24 07:27:31.788 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-24 07:27:31.788 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-24 07:27:31.788 [INFO] main.go:69: Launching desktop UI window...
+2026-06-24 07:27:32.285 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-24 07:27:32.286 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:27:39.262 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-24 07:27:39.262 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:27:39.263 [INFO] main.go:126: Protocol lifecycle event: start
+2026-06-24 07:27:42.986 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 07:27:42.986 [INFO] main.go:141: Device lifecycle event: type=registered id=bebe212c7a5d10cdacc51a617fd2b055 name=Unknown
+2026-06-24 07:28:50.281 [INFO] main.go:159: Received signal: interrupt
+2026-06-24 07:28:50.283 [INFO] main.go:173: Initiating graceful shutdown...
+2026-06-24 07:28:50.283 [INFO] main.go:177: Stopping protocol server...
+2026-06-24 07:28:50.290 [INFO] manager.go:368: Bluetooth manager stopped
+2026-06-24 07:28:50.290 [INFO] server.go:381: USB serial server stopped
+2026-06-24 07:28:50.290 [INFO] main.go:185: Protocol server stopped
+2026-06-24 07:28:50.290 [INFO] main.go:193: Stopping device manager...
+2026-06-24 07:28:50.292 [INFO] main.go:36: Device manager stopped
+2026-06-24 07:28:50.292 [INFO] main.go:199: Closing UI...
+2026-06-24 07:28:50.293 [INFO] main.go:128: Protocol lifecycle event: stop
+2026-06-24 07:28:50.303 [INFO] main.go:203: Shutdown complete
+2026-06-24 07:29:22.599 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-24 07:29:22.599 [INFO] main.go:97: System Information:
+2026-06-24 07:29:22.599 [INFO] main.go:98:   OS: darwin
+2026-06-24 07:29:22.599 [INFO] main.go:99:   Arch: arm64
+2026-06-24 07:29:22.599 [INFO] main.go:100:   CPUs: 8
+2026-06-24 07:29:22.599 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-24 07:29:22.599 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-24 07:29:22.599 [INFO] main.go:103:   Git Commit: unknown
+2026-06-24 07:29:22.600 [INFO] main.go:115: Authentication disabled
+2026-06-24 07:29:22.613 [INFO] main.go:64: Application started successfully
+2026-06-24 07:29:22.613 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-24 07:29:22.613 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-24 07:29:22.613 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-24 07:29:22.614 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-24 07:29:22.614 [INFO] main.go:69: Launching desktop UI window...
+2026-06-24 07:29:23.100 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-24 07:29:23.101 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:29:30.763 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-24 07:29:30.764 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:29:30.766 [INFO] main.go:126: Protocol lifecycle event: start
+2026-06-24 07:29:40.755 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 07:29:40.756 [INFO] main.go:141: Device lifecycle event: type=registered id=30b746af547dde1eb201bb821723eba5 name=Unknown
+2026-06-24 07:34:24.917 [INFO] main.go:159: Received signal: interrupt
+2026-06-24 07:34:24.918 [INFO] main.go:173: Initiating graceful shutdown...
+2026-06-24 07:34:24.918 [INFO] main.go:177: Stopping protocol server...
+2026-06-24 07:34:24.922 [INFO] manager.go:368: Bluetooth manager stopped
+2026-06-24 07:34:24.923 [INFO] server.go:381: USB serial server stopped
+2026-06-24 07:34:24.923 [INFO] main.go:185: Protocol server stopped
+2026-06-24 07:34:24.924 [INFO] main.go:193: Stopping device manager...
+2026-06-24 07:34:24.924 [INFO] main.go:36: Device manager stopped
+2026-06-24 07:34:24.924 [INFO] main.go:199: Closing UI...
+2026-06-24 07:34:24.924 [INFO] main.go:128: Protocol lifecycle event: stop
+2026-06-24 07:34:24.931 [INFO] main.go:203: Shutdown complete
+2026-06-24 07:34:29.525 [INFO] main.go:92: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-24 07:34:29.525 [INFO] main.go:97: System Information:
+2026-06-24 07:34:29.525 [INFO] main.go:98:   OS: darwin
+2026-06-24 07:34:29.525 [INFO] main.go:99:   Arch: arm64
+2026-06-24 07:34:29.525 [INFO] main.go:100:   CPUs: 8
+2026-06-24 07:34:29.525 [INFO] main.go:101:   Go Version: go1.25.0
+2026-06-24 07:34:29.525 [INFO] main.go:102:   Build Time: 2025-01-15
+2026-06-24 07:34:29.525 [INFO] main.go:103:   Git Commit: unknown
+2026-06-24 07:34:29.526 [INFO] main.go:115: Authentication disabled
+2026-06-24 07:34:29.531 [INFO] main.go:64: Application started successfully
+2026-06-24 07:34:29.531 [INFO] main.go:65: WebSocket server will listen on port 8081
+2026-06-24 07:34:29.531 [INFO] main.go:66: TCP server will listen on port 8080
+2026-06-24 07:34:29.531 [INFO] main.go:67: UDP discovery will listen on port 8082
+2026-06-24 07:34:29.531 [INFO] main.go:68: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-24 07:34:29.531 [INFO] main.go:69: Launching desktop UI window...
+2026-06-24 07:34:30.027 [INFO] main.go:36: Bluetooth manager started: adapter=default
+2026-06-24 07:34:30.027 [INFO] main.go:36: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:34:41.911 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-24 07:34:41.923 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 07:34:41.928 [INFO] main.go:126: Protocol lifecycle event: start
+2026-06-24 07:34:46.186 [INFO] main.go:36: Device registered: Unknown (TCP)
+2026-06-24 07:34:46.188 [INFO] main.go:141: Device lifecycle event: type=registered id=7c7d6fb4b1686d76a310b7ebc32ee766 name=Unknown
+2026-06-24 07:38:52.046 [INFO] manager.go:368: Bluetooth manager stopped
+2026-06-24 07:38:52.047 [INFO] server.go:381: USB serial server stopped
+2026-06-24 07:38:52.051 [INFO] main.go:128: Protocol lifecycle event: stop
+2026-06-24 07:38:52.263 [INFO] main.go:78: Shutting down...
+2026-06-24 07:38:52.264 [INFO] main.go:36: Device manager stopped
