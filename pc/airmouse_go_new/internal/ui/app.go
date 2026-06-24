@@ -100,139 +100,154 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouseController
 // ============================================================
 
 func (a *App) Run() error {
-	width, height := GetWindowSize()
-	a.window = a.fyneApp.NewWindow(fmt.Sprintf("Air Mouse Pro Server - %s", a.cfg.ServerName))
-	a.window.Resize(fyne.NewSize(width, height))
-	a.window.CenterOnScreen()
-	a.window.SetMaster()
+    fmt.Println("Creating window...")
+    width, height := GetWindowSize()
+    a.window = a.fyneApp.NewWindow(fmt.Sprintf("Air Mouse Pro Server - %s", a.cfg.ServerName))
+    a.window.Resize(fyne.NewSize(width, height))
+    a.window.CenterOnScreen()
+    a.window.SetMaster()
+    fmt.Printf("Window created, size %v\n", fyne.NewSize(width, height))
 
-	// Build status bar and labels
-	a.statusBar = NewStatusBar()
-	a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval in Devices")
-	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts. Open Devices and tap Approve to accept Android.")
-	a.summaryStatus.Wrapping = fyne.TextWrapWord
+    a.statusBar = NewStatusBar()
+    a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval in Devices")
+    a.summaryStatus = widget.NewLabel("Server details will appear here once it starts. Open Devices and tap Approve to accept Android.")
+    a.summaryStatus.Wrapping = fyne.TextWrapWord
 
-	// Build all tabs
-	a.buildTabs()
+    fmt.Println("Building tabs...")
+    a.buildTabs()
+    fmt.Println("Tabs built, all tabs non‑nil")
 
-	// Tab container
-	tabs := container.NewAppTabs(
-		container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
-		container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
-		container.NewTabItemWithIcon("Network", theme.ComputerIcon(), a.networkTab),
-		container.NewTabItemWithIcon("Gestures", theme.ContentCopyIcon(), a.gesturesTab),
-		container.NewTabItemWithIcon("Proximity", theme.VisibilityIcon(), a.proximityTab),
-		container.NewTabItemWithIcon("Analytics", theme.InfoIcon(), a.analyticsTab),
-		container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), a.settingsTab),
-		container.NewTabItemWithIcon("Logs", theme.DocumentIcon(), a.logsTab),
-		container.NewTabItemWithIcon("Protocol", theme.InfoIcon(), a.protocolTab),
-	)
-	tabs.SetTabLocation(container.TabLocationTop)
-	tabs.SelectIndex(0)
-	tabs.OnSelected = func(ti *container.TabItem) {
-		a.onTabSelected(ti)
-	}
+    tabs := container.NewAppTabs(
+        container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
+        container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
+        container.NewTabItemWithIcon("Network", theme.ComputerIcon(), a.networkTab),
+        container.NewTabItemWithIcon("Gestures", theme.ContentCopyIcon(), a.gesturesTab),
+        container.NewTabItemWithIcon("Proximity", theme.VisibilityIcon(), a.proximityTab),
+        container.NewTabItemWithIcon("Analytics", theme.InfoIcon(), a.analyticsTab),
+        container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), a.settingsTab),
+        container.NewTabItemWithIcon("Logs", theme.DocumentIcon(), a.logsTab),
+        container.NewTabItemWithIcon("Protocol", theme.InfoIcon(), a.protocolTab),
+    )
+    tabs.SetTabLocation(container.TabLocationTop)
+    tabs.SelectIndex(0)
+    tabs.OnSelected = func(ti *container.TabItem) {
+        a.onTabSelected(ti)
+    }
 
-	// Menu and toolbar
-	mainMenu := a.createMenuBar()
-	a.window.SetMainMenu(mainMenu)
-	toolbar := a.createToolbar()
+    mainMenu := a.createMenuBar()
+    a.window.SetMainMenu(mainMenu)
+    toolbar := a.createToolbar()
 
-	// Main layout
-	content := container.NewBorder(
-		toolbar,
-		a.statusBar.Widget(),
-		nil,
-		nil,
-		tabs,
-	)
-	a.window.SetContent(content)
-	utils.LogInfo("Content set, window ready")
+    content := container.NewBorder(
+        toolbar,
+        a.statusBar.Widget(),
+        nil,
+        nil,
+        tabs,
+    )
+    a.window.SetContent(content)
+    fmt.Println("Content set")
 
-	// Window close handler
-	a.window.SetCloseIntercept(func() {
-		a.onWindowClose()
-	})
+    a.window.SetCloseIntercept(func() {
+        a.onWindowClose()
+    })
 
-	// Start background tasks
-	go a.connectionStatusUpdater()
+    go a.connectionStatusUpdater()
 
-	// Show welcome dialog on first launch (after window appears)
-	if a.cfg.IsFirstLaunch() {
-		go func() {
-			time.Sleep(1 * time.Second) // wait for window to render
-			RunOnMain(func() {
-				ShowWelcomeDialog(a.window)
-			})
-		}()
-		_ = a.cfg.SetFirstLaunchComplete()
-	}
+    if a.cfg.IsFirstLaunch() {
+        go func() {
+            time.Sleep(1 * time.Second)
+            RunOnMain(func() {
+                ShowWelcomeDialog(a.window)
+            })
+        }()
+        _ = a.cfg.SetFirstLaunchComplete()
+    }
 
-	// === FIX: Force window to appear before event loop ===
-	utils.LogInfo("Showing window...")
-	a.window.Show()
-	a.window.RequestFocus()
-	time.Sleep(200 * time.Millisecond) // allow window manager to process
-
-	// === Start the event loop ===
-	utils.LogInfo("Entering ShowAndRun...")
-	a.window.ShowAndRun()
-	utils.LogInfo("Window closed")
-	return nil
+    fmt.Println("Entering ShowAndRun...")
+    a.window.ShowAndRun()
+    fmt.Println("Window closed")
+    return nil
 }
 // ============================================================
 // buildTabs – creates all tabs with error handling
 // ============================================================
-func (a *App) showNetworkProtocolGuide() {
-    if a.window == nil {
-        return
-    }
-    dialog.ShowCustom("Network Protocol", "Close", buildProtocolGuideContent(a.cfg, a.server), a.window)
-}
+
 func (a *App) buildTabs() {
-	    utils.LogInfo("Building dashboard tab...")
-    if dashboardTab, dashboardCtrl := NewDashboardTab(a.server, a.mouse, a.deviceMgr); dashboardTab != nil {
-        a.dashboardTab = safeTab(dashboardTab, "Dashboard")
-        a.dashboardCtrl = dashboardCtrl
-    } else {
-        a.dashboardTab = safeTab(nil, "Dashboard")
-    }
-    utils.LogInfo("Dashboard tab done")  // ← add
+	// Recover from any panic in tab creation
+	defer func() {
+		if r := recover(); r != nil {
+			utils.LogError("Panic during tab creation: %v", r)
+		}
+	}()
 
-    utils.LogInfo("Building devices tab...")
-    a.devicesTab = safeTab(NewDevicesTab(a.server, a.deviceMgr), "Devices")
-    utils.LogInfo("Devices tab done")    // ← add
+	fmt.Println("Building dashboard tab...")
+	if dashboardTab, dashboardCtrl := NewDashboardTab(a.server, a.mouse, a.deviceMgr); dashboardTab != nil {
+		a.dashboardTab = safeTab(dashboardTab, "Dashboard")
+		a.dashboardCtrl = dashboardCtrl
+	} else {
+		a.dashboardTab = safeTab(nil, "Dashboard")
+	}
+	fmt.Println("Dashboard tab done")
 
+	fmt.Println("Building devices tab...")
+	a.devicesTab = safeTab(NewDevicesTab(a.server, a.deviceMgr), "Devices")
+	fmt.Println("Devices tab done")
 
-
-
-
-	utils.LogInfo("Building network tab...")
+	fmt.Println("Building network tab...")
 	a.networkTab = safeTab(NewNetworkTab(a.cfg), "Network")
+	fmt.Println("Network tab done")
 
-	utils.LogInfo("Building gestures tab...")
+	fmt.Println("Building gestures tab...")
 	a.gesturesTab = safeTab(NewGesturesTab(), "Gestures")
+	fmt.Println("Gestures tab done")
 
-	utils.LogInfo("Building proximity tab...")
+	fmt.Println("Building proximity tab...")
 	if proximityTab, proximityCtrl := NewProximityTab(); proximityTab != nil {
 		a.proximityTab = safeTab(proximityTab, "Proximity")
 		a.proximityCtrl = proximityCtrl
 	} else {
 		a.proximityTab = safeTab(nil, "Proximity")
 	}
+	fmt.Println("Proximity tab done")
 
-	utils.LogInfo("Building analytics tab...")
+	fmt.Println("Building analytics tab...")
 	a.analyticsTab = safeTab(NewAnalyticsTab(a.collector), "Analytics")
+	fmt.Println("Analytics tab done")
 
-	utils.LogInfo("Building settings tab...")
+	fmt.Println("Building settings tab...")
 	a.settingsTab = safeTab(NewSettingsTab(a.cfg, a.mouse), "Settings")
+	fmt.Println("Settings tab done")
 
-	utils.LogInfo("Building logs tab...")
+	fmt.Println("Building logs tab...")
 	a.logsTab = safeTab(NewLogsTab(), "Logs")
+	fmt.Println("Logs tab done")
 
-	utils.LogInfo("Building protocol tab...")
+	fmt.Println("Building protocol tab...")
 	a.protocolTab = widget.NewLabel("Protocol Guide (coming soon)")
-	utils.LogInfo("Protocol tab done")
+	fmt.Println("Protocol tab done")
+
+	// Safety net: ensure no tab is nil
+	if a.dashboardTab == nil { a.dashboardTab = widget.NewLabel("Dashboard") }
+	if a.devicesTab == nil   { a.devicesTab = widget.NewLabel("Devices") }
+	if a.networkTab == nil   { a.networkTab = widget.NewLabel("Network") }
+	if a.gesturesTab == nil  { a.gesturesTab = widget.NewLabel("Gestures") }
+	if a.proximityTab == nil { a.proximityTab = widget.NewLabel("Proximity") }
+	if a.analyticsTab == nil { a.analyticsTab = widget.NewLabel("Analytics") }
+	if a.settingsTab == nil  { a.settingsTab = widget.NewLabel("Settings") }
+	if a.logsTab == nil      { a.logsTab = widget.NewLabel("Logs") }
+	if a.protocolTab == nil  { a.protocolTab = widget.NewLabel("Protocol") }
+
+	fmt.Println("All tabs created successfully")
+}
+
+
+// showNetworkProtocolGuide is called from the menu.
+func (a *App) showNetworkProtocolGuide() {
+	if a.window == nil {
+		return
+	}
+	dialog.ShowCustom("Network Protocol", "Close", buildProtocolGuideContent(a.cfg, a.server), a.window)
 }
 
 // ============================================================
@@ -412,7 +427,7 @@ func (a *App) connectionStatusUpdater() {
 	for {
 		select {
 		case <-ticker.C:
-			RunOnMain(func() { a.refreshConnectionSummary() })
+			fyne.Do(func() { a.refreshConnectionSummary() })
 		case <-a.stopChan:
 			return
 		}

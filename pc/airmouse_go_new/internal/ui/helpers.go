@@ -342,13 +342,9 @@ func toLower(s string) string {
 // Window / Platform Helpers
 // ============================================================
 
-// RunOnMain executes fn on the UI thread.
+// RunOnMain executes fn on the UI thread using fyne.Do.
 func RunOnMain(fn func()) {
-	if driver, ok := fyne.CurrentApp().Driver().(interface{ RunOnMain(func()) }); ok {
-		driver.RunOnMain(fn)
-	} else {
-		fn()
-	}
+	fyne.Do(fn)
 }
 
 // getCurrentWindow returns the first application window, or nil if none.

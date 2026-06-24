@@ -61,8 +61,11 @@ func NewLogsTab() fyne.CanvasObject {
 	}
 	tab.paused.Store(false)
 
+	// 🔥 FIX: Assign global BEFORE using the logger to avoid deadlock
 	globalLogsTab = tab
-	utils.LogInfo("Logs tab initialized")
+
+	// 🔥 FIX: Use fmt.Println instead of utils.LogInfo during tab construction
+	fmt.Println("Logs tab initialized")
 
 	// Main log display
 	tab.logWidget = widget.NewMultiLineEntry()
