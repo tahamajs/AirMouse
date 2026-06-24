@@ -104,8 +104,8 @@ func (a *App) Run() error {
 
 	// Status bar
 	a.statusBar = NewStatusBar()
-	a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval")
-	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts.")
+	a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval in Devices")
+	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts. Open Devices and tap Pair to approve Android.")
 	a.summaryStatus.Wrapping = fyne.TextWrapWord
 
 	// ----- Create all tabs (using safeTab to catch nil) -----
@@ -314,7 +314,7 @@ func (a *App) startServerAsync(source string) {
 	}
 	utils.LogInfo("UI requested server start: source=%s", source)
 	if a.connectionStatus != nil {
-		a.connectionStatus.SetText("⏳ Status: Waiting for approval")
+		a.connectionStatus.SetText("⏳ Status: Waiting for approval in Devices")
 	}
 	go func() {
 		err := a.server.Start()
