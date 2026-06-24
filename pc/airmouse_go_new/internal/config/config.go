@@ -143,6 +143,9 @@ type Config struct {
 	ConfigPath string `json:"-"`
 	LogPath    string `json:"-"`
 
+	// First launch flag (for onboarding)
+	FirstLaunch bool `json:"first_launch"`
+
 	mu *sync.RWMutex `json:"-"`
 }
 
@@ -293,7 +296,11 @@ func loadOrDefault() *Config {
 		ModelPath:  "models/mouse_smoothing.onnx",
 		ConfigPath: getConfigPath(),
 		LogPath:    getLogPath(),
-		mu:         &sync.RWMutex{},
+
+		// First launch – default to true
+		FirstLaunch: true,
+
+		mu: &sync.RWMutex{},
 	}
 
 	// Try to load from file
@@ -374,7 +381,7 @@ func (c *Config) SetProximityThresholds(near, far float64) {
 	c.Save()
 }
 
-// --- Other setters (already present but we keep them) ---
+// --- Other setters ---
 
 func (c *Config) SetSensitivity(s float64) {
 	c.mu.Lock()
@@ -424,6 +431,25 @@ func (c *Config) SetPersonalizationEnabled(enabled bool) {
 	c.mu.Unlock()
 	c.Save()
 }
+
+// --- FirstLaunch helpers ---
+
+// IsFirstLaunch returns true if this is the first run of the application.
+func (c *Config) IsFirstLaunch() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.FirstLaunch
+}
+
+// SetFirstLaunchComplete marks the first launch as complete and saves the config.
+func (c *Config) SetFirstLaunchComplete() error {
+	c.mu.Lock()
+	c.FirstLaunch = false
+	c.mu.Unlock()
+	return c.Save()
+}
+
+// --- Other public methods ---
 
 // ToJSON returns config as JSON string.
 func (c *Config) ToJSON() string {
@@ -500,24 +526,4 @@ func getLogPath() string {
 		configDir = "."
 	}
 	return filepath.Join(configDir, "airmouse", "logs")
-}type Config struct {
-    // ... existing fields ...
-    FirstLaunch bool `json:"first_launch"`
-    // ... rest ...
 }
-
-func (c *Config) IsFirstLaunch() bool {
-    c.mu.RLock()
-    defer c.mu.RUnlock()
-    return c.FirstLaunch
-}
-
-func (c *Config) SetFirstLaunchComplete() error {
-    c.mu.Lock()
-    c.FirstLaunch = false
-    c.mu.Unlock()
-    return c.Save()
-}
-
-// In loadOrDefault(), set:
-FirstLaunch: true,
