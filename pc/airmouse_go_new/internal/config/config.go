@@ -99,6 +99,9 @@ type Config struct {
 	EnablePairingUI bool     `json:"enable_pairing_ui"`
 	TokenTTL        int      `json:"token_ttl_hours"`
 
+	// Trusted devices (auto‑approval)
+	TrustedDevices []string `json:"trusted_devices"`
+
 	// Performance
 	MoveRateLimit     int `json:"move_rate_limit"`
 	HeartbeatInterval int `json:"heartbeat_interval"`
@@ -165,7 +168,6 @@ func Get() *Config {
 // loadOrDefault loads config from file or returns defaults.
 func loadOrDefault() *Config {
 	cfg := &Config{
-		// Server defaults
 		Port:          8080,
 		WebSocketPort: 8081,
 		UDPPort:       8082,
@@ -175,14 +177,12 @@ func loadOrDefault() *Config {
 		Version:       "3.0.0",
 		Language:      "en",
 
-		// Protocol defaults
 		EnableTCP:       true,
 		EnableWebSocket: true,
 		EnableUDP:       true,
 		EnableBluetooth: false,
 		EnableSerial:    false,
 
-		// Mouse defaults
 		Sensitivity:         1.0,
 		SmoothingEnabled:    true,
 		AccelerationEnabled: true,
@@ -190,7 +190,6 @@ func loadOrDefault() *Config {
 		MaxAcceleration:     3.0,
 		HapticEnabled:       true,
 
-		// AI defaults
 		EnableAISmoothing:        false,
 		EnablePredictive:         true,
 		PredictiveBlendFactor:    0.6,
@@ -202,7 +201,6 @@ func loadOrDefault() *Config {
 		JitterUseKalman:          true,
 		JitterUseAcceleration:    false,
 
-		// Gesture defaults
 		GestureConfidenceThreshold: 0.7,
 		GestureCooldown:            500,
 		ClickThreshold:             5.0,
@@ -210,7 +208,6 @@ func loadOrDefault() *Config {
 		DoubleClickInterval:        300,
 		RightClickTilt:             45.0,
 
-		// Proximity defaults
 		ProximityEnabled:       false,
 		ProximityNearThreshold: 1.5,
 		ProximityFarThreshold:  3.0,
@@ -219,32 +216,27 @@ func loadOrDefault() *Config {
 		BLEEnabled:             true,
 		HIDProxyEnabled:        false,
 
-		// Personalization defaults
 		EnablePersonalization:    false,
 		PersonalizationBuffer:    2000,
 		PersonalizationInterval:  3600,
 		PersonalizationServerURL: "http://localhost:5001",
 		AutoSwapModel:            false,
 
-		// ML defaults
 		EnableMLPrediction:  false,
 		MLModelPath:         "models/lstm_predictor.onnx",
 		MLSequenceLength:    16,
 		MLBlendFactor:       0.6,
 		MLInferenceInterval: 20,
 
-		// Humanizer defaults
 		EnableHumanizer:            false,
 		HumanizerTremorAmplitude:   3.5,
 		HumanizerBSplineSegments:   15,
 		HumanizerNoiseAmplitude:    2.0,
 		HumanizerVelocityPeakRatio: 0.55,
 
-		// Particle filter defaults
 		EnableParticleFilter:       false,
 		ParticleFilterNumParticles: 500,
 
-		// Auth defaults
 		AuthEnabled:     false,
 		AuthSecret:      "",
 		AuthToken:       "",
@@ -253,30 +245,27 @@ func loadOrDefault() *Config {
 		EnablePairingUI: true,
 		TokenTTL:        24,
 
-		// Performance defaults
+		TrustedDevices: []string{},
+
 		MoveRateLimit:     60,
 		HeartbeatInterval: 10,
 		ConnectionTimeout: 30,
 		BufferSize:        1024,
 		InactiveTimeout:   300,
 
-		// Device defaults
 		MaxClients:     10,
 		ClientNames:    true,
 		DeviceRegistry: true,
 
-		// Discovery defaults
 		DiscoveryPort: 8083,
 		MDNSName:      "airmouse",
 
-		// Logging defaults
 		LogLevel:       "info",
 		LogFile:        "",
 		LogColor:       true,
 		DebugMode:      false,
 		MetricsEnabled: true,
 
-		// UI defaults
 		Theme:           "dark",
 		AccentColor:     "#6366f1",
 		AlwaysOnTop:     false,
@@ -285,19 +274,16 @@ func loadOrDefault() *Config {
 		WindowHeight:    900,
 		AutoStartServer: false,
 
-		// USB Gadget defaults
 		USBGadgetEnabled: false,
 		USBVendorID:      "0x1d6b",
 		USBProductID:     "0x0104",
 		USBManufacturer:  "AirMouse",
 		USBProduct:       "AirMouse HID",
 
-		// Paths
 		ModelPath:  "models/mouse_smoothing.onnx",
 		ConfigPath: getConfigPath(),
 		LogPath:    getLogPath(),
 
-		// First launch – default to true
 		FirstLaunch: true,
 
 		mu: &sync.RWMutex{},
@@ -340,7 +326,71 @@ func (c *Config) Reload() error {
 	return nil
 }
 
-// --- Proximity helpers ---
+// ------------------------------------------------------------
+// Trusted Devices (for auto‑approval)
+// ------------------------------------------------------------
+
+// AddTrustedDevice adds a fingerprint to the trusted list and saves.
+func (c *Config) AddTrustedDevice(fingerprint string) {
+	if fingerprint == "" {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, f := range c.TrustedDevices {
+		if f == fingerprint {
+			return
+		}
+	}
+	c.TrustedDevices = append(c.TrustedDevices, fingerprint)
+	c.mu.Unlock()
+	_ = c.Save()
+}
+
+// RemoveTrustedDevice removes a fingerprint from the trusted list and saves.
+func (c *Config) RemoveTrustedDevice(fingerprint string) {
+	if fingerprint == "" {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for i, f := range c.TrustedDevices {
+		if f == fingerprint {
+			c.TrustedDevices = append(c.TrustedDevices[:i], c.TrustedDevices[i+1:]...)
+			c.mu.Unlock()
+			_ = c.Save()
+			return
+		}
+	}
+}
+
+// IsTrustedDevice checks if a fingerprint is in the trusted list.
+func (c *Config) IsTrustedDevice(fingerprint string) bool {
+	if fingerprint == "" {
+		return false
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	for _, f := range c.TrustedDevices {
+		if f == fingerprint {
+			return true
+		}
+	}
+	return false
+}
+
+// GetTrustedDevices returns a copy of the trusted devices list.
+func (c *Config) GetTrustedDevices() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	result := make([]string, len(c.TrustedDevices))
+	copy(result, c.TrustedDevices)
+	return result
+}
+
+// ------------------------------------------------------------
+// Proximity helpers
+// ------------------------------------------------------------
 
 // GetProximityConfig returns a struct with proximity settings.
 func (c *Config) GetProximityConfig() struct {
@@ -381,7 +431,9 @@ func (c *Config) SetProximityThresholds(near, far float64) {
 	c.Save()
 }
 
-// --- Other setters ---
+// ------------------------------------------------------------
+// Setters
+// ------------------------------------------------------------
 
 func (c *Config) SetSensitivity(s float64) {
 	c.mu.Lock()
@@ -432,7 +484,51 @@ func (c *Config) SetPersonalizationEnabled(enabled bool) {
 	c.Save()
 }
 
-// --- FirstLaunch helpers ---
+func (c *Config) SetServerName(name string) {
+	c.mu.Lock()
+	c.ServerName = name
+	c.mu.Unlock()
+	c.Save()
+}
+
+func (c *Config) SetUserName(name string) {
+	c.mu.Lock()
+	c.UserName = name
+	c.mu.Unlock()
+	c.Save()
+}
+
+func (c *Config) SetPort(port int) {
+	c.mu.Lock()
+	c.Port = port
+	c.mu.Unlock()
+	c.Save()
+}
+
+func (c *Config) SetWebSocketPort(port int) {
+	c.mu.Lock()
+	c.WebSocketPort = port
+	c.mu.Unlock()
+	c.Save()
+}
+
+func (c *Config) SetUDPPort(port int) {
+	c.mu.Lock()
+	c.UDPPort = port
+	c.mu.Unlock()
+	c.Save()
+}
+
+func (c *Config) SetLanguage(lang string) {
+	c.mu.Lock()
+	c.Language = lang
+	c.mu.Unlock()
+	c.Save()
+}
+
+// ------------------------------------------------------------
+// FirstLaunch helpers
+// ------------------------------------------------------------
 
 // IsFirstLaunch returns true if this is the first run of the application.
 func (c *Config) IsFirstLaunch() bool {
@@ -449,7 +545,9 @@ func (c *Config) SetFirstLaunchComplete() error {
 	return c.Save()
 }
 
-// --- Other public methods ---
+// ------------------------------------------------------------
+// Serialisation helpers
+// ------------------------------------------------------------
 
 // ToJSON returns config as JSON string.
 func (c *Config) ToJSON() string {
@@ -509,6 +607,10 @@ func (c *Config) String() string {
 	return fmt.Sprintf("Config{ServerName:%s, Port:%d, WebSocketPort:%d, UDPPort:%d, Theme:%s}",
 		c.ServerName, c.Port, c.WebSocketPort, c.UDPPort, c.Theme)
 }
+
+// ------------------------------------------------------------
+// Path helpers
+// ------------------------------------------------------------
 
 // getConfigPath returns the config file path.
 func getConfigPath() string {

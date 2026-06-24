@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"airmouse-go/control/common"
 	"airmouse-go/control/mouse"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
@@ -298,19 +299,63 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 		}
 	case "hello":
 		utils.LogInfo("USB device identified: path=%s", dev.Path)
+		// Extract device info for fingerprint
+		var hello map[string]string
+		var fingerprint string
 		if len(msg.Payload) > 0 {
-			var hello map[string]string
 			if err := json.Unmarshal(msg.Payload, &hello); err == nil {
-				if name, ok := hello["name"]; ok && s.deviceMgr != nil {
+				name := hello["name"]
+				version := hello["version"]
+				deviceName := hello["device_name"]
+				model := hello["model"]
+				manufacturer := hello["manufacturer"]
+				brand := hello["brand"]
+				androidVersion := hello["android_version"]
+				sdkInt := hello["sdk_int"]
+				deviceIDValue := hello["device_id"]
+				protocolName := hello["protocol"]
+				transport := hello["transport"]
+				fingerprint = device.StableDeviceID(deviceIDValue, name, version, deviceName, model, manufacturer, brand, androidVersion, sdkInt, protocolName, transport)
+				if name != "" && s.deviceMgr != nil {
 					_ = s.deviceMgr.UpdateDeviceName(dev.Path, name)
 				}
 			}
 		}
+		if fingerprint == "" {
+			// Fallback: use device path as fingerprint
+			fingerprint = dev.Path
+		}
+
+		// Check for auto‑approval
+		if s.deviceMgr != nil && config.Get().IsTrustedDevice(fingerprint) {
+			// Auto‑approve this trusted device
+			_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeUSB, hello["name"], map[string]string{
+				"fingerprint": fingerprint,
+				"path":        dev.Path,
+			})
+			_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
+			cfg := config.Get()
+			response := fmt.Sprintf(`{"type":"welcome","payload":{"server":"%s","version":"%s"}}`+"\n",
+				cfg.ServerName, cfg.Version)
+			if _, err := dev.File.Write([]byte(response)); err == nil {
+				dev.BytesSent += int64(len(response))
+				utils.LogInfo("USB device auto‑approved: %s (fingerprint: %s)", dev.Path, fingerprint)
+			}
+			// Clear any pending state
+			common.SetMovementPaused(false)
+			common.ClearPause()
+			return
+		}
+
+		// If not auto‑approved, send welcome as pending
 		cfg := config.Get()
 		response := fmt.Sprintf(`{"type":"welcome","payload":{"server":"%s","version":"%s"}}`+"\n",
 			cfg.ServerName, cfg.Version)
 		if _, err := dev.File.Write([]byte(response)); err == nil {
 			dev.BytesSent += int64(len(response))
+		}
+		if s.deviceMgr != nil {
+			_ = s.deviceMgr.UpdateDeviceStatus(dev.Path, device.StatusPendingApproval)
 		}
 	case "ping":
 		if _, err := dev.File.Write([]byte(`{"type":"pong"}` + "\n")); err == nil {
