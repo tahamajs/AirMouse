@@ -1,9 +1,8 @@
-
 package com.airmouse.network
 
+import android.util.Log
 import kotlinx.coroutines.*
 import org.json.JSONObject
-import timber.log.Timber
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
@@ -14,6 +13,10 @@ import java.net.SocketTimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * @deprecated Use [ConnectionManager] instead. This class is kept for backward compatibility
+ * and will be removed in a future version.
+ */
 @Deprecated(
     message = "Use ConnectionManager instead. This class is deprecated and will be removed.",
     replaceWith = ReplaceWith("ConnectionManager")
@@ -23,13 +26,14 @@ import javax.inject.Singleton
 class TcpClient @Inject constructor() {
 
     companion object {
+        private const val TAG = "TcpClient"
         private const val BUFFER_SIZE = 8192
         private const val DEPRECATION_WARNING = "TcpClient is deprecated. Please use ConnectionManager instead."
 
-        
         private const val DEFAULT_CONNECT_TIMEOUT = 5000
         private const val DEFAULT_READ_TIMEOUT = 30000
-        private const val DEFAULT_WRITE_TIMEOUT = 5000
+        private const val MAX_RECONNECT_ATTEMPTS = 5
+        private const val HEARTBEAT_INTERVAL_MS = 30000L
     }
 
     private var socket: Socket? = null
@@ -39,27 +43,29 @@ class TcpClient @Inject constructor() {
     private var readJob: Job? = null
     private var heartbeatJob: Job? = null
     private var reconnectAttempts = 0
-    private val maxReconnectAttempts = 5
     private var currentIp = ""
     private var currentPort = 0
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    
+    // Callbacks
     var onConnected: (() -> Unit)? = null
     var onDisconnected: (() -> Unit)? = null
     var onError: ((String) -> Unit)? = null
     var onMessage: ((String) -> Unit)? = null
     var onReconnecting: ((Int) -> Unit)? = null
-    var onConnectionQuality: ((Int) -> Unit)? = null 
+    var onConnectionQuality: ((Int) -> Unit)? = null
 
     init {
-        Timber.w(DEPRECATION_WARNING)
+        Log.w(TAG, DEPRECATION_WARNING)
     }
 
+    /**
+     * Connect to a TCP server.
+     */
     @Deprecated("Use ConnectionManager.connect() instead", ReplaceWith("connectionManager.connect(ip, port)"))
     suspend fun connect(ip: String, port: Int, timeoutMs: Int = DEFAULT_CONNECT_TIMEOUT): Boolean {
-        Timber.w(DEPRECATION_WARNING)
+        Log.w(TAG, DEPRECATION_WARNING)
         currentIp = ip
         currentPort = port
 
@@ -73,11 +79,11 @@ class TcpClient @Inject constructor() {
                     keepAlive = true
                     receiveBufferSize = BUFFER_SIZE
                     sendBufferSize = BUFFER_SIZE
-                    setPerformancePreferences(0, 2, 1) 
+                    setPerformancePreferences(0, 2, 1) // latency, bandwidth, time
                 }
                 socket = currentSocket
 
-                writer = PrintWriter(requireNotNull(currentSocket.getOutputStream()), true) 
+                writer = PrintWriter(currentSocket.getOutputStream(), true)
                 reader = BufferedReader(InputStreamReader(currentSocket.getInputStream()))
                 isConnected = true
                 reconnectAttempts = 0
@@ -85,15 +91,15 @@ class TcpClient @Inject constructor() {
                 startReading()
                 startHeartbeat()
 
-                Timber.i("Connected to %s:%d", ip, port)
+                Log.i(TAG, "Connected to $ip:$port")
                 onConnected?.invoke()
                 return@withContext true
             } catch (e: SocketTimeoutException) {
-                Timber.e(e, "Connection timeout: %s", e.message)
+                Log.e(TAG, "Connection timeout", e)
                 onError?.invoke("Connection timeout")
                 return@withContext false
             } catch (e: Exception) {
-                Timber.e(e, "Connection failed: %s", e.message)
+                Log.e(TAG, "Connection failed", e)
                 onError?.invoke(e.message ?: "Connection failed")
                 return@withContext false
             }
@@ -112,25 +118,37 @@ class TcpClient @Inject constructor() {
                             handleServerMessage(line)
                         }
                     } else {
-                        Timber.d("End of stream reached")
+                        Log.d(TAG, "End of stream reached")
                         disconnect()
                         withContext(Dispatchers.Main) {
                             onDisconnected?.invoke()
                         }
+                        scheduleReconnect()
+                        break
                     }
                 } catch (e: SocketException) {
                     if (isConnected) {
-                        Timber.e(e, "Socket error: %s", e.message)
+                        Log.e(TAG, "Socket error", e)
                         disconnect()
                         withContext(Dispatchers.Main) {
                             onDisconnected?.invoke()
                         }
+                        scheduleReconnect()
+                        break
                     }
                 } catch (e: SocketTimeoutException) {
-                    
-                    Timber.d("Read timeout, continuing...")
+                    // Timeout is normal – continue
+                    Log.d(TAG, "Read timeout, continuing...")
                 } catch (e: Exception) {
-                    Timber.e(e, "Read error: %s", e.message)
+                    Log.e(TAG, "Read error", e)
+                    if (isConnected) {
+                        disconnect()
+                        withContext(Dispatchers.Main) {
+                            onDisconnected?.invoke()
+                        }
+                        scheduleReconnect()
+                        break
+                    }
                 }
             }
         }
@@ -140,7 +158,7 @@ class TcpClient @Inject constructor() {
         heartbeatJob?.cancel()
         heartbeatJob = scope.launch {
             while (isConnected) {
-                delay(30000) 
+                delay(HEARTBEAT_INTERVAL_MS)
                 if (isConnected) {
                     sendPing()
                 }
@@ -156,35 +174,39 @@ class TcpClient @Inject constructor() {
                     onConnectionQuality?.invoke(10)
                 }
                 "welcome" -> {
-                    Timber.i("Server welcome: %s", json.optJSONObject("payload")?.optString("server"))
+                    Log.i(TAG, "Server welcome: ${json.optJSONObject("payload")?.optString("server")}")
                 }
                 "ack" -> {
-                    Timber.d("ACK received for: %s", json.optString("id"))
+                    Log.d(TAG, "ACK received for: ${json.optString("id")}")
                 }
                 "error" -> {
                     val error = json.optJSONObject("payload")?.optString("message") ?: "Unknown error"
                     onError?.invoke(error)
                 }
+                else -> {
+                    Log.d(TAG, "Unhandled server message type: ${json.optString("type")}")
+                }
             }
         } catch (e: Exception) {
-            
+            // Non-JSON message – ignore
+            Log.d(TAG, "Non-JSON message: $message")
         }
     }
 
     @Deprecated("Use ConnectionManager.send() instead", ReplaceWith("connectionManager.send(message)"))
     fun send(message: String) {
-        Timber.w(DEPRECATION_WARNING)
+        Log.w(TAG, DEPRECATION_WARNING)
         if (isConnected && writer != null) {
             try {
                 writer?.println(message)
                 writer?.flush()
-                Timber.d("Sent: %s", message)
+                Log.d(TAG, "Sent: $message")
             } catch (e: Exception) {
-                Timber.e(e, "Send error: %s", e.message)
+                Log.e(TAG, "Send error", e)
                 onError?.invoke(e.message ?: "Send failed")
             }
         } else {
-            Timber.w("Cannot send message: not connected")
+            Log.w(TAG, "Cannot send message: not connected")
         }
     }
 
@@ -241,6 +263,9 @@ class TcpClient @Inject constructor() {
         send(json.toString())
     }
 
+    /**
+     * Disconnect manually.
+     */
     fun disconnect() {
         readJob?.cancel()
         heartbeatJob?.cancel()
@@ -250,26 +275,44 @@ class TcpClient @Inject constructor() {
             reader?.close()
             socket?.close()
         } catch (e: Exception) {
-            Timber.e(e, "Disconnect error: %s", e.message)
+            Log.e(TAG, "Disconnect error", e)
         }
 
         writer = null
         reader = null
         socket = null
         isConnected = false
-        Timber.i("Disconnected")
+        Log.i(TAG, "Disconnected")
+    }
+
+    /**
+     * Reconnect logic with exponential backoff.
+     */
+    private fun scheduleReconnect() {
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            Log.w(TAG, "Max reconnect attempts reached")
+            return
+        }
+
+        val delay = (reconnectAttempts + 1) * 2000L
+        reconnectAttempts++
+        Log.i(TAG, "Scheduling reconnect in ${delay}ms (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
+        onReconnecting?.invoke(reconnectAttempts)
+
+        scope.launch {
+            delay(delay)
+            if (!isConnected) {
+                connect(currentIp, currentPort)
+            }
+        }
     }
 
     fun isConnected(): Boolean = isConnected
 
     fun getRemoteAddress(): String? = socket?.inetAddress?.hostAddress
-
     fun getRemotePort(): Int = socket?.port ?: -1
-
     fun getLocalAddress(): String? = socket?.localAddress?.hostAddress
-
     fun getLocalPort(): Int = socket?.localPort ?: -1
-
     fun isClosed(): Boolean = socket?.isClosed ?: true
 
     fun getConnectionInfo(): Map<String, Any> {
@@ -281,25 +324,5 @@ class TcpClient @Inject constructor() {
             "local_port" to getLocalPort(),
             "closed" to isClosed()
         )
-    }
-
-    private fun scheduleReconnect() {
-        if (reconnectAttempts >= maxReconnectAttempts) {
-            Timber.w("Max reconnect attempts reached")
-            return
-        }
-
-        val delay = (reconnectAttempts + 1) * 2000L
-        reconnectAttempts++
-
-        Timber.i("Scheduling reconnect in %dms (attempt %d/%d)", delay, reconnectAttempts, maxReconnectAttempts)
-        onReconnecting?.invoke(reconnectAttempts)
-
-        scope.launch {
-            delay(delay)
-            if (!isConnected) {
-                connect(currentIp, currentPort)
-            }
-        }
     }
 }

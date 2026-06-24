@@ -120,6 +120,25 @@
             android:screenOrientation="fullSensor"
             android:theme="@style/Theme.AirMouse" />
 
+        <!-- ==================== FOREGROUND SERVICE ==================== -->
+        <!-- The sensor service that runs in the foreground to keep the app alive -->
+        <service
+            android:name=".sensors.SensorService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync|connectedDevice|microphone" />
+
+        <!-- ==================== BOOT COMPLETED RECEIVER (optional) ==================== -->
+        <receiver
+            android:name=".utils.BootReceiver"
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
         <!-- ==================== PROVIDERS ==================== -->
         <provider
             android:name="androidx.core.content.FileProvider"
