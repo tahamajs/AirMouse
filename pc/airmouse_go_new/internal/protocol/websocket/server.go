@@ -17,9 +17,10 @@ import (
 
 	gorilla "github.com/gorilla/websocket"
 
+	"airmouse-go/control/common"
+	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
-	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/utils"
@@ -60,16 +61,25 @@ type Server struct {
 	port         int
 	listener     net.Listener
 	clients      map[string]*WSClient
-	mouse        control.MouseController
+	mouse        MouseController // use a local interface; we'll define it below
 	deviceMgr    *device.Manager
 	authMgr      *auth.Manager
-	proxMgr      *proximity.Manager // proximity manager (optional)
+	proxMgr      *proximity.Manager // optional
 	mu           sync.RWMutex
 	server       *http.Server
 	running      bool
 	totalClients int64
 	startTime    time.Time
 	fileSessions map[string]*fileSession
+}
+
+// We need a local interface for MouseController (to avoid a heavy import)
+type MouseController interface {
+	Move(dx, dy float64)
+	Click(button string)
+	DoubleClick()
+	Scroll(delta int)
+	// ... other methods not used in this file
 }
 
 type fileSession struct {
@@ -86,7 +96,7 @@ type fileSession struct {
 }
 
 // NewServer creates a new WebSocket server.
-func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *Server {
+func NewServer(port int, mouse MouseController, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *Server {
 	return &Server{
 		port:         port,
 		clients:      make(map[string]*WSClient),
@@ -466,13 +476,13 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		command, _ := payload["command"].(string)
 		switch command {
 		case "start", "touchpad_start", "resume", "resume_movement":
-			control.SetMovementPaused(false)
+			common.SetMovementPaused(false)
 			utils.LogInfo("Movement resumed by device: %s command=%s", client.ID, command)
 		case "stop", "touchpad_stop", "pause", "pause_movement":
-			control.SetMovementPaused(true)
+			common.SetMovementPaused(true)
 			utils.LogInfo("Movement paused by device: %s command=%s", client.ID, command)
 		case "show_desktop", "task_view", "switch_window", "lock_screen", "window_close", "zoom_in", "zoom_out", "zoom_reset":
-			if err := control.ExecuteSystemCommand(command); err != nil {
+			if err := syscmd.ExecuteSystemCommand(command); err != nil {
 				utils.LogError("WebSocket system command failed: device=%s command=%s err=%v", client.ID, command, err)
 			} else {
 				utils.LogInfo("WebSocket system command executed: device=%s command=%s", client.ID, command)
@@ -516,8 +526,8 @@ func (s *Server) ApproveDevice(deviceID string) error {
 	}
 
 	client.Approved.Store(true)
-	control.SetMovementPaused(false)
-	control.ClearPause()
+	common.SetMovementPaused(false)
+	common.ClearPause()
 
 	if s.deviceMgr != nil {
 		_ = s.deviceMgr.UpdateDeviceStatus(deviceID, device.StatusConnected)
