@@ -44,7 +44,7 @@ import javax.inject.Singleton
  * This manager is fully compatible with the Go server and supports:
  * - Authentication (optional)
  * - Heartbeat (ping/pong)
- * - Reliable messages (click/scroll) with ACK and retransmission (assignment requirements)
+ * - Reliable messages (click/scroll) with ACK and retransmission
  * - Reconnection with exponential backoff
  * - Connection quality monitoring
  */
@@ -530,17 +530,23 @@ class ConnectionManager @Inject constructor(
                     connect(InetSocketAddress(ip, port), 5000)
                     tcpNoDelay = true
                     keepAlive = true
-                    soTimeout = 30000
+                    soTimeout = 60000  // increased from 30000 to 60000
                     receiveBufferSize = 8192
                     sendBufferSize = 8192
                 }
                 tcpSocket = socket
-
                 tcpWriter = PrintWriter(socket.getOutputStream(), true)
                 tcpReader = BufferedReader(InputStreamReader(socket.getInputStream()))
 
+                // Send hello and verify it was sent
                 val helloSent = sendHello()
                 Log.d(TAG, "connectTcp(): helloSent=$helloSent")
+                if (!helloSent) {
+                    Log.e(TAG, "Failed to send hello over TCP")
+                    socket.close()
+                    return@withContext false
+                }
+
                 Log.i(TAG, "Socket opened via TCP")
                 Log.i(TAG, "Hello sent via TCP")
                 startTcpReading()
@@ -654,7 +660,8 @@ class ConnectionManager @Inject constructor(
                     updateConnectionQuality(ping)
                 }
                 MessageTypes.TYPE_PING -> {
-                    Log.d(TAG, "Server ping received; replying with pong")
+                    // 🔄 Server ping received - send pong
+                    Log.d(TAG, "🔄 Server ping received; sending pong")
                     sendPong()
                 }
                 MessageTypes.TYPE_ACK -> {
@@ -781,24 +788,45 @@ class ConnectionManager @Inject constructor(
     }
 
     // ============================================================
-    // Sending Methods (Public & Private)
+    // Sending Methods (Public & Private) – ENHANCED LOGGING
     // ============================================================
 
     private fun sendRawString(message: String, allowWhileConnecting: Boolean = false): Boolean {
+        // Enhanced logging
+        Log.d(TAG, "📤 sendRawString: message=$message")
         val state = _connectionStatus.value
         if (state != ConnectionStatus.CONNECTED && !(allowWhileConnecting && state == ConnectionStatus.CONNECTING)) {
-            Log.d(TAG, "sendRawString(): blocked state=${state.name} allowWhileConnecting=$allowWhileConnecting payload=${message.take(96)}")
+            Log.w(TAG, "📤 sendRawString: blocked state=${state.name}, allowWhileConnecting=$allowWhileConnecting")
             return false
         }
-        Log.d(TAG, "sendRawString(): state=${state.name} protocol=${currentProtocol.name} bytes=${message.length}")
-        return when (currentProtocol) {
+
+        val result = when (currentProtocol) {
             ConnectionProtocol.UDP -> sendUdpBytes(message.toByteArray())
-            ConnectionProtocol.WEBSOCKET -> webSocket?.send(message) ?: false
+            ConnectionProtocol.WEBSOCKET -> {
+                val sent = webSocket?.send(message) ?: false
+                Log.d(TAG, "📤 WebSocket send result: $sent")
+                sent
+            }
             ConnectionProtocol.TCP -> {
-                tcpWriter?.println(message)
-                tcpWriter?.checkError() == false
+                val writer = tcpWriter
+                if (writer == null) {
+                    Log.e(TAG, "📤 TCP writer is null")
+                    return false
+                }
+                try {
+                    writer.println(message)
+                    val ok = writer.checkError()
+                    val success = !ok
+                    Log.d(TAG, "📤 TCP write result: success=$success")
+                    success
+                } catch (e: Exception) {
+                    Log.e(TAG, "📤 TCP write exception", e)
+                    false
+                }
             }
         }
+        Log.d(TAG, "📤 sendRawString final result: $result")
+        return result
     }
 
     fun send(message: String): Boolean = sendRawString(message)
@@ -975,45 +1003,40 @@ class ConnectionManager @Inject constructor(
     }
 
     fun sendPong(): Boolean {
-        return sendRawString(AirMouseProtocolMessages.pong(), allowWhileConnecting = true)
+        val sent = sendRawString(AirMouseProtocolMessages.pong(), allowWhileConnecting = true)
+        Log.d(TAG, "📤 Pong sent: $sent")
+        return sent
     }
 
     // ------------------------------------------------------------
-    // Identification
+    // Identification – ENHANCED LOGGING
     // ------------------------------------------------------------
 
     fun sendHello(name: String = Build.MODEL, version: String = "3.0"): Boolean {
         val authToken = prefs.getString("auth_token", "")
-        Log.i(
-            TAG,
-            "Sending hello: protocol=${currentProtocol.name} transport=${when (currentProtocol) {
+        val json = AirMouseProtocolMessages.hello(
+            name = name,
+            version = version,
+            device = Build.MANUFACTURER + " " + Build.MODEL,
+            androidVersion = Build.VERSION.RELEASE,
+            model = Build.MODEL,
+            manufacturer = Build.MANUFACTURER,
+            brand = Build.BRAND,
+            deviceName = Build.DEVICE,
+            sdkInt = Build.VERSION.SDK_INT.toString(),
+            deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "",
+            protocol = currentProtocol.name,
+            transport = when (currentProtocol) {
                 ConnectionProtocol.UDP -> "udp"
                 ConnectionProtocol.WEBSOCKET -> "websocket"
                 ConnectionProtocol.TCP -> "tcp"
-            }} " +
-                "device=${Build.MANUFACTURER} ${Build.MODEL} android=${Build.VERSION.RELEASE}"
+            },
+            authToken = authToken
         )
-        return sendRawString(
-            AirMouseProtocolMessages.hello(
-                name = name,
-                version = version,
-                device = Build.MANUFACTURER + " " + Build.MODEL,
-                androidVersion = Build.VERSION.RELEASE,
-                model = Build.MODEL,
-                manufacturer = Build.MANUFACTURER,
-                brand = Build.BRAND,
-                deviceName = Build.DEVICE,
-                sdkInt = Build.VERSION.SDK_INT.toString(),
-                deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "",
-                protocol = currentProtocol.name,
-                transport = when (currentProtocol) {
-                    ConnectionProtocol.UDP -> "udp"
-                    ConnectionProtocol.WEBSOCKET -> "websocket"
-                    ConnectionProtocol.TCP -> "tcp"
-                },
-                authToken = authToken
-            )
-        , allowWhileConnecting = true)
+        Log.i(TAG, "📤 Sending hello: $json")
+        val sent = sendRawString(json, allowWhileConnecting = true)
+        Log.i(TAG, "📤 Hello sent: $sent")
+        return sent
     }
 
     // ============================================================

@@ -1,4 +1,3 @@
-
 package com.airmouse.data.repository
 
 import android.bluetooth.BluetoothAdapter
@@ -39,9 +38,6 @@ class ProximityRepositoryImpl @Inject constructor(
     private val _calibrationProgress = MutableStateFlow(0)
 
     private var bluetoothAdapter: BluetoothAdapter? = null
-    private var lastRssi = -100
-    private var rssiHistory = mutableListOf<Int>()
-    private val maxHistorySize = 10
 
     init {
         initBluetooth()
@@ -69,9 +65,7 @@ class ProximityRepositoryImpl @Inject constructor(
     }
 
     private fun loadCalibrationData() {
-        val txPower = prefs.getInt("proximity_tx_power", -59)
-        val pathLoss = prefs.getFloat("proximity_path_loss", 2.5f)
-        
+        // Calibration data is read directly in calculateDistanceFromRssi
     }
 
     private fun startMonitoringIfEnabled() {
@@ -84,9 +78,7 @@ class ProximityRepositoryImpl @Inject constructor(
 
     override suspend fun startMonitoring() {
         if (_isMonitoring.value) return
-        if (_config.value.deviceAddress.isEmpty()) {
-            return
-        }
+        if (_config.value.deviceAddress.isEmpty()) return
 
         _isMonitoring.value = true
         scope.launch {
@@ -105,17 +97,15 @@ class ProximityRepositoryImpl @Inject constructor(
                         lastUpdate = System.currentTimeMillis()
                     )
 
-                    
                     connectionManager.sendProximity(isNear, distance)
 
-                    
                     if (_config.value.autoLockEnabled || _config.value.autoUnlockEnabled) {
                         handleAutoLock(isNear)
                     }
 
                     delay(_config.value.scanInterval)
-                } catch (e: Exception) {
-                    
+                } catch (_: Exception) {
+                    // Ignore and continue
                 }
             }
         }
@@ -158,7 +148,6 @@ class ProximityRepositoryImpl @Inject constructor(
             val distances = listOf(0.5f, 1.0f, 2.0f, 3.0f, 5.0f)
 
             for ((index, distance) in distances.withIndex()) {
-                
                 delay(3000)
                 val rssi = getAverageRssi()
                 if (rssi != -100) {
@@ -180,7 +169,6 @@ class ProximityRepositoryImpl @Inject constructor(
     }
 
     private fun calculateCalibrationParameters(samples: List<Pair<Int, Float>>) {
-        
         val n = samples.size
         var sumRssi = 0.0
         var sumDist = 0.0
@@ -201,7 +189,6 @@ class ProximityRepositoryImpl @Inject constructor(
         val denominator = n * sumLogDistSq - sumLogDist * sumLogDist
         val pathLoss = if (denominator != 0.0) -10 * numerator / denominator else 2.5
 
-        
         val avgRssiAt1m = samples.filter { it.second == 1.0f }.map { it.first }.average()
         val txPower = if (avgRssiAt1m > 0) avgRssiAt1m else -59.0
 
@@ -210,7 +197,11 @@ class ProximityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getCalibrationStatus(): ProximityCalibrationStatus {
-        return if (prefs.getBoolean("proximity_calibrated", false)) ProximityCalibrationStatus.CALIBRATED else ProximityCalibrationStatus.NOT_CALIBRATED
+        return if (prefs.getBoolean("proximity_calibrated", false)) {
+            ProximityCalibrationStatus.CALIBRATED
+        } else {
+            ProximityCalibrationStatus.NOT_CALIBRATED
+        }
     }
 
     override suspend fun resetCalibration() {
@@ -237,7 +228,7 @@ class ProximityRepositoryImpl @Inject constructor(
             try {
                 val device = bluetoothAdapter!!.getRemoteDevice(address)
                 device.name ?: address
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 address
             }
         } else {
@@ -245,9 +236,7 @@ class ProximityRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun isBluetoothEnabled(): Boolean {
-        return bluetoothAdapter?.isEnabled == true
-    }
+    override suspend fun isBluetoothEnabled(): Boolean = bluetoothAdapter?.isEnabled == true
 
     override suspend fun lockScreen() {
         connectionManager.sendLockScreen()
@@ -275,8 +264,7 @@ class ProximityRepositoryImpl @Inject constructor(
     }
 
     private fun getCurrentRssi(): Int {
-        
-        
+        // Simulated RSSI – replace with real implementation
         return (-80..-30).random()
     }
 
@@ -298,7 +286,7 @@ class ProximityRepositoryImpl @Inject constructor(
         val txPower = prefs.getInt("proximity_tx_power", -59)
         val pathLoss = prefs.getFloat("proximity_path_loss", 2.5f)
         val ratio = (txPower - rssi) / (10.0 * pathLoss)
-        val distance = 10.0.pow(ratio)
+        val distance = 10.0.pow(ratio.toDouble())
         return distance.toFloat().coerceIn(0.3f, 15.0f)
     }
 

@@ -1,4 +1,3 @@
-
 package com.airmouse.di
 
 import androidx.lifecycle.ViewModel
@@ -9,6 +8,3 @@ import kotlin.reflect.KClass
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class ViewModelKey(val value: KClass<out ViewModel>)
-
-
-

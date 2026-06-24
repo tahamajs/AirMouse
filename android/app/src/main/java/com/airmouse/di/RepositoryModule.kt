@@ -1,4 +1,3 @@
-
 package com.airmouse.di
 
 import android.bluetooth.BluetoothAdapter
@@ -34,8 +33,6 @@ abstract class RepositoryModule {
     abstract fun bindConnectionRepository(
         impl: ConnectionRepositoryImpl
     ): IConnectionRepository
-
-    
 
     @Binds
     @Singleton
@@ -152,5 +149,24 @@ object RepositoryProvidersModule {
         preferencesManager: PreferencesManager
     ): StatisticsRepositoryImpl {
         return StatisticsRepositoryImpl(preferencesManager)
+    }
+
+    // --- ADDED: Missing repository implementations ---
+
+    @Provides
+    @Singleton
+    fun provideVoiceCommandRepositoryImpl(
+        preferencesManager: PreferencesManager
+    ): VoiceCommandRepositoryImpl {
+        return VoiceCommandRepositoryImpl(preferencesManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUpdateRepositoryImpl(
+        preferencesManager: PreferencesManager,
+        connectionManager: ConnectionManager
+    ): UpdateRepositoryImpl {
+        return UpdateRepositoryImpl(preferencesManager, connectionManager)
     }
 }

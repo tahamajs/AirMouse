@@ -1,7 +1,9 @@
 // CompleteFeatureImplementation.kt
 package com.airmouse.implementation
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -30,6 +32,11 @@ import javax.inject.Singleton
 /**
  * Complete feature implementation for Air Mouse Pro.
  * Provides all user‑customizable input methods and additional use cases.
+ *
+ * Usage:
+ * - Inject this class into your ViewModel or Activity.
+ * - Call the appropriate start/stop methods based on user preferences and lifecycle.
+ * - For UI‑dependent features (screen tap, edge swipe, touch scroll), connect the relevant UI events.
  */
 @Singleton
 class CompleteFeatureImplementation @Inject constructor(
@@ -39,21 +46,7 @@ class CompleteFeatureImplementation @Inject constructor(
 ) {
 
     // ==================== 1. Customizable Click Button ====================
-    class CustomizableClickButton @Inject constructor(
-        private val context: Context,
-        private val prefs: PreferencesManager,
-        private val connectionManager: ConnectionManager
-    ) {
-        enum class ClickMethod {
-            GYRO_FLICK,
-            SCREEN_TAP,
-            VOLUME_BUTTON,
-            PROXIMITY_SENSOR,
-            VOICE_COMMAND,
-            BLINK_DETECTION,
-            EDGE_SWIPE
-        }
-
+    inner class CustomizableClickButton {
         var currentMethod: ClickMethod
             get() = ClickMethod.valueOf(prefs.getString("click_method", "GYRO_FLICK"))
             set(value) { prefs.putString("click_method", value.name) }
@@ -67,24 +60,10 @@ class CompleteFeatureImplementation @Inject constructor(
         private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         private var voiceRecognizer: SpeechRecognizer? = null
         private var blinkCallback: (() -> Unit)? = null
-        private var volumeDownPressed = false
-        private var volumeUpPressed = false
 
-        // Screen tap detection (handled by UI)
+        // UI callbacks – set these from your Activity/Compose screen
         var onScreenTap: (() -> Unit)? = null
-
-        // Edge swipe detection (handled by UI)
         var onEdgeSwipe: (() -> Unit)? = null
-
-        init {
-            setupVolumeButtonListener()
-        }
-
-        private fun setupVolumeButtonListener() {
-            // Volume button detection uses AccessibilityService or global key listener.
-            // For simplicity, we simulate via a broadcast receiver.
-            // In production, use a custom AccessibilityService or register a global key callback.
-        }
 
         fun startListening() {
             if (isListening) return
@@ -105,6 +84,12 @@ class CompleteFeatureImplementation @Inject constructor(
             stopProximityListening()
             stopVoiceListening()
             stopBlinkDetection()
+        }
+
+        // Manually trigger a click (for UI‑based methods)
+        fun triggerClick() {
+            connectionManager.sendClick("left")
+            vibrate(30)
         }
 
         private fun startGyroListening() {
@@ -186,7 +171,8 @@ class CompleteFeatureImplementation @Inject constructor(
         }
 
         private fun startBlinkDetection() {
-            // Requires camera permission and face detection. Stub.
+            // Requires camera permission and face detection – stub for now.
+            // In production, integrate with CameraX or MLKit.
             blinkCallback = { connectionManager.sendClick("left"); vibrate(30) }
         }
 
@@ -195,9 +181,8 @@ class CompleteFeatureImplementation @Inject constructor(
         }
 
         private fun hasMicrophonePermission(): Boolean {
-            return ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         }
-
 
         private fun vibrate(duration: Long) {
             val vibrator = ContextCompat.getSystemService(context, Vibrator::class.java) ?: return
@@ -216,20 +201,7 @@ class CompleteFeatureImplementation @Inject constructor(
     }
 
     // ==================== 2. Customizable Scroll Method ====================
-    class CustomizableScrollMethod @Inject constructor(
-        private val prefs: PreferencesManager,
-        private val connectionManager: ConnectionManager,
-        private val context: Context
-    ) {
-        enum class ScrollMethod {
-            VERTICAL_ACCELERATION,
-            TWO_FINGER_DRAG,
-            EDGE_SCROLL,
-            ROTATION_GESTURE,
-            VOICE_COMMAND,
-            AUTOMATIC
-        }
-
+    inner class CustomizableScrollMethod {
         var currentMethod: ScrollMethod
             get() = ScrollMethod.valueOf(prefs.getString("scroll_method", "VERTICAL_ACCELERATION"))
             set(value) { prefs.putString("scroll_method", value.name) }
@@ -262,6 +234,12 @@ class CompleteFeatureImplementation @Inject constructor(
             isListening = false
             stopAccelListening()
             stopRotationListening()
+        }
+
+        // Manually trigger a scroll (for UI‑based methods like edge scroll)
+        fun triggerScroll(delta: Int) {
+            val finalDelta = if (inverted) -delta else delta
+            connectionManager.sendScroll(finalDelta)
         }
 
         private fun startAccelListening() {
@@ -309,23 +287,7 @@ class CompleteFeatureImplementation @Inject constructor(
     }
 
     // ==================== 3. Phone orientation to cursor mapping ====================
-    class OrientationToCursorMapper @Inject constructor(
-        private val prefs: PreferencesManager,
-        private val connectionManager: ConnectionManager
-    ) {
-        enum class AxisSource { YAW, PITCH, ROLL, GYRO_X, GYRO_Y, GYRO_Z }
-        enum class CurveType { LINEAR, SMOOTH, AGGRESSIVE, EXPONENTIAL }
-
-        data class MappingConfig(
-            val xAxisSource: AxisSource,
-            val yAxisSource: AxisSource,
-            val xInverted: Boolean,
-            val yInverted: Boolean,
-            val deadzone: Float,   // degrees
-            val curve: CurveType,
-            val sensitivity: Float // multiplier
-        )
-
+    inner class OrientationToCursorMapper {
         private var config = MappingConfig(
             xAxisSource = AxisSource.YAW,
             yAxisSource = AxisSource.ROLL,
@@ -409,18 +371,15 @@ class CompleteFeatureImplementation @Inject constructor(
             val absVal = abs(value)
             return when (curve) {
                 CurveType.LINEAR -> value
-                CurveType.SMOOTH -> sign * absVal.pow(1.2f)
-                CurveType.AGGRESSIVE -> sign * absVal.pow(1.8f)
+                CurveType.SMOOTH -> sign * absVal.toDouble().pow(1.2).toFloat()
+                CurveType.AGGRESSIVE -> sign * absVal.toDouble().pow(1.8).toFloat()
                 CurveType.EXPONENTIAL -> sign * (kotlin.math.exp(absVal) - 1)
             }
         }
     }
 
     // ==================== 4. Screen touch for scroll feature ====================
-    class TouchScrollFeature @Inject constructor(
-        private val connectionManager: ConnectionManager,
-        private val prefs: PreferencesManager
-    ) {
+    inner class TouchScrollFeature {
         private var lastY = 0f
         private var lastX = 0f
         private var lastTime = 0L
@@ -483,11 +442,7 @@ class CompleteFeatureImplementation @Inject constructor(
     }
 
     // ==================== 5. Additional Use Cases ====================
-    class AdditionalUseCases @Inject constructor(
-        private val connectionManager: ConnectionManager,
-        private val prefs: PreferencesManager,
-        private val context: Context
-    ) {
+    inner class AdditionalUseCases {
         private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         private var presentationModeActive = false
         private var mediaModeActive = false
@@ -496,7 +451,6 @@ class CompleteFeatureImplementation @Inject constructor(
         // Presentation remote
         fun enablePresentationMode() {
             presentationModeActive = true
-            // Register swipe listeners via UI
         }
 
         fun disablePresentationMode() {
@@ -548,7 +502,7 @@ class CompleteFeatureImplementation @Inject constructor(
             connectionManager.send("""{"type":"smarthome","device":"$device","action":"$action"}""")
         }
 
-        // Accessibility helper (head tracking, eye gaze)
+        // Accessibility helper (head tracking, eye gaze) – stub
         fun enableHeadTracking() {
             // Requires head orientation from front camera. Stub.
         }
@@ -582,3 +536,36 @@ class CompleteFeatureImplementation @Inject constructor(
         }
     }
 }
+
+enum class ClickMethod {
+    GYRO_FLICK,
+    SCREEN_TAP,
+    VOLUME_BUTTON,
+    PROXIMITY_SENSOR,
+    VOICE_COMMAND,
+    BLINK_DETECTION,
+    EDGE_SWIPE
+}
+
+enum class ScrollMethod {
+    VERTICAL_ACCELERATION,
+    TWO_FINGER_DRAG,
+    EDGE_SCROLL,
+    ROTATION_GESTURE,
+    VOICE_COMMAND,
+    AUTOMATIC
+}
+
+enum class AxisSource { YAW, PITCH, ROLL, GYRO_X, GYRO_Y, GYRO_Z }
+
+enum class CurveType { LINEAR, SMOOTH, AGGRESSIVE, EXPONENTIAL }
+
+data class MappingConfig(
+    val xAxisSource: AxisSource,
+    val yAxisSource: AxisSource,
+    val xInverted: Boolean,
+    val yInverted: Boolean,
+    val deadzone: Float,
+    val curve: CurveType,
+    val sensitivity: Float
+)

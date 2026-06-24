@@ -34,10 +34,20 @@ fun AccessibilityScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedCategory by remember { mutableStateOf(AccessibilityCategory.DISPLAY) }
 
+    // Store success/error messages in local variables to enable smart casting
+    val successMessage = uiState.successMessage
+    val errorMessage = uiState.errorMessage
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Accessibility", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+                title = {
+                    Text(
+                        "Accessibility",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -75,7 +85,7 @@ fun AccessibilityScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                
+                // Tab row
                 ScrollableTabRow(
                     selectedTabIndex = selectedCategory.ordinal,
                     containerColor = Color.Transparent,
@@ -103,12 +113,24 @@ fun AccessibilityScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                
+                // Content area with animations
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Success/error messages – using local variables
+                    if (successMessage != null) {
+                        item {
+                            SuccessMessageBanner(message = successMessage)
+                        }
+                    }
+                    if (errorMessage != null) {
+                        item {
+                            ErrorMessageBanner(message = errorMessage)
+                        }
+                    }
+
                     item {
                         when (selectedCategory) {
                             AccessibilityCategory.DISPLAY -> DisplaySettings(uiState, viewModel)
@@ -116,7 +138,20 @@ fun AccessibilityScreen(
                             AccessibilityCategory.GESTURE -> GestureSettings(uiState, viewModel)
                             AccessibilityCategory.VOICE -> VoiceSettings(uiState, viewModel)
                             AccessibilityCategory.ADVANCED -> AdvancedSettings(uiState, viewModel)
+                            AccessibilityCategory.MOUSE -> MouseSettings(uiState, viewModel)
                         }
+                    }
+
+                    // Footer info
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Accessibility settings are saved automatically",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                     }
                 }
             }
@@ -124,7 +159,9 @@ fun AccessibilityScreen(
     }
 }
 
-
+// ============================================================
+// Reusable Components
+// ============================================================
 
 @Composable
 fun GlassCard(
@@ -139,27 +176,12 @@ fun GlassCard(
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
     ) {
-        Column(content = content)
-            @Composable
-            fun GlassCard(
-                modifier: Modifier = Modifier,
-                content: @Composable ColumnScope.() -> Unit
-            ) {
-                Card(
-                    modifier = modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        content = content
-                    )
-                }
-            }
-
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            content = content
+        )
     }
 }
 
@@ -194,13 +216,51 @@ fun AnimatedSwitch(
     }
 }
 
+@Composable
+fun SuccessMessageBanner(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50))
+            Text(message, fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+    }
+}
 
+@Composable
+fun ErrorMessageBanner(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            Text(message, fontSize = 14.sp, color = MaterialTheme.colorScheme.onErrorContainer)
+        }
+    }
+}
+
+// ============================================================
+// Display Settings
+// ============================================================
 
 @Composable
 private fun DisplaySettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
+            Column {
                 Text("🖼️ Display Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -257,11 +317,34 @@ private fun DisplaySettings(uiState: AccessibilityUiState, viewModel: Accessibil
                         activeTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
+
+                // Sample text preview
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Sample Text",
+                            fontSize = uiState.customFontSize.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (uiState.highContrast) Color.Black else MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "This is how text will look with your current settings.",
+                            fontSize = (uiState.customFontSize * 0.85f).sp,
+                            color = if (uiState.highContrast) Color.DarkGray else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
 
+        // Color Blind Mode
         GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
+            Column {
                 Text("🎨 Color Vision Deficiency", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -269,16 +352,42 @@ private fun DisplaySettings(uiState: AccessibilityUiState, viewModel: Accessibil
                     selectedMode = uiState.colorBlindMode,
                     onModeSelected = viewModel::setColorBlindMode
                 )
+
+                // Preview of color palette
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(Color.Red, Color.Green, Color.Blue, Color.Yellow, Color.Magenta).forEach { color ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(24.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(color)
+                        )
+                    }
+                }
+                Text(
+                    text = "Color palette preview (may not reflect actual color blindness simulation)",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ============================================================
+// Feedback Settings
+// ============================================================
+
 @Composable
 private fun FeedbackSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
     GlassCard {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column {
             Text("🔊 Haptic & Sound", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -326,10 +435,14 @@ private fun FeedbackSettings(uiState: AccessibilityUiState, viewModel: Accessibi
     }
 }
 
+// ============================================================
+// Gesture Settings
+// ============================================================
+
 @Composable
 private fun GestureSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
     GlassCard {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column {
             Text("✋ Gesture Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -390,10 +503,14 @@ private fun GestureSettings(uiState: AccessibilityUiState, viewModel: Accessibil
     }
 }
 
+// ============================================================
+// Voice Settings
+// ============================================================
+
 @Composable
 private fun VoiceSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
     GlassCard {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column {
             Text("🎤 Voice Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -433,11 +550,15 @@ private fun VoiceSettings(uiState: AccessibilityUiState, viewModel: Accessibilit
     }
 }
 
+// ============================================================
+// Advanced Settings
+// ============================================================
+
 @Composable
 private fun AdvancedSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
+            Column {
                 Text("⚙️ Advanced Accessibility", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -490,7 +611,7 @@ private fun AdvancedSettings(uiState: AccessibilityUiState, viewModel: Accessibi
         }
 
         GlassCard {
-            Column(modifier = Modifier.padding(20.dp)) {
+            Column {
                 Text("ℹ️ Accessibility Info", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -539,6 +660,122 @@ private fun AdvancedSettings(uiState: AccessibilityUiState, viewModel: Accessibi
         }
     }
 }
+
+// ============================================================
+// Mouse Settings (NEW)
+// ============================================================
+
+@Composable
+private fun MouseSettings(uiState: AccessibilityUiState, viewModel: AccessibilityViewModel) {
+    // app/src/main/java/com/airmouse/presentation/ui/accessibility/AccessibilityScreen.kt
+// Inside MouseSettings or wherever you have the chip selector:
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ControlMode.entries.forEach { mode ->
+            val modeKey = when (mode) {
+                ControlMode.GYRO -> "gyro"
+                ControlMode.ACCEL -> "accel"
+                ControlMode.HYBRID -> "hybrid"
+                ControlMode.MOUSE -> "mouse"
+            }
+            val isSelected = uiState.controlMode == modeKey
+            FilterChip(
+                selected = isSelected,
+                onClick = { viewModel.setControlMode(modeKey) },
+                label = { Text(mode.displayName, fontSize = 11.sp) },
+                modifier = Modifier.weight(1f),
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                )
+            )
+        }
+    }
+    GlassCard {
+        Column {
+            Text("🖱️ Mouse Control", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AnimatedSwitch(
+                checked = uiState.isMouseEnabled,
+                onCheckedChange = viewModel::setMouseEnabled,
+                label = "Enable Mouse Control",
+                description = "Allow cursor control from the phone"
+            )
+
+            AnimatedSwitch(
+                checked = uiState.mousePointerLarge,
+                onCheckedChange = viewModel::setMousePointerLarge,
+                label = "Large Pointer",
+                description = "Use a larger cursor for better visibility"
+            )
+
+            AnimatedSwitch(
+                checked = uiState.mouseTrails,
+                onCheckedChange = viewModel::setMouseTrails,
+                label = "Mouse Trails",
+                description = "Show pointer trails for easier tracking"
+            )
+
+            AnimatedSwitch(
+                checked = uiState.snapToDefault,
+                onCheckedChange = viewModel::setSnapToDefault,
+                label = "Snap to Default",
+                description = "Auto-snap cursor to default position on connection"
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Control mode selector (if you want to integrate it here)
+            Text(
+                text = "Control Mode",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                text = "Switch between motion and mouse control modes",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ControlMode.entries.forEach { mode ->
+                    val isSelected = uiState.controlMode == mode.name.lowercase()
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            // You would need to add controlMode to UiState or use a separate ViewModel
+                            // For now, we show the UI but the logic would go through HomeViewModel
+                            // This is a placeholder for future integration
+                        },
+                        label = { Text(mode.displayName, fontSize = 11.sp) },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    )
+                }
+            }
+            Text(
+                text = "Note: Control mode is managed from the Home screen.",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
+}
+
+// ============================================================
+// Color Blind Mode Selector
+// ============================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

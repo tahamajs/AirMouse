@@ -239,8 +239,6 @@ class SensorService(
     }
 
     private fun processRotationVector(values: FloatArray) {
-        
-        
         val rotationMatrix = FloatArray(9)
         SensorManager.getRotationMatrixFromVector(rotationMatrix, values)
         val orientation = FloatArray(3)
@@ -250,8 +248,14 @@ class SensorService(
         val directPitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
         val directRoll = Math.toDegrees(orientation[2].toDouble()).toFloat()
 
-        
-        
+        if (!isCalibrated) {
+            roll = directRoll
+            pitch = directPitch
+            yaw = directYaw
+            filteredRoll = smoothingAlpha * roll + (1 - smoothingAlpha) * filteredRoll
+            filteredYaw = smoothingAlpha * yaw + (1 - smoothingAlpha) * filteredYaw
+            onOrientationChanged?.invoke(filteredRoll, filteredYaw)
+        }
     }
 
     private fun checkStability() {

@@ -1,10 +1,12 @@
 package com.airmouse.sensors
+import android.util.Log   // <-- add this
 
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import kotlinx.coroutines.suspendCancellableCoroutine
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.core.content.ContextCompat
@@ -198,12 +200,15 @@ class CalibrationHelper(
     }
 
     suspend fun startFullCalibration(onInstruction: (String, Int) -> Unit): Boolean {
+        Log.d(TAG, "Starting full calibration")
         _calibrationState.value = CalibrationState.CALIBRATING
         _calibrationProgress.value = 0
         
         
         onInstruction("Place device on a flat, stationary surface", 10)
+        Log.d(TAG, "Calibration step: gyroscope")
         if (!calibrateGyroscope()) {
+            Log.e(TAG, "Gyroscope calibration failed")
             _calibrationState.value = CalibrationState.FAILED
             return false
         }
@@ -212,7 +217,9 @@ class CalibrationHelper(
         
         
         onInstruction("Move device in a figure-8 pattern", 40)
+        Log.d(TAG, "Calibration step: magnetometer")
         if (!calibrateMagnetometer()) {
+            Log.e(TAG, "Magnetometer calibration failed")
             _calibrationState.value = CalibrationState.FAILED
             return false
         }
@@ -221,7 +228,9 @@ class CalibrationHelper(
         
         
         onInstruction("Place device flat facing up", 70)
+        Log.d(TAG, "Calibration step: accelerometer")
         if (!calibrateAccelerometer()) {
+            Log.e(TAG, "Accelerometer calibration failed")
             _calibrationState.value = CalibrationState.FAILED
             return false
         }
@@ -230,6 +239,7 @@ class CalibrationHelper(
         _calibrationState.value = CalibrationState.COMPLETED
         saveCalibrationData()
         vibrate(200)
+        Log.d(TAG, "Calibration completed successfully")
         
         return true
     }
@@ -259,8 +269,8 @@ class CalibrationHelper(
         }
         
         sensorManager?.registerListener(listener, gyroscope, SensorManager.SENSOR_DELAY_FASTEST)
-        
-        
+
+
         mainScope.launch {
             delay(10000)
             if (gyroSamples.size < GYRO_SAMPLES_REQUIRED) {
@@ -591,6 +601,7 @@ class CalibrationHelper(
     }
 
     fun resetCalibration() {
+        Log.d(TAG, "Resetting calibration")
         gyroBiasX = 0f
         gyroBiasY = 0f
         gyroBiasZ = 0f

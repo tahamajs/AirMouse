@@ -1,4 +1,3 @@
-
 package com.airmouse.presentation.ui.calibration
 
 import androidx.compose.animation.*
@@ -40,6 +39,10 @@ import com.airmouse.ui.components.DonutChart
 import kotlinx.coroutines.delay
 import java.util.Locale
 
+// ============================================================
+// Main Calibration Screen
+// ============================================================
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalibrationScreen(
@@ -54,7 +57,6 @@ fun CalibrationScreen(
 
     var animationTriggered by remember { mutableStateOf(false) }
     var confettiActive by remember { mutableStateOf(false) }
-
 
     val currentStep = if (uiState.isComplete) 3 else (uiState.currentStep - 1).coerceAtLeast(0)
     val totalSteps = uiState.totalSteps
@@ -162,203 +164,9 @@ fun CalibrationScreen(
     }
 }
 
-@Composable
-private fun CalibrationSamplingScreen(
-    paddingValues: PaddingValues,
-    currentStep: Int,
-    totalSteps: Int,
-    stepName: String,
-    uiState: CalibrationUiState,
-    onCancel: () -> Unit
-) {
-    val stepIndex = currentStep.coerceIn(0, 2)
-    val accent = when (stepIndex) {
-        0 -> Color(0xFF38BDF8)
-        1 -> Color(0xFFF59E0B)
-        else -> Color(0xFF22C55E)
-    }
-    val pulseTransition = rememberInfiniteTransition(label = "sampling_pulse")
-    val outerScale by pulseTransition.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "sampling_outer_scale"
-    )
-    val ringRotation by pulseTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(6000, easing = LinearEasing)),
-        label = "sampling_ring_rotation"
-    )
-    val instruction = when (stepIndex) {
-        0 -> "Hold the phone flat and still while we collect gyro bias samples."
-        1 -> "Keep the phone still and avoid magnets while magnetometer samples are captured."
-        else -> "Rotate through the six orientations and hold each position steady until the capture ends."
-    }
-    val label = when (stepIndex) {
-        0 -> "GYROSCOPE"
-        1 -> "MAGNETOMETER"
-        else -> "ACCELEROMETER"
-    }
-    val sampleText = if (uiState.totalSamplesNeeded > 0) {
-        "${uiState.samplesCollected}/${uiState.totalSamplesNeeded}"
-    } else if (stepIndex == 2) {
-        "${uiState.currentPosition + 1}/${uiState.totalPositions}"
-    } else {
-        "Collecting"
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF020617),
-                        accent.copy(alpha = 0.30f),
-                        Color(0xFF111827)
-                    )
-                )
-            )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AssistChip(
-                        onClick = { },
-                        label = { Text("Step ${currentStep + 1} of $totalSteps") },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = Color.White.copy(alpha = 0.08f),
-                            labelColor = Color.White
-                        )
-                    )
-                    AssistChip(
-                        onClick = { },
-                        label = { Text("Sampling") },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = accent.copy(alpha = 0.20f),
-                            labelColor = Color.White
-                        )
-                    )
-                }
-
-                Text(
-                    "Collecting $stepName data",
-                    color = Color.White,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Text(
-                    instruction,
-                    color = Color.White.copy(alpha = 0.80f),
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp
-                )
-            }
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(18.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(220.dp)
-                        .graphicsLayer {
-                            scaleX = outerScale
-                            scaleY = outerScale
-                            rotationZ = ringRotation
-                        }
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    accent.copy(alpha = 0.95f),
-                                    Color.White.copy(alpha = 0.12f),
-                                    Color.Transparent
-                                )
-                            ),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = label,
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = sampleText,
-                            color = Color.White.copy(alpha = 0.78f),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.07f)),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Live progress", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        LinearProgressIndicator(
-                            progress = { uiState.progress / 100f },
-                            modifier = Modifier.fillMaxWidth().height(10.dp),
-                            color = accent,
-                            trackColor = Color.White.copy(alpha = 0.12f)
-                        )
-                        Text(
-                            uiState.statusMessage.ifBlank { "Collecting data..." },
-                            color = Color.White.copy(alpha = 0.84f)
-                        )
-                        if (uiState.stepInstruction.isNotBlank()) {
-                            Text(
-                                uiState.stepInstruction,
-                                color = Color(0xFFBFDBFE),
-                                fontSize = 12.sp,
-                                lineHeight = 18.sp
-                            )
-                        }
-                    }
-                }
-
-                uiState.errorMessage?.let { message ->
-                    CalibrationErrorPanel(message = message)
-                }
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = onCancel,
-                    modifier = Modifier.fillMaxWidth().height(58.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.20f))
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Cancel", color = Color.White.copy(alpha = 0.90f))
-                }
-            }
-        }
-    }
-}
+// ============================================================
+// Step Intro Screen
+// ============================================================
 
 @Composable
 private fun CalibrationStepIntroScreen(
@@ -382,7 +190,7 @@ private fun CalibrationStepIntroScreen(
     val title = when (stepIndex) {
         0 -> "Gyroscope warmup"
         1 -> "Magnetometer sweep"
-        else -> "Accelerometer six-position check"
+        else -> "Accelerometer six‑position check"
     }
     val subtitle = when (stepIndex) {
         0 -> "We will first measure the idle gyro drift while the phone is steady."
@@ -392,7 +200,7 @@ private fun CalibrationStepIntroScreen(
     val guidance = when (stepIndex) {
         0 -> "Put the phone on a flat surface. When you tap Start, a short animation plays before sampling begins."
         1 -> "Keep the phone still and clear of large metal objects while the preview runs."
-        else -> "Follow the on-screen pose for each orientation; sampling starts only after the animation finishes."
+        else -> "Follow the on‑screen pose for each orientation; sampling starts only after the animation finishes."
     }
     val introPulse = rememberInfiniteTransition(label = "intro_pulse")
     val pulsingScale by introPulse.animateFloat(
@@ -610,6 +418,212 @@ private fun CalibrationStepIntroScreen(
     }
 }
 
+// ============================================================
+// Sampling Screen
+// ============================================================
+
+@Composable
+private fun CalibrationSamplingScreen(
+    paddingValues: PaddingValues,
+    currentStep: Int,
+    totalSteps: Int,
+    stepName: String,
+    uiState: CalibrationUiState,
+    onCancel: () -> Unit
+) {
+    val stepIndex = currentStep.coerceIn(0, 2)
+    val accent = when (stepIndex) {
+        0 -> Color(0xFF38BDF8)
+        1 -> Color(0xFFF59E0B)
+        else -> Color(0xFF22C55E)
+    }
+    val pulseTransition = rememberInfiniteTransition(label = "sampling_pulse")
+    val outerScale by pulseTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sampling_outer_scale"
+    )
+    val ringRotation by pulseTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(6000, easing = LinearEasing)),
+        label = "sampling_ring_rotation"
+    )
+    val instruction = when (stepIndex) {
+        0 -> "Hold the phone flat and still while we collect gyro bias samples."
+        1 -> "Keep the phone still and avoid magnets while magnetometer samples are captured."
+        else -> "Rotate through the six orientations and hold each position steady until the capture ends."
+    }
+    val label = when (stepIndex) {
+        0 -> "GYROSCOPE"
+        1 -> "MAGNETOMETER"
+        else -> "ACCELEROMETER"
+    }
+    val sampleText = if (uiState.totalSamplesNeeded > 0) {
+        "${uiState.samplesCollected}/${uiState.totalSamplesNeeded}"
+    } else if (stepIndex == 2) {
+        "${uiState.currentPosition + 1}/${uiState.totalPositions}"
+    } else {
+        "Collecting"
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF020617),
+                        accent.copy(alpha = 0.30f),
+                        Color(0xFF111827)
+                    )
+                )
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AssistChip(
+                        onClick = { },
+                        label = { Text("Step ${currentStep + 1} of $totalSteps") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color.White.copy(alpha = 0.08f),
+                            labelColor = Color.White
+                        )
+                    )
+                    AssistChip(
+                        onClick = { },
+                        label = { Text("Sampling") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = accent.copy(alpha = 0.20f),
+                            labelColor = Color.White
+                        )
+                    )
+                }
+
+                Text(
+                    "Collecting $stepName data",
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    instruction,
+                    color = Color.White.copy(alpha = 0.80f),
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp
+                )
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(220.dp)
+                        .graphicsLayer {
+                            scaleX = outerScale
+                            scaleY = outerScale
+                            rotationZ = ringRotation
+                        }
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    accent.copy(alpha = 0.95f),
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color.Transparent
+                                )
+                            ),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = label,
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = sampleText,
+                            color = Color.White.copy(alpha = 0.78f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.07f)),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Live progress", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        LinearProgressIndicator(
+                            progress = { uiState.progress / 100f },
+                            modifier = Modifier.fillMaxWidth().height(10.dp),
+                            color = accent,
+                            trackColor = Color.White.copy(alpha = 0.12f)
+                        )
+                        Text(
+                            uiState.statusMessage.ifBlank { "Collecting data..." },
+                            color = Color.White.copy(alpha = 0.84f)
+                        )
+                        if (uiState.stepInstruction.isNotBlank()) {
+                            Text(
+                                uiState.stepInstruction,
+                                color = Color(0xFFBFDBFE),
+                                fontSize = 12.sp,
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+                }
+
+                uiState.errorMessage?.let { message ->
+                    CalibrationErrorPanel(message = message)
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth().height(58.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.20f))
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Cancel", color = Color.White.copy(alpha = 0.90f))
+                }
+            }
+        }
+    }
+}
+
+// ============================================================
+// Error Panel
+// ============================================================
+
 @Composable
 private fun CalibrationErrorPanel(message: String) {
     Surface(
@@ -637,6 +651,10 @@ private fun calibrationStepName(stepNumber: Int): String {
         else -> "Calibration"
     }
 }
+
+// ============================================================
+// Completion Screen
+// ============================================================
 
 @Composable
 private fun CompletionScreen(
@@ -702,6 +720,10 @@ private fun CompletionScreen(
     }
 }
 
+// ============================================================
+// Guide Screen (Single, with `key` parameters)
+// ============================================================
+
 @Composable
 fun CalibrationGuideScreen(
     paddingValues: PaddingValues,
@@ -719,19 +741,16 @@ fun CalibrationGuideScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        item {
+        item(key = "hero") {
             HeroCalibrationCard(uiState = uiState, currentStep = currentStep, stepName = stepName)
         }
-
-        item {
+        item(key = "tracker") {
             CalibrationStepTracker(currentStep = currentStep, totalSteps = totalSteps)
         }
-
-        item {
+        item(key = "fitness") {
             FitnessStepCard(step = currentStep, totalSteps = totalSteps, stepName = stepName, uiState = uiState)
         }
-
-        item {
+        item(key = "status") {
             CalibrationStatusCard(
                 isCalibrating = uiState.isCalibrating,
                 progress = uiState.progress,
@@ -741,24 +760,19 @@ fun CalibrationGuideScreen(
                 calibrationData = calibrationData
             )
         }
-
-        item {
+        item(key = "guidance") {
             CalibrationGuidanceCard(isCalibrating = uiState.isCalibrating)
         }
-
-        item {
+        item(key = "sensors") {
             CalibrationSensorCards(activeStep = currentStep)
         }
-
-        item {
+        item(key = "formula") {
             CalibrationFormulaSection()
         }
-
-        item {
+        item(key = "livedata") {
             LiveSensorDataCard(uiState = uiState)
         }
-
-        item {
+        item(key = "actions") {
             PrimaryCalibrationActions(
                 isCalibrating = uiState.isCalibrating,
                 stepName = stepName,
@@ -766,60 +780,15 @@ fun CalibrationGuideScreen(
                 onCancel = { viewModel.resetCalibration() }
             )
         }
-
-        item {
+        item(key = "sensorstatus") {
             SensorStatusDisplay(uiState = uiState, calibrationData = calibrationData)
         }
     }
 }
 
-@Composable
-private fun HeroCalibrationCard(uiState: CalibrationUiState, currentStep: Int, stepName: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
-        shape = RoundedCornerShape(28.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(Color(0xFF22C55E), Color(0xFF16A34A))))
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Air Mouse calibration", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Step ${currentStep + 1}: $stepName. Do one stage at a time, like a guided fitness routine.",
-                        color = Color.White.copy(alpha = 0.78f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CalibrationTag("Gyro bias")
-                CalibrationTag("Accel 6-pos")
-                CalibrationTag("Mag min/max")
-            }
-            if (uiState.isCalibrating) {
-                LinearProgressIndicator(
-                    progress = { uiState.progress / 100f },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF22C55E),
-                    trackColor = Color.White.copy(alpha = 0.12f)
-                )
-            } else {
-                Text(
-                    "Tap start to begin the current stage. Each step unlocks the next one automatically.",
-                    color = Color.White.copy(alpha = 0.72f),
-                    fontSize = 12.sp
-                )
-            }
-        }
-    }
-}
+// ============================================================
+// Helper Components (Tags, Cards, etc.)
+// ============================================================
 
 @Composable
 private fun CalibrationTag(text: String) {
@@ -957,11 +926,11 @@ private fun CalibrationGuidanceCard(isCalibrating: Boolean) {
             }
             Text(
                 "Follow the assignment sequence and keep the phone steady whenever the step asks for a still sample.\n\n" +
-                    "• Gyroscope: collect stationary samples, compute the bias, and subtract it so the idle reading trends to zero.\n" +
-                    "• Accelerometer: repeat the six-position routine and fit each axis against gravity (9.81 m/s²).\n" +
-                    "• Magnetometer: rotate the phone through many orientations, save the minimum and maximum of each axis, and derive offset/scale from them.\n" +
-                    "• Fusion: combine the calibrated sensors with a filter such as Madgwick AHRS or another suitable fusion approach to reduce drift.\n" +
-                    "• Output: use the filtered signal for cursor motion, click, and scroll so the pointer stays smooth and stable.",
+                        "• Gyroscope: collect stationary samples, compute the bias, and subtract it so the idle reading trends to zero.\n" +
+                        "• Accelerometer: repeat the six‑position routine and fit each axis against gravity (9.81 m/s²).\n" +
+                        "• Magnetometer: rotate the phone through many orientations, save the minimum and maximum of each axis, and derive offset/scale from them.\n" +
+                        "• Fusion: combine the calibrated sensors with a filter such as Madgwick AHRS or another suitable fusion approach to reduce drift.\n" +
+                        "• Output: use the filtered signal for cursor motion, click, and scroll so the pointer stays smooth and stable.",
                 color = Color.White.copy(alpha = 0.82f),
                 lineHeight = 20.sp
             )
@@ -1009,7 +978,7 @@ private fun CalibrationSensorCards(activeStep: Int) {
         )
         SensorStepCard(
             stepNumber = 2,
-            title = "Accelerometer six-position calibration",
+            title = "Accelerometer six‑position calibration",
             subtitle = "Place the phone in each required orientation and compare against gravity.",
             accent = Color(0xFF22C55E),
             formula = "offset = (min + max) / 2\nscale = (max - min) / 2\ncorrected = (raw - offset) / scale",
@@ -1027,7 +996,7 @@ private fun CalibrationSensorCards(activeStep: Int) {
             formula = "offset = (min + max) / 2\nscale = (max - min) / 2\ncorrected = (raw - offset) / scale",
             isActive = activeStep == 1,
             details = listOf(
-                "Goal: compensate hard-iron bias and axis scaling.",
+                "Goal: compensate hard‑iron bias and axis scaling.",
                 "Rotate through as much of the sphere as possible."
             )
         )
@@ -1241,3 +1210,55 @@ private fun SensorValueRow(label: String, values: Triple<Float, Float, Float>) {
 }
 
 private fun formatSensorValue(value: Float): String = String.format(Locale.US, "%.3f", value)
+
+// ============================================================
+// Hero Card
+// ============================================================
+
+@Composable
+private fun HeroCalibrationCard(uiState: CalibrationUiState, currentStep: Int, stepName: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Brush.radialGradient(listOf(Color(0xFF22C55E), Color(0xFF16A34A))))
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Air Mouse calibration", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Step ${currentStep + 1}: $stepName. Do one stage at a time, like a guided fitness routine.",
+                        color = Color.White.copy(alpha = 0.78f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CalibrationTag("Gyro bias")
+                CalibrationTag("Accel 6-pos")
+                CalibrationTag("Mag min/max")
+            }
+            if (uiState.isCalibrating) {
+                LinearProgressIndicator(
+                    progress = { uiState.progress / 100f },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF22C55E),
+                    trackColor = Color.White.copy(alpha = 0.12f)
+                )
+            } else {
+                Text(
+                    "Tap start to begin the current stage. Each step unlocks the next one automatically.",
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}

@@ -1,6 +1,6 @@
-
 package com.airmouse.presentation.ui.network
 
+import android.util.Patterns
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,8 +35,10 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-
-
+/**
+ * Screen for discovering Air Mouse servers on the local network.
+ * Supports UDP broadcast discovery, manual IP entry, and saving favorite servers.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NetworkDiscoveryScreen(
@@ -116,7 +118,7 @@ fun NetworkDiscoveryScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            
+            // Sort menu
             DropdownMenu(
                 expanded = showSortMenu,
                 onDismissRequest = { showSortMenu = false }
@@ -140,7 +142,7 @@ fun NetworkDiscoveryScreen(
                 }
             }
 
-            
+            // Manual connect dialog
             if (showManualConnectDialog) {
                 ManualConnectDialog(
                     onDismiss = { showManualConnectDialog = false },
@@ -155,7 +157,7 @@ fun NetworkDiscoveryScreen(
                 )
             }
 
-            
+            // Search / filter field
             OutlinedTextField(
                 value = uiState.filterText,
                 onValueChange = viewModel::setFilterText,
@@ -187,7 +189,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            
+            // Local IP address card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -242,6 +244,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Status card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -274,7 +277,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            
+            // Scan button
             Button(
                 onClick = { viewModel.scanNetwork() },
                 modifier = Modifier.fillMaxWidth(),
@@ -311,7 +314,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            
+            // Error message display
             val errorMessage = uiState.errorMessage
             if (errorMessage != null) {
                 Surface(
@@ -349,7 +352,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            
+            // Tabs: Discovered, Saved, History
             ScrollableTabRow(
                 selectedTabIndex = when (uiState.activeTab) {
                     DiscoveryTab.DISCOVERED -> 0
@@ -428,7 +431,7 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            
+            // Content based on active tab
             when (uiState.activeTab) {
                 DiscoveryTab.DISCOVERED -> {
                     val filteredServers = uiState.discoveredServers.filter { server ->
@@ -585,8 +588,9 @@ fun NetworkDiscoveryScreen(
     }
 }
 
-
-
+/**
+ * Item representing a discovered server in the list.
+ */
 @Composable
 fun DiscoveredServerItem(
     server: DiscoveredServer,
@@ -697,6 +701,9 @@ fun DiscoveredServerItem(
     }
 }
 
+/**
+ * Item representing a saved server in the list.
+ */
 @Composable
 fun SavedServerItem(
     server: DiscoveredServer,
@@ -796,8 +803,9 @@ fun SavedServerItem(
     }
 }
 
-
-
+/**
+ * Status chip indicating online/offline state.
+ */
 @Composable
 fun StatusChip(isReachable: Boolean, ping: Long) {
     val color = if (isReachable) Color(0xFF4CAF50) else Color(0xFFF44336)
@@ -815,6 +823,9 @@ fun StatusChip(isReachable: Boolean, ping: Long) {
     }
 }
 
+/**
+ * Signal strength bar indicator.
+ */
 @Composable
 fun SignalStrengthBar(strength: Int) {
     Row {
@@ -832,6 +843,9 @@ fun SignalStrengthBar(strength: Int) {
     }
 }
 
+/**
+ * Empty state card with a retry button.
+ */
 @Composable
 fun EmptyStateCard(
     title: String,
@@ -874,6 +888,9 @@ fun EmptyStateCard(
     }
 }
 
+/**
+ * History item showing a past connection.
+ */
 @Composable
 fun HistoryItem(history: ConnectionHistoryItem) {
     Card(
@@ -919,6 +936,9 @@ fun HistoryItem(history: ConnectionHistoryItem) {
     }
 }
 
+/**
+ * Dialog for manually entering server IP and port.
+ */
 @Composable
 fun ManualConnectDialog(
     onDismiss: () -> Unit,
@@ -943,7 +963,7 @@ fun ManualConnectDialog(
                     value = ip,
                     onValueChange = {
                         ip = it
-                        isValidIp = android.util.Patterns.IP_ADDRESS.matcher(it).matches()
+                        isValidIp = Patterns.IP_ADDRESS.matcher(it).matches()
                     },
                     label = { Text("IP Address") },
                     isError = !isValidIp && ip.isNotEmpty(),

@@ -616,8 +616,10 @@ class SettingsViewModel @Inject constructor(
 
     private suspend fun toggleAutoConnect() {
         val current = _uiState.value.autoConnect
-        prefs.putBoolean("auto_connect", !current)
-        _uiState.update { it.copy(autoConnect = !current) }
+        val newValue = !current
+        prefs.setAutoConnect(newValue)
+        prefs.putBoolean("auto_connect_enabled", newValue)
+        _uiState.update { it.copy(autoConnect = newValue) }
     }
 
     private suspend fun updateReconnectAttempts(value: Int) {

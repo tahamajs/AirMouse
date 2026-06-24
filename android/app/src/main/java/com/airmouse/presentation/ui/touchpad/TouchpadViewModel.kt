@@ -1,4 +1,3 @@
-
 package com.airmouse.presentation.ui.touchpad
 
 import android.content.Context
@@ -15,6 +14,7 @@ import com.airmouse.domain.model.MouseStatistics
 import com.airmouse.domain.model.MovementProfile
 import com.airmouse.domain.model.UserPreferences
 import com.airmouse.network.ConnectionManager
+import com.airmouse.network.MessageTypes
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -35,32 +35,60 @@ class TouchpadViewModel @Inject constructor(
     private val connectionManager: ConnectionManager
 ) : ViewModel() {
 
+    // ============================================================
+    // UI State
+    // ============================================================
+
     private val _uiState = MutableStateFlow(TouchpadUiState())
     val uiState: StateFlow<TouchpadUiState> = _uiState.asStateFlow()
 
     private val _effect = MutableStateFlow<TouchpadEffect?>(null)
     val effect: StateFlow<TouchpadEffect?> = _effect.asStateFlow()
 
-    
+    // ============================================================
+    // Gesture Tracking State
+    // ============================================================
+
+    // Single‑finger drag
     private var lastX = 0f
     private var lastY = 0f
+
+    // Two‑finger scroll
     private var lastScrollX = 0f
     private var lastScrollY = 0f
+
+    // Three‑finger swipe
+    private var threeFingerLastX = 0f
+    private var threeFingerLastY = 0f
+
+    // Four‑finger swipe
+    private var fourFingerLastX = 0f
+    private var fourFingerLastY = 0f
+
+    // Pinch / rotate
     private var lastPinchDistance = 0f
     private var lastRotation = 0f
+
+    // Tap detection
     private var lastTapTime = 0L
     private var tapCount = 0
+
+    // Inertia / timeout jobs
     private var inertiaJob: Job? = null
     private var gestureTimeoutJob: Job? = null
     private var isGestureActive = false
+
+    // ============================================================
+    // Initialisation
+    // ============================================================
 
     init {
         loadSettings()
     }
 
-    
-    
-    
+    // ============================================================
+    // Settings Loading & Saving
+    // ============================================================
 
     private fun loadSettings() {
         val connectionConfig = ConnectionConfig(
@@ -69,6 +97,7 @@ class TouchpadViewModel @Inject constructor(
             autoReconnect = prefs.getBoolean("auto_connect", true),
             timeoutMs = prefs.getInt("connection_timeout", 5000).toLong()
         ).normalized()
+
         val mouseProfile = MovementProfile(
             sensitivity = prefs.getFloat("touchpad_sensitivity", 1.0f),
             smoothingEnabled = prefs.getBoolean("touchpad_scroll_inertia", true),
@@ -77,6 +106,7 @@ class TouchpadViewModel @Inject constructor(
             invertY = prefs.getBoolean("touchpad_invert_vertical", false),
             deadband = prefs.getFloat("deadband", 0.5f)
         )
+
         val appPreferences = AppPreferences(
             theme = prefs.getString("theme", "system"),
             language = prefs.getLanguage(),
@@ -87,6 +117,7 @@ class TouchpadViewModel @Inject constructor(
             analyticsEnabled = prefs.getBoolean("analytics_enabled", true),
             crashReportingEnabled = prefs.getBoolean("crash_reporting", true)
         )
+
         val userPreferences = UserPreferences(
             username = prefs.getUserName(),
             serverName = prefs.getString("server_name", "Air Mouse Pro"),
@@ -95,12 +126,14 @@ class TouchpadViewModel @Inject constructor(
             autoConnect = connectionConfig.autoReconnect,
             rememberCredentials = prefs.getBoolean("remember_credentials", true)
         )
+
         val mouseStatistics = MouseStatistics(
             totalClicks = prefs.getInt("stat_clicks", 0),
             totalDoubleClicks = prefs.getInt("stat_double_clicks", 0),
             totalRightClicks = prefs.getInt("stat_right_clicks", 0),
             totalScrolls = prefs.getInt("stat_scrolls", 0)
         )
+
         _uiState.update {
             it.copy(
                 isActive = prefs.getBoolean("touchpad_active", false),
@@ -140,105 +173,6 @@ class TouchpadViewModel @Inject constructor(
         }
     }
 
-    
-    
-    
-
-    fun handleEvent(event: TouchpadEvent) {
-        when (event) {
-            is TouchpadEvent.ToggleTouchpad -> toggleTouchpad()
-            is TouchpadEvent.ResetToDefaults -> resetToDefaults()
-            is TouchpadEvent.ApplyPreset -> applyPreset(event.mode)
-
-            is TouchpadEvent.TouchEvent -> processTouchEvent(
-                event.x, event.y, event.pointerCount,
-                event.pointers, event.pressure
-            )
-            is TouchpadEvent.TapEvent -> processTap(event.x, event.y)
-            is TouchpadEvent.LongPressEvent -> processLongPress()
-            is TouchpadEvent.GestureEnd -> resetGestureState()
-
-            
-            is TouchpadEvent.UpdateSensitivity -> updateSensitivity(event.value)
-            is TouchpadEvent.UpdateCursorSpeed -> updateCursorSpeed(event.value)
-            is TouchpadEvent.UpdatePointerSpeed -> updatePointerSpeed(event.value)
-            TouchpadEvent.ToggleAcceleration -> toggleAcceleration()
-            TouchpadEvent.ToggleInvertVertical -> toggleInvertVertical()
-            TouchpadEvent.ToggleInvertHorizontal -> toggleInvertHorizontal()
-
-            
-            is TouchpadEvent.UpdateScrollSpeed -> updateScrollSpeed(event.value)
-            TouchpadEvent.ToggleNaturalScrolling -> toggleNaturalScrolling()
-            TouchpadEvent.ToggleTwoFingerScroll -> toggleTwoFingerScroll()
-            TouchpadEvent.ToggleEdgeScrolling -> toggleEdgeScrolling()
-            TouchpadEvent.ToggleScrollInertia -> toggleScrollInertia()
-
-            
-            TouchpadEvent.ToggleTapToClick -> toggleTapToClick()
-            is TouchpadEvent.UpdateDoubleTapDelay -> updateDoubleTapDelay(event.value)
-            TouchpadEvent.ToggleThreeFingerSwipe -> toggleThreeFingerSwipe()
-            TouchpadEvent.TogglePinchToZoom -> togglePinchToZoom()
-            TouchpadEvent.ToggleRotateToRotate -> toggleRotateToRotate()
-
-            
-            TouchpadEvent.ToggleHapticFeedback -> toggleHapticFeedback()
-            TouchpadEvent.ToggleShowTouchPoints -> toggleShowTouchPoints()
-
-            
-            TouchpadEvent.NavigateBack -> navigateBack()
-            TouchpadEvent.NavigateToSettings -> navigateToSettings()
-        }
-    }
-
-    
-    
-    
-
-    private fun toggleTouchpad() {
-        val newState = !_uiState.value.isActive
-        saveSetting("touchpad_active", newState)
-        _uiState.update { it.copy(isActive = newState) }
-
-        sendCommand(if (newState) "start" else "stop")
-        triggerEffect(TouchpadEffect.SendCommand(if (newState) "touchpad_start" else "touchpad_stop"))
-
-        if (newState) {
-            vibrate(50)
-            triggerEffect(TouchpadEffect.ShowToast("Touchpad activated"))
-        } else {
-            resetGestureState()
-            triggerEffect(TouchpadEffect.ShowToast("Touchpad deactivated"))
-        }
-    }
-
-    private fun resetToDefaults() {
-        val defaultState = TouchpadUiState()
-        _uiState.update { defaultState }
-
-        
-        prefs.clear()
-
-        
-        saveAllSettings(defaultState)
-
-        triggerEffect(TouchpadEffect.ShowToast("Reset to defaults"))
-    }
-
-    private fun applyPreset(mode: TouchpadMode) {
-        val preset = TouchpadPresets.getPreset(mode)
-
-        updateSensitivity(preset.sensitivity)
-        updateCursorSpeed(preset.cursorSpeed)
-        updateScrollSpeed(preset.scrollSpeed)
-        updateAcceleration(preset.accelerationEnabled)
-        updateTapToClick(preset.tapToClick)
-        updateTwoFingerScroll(preset.twoFingerScroll)
-        updateThreeFingerSwipe(preset.threeFingerSwipe)
-        updateNaturalScrolling(preset.naturalScrolling)
-
-        triggerEffect(TouchpadEffect.ShowToast("Applied: ${mode.displayName}"))
-    }
-
     private fun saveAllSettings(state: TouchpadUiState) {
         saveSetting("touchpad_sensitivity", state.sensitivity)
         saveSetting("touchpad_cursor_speed", state.cursorSpeed)
@@ -261,13 +195,110 @@ class TouchpadViewModel @Inject constructor(
         saveSetting("touchpad_active", state.isActive)
     }
 
-    
-    
-    
+    // ============================================================
+    // Event Handling
+    // ============================================================
 
-    fun processTouchEvent(x: Float, y: Float, count: Int, pointers: List<Pair<Float, Float>>, pressure: Float) {
+    fun handleEvent(event: TouchpadEvent) {
+        when (event) {
+            is TouchpadEvent.ToggleTouchpad -> toggleTouchpad()
+            is TouchpadEvent.ResetToDefaults -> resetToDefaults()
+            is TouchpadEvent.ApplyPreset -> applyPreset(event.mode)
+
+            is TouchpadEvent.TouchEvent -> processTouchEvent(
+                event.x, event.y, event.pointerCount,
+                event.pointers, event.pressure
+            )
+            is TouchpadEvent.TapEvent -> processTap(event.x, event.y)
+            is TouchpadEvent.LongPressEvent -> processLongPress()
+            is TouchpadEvent.GestureEnd -> resetGestureState()
+
+            // Settings updates
+            is TouchpadEvent.UpdateSensitivity -> updateSensitivity(event.value)
+            is TouchpadEvent.UpdateCursorSpeed -> updateCursorSpeed(event.value)
+            is TouchpadEvent.UpdatePointerSpeed -> updatePointerSpeed(event.value)
+            TouchpadEvent.ToggleAcceleration -> toggleAcceleration()
+            TouchpadEvent.ToggleInvertVertical -> toggleInvertVertical()
+            TouchpadEvent.ToggleInvertHorizontal -> toggleInvertHorizontal()
+
+            is TouchpadEvent.UpdateScrollSpeed -> updateScrollSpeed(event.value)
+            TouchpadEvent.ToggleNaturalScrolling -> toggleNaturalScrolling()
+            TouchpadEvent.ToggleTwoFingerScroll -> toggleTwoFingerScroll()
+            TouchpadEvent.ToggleEdgeScrolling -> toggleEdgeScrolling()
+            TouchpadEvent.ToggleScrollInertia -> toggleScrollInertia()
+
+            TouchpadEvent.ToggleTapToClick -> toggleTapToClick()
+            is TouchpadEvent.UpdateDoubleTapDelay -> updateDoubleTapDelay(event.value)
+            TouchpadEvent.ToggleThreeFingerSwipe -> toggleThreeFingerSwipe()
+            TouchpadEvent.TogglePinchToZoom -> togglePinchToZoom()
+            TouchpadEvent.ToggleRotateToRotate -> toggleRotateToRotate()
+
+            TouchpadEvent.ToggleHapticFeedback -> toggleHapticFeedback()
+            TouchpadEvent.ToggleShowTouchPoints -> toggleShowTouchPoints()
+
+            TouchpadEvent.NavigateBack -> navigateBack()
+            TouchpadEvent.NavigateToSettings -> navigateToSettings()
+        }
+    }
+
+    // ============================================================
+    // Core Touchpad Actions
+    // ============================================================
+
+    private fun toggleTouchpad() {
+        val newState = !_uiState.value.isActive
+        saveSetting("touchpad_active", newState)
+        _uiState.update { it.copy(isActive = newState) }
+
+        sendCommand(if (newState) "start" else "stop")
+        triggerEffect(TouchpadEffect.SendCommand(if (newState) "touchpad_start" else "touchpad_stop"))
+
+        if (newState) {
+            vibrate(50)
+            triggerEffect(TouchpadEffect.ShowToast("Touchpad activated"))
+        } else {
+            resetGestureState()
+            triggerEffect(TouchpadEffect.ShowToast("Touchpad deactivated"))
+        }
+    }
+
+    private fun resetToDefaults() {
+        val defaultState = TouchpadUiState()
+        _uiState.update { defaultState }
+        prefs.clear()
+        saveAllSettings(defaultState)
+        triggerEffect(TouchpadEffect.ShowToast("Reset to defaults"))
+    }
+
+    private fun applyPreset(mode: TouchpadMode) {
+        val preset = TouchpadPresets.getPreset(mode)
+
+        updateSensitivity(preset.sensitivity)
+        updateCursorSpeed(preset.cursorSpeed)
+        updateScrollSpeed(preset.scrollSpeed)
+        updateAcceleration(preset.accelerationEnabled)
+        updateTapToClick(preset.tapToClick)
+        updateTwoFingerScroll(preset.twoFingerScroll)
+        updateThreeFingerSwipe(preset.threeFingerSwipe)
+        updateNaturalScrolling(preset.naturalScrolling)
+
+        triggerEffect(TouchpadEffect.ShowToast("Applied: ${mode.displayName}"))
+    }
+
+    // ============================================================
+    // Touch Event Processing
+    // ============================================================
+
+    fun processTouchEvent(
+        x: Float,
+        y: Float,
+        pointerCount: Int,
+        pointers: List<Pair<Float, Float>>,
+        pressure: Float
+    ) {
         if (!_uiState.value.isActive) return
 
+        // Update UI state with touch points
         _uiState.update {
             it.copy(
                 currentX = x,
@@ -278,13 +309,17 @@ class TouchpadViewModel @Inject constructor(
             )
         }
 
-        when (count) {
+        when (pointerCount) {
             1 -> handleSingleFingerMove(x, y)
             2 -> handleTwoFingerGesture(pointers)
             3 -> if (_uiState.value.threeFingerSwipe) handleThreeFingerGesture(pointers)
             4 -> handleFourFingerGesture(pointers)
         }
     }
+
+    // ------------------------------------------------------------
+    // 1‑Finger: Drag
+    // ------------------------------------------------------------
 
     private fun handleSingleFingerMove(x: Float, y: Float) {
         if (lastX == 0f && lastY == 0f) {
@@ -296,7 +331,7 @@ class TouchpadViewModel @Inject constructor(
         var dx = (x - lastX) * _uiState.value.sensitivity * _uiState.value.cursorSpeed
         var dy = (y - lastY) * _uiState.value.sensitivity * _uiState.value.cursorSpeed
 
-        
+        // Acceleration
         if (_uiState.value.accelerationEnabled) {
             val speed = sqrt(dx * dx + dy * dy)
             val factor = 1 + (speed / 50f).coerceIn(0f, 2f)
@@ -304,11 +339,10 @@ class TouchpadViewModel @Inject constructor(
             dy *= factor
         }
 
-        
+        // Inversion
         if (_uiState.value.invertHorizontal) dx = -dx
         if (_uiState.value.invertVertical) dy = -dy
 
-        
         sendMove(dx, dy)
 
         _uiState.update {
@@ -322,13 +356,44 @@ class TouchpadViewModel @Inject constructor(
         lastY = y
     }
 
-    private fun handleTwoFingerGesture(pointers: List<Pair<Float, Float>>) {
-        if (!_uiState.value.twoFingerScroll) return
+    // ------------------------------------------------------------
+    // 2‑Finger: Scroll
+    // ------------------------------------------------------------
 
+    private fun handleTwoFingerGesture(pointers: List<Pair<Float, Float>>) {
         val centerX = (pointers[0].first + pointers[1].first) / 2f
         val centerY = (pointers[0].second + pointers[1].second) / 2f
+        val distance = hypot(
+            pointers[1].first - pointers[0].first,
+            pointers[1].second - pointers[0].second
+        )
 
-        if (lastScrollX != 0f || lastScrollY != 0f) {
+        if (_uiState.value.pinchToZoom && lastPinchDistance != 0f) {
+            val pinchDelta = distance - lastPinchDistance
+            if (abs(pinchDelta) > 20f) {
+                val command = if (pinchDelta > 0) {
+                    MessageTypes.COMMAND_ZOOM_IN
+                } else {
+                    MessageTypes.COMMAND_ZOOM_OUT
+                }
+                sendCommand(command)
+                vibrate(15)
+                _uiState.update {
+                    it.copy(
+                        lastGesture = if (pinchDelta > 0) TouchpadGesture.PINCH_OUT.displayName else TouchpadGesture.PINCH_IN.displayName,
+                        gestureHistory = (it.gestureHistory + if (pinchDelta > 0) {
+                            TouchpadGesture.PINCH_OUT.displayName
+                        } else {
+                            TouchpadGesture.PINCH_IN.displayName
+                        }).takeLast(10)
+                    )
+                }
+                lastPinchDistance = 0f
+                return
+            }
+        }
+
+        if (_uiState.value.twoFingerScroll && (lastScrollX != 0f || lastScrollY != 0f)) {
             var dx = (centerX - lastScrollX) * _uiState.value.scrollSpeed
             var dy = (centerY - lastScrollY) * _uiState.value.scrollSpeed
 
@@ -337,7 +402,7 @@ class TouchpadViewModel @Inject constructor(
                 dy = -dy
             }
 
-            
+            // Only scroll if movement is significant
             if (abs(dy) > 3) {
                 val scrollDelta = (dy / 10f).toInt()
                 if (scrollDelta != 0) {
@@ -354,61 +419,77 @@ class TouchpadViewModel @Inject constructor(
 
         lastScrollX = centerX
         lastScrollY = centerY
+        lastPinchDistance = distance
     }
 
+    // ------------------------------------------------------------
+    // 3‑Finger: Swipe (uses dedicated tracking vars)
+    // ------------------------------------------------------------
+
     private fun handleThreeFingerGesture(pointers: List<Pair<Float, Float>>) {
-        
         val centerX = pointers.map { it.first }.sum() / 3f
         val centerY = pointers.map { it.second }.sum() / 3f
 
-        
-        if (lastX != 0f || lastY != 0f) {
-            val dx = centerX - lastX
-            val dy = centerY - lastY
+        if (threeFingerLastX != 0f || threeFingerLastY != 0f) {
+            val dx = centerX - threeFingerLastX
+            val dy = centerY - threeFingerLastY
 
             if (abs(dx) > 50 || abs(dy) > 50) {
-                val gesture = when {
-                    abs(dx) > abs(dy) && dx > 0 -> TouchpadGesture.THREE_FINGER_SWIPE_RIGHT
-                    abs(dx) > abs(dy) && dx < 0 -> TouchpadGesture.THREE_FINGER_SWIPE_LEFT
-                    dy > 0 -> TouchpadGesture.THREE_FINGER_SWIPE_DOWN
-                    else -> TouchpadGesture.THREE_FINGER_SWIPE_UP
+                val (gesture, command) = when {
+                    abs(dx) > abs(dy) && dx > 0 -> TouchpadGesture.THREE_FINGER_SWIPE_RIGHT to MessageTypes.COMMAND_SWITCH_WINDOW
+                    abs(dx) > abs(dy) && dx < 0 -> TouchpadGesture.THREE_FINGER_SWIPE_LEFT to MessageTypes.COMMAND_SWITCH_WINDOW
+                    dy > 0 -> TouchpadGesture.THREE_FINGER_SWIPE_DOWN to MessageTypes.COMMAND_SHOW_DESKTOP
+                    else -> TouchpadGesture.THREE_FINGER_SWIPE_UP to MessageTypes.COMMAND_TASK_VIEW
                 }
 
-                sendGesture(gesture.displayName)
-                _uiState.update {
-                    it.copy(lastGesture = gesture.displayName)
-                }
+                sendCommand(command)
+                vibrate(20)
+                pushGestureHistory(gesture.displayName)
 
-                
-                lastX = 0f
-                lastY = 0f
+                // Reset to prevent repeated triggers
+                threeFingerLastX = 0f
+                threeFingerLastY = 0f
                 return
             }
         }
 
-        lastX = centerX
-        lastY = centerY
+        threeFingerLastX = centerX
+        threeFingerLastY = centerY
     }
+
+    // ------------------------------------------------------------
+    // 4‑Finger: Volume control (uses dedicated tracking var)
+    // ------------------------------------------------------------
 
     private fun handleFourFingerGesture(pointers: List<Pair<Float, Float>>) {
-        
+        val centerX = pointers.map { it.first }.sum() / 4f
         val centerY = pointers.map { it.second }.sum() / 4f
 
-        if (lastY != 0f) {
-            val dy = centerY - lastY
-            if (abs(dy) > 30) {
-                val action = if (dy > 0) "volume_down" else "volume_up"
-                sendCommand(action)
-                vibrate(20)
-                _uiState.update {
-                    it.copy(lastGesture = "4-Finger ${if (dy > 0) "Down" else "Up"}")
+        if (fourFingerLastX != 0f || fourFingerLastY != 0f) {
+            val dx = centerX - fourFingerLastX
+            val dy = centerY - fourFingerLastY
+            if (abs(dx) > 35 || abs(dy) > 35) {
+                val (gesture, command) = when {
+                    abs(dx) > abs(dy) && dx > 0 -> TouchpadGesture.FOUR_FINGER_SWIPE_RIGHT to MessageTypes.COMMAND_SWITCH_WINDOW
+                    abs(dx) > abs(dy) && dx < 0 -> TouchpadGesture.FOUR_FINGER_SWIPE_LEFT to MessageTypes.COMMAND_SWITCH_WINDOW
+                    dy > 0 -> TouchpadGesture.FOUR_FINGER_SWIPE_DOWN to MessageTypes.COMMAND_SHOW_DESKTOP
+                    else -> TouchpadGesture.FOUR_FINGER_SWIPE_UP to MessageTypes.COMMAND_TASK_VIEW
                 }
-                lastY = 0f
+                sendCommand(command)
+                vibrate(25)
+                pushGestureHistory(gesture.displayName)
+                fourFingerLastX = 0f
+                fourFingerLastY = 0f
                 return
             }
         }
-        lastY = centerY
+        fourFingerLastX = centerX
+        fourFingerLastY = centerY
     }
+
+    // ------------------------------------------------------------
+    // Tap & Long‑Press
+    // ------------------------------------------------------------
 
     fun processTap(x: Float, y: Float) {
         if (!_uiState.value.isActive || !_uiState.value.tapToClick) return
@@ -419,24 +500,19 @@ class TouchpadViewModel @Inject constructor(
         if (now - lastTapTime < tapDelay) {
             tapCount++
             if (tapCount >= 2) {
-                
+                // Double tap
                 sendClick("left")
                 tapCount = 0
-                _uiState.update {
-                    it.copy(lastGesture = TouchpadGesture.DOUBLE_TAP.displayName)
-                }
+                pushGestureHistory(TouchpadGesture.DOUBLE_TAP.displayName)
                 vibrate(40)
             }
         } else {
             tapCount = 1
-            
+            // Single tap
             sendClick("left")
-            _uiState.update {
-                it.copy(lastGesture = TouchpadGesture.TAP.displayName)
-            }
+            pushGestureHistory(TouchpadGesture.TAP.displayName)
             vibrate(20)
         }
-
         lastTapTime = now
     }
 
@@ -444,19 +520,22 @@ class TouchpadViewModel @Inject constructor(
         if (!_uiState.value.isActive) return
 
         sendClick("right")
-        _uiState.update {
-            it.copy(lastGesture = TouchpadGesture.LONG_PRESS.displayName)
-        }
+        pushGestureHistory(TouchpadGesture.LONG_PRESS.displayName)
         vibrate(50)
     }
 
     fun resetGestureState() {
+        // Reset all tracking variables
         lastX = 0f
         lastY = 0f
         lastScrollX = 0f
         lastScrollY = 0f
+        threeFingerLastX = 0f
+        threeFingerLastY = 0f
         lastPinchDistance = 0f
         lastRotation = 0f
+        fourFingerLastX = 0f
+        fourFingerLastY = 0f
         isGestureActive = false
 
         _uiState.update {
@@ -467,11 +546,10 @@ class TouchpadViewModel @Inject constructor(
         }
     }
 
-    
-    
-    
+    // ============================================================
+    // Settings Updaters (with persistence)
+    // ============================================================
 
-    
     private fun updateSensitivity(value: Float) {
         saveSetting("touchpad_sensitivity", value)
         _uiState.update { it.copy(sensitivity = value) }
@@ -512,7 +590,6 @@ class TouchpadViewModel @Inject constructor(
         _uiState.update { it.copy(invertHorizontal = newValue) }
     }
 
-    
     private fun updateScrollSpeed(value: Float) {
         saveSetting("touchpad_scroll_speed", value)
         _uiState.update { it.copy(scrollSpeed = value) }
@@ -554,7 +631,6 @@ class TouchpadViewModel @Inject constructor(
         _uiState.update { it.copy(scrollInertia = newValue) }
     }
 
-    
     private fun toggleTapToClick() {
         val newValue = !_uiState.value.tapToClick
         saveSetting("touchpad_tap_to_click", newValue)
@@ -596,7 +672,6 @@ class TouchpadViewModel @Inject constructor(
         _uiState.update { it.copy(rotateToRotate = newValue) }
     }
 
-    
     private fun toggleHapticFeedback() {
         val newValue = !_uiState.value.hapticFeedback
         saveSetting("touchpad_haptic_feedback", newValue)
@@ -609,9 +684,9 @@ class TouchpadViewModel @Inject constructor(
         _uiState.update { it.copy(showTouchPoints = newValue) }
     }
 
-    
-    
-    
+    // ============================================================
+    // Network Sending Helpers
+    // ============================================================
 
     private fun sendMove(dx: Float, dy: Float) {
         triggerEffect(TouchpadEffect.SendMove(dx, dy))
@@ -638,9 +713,18 @@ class TouchpadViewModel @Inject constructor(
         connectionManager.sendControl(command)
     }
 
-    
-    
-    
+    private fun pushGestureHistory(gesture: String) {
+        _uiState.update {
+            it.copy(
+                lastGesture = gesture,
+                gestureHistory = (it.gestureHistory + gesture).takeLast(10)
+            )
+        }
+    }
+
+    // ============================================================
+    // Navigation
+    // ============================================================
 
     private fun navigateBack() {
         triggerEffect(TouchpadEffect.NavigateBack)
@@ -650,9 +734,9 @@ class TouchpadViewModel @Inject constructor(
         triggerEffect(TouchpadEffect.NavigateToSettings)
     }
 
-    
-    
-    
+    // ============================================================
+    // Haptic Feedback
+    // ============================================================
 
     private fun vibrate(duration: Long) {
         if (!_uiState.value.hapticFeedback) return
@@ -668,15 +752,15 @@ class TouchpadViewModel @Inject constructor(
             if (!vibrator.hasVibrator()) return
             vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
         } catch (_: SecurityException) {
-            
+            // Permission not granted – ignore
         } catch (_: Exception) {
-            
+            // Other vibration errors – ignore
         }
     }
 
-    
-    
-    
+    // ============================================================
+    // Effects
+    // ============================================================
 
     private fun triggerEffect(effect: TouchpadEffect) {
         _effect.value = effect
@@ -685,6 +769,10 @@ class TouchpadViewModel @Inject constructor(
     fun clearEffect() {
         _effect.value = null
     }
+
+    // ============================================================
+    // Lifecycle
+    // ============================================================
 
     override fun onCleared() {
         super.onCleared()

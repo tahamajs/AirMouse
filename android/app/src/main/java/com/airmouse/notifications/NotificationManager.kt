@@ -1,4 +1,3 @@
-
 package com.airmouse.notifications
 
 import android.Manifest
@@ -24,19 +23,26 @@ class NotificationManager @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
     companion object {
-        
+        // Notification Channels
         const val CHANNEL_CONNECTION = "connection_channel"
         const val CHANNEL_ERROR = "error_channel"
         const val CHANNEL_GENERAL = "general_channel"
+        const val CHANNEL_GESTURE = "gesture_channel"
+        const val CHANNEL_PROXIMITY = "proximity_channel"
+        const val CHANNEL_CALIBRATION = "calibration_channel"
 
-        
+        // Notification IDs
         const val NOTIFICATION_CONNECTED = 1001
         const val NOTIFICATION_DISCONNECTED = 1002
         const val NOTIFICATION_ERROR = 1006
         const val NOTIFICATION_INFO = 1007
         const val NOTIFICATION_DISCOVERY = 1011
+        const val NOTIFICATION_GESTURE = 1012
+        const val NOTIFICATION_PROXIMITY = 1013
+        const val NOTIFICATION_CALIBRATION = 1014
+        const val NOTIFICATION_GENERIC = 1015
 
-        
+        // Priorities (legacy; modern usage uses importance via channels)
         const val PRIORITY_LOW = NotificationCompat.PRIORITY_LOW
         const val PRIORITY_DEFAULT = NotificationCompat.PRIORITY_DEFAULT
         const val PRIORITY_HIGH = NotificationCompat.PRIORITY_HIGH
@@ -47,14 +53,16 @@ class NotificationManager @Inject constructor(
 
     private val canPostNotifications: Boolean
         get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
 
     init {
         createNotificationChannels()
     }
 
-    
+    // ==========================================
+    // Channel Creation
+    // ==========================================
 
     private fun createNotificationChannels() {
         val channels = listOf(
@@ -77,10 +85,33 @@ class NotificationManager @Inject constructor(
                 name = "General",
                 importance = NotificationManager.IMPORTANCE_DEFAULT,
                 description = "General notifications"
+            ),
+            createChannel(
+                id = CHANNEL_GESTURE,
+                name = "Gestures",
+                importance = NotificationManager.IMPORTANCE_DEFAULT,
+                description = "Gesture detection notifications",
+                enableVibration = true
+            ),
+            createChannel(
+                id = CHANNEL_PROXIMITY,
+                name = "Proximity",
+                importance = NotificationManager.IMPORTANCE_HIGH,
+                description = "Proximity lock/unlock events",
+                enableVibration = true,
+                enableSound = true
+            ),
+            createChannel(
+                id = CHANNEL_CALIBRATION,
+                name = "Calibration",
+                importance = NotificationManager.IMPORTANCE_DEFAULT,
+                description = "Calibration progress and status"
             )
         )
 
-        channels.forEach { notificationManager.createNotificationChannel(it) }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            channels.forEach { notificationManager.createNotificationChannel(it) }
+        }
     }
 
     @Suppress("SameParameterValue")
@@ -90,7 +121,9 @@ class NotificationManager @Inject constructor(
         importance: Int,
         description: String,
         enableVibration: Boolean = true,
-        enableSound: Boolean = true
+        enableSound: Boolean = true,
+        enableLights: Boolean = false,
+        notificationLightColor: Int = 0
     ): NotificationChannel {
         return NotificationChannel(id, name, importance).apply {
             this.description = description
@@ -109,7 +142,11 @@ class NotificationManager @Inject constructor(
                 vibrationPattern = longArrayOf(0, 300, 100, 200)
             }
 
-            
+            if (enableLights) {
+                enableLights(true)
+                lightColor = notificationLightColor
+            }
+
             if (importance == NotificationManager.IMPORTANCE_HIGH) {
                 setBypassDnd(true)
             }
@@ -119,7 +156,9 @@ class NotificationManager @Inject constructor(
         }
     }
 
-    
+    // ==========================================
+    // Base Builder
+    // ==========================================
 
     private fun createBaseNotification(
         channelId: String,
@@ -150,7 +189,9 @@ class NotificationManager @Inject constructor(
             .setColor(context.getColor(R.color.primary))
     }
 
-    
+    // ==========================================
+    // Public Notification Methods
+    // ==========================================
 
     fun showConnectedNotification(serverName: String) {
         if (!canPostNotifications) return
@@ -169,7 +210,7 @@ class NotificationManager @Inject constructor(
         try {
             notificationManagerCompat.notify(NOTIFICATION_CONNECTED, notification)
         } catch (e: SecurityException) {
-            
+            // Permission not granted – ignore
         }
     }
 
@@ -182,7 +223,7 @@ class NotificationManager @Inject constructor(
             channelId = CHANNEL_GENERAL,
             title = "Nearby server found",
             message = "$serverName is available at $ip:$port using $protocol. Tap to open the discovery screen.",
-            icon = R.drawable.ic_connected,
+            icon = android.R.drawable.ic_menu_search,
             priority = PRIORITY_DEFAULT,
             intent = intent
         ).build()
@@ -190,7 +231,7 @@ class NotificationManager @Inject constructor(
         try {
             notificationManagerCompat.notify(NOTIFICATION_DISCOVERY, notification)
         } catch (e: SecurityException) {
-            
+            // Ignore
         }
     }
 
@@ -208,7 +249,7 @@ class NotificationManager @Inject constructor(
         try {
             notificationManagerCompat.notify(NOTIFICATION_DISCONNECTED, notification)
         } catch (e: SecurityException) {
-            
+            // Ignore
         }
     }
 
@@ -257,7 +298,7 @@ class NotificationManager @Inject constructor(
         try {
             notificationManagerCompat.notify(NOTIFICATION_INFO, notification)
         } catch (e: SecurityException) {
-            
+            // Ignore
         }
     }
 
@@ -274,7 +315,97 @@ class NotificationManager @Inject constructor(
         try {
             notificationManagerCompat.notify(NOTIFICATION_ERROR, notification)
         } catch (e: SecurityException) {
-            
+            // Ignore
         }
+    }
+
+    // ==========================================
+    // Additional Notification Types
+    // ==========================================
+
+    fun showGestureNotification(gesture: String, confidence: Float) {
+        if (!canPostNotifications) return
+        val message = String.format("Gesture '%s' detected (confidence: %.0f%%)", gesture, confidence * 100)
+        val notification = createBaseNotification(
+            channelId = CHANNEL_GESTURE,
+            title = "Gesture Detected",
+            message = message,
+            icon = R.drawable.ic_gesture,
+            priority = PRIORITY_DEFAULT
+        ).build()
+
+        try {
+            notificationManagerCompat.notify(NOTIFICATION_GESTURE, notification)
+        } catch (e: SecurityException) {
+            // Ignore
+        }
+    }
+
+    fun showProximityNotification(isNear: Boolean, distance: Float) {
+        if (!canPostNotifications) return
+        val title = if (isNear) "Device Near" else "Device Far"
+        val message = String.format("Distance: %.2f meters", distance)
+        val notification = createBaseNotification(
+            channelId = CHANNEL_PROXIMITY,
+            title = title,
+            message = message,
+            icon = R.drawable.ic_proximity,
+            priority = PRIORITY_HIGH
+        ).build()
+
+        try {
+            notificationManagerCompat.notify(NOTIFICATION_PROXIMITY, notification)
+        } catch (e: SecurityException) {
+            // Ignore
+        }
+    }
+
+    fun showCalibrationNotification(status: String, progress: Int) {
+        if (!canPostNotifications) return
+        val message = String.format("Progress: %d%% – %s", progress, status)
+        val notification = createBaseNotification(
+            channelId = CHANNEL_CALIBRATION,
+            title = "Calibration Status",
+            message = message,
+            icon = R.drawable.ic_calibration,
+            priority = PRIORITY_DEFAULT
+        ).apply {
+            setProgress(100, progress, progress < 0)
+        }.build()
+
+        try {
+            notificationManagerCompat.notify(NOTIFICATION_CALIBRATION, notification)
+        } catch (e: SecurityException) {
+            // Ignore
+        }
+    }
+
+    fun showInfoNotification(title: String, message: String, id: Int = NOTIFICATION_GENERIC) {
+        if (!canPostNotifications) return
+        val notification = createBaseNotification(
+            channelId = CHANNEL_GENERAL,
+            title = title,
+            message = message,
+            icon = R.drawable.ic_info,
+            priority = PRIORITY_DEFAULT
+        ).build()
+
+        try {
+            notificationManagerCompat.notify(id, notification)
+        } catch (e: SecurityException) {
+            // Ignore
+        }
+    }
+
+    // ==========================================
+    // Utility Methods
+    // ==========================================
+
+    fun cancelNotification(id: Int) {
+        notificationManagerCompat.cancel(id)
+    }
+
+    fun cancelAllNotifications() {
+        notificationManagerCompat.cancelAll()
     }
 }

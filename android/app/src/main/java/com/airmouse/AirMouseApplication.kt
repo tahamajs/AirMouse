@@ -13,6 +13,7 @@ import android.os.StrictMode
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration as WorkConfiguration
+import com.airmouse.BuildConfig // ✅ IMPORT ADDED
 import com.airmouse.utils.PreferencesManager
 import com.airmouse.utils.LogManager
 import dagger.hilt.android.HiltAndroidApp
@@ -202,88 +203,86 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
 
     private fun createNotificationChannels() {
         try {
-            val manager = getSystemService(NotificationManager::class.java)
-            if (manager != null) {
-                val channels = mutableListOf<NotificationChannel>()
+            val manager = getSystemService(NotificationManager::class.java) ?: return
+            val channels = mutableListOf<NotificationChannel>()
 
-                // Connection Channel
-                channels.add(
-                    NotificationChannel(
-                        "connection_channel",
-                        "Connection Status",
-                        NotificationManager.IMPORTANCE_LOW
-                    ).apply {
-                        description = "Shows connection status and network updates"
-                        setSound(null, null)
-                        enableVibration(false)
-                    }
-                )
+            // Connection Channel
+            channels.add(
+                NotificationChannel(
+                    "connection_channel",
+                    "Connection Status",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Shows connection status and network updates"
+                    setSound(null, null)
+                    enableVibration(false)
+                }
+            )
 
-                // Gesture Channel
-                channels.add(
-                    NotificationChannel(
-                        "gesture_channel",
-                        "Gesture Detection",
-                        NotificationManager.IMPORTANCE_DEFAULT
-                    ).apply {
-                        description = "Shows gesture detection notifications"
-                        enableVibration(true)
-                    }
-                )
+            // Gesture Channel
+            channels.add(
+                NotificationChannel(
+                    "gesture_channel",
+                    "Gesture Detection",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = "Shows gesture detection notifications"
+                    enableVibration(true)
+                }
+            )
 
-                // Proximity Channel
-                channels.add(
-                    NotificationChannel(
-                        "proximity_channel",
-                        "Proximity Lock",
-                        NotificationManager.IMPORTANCE_HIGH
-                    ).apply {
-                        description = "Shows proximity lock/unlock notifications"
-                        enableVibration(true)
-                        enableLights(true)
-                        lightColor = 0xFFFF5722.toInt()
-                    }
-                )
+            // Proximity Channel
+            channels.add(
+                NotificationChannel(
+                    "proximity_channel",
+                    "Proximity Lock",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Shows proximity lock/unlock notifications"
+                    enableVibration(true)
+                    enableLights(true)
+                    lightColor = 0xFFFF5722.toInt()
+                }
+            )
 
-                // Calibration Channel
-                channels.add(
-                    NotificationChannel(
-                        "calibration_channel",
-                        "Calibration",
-                        NotificationManager.IMPORTANCE_DEFAULT
-                    ).apply {
-                        description = "Shows calibration progress and status"
-                        enableVibration(false)
-                    }
-                )
+            // Calibration Channel
+            channels.add(
+                NotificationChannel(
+                    "calibration_channel",
+                    "Calibration",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = "Shows calibration progress and status"
+                    enableVibration(false)
+                }
+            )
 
-                // Voice Channel
-                channels.add(
-                    NotificationChannel(
-                        "voice_channel",
-                        "Voice Commands",
-                        NotificationManager.IMPORTANCE_LOW
-                    ).apply {
-                        description = "Shows voice command status"
-                        setSound(null, null)
-                    }
-                )
+            // Voice Channel
+            channels.add(
+                NotificationChannel(
+                    "voice_channel",
+                    "Voice Commands",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Shows voice command status"
+                    setSound(null, null)
+                }
+            )
 
-                // Update Channel
-                channels.add(
-                    NotificationChannel(
-                        "update_channel",
-                        "App Updates",
-                        NotificationManager.IMPORTANCE_DEFAULT
-                    ).apply {
-                        description = "Shows app update notifications"
-                        enableVibration(true)
-                    }
-                )
+            // Update Channel
+            channels.add(
+                NotificationChannel(
+                    "update_channel",
+                    "App Updates",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = "Shows app update notifications"
+                    enableVibration(true)
+                }
+            )
 
-                manager.createNotificationChannels(channels)
-                Timber.i("✅ Created ${channels.size} notification channels")
-            }
+            manager.createNotificationChannels(channels)
+            Timber.i("✅ Created ${channels.size} notification channels")
         } catch (e: Exception) {
             Timber.e(e, "Failed to create notification channels")
         }
@@ -395,7 +394,6 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
     fun getDeviceInfo(): String = "${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE})"
 }
 
-
 class CrashReportingTree : Timber.Tree() {
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
         if (priority == android.util.Log.ERROR) {
@@ -407,5 +405,6 @@ class CrashReportingTree : Timber.Tree() {
         } else if (priority == android.util.Log.WARN) {
             Timber.w("[$tag] $message")
         }
+        // Other priorities are ignored for this tree; you can add more if needed.
     }
 }

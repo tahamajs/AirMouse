@@ -16,14 +16,12 @@ import javax.inject.Singleton
 
 @Singleton
 class PreferencesManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : PreferencesManagerContract {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
     companion object {
         private const val PREF_NAME = "airmouse_prefs"
-
-        
         private const val DEFAULT_SENSITIVITY = 0.5f
         private const val DEFAULT_CLICK_THRESHOLD = 8f
         private const val DEFAULT_DOUBLE_CLICK_INTERVAL = 400L
@@ -203,6 +201,12 @@ class PreferencesManager @Inject constructor(
 
     fun isShowFps(): Boolean = getBoolean("show_fps", false)
     fun setShowFps(enabled: Boolean) = putBoolean("show_fps", enabled)
+
+    fun isVolumeKeyToggleEnabled(): Boolean = getBoolean("volume_key_toggle", true)
+    fun setVolumeKeyToggleEnabled(enabled: Boolean) = putBoolean("volume_key_toggle", enabled)
+
+    fun getControlMode(): String = getString("control_mode", "motion")
+    fun setControlMode(mode: String) = putString("control_mode", mode)
 
     
 

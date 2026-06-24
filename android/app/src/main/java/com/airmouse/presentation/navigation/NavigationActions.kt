@@ -1,9 +1,12 @@
-
+// app/src/main/java/com/airmouse/presentation/navigation/NavigationActions.kt
 package com.airmouse.presentation.navigation
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 
+/**
+ * Interface for navigation actions used by ViewModels and Composables.
+ */
 interface NavigationActions {
     fun navigateTo(route: String)
     fun navigateBack()
@@ -30,6 +33,9 @@ interface NavigationActions {
     fun navigateToTouchpadSettings()
 }
 
+/**
+ * Implementation of NavigationActions using NavController.
+ */
 class NavigationActionsImpl(
     private val navController: NavController
 ) : NavigationActions {

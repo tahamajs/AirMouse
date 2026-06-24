@@ -85,6 +85,7 @@ fun HomeScreen(
         mutableStateOf(homeUiState.userName.isBlank() && !homeViewModel.hasRegisteredUser())
     }
     var showCalibrationRequiredDialog by remember { mutableStateOf(false) }
+    var isReconnecting by remember { mutableStateOf(false) }
 
     val userName = homeUiState.userName.ifBlank { pendingUserName }
     val greetingText = if (userName.isNotBlank()) "Welcome back, $userName!" else "Welcome to Air Mouse Pro!"
@@ -92,10 +93,10 @@ fun HomeScreen(
     val selectedProtocol = homeUiState.selectedProtocol
     val isConnectionActive = homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.CONNECTED
     val isConnectionPending = homeUiState.isConnecting
+    val isAutoConnectEnabled = homeUiState.isAutoConnectEnabled
+
     val approvalCountdownText = remember(isConnectionPending, approvalCountdownMs) {
-        if (!isConnectionPending || approvalCountdownMs <= 0L) {
-            ""
-        } else {
+        if (!isConnectionPending || approvalCountdownMs <= 0L) "" else {
             val seconds = (approvalCountdownMs + 999) / 1000
             "Server approval timeout in ${seconds}s"
         }
@@ -181,16 +182,30 @@ fun HomeScreen(
         }
     }
 
-    fun connectMouse() {
-        if (!isRegistered) {
-            showRegistrationDialog = true
-            return
+    LaunchedEffect(homeUiState.isAutoConnectEnabled, homeUiState.connectionStatus, homeUiState.serverIp, homeUiState.serverPort) {
+        if (
+            homeUiState.isAutoConnectEnabled &&
+            homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.DISCONNECTED &&
+            homeUiState.serverIp.isNotBlank() &&
+            homeUiState.serverPort > 0
+        ) {
+            delay(800)
+            if (
+                homeUiState.isAutoConnectEnabled &&
+                homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.DISCONNECTED
+            ) {
+                homeViewModel.addLogMessage("Auto-connecting to ${homeUiState.serverIp}:${homeUiState.serverPort}")
+                homeViewModel.connect()
+            }
         }
-        homeViewModel.connect()
     }
 
-    fun disconnectMouse() {
-        homeViewModel.disconnect()
+    fun toggleConnection() {
+        if (isConnectionActive) {
+            homeViewModel.disconnect()
+        } else {
+            homeViewModel.connect()
+        }
     }
 
     // Permission launcher
@@ -243,7 +258,7 @@ fun HomeScreen(
                 exit = fadeOut() + scaleOut()
             ) {
                 FloatingActionButton(
-                    onClick = { disconnectMouse() },
+                    onClick = { homeViewModel.disconnect() },
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError,
                     shape = CircleShape,
@@ -260,11 +275,45 @@ fun HomeScreen(
                 .background(if (quietConnectedMode) Color(0xFF05070B) else MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
+            // Unified control button (placed at the top of the content, not inside LazyColumn)
+            UnifiedControlButton(
+                viewModel = homeViewModel,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 8.dp)
+            )
+
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Display the current control mode from the state
+                item {
+                    Text(
+                        text = "Mode: ${homeUiState.controlMode.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+
+                // ==========================================
+                // Connection Toggle Button (Prominent)
+                // ==========================================
+                item {
+                    ConnectionToggleButton(
+                        isAutoConnectEnabled = isAutoConnectEnabled,
+                        onToggleAutoConnect = { homeViewModel.toggleAutoConnect() },
+                        isConnected = isConnectionActive,
+                        isConnecting = isConnectionPending,
+                        statusText = connectionStatusText,
+                        accentColor = statusAccent,
+                        onToggle = { toggleConnection() }
+                    )
+                }
+
                 item {
                     StateOverviewBanner(
                         isConnected = isConnectionActive,
@@ -313,11 +362,9 @@ fun HomeScreen(
                         totalSensors = homeUiState.totalSensors,
                         progress = if (homeUiState.totalSensors > 0) {
                             homeUiState.sensorsCalibrated.toFloat() / homeUiState.totalSensors.toFloat()
-                        } else {
-                            0f
-                        },
+                        } else 0f,
                         onOpenCalibration = { navigationActions.navigateToCalibration() },
-                        onConnect = { connectMouse() }
+                        onConnect = { toggleConnection() }
                     )
                 }
 
@@ -423,26 +470,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Connection Status
-                item {
-                    ConnectionStatusCard(
-                        isConnected = isConnectionActive,
-                        isConnecting = isConnectionPending,
-                        serverName = serverName,
-                        serverIp = serverIp,
-                        ping = ping,
-                        statusText = connectionStatusText,
-                        statusAccent = statusAccent,
-                        onDisconnect = { disconnectMouse() },
-                        onReconnect = {
-                            scope.launch {
-                                delay(2000)
-                                connectMouse()
-                            }
-                        }
-                    )
-                }
-
                 // Connection Controls
                 item {
                     if (!isRegistered) {
@@ -473,7 +500,7 @@ fun HomeScreen(
                             homeViewModel.updatePort(it)
                         },
                         onProtocolChange = { homeViewModel.updateConnectionProtocol(it) },
-                        onConnect = { connectMouse() },
+                        onConnect = { toggleConnection() },
                         onScanQr = {
                             if (ContextCompat.checkSelfPermission(
                                     context,
@@ -508,18 +535,18 @@ fun HomeScreen(
                 }
 
                 item {
-                ModuleHubCard(
-                    isRegistered = isRegistered,
-                    isCalibrated = homeUiState.isCalibrated,
-                    onModuleClick = { route ->
-                        if (!isRegistered) {
-                            showRegistrationDialog = true
-                        } else if (!homeUiState.isCalibrated && route != Destinations.Calibration.route) {
-                            showCalibrationRequiredDialog = true
-                        } else {
-                            navigationActions.navigateTo(route)
+                    ModuleHubCard(
+                        isRegistered = isRegistered,
+                        isCalibrated = homeUiState.isCalibrated,
+                        onModuleClick = { route ->
+                            if (!isRegistered) {
+                                showRegistrationDialog = true
+                            } else if (!homeUiState.isCalibrated && route != Destinations.Calibration.route) {
+                                showCalibrationRequiredDialog = true
+                            } else {
+                                navigationActions.navigateTo(route)
+                            }
                         }
-                    }
                     )
                 }
 
@@ -692,6 +719,274 @@ fun HomeScreen(
     }
 }
 
+// ==========================================
+// UNIFIED CONTROL BUTTON
+// ==========================================
+
+@Composable
+fun UnifiedControlButton(
+    viewModel: HomeViewModel,
+    modifier: Modifier = Modifier
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isConnected = uiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.CONNECTED
+    val isActive = uiState.isActive
+    val isConnecting = uiState.isConnecting
+
+    val buttonText = when {
+        isConnecting -> "Connecting..."
+        isConnected && isActive -> "🟢 Stop Air Mouse"
+        isConnected && !isActive -> "🔴 Start Air Mouse"
+        else -> "📡 Connect to Server"
+    }
+
+    val buttonColor = when {
+        isConnecting -> MaterialTheme.colorScheme.secondary
+        isConnected && isActive -> MaterialTheme.colorScheme.error
+        isConnected && !isActive -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    Button(
+        onClick = {
+            when {
+                isConnecting -> { /* Do nothing, already connecting */ }
+                isConnected && isActive -> viewModel.stopAirMouse()
+                isConnected && !isActive -> viewModel.startAirMouse()
+                else -> viewModel.connect()
+            }
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        enabled = !isConnecting,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = buttonColor,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        if (isConnecting) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        Text(
+            buttonText,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+// ==========================================
+// CONNECTION TOGGLE BUTTON
+// ==========================================
+
+@Composable
+fun ConnectionToggleButton(
+    isConnected: Boolean,
+    isConnecting: Boolean,
+    isAutoConnectEnabled: Boolean,
+    statusText: String,
+    accentColor: Color,
+    onToggle: () -> Unit,
+    onToggleAutoConnect: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isConnected) {
+                Color(0xFF10B981).copy(alpha = 0.12f)
+            } else if (isAutoConnectEnabled) {
+                Color(0xFFF59E0B).copy(alpha = 0.12f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        ),
+        shape = RoundedCornerShape(24.dp),
+        border = if (isConnected) {
+            BorderStroke(2.dp, Color(0xFF10B981))
+        } else if (isAutoConnectEnabled) {
+            BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f))
+        } else null
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Status row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                AnimatedStatusDot(
+                    isConnected = isConnected,
+                    isConnecting = isConnecting,
+                    isAutoConnectEnabled = isAutoConnectEnabled
+                )
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = when {
+                            isConnected -> "Connected"
+                            isConnecting -> "Connecting..."
+                            isAutoConnectEnabled -> "Auto-reconnect ON"
+                            else -> "Disconnected"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = if (isConnected) Color(0xFF10B981) else if (isAutoConnectEnabled) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = statusText,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = if (isAutoConnectEnabled) "Auto ON" else "Auto OFF",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isAutoConnectEnabled) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Switch(
+                        checked = isAutoConnectEnabled,
+                        onCheckedChange = { onToggleAutoConnect() },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF10B981),
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                }
+            }
+
+            // Main toggle button
+            Button(
+                onClick = onToggle,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = when {
+                        isConnected -> Color(0xFFEF4444)
+                        isConnecting -> Color(0xFFF59E0B)
+                        else -> Color(0xFF10B981)
+                    },
+                    contentColor = Color.White,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                enabled = !isConnecting
+            ) {
+                if (isConnecting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Connecting...")
+                } else if (isConnected) {
+                    Icon(Icons.Default.Close, contentDescription = "Disconnect")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Disconnect")
+                } else {
+                    Icon(Icons.Default.PlayArrow, contentDescription = "Connect")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Connect")
+                }
+            }
+
+            // Status hint
+            if (!isConnected && isAutoConnectEnabled) {
+                Text(
+                    text = "Auto-reconnect is ON. Disconnect closes this session, then reconnects automatically.",
+                    fontSize = 11.sp,
+                    color = Color(0xFFF59E0B),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else if (!isConnected && !isAutoConnectEnabled) {
+                Text(
+                    text = "Tap Connect to start a session.",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else if (isConnected) {
+                Text(
+                    text = "Connected to server. Mouse control is active.",
+                    fontSize = 11.sp,
+                    color = Color(0xFF10B981),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AnimatedStatusDot(
+    isConnected: Boolean,
+    isConnecting: Boolean,
+    isAutoConnectEnabled: Boolean
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "statusDot")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
+    val color = when {
+        isConnected -> Color(0xFF10B981)
+        isConnecting -> Color(0xFFF59E0B)
+        isAutoConnectEnabled -> Color(0xFFF59E0B)
+        else -> Color(0xFFEF4444)
+    }
+
+    Box(
+        modifier = Modifier
+            .size(16.dp)
+            .scale(if (isConnected || isConnecting) pulse else 1f),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(color, CircleShape)
+        )
+        // Glow effect
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .background(
+                    color = color.copy(alpha = 0.2f),
+                    shape = CircleShape
+                )
+        )
+    }
+}
+
+// ==========================================
+// QUIET CONNECTED MODE OVERLAY
+// ==========================================
+
 @Composable
 private fun ConnectedQuietModeOverlay(
     connectionStatusText: String,
@@ -739,6 +1034,10 @@ private fun ConnectedQuietModeOverlay(
     }
 }
 
+// ==========================================
+// TELEMETRY CARD
+// ==========================================
+
 @Composable
 private fun SensorTelemetryCard(
     roll: Float,
@@ -751,9 +1050,7 @@ private fun SensorTelemetryCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(
@@ -1205,7 +1502,7 @@ fun HomeTopBar(
         modifier = Modifier.fillMaxWidth()
     ) {
         TopAppBar(
-        title = {
+            title = {
                 Column {
                     Text(
                         "Air Mouse Pro",
@@ -1222,109 +1519,109 @@ fun HomeTopBar(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-        },
-        navigationIcon = {
-            IconButton(onClick = onDrawerClick) {
-                Icon(Icons.Default.Menu, contentDescription = "Open menu")
-            }
-        },
-        actions = {
-            IconButton(onClick = onSearchClick) {
-                Icon(Icons.Default.Search, contentDescription = "Search devices")
-            }
-            IconButton(onClick = onMenuClick) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More options")
-            }
-            DropdownMenu(
-                expanded = overflowMenuExpanded,
-                onDismissRequest = onMenuDismiss
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Touchpad") },
-                    leadingIcon = { Icon(Icons.Default.TouchApp, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.Touchpad.route)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Calibration") },
-                    leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateToCalibration()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Gesture Studio") },
-                    leadingIcon = { Icon(Icons.Default.Gesture, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.GestureStudio.route)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Network Discovery") },
-                    leadingIcon = { Icon(Icons.Default.Wifi, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.NetworkDiscovery.route)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Server Logs") },
-                    leadingIcon = { Icon(Icons.Default.List, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.ServerLogs.route)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Profiles") },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.Profiles.route)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Themes") },
-                    leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.Themes.route)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Settings") },
-                    leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.Settings.route)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Help") },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.Help.route)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("About") },
-                    leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
-                    onClick = {
-                        onMenuDismiss()
-                        navigationActions.navigateTo(Destinations.About.route)
-                    }
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent,
-            scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
-        )
+            },
+            navigationIcon = {
+                IconButton(onClick = onDrawerClick) {
+                    Icon(Icons.Default.Menu, contentDescription = "Open menu")
+                }
+            },
+            actions = {
+                IconButton(onClick = onSearchClick) {
+                    Icon(Icons.Default.Search, contentDescription = "Search devices")
+                }
+                IconButton(onClick = onMenuClick) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                }
+                DropdownMenu(
+                    expanded = overflowMenuExpanded,
+                    onDismissRequest = onMenuDismiss
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Touchpad") },
+                        leadingIcon = { Icon(Icons.Default.TouchApp, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.Touchpad.route)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Calibration") },
+                        leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateToCalibration()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Gesture Studio") },
+                        leadingIcon = { Icon(Icons.Default.Gesture, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.GestureStudio.route)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Network Discovery") },
+                        leadingIcon = { Icon(Icons.Default.Wifi, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.NetworkDiscovery.route)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Server Logs") },
+                        leadingIcon = { Icon(Icons.Default.List, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.ServerLogs.route)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Profiles") },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.Profiles.route)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Themes") },
+                        leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.Themes.route)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Settings") },
+                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.Settings.route)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Help") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.Help.route)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("About") },
+                        leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                        onClick = {
+                            onMenuDismiss()
+                            navigationActions.navigateTo(Destinations.About.route)
+                        }
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
+            )
         )
     }
 }
@@ -1382,51 +1679,51 @@ private fun StateOverviewBanner(
                 }
                 AssistChip(
                     onClick = onOpenCalibration,
-                    label = { Text(if (isCalibrated) "Recalibrate" else "Calibrate") }
-                )
+                    label = { Text(if (isCalibrated) "Recalibrate" else "Calibrate") })
             }
+        }
 
+        Text(
+            text = detail,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        if (approvalCountdownText.isNotBlank()) {
             Text(
-                text = detail,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            if (approvalCountdownText.isNotBlank()) {
-                Text(
-                    text = approvalCountdownText,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFF59E0B)
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                FilterChip(
-                    selected = isCalibrated,
-                    onClick = onOpenCalibration,
-                    label = { Text("Calibration") }
-                )
-                FilterChip(
-                    selected = isConnected,
-                    onClick = onOpenNetwork,
-                    label = { Text("Network") }
-                )
-                FilterChip(
-                    selected = isConnecting,
-                    onClick = { },
-                    label = { Text("Session") }
-                )
-            }
-
-            Text(
-                text = "Target: $serverIp:$serverPort",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = approvalCountdownText,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFFF59E0B)
             )
         }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            FilterChip(
+                selected = isCalibrated,
+                onClick = onOpenCalibration,
+                label = { Text("Calibration") }
+            )
+            FilterChip(
+                selected = isConnected,
+                onClick = onOpenNetwork,
+                label = { Text("Network") }
+            )
+            FilterChip(
+                selected = isConnecting,
+                onClick = { },
+                label = { Text("Session") }
+            )
+        }
+
+        Text(
+            text = "Target: $serverIp:$serverPort",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
+
 
 @Composable
 private fun ScreenSleepHintCard(
@@ -1581,17 +1878,17 @@ private fun AccessGateCard(
                     Text(missingLabel, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
                 }
             }
-                Text(
-                    text = if (isRegistered && isCalibrated && isConnected) {
-                        "The full control surface is approved and connected."
-                    } else if (!isConnected) {
-                        "Waiting for approval from the desktop."
-                    } else {
-                        "The app will guide the user through setup, calibration, and desktop approval before enabling the control features."
-                    },
-                    color = Color.White.copy(alpha = 0.82f),
-                    fontSize = 13.sp
-                )
+            Text(
+                text = if (isRegistered && isCalibrated && isConnected) {
+                    "The full control surface is approved and connected."
+                } else if (!isConnected) {
+                    "Waiting for approval from the desktop."
+                } else {
+                    "The app will guide the user through setup, calibration, and desktop approval before enabling the control features."
+                },
+                color = Color.White.copy(alpha = 0.82f),
+                fontSize = 13.sp
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!isRegistered) {
                     FilledTonalButton(onClick = onRegister) { Text("Approve user") }
@@ -1724,366 +2021,6 @@ fun GreetingCard(text: String, userName: String, onEditProfile: () -> Unit) {
             IconButton(onClick = onEditProfile) {
                 Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
             }
-        }
-    }
-}
-
-// ==========================================
-// CONNECTION STATUS CARD
-// ==========================================
-
-@Composable
-fun ConnectionStatusCard(
-    isConnected: Boolean,
-    isConnecting: Boolean,
-    serverName: String,
-    serverIp: String,
-    ping: Int,
-    statusText: String,
-    statusAccent: Color,
-    onDisconnect: () -> Unit,
-    onReconnect: () -> Unit
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isConnected) statusAccent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .scale(if (isConnected) pulse else 1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
-                    contentDescription = null,
-                    tint = if (isConnected) statusAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(48.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = if (isConnected) "Connected to $serverName" else "Waiting for approval",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            if (isConnected) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(onClick = { }, label = { Text(serverIp) })
-                    AssistChip(onClick = { }, label = { Text("${ping}ms ping") })
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = onDisconnect,
-                    modifier = Modifier.fillMaxWidth(0.6f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Disconnect")
-                }
-            } else {
-                Text(
-                text = if (isConnecting) "Server is approving the connection. The phone is ready and holding the session." else "Tap to connect or scan QR to start a session.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = onReconnect,
-                    modifier = Modifier.fillMaxWidth(0.6f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (isConnecting) "Approving..." else "Retry")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun LiveMotionCenterCard(
-    sensorState: HomeViewModel.SensorState,
-    uiState: HomeViewModel.HomeUiState,
-    accent: Color
-) {
-    val motionLevel = (sensorState.currentSpeed * 12f).coerceIn(0f, 1f)
-    val motionX = sensorState.lastDx.coerceIn(-24f, 24f)
-    val motionY = sensorState.lastDy.coerceIn(-24f, 24f)
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .background(accent, CircleShape)
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Live motion center", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Shows the live cursor-driving sensor values used by the app.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                AssistChip(
-                    onClick = { },
-                    label = { Text(if (sensorState.isActive) "Tracking" else "Idle") }
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), RoundedCornerShape(20.dp))
-                    .padding(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .align(Alignment.Center)
-                        .offset(x = motionX.dp, y = motionY.dp)
-                        .scale(0.8f + motionLevel * 0.7f)
-                        .background(accent, RoundedCornerShape(8.dp))
-                )
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MiniMetricChip(label = "Speed", value = String.format(Locale.US, "%.2f", sensorState.currentSpeed))
-                MiniMetricChip(label = "FPS", value = sensorState.fps.toString())
-                MiniMetricChip(label = "Mode", value = uiState.controlMode)
-                MiniMetricChip(label = "Battery", value = "${uiState.batteryLevel}%")
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SensorAxisCard(label = "Dx", value = sensorState.lastDx, color = Color(0xFF38BDF8), modifier = Modifier.weight(1f))
-                SensorAxisCard(label = "Dy", value = sensorState.lastDy, color = Color(0xFF22C55E), modifier = Modifier.weight(1f))
-                SensorAxisCard(label = "Samples", value = sensorState.sampleCount.toFloat(), color = Color(0xFFF59E0B), modifier = Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun DomainSummaryCard(
-    uiState: HomeViewModel.HomeUiState,
-    isConnected: Boolean
-) {
-    val profile = uiState.mouseProfile
-    val prefs = uiState.appPreferences
-    val stats = uiState.mouseStatistics
-    val connection = uiState.connectionConfig
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(Icons.Default.Dataset, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Domain model snapshot", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text(
-                        "Data and domain objects feeding the UI.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                }
-                AssistChip(onClick = { }, label = { Text(if (isConnected) "Live" else "Saved") })
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                MiniMetricChip("Sensitivity", String.format(Locale.US, "%.2f", profile.sensitivity))
-                MiniMetricChip("Clicks", stats.totalClicks.toString())
-                MiniMetricChip("Scrolls", stats.totalScrolls.toString())
-                MiniMetricChip("Theme", prefs.theme)
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                MiniMetricChip("IP", connection.ip.ifBlank { "unset" })
-                MiniMetricChip("Port", connection.port.toString())
-                MiniMetricChip("Lang", prefs.language)
-                MiniMetricChip("Auto connect", if (connection.autoReconnect) "On" else "Off")
-            }
-        }
-    }
-}
-
-@Composable
-private fun ServiceHubCard(
-    presentationState: PresentationModeService.PresentationState,
-    transferState: FileTransferService.TransferState,
-    transferFolderPath: String,
-    onTogglePresentation: () -> Unit,
-    onClearPresentationOverlay: () -> Unit,
-    onClearTransfers: () -> Unit,
-    isConnected: Boolean,
-    accent: Color
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .background(accent, CircleShape)
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Service hub",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Live presentation tools and file transfer state are wired into the dashboard.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                AssistChip(
-                    onClick = { },
-                    label = { Text(if (isConnected) "Connected" else "Waiting for approval") }
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MiniMetricChip("Presentation", if (presentationState.isActive) "Live" else "Idle")
-                MiniMetricChip("Slides", if (presentationState.totalSlides > 0) "${presentationState.currentSlide}/${presentationState.totalSlides}" else "0/0")
-                MiniMetricChip("Annotations", presentationState.annotations.size.toString())
-                MiniMetricChip("Transfers", transferState.queueSize.toString())
-            }
-
-            Text(
-                text = if (presentationState.isActive) {
-                    "Presentation mode is active for ${presentationState.elapsedTime.toReadableDuration()} with ${presentationState.annotations.size} annotations."
-                } else {
-                    "Presentation mode is ready to turn on from this screen."
-                },
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Text(
-                text = "Transfer folder: $transferFolderPath",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-            )
-
-            if (transferState.currentTransfer != null) {
-                Text(
-                    text = "Active transfer: ${transferState.currentTransfer.fileName} (${transferState.currentTransfer.progress.toInt()}%)",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = onTogglePresentation,
-                    colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color.White)
-                ) {
-                    Text(if (presentationState.isActive) "Stop Presentation" else "Start Presentation")
-                }
-                OutlinedButton(onClick = onClearPresentationOverlay) {
-                    Text("Clear Overlay")
-                }
-                OutlinedButton(
-                    onClick = onClearTransfers,
-                    enabled = transferState.completedTransfers.isNotEmpty()
-                ) {
-                    Text("Clear Transfers")
-                }
-            }
-
-            if (transferState.completedTransfers.isNotEmpty()) {
-                Text(
-                    text = "Completed transfers: ${transferState.completedTransfers.size}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MiniMetricChip(label: String, value: String) {
-    Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
-        Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-            Text(value, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-        }
-    }
-}
-
-@Composable
-private fun SensorAxisCard(
-    label: String,
-    value: Float,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f))) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(label, color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(String.format(Locale.US, "%.2f", value), fontFamily = FontFamily.Monospace, fontSize = 16.sp)
         }
     }
 }
@@ -2237,7 +2174,7 @@ fun ConnectionControlsCard(
 }
 
 // ==========================================
-// QUICK ACTIONS
+// QUICK ACTIONS ROW
 // ==========================================
 
 @Composable
@@ -2615,4 +2552,257 @@ private fun Long.toReadableDuration(): String {
     val minutes = (totalSeconds % 3600L) / 60L
     val seconds = totalSeconds % 60L
     return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+}
+
+// ==========================================
+// LIVE MOTION CENTER CARD
+// ==========================================
+
+@Composable
+fun LiveMotionCenterCard(
+    sensorState: HomeViewModel.SensorState,
+    uiState: HomeViewModel.HomeUiState,
+    accent: Color
+) {
+    val motionLevel = (sensorState.currentSpeed * 12f).coerceIn(0f, 1f)
+    val motionX = sensorState.lastDx.coerceIn(-24f, 24f)
+    val motionY = sensorState.lastDy.coerceIn(-24f, 24f)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(accent, CircleShape)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Live motion center", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Shows the live cursor-driving sensor values used by the app.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                AssistChip(
+                    onClick = { },
+                    label = { Text(if (sensorState.isActive) "Tracking" else "Idle") }
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), RoundedCornerShape(20.dp))
+                    .padding(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .align(Alignment.Center)
+                        .offset(x = motionX.dp, y = motionY.dp)
+                        .scale(0.8f + motionLevel * 0.7f)
+                        .background(accent, RoundedCornerShape(8.dp))
+                )
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MiniMetricChip(label = "Speed", value = String.format(Locale.US, "%.2f", sensorState.currentSpeed))
+                MiniMetricChip(label = "FPS", value = sensorState.fps.toString())
+                MiniMetricChip(label = "Mode", value = uiState.controlMode)
+                MiniMetricChip(label = "Battery", value = "${uiState.batteryLevel}%")
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                SensorAxisCard(label = "Dx", value = sensorState.lastDx, color = Color(0xFF38BDF8), modifier = Modifier.weight(1f))
+                SensorAxisCard(label = "Dy", value = sensorState.lastDy, color = Color(0xFF22C55E), modifier = Modifier.weight(1f))
+                SensorAxisCard(label = "Samples", value = sensorState.sampleCount.toFloat(), color = Color(0xFFF59E0B), modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniMetricChip(label: String, value: String) {
+    Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
+        Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            Text(value, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun SensorAxisCard(
+    label: String,
+    value: Float,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f))) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(label, color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(String.format(Locale.US, "%.2f", value), fontFamily = FontFamily.Monospace, fontSize = 16.sp)
+        }
+    }
+}
+
+@Composable
+private fun DomainSummaryCard(
+    uiState: HomeViewModel.HomeUiState,
+    isConnected: Boolean
+) {
+    val profile = uiState.mouseProfile
+    val prefs = uiState.appPreferences
+    val stats = uiState.mouseStatistics
+    val connection = uiState.connectionConfig
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Default.Dataset, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Domain model snapshot", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text(
+                        "Data and domain objects feeding the UI.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+                AssistChip(onClick = { }, label = { Text(if (isConnected) "Live" else "Saved") })
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                MiniMetricChip("Sensitivity", String.format(Locale.US, "%.2f", profile.sensitivity))
+                MiniMetricChip("Clicks", stats.totalClicks.toString())
+                MiniMetricChip("Scrolls", stats.totalScrolls.toString())
+                MiniMetricChip("Theme", prefs.theme)
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                MiniMetricChip("IP", connection.ip.ifBlank { "unset" })
+                MiniMetricChip("Port", connection.port.toString())
+                MiniMetricChip("Lang", prefs.language)
+                MiniMetricChip("Auto connect", if (connection.autoReconnect) "On" else "Off")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServiceHubCard(
+    presentationState: PresentationModeService.PresentationState,
+    transferState: FileTransferService.TransferState,
+    transferFolderPath: String,
+    onTogglePresentation: () -> Unit,
+    onClearPresentationOverlay: () -> Unit,
+    onClearTransfers: () -> Unit,
+    isConnected: Boolean,
+    accent: Color
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(accent, CircleShape)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Service hub",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Live presentation tools and file transfer state are wired into the dashboard.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                AssistChip(
+                    onClick = { },
+                    label = { Text(if (isConnected) "Connected" else "Waiting for approval") }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MiniMetricChip("Presentation", if (presentationState.isActive) "Live" else "Idle")
+                MiniMetricChip("Slides", if (presentationState.totalSlides > 0) "${presentationState.currentSlide}/${presentationState.totalSlides}" else "0/0")
+                MiniMetricChip("Annotations", presentationState.annotations.size.toString())
+                MiniMetricChip("Transfers", transferState.queueSize.toString())
+            }
+
+            Text(
+                text = if (presentationState.isActive) {
+                    "Presentation mode is active for ${presentationState.elapsedTime.toReadableDuration()} with ${presentationState.annotations.size} annotations."
+                } else {
+                    "Presentation mode is ready to turn on from this screen."
+                },
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Text(
+                text = "Transfer folder: $transferFolderPath",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp
+            )
+
+            if (transferState.currentTransfer != null) {
+                Text(
+                    text = "Active transfer: ${transferState.currentTransfer.fileName} (${transferState.currentTransfer.progress.toInt()}%)",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onTogglePresentation,
+                    colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color.White)
+                ) {
+                    Text(if (presentationState.isActive) "Stop Presentation" else "Start Presentation")
+                }
+                OutlinedButton(onClick = onClearPresentationOverlay) {
+                    Text("Clear Overlay")
+                }
+                OutlinedButton(
+                    onClick = onClearTransfers,
+                    enabled = transferState.completedTransfers.isNotEmpty()
+                ) {
+                    Text("Clear Transfers")
+                }
+            }
+
+            if (transferState.completedTransfers.isNotEmpty()) {
+                Text(
+                    text = "Completed transfers: ${transferState.completedTransfers.size}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
 }

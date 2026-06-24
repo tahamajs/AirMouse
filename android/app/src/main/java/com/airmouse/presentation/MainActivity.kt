@@ -1,4 +1,3 @@
-
 package com.airmouse.presentation
 
 import android.content.Intent
@@ -10,7 +9,6 @@ import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -28,40 +26,45 @@ import com.airmouse.presentation.navigation.Destinations
 import com.airmouse.presentation.navigation.NavigationActionsImpl
 import com.airmouse.presentation.theme.AirMouseTheme
 import com.airmouse.presentation.ui.themes.*
-import com.airmouse.presentation.ui.themes.AccentColor
-import com.airmouse.presentation.ui.themes.LocalThemeColors
-import com.airmouse.presentation.ui.themes.ProvideThemeColors
-import com.airmouse.presentation.ui.themes.getThemeColorScheme
 import com.airmouse.ui.onboarding.OnboardingActivity
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import javax.inject.Inject
 
+/**
+ * Main entry point for the Air Mouse Android app.
+ * Handles splash screen, onboarding redirection, theme setup, and navigation.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var prefs: PreferencesManager
 
+    // Keeps the splash screen visible while loading resources.
     private var keepSplashOnScreen = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Install splash screen and keep it up while we load.
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { keepSplashOnScreen }
 
         super.onCreate(savedInstanceState)
 
-        
+        // If user hasn't completed onboarding, go directly to onboarding flow.
         if (!prefs.isOnboardingCompleted()) {
             keepSplashOnScreen = false
             startOnboarding()
             return
         }
 
+        // Set up system bars and window flags.
         setupWindow()
 
+        // Set the Compose content.
         setContent {
+            // Read theme and accent preferences.
             val themeId = prefs.getString("theme", "system")
             val accentName = prefs.getString("accent_color", "ORANGE")
             val accentColor = try {
@@ -70,23 +73,24 @@ class MainActivity : ComponentActivity() {
                 AccentColor.ORANGE
             }
 
+            // Determine dark mode based on theme selection.
             val isDarkTheme = when (themeId) {
                 "light" -> false
                 "high_contrast" -> false
                 else -> true
             }
 
-            
+            // Build the color scheme.
             val themeColors = remember(themeId, accentColor) {
                 getThemeColorScheme(themeId, accentColor)
             }
 
-            
+            // Update system bars (status & navigation) to match the theme.
             LaunchedEffect(themeId) {
                 updateSystemBarsForTheme(themeId)
             }
 
-            
+            // Provide the theme colors to the rest of the app via CompositionLocal.
             ProvideThemeColors(themeColors) {
                 AirMouseTheme(
                     darkTheme = isDarkTheme,
@@ -97,11 +101,13 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = themeColors.background
                     ) {
+                        // Hide splash screen after a short delay.
                         LaunchedEffect(Unit) {
                             delay(500)
                             keepSplashOnScreen = false
                         }
 
+                        // The main navigation host.
                         MainScreen(startDestination = Destinations.Home.route)
                     }
                 }
@@ -109,6 +115,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Configures the window for edge‑to‑edge display and transparent system bars.
+     */
     private fun setupWindow() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -119,12 +128,20 @@ class MainActivity : ComponentActivity() {
         updateSystemBarsColor()
     }
 
+    /**
+     * Updates the system bar appearance (light/dark icons) based on the current theme.
+     */
     private fun updateSystemBarsColor() {
         val themeId = prefs.getString("theme", "system")
         updateSystemBarsForTheme(themeId)
     }
 
+    /**
+     * Updates system bars for a specific theme.
+     * @param themeId The theme identifier (e.g., "light", "dark", "system", "high_contrast").
+     */
     private fun updateSystemBarsForTheme(themeId: String) {
+        // Determine if the status bar should be light (dark icons) or dark.
         val isDark = when (themeId) {
             "light" -> false
             "high_contrast" -> false
@@ -137,7 +154,7 @@ class MainActivity : ComponentActivity() {
             controller.isAppearanceLightNavigationBars = !isDark
         }
 
-        
+        // Set navigation bar color to match the theme background.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val accentName = prefs.getString("accent_color", "ORANGE")
             val accentColor = try {
@@ -152,6 +169,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Launches the onboarding activity and finishes this activity.
+     * If the onboarding activity is not available, falls back to the main screen.
+     */
     private fun startOnboarding() {
         try {
             val intent = Intent(this, OnboardingActivity::class.java).apply {
@@ -164,75 +185,57 @@ class MainActivity : ComponentActivity() {
                 return
             }
 
+            // Fallback: onboarding activity not found – go directly to main screen.
             Log.w("MainActivity", "Onboarding activity is not resolvable; falling back to main screen")
             setupWindow()
-            setContent {
-                val themeId = prefs.getString("theme", "system")
-                val accentName = prefs.getString("accent_color", "ORANGE")
-                val accentColor = try {
-                    AccentColor.valueOf(accentName)
-                } catch (e: Exception) {
-                    AccentColor.ORANGE
-                }
-                val isDarkTheme = when (themeId) {
-                    "light" -> false
-                    "high_contrast" -> false
-                    else -> true
-                }
-                val themeColors = remember(themeId, accentColor) {
-                    getThemeColorScheme(themeId, accentColor)
-                }
-                ProvideThemeColors(themeColors) {
-                    AirMouseTheme(
-                        darkTheme = isDarkTheme,
-                        useDynamicColor = prefs.getBoolean("dynamic_colors", true),
-                        themeColors = themeColors
-                    ) {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = themeColors.background
-                        ) {
-                            MainScreen(startDestination = Destinations.Home.route)
-                        }
-                    }
-                }
-            }
+            launchMainScreen()
         } catch (e: Exception) {
             Log.e("MainActivity", "Failed to launch onboarding, continuing into main screen", e)
             setupWindow()
-            setContent {
-                val themeId = prefs.getString("theme", "system")
-                val accentName = prefs.getString("accent_color", "ORANGE")
-                val accentColor = try {
-                    AccentColor.valueOf(accentName)
-                } catch (e: Exception) {
-                    AccentColor.ORANGE
-                }
-                val isDarkTheme = when (themeId) {
-                    "light" -> false
-                    "high_contrast" -> false
-                    else -> true
-                }
-                val themeColors = remember(themeId, accentColor) {
-                    getThemeColorScheme(themeId, accentColor)
-                }
-                ProvideThemeColors(themeColors) {
-                    AirMouseTheme(
-                        darkTheme = isDarkTheme,
-                        useDynamicColor = prefs.getBoolean("dynamic_colors", true),
-                        themeColors = themeColors
+            launchMainScreen()
+        }
+    }
+
+    /**
+     * Launches the main screen content directly (used as a fallback).
+     */
+    private fun launchMainScreen() {
+        setContent {
+            val themeId = prefs.getString("theme", "system")
+            val accentName = prefs.getString("accent_color", "ORANGE")
+            val accentColor = try {
+                AccentColor.valueOf(accentName)
+            } catch (e: Exception) {
+                AccentColor.ORANGE
+            }
+            val isDarkTheme = when (themeId) {
+                "light" -> false
+                "high_contrast" -> false
+                else -> true
+            }
+            val themeColors = remember(themeId, accentColor) {
+                getThemeColorScheme(themeId, accentColor)
+            }
+            ProvideThemeColors(themeColors) {
+                AirMouseTheme(
+                    darkTheme = isDarkTheme,
+                    useDynamicColor = prefs.getBoolean("dynamic_colors", true),
+                    themeColors = themeColors
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = themeColors.background
                     ) {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = themeColors.background
-                        ) {
-                            MainScreen(startDestination = Destinations.Home.route)
-                        }
+                        MainScreen(startDestination = Destinations.Home.route)
                     }
                 }
             }
         }
     }
+
+    // ============================================================
+    // Lifecycle callbacks to handle system bar updates.
+    // ============================================================
 
     override fun onResume() {
         super.onResume()
@@ -245,6 +248,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// ============================================================
+// MainScreen composable – the root navigation host.
+// ============================================================
+
+/**
+ * The main application screen with a bottom navigation bar.
+ * @param startDestination The initial destination route.
+ */
 @Composable
 fun MainScreen(startDestination: String) {
     val navController = rememberNavController()
