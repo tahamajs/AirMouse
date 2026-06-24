@@ -28,6 +28,9 @@ var (
 func main() {
 	// --- 1. Load configuration and initialize logger ---
 	cfg := config.Get()
+	if cfg.DebugMode && cfg.LogLevel == "info" {
+		cfg.LogLevel = "debug"
+	}
 	logger.Init(cfg.LogLevel, cfg.LogFile)
 
 	// Inject logger callbacks into the device package (if the package supports it).
