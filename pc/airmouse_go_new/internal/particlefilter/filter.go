@@ -5,7 +5,6 @@ package particlefilter
 import (
     "math"
     "math/rand"
-    "sort"
     "sync"
     "time"
 
