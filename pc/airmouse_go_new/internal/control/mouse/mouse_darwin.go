@@ -48,19 +48,6 @@ void scrollWheel(int delta) {
     CGEventPost(kCGHIDEventTap, event);
     CFRelease(event);
 }
-
-int hasAccessibilityPermission() {
-    return AXIsProcessTrusted();
-}
-
-int requestAccessibilityPermission() {
-    const void *keys[] = { kAXTrustedCheckOptionPrompt };
-    const void *values[] = { kCFBooleanTrue };
-    CFDictionaryRef options = CFDictionaryCreate(NULL, keys, values, 1, &kCFCopyStringDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-    int trusted = AXIsProcessTrustedWithOptions(options);
-    CFRelease(options);
-    return trusted;
-}
 */
 import "C"
 import (
@@ -92,17 +79,14 @@ func (m *mouseController) executeScroll(delta int) {
 	C.scrollWheel(C.int(delta))
 }
 
-// HasAccessibilityPermission reports whether macOS accessibility control is enabled.
 func HasAccessibilityPermission() bool {
 	return C.hasAccessibilityPermission() != 0
 }
 
-// RequestAccessibilityPermission opens the macOS permission prompt.
 func RequestAccessibilityPermission() bool {
 	return C.requestAccessibilityPermission() != 0
 }
 
-// OpenAccessibilitySettings opens the macOS Accessibility privacy pane.
 func OpenAccessibilitySettings() error {
 	return exec.Command("open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility").Start()
 }
