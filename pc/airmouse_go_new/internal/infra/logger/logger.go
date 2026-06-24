@@ -31,10 +31,12 @@ type Logger struct {
 	out   io.Writer
 	mu    sync.Mutex
 	file  *os.File
+	hooks []func(level Level, msg string)
 }
 
 var defaultLogger *Logger
 var once sync.Once
+var pendingHooks []func(level Level, msg string)
 
 func Init(level string, logFile string) {
 	once.Do(func() {
@@ -54,11 +56,15 @@ func Init(level string, logFile string) {
 			f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 			if err == nil {
 				writer = io.MultiWriter(os.Stdout, f)
-				defaultLogger = &Logger{level: lvl, out: writer, file: f}
+				defaultLogger = &Logger{level: lvl, out: writer, file: f, hooks: make([]func(level Level, msg string), 0)}
+				defaultLogger.hooks = append(defaultLogger.hooks, pendingHooks...)
+				pendingHooks = nil
 				return
 			}
 		}
-		defaultLogger = &Logger{level: lvl, out: writer}
+		defaultLogger = &Logger{level: lvl, out: writer, hooks: make([]func(level Level, msg string), 0)}
+		defaultLogger.hooks = append(defaultLogger.hooks, pendingHooks...)
+		pendingHooks = nil
 	})
 }
 
@@ -74,12 +80,28 @@ func log(level Level, format string, args ...interface{}) {
 	defaultLogger.mu.Lock()
 	defer defaultLogger.mu.Unlock()
 	_, _ = defaultLogger.out.Write([]byte(lineMsg))
+	for _, hook := range defaultLogger.hooks {
+		go hook(level, msg)
+	}
 }
 
 func Debug(format string, args ...interface{}) { log(LevelDebug, format, args...) }
 func Info(format string, args ...interface{})  { log(LevelInfo, format, args...) }
 func Warn(format string, args ...interface{})  { log(LevelWarn, format, args...) }
 func Error(format string, args ...interface{}) { log(LevelError, format, args...) }
+
+func AddHook(hook func(level Level, msg string)) {
+	if hook == nil {
+		return
+	}
+	if defaultLogger == nil {
+		pendingHooks = append(pendingHooks, hook)
+		return
+	}
+	defaultLogger.mu.Lock()
+	defer defaultLogger.mu.Unlock()
+	defaultLogger.hooks = append(defaultLogger.hooks, hook)
+}
 
 func Close() {
 	if defaultLogger != nil && defaultLogger.file != nil {
