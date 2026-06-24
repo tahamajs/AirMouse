@@ -596,7 +596,23 @@ func (t *SettingsTab) exportSettings() {
 		}
 	}, win)
 }
+// Inside ui/settings.go
 
+func (t *SettingsTab) createCursorSection() {
+    // Sensitivity slider
+    t.sensitivitySlider.OnChanged = func(v float64) {
+        t.cfg.Sensitivity = v
+        t.mouse.SetSensitivity(v)   // <-- updates the controller
+    }
+6. (Optional) Add a UI Toggle in the Settings Tab
+In ui/settings.go, add a switch under the proximity section that updates cfg.ProximityEnabled and calls proxMgr.EnableAutoLock() and proxMgr.EnableAutoUnlock().
+
+
+    // Smoothing toggle
+    t.smoothingCheck.OnChanged = func(b bool) {
+        t.mouse.SetSmoothing(b)
+    }
+}
 func (t *SettingsTab) importSettings() {
 	win := getCurrentWindow()
 	if win == nil {

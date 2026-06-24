@@ -419,3 +419,25 @@ func (s *ProtocolServer) GetDeviceManager() *device.Manager {
 func (s *ProtocolServer) GetAuthManager() *auth.Manager {
 	return s.authMgr
 }
+
+type ProtocolServer struct {
+    // ... existing fields ...
+    proxMgr *proximity.Manager
+}
+
+func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *ProtocolServer {
+    return &ProtocolServer{
+        // ... existing ...
+        proxMgr: proxMgr,
+    }
+}protocolServer := protocol.NewProtocolServer(mouseController, deviceManager, authManager, proxMgr)type ProtocolServer struct {
+    // ... existing fields ...
+    proxMgr *proximity.Manager
+}
+
+func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *ProtocolServer {
+    return &ProtocolServer{
+        // ... existing ...
+        proxMgr: proxMgr,
+    }
+}s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr, s.proxMgr)

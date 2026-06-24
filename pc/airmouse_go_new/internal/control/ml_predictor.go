@@ -9,6 +9,7 @@ import (
     "time"
 
     "airmouse-go/internal/predictiveml"
+    "airmouse-go/internal/utils"   // <-- ADDED
 )
 
 type MLPredictor struct {
@@ -24,12 +25,12 @@ type MLPredictor struct {
 }
 
 type MLPredictorStats struct {
-    TotalPredictions   int64
+    TotalPredictions      int64
     SuccessfulPredictions int64
-    AverageConfidence  float64
-    AverageLatencyMs   float64
-    LastPrediction     time.Time
-    ModelAccuracy      float64
+    AverageConfidence     float64
+    AverageLatencyMs      float64
+    LastPrediction        time.Time
+    ModelAccuracy         float64
 }
 
 type Point struct {
@@ -62,47 +63,47 @@ func NewMLPredictor(cfg MLPredictionConfig) (*MLPredictor, error) {
     if cfg.MaxHistory <= 0 {
         cfg.MaxHistory = 100
     }
-    
+
     predictorCfg := predictiveml.Config{
         ModelPath:      cfg.ModelPath,
         SequenceLength: cfg.SequenceLength,
         EnableML:       true,
         BlendFactor:    cfg.BlendFactor,
     }
-    
+
     predictor, err := predictiveml.NewPredictor(predictorCfg)
     if err != nil {
         return nil, fmt.Errorf("failed to create ML predictor: %w", err)
     }
-    
+
     mlp := &MLPredictor{
-        predictor: predictor,
-        cfg:       predictorCfg,
-        enabled:   true,
-        fallback:  NewMovementPredictor(0.02, 0.6),
-        history:   make([]Point, 0, cfg.MaxHistory),
+        predictor:  predictor,
+        cfg:        predictorCfg,
+        enabled:    true,
+        fallback:   NewMovementPredictor(0.02, 0.6),
+        history:    make([]Point, 0, cfg.MaxHistory),
         maxHistory: cfg.MaxHistory,
         confidence: 0.5,
     }
-    
+
     return mlp, nil
 }
 
 func (m *MLPredictor) AddPoint(x, y float64) {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     point := Point{X: x, Y: y, Timestamp: time.Now()}
     m.history = append(m.history, point)
-    
+
     if len(m.history) > m.maxHistory {
         m.history = m.history[1:]
     }
-    
+
     if m.predictor != nil && m.enabled {
         m.predictor.AddPoint(float32(x), float32(y))
     }
-    
+
     if m.fallback != nil {
         m.fallback.AddMovement(x, y)
     }
@@ -111,7 +112,7 @@ func (m *MLPredictor) AddPoint(x, y float64) {
 func (m *MLPredictor) PredictDelta() (dx, dy float64, confidence float64, err error) {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     if !m.enabled {
         if m.fallback != nil {
             predDx, predDy := m.fallback.AddMovement(0, 0)
@@ -119,12 +120,12 @@ func (m *MLPredictor) PredictDelta() (dx, dy float64, confidence float64, err er
         }
         return 0, 0, 0, nil
     }
-    
+
     startTime := time.Now()
-    
+
     var predDx, predDy float32
     var mlConfidence float64
-    
+
     if m.predictor != nil {
         predDx, predDy, mlConfidence, err = m.predictor.PredictDelta()
         if err != nil {
@@ -138,7 +139,7 @@ func (m *MLPredictor) PredictDelta() (dx, dy float64, confidence float64, err er
     } else {
         return 0, 0, 0, fmt.Errorf("predictor not initialized")
     }
-    
+
     // Apply confidence threshold
     confidence = mlConfidence
     if confidence < m.cfg.MinConfidence {
@@ -149,7 +150,7 @@ func (m *MLPredictor) PredictDelta() (dx, dy float64, confidence float64, err er
         }
         return float64(predDx), float64(predDy), confidence, nil
     }
-    
+
     // Update stats
     latency := time.Since(startTime)
     m.stats.TotalPredictions++
@@ -158,7 +159,7 @@ func (m *MLPredictor) PredictDelta() (dx, dy float64, confidence float64, err er
     m.stats.AverageLatencyMs = (m.stats.AverageLatencyMs*float64(m.stats.TotalPredictions-1) + float64(latency.Microseconds())/1000.0) / float64(m.stats.TotalPredictions)
     m.stats.LastPrediction = time.Now()
     m.confidence = confidence
-    
+
     return float64(predDx), float64(predDy), confidence, nil
 }
 
@@ -167,11 +168,11 @@ func (m *MLPredictor) PredictWithBlend(rawDx, rawDy float64) (dx, dy float64) {
     if err != nil {
         return rawDx, rawDy
     }
-    
+
     if confidence < m.cfg.MinConfidence {
         return rawDx, rawDy
     }
-    
+
     blend := m.cfg.BlendFactor
     // Adjust blend based on confidence
     if confidence > 0.8 {
@@ -179,15 +180,15 @@ func (m *MLPredictor) PredictWithBlend(rawDx, rawDy float64) (dx, dy float64) {
     } else if confidence < 0.5 {
         blend = math.Max(0.3, blend*0.8)
     }
-    
+
     return (1-blend)*rawDx + blend*mlDx,
-           (1-blend)*rawDy + blend*mlDy
+        (1-blend)*rawDy + blend*mlDy
 }
 
 func (m *MLPredictor) SetEnabled(enabled bool) {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     m.enabled = enabled
     if m.predictor != nil {
         m.predictor.SetEnabled(enabled)
@@ -203,7 +204,7 @@ func (m *MLPredictor) IsEnabled() bool {
 func (m *MLPredictor) SetBlendFactor(factor float64) {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     if factor < 0 {
         factor = 0
     }
@@ -225,13 +226,13 @@ func (m *MLPredictor) GetBlendFactor() float64 {
 func (m *MLPredictor) GetStats() MLPredictorStats {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     if m.predictor != nil {
         predStats := m.predictor.GetStats()
         m.stats.AverageConfidence = predStats.AverageConfidence
         m.stats.AverageLatencyMs = float64(predStats.AverageLatency.Microseconds()) / 1000.0
     }
-    
+
     return m.stats
 }
 
@@ -244,7 +245,7 @@ func (m *MLPredictor) GetConfidence() float64 {
 func (m *MLPredictor) Reset() {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     if m.predictor != nil {
         m.predictor.Reset()
     }
@@ -259,30 +260,33 @@ func (m *MLPredictor) Reset() {
 func (m *MLPredictor) Train(samples []TrainingSample) error {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     if len(samples) == 0 {
         return fmt.Errorf("no training samples")
     }
-    
+
     // Convert samples to training data
     trainingData := make([]predictiveml.TrainingSample, len(samples))
     for i, s := range samples {
         trainingData[i] = predictiveml.TrainingSample{
-            X: s.X, Y: s.Y,
-            VelocityX: s.VelocityX, VelocityY: s.VelocityY,
-            AccelerationX: s.AccelerationX, AccelerationY: s.AccelerationY,
-            Timestamp: s.Timestamp,
+            X:               s.X,
+            Y:               s.Y,
+            VelocityX:       s.VelocityX,
+            VelocityY:       s.VelocityY,
+            AccelerationX:   s.AccelerationX,
+            AccelerationY:   s.AccelerationY,
+            Timestamp:       s.Timestamp,
         }
     }
-    
-    logger.Info("Training ML model with %d samples", len(samples))
+
+    utils.LogInfo("Training ML model with %d samples", len(samples))   // <-- FIXED
     return nil
 }
 
 func (m *MLPredictor) GetModelInfo() map[string]interface{} {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     info := map[string]interface{}{
         "enabled":           m.enabled,
         "sequence_length":   m.cfg.SequenceLength,
@@ -296,19 +300,19 @@ func (m *MLPredictor) GetModelInfo() map[string]interface{} {
         "current_confidence": m.confidence,
         "history_size":      len(m.history),
     }
-    
+
     if m.predictor != nil {
         info["model_path"] = m.cfg.ModelPath
         info["is_initialized"] = m.predictor.IsInitialized()
     }
-    
+
     return info
 }
 
 func (m *MLPredictor) Close() error {
     m.mu.Lock()
     defer m.mu.Unlock()
-    
+
     if m.predictor != nil {
         return m.predictor.Close()
     }
@@ -316,8 +320,8 @@ func (m *MLPredictor) Close() error {
 }
 
 type TrainingSample struct {
-    X, Y           float32
-    VelocityX, VelocityY float32
+    X, Y               float32
+    VelocityX, VelocityY   float32
     AccelerationX, AccelerationY float32
-    Timestamp      time.Time
+    Timestamp          time.Time
 }

@@ -8,7 +8,19 @@ import (
 	"sync"
 	"time"
 )
+ProximityEnabled       bool    `json:"proximity_enabled"`
+ProximityNearThreshold float64 `json:"proximity_near_threshold"`
+ProximityFarThreshold  float64 `json:"proximity_far_threshold"`
 
+
+ProximityEnabled:       false,
+ProximityNearThreshold: 1.5,
+ProximityFarThreshold:  3.0,
+ProximityEnabled       bool    `json:"proximity_enabled"`
+ProximityNearThreshold float64 `json:"proximity_near_threshold"`
+ProximityFarThreshold  float64 `json:"proximity_far_threshold"`ProximityEnabled:       false,
+ProximityNearThreshold: 1.5,
+ProximityFarThreshold:  3.0,
 type Config struct {
 	// Server settings
 	Port          int    `json:"port"`

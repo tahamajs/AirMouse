@@ -612,3 +612,13 @@ func firstNumber(payload map[string]any, keys ...string) float64 {
 	}
 	return 0
 }
+
+// Inside protocol/tcp/server.go (or websocket, udp)
+
+func (s *Server) processLine(client *Client, line []byte) {
+    // ... parse message ...
+    case "move":
+        dx := ...
+        dy := ...
+        s.mouse.Move(dx, dy)   // <- calls mouseController.Move
+}
