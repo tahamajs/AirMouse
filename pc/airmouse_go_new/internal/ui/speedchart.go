@@ -18,15 +18,15 @@ import (
 
 type SpeedChart struct {
 	widget.BaseWidget
-	container *fyne.Container
-	history   []float64
-	maxPoints int
-	maxSpeed  float64
-	color     color.Color
-	mu        sync.RWMutex
-	autoScale bool
-	gridColor color.Color
-	bgColor   color.Color
+	container   *fyne.Container
+	history     []float64
+	maxPoints   int
+	maxSpeed    float64
+	color       color.Color
+	mu          sync.RWMutex
+	autoScale   bool
+	gridColor   color.Color
+	bgColor     color.Color
 	initialized bool
 }
 
@@ -111,12 +111,9 @@ func (c *SpeedChart) redraw() {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	// Clear existing objects
 	c.container.Objects = nil
 
-	// Always ensure we have at least one object to render
 	if len(c.history) == 0 {
-		// Show placeholder text
 		label := canvas.NewText("No data yet", color.RGBA{200, 200, 200, 255})
 		label.Alignment = fyne.TextAlignCenter
 		label.TextSize = 16
@@ -134,13 +131,11 @@ func (c *SpeedChart) redraw() {
 		c.maxSpeed = 1
 	}
 
-	// Background
 	bg := canvas.NewRectangle(c.bgColor)
 	bg.Resize(fyne.NewSize(width, height))
 	bg.Move(fyne.NewPos(0, 0))
 	c.container.Add(bg)
 
-	// Grid lines
 	for i := 0; i <= 4; i++ {
 		y := height - (float32(i) * height / 4)
 		gridLine := canvas.NewLine(c.gridColor)
@@ -150,7 +145,6 @@ func (c *SpeedChart) redraw() {
 		c.container.Add(gridLine)
 	}
 
-	// Speed line
 	for i := 1; i < len(c.history); i++ {
 		x1 := float32(i-1) * step
 		y1 := height - float32(c.history[i-1]/c.maxSpeed)*height
@@ -164,7 +158,6 @@ func (c *SpeedChart) redraw() {
 		c.container.Add(line)
 	}
 
-	// Fill under curve
 	fillColor := color.RGBA{99, 102, 241, 50}
 	for i := 0; i < len(c.history)-1; i++ {
 		x1 := float32(i) * step
@@ -362,6 +355,7 @@ func (c *PingChart) redraw() {
 	c.container.Refresh()
 }
 
+// SetThresholds configures the good and warning threshold lines.
 func (c *PingChart) SetThresholds(good, warn float64) {
 	if !c.initialized {
 		return
@@ -374,6 +368,7 @@ func (c *PingChart) SetThresholds(good, warn float64) {
 	c.Refresh()
 }
 
+// Clear resets the chart.
 func (c *PingChart) Clear() {
 	if !c.initialized {
 		return
@@ -386,6 +381,7 @@ func (c *PingChart) Clear() {
 	c.Refresh()
 }
 
+// GetAverageLatency returns the average latency of the stored points.
 func (c *PingChart) GetAverageLatency() float64 {
 	if !c.initialized {
 		return 0
@@ -402,6 +398,7 @@ func (c *PingChart) GetAverageLatency() float64 {
 	return sum / float64(len(c.history))
 }
 
+// IsInitialized returns true if the chart is properly initialized.
 func (c *PingChart) IsInitialized() bool {
 	return c.initialized
 }
@@ -412,14 +409,15 @@ func (c *PingChart) IsInitialized() bool {
 
 type MovementChart struct {
 	widget.BaseWidget
-	container *fyne.Container
-	points    []fyne.Position
-	maxPoints int
-	color     color.Color
-	mu        sync.RWMutex
+	container   *fyne.Container
+	points      []fyne.Position
+	maxPoints   int
+	color       color.Color
+	mu          sync.RWMutex
 	initialized bool
 }
 
+// NewMovementChart creates a movement trail chart.
 func NewMovementChart() fyne.CanvasObject {
 	chart := &MovementChart{
 		points:      make([]fyne.Position, 0, 200),
@@ -440,6 +438,7 @@ func (c *MovementChart) MinSize() fyne.Size {
 	return fyne.NewSize(400, 200)
 }
 
+// AddPoint adds a point to the trail.
 func (c *MovementChart) AddPoint(x, y float32) {
 	if !c.initialized {
 		return
@@ -505,6 +504,7 @@ func (c *MovementChart) redraw() {
 		y1 := height - (c.points[i-1].Y-minY)/rangeY*height
 		x2 := (c.points[i].X - minX) / rangeX * width
 		y2 := height - (c.points[i].Y-minY)/rangeY*height
+
 		line := canvas.NewLine(c.color)
 		line.Position1 = fyne.NewPos(x1, y1)
 		line.Position2 = fyne.NewPos(x2, y2)
@@ -523,6 +523,7 @@ func (c *MovementChart) redraw() {
 	c.container.Refresh()
 }
 
+// Clear resets the trail.
 func (c *MovementChart) Clear() {
 	if !c.initialized {
 		return
@@ -534,6 +535,7 @@ func (c *MovementChart) Clear() {
 	c.Refresh()
 }
 
+// IsInitialized returns true if the chart is properly initialized.
 func (c *MovementChart) IsInitialized() bool {
 	return c.initialized
 }

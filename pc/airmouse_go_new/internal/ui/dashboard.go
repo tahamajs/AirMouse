@@ -54,6 +54,7 @@ type DashboardTab struct {
 	controlBtn *widget.Button
 	qrBtn      *widget.Button
 	refreshBtn *widget.Button
+	helpBtn    *widget.Button // Help button for context help
 
 	serverStart time.Time
 	mu          sync.Mutex
@@ -206,6 +207,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 			})
 		}()
 	})
+	tab.controlBtn.Importance = widget.HighImportance
 
 	tab.refreshBtn = widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		tab.refreshStats()
@@ -215,8 +217,17 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	tab.qrBtn = widget.NewButtonWithIcon("Show QR Code", theme.InfoIcon(), func() {
 		tab.showPairingQRDialog()
 	})
-	tab.controlBtn.Importance = widget.HighImportance
 
+	// Help button – opens context help for dashboard
+	tab.helpBtn = widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
+		win := getCurrentWindow()
+		if win != nil {
+			ShowContextHelp(win, "dashboard")
+		}
+	})
+	tab.helpBtn.Importance = widget.MediumImportance
+
+	// ---- Build permission card ----
 	permissionCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("🔒 macOS Permissions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -241,10 +252,10 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 	}
 
-	// Profile card
+	// ---- Profile card ----
 	profileCard := NewGlassCard(container.NewPadded(tab.createProfileCard()))
 
-	// Stats card
+	// ---- Stats card ----
 	statsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📊 Statistics", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -254,7 +265,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		),
 	)))
 
-	// Actions card
+	// ---- Quick Actions card ----
 	actionsCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("⚡ Quick Actions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -266,7 +277,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		),
 	)))
 
-	// Status card
+	// ---- Status card ----
 	statusCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📡 Server Status", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -279,9 +290,25 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.aiStatusLabel,
 	)))
 
-	// Approval card with dynamic pending list
-	approvalCard := NewGlassCard(container.NewPadded(container.NewVBox(
+	// ---- Approval card with dynamic pending list ----
+	// Add a small refresh and help button inside the approval card
+	approvalHeader := container.NewHBox(
 		tab.approvalTitle,
+		container.NewHBox(
+			widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
+				tab.refreshStats()
+			}),
+			widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
+				win := getCurrentWindow()
+				if win != nil {
+					ShowContextHelp(win, "dashboard")
+				}
+			}),
+		),
+	)
+
+	approvalCard := NewGlassCard(container.NewPadded(container.NewVBox(
+		approvalHeader,
 		widget.NewSeparator(),
 		tab.approvalBanner,
 		tab.approvalDetail,
@@ -297,6 +324,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		),
 	)))
 
+	// ---- Device cards ----
 	deviceCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		widget.NewLabelWithStyle("📱 Nearby / Connected Devices", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -358,14 +386,16 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		),
 	))
 
+	// ---- Control card with help button ----
 	controlCard := NewGlassCard(container.NewVBox(
 		widget.NewLabelWithStyle("⚡ Server Control", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		widget.NewLabel("Use the main action below to start or stop the desktop service."),
 		container.NewPadded(tab.controlBtn),
-		container.NewHBox(tab.refreshBtn, tab.qrBtn),
+		container.NewHBox(tab.refreshBtn, tab.qrBtn, tab.helpBtn),
 	))
 
+	// ---- Left and right columns ----
 	leftColumn := container.NewVBox(
 		statsCard,
 		controlCard,
@@ -385,6 +415,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		profileCard,
 	)
 
+	// ---- Main content ----
 	content := container.NewVBox(
 		hero,
 		widget.NewSeparator(),
