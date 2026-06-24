@@ -7,7 +7,7 @@ import (
     "sync"
     "time"
 
-    "airmouse-go/internal/infra/logger"
+	"airmouse-go/internal/logger"
 )
 
 // SerialConnection represents a Bluetooth serial (SPP) connection

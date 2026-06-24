@@ -17,15 +17,16 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/skip2/go-qrcode"
 
+	"airmouse-go/control/common"
+	"airmouse-go/control/mouse"
+	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/config"
-	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/personalization"
 	"airmouse-go/internal/protocol"
+	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/utils"
 )
-
-// ============================================================
 // App struct
 // ============================================================
 
@@ -34,7 +35,7 @@ type App struct {
 	window    fyne.Window
 	cfg       *config.Config
 	server    *protocol.ProtocolServer
-	mouse     control.MouseController
+	mouse     mouse.Controller
 	deviceMgr *device.Manager
 	collector *personalization.DataCollector
 
@@ -66,7 +67,7 @@ type App struct {
 // Constructor
 // ============================================================
 
-func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) *App {
+func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse mouse.Controller, deviceMgr *device.Manager) *App {
 	selectedTheme := getThemeByName(cfg.Theme)
 	a := app.New()
 	if selectedTheme != nil {

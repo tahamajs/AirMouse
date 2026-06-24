@@ -1,5 +1,6 @@
 package ui
 
+
 import (
 	"bytes"
 	"fmt"
@@ -17,13 +18,15 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 
 	"airmouse-go/internal/config"
-	"airmouse-go/internal/control"
+	"airmouse-go/control/mouse" 
+	"airmouse-go/control/common"
+	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/protocol"
 	"airmouse-go/internal/utils"
 )
 
-// ------------------------------------------------------------
+// ... rest of the file (the entire DashboardTab implementation) ...// ------------------------------------------------------------
 //  DashboardTab – Optimized version without chart to prevent hangs
 // ------------------------------------------------------------
 
@@ -61,7 +64,7 @@ type DashboardTab struct {
 	logMu       sync.Mutex
 	stopOnce    sync.Once
 	recentLogs  []string
-	mouse       control.MouseController
+	mouse       mouse.Controller
 	server      *protocol.ProtocolServer
 	deviceMgr   *device.Manager
 	cfg         *config.Config
@@ -69,7 +72,7 @@ type DashboardTab struct {
 }
 
 // NewDashboardTab creates the dashboard tab content.
-func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) (fyne.CanvasObject, *DashboardTab) {
+func NewDashboardTab(server *protocol.ProtocolServer, mouse mouse.Controller, deviceMgr *device.Manager) (fyne.CanvasObject, *DashboardTab) {
 	// Safety: if any dependency is nil, return a placeholder
 	if server == nil || mouse == nil || deviceMgr == nil {
 		return widget.NewLabelWithStyle("⚠️ Dashboard unavailable - dependencies missing",
@@ -234,12 +237,12 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.permissionHint,
 		container.NewHBox(
 			widget.NewButton("Open Settings", func() {
-				if err := control.OpenAccessibilitySettings(); err != nil {
+	if err := mctl.OpenAccessibilitySettings(); err != nil {
 					dialog.ShowError(err, getCurrentWindow())
 				}
 			}),
 			widget.NewButton("Check Now", func() {
-				if control.HasAccessibilityPermission() {
+				if mouse.HasAccessibilityPermission() {
 					tab.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 				} else {
 					tab.permissionHint.SetText("⚠️ Permission still missing. Enable Accessibility for Air Mouse Pro Server in System Settings.")
@@ -248,7 +251,7 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		),
 	)))
 
-	if control.HasAccessibilityPermission() {
+	if mouse.HasAccessibilityPermission() {
 		tab.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 	}
 
@@ -271,8 +274,8 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		widget.NewSeparator(),
 		widget.NewLabel("Pause and resume are useful while you calibrate or test approval."),
 		container.NewHBox(
-			widget.NewButton("⏸️ Pause", func() { control.SetMovementPaused(true) }),
-			widget.NewButton("▶️ Resume", func() { control.SetMovementPaused(false) }),
+			widget.NewButton("⏸️ Pause", func() { common.SetMovementPaused(true) }),
+			widget.NewButton("▶️ Resume", func() { common.SetMovementPaused(false) }),
 			widget.NewButton("🔄 Reset Stats", func() { tab.mouse.ResetStats() }),
 		),
 	)))
@@ -519,7 +522,7 @@ func (t *DashboardTab) refreshStats() {
 	RunOnMain(func() {
 		// Update permission hint
 		if t.permissionHint != nil {
-			if control.HasAccessibilityPermission() {
+			if mouse.HasAccessibilityPermission() {
 				t.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
 			} else {
 				t.permissionHint.SetText("⛔ Accessibility permission is missing. Mouse control is blocked until you enable it in System Settings.")
@@ -621,7 +624,7 @@ func (t *DashboardTab) refreshStats() {
 				utils.GetLocalIP(),
 				deviceCount,
 			))
-			if !control.HasAccessibilityPermission() {
+			if !mouse.HasAccessibilityPermission() {
 				t.summaryLabel.SetText("Mouse control is unavailable until Accessibility permission is granted on this Mac.")
 			}
 		}

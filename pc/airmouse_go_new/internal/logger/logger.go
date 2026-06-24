@@ -42,9 +42,10 @@ const colorReset = "\033[0m"
 // Logger is the main logging structure.
 type Logger struct {
 	level       Level
+	    mu          sync.RWMutex
+
 	out         io.Writer
 	file        *os.File
-	mu          sync.Mutex
 	useColor    bool
 	timestamp   bool
 	hooks       []func(level Level, msg string)
@@ -286,12 +287,12 @@ func SetLevel(level Level) {
 
 // GetLevel returns the current log level.
 func GetLevel() Level {
-	if defaultLogger != nil {
-		defaultLogger.mu.RLock()
-		defer defaultLogger.mu.RUnlock()
-		return defaultLogger.level
-	}
-	return LevelInfo
+    if defaultLogger != nil {
+        defaultLogger.mu.RLock()
+        defer defaultLogger.mu.RUnlock()
+        return defaultLogger.level
+    }
+    return LevelInfo
 }
 
 // AddHook registers a hook that receives (level, msg).

@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	    "encoding/hex"   // <-- add this line
+
 	"encoding/json"
 	"fmt"
 	"strings"

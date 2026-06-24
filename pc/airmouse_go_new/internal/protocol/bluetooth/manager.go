@@ -7,15 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"airmouse-go/internal/control"
+	"airmouse-go/control/mouse"
 	"airmouse-go/internal/device"
-	"airmouse-go/internal/infra/logger"
+	"airmouse-go/internal/logger"
 )
 
 // BLE Manager with full Bluetooth LE support
 type Manager struct {
 	adapter      string
-	mouse        control.MouseController
+	mouse        mouse.Controller
 	deviceMgr    *device.Manager
 	connections  map[string]*BLEConnection
 	mu           sync.RWMutex
@@ -66,10 +66,10 @@ type BluetoothEvent struct {
 	Timestamp time.Time
 }
 
-func NewManager(adapter string, mouse control.MouseController, deviceMgr *device.Manager) *Manager {
+func NewManager(adapter string, mouseCtrl mouse.Controller, deviceMgr *device.Manager) *Manager {
 	return &Manager{
 		adapter:      adapter,
-		mouse:        mouse,
+		mouse:        mouseCtrl,
 		deviceMgr:    deviceMgr,
 		connections:  make(map[string]*BLEConnection),
 		scanInterval: 5 * time.Second,
@@ -81,15 +81,11 @@ func NewManager(adapter string, mouse control.MouseController, deviceMgr *device
 func (m *Manager) Start() error {
 	m.running = true
 
-	// Initialize Bluetooth adapter
 	if err := m.initAdapter(); err != nil {
 		logger.Warn("Bluetooth adapter initialization failed: %v", err)
 	}
 
-	// Start discovery
 	go m.discoveryLoop()
-
-	// Start HID report processor
 	go m.processHIDReports()
 
 	logger.Info("Bluetooth manager started: adapter=%s", m.adapter)
@@ -97,7 +93,6 @@ func (m *Manager) Start() error {
 }
 
 func (m *Manager) initAdapter() error {
-	// Platform-specific adapter initialization
 	if !m.isBluetoothAvailable() {
 		return fmt.Errorf("bluetooth not available")
 	}
@@ -105,7 +100,6 @@ func (m *Manager) initAdapter() error {
 }
 
 func (m *Manager) isBluetoothAvailable() bool {
-	// Platform-specific availability check
 	return true
 }
 
@@ -121,7 +115,6 @@ func (m *Manager) discoveryLoop() {
 
 func (m *Manager) startDiscovery() {
 	// Real BLE discovery is not simulated here.
-	// The manager only updates the UI when actual adapter events are wired in.
 }
 
 func (m *Manager) handleDiscoveredDevice(addr, name string, rssi, txPower int32) {
@@ -175,7 +168,6 @@ func (m *Manager) ConnectDevice(addr string) error {
 		return nil
 	}
 
-	// Establish Bluetooth connection
 	if err := m.establishConnection(conn); err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
@@ -191,7 +183,6 @@ func (m *Manager) ConnectDevice(addr string) error {
 		Timestamp: time.Now(),
 	})
 
-	// Start HID report reader
 	go m.readHIDReports(conn)
 
 	logger.Info("BLE device connected: addr=%s name=%s", addr, conn.Name)
@@ -199,7 +190,6 @@ func (m *Manager) ConnectDevice(addr string) error {
 }
 
 func (m *Manager) establishConnection(conn *BLEConnection) error {
-	// Platform-specific connection establishment
 	time.Sleep(500 * time.Millisecond)
 	return nil
 }
@@ -238,7 +228,6 @@ func (m *Manager) readHIDReports(conn *BLEConnection) {
 			return
 		default:
 			time.Sleep(10 * time.Millisecond)
-			// Simulate HID report
 			report := HIDReport{
 				X:       int16(rand.Intn(20) - 10),
 				Y:       int16(rand.Intn(20) - 10),
@@ -249,7 +238,6 @@ func (m *Manager) readHIDReports(conn *BLEConnection) {
 				return
 			case conn.HIDReport <- report:
 			default:
-				// Drop stale reports if the reader falls behind.
 			}
 		}
 	}

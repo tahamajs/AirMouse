@@ -10,6 +10,7 @@ import (
 	"airmouse-go/control/predict"
 )
 
+// Controller defines the interface for mouse operations.
 type Controller interface {
 	Move(dx, dy float64)
 	Click(button string)
@@ -62,6 +63,7 @@ const (
 	rateLimitPerSec = 200
 )
 
+// NewController creates a new mouse controller with default settings.
 func NewController(sensitivity float64) Controller {
 	if sensitivity <= 0 {
 		sensitivity = 1.0
@@ -136,6 +138,7 @@ func (m *mouseController) ResetStats() {
 }
 func (m *mouseController) GetPosition() (x, y float64)              { return m.lastCursorX, m.lastCursorY }
 
+// Move applies all filters (smoothing, prediction, acceleration) and executes the movement.
 func (m *mouseController) Move(dx, dy float64) {
 	if common.IsMovementPaused() {
 		return
@@ -207,6 +210,7 @@ func (m *mouseController) Move(dx, dy float64) {
 	m.lastCursorY += dy
 }
 
+// Click handles single clicks with double‑click detection.
 func (m *mouseController) Click(button string) {
 	now := time.Now()
 	if button == "left" {
@@ -232,16 +236,19 @@ func (m *mouseController) Click(button string) {
 	}
 }
 
+// DoubleClick sends a double‑click event.
 func (m *mouseController) DoubleClick() {
 	m.executeDoubleClick()
 	atomic.AddInt64(&m.doubleClickCnt, 1)
 }
 
+// Scroll sends a scroll event.
 func (m *mouseController) Scroll(delta int) {
 	m.executeScroll(delta)
 	atomic.AddInt64(&m.scrollCount, 1)
 }
 
+// Stats returns current usage counters.
 func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
 	return atomic.LoadInt64(&m.clickCount),
 		atomic.LoadInt64(&m.doubleClickCnt),
@@ -249,6 +256,7 @@ func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
 		atomic.LoadInt64(&m.scrollCount)
 }
 
+// applySmoothing performs exponential moving average smoothing.
 func (m *mouseController) applySmoothing(dx, dy float64) (float64, float64) {
 	if !m.smoothing {
 		return dx, dy
@@ -259,8 +267,3 @@ func (m *mouseController) applySmoothing(dx, dy float64) (float64, float64) {
 	return m.lastX, m.lastY
 }
 
-// Platform-specific execution (implemented in _darwin, _linux, _windows)
-func (m *mouseController) executeMove(dx, dy float64)       {}
-func (m *mouseController) executeClick(button string)      {}
-func (m *mouseController) executeDoubleClick()             {}
-func (m *mouseController) executeScroll(delta int)         {}

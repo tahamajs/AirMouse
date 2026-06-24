@@ -388,7 +388,8 @@ func (s *ProtocolServer) ApproveDevice(deviceID string) error {
 
 	var lastErr error
 	for _, srv := range servers {
-		if err := srv.ApproveDevice(deviceID); err == nil {
+		err := srv.ApproveDevice(deviceID)
+		if err == nil {
 			return nil
 		}
 		lastErr = err

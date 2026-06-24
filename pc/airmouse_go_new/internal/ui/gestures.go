@@ -134,7 +134,6 @@ func NewGesturesTab() fyne.CanvasObject {
 		tab.showAddGestureDialog()
 	})
 	tab.addBtn.Importance = widget.HighImportance
-	tab.addBtn.ToolTip = "Add a new gesture template"
 
 	tab.editBtn = widget.NewButtonWithIcon("Edit", theme.SettingsIcon(), func() {
 		if tab.selected >= 0 {
@@ -142,7 +141,6 @@ func NewGesturesTab() fyne.CanvasObject {
 		}
 	})
 	tab.editBtn.Disable()
-	tab.editBtn.ToolTip = "Edit the selected gesture"
 
 	tab.deleteBtn = widget.NewButtonWithIcon("Delete", theme.DeleteIcon(), func() {
 		if tab.selected >= 0 {
@@ -151,23 +149,19 @@ func NewGesturesTab() fyne.CanvasObject {
 	})
 	tab.deleteBtn.Disable()
 	tab.deleteBtn.Importance = widget.DangerImportance
-	tab.deleteBtn.ToolTip = "Delete the selected gesture"
 
 	tab.importBtn = widget.NewButtonWithIcon("Import", theme.DownloadIcon(), func() {
 		tab.importGestures()
 	})
-	tab.importBtn.ToolTip = "Import gesture templates from a JSON file"
 
 	tab.exportBtn = widget.NewButtonWithIcon("Export", theme.UploadIcon(), func() {
 		tab.exportGestures()
 	})
-	tab.exportBtn.ToolTip = "Export gesture templates to a JSON file"
 
 	tab.resetBtn = widget.NewButtonWithIcon("Reset to Defaults", theme.ViewRefreshIcon(), func() {
 		tab.resetToDefaults()
 	})
 	tab.resetBtn.Importance = widget.WarningImportance
-	tab.resetBtn.ToolTip = "Restore the default gesture templates"
 
 	tab.helpBtn = widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
 		win := getCurrentWindow()
@@ -175,12 +169,10 @@ func NewGesturesTab() fyne.CanvasObject {
 			ShowContextHelp(win, "gestures")
 		}
 	})
-	tab.helpBtn.ToolTip = "Show help for gestures"
 
 	tab.testBtn = widget.NewButtonWithIcon("Test Gesture", theme.MediaPlayIcon(), func() {
 		tab.testGesture()
 	})
-	tab.testBtn.ToolTip = "Test the selected gesture"
 
 	tab.statusLabel = widget.NewLabel("")
 	tab.statusLabel.Importance = widget.MediumImportance

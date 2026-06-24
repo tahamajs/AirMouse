@@ -1,5 +1,6 @@
 package ui
 
+
 import (
 	"bytes"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	infraLogger "airmouse-go/internal/infra/logger"
+	infraLogger "airmouse-go/internal/logger"
 	"airmouse-go/internal/utils"
 )
 
