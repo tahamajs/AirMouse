@@ -19,3 +19,20 @@ func ExecuteSystemCommand(command string) error {
 		return nil
 	}
 }
+
+package syscmd
+
+import "runtime"
+
+func ExecuteSystemCommand(command string) error {
+	switch runtime.GOOS {
+	case "darwin":
+		return execDarwin(command)
+	case "linux":
+		return execLinux(command)
+	case "windows":
+		return execWindows(command)
+	default:
+		return nil
+	}
+}

@@ -229,4 +229,15 @@ func (m *MLPredictor) Close() error {
 		return m.predictor.Close()
 	}
 	return nil
-}
+}//go:build ml
+
+package predict
+
+import ( ... ) // full implementation
+
+// Stub:
+//go:build !ml
+package predict
+
+type MLPredictor struct{}
+// ... all stub methods
