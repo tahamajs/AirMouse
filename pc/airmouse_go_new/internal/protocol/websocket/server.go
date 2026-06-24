@@ -98,7 +98,6 @@ func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manage
 
 // Start starts the WebSocket server.
 func (s *Server) Start() error {
-	// Bind synchronously so we can return an error if the port is already used.
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
 	if err != nil {
 		return fmt.Errorf("failed to bind WebSocket port %d: %w", s.port, err)
@@ -141,21 +140,17 @@ func (s *Server) Stop() error {
 	s.running = false
 	s.mu.Unlock()
 
-	// Close the listener to stop accepting new connections.
 	if s.listener != nil {
 		_ = s.listener.Close()
 	}
 
-	// Close the HTTP server (this will also close the listener).
 	if s.server != nil {
 		_ = s.server.Close()
 	}
 
-	// Close all client connections and their channels.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, c := range s.clients {
-		// Close channels to signal writeLoop to exit.
 		close(c.Send)
 		close(c.BinarySend)
 		_ = c.Conn.Close()
@@ -170,7 +165,6 @@ func (s *Server) Stop() error {
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
 
-	// Authenticate if enabled
 	if cfg.AuthEnabled {
 		token := r.URL.Query().Get("token")
 		if token == "" || s.authMgr == nil || !s.authMgr.ValidateToken(token) {
@@ -205,7 +199,6 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	s.totalClients++
 	s.mu.Unlock()
 
-	// Register device
 	if s.deviceMgr != nil {
 		_ = s.deviceMgr.RegisterDevice(id, device.TypeWebSocket, "Android")
 		_ = s.deviceMgr.UpdateDeviceStatus(id, device.StatusPendingApproval)
@@ -238,14 +231,10 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 // readLoop reads messages from the client.
 func (s *Server) readLoop(client *WSClient) {
 	defer func() {
-		// Close the WebSocket connection.
 		_ = client.Conn.Close()
-
-		// Close the send channels to signal writeLoop to exit.
 		close(client.Send)
 		close(client.BinarySend)
 
-		// Remove from server map.
 		s.mu.Lock()
 		delete(s.clients, client.ID)
 		delete(s.fileSessions, client.ID)
@@ -270,7 +259,6 @@ func (s *Server) readLoop(client *WSClient) {
 			return
 		}
 
-		// Update last active and bytes received (using mutex for safe update)
 		s.mu.Lock()
 		client.LastActive = time.Now()
 		client.BytesRecv += int64(len(data))
@@ -303,7 +291,6 @@ func (s *Server) writeLoop(client *WSClient) {
 		select {
 		case msg, ok := <-client.Send:
 			if !ok {
-				// Send channel closed -> exit.
 				return
 			}
 			_ = client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
@@ -311,7 +298,6 @@ func (s *Server) writeLoop(client *WSClient) {
 				utils.LogDebug("WebSocket write error: %v", err)
 				return
 			}
-			// Update bytes sent (mutex)
 			s.mu.Lock()
 			client.BytesSent += int64(len(msg))
 			s.mu.Unlock()
@@ -330,7 +316,6 @@ func (s *Server) writeLoop(client *WSClient) {
 			s.mu.Unlock()
 
 		case <-ticker.C:
-			// Send ping to keep connection alive.
 			_ = client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := client.Conn.WriteMessage(gorilla.PingMessage, nil); err != nil {
 				return
@@ -341,10 +326,8 @@ func (s *Server) writeLoop(client *WSClient) {
 
 // processMessage processes incoming messages.
 func (s *Server) processMessage(client *WSClient, msgType string, payload map[string]any, id *string) {
-	// Send ACK for commands that expect it
 	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll") {
 		if ack := AckMessage(id); len(ack) > 0 {
-			// Non‑blocking send to avoid blocking if client is gone.
 			select {
 			case client.Send <- ack:
 			default:
@@ -353,7 +336,6 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 	}
 
-	// Check approval status (atomic load)
 	approved := client.Approved.Load()
 	if !approved && msgType != "hello" && msgType != "ping" {
 		utils.LogDebug("Ignoring WebSocket %s while waiting for approval: device=%s", msgType, client.ID)
@@ -419,6 +401,13 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
 		utils.LogDebug("WebSocket hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
 
+		// 🔁 Auto-approve if device was previously approved
+		if s.autoApproveWSClient(client, fingerprint) {
+			// Device auto-approved – skip pending approval flow
+			break
+		}
+
+		// Otherwise, mark as pending approval
 		s.mu.Lock()
 		client.Name = name
 		if s.deviceMgr != nil {
@@ -476,14 +465,12 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 
 	case "ping":
-		// Non‑blocking send
 		select {
 		case client.Send <- PongMessage():
 		default:
 		}
 
 	case "pong":
-		// Heartbeat received
 		utils.LogDebug("Pong received from: %s", client.ID)
 
 	default:
@@ -521,7 +508,6 @@ func (s *Server) ApproveDevice(deviceID string) error {
 
 	cfg := config.Get()
 	welcomeMsg := WelcomeMessage(cfg.ServerName, cfg.Version)
-	// Non‑blocking send to avoid blocking if client channel is full.
 	select {
 	case client.Send <- welcomeMsg:
 		utils.LogInfo("WebSocket approval accepted and welcome sent: device=%s", deviceID)
@@ -531,8 +517,25 @@ func (s *Server) ApproveDevice(deviceID string) error {
 	return nil
 }
 
+// autoApproveWSClient checks if the device is known and auto-approves it.
+func (s *Server) autoApproveWSClient(client *WSClient, fingerprint string) bool {
+	if s.deviceMgr == nil {
+		return false
+	}
+	if s.deviceMgr.IsDeviceApproved(fingerprint) {
+		_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
+		cfg := config.Get()
+		client.Send <- WelcomeMessage(cfg.ServerName, cfg.Version)
+		client.Approved.Store(true)
+		client.DeviceID = fingerprint
+		utils.LogInfo("WebSocket auto-approved known device: %s (fingerprint: %s)", client.ID, fingerprint)
+		return true
+	}
+	return false
+}
+
 // ---------------------------------------------------------------------
-// File transfer helpers (unchanged, but kept for completeness)
+// File transfer helpers (unchanged)
 // ---------------------------------------------------------------------
 
 func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
@@ -651,7 +654,6 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 			if end > len(data) {
 				end = len(data)
 			}
-			// Use non‑blocking send; if channel full, we drop the chunk (should not happen with large buffer)
 			select {
 			case client.BinarySend <- append([]byte(nil), data[offset:end]...):
 			default:
