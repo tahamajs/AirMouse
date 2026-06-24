@@ -32,6 +32,7 @@ type Controller interface {
 }
 
 type mouseController struct {
+	
 	sensitivity    float64
 	clickCount     int64
 	doubleClickCnt int64
@@ -266,4 +267,3 @@ func (m *mouseController) applySmoothing(dx, dy float64) (float64, float64) {
 	m.lastY = alpha*dy + (1-alpha)*m.lastY
 	return m.lastX, m.lastY
 }
-

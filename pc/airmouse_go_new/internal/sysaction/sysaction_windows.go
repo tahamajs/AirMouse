@@ -5,7 +5,6 @@ package sysaction
 import (
 	"syscall"
 	"time"
-	"unsafe"
 )
 
 var (

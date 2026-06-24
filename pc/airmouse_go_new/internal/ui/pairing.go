@@ -35,7 +35,6 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	ip := utils.GetLocalIP()
 	port := cfg.Port
 
-	// Create pairing data with full device info
 	pairingData := fmt.Sprintf(
 		"airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&udp=%d&version=3.0",
 		url.QueryEscape(wsURL),
@@ -45,7 +44,6 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 		cfg.UDPPort,
 	)
 
-	// Generate QR code
 	pngBytes, err := qrcode.Encode(pairingData, qrcode.High, 300)
 	if err != nil {
 		dialog.ShowError(fmt.Errorf("QR generation failed: %w", err), parent)
@@ -61,7 +59,6 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	qrImage.FillMode = canvas.ImageFillContain
 	qrImage.SetMinSize(fyne.NewSize(320, 320))
 
-	// Instructions
 	instructions := widget.NewRichTextFromMarkdown(
 		"# How to pair your device\n\n" +
 			"**Pending approval:** the server will not enable mouse control until this session is approved from the panel.\n\n" +
@@ -83,7 +80,6 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 			"3. Tap on the discovered server to connect\n" +
 			"4. Approve the session in this panel when it appears")
 
-	// Server info
 	serverInfo := widget.NewRichTextFromMarkdown(fmt.Sprintf(
 		"## Server Information\n\n"+
 			"- **Server Name:** %s\n"+
@@ -94,7 +90,6 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 			"- **Version:** 3.0.0",
 		cfg.ServerName, ip, cfg.Port, cfg.WebSocketPort, cfg.UDPPort))
 
-	// Copy buttons
 	copyIPBtn := widget.NewButtonWithIcon("Copy IP", theme.ContentCopyIcon(), func() {
 		if parent != nil {
 			parent.Clipboard().SetContent(ip)
@@ -110,7 +105,6 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 		}
 	})
 
-	// Tabs for different pairing methods
 	qrTab := container.NewVBox(
 		widget.NewLabelWithStyle("Scan QR Code", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -144,7 +138,6 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 		container.NewTabItemWithIcon("Help", theme.HelpIcon(), helpTab),
 	)
 
-	// Main content
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("🔗 Pair New Device", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),

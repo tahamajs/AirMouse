@@ -15,7 +15,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"airmouse-go/internal/config"
-	mctl mctl "airmouse-go/control/mouse"   // alias
+	mctl  "airmouse-go/control/mouse"   // alias
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/protocol"
 )

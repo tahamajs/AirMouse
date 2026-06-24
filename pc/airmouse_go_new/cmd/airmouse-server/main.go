@@ -21,7 +21,6 @@ import (
 	"airmouse-go/internal/ui"
 )
 
-// Build‑time variables (set via -ldflags)
 var (
 	version   = "3.0.0"
 	buildTime = "2025-01-15"
@@ -29,7 +28,6 @@ var (
 )
 
 func main() {
-	// --- 1. Parse command line flags ---
 	var (
 		configPath  string
 		logLevel    string
@@ -47,7 +45,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// --- 2. Load configuration ---
 	cfg := config.Get()
 	if configPath != "" {
 		cfg.ConfigPath = configPath
@@ -63,11 +60,13 @@ func main() {
 		cfg.LogLevel = "debug"
 	}
 
-	// --- 3. Initialise logger ---
-	logger.Init(cfg.LogLevel, cfg.LogFile, cfg.LogColor)
+	// --- 3. Initialise logger (fixed signature) ---
+	logger.Init(logger.Config{
+		Level: cfg.LogLevel,
+	})
+
 	defer logger.Close()
 
-	// Inject logger callbacks into the device package.
 	device.SetLogger(
 		func(msg string, args ...interface{}) {
 			logger.Info(fmt.Sprintf(msg, args...))
@@ -80,12 +79,11 @@ func main() {
 	printBanner()
 	logSystemInfo()
 
-	// --- 4. Create core components ---
-	mouseCtrl := mouse.NewController(cfg.Sensitivity) // now from control/mouse
+	mouseCtrl := mouse.NewController(cfg.Sensitivity)
 	deviceMgr := device.NewManager()
 	authMgr := initAuth(cfg)
 
-	// Create proximity manager
+	// --- Proximity manager (with stubbed persistence) ---
 	proxMgr := proximity.NewManager()
 	nearThreshold := float32(cfg.ProximityNearThreshold)
 	farThreshold := float32(cfg.ProximityFarThreshold)
@@ -93,38 +91,36 @@ func main() {
 	proxMgr.EnableAutoLock(cfg.ProximityEnabled)
 	proxMgr.EnableAutoUnlock(cfg.ProximityEnabled)
 
+	// Create RSSI fusion with persistence stubs (we'll add methods later)
 	fusion := proximity.NewRSSIFusion(-59, 2.0)
 	if cfg.ProximityEnabled {
-		statePath := filepath.Join(cfg.ConfigDir, "proximity_state.json")
-		if err := fusion.LoadState(statePath); err == nil {
-			logger.Info("Loaded proximity state from %s", statePath)
-		}
-		proxMgr.SetRSSIFusion(fusion)
+		// Compute config directory – use filepath.Dir(cfg.ConfigPath)
+		configDir := filepath.Dir(cfg.ConfigPath)
+		statePath := filepath.Join(configDir, "proximity_state.json")
+		_ = fusion.LoadState(statePath) // stub: does nothing
+		proxMgr.SetRSSIFusion(fusion)    // stub: does nothing
 		go func() {
 			ticker := time.NewTicker(60 * time.Second)
 			defer ticker.Stop()
 			for range ticker.C {
-				_ = fusion.SaveState(statePath)
+				_ = fusion.SaveState(statePath) // stub: does nothing
 			}
 		}()
 	}
 
-	// Create protocol server (passes mouse controller, device manager, auth manager, and proximity manager)
+	// Create protocol server (accepts 4 arguments; proximity is passed inside)
 	protocolServer := protocol.NewProtocolServerWithProximity(mouseCtrl, deviceMgr, authMgr, proxMgr)
 
-	// --- 5. Wire lifecycle logging ---
 	wireLifecycleLogging(protocolServer, deviceMgr)
 
-	// --- 6. Build the UI (does not start the event loop) ---
-	appUI := ui.NewApp(cfg, protocolServer, mouseCtrl, deviceMgr, proxMgr)
+	// --- UI: now takes 4 arguments (proxMgr removed) ---
+	appUI := ui.NewApp(cfg, protocolServer, mouseCtrl, deviceMgr)
 
-	// --- 7. Setup graceful shutdown ---
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go handleSignals(ctx, appUI, protocolServer, deviceMgr, proxMgr, fusion)
+	go handleSignals(ctx, appUI, protocolServer, deviceMgr, proxMgr, fusion, cfg)
 
-	// --- 8. Log server endpoints ---
 	logger.Info("Application started successfully")
 	logger.Info("WebSocket server will listen on port %d", cfg.WebSocketPort)
 	logger.Info("TCP server will listen on port %d", cfg.Port)
@@ -132,24 +128,22 @@ func main() {
 	logger.Info("Active protocols: %v", protocolServer.GetActiveProtocols())
 	logger.Info("Launching desktop UI window...")
 
-	// --- 9. Run the UI (blocks until window closed) ---
 	if err := appUI.Run(); err != nil {
 		logger.Error("Application error: %v", err)
 		os.Exit(1)
 	}
 
-	// --- 10. Cleanup after UI exits ---
 	logger.Info("Shutting down...")
 	protocolServer.Stop()
 	deviceMgr.Stop()
 	if proxMgr != nil && fusion != nil {
-		statePath := filepath.Join(cfg.ConfigDir, "proximity_state.json")
+		configDir := filepath.Dir(cfg.ConfigPath)
+		statePath := filepath.Join(configDir, "proximity_state.json")
 		_ = fusion.SaveState(statePath)
 	}
 	logger.Info("Shutdown complete")
 }
 
-// printBanner displays the startup banner.
 func printBanner() {
 	banner := `
 ╔═══════════════════════════════════════════════════════════════╗
@@ -160,7 +154,6 @@ func printBanner() {
 	logger.Info(fmt.Sprintf(banner, version))
 }
 
-// logSystemInfo prints system details.
 func logSystemInfo() {
 	logger.Info("System Information:")
 	logger.Info("  OS: %s", runtime.GOOS)
@@ -171,7 +164,6 @@ func logSystemInfo() {
 	logger.Info("  Git Commit: %s", gitCommit)
 }
 
-// initAuth sets up authentication (if enabled).
 func initAuth(cfg *config.Config) *auth.Manager {
 	authMgr := auth.NewManager(cfg.AuthSecret)
 	if cfg.AuthEnabled {
@@ -187,7 +179,6 @@ func initAuth(cfg *config.Config) *auth.Manager {
 	return authMgr
 }
 
-// wireLifecycleLogging attaches lifecycle event listeners.
 func wireLifecycleLogging(server *protocol.ProtocolServer, deviceMgr *device.DeviceManager) {
 	if server != nil {
 		server.AddEventListener(func(event protocol.ServerEvent) {
@@ -205,7 +196,6 @@ func wireLifecycleLogging(server *protocol.ProtocolServer, deviceMgr *device.Dev
 			}
 		})
 	}
-
 	if deviceMgr != nil {
 		deviceMgr.AddEventListener(func(event device.DeviceEvent) {
 			logger.Info(
@@ -218,8 +208,10 @@ func wireLifecycleLogging(server *protocol.ProtocolServer, deviceMgr *device.Dev
 	}
 }
 
-// handleSignals listens for OS signals and performs graceful shutdown.
-func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.ProtocolServer, deviceMgr *device.DeviceManager, proxMgr *proximity.Manager, fusion *proximity.RSSIFusion) {
+func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.ProtocolServer,
+	deviceMgr *device.DeviceManager, proxMgr *proximity.Manager,
+	fusion *proximity.RSSIFusion, cfg *config.Config) {
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
@@ -227,7 +219,6 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 		select {
 		case sig := <-sigChan:
 			logger.Info("Received signal: %v", sig)
-
 			switch sig {
 			case syscall.SIGHUP:
 				logger.Info("Reloading configuration...")
@@ -236,7 +227,6 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 				} else {
 					logger.Info("Configuration reloaded successfully")
 				}
-
 			case syscall.SIGINT, syscall.SIGTERM:
 				logger.Info("Initiating graceful shutdown...")
 				if server != nil {
@@ -258,8 +248,8 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 					deviceMgr.Stop()
 				}
 				if proxMgr != nil && fusion != nil {
-					cfg := config.Get()
-					statePath := filepath.Join(cfg.ConfigDir, "proximity_state.json")
+					configDir := filepath.Dir(cfg.ConfigPath)
+					statePath := filepath.Join(configDir, "proximity_state.json")
 					_ = fusion.SaveState(statePath)
 				}
 				if appUI != nil {
@@ -269,11 +259,9 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 				logger.Info("Shutdown complete")
 				logger.Close()
 				os.Exit(0)
-
 			default:
 				logger.Debug("Unhandled signal: %v", sig)
 			}
-
 		case <-ctx.Done():
 			logger.Debug("Context cancelled, stopping signal handler")
 			return

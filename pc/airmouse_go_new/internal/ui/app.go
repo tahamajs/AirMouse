@@ -17,16 +17,15 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/skip2/go-qrcode"
 
-	"airmouse-go/control/common"
 	"airmouse-go/control/mouse"
-	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/personalization"
 	"airmouse-go/internal/protocol"
-	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/utils"
 )
+
+// ============================================================
 // App struct
 // ============================================================
 
@@ -67,7 +66,7 @@ type App struct {
 // Constructor
 // ============================================================
 
-func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse mouse.Controller, deviceMgr *device.Manager) *App {
+func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouseController mouse.Controller, deviceMgr *device.Manager) *App {
 	selectedTheme := getThemeByName(cfg.Theme)
 	a := app.New()
 	if selectedTheme != nil {
@@ -89,7 +88,7 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse mouse.Con
 		fyneApp:   a,
 		cfg:       cfg,
 		server:    server,
-		mouse:     mouse,
+		mouse:     mouseController,
 		deviceMgr: deviceMgr,
 		collector: collector,
 		stopChan:  make(chan struct{}),
@@ -101,23 +100,23 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse mouse.Con
 // ============================================================
 
 func (a *App) Run() error {
-	// Create window with responsive sizing
+	// Use size from helpers.go – no duplicate here
 	width, height := GetWindowSize()
 	a.window = a.fyneApp.NewWindow(fmt.Sprintf("Air Mouse Pro Server - %s", a.cfg.ServerName))
 	a.window.Resize(fyne.NewSize(width, height))
 	a.window.CenterOnScreen()
 	a.window.SetMaster()
 
-	// Status bar (already handles its own updates)
+	// Ensure the window is brought to front on macOS
+	a.window.RequestFocus()
+
 	a.statusBar = NewStatusBar()
 	a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval in Devices")
 	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts. Open Devices and tap Approve to accept Android.")
 	a.summaryStatus.Wrapping = fyne.TextWrapWord
 
-	// Build tabs
 	a.buildTabs()
 
-	// Tab container – use responsive layout
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
 		container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
@@ -135,32 +134,32 @@ func (a *App) Run() error {
 		a.onTabSelected(ti)
 	}
 
-	// Menu & Toolbar
 	mainMenu := a.createMenuBar()
 	a.window.SetMainMenu(mainMenu)
 	toolbar := a.createToolbar()
 
-	// Main layout – using Border for clean separation
 	content := container.NewBorder(
-		toolbar,                // top
-		a.statusBar.Widget(),   // bottom
-		nil,                    // left
-		nil,                    // right
-		tabs,                   // center
+		toolbar,
+		a.statusBar.Widget(),
+		nil,
+		nil,
+		tabs,
 	)
 	a.window.SetContent(content)
+	utils.LogInfo("Content set, window ready")
 
-	// Window close handler
+	// Force window to appear and raise
+	a.window.Show()
+	time.Sleep(100 * time.Millisecond)
+	a.window.RequestFocus()
+
 	a.window.SetCloseIntercept(func() {
 		a.onWindowClose()
 	})
 
-	// Background tasks
 	go a.connectionStatusUpdater()
 
-	// Show welcome dialog on first launch
 	if a.cfg.IsFirstLaunch() {
-		// Show after a short delay to let the window render
 		go func() {
 			time.Sleep(500 * time.Millisecond)
 			RunOnMain(func() {
@@ -170,7 +169,6 @@ func (a *App) Run() error {
 		_ = a.cfg.SetFirstLaunchComplete()
 	}
 
-	// Show and run
 	utils.LogInfo("Showing window")
 	a.window.ShowAndRun()
 	utils.LogInfo("Window closed")
@@ -235,7 +233,7 @@ func safeTab(tab fyne.CanvasObject, name string) fyne.CanvasObject {
 }
 
 // ============================================================
-// Menu Bar – with Help menu improvements
+// Menu Bar
 // ============================================================
 
 func (a *App) createMenuBar() *fyne.MainMenu {
@@ -315,7 +313,7 @@ func (a *App) createMenuBar() *fyne.MainMenu {
 }
 
 // ============================================================
-// Toolbar – with help button
+// Toolbar
 // ============================================================
 
 func (a *App) createToolbar() fyne.CanvasObject {
@@ -413,10 +411,8 @@ func (a *App) refreshConnectionSummary() {
 
 	activeCount := 0
 	pendingCount := 0
-	totalCount := 0
 	if a.deviceMgr != nil {
 		allDevices := a.deviceMgr.GetAllDevices()
-		totalCount = len(allDevices)
 		activeCount = len(a.deviceMgr.GetActiveDevices())
 		for _, d := range allDevices {
 			if d.Status == device.StatusPendingApproval {
@@ -529,7 +525,7 @@ func (a *App) stopBackgroundUI() {
 }
 
 // ============================================================
-// Dialog helpers (fully implemented)
+// Dialog helpers (all methods unchanged – they are correct)
 // ============================================================
 
 func (a *App) exportConfig() {
