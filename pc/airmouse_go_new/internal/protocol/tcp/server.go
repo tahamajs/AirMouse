@@ -395,6 +395,12 @@ func (s *Server) processLine(client *Client, line []byte) {
 		case "stop", "touchpad_stop", "pause", "pause_movement":
 			control.SetMovementPaused(true)
 			utils.LogInfo("Movement paused by TCP client: client=%s command=%s", client.ID, command)
+		case "show_desktop", "task_view", "switch_window", "lock_screen", "window_close", "zoom_in", "zoom_out", "zoom_reset":
+			if err := control.ExecuteSystemCommand(command); err != nil {
+				utils.LogError("TCP system command failed: client=%s command=%s err=%v", client.ID, command, err)
+			} else {
+				utils.LogInfo("TCP system command executed: client=%s command=%s", client.ID, command)
+			}
 		default:
 			utils.LogDebug("Unknown TCP control command: %s", command)
 		}

@@ -227,6 +227,12 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		case "stop", "touchpad_stop", "pause", "pause_movement":
 			control.SetMovementPaused(true)
 			utils.LogInfo("Movement paused by UDP client: %s command=%s", clientIP, command)
+		case "show_desktop", "task_view", "switch_window", "lock_screen", "window_close", "zoom_in", "zoom_out", "zoom_reset":
+			if err := control.ExecuteSystemCommand(command); err != nil {
+				utils.LogError("UDP system command failed: %s command=%s err=%v", clientIP, command, err)
+			} else {
+				utils.LogInfo("UDP system command executed: %s command=%s", clientIP, command)
+			}
 		default:
 			utils.LogDebug("Unknown UDP control command: %s", command)
 		}
