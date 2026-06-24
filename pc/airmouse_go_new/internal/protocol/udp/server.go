@@ -143,8 +143,12 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		return
 	}
 
-	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll") {
-		s.writeToClient(clientKey, clientAddr, websocketpkg.AckMessage(id))
+	if id != nil {
+		ack := websocketpkg.AckMessage(id)
+		if len(ack) > 0 {
+			s.writeToClient(clientKey, clientAddr, ack)
+			utils.LogDebug("UDP ack sent: client=%s type=%s id=%s", clientIP, msgType, *id)
+		}
 	}
 
 	if !client.Approved && msgType != "hello" && msgType != "ping" {

@@ -30,6 +30,7 @@ type DevicesTab struct {
 	blockBtn      *widget.Button
 	renameBtn     *widget.Button
 	statusLabel   *widget.Label
+	approvalLabel *widget.Label
 	searchEntry   *widget.Entry
 	filterSelect  *widget.Select
 	selectedID    string
@@ -154,6 +155,8 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 	tab.renameBtn.Disable()
 
 	tab.statusLabel = widget.NewLabel("")
+	tab.approvalLabel = widget.NewLabel("⏳ Approval pending: select a device and tap Pair to approve the session.")
+	tab.approvalLabel.Wrapping = fyne.TextWrapWord
 
 	// ----- Details Panel -----
 	tab.details = widget.NewLabel("Select a device to view details")
@@ -186,7 +189,7 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 		widget.NewLabelWithStyle("Device Details", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		statsPanel,
 		nil, nil,
-		container.NewScroll(tab.details),
+		container.NewVBox(tab.approvalLabel, container.NewScroll(tab.details)),
 	)
 
 	split := container.NewHSplit(leftPanel, rightPanel)
@@ -255,7 +258,10 @@ func (t *DevicesTab) refresh() {
 		if !exists {
 			t.selectedID = ""
 			t.updateButtons(false)
-			t.details.SetText("Waiting for approval")
+			t.details.SetText("Waiting for approval.\n\nTap Pair on a device to open the pairing wizard and approve the session.")
+			if t.approvalLabel != nil {
+				t.approvalLabel.SetText("⏳ Approval pending: no device is selected yet. Use Pair to approve a phone.")
+			}
 		}
 	}
 }
@@ -277,6 +283,7 @@ func (t *DevicesTab) showDeviceDetails(d *device.DeviceInfo) {
 			"Name: %s\n"+
 			"Type: %s\n"+
 			"Status: %s\n\n"+
+			"Approval: pending until Pair is tapped\n\n"+
 			"━━━━━━━━━━━━━━━━━━━━━━━━\n"+
 			"⏱️ TIMING\n"+
 			"━━━━━━━━━━━━━━━━━━━━━━━━\n"+
@@ -303,12 +310,18 @@ func (t *DevicesTab) showDeviceDetails(d *device.DeviceInfo) {
 		FormatBytes(d.BytesSent+d.BytesRecv),
 	)
 	t.details.SetText(details)
+	if t.approvalLabel != nil {
+		t.approvalLabel.SetText(fmt.Sprintf("⏳ Approval pending for %s. Tap Pair to open the pairing wizard and approve this device.", d.Name))
+	}
 }
 
 func (t *DevicesTab) showPairingForDevice(d *device.DeviceInfo) {
 	win := getCurrentWindow()
 	if win == nil || d == nil {
 		return
+	}
+	if t.approvalLabel != nil {
+		t.approvalLabel.SetText(fmt.Sprintf("✅ Pairing wizard opened for %s. Approve the session to enable control.", d.Name))
 	}
 	ShowPairingWizard(win, fmt.Sprintf("ws://%s:%d/ws", utils.GetLocalIP(), config.Get().WebSocketPort))
 }

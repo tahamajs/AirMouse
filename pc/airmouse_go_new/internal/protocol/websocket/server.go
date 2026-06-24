@@ -192,6 +192,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	utils.LogInfo("WebSocket client connected: id=%s, ip=%s", id, client.IP)
 	utils.LogInfo("WebSocket approval pending: id=%s", id)
+	utils.LogDebug("WebSocket initial client state: id=%s approved=%v device=%s", id, client.Approved, client.DeviceID)
 
 	// Send welcome message
 	welcome := WelcomeMessage(cfg.ServerName, cfg.Version)
@@ -374,6 +375,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			name = "Unknown"
 		}
 		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
+		utils.LogDebug("WebSocket hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
 		client.Name = name
 		client.Approved = true
 		if s.deviceMgr != nil {
@@ -403,6 +405,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		welcome := WelcomeMessage(cfg.ServerName, cfg.Version)
 		client.Send <- welcome
 		utils.LogInfo("Approval sent to device (WebSocket): id=%s name=%s", client.ID, name)
+		utils.LogDebug("WebSocket approval state set: id=%s approved=%v device_id=%s", client.ID, client.Approved, client.DeviceID)
 
 	case "gesture":
 		gesture, _ := payload["gesture"].(string)
