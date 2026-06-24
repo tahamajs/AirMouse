@@ -1,44 +1,100 @@
-# .air.toml
+# .air.toml - Air live‑reload configuration
+# See: https://github.com/air-verse/air
+
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  args_bin = []
-  bin = "./tmp/airmouse-server"
+  # The command to build your Go application.
+  # If you have a Makefile, you can use "make build" as shown.
   cmd = "make build"
-  delay = 1000
-  exclude_dir = ["assets", "tmp", "vendor", "dist", "build"]
-  exclude_file = []
-  exclude_regex = ["_test.go"]
-  exclude_unchanged = false
-  follow_symlink = false
+  # Binary output path (relative to root).
+  bin = "./tmp/airmouse-server"
+  # Full path to the binary (used for Windows if needed).
   full_bin = ""
-  include_dir = []
-  include_ext = ["go", "tpl", "tmpl", "html"]
-  include_file = []
+  # Arguments passed to the binary (e.g., "-c config.toml").
+  args_bin = []
+  # Delay (in ms) before triggering a rebuild after a change.
+  delay = 1000
+  # Stop on error during build.
+  stop_on_error = false
+  # Send interrupt signal (SIGINT) instead of killing the process.
+  send_interrupt = false
+  # Kill delay after sending interrupt (0 = no delay).
   kill_delay = "0s"
-  log = "build-errors.log"
-  poll = false
-  poll_interval = 0
+  # Rerun the binary even if the build failed.
   rerun = false
   rerun_delay = 500
-  send_interrupt = false
-  stop_on_error = false
+  # Exclude directories from watching.
+  exclude_dir = ["assets", "tmp", "vendor", "dist", "build"]
+  # Exclude specific files.
+  exclude_file = []
+  # Exclude files matching these regex patterns.
+  exclude_regex = ["_test.go"]
+  # Do not trigger rebuild for unchanged files.
+  exclude_unchanged = false
+  # Follow symbolic links.
+  follow_symlink = false
+  # Include directories (empty = all).
+  include_dir = []
+  # Include file extensions to watch.
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  # Include specific files.
+  include_file = []
+  # Log file for build errors.
+  log = "build-errors.log"
+  # Polling mode (use if filesystem events are unreliable).
+  poll = false
+  # Poll interval (only used if poll = true).
+  poll_interval = 0
+  # Use the host's environment variables (default true).
+  # Set to false to isolate.
+  # (Not a standard option but can be added; we omit for compatibility)
 
 [color]
-  app = ""
-  build = "yellow"
-  main = "magenta"
-  runner = "green"
-  watcher = "cyan"
+  # Colour settings for the terminal output.
+  app = ""          # Default colour for app logs
+  build = "yellow"  # Build messages
+  main = "magenta"  # Main process output
+  runner = "green"  # Runner status
+  watcher = "cyan"  # File watcher events
 
 [log]
-  main_only = false
-  time = false
+  # Logging behaviour.
+  main_only = false   # Only show logs from the main process, not the runner.
+  time = false        # Show timestamps in logs.
 
 [misc]
-  clean_on_exit = false
+  # Miscellaneous options.
+  clean_on_exit = false  # Clean temporary files on exit.
 
 [screen]
-  clear_on_rebuild = true
-  keep_scroll = true
+  # Terminal screen behaviour.
+  clear_on_rebuild = true  # Clear the screen before each rebuild.
+  keep_scroll = true        # Keep scrollback history.
+
+# ------------------------------
+# Optional advanced sections
+# ------------------------------
+
+# [proxy]
+#   # Proxy configuration for HTTP/WebSocket proxying.
+#   enabled = false
+#   port = 3000
+#   proxy_pass = "http://localhost:8080"
+#   websocket = true
+
+# [test]
+#   # Run tests after each build.
+#   enabled = false
+#   args = ["-v"]
+#   include_dirs = []
+
+# [build_error_handler]
+#   # Execute a command when a build error occurs.
+#   command = "echo 'Build failed'"
+
+# [env]
+#   # Environment variables passed to the binary.
+#   AIRMOUSE_CONFIG = "config.json"
+#   LOG_LEVEL = "debug"a

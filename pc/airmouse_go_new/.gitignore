@@ -1,1 +1,174 @@
-.gotmp/*
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Build artifacts
+dist/
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go specific
+go.sum
+go.mod
+vendor/
+*.coverprofile
+coverage.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Dependencies
+vendor/
+node_modules/
+package-lock.json
+yarn.lock
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage
+coverage.out
+coverage.html
+*.coverprofile
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# CI
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Scripts
+scripts/
+*.sh
+!scripts/init-db.sql
+
+# Testing
+test/
+tests/
+*_test.go.bak
+*.test
+
+# Local configuration
+config.json
+*.local
+.env
+.env.local
+.env.*.local
+
+# Python (for ML/scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.env
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Data
+data/
+models/
+!models/.gitkeep
+
+# Web assets source
+web/static/src/
+web/static/node_modules/
+web/static/dist/
+
+# Releases
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+*.snap
+
+# Fyne specific
+fyne-cross/
+fyne-cross-*
+
+# macOS specifics
+*.dmg
+*.app
+
+# Windows specifics
+*.msi
+*.exe
+*.pdb
+
+# Linux specifics
+*.deb
+*.rpm
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Certificate / key files
+*.pem
+*.key
+*.crt
+*.p12
+
+# Python type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains
+.idea/
+*.iml
+*.iws
+
+# Temporary files (again, just in case)
+*.temp
+*.swp
