@@ -2804,3 +2804,8 @@
 2026-06-24 17:46:39.651 [INFO] main.go:144: Device lifecycle event: type=registered id=c8b1906569e690681803724764861c18 name=Unknown
 2026-06-24 18:02:27.691 [INFO] main.go:39: Device registered: Unknown (TCP)
 2026-06-24 18:02:27.694 [INFO] main.go:144: Device lifecycle event: type=registered id=af6bb1627196ee391daf38a9175ff271 name=Unknown
+2026-06-24 18:27:33.776 [INFO] manager.go:368: Bluetooth manager stopped
+2026-06-24 18:27:33.779 [INFO] server.go:381: USB serial server stopped
+2026-06-24 18:27:33.782 [INFO] main.go:131: Protocol lifecycle event: stop
+2026-06-24 18:27:33.847 [INFO] main.go:81: Shutting down...
+2026-06-24 18:27:33.847 [INFO] main.go:39: Device manager stopped
