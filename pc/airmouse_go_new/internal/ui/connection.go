@@ -34,7 +34,6 @@ type ConnectionQualityWidget struct {
 
 // NewConnectionQualityWidget creates a widget that displays connection status.
 func NewConnectionQualityWidget() *ConnectionQualityWidget {
-	// Create a default colored image (must be *image.Uniform)
 	defaultImg := image.NewUniform(color.RGBA{128, 128, 128, 255})
 
 	ic := canvas.NewImageFromImage(defaultImg)
@@ -70,9 +69,7 @@ func NewConnectionQualityWidget() *ConnectionQualityWidget {
 		initialized:  true,
 	}
 
-	// Start the updater in a separate goroutine
 	go w.updater()
-
 	return w
 }
 
@@ -221,7 +218,6 @@ func (w *ConnectionQualityWidget) updateIcon(rssi int) {
 		col = color.RGBA{239, 68, 68, 255} // Red
 	}
 
-	// Create a new uniform image with the color
 	newImg := image.NewUniform(col)
 	if newImg != nil {
 		w.icon.Image = newImg
@@ -292,7 +288,6 @@ func (w *ConnectionQualityWidget) Reset() {
 	w.latencyLabel.SetText("Latency: -- ms")
 	w.signalBar.SetValue(0)
 
-	// Reset icon to default gray
 	defaultImg := image.NewUniform(color.RGBA{128, 128, 128, 255})
 	if defaultImg != nil && w.icon != nil {
 		w.icon.Image = defaultImg

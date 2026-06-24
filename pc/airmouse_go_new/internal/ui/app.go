@@ -25,9 +25,9 @@ import (
 	"airmouse-go/internal/utils"
 )
 
-// ------------------------------------------------------------
-//  App struct
-// ------------------------------------------------------------
+// ============================================================
+// App struct
+// ============================================================
 
 type App struct {
 	fyneApp   fyne.App
@@ -38,6 +38,7 @@ type App struct {
 	deviceMgr *device.Manager
 	collector *personalization.DataCollector
 
+	// Tabs
 	dashboardTab  fyne.CanvasObject
 	devicesTab    fyne.CanvasObject
 	networkTab    fyne.CanvasObject
@@ -50,18 +51,20 @@ type App struct {
 	dashboardCtrl interface{ Stop() }
 	proximityCtrl interface{ Stop() }
 
+	// Status
 	statusBar        *StatusBar
 	connectionStatus *widget.Label
 	summaryStatus    *widget.Label
 
+	// Lifecycle
 	shutdownOnce sync.Once
 	stopChan     chan struct{}
 	stopOnce     sync.Once
 }
 
-// ------------------------------------------------------------
-//  Constructor
-// ------------------------------------------------------------
+// ============================================================
+// Constructor
+// ============================================================
 
 func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) *App {
 	selectedTheme := getThemeByName(cfg.Theme)
@@ -92,53 +95,28 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouse control.M
 	}
 }
 
-// ------------------------------------------------------------
-//  Run – creates window, tabs, and starts the event loop
-// ------------------------------------------------------------
+// ============================================================
+// Run – creates window, tabs, and starts the event loop
+// ============================================================
 
 func (a *App) Run() error {
+	// Create window with responsive sizing
+	width, height := GetWindowSize()
 	a.window = a.fyneApp.NewWindow(fmt.Sprintf("Air Mouse Pro Server - %s", a.cfg.ServerName))
-	a.window.Resize(fyne.NewSize(1400, 900))
+	a.window.Resize(fyne.NewSize(width, height))
 	a.window.CenterOnScreen()
 	a.window.SetMaster()
 
-	// Status bar
+	// Status bar (already handles its own updates)
 	a.statusBar = NewStatusBar()
 	a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval in Devices")
 	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts. Open Devices and tap Approve to accept Android.")
 	a.summaryStatus.Wrapping = fyne.TextWrapWord
 
-	// ----- Create all tabs (using safeTab to catch nil) -----
-	utils.LogInfo("Building dashboard tab...")
-	if dashboardTab, dashboardCtrl := NewDashboardTab(a.server, a.mouse, a.deviceMgr); dashboardTab != nil {
-		a.dashboardTab = safeTab(dashboardTab, "Dashboard")
-		a.dashboardCtrl = dashboardCtrl
-	} else {
-		a.dashboardTab = safeTab(nil, "Dashboard")
-	}
-	utils.LogInfo("Building devices tab...")
-	a.devicesTab = safeTab(NewDevicesTab(a.server, a.deviceMgr), "Devices")
-	utils.LogInfo("Building network tab...")
-	a.networkTab = safeTab(NewNetworkTab(a.cfg), "Network")
-	utils.LogInfo("Building gestures tab...")
-	a.gesturesTab = safeTab(NewGesturesTab(), "Gestures")
-	utils.LogInfo("Building proximity tab...")
-	if proximityTab, proximityCtrl := NewProximityTab(); proximityTab != nil {
-		a.proximityTab = safeTab(proximityTab, "Proximity")
-		a.proximityCtrl = proximityCtrl
-	} else {
-		a.proximityTab = safeTab(nil, "Proximity")
-	}
-	utils.LogInfo("Building analytics tab...")
-	a.analyticsTab = safeTab(NewAnalyticsTab(a.collector), "Analytics")
-	utils.LogInfo("Building settings tab...")
-	a.settingsTab = safeTab(NewSettingsTab(a.cfg, a.mouse), "Settings")
-	utils.LogInfo("Building logs tab...")
-	a.logsTab = safeTab(NewLogsTab(), "Logs")
-	utils.LogInfo("Building protocol tab...")
-	a.protocolTab = safeTab(NewProtocolGuideTab(a.cfg, a.server), "Network Protocol")
+	// Build tabs
+	a.buildTabs()
 
-	// ----- Tab container -----
+	// Tab container – use responsive layout
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
 		container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
@@ -156,38 +134,96 @@ func (a *App) Run() error {
 		a.onTabSelected(ti)
 	}
 
-	// ----- Menu & Toolbar -----
+	// Menu & Toolbar
 	mainMenu := a.createMenuBar()
 	a.window.SetMainMenu(mainMenu)
 	toolbar := a.createToolbar()
 
-	// ----- Main layout -----
+	// Main layout – using Border for clean separation
 	content := container.NewBorder(
-		toolbar,
-		a.statusBar.Widget(),
-		nil, nil,
-		tabs,
+		toolbar,                // top
+		a.statusBar.Widget(),   // bottom
+		nil,                    // left
+		nil,                    // right
+		tabs,                   // center
 	)
 	a.window.SetContent(content)
 
-	// ----- Window close handler -----
+	// Window close handler
 	a.window.SetCloseIntercept(func() {
 		a.onWindowClose()
 	})
 
-	// ----- Start background tasks -----
+	// Background tasks
 	go a.connectionStatusUpdater()
 
-	// ----- Show and run -----
+	// Show welcome dialog on first launch
+	if a.cfg.IsFirstLaunch() {
+		// Show after a short delay to let the window render
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			RunOnMain(func() {
+				ShowWelcomeDialog(a.window)
+			})
+		}()
+		_ = a.cfg.SetFirstLaunchComplete()
+	}
+
+	// Show and run
 	utils.LogInfo("Showing window")
 	a.window.ShowAndRun()
 	utils.LogInfo("Window closed")
 	return nil
 }
 
-// ------------------------------------------------------------
-//  safeTab – prevents nil panics
-// ------------------------------------------------------------
+// ============================================================
+// buildTabs – creates all tabs with error handling
+// ============================================================
+
+func (a *App) buildTabs() {
+	utils.LogInfo("Building dashboard tab...")
+	if dashboardTab, dashboardCtrl := NewDashboardTab(a.server, a.mouse, a.deviceMgr); dashboardTab != nil {
+		a.dashboardTab = safeTab(dashboardTab, "Dashboard")
+		a.dashboardCtrl = dashboardCtrl
+	} else {
+		a.dashboardTab = safeTab(nil, "Dashboard")
+	}
+
+	utils.LogInfo("Building devices tab...")
+	a.devicesTab = safeTab(NewDevicesTab(a.server, a.deviceMgr), "Devices")
+
+	utils.LogInfo("Building network tab...")
+	a.networkTab = safeTab(NewNetworkTab(a.cfg), "Network")
+
+	utils.LogInfo("Building gestures tab...")
+	a.gesturesTab = safeTab(NewGesturesTab(), "Gestures")
+
+	utils.LogInfo("Building proximity tab...")
+	if proximityTab, proximityCtrl := NewProximityTab(); proximityTab != nil {
+		a.proximityTab = safeTab(proximityTab, "Proximity")
+		a.proximityCtrl = proximityCtrl
+	} else {
+		a.proximityTab = safeTab(nil, "Proximity")
+	}
+
+	utils.LogInfo("Building analytics tab...")
+	a.analyticsTab = safeTab(NewAnalyticsTab(a.collector), "Analytics")
+
+	utils.LogInfo("Building settings tab...")
+	a.settingsTab = safeTab(NewSettingsTab(a.cfg, a.mouse), "Settings")
+
+	utils.LogInfo("Building logs tab...")
+	a.logsTab = safeTab(NewLogsTab(), "Logs")
+
+	utils.LogInfo("Building protocol tab...")
+	a.protocolTab = safeTab(NewProtocolGuideTab(a.cfg, a.server), "Network Protocol")
+
+	utils.LogInfo("All tabs created successfully")
+}
+
+// ============================================================
+// safeTab – prevents nil panics
+// ============================================================
 
 func safeTab(tab fyne.CanvasObject, name string) fyne.CanvasObject {
 	if tab != nil {
@@ -197,15 +233,13 @@ func safeTab(tab fyne.CanvasObject, name string) fyne.CanvasObject {
 	return widget.NewLabelWithStyle("⚠️ "+name+" tab not implemented", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 }
 
-// ------------------------------------------------------------
-//  Menu Bar
-// ------------------------------------------------------------
+// ============================================================
+// Menu Bar – with Help menu improvements
+// ============================================================
 
 func (a *App) createMenuBar() *fyne.MainMenu {
 	fileMenu := fyne.NewMenu("File",
-		fyne.NewMenuItem("Start Server", func() {
-			a.startServerAsync("menu")
-		}),
+		fyne.NewMenuItem("Start Server", func() { a.startServerAsync("menu") }),
 		fyne.NewMenuItem("Stop Server", func() { a.stopServerAsync("menu") }),
 		fyne.NewMenuItem("Restart Server", func() {
 			go func() {
@@ -234,7 +268,7 @@ func (a *App) createMenuBar() *fyne.MainMenu {
 	viewMenu := fyne.NewMenu("View",
 		fyne.NewMenuItem("Refresh", func() { a.window.Content().Refresh() }),
 		fyne.NewMenuItem("Reset Layout", func() {
-			a.window.Resize(fyne.NewSize(1400, 900))
+			a.window.Resize(fyne.NewSize(1200, 800))
 			a.window.CenterOnScreen()
 		}),
 		fyne.NewMenuItemSeparator(),
@@ -259,6 +293,14 @@ func (a *App) createMenuBar() *fyne.MainMenu {
 	)
 
 	helpMenu := fyne.NewMenu("Help",
+		fyne.NewMenuItem("Welcome Guide", func() { ShowWelcomeDialog(a.window) }),
+		fyne.NewMenuItem("Keyboard Shortcuts", func() { ShowShortcutsDialog(a.window) }),
+		fyne.NewMenuItem("Dashboard Help", func() { ShowContextHelp(a.window, "dashboard") }),
+		fyne.NewMenuItem("Devices Help", func() { ShowContextHelp(a.window, "devices") }),
+		fyne.NewMenuItem("Network Help", func() { ShowContextHelp(a.window, "network") }),
+		fyne.NewMenuItem("Gestures Help", func() { ShowContextHelp(a.window, "gestures") }),
+		fyne.NewMenuItem("Proximity Help", func() { ShowContextHelp(a.window, "proximity") }),
+		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem("User Guide", func() { a.showUserGuide() }),
 		fyne.NewMenuItem("API Documentation", func() { a.showAPIDocs() }),
 		fyne.NewMenuItemSeparator(),
@@ -271,16 +313,16 @@ func (a *App) createMenuBar() *fyne.MainMenu {
 	return fyne.NewMainMenu(fileMenu, serverMenu, viewMenu, toolsMenu, helpMenu)
 }
 
-// ------------------------------------------------------------
-//  Toolbar
-// ------------------------------------------------------------
+// ============================================================
+// Toolbar – with help button
+// ============================================================
 
 func (a *App) createToolbar() fyne.CanvasObject {
 	settingsBtn := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
 		dialog.ShowInformation("Settings", "Open the Settings tab to adjust server, network, and pairing options.", a.window)
 	})
 	helpBtn := widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
-		showShortcutsDialog(a.window)
+		ShowShortcutsDialog(a.window)
 	})
 
 	title := widget.NewLabelWithStyle("Air Mouse Pro Server", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
@@ -296,9 +338,9 @@ func (a *App) createToolbar() fyne.CanvasObject {
 	)
 }
 
-// ------------------------------------------------------------
-//  Server control helpers
-// ------------------------------------------------------------
+// ============================================================
+// Server control
+// ============================================================
 
 func (a *App) startServerAsync(source string) {
 	if a.server == nil {
@@ -338,17 +380,17 @@ func (a *App) stopServerAsync(source string) {
 	})
 }
 
-// ------------------------------------------------------------
-//  Tab selection handler
-// ------------------------------------------------------------
+// ============================================================
+// Tab selection handler
+// ============================================================
 
 func (a *App) onTabSelected(ti *container.TabItem) {
 	utils.LogDebug("Selected tab: %s", ti.Text)
 }
 
-// ------------------------------------------------------------
-//  Connection status updater (runs in background)
-// ------------------------------------------------------------
+// ============================================================
+// Connection status updater
+// ============================================================
 
 func (a *App) connectionStatusUpdater() {
 	ticker := time.NewTicker(2 * time.Second)
@@ -381,7 +423,6 @@ func (a *App) refreshConnectionSummary() {
 			}
 		}
 	}
-	utils.LogDebug("Refreshing connection summary: server_nil=%t running=%t active=%d pending=%d total=%d", a.server == nil, a.server != nil && a.server.IsRunning(), activeCount, pendingCount, totalCount)
 
 	if a.server == nil {
 		a.connectionStatus.SetText("⚪ Status: Server unavailable")
@@ -412,33 +453,22 @@ func (a *App) refreshConnectionSummary() {
 		if pendingCount > 0 {
 			a.summaryStatus.SetText(fmt.Sprintf(
 				"Pending approval on %s:%d | ws://%s:%d/ws | UDP %d | Connected: %d | Pending: %d | Theme: %s",
-				ip,
-				a.cfg.Port,
-				ip,
-				a.cfg.WebSocketPort,
-				a.cfg.UDPPort,
-				activeCount,
-				pendingCount,
-				a.cfg.Theme,
+				ip, a.cfg.Port, ip, a.cfg.WebSocketPort, a.cfg.UDPPort,
+				activeCount, pendingCount, a.cfg.Theme,
 			))
 		} else {
 			a.summaryStatus.SetText(fmt.Sprintf(
 				"Approved and connected on %s:%d | ws://%s:%d/ws | UDP %d | Connected: %d | Theme: %s",
-				ip,
-				a.cfg.Port,
-				ip,
-				a.cfg.WebSocketPort,
-				a.cfg.UDPPort,
-				activeCount,
-				a.cfg.Theme,
+				ip, a.cfg.Port, ip, a.cfg.WebSocketPort, a.cfg.UDPPort,
+				activeCount, a.cfg.Theme,
 			))
 		}
 	}
 }
 
-// ------------------------------------------------------------
-//  Window close & stop
-// ------------------------------------------------------------
+// ============================================================
+// Window close & stop
+// ============================================================
 
 func (a *App) onWindowClose() {
 	utils.LogInfo("Window close requested; shutting down immediately")
@@ -449,8 +479,6 @@ func (a *App) Stop() {
 	a.shutdown(true)
 }
 
-// shutdown stops background work and quits the Fyne app.
-// When force is true, it skips the confirmation dialog.
 func (a *App) shutdown(force bool) {
 	a.shutdownOnce.Do(func() {
 		utils.LogInfo("Shutdown sequence started (force=%v)", force)
@@ -499,9 +527,9 @@ func (a *App) stopBackgroundUI() {
 	}
 }
 
-// ------------------------------------------------------------
-//  Various dialog helpers (fully implemented)
-// ------------------------------------------------------------
+// ============================================================
+// Dialog helpers (fully implemented)
+// ============================================================
 
 func (a *App) exportConfig() {
 	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
@@ -559,7 +587,6 @@ func (a *App) showPairingQR() {
 	qrWindow.Resize(fyne.NewSize(400, 450))
 	qrWindow.CenterOnScreen()
 
-	// Generate QR with error handling
 	pngBytes, err := qrcode.Encode(data, qrcode.High, 300)
 	if err != nil {
 		dialog.ShowError(fmt.Errorf("QR generation failed: %w", err), a.window)
@@ -590,13 +617,10 @@ func (a *App) showPairingQR() {
 func (a *App) clearAllDevices() {
 	dialog.ShowConfirm("Clear Devices", "Remove all connected devices?", func(confirmed bool) {
 		if confirmed && a.deviceMgr != nil {
-			// Assuming deviceMgr has a ClearAll method; if not, we can iterate.
-			// For safety, we'll just call a method if it exists.
 			if clearer, ok := interface{}(a.deviceMgr).(interface{ ClearAll() }); ok {
 				clearer.ClearAll()
 				dialog.ShowInformation("Cleared", "All devices have been removed.", a.window)
 			} else {
-				// fallback: iterate and unregister
 				for _, d := range a.deviceMgr.GetAllDevices() {
 					_ = a.deviceMgr.UnregisterDevice(d.ID)
 				}
@@ -685,7 +709,6 @@ func (a *App) showPerformanceMonitor() {
 		widget.NewLabel(fmt.Sprintf("Goroutines: %d", metrics.GoRoutines)),
 		widget.NewLabel(fmt.Sprintf("Uptime: %v", metrics.Uptime)),
 		widget.NewButton("Refresh", func() {
-			// reopen the dialog with fresh stats
 			a.showPerformanceMonitor()
 		}),
 	)
@@ -715,7 +738,6 @@ func (a *App) showAPIDocs() {
 		widget.NewLabel("Health Check: GET /health"),
 		widget.NewLabel("Status: GET /api/status"),
 		widget.NewButton("Open in Browser", func() {
-			// Could open browser
 			dialog.ShowInformation("API Docs", "Open your browser to http://"+ip+":"+fmt.Sprintf("%d", a.cfg.Port)+"/health", a.window)
 		}),
 	)
@@ -739,9 +761,9 @@ func (a *App) reportIssue() {
 	dialog.ShowCustom("Report Issue", "Cancel", content, a.window)
 }
 
-// ------------------------------------------------------------
-//  Global helpers (some are defined elsewhere)
-// ------------------------------------------------------------
+// ============================================================
+// Global shortcuts dialog (enhanced)
+// ============================================================
 
 func showShortcutsDialog(w fyne.Window) {
 	content := container.NewVBox(
@@ -752,7 +774,10 @@ func showShortcutsDialog(w fyne.Window) {
 		widget.NewLabel("⌘/Ctrl + R - Restart Server"),
 		widget.NewLabel("⌘/Ctrl + Q - Quit"),
 		widget.NewLabel("⌘/Ctrl + , - Settings"),
-		widget.NewLabel("F1 - Help"),
+		widget.NewLabel("⌘/Ctrl + 1-9 - Switch Tabs"),
+		widget.NewLabel("F1 - Help / Shortcuts"),
+		widget.NewLabel("F5 - Refresh"),
+		widget.NewLabel("Esc - Close Dialog"),
 	)
 	dialog.ShowCustom("Shortcuts", "Close", content, w)
 }

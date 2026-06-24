@@ -17,6 +17,7 @@ import (
 	"airmouse-go/internal/utils"
 )
 
+// LogEntry represents a single log line.
 type LogEntry struct {
 	Time    time.Time
 	Level   string
@@ -24,6 +25,7 @@ type LogEntry struct {
 	Source  string
 }
 
+// LogsTab provides a live log viewer with filtering and export.
 type LogsTab struct {
 	logWidget   *widget.Entry
 	filterEntry *widget.Entry
@@ -34,8 +36,9 @@ type LogsTab struct {
 	exportBtn   *widget.Button
 	pauseBtn    *widget.Button
 	copyBtn     *widget.Button
+	helpBtn     *widget.Button
 
-	paused     atomic.Bool // now safe for concurrent access
+	paused     atomic.Bool // safe for concurrent access
 	logMu      sync.RWMutex
 	logEntries []LogEntry
 	filter     string
@@ -62,7 +65,6 @@ func handleLogHook(level, msg string) {
 		globalLogsTab.AddLogEntry(level, msg, "")
 		return
 	}
-
 	pendingLogsMu.Lock()
 	pendingLogs = append(pendingLogs, LogEntry{
 		Time:    time.Now(),
@@ -127,6 +129,7 @@ func NewLogsTab() fyne.CanvasObject {
 		tab.filter = s
 		tab.refreshDisplay()
 	}
+	tab.filterEntry.ToolTip = "Filter log messages by text"
 
 	// Level filter
 	levels := []string{"All", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"}
@@ -136,40 +139,54 @@ func NewLogsTab() fyne.CanvasObject {
 		tab.level = s
 		tab.refreshDisplay()
 	}
+	tab.levelSelect.ToolTip = "Filter by log level"
 
 	// ----- Auto-scroll checkbox -----
 	tab.autoScroll = widget.NewCheck("Auto-scroll", func(on bool) {
-		// Refresh display to apply auto-scroll setting
 		tab.refreshDisplay()
 	})
 	tab.autoScroll.SetChecked(true)
+	tab.autoScroll.ToolTip = "Automatically scroll to the bottom when new logs arrive"
 
 	// ----- Status label -----
 	tab.statusLabel = widget.NewLabel("📊 0 entries")
 	tab.statusLabel.Importance = widget.MediumImportance
 
-	// ----- Buttons -----
+	// ----- Buttons with tooltips -----
 	tab.clearBtn = widget.NewButtonWithIcon("Clear", theme.DeleteIcon(), func() {
 		tab.clearLogs()
 	})
+	tab.clearBtn.ToolTip = "Clear all log entries (confirmation required)"
 
 	tab.exportBtn = widget.NewButtonWithIcon("Export", theme.DownloadIcon(), func() {
 		tab.exportLogs()
 	})
+	tab.exportBtn.ToolTip = "Export all logs to a text file"
 
 	tab.pauseBtn = widget.NewButtonWithIcon("Pause", theme.MediaPauseIcon(), func() {
 		tab.togglePause()
 	})
+	tab.pauseBtn.ToolTip = "Pause/Resume live log streaming"
 
 	tab.copyBtn = widget.NewButtonWithIcon("Copy All", theme.ContentCopyIcon(), func() {
 		tab.copyAllLogs()
 	})
+	tab.copyBtn.ToolTip = "Copy all visible logs to the clipboard"
+
+	tab.helpBtn = widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
+		win := getCurrentWindow()
+		if win != nil {
+			ShowContextHelp(win, "logs")
+		}
+	})
+	tab.helpBtn.ToolTip = "Show help for the Logs tab"
 
 	// ----- Statistics card -----
 	statsCard := tab.createStatsCard()
-	title := widget.NewLabelWithStyle("🧾 Live Log Stream", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
 	// ----- Toolbar -----
+	title := widget.NewLabelWithStyle("🧾 Live Log Stream", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+
 	toolbar := container.NewVBox(
 		title,
 		container.NewHBox(
@@ -181,6 +198,7 @@ func NewLogsTab() fyne.CanvasObject {
 			tab.exportBtn,
 			tab.pauseBtn,
 			tab.copyBtn,
+			tab.helpBtn,
 			tab.autoScroll,
 			tab.statusLabel,
 		),
@@ -216,7 +234,6 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 	}
 	t.logEntries = append(t.logEntries, entry)
 
-	// Keep last 1000 entries
 	if len(t.logEntries) > 1000 {
 		t.logEntries = t.logEntries[len(t.logEntries)-1000:]
 	}
@@ -228,7 +245,6 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 
 // refreshDisplay updates the log view with current filters.
 func (t *LogsTab) refreshDisplay() {
-	// Safety guard: return if widgets are not yet initialized
 	if t.logWidget == nil || t.statusLabel == nil {
 		return
 	}
@@ -245,11 +261,9 @@ func (t *LogsTab) refreshDisplay() {
 	filteredCount := 0
 
 	for _, entry := range entries {
-		// Level filter
 		if level != "All" && entry.Level != level {
 			continue
 		}
-		// Text filter
 		if filterText != "" && !bytes.Contains([]byte(entry.Message), []byte(filterText)) &&
 			!bytes.Contains([]byte(entry.Level), []byte(filterText)) {
 			continue
@@ -265,11 +279,9 @@ func (t *LogsTab) refreshDisplay() {
 		buf.WriteString(line)
 	}
 
-	// Update status and content
 	t.statusLabel.SetText(fmt.Sprintf("📊 %d / %d entries", filteredCount, len(entries)))
 	t.logWidget.SetText(buf.String())
 
-	// Auto-scroll to bottom
 	if autoScroll && filteredCount > 0 {
 		t.logWidget.CursorRow = len(t.logWidget.Text) - 1
 	}
@@ -287,6 +299,7 @@ func (t *LogsTab) clearLogs() {
 			t.logEntries = make([]LogEntry, 0, 1000)
 			t.logMu.Unlock()
 			t.refreshDisplay()
+			t.setStatus("✅ Logs cleared", widget.SuccessImportance)
 			utils.LogInfo("Logs cleared by user")
 		}
 	}, win)
@@ -299,33 +312,44 @@ func (t *LogsTab) exportLogs() {
 		return
 	}
 	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
-		if err == nil && writer != nil {
-			defer writer.Close()
-
-			t.logMu.RLock()
-			defer t.logMu.RUnlock()
-
-			header := fmt.Sprintf("Air Mouse Pro Log Export\n"+
-				"Date: %s\n"+
-				"Total Entries: %d\n"+
-				"----------------------------------------\n\n",
-				time.Now().Format("2006-01-02 15:04:05"),
-				len(t.logEntries))
-			_, _ = writer.Write([]byte(header))
-
-			for _, entry := range t.logEntries {
-				line := fmt.Sprintf("%s [%s] %s\n",
-					entry.Time.Format("2006-01-02 15:04:05.000"),
-					entry.Level,
-					entry.Message)
-				_, _ = writer.Write([]byte(line))
+		if err != nil {
+			if err.Error() != "operation cancelled" {
+				dialog.ShowError(err, win)
 			}
-
-			dialog.ShowInformation("Export Complete",
-				fmt.Sprintf("Exported %d log entries", len(t.logEntries)),
-				win)
-			utils.LogInfo("Logs exported: %d entries", len(t.logEntries))
+			return
 		}
+		defer writer.Close()
+
+		t.logMu.RLock()
+		defer t.logMu.RUnlock()
+
+		header := fmt.Sprintf("Air Mouse Pro Log Export\n"+
+			"Date: %s\n"+
+			"Total Entries: %d\n"+
+			"----------------------------------------\n\n",
+			time.Now().Format("2006-01-02 15:04:05"),
+			len(t.logEntries))
+		if _, err := writer.Write([]byte(header)); err != nil {
+			dialog.ShowError(err, win)
+			return
+		}
+
+		for _, entry := range t.logEntries {
+			line := fmt.Sprintf("%s [%s] %s\n",
+				entry.Time.Format("2006-01-02 15:04:05.000"),
+				entry.Level,
+				entry.Message)
+			if _, err := writer.Write([]byte(line)); err != nil {
+				dialog.ShowError(err, win)
+				return
+			}
+		}
+
+		t.setStatus(fmt.Sprintf("✅ Exported %d log entries", len(t.logEntries)), widget.SuccessImportance)
+		dialog.ShowInformation("Export Complete",
+			fmt.Sprintf("Exported %d log entries", len(t.logEntries)),
+			win)
+		utils.LogInfo("Logs exported: %d entries", len(t.logEntries))
 	}, win)
 }
 
@@ -337,10 +361,12 @@ func (t *LogsTab) togglePause() {
 	if newState {
 		t.pauseBtn.SetIcon(theme.MediaPlayIcon())
 		t.pauseBtn.SetText("Resume")
+		t.setStatus("⏸️ Log streaming paused", widget.WarningImportance)
 		utils.LogInfo("Log streaming paused")
 	} else {
 		t.pauseBtn.SetIcon(theme.MediaPauseIcon())
 		t.pauseBtn.SetText("Pause")
+		t.setStatus("▶️ Log streaming resumed", widget.SuccessImportance)
 		utils.LogInfo("Log streaming resumed")
 		RunOnMain(func() {
 			t.refreshDisplay()
@@ -369,15 +395,30 @@ func (t *LogsTab) copyAllLogs() {
 	clipboard := win.Clipboard()
 	clipboard.SetContent(buf.String())
 
+	t.setStatus("✅ Logs copied to clipboard", widget.SuccessImportance)
 	dialog.ShowInformation("Copied", "All logs copied to clipboard", win)
 }
 
-// createStatsCard returns a panel with live log-level statistics.
+// setStatus updates the status label with a message and auto‑clears after 5 seconds.
+func (t *LogsTab) setStatus(msg string, importance widget.Importance) {
+	t.statusLabel.SetText(msg)
+	t.statusLabel.Importance = importance
+	time.AfterFunc(5*time.Second, func() {
+		RunOnMain(func() {
+			if t.statusLabel != nil {
+				// Restore the entry count display
+				t.refreshDisplay()
+			}
+		})
+	})
+}
+
+// createStatsCard returns a panel with live log‑level statistics.
 func (t *LogsTab) createStatsCard() fyne.CanvasObject {
-	debugCount := widget.NewLabel("DEBUG: 0")
-	infoCount := widget.NewLabel("INFO: 0")
-	warnCount := widget.NewLabel("WARN: 0")
-	errorCount := widget.NewLabel("ERROR: 0")
+	debugCount := widget.NewLabel("🔍 DEBUG: 0")
+	infoCount := widget.NewLabel("ℹ️ INFO: 0")
+	warnCount := widget.NewLabel("⚠️ WARN: 0")
+	errorCount := widget.NewLabel("❌ ERROR: 0")
 
 	go func() {
 		for {

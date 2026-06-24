@@ -13,18 +13,18 @@ import (
 type GlassCard struct {
 	widget.BaseWidget
 	Content      fyne.CanvasObject
-	BorderColor   color.Color
-	BgColor       color.Color
-	CornerRadius  float32
+	BorderColor  color.Color
+	BgColor      color.Color
+	CornerRadius float32
 }
 
-// NewGlassCard creates a new glass card
+// NewGlassCard creates a new glass card with default styling.
 func NewGlassCard(content fyne.CanvasObject) *GlassCard {
 	card := &GlassCard{
 		Content:      content,
-		BorderColor:   color.RGBA{148, 163, 184, 70},
-		BgColor:       color.RGBA{9, 15, 30, 235},
-		CornerRadius:  24,
+		BorderColor:  color.RGBA{148, 163, 184, 70},
+		BgColor:      color.RGBA{9, 15, 30, 235},
+		CornerRadius: 24,
 	}
 	card.ExtendBaseWidget(card)
 	return card
@@ -47,7 +47,6 @@ func (c *GlassCard) CreateRenderer() fyne.WidgetRenderer {
 	}
 
 	root := container.NewMax(items...)
-
 	return widget.NewSimpleRenderer(root)
 }
 

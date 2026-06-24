@@ -500,4 +500,24 @@ func getLogPath() string {
 		configDir = "."
 	}
 	return filepath.Join(configDir, "airmouse", "logs")
+}type Config struct {
+    // ... existing fields ...
+    FirstLaunch bool `json:"first_launch"`
+    // ... rest ...
 }
+
+func (c *Config) IsFirstLaunch() bool {
+    c.mu.RLock()
+    defer c.mu.RUnlock()
+    return c.FirstLaunch
+}
+
+func (c *Config) SetFirstLaunchComplete() error {
+    c.mu.Lock()
+    c.FirstLaunch = false
+    c.mu.Unlock()
+    return c.Save()
+}
+
+// In loadOrDefault(), set:
+FirstLaunch: true,

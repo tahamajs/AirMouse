@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// GestureTemplate represents a single gesture template.
 type GestureTemplate struct {
 	Name       string  `json:"name"`
 	Type       string  `json:"type"`
@@ -21,39 +22,48 @@ type GestureTemplate struct {
 	Confidence float64 `json:"confidence"`
 }
 
-type GesturesTab struct {
-	list        *widget.List
-	templates   []GestureTemplate
-	selected    int
-	searchEntry *widget.Entry
-	filterType  *widget.Select
-	addBtn      *widget.Button
-	editBtn     *widget.Button
-	deleteBtn   *widget.Button
-	importBtn   *widget.Button
-	exportBtn   *widget.Button
-	testBtn     *widget.Button
-	statusLabel *widget.Label
-	overview    *widget.Label
-	activeCount *widget.Label
-	mu          sync.RWMutex // protects templates
+// defaultGestures returns the built‑in gesture templates.
+func defaultGestures() []GestureTemplate {
+	return []GestureTemplate{
+		{Name: "ThumbsUp", Type: "Hand", Action: "Play/Pause", Confidence: 0.95},
+		{Name: "ThumbsDown", Type: "Hand", Action: "Stop", Confidence: 0.92},
+		{Name: "LeftSwipe", Type: "Swipe", Action: "Previous Track", Confidence: 0.88},
+		{Name: "RightSwipe", Type: "Swipe", Action: "Next Track", Confidence: 0.89},
+		{Name: "CircleCW", Type: "Circular", Action: "Volume Up", Confidence: 0.85},
+		{Name: "CircleCCW", Type: "Circular", Action: "Volume Down", Confidence: 0.84},
+		{Name: "ZoomIn", Type: "Pinch", Action: "Zoom In", Confidence: 0.90},
+		{Name: "ZoomOut", Type: "Pinch", Action: "Zoom Out", Confidence: 0.89},
+		{Name: "Peace", Type: "Hand", Action: "Lock Screen", Confidence: 0.87},
+		{Name: "Fist", Type: "Hand", Action: "Mute", Confidence: 0.86},
+	}
 }
 
+// GesturesTab is the gestures management tab.
+type GesturesTab struct {
+	list          *widget.List
+	templates     []GestureTemplate
+	selected      int
+	searchEntry   *widget.Entry
+	filterType    *widget.Select
+	addBtn        *widget.Button
+	editBtn       *widget.Button
+	deleteBtn     *widget.Button
+	importBtn     *widget.Button
+	exportBtn     *widget.Button
+	resetBtn      *widget.Button
+	helpBtn       *widget.Button
+	testBtn       *widget.Button
+	statusLabel   *widget.Label
+	overview      *widget.Label
+	activeCount   *widget.Label
+	mu            sync.RWMutex // protects templates
+}
+
+// NewGesturesTab creates the gestures management tab.
 func NewGesturesTab() fyne.CanvasObject {
 	tab := &GesturesTab{
-		templates: []GestureTemplate{
-			{Name: "ThumbsUp", Type: "Hand", Action: "Play/Pause", Confidence: 0.95},
-			{Name: "ThumbsDown", Type: "Hand", Action: "Stop", Confidence: 0.92},
-			{Name: "LeftSwipe", Type: "Swipe", Action: "Previous Track", Confidence: 0.88},
-			{Name: "RightSwipe", Type: "Swipe", Action: "Next Track", Confidence: 0.89},
-			{Name: "CircleCW", Type: "Circular", Action: "Volume Up", Confidence: 0.85},
-			{Name: "CircleCCW", Type: "Circular", Action: "Volume Down", Confidence: 0.84},
-			{Name: "ZoomIn", Type: "Pinch", Action: "Zoom In", Confidence: 0.90},
-			{Name: "ZoomOut", Type: "Pinch", Action: "Zoom Out", Confidence: 0.89},
-			{Name: "Peace", Type: "Hand", Action: "Lock Screen", Confidence: 0.87},
-			{Name: "Fist", Type: "Hand", Action: "Mute", Confidence: 0.86},
-		},
-		selected: -1,
+		templates: defaultGestures(),
+		selected:  -1,
 	}
 
 	tab.overview = widget.NewLabel("Gestures help you map hand motion to high-level actions like media control, locking, and zooming.")
@@ -84,9 +94,9 @@ func NewGesturesTab() fyne.CanvasObject {
 		func() int { return len(tab.getFilteredTemplates()) },
 		func() fyne.CanvasObject {
 			return container.NewHBox(
-				widget.NewLabel(""),
-				widget.NewLabel(""),
-				widget.NewLabel(""),
+				widget.NewLabel(""), // name
+				widget.NewLabel(""), // type
+				widget.NewLabel(""), // action
 			)
 		},
 		func(id int, obj fyne.CanvasObject) {
@@ -119,10 +129,12 @@ func NewGesturesTab() fyne.CanvasObject {
 		tab.updateButtons()
 	}
 
-	// ----- Buttons -----
+	// ----- Buttons with tooltips -----
 	tab.addBtn = widget.NewButtonWithIcon("Add Gesture", theme.ContentAddIcon(), func() {
 		tab.showAddGestureDialog()
 	})
+	tab.addBtn.Importance = widget.HighImportance
+	tab.addBtn.ToolTip = "Add a new gesture template"
 
 	tab.editBtn = widget.NewButtonWithIcon("Edit", theme.SettingsIcon(), func() {
 		if tab.selected >= 0 {
@@ -130,6 +142,7 @@ func NewGesturesTab() fyne.CanvasObject {
 		}
 	})
 	tab.editBtn.Disable()
+	tab.editBtn.ToolTip = "Edit the selected gesture"
 
 	tab.deleteBtn = widget.NewButtonWithIcon("Delete", theme.DeleteIcon(), func() {
 		if tab.selected >= 0 {
@@ -137,20 +150,40 @@ func NewGesturesTab() fyne.CanvasObject {
 		}
 	})
 	tab.deleteBtn.Disable()
+	tab.deleteBtn.Importance = widget.DangerImportance
+	tab.deleteBtn.ToolTip = "Delete the selected gesture"
 
 	tab.importBtn = widget.NewButtonWithIcon("Import", theme.DownloadIcon(), func() {
 		tab.importGestures()
 	})
+	tab.importBtn.ToolTip = "Import gesture templates from a JSON file"
 
 	tab.exportBtn = widget.NewButtonWithIcon("Export", theme.UploadIcon(), func() {
 		tab.exportGestures()
 	})
+	tab.exportBtn.ToolTip = "Export gesture templates to a JSON file"
+
+	tab.resetBtn = widget.NewButtonWithIcon("Reset to Defaults", theme.ViewRefreshIcon(), func() {
+		tab.resetToDefaults()
+	})
+	tab.resetBtn.Importance = widget.WarningImportance
+	tab.resetBtn.ToolTip = "Restore the default gesture templates"
+
+	tab.helpBtn = widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
+		win := getCurrentWindow()
+		if win != nil {
+			ShowContextHelp(win, "gestures")
+		}
+	})
+	tab.helpBtn.ToolTip = "Show help for gestures"
 
 	tab.testBtn = widget.NewButtonWithIcon("Test Gesture", theme.MediaPlayIcon(), func() {
 		tab.testGesture()
 	})
+	tab.testBtn.ToolTip = "Test the selected gesture"
 
 	tab.statusLabel = widget.NewLabel("")
+	tab.statusLabel.Importance = widget.MediumImportance
 
 	// ----- Stats & Instructions -----
 	statsCard := tab.createStatsCard()
@@ -185,6 +218,8 @@ func NewGesturesTab() fyne.CanvasObject {
 		container.NewHBox(
 			tab.importBtn,
 			tab.exportBtn,
+			tab.resetBtn,
+			tab.helpBtn,
 			tab.testBtn,
 		),
 		tab.statusLabel,
@@ -244,6 +279,7 @@ func (t *GesturesTab) getFilteredTemplates() []GestureTemplate {
 	return filterGestureTemplates(t.templates, searchText, filterType)
 }
 
+// filterGestureTemplates filters the templates by search text and type.
 func filterGestureTemplates(templates []GestureTemplate, searchText, filterType string) []GestureTemplate {
 	filtered := make([]GestureTemplate, 0)
 	searchText = strings.ToLower(searchText)
@@ -292,6 +328,7 @@ func (t *GesturesTab) updateButtons() {
 	}
 }
 
+// showAddGestureDialog displays the add gesture dialog.
 func (t *GesturesTab) showAddGestureDialog() {
 	win := getCurrentWindow()
 	if win == nil {
@@ -324,11 +361,12 @@ func (t *GesturesTab) showAddGestureDialog() {
 			t.templates = append(t.templates, newGesture)
 			t.mu.Unlock()
 			t.refreshList()
-			t.statusLabel.SetText(fmt.Sprintf("✓ Added gesture: %s", newGesture.Name))
+			t.setStatus("✓ Added gesture: "+newGesture.Name, widget.SuccessImportance)
 		}
 	}, win)
 }
 
+// showEditGestureDialog displays the edit gesture dialog.
 func (t *GesturesTab) showEditGestureDialog() {
 	win := getCurrentWindow()
 	if win == nil {
@@ -366,11 +404,12 @@ func (t *GesturesTab) showEditGestureDialog() {
 			}
 			t.mu.Unlock()
 			t.refreshList()
-			t.statusLabel.SetText(fmt.Sprintf("✓ Updated gesture: %s", nameEntry.Text))
+			t.setStatus("✓ Updated gesture: "+nameEntry.Text, widget.SuccessImportance)
 		}
 	}, win)
 }
 
+// deleteGesture deletes the selected gesture after confirmation.
 func (t *GesturesTab) deleteGesture() {
 	win := getCurrentWindow()
 	if win == nil {
@@ -396,7 +435,7 @@ func (t *GesturesTab) deleteGesture() {
 				t.mu.Unlock()
 				t.selected = -1
 				t.refreshList()
-				t.statusLabel.SetText(fmt.Sprintf("✓ Deleted gesture: %s", gesture.Name))
+				t.setStatus("✓ Deleted gesture: "+gesture.Name, widget.SuccessImportance)
 			}
 		},
 		win)
@@ -429,7 +468,7 @@ func (t *GesturesTab) importGestures() {
 		t.mu.Unlock()
 		t.selected = -1
 		t.refreshList()
-		t.statusLabel.SetText(fmt.Sprintf("✓ Imported %d gestures", len(imported)))
+		t.setStatus(fmt.Sprintf("✓ Imported %d gestures", len(imported)), widget.SuccessImportance)
 	}, win)
 }
 
@@ -460,10 +499,32 @@ func (t *GesturesTab) exportGestures() {
 			dialog.ShowError(fmt.Errorf("failed to write: %w", err), win)
 			return
 		}
-		t.statusLabel.SetText(fmt.Sprintf("✓ Exported %d gestures", len(t.templates)))
+		t.setStatus(fmt.Sprintf("✓ Exported %d gestures", len(t.templates)), widget.SuccessImportance)
 	}, win)
 }
 
+// resetToDefaults restores the default gesture templates after confirmation.
+func (t *GesturesTab) resetToDefaults() {
+	win := getCurrentWindow()
+	if win == nil {
+		return
+	}
+	dialog.ShowConfirm("Reset to Defaults",
+		"This will replace all current gestures with the default set. Continue?",
+		func(confirmed bool) {
+			if confirmed {
+				t.mu.Lock()
+				t.templates = defaultGestures()
+				t.mu.Unlock()
+				t.selected = -1
+				t.refreshList()
+				t.setStatus("✓ Reset to default gestures", widget.SuccessImportance)
+			}
+		},
+		win)
+}
+
+// testGesture shows information about the selected gesture.
 func (t *GesturesTab) testGesture() {
 	win := getCurrentWindow()
 	if win == nil {
@@ -480,6 +541,21 @@ func (t *GesturesTab) testGesture() {
 				gesture.Name, gesture.Action, gesture.Confidence*100),
 			win)
 	}
+}
+
+// setStatus updates the status label with a message and importance.
+func (t *GesturesTab) setStatus(msg string, importance widget.Importance) {
+	t.statusLabel.SetText(msg)
+	t.statusLabel.Importance = importance
+	// Clear after 5 seconds
+	time.AfterFunc(5*time.Second, func() {
+		RunOnMain(func() {
+			if t.statusLabel != nil {
+				t.statusLabel.SetText("")
+				t.statusLabel.Importance = widget.MediumImportance
+			}
+		})
+	})
 }
 
 // createStatsCard returns a live statistics panel.

@@ -9,14 +9,52 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/skip2/go-qrcode"
 )
 
-// ------------------------------------------------------------
-// Dialog helpers
-// ------------------------------------------------------------
+// ============================================================
+// Cross-Platform Helpers
+// ============================================================
+
+// GetPlatformModifier returns the appropriate modifier key for the platform.
+func GetPlatformModifier() string {
+	return "Ctrl" // Fyne handles Cmd on macOS automatically via theme shortcuts
+}
+
+// IsDarkTheme returns true if the current theme is dark.
+func IsDarkTheme() bool {
+	return fyne.CurrentApp().Settings().Theme() == theme.DarkTheme()
+}
+
+// GetWindowSize returns a size that works well across platforms.
+func GetWindowSize() (width, height float32) {
+	return 1200, 800
+}
+
+// CenterWindow centers a window on screen.
+func CenterWindow(w fyne.Window) {
+	w.CenterOnScreen()
+}
+
+// ============================================================
+// Responsive Layout Helpers
+// ============================================================
+
+// ResponsiveGrid creates a grid that adapts to window width.
+func ResponsiveGrid(minColWidth float32, objects ...fyne.CanvasObject) *fyne.Container {
+	return container.NewGridWrap(
+		fyne.NewSize(minColWidth, minColWidth*0.75),
+		objects...,
+	)
+}
+
+// ============================================================
+// Dialog Helpers
+// ============================================================
 
 // ShowError displays an error dialog with the given message.
 func ShowError(parent fyne.Window, err error) {
@@ -101,11 +139,95 @@ func ShowProgressDialog(parent fyne.Window, title, message string) *dialog.Progr
 	return progress
 }
 
-// ------------------------------------------------------------
-// Formatting helpers
-// ------------------------------------------------------------
+// ============================================================
+// Onboarding / Welcome Dialog
+// ============================================================
 
-// FormatBytes converts bytes to a human‑readable string (exported).
+// ShowWelcomeDialog displays a first-run welcome screen with guided setup.
+func ShowWelcomeDialog(parent fyne.Window) {
+	if parent == nil {
+		parent = getCurrentWindow()
+		if parent == nil {
+			return
+		}
+	}
+
+	content := widget.NewRichTextFromMarkdown(
+		"# Welcome to Air Mouse Pro! 🚀\n\n" +
+			"## Quick Start\n" +
+			"1. **Start the server** – click the big green button on the Dashboard.\n" +
+			"2. **Pair your phone** – scan the QR code with the Android app.\n" +
+			"3. **Approve the device** – tap Approve in the Devices tab.\n" +
+			"4. **Start controlling** – move your phone to control the cursor!\n\n" +
+			"## Need Help?\n" +
+			"- Press **F1** anytime for keyboard shortcuts.\n" +
+			"- Visit the **Help** menu for documentation.\n" +
+			"- Check the **Logs** tab for troubleshooting.\n\n" +
+			"💡 *Pro tip: Grant Accessibility permission on macOS for mouse control.*",
+	)
+
+	dialog.ShowCustom("Welcome to Air Mouse Pro", "Get Started", content, parent)
+}
+
+// ============================================================
+// Contextual Help System
+// ============================================================
+
+// ShowContextHelp displays help for the current context.
+func ShowContextHelp(parent fyne.Window, context string) {
+	if parent == nil {
+		parent = getCurrentWindow()
+		if parent == nil {
+			return
+		}
+	}
+
+	helpMap := map[string]string{
+		"dashboard": "## Dashboard\n\n" +
+			"**Start/Stop Server** – controls the service.\n" +
+			"**Approval Center** – shows devices waiting for approval.\n" +
+			"**Statistics** – live click and device counts.\n" +
+			"**Quick Actions** – pause/resume movement, reset stats.",
+
+		"devices": "## Devices\n\n" +
+			"**Pending devices** – appear with an orange dot.\n" +
+			"**Approve** – tap to allow mouse control.\n" +
+			"**Block** – prevent a device from connecting.\n" +
+			"**Rename** – give devices friendly names.",
+
+		"network": "## Network\n\n" +
+			"**IP Address** – select the correct network interface.\n" +
+			"**Ports** – TCP (8080), WebSocket (8081), UDP discovery (8082).\n" +
+			"**QR Code** – scan with the Android app to pair.\n" +
+			"**Test Connection** – verify the server is reachable.",
+
+		"gestures": "## Gestures\n\n" +
+			"**Templates** – pre‑defined gestures for common actions.\n" +
+			"**Add/Edit/Delete** – manage your own gesture library.\n" +
+			"**Test Gesture** – try a gesture before using it.\n" +
+			"**Import/Export** – share gesture templates.",
+
+		"proximity": "## Proximity\n\n" +
+			"**Enable** – turn on auto‑lock/unlock.\n" +
+			"**Thresholds** – near (unlock) and far (lock) distances.\n" +
+			"**Calibrate** – adjust for your environment.\n" +
+			"**Lock/Unlock Now** – manual override.",
+	}
+
+	markdown, ok := helpMap[context]
+	if !ok {
+		markdown = "## Help\n\nNo specific help available for this context."
+	}
+
+	content := widget.NewRichTextFromMarkdown(markdown)
+	dialog.ShowCustom("Help", "Close", content, parent)
+}
+
+// ============================================================
+// Formatting Helpers
+// ============================================================
+
+// FormatBytes converts bytes to a human‑readable string.
 func FormatBytes(bytes int64) string {
 	const unit = 1024
 	if bytes < unit {
@@ -119,7 +241,7 @@ func FormatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-// FormatDurationShort formats a duration in a compact form (exported).
+// FormatDurationShort formats a duration in a compact form.
 func FormatDurationShort(d time.Duration) string {
 	if d < time.Minute {
 		return fmt.Sprintf("%ds", int(d.Seconds()))
@@ -133,7 +255,7 @@ func FormatDurationShort(d time.Duration) string {
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
 
-// FormatDuration formats a duration in a full human‑readable form (exported).
+// FormatDuration formats a duration in a full human‑readable form.
 func FormatDuration(d time.Duration) string {
 	hours := int(d.Hours())
 	minutes := int(d.Minutes()) % 60
@@ -148,9 +270,9 @@ func FormatDuration(d time.Duration) string {
 	return fmt.Sprintf("%ds", seconds)
 }
 
-// ------------------------------------------------------------
-// UI component helpers
-// ------------------------------------------------------------
+// ============================================================
+// UI Component Helpers
+// ============================================================
 
 // CreateStatusBadge creates a colored status badge.
 func CreateStatusBadge(text string, statusType string) *widget.Label {
@@ -184,9 +306,9 @@ func CreateQRImage(data string, size int) *canvas.Image {
 	return qrImage
 }
 
-// ------------------------------------------------------------
-// String helpers
-// ------------------------------------------------------------
+// ============================================================
+// String Helpers
+// ============================================================
 
 // JoinStrings joins a slice of strings with a separator.
 func JoinStrings(strs []string, sep string) string {
@@ -202,7 +324,6 @@ func TruncateString(s string, maxLen int) string {
 }
 
 // containsIgnoreCase checks if substr appears in s (case‑insensitive).
-// This is used internally by devices.go and gestures.go.
 func containsIgnoreCase(s, substr string) bool {
 	if len(substr) == 0 {
 		return true
@@ -227,45 +348,20 @@ func toLower(s string) string {
 	return string(b)
 }
 
-// ------------------------------------------------------------
-// Window / platform helpers
-// ------------------------------------------------------------
+// ============================================================
+// Window / Platform Helpers
+// ============================================================
 
-// GetPlatformModifier returns the appropriate modifier key for the platform.
-func GetPlatformModifier() string {
-	return "Ctrl"
-}
-
-// RunOnMain executes fn on the UI thread. It uses Fyne’s driver if available,
-// otherwise it calls fn directly (which may not be safe, but is a fallback).
+// RunOnMain executes fn on the UI thread.
 func RunOnMain(fn func()) {
-	// The recommended way in Fyne v2 is to use the driver's RunOnMain.
 	if driver, ok := fyne.CurrentApp().Driver().(interface{ RunOnMain(func()) }); ok {
 		driver.RunOnMain(fn)
 	} else {
-		// Fallback – may cause issues if called from a goroutine.
 		fn()
 	}
 }
 
-// IsDarkTheme returns true if the current theme is dark.
-func IsDarkTheme() bool {
-	// This can be expanded to actually check the theme.
-	return true
-}
-
-// CenterWindow centers a window on screen.
-func CenterWindow(w fyne.Window) {
-	w.CenterOnScreen()
-}
-
-// GetWindowSize returns the default window size.
-func GetWindowSize() (width, height float32) {
-	return 1400, 900
-}
-
 // getCurrentWindow returns the first application window, or nil if none.
-// This is used internally by all dialog helpers.
 func getCurrentWindow() fyne.Window {
 	if fyne.CurrentApp() == nil {
 		return nil
@@ -275,18 +371,4 @@ func getCurrentWindow() fyne.Window {
 		return nil
 	}
 	return windows[0]
-}
-
-// ------------------------------------------------------------
-// Type-safe join with custom separator (kept for compatibility)
-// ------------------------------------------------------------
-
-// joinStrings is a private alias for JoinStrings (used internally).
-func joinStrings(strs []string, sep string) string {
-	return JoinStrings(strs, sep)
-}
-
-// formatDurationShort is a private alias for FormatDurationShort.
-func formatDurationShort(d time.Duration) string {
-	return FormatDurationShort(d)
 }

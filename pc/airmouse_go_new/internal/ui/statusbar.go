@@ -191,15 +191,15 @@ func (sb *StatusBar) UpdateStartTime(startTime time.Time) {
 // ------------------------------------------------------------
 
 type AdvancedStatusBar struct {
-	container    *fyne.Container
-	cpuLabel     *widget.Label
-	memLabel     *widget.Label
+	container      *fyne.Container
+	cpuLabel       *widget.Label
+	memLabel       *widget.Label
 	goroutineLabel *widget.Label
-	uptimeLabel  *widget.Label
-	onRefresh    func() SystemMetrics
-	stop         chan struct{}
-	stopOnce     sync.Once
-	startTime    time.Time
+	uptimeLabel    *widget.Label
+	onRefresh      func() SystemMetrics
+	stop           chan struct{}
+	stopOnce       sync.Once
+	startTime      time.Time
 }
 
 // NewAdvancedStatusBar creates an advanced status bar that calls a user-provided
