@@ -24,7 +24,7 @@ type Server struct {
 	mouse     control.MouseController
 	authMgr   *auth.Manager
 	running   bool
-	mu        sync.RWMutex
+	mu        sync.RWMutex // protects clients map and running
 	clients   map[string]*UDPClient
 	callbacks []func(event UDPEvent)
 }
@@ -38,6 +38,7 @@ type UDPClient struct {
 	Approved   bool
 	BytesSent  int64
 	BytesRecv  int64
+	mu         sync.RWMutex // protects all fields except Address (immutable after creation)
 }
 
 // UDPEvent – event for callbacks
@@ -47,6 +48,7 @@ type UDPEvent struct {
 	Timestamp time.Time
 }
 
+// NewServer creates a new UDP discovery server.
 func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *Server {
 	return &Server{
 		port:      port,
@@ -58,7 +60,7 @@ func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manage
 	}
 }
 
-// Start the UDP discovery server
+// Start binds and starts the UDP server.
 func (s *Server) Start() error {
 	addr := net.UDPAddr{
 		Port: s.port,
@@ -70,8 +72,11 @@ func (s *Server) Start() error {
 		return fmt.Errorf("failed to listen on UDP port %d: %w", s.port, err)
 	}
 
+	s.mu.Lock()
 	s.conn = conn
 	s.running = true
+	s.mu.Unlock()
+
 	go s.listenLoop()
 
 	utils.LogInfo("UDP discovery server started on port %d", s.port)
@@ -82,14 +87,24 @@ func (s *Server) Start() error {
 // listenLoop – main receive loop
 func (s *Server) listenLoop() {
 	buf := make([]byte, 4096)
-	for s.running {
-		s.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	for {
+		s.mu.RLock()
+		running := s.running
+		s.mu.RUnlock()
+		if !running {
+			break
+		}
+
+		_ = s.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 		n, clientAddr, err := s.conn.ReadFromUDP(buf)
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				continue
 			}
-			if s.running {
+			s.mu.RLock()
+			running = s.running
+			s.mu.RUnlock()
+			if running {
 				utils.LogDebug("UDP read error: %v", err)
 			}
 			continue
@@ -106,7 +121,8 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 	utils.LogDebug("UDP inbound packet from %s payload=%q", clientIP, msg)
 
 	clientKey := clientAddr.String()
-	// Update/register client
+
+	// Get or create client
 	s.mu.Lock()
 	client, exists := s.clients[clientKey]
 	if !exists {
@@ -116,9 +132,11 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		}
 		s.clients[clientKey] = client
 	}
-	client.Address = clientAddr
+	// Update last seen and bytes received (under client mutex)
+	client.mu.Lock()
 	client.LastSeen = time.Now()
 	client.BytesRecv += int64(len(msg))
+	client.mu.Unlock()
 	s.mu.Unlock()
 
 	// Handle discovery requests (both spellings)
@@ -143,6 +161,7 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		return
 	}
 
+	// Send ACK for messages with ID
 	if id != nil {
 		ack := websocketpkg.AckMessage(id)
 		if len(ack) > 0 {
@@ -151,7 +170,11 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		}
 	}
 
-	if !client.Approved && msgType != "hello" && msgType != "ping" {
+	// Check approval status (under client mutex)
+	client.mu.RLock()
+	approved := client.Approved
+	client.mu.RUnlock()
+	if !approved && msgType != "hello" && msgType != "ping" {
 		utils.LogDebug("Ignoring UDP %s while waiting for approval: client=%s", msgType, clientIP)
 		return
 	}
@@ -219,17 +242,16 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 // sendDiscoveryResponse – sends plain‑text response compatible with Android app
 func (s *Server) sendDiscoveryResponse(clientAddr *net.UDPAddr) {
 	cfg := config.Get()
-	// Android discovery clients currently accept the legacy text format:
-	// AIRMOUSE_SERVER:<port>:<name>:<version>
 	response := fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s", cfg.UDPPort, cfg.ServerName, cfg.Version)
+	_ = s.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	_, err := s.conn.WriteToUDP([]byte(response), clientAddr)
 	if err != nil {
 		utils.LogDebug("Failed to send discovery response: %v", err)
-		return
 	}
 	utils.LogInfo("UDP discovery response sent to %s on port %d", clientAddr.IP.String(), cfg.UDPPort)
 }
 
+// handleHello processes a hello message from a UDP client.
 func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *UDPClient, payload map[string]any) {
 	cfg := config.Get()
 	name, _ := payload["name"].(string)
@@ -250,6 +272,7 @@ func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *
 		name = "Unknown"
 	}
 
+	// Authentication check
 	if cfg.AuthEnabled {
 		if token == "" || s.authMgr == nil || !s.authMgr.ValidateToken(token) {
 			_ = s.writeToClient(clientKey, clientAddr, []byte(`{"type":"error","payload":{"message":"connection rejected: invalid pairing token"}}`+"\n"))
@@ -258,11 +281,13 @@ func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *
 		}
 	}
 
-	s.mu.Lock()
+	// Update client fields (under client mutex)
+	client.mu.Lock()
 	client.DeviceName = name
 	client.DeviceID = fingerprint
-	s.mu.Unlock()
+	client.mu.Unlock()
 
+	// Register with device manager
 	if s.deviceMgr != nil {
 		_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeUDP, name, map[string]string{
 			"fingerprint":     fingerprint,
@@ -283,29 +308,34 @@ func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *
 	utils.LogInfo("UDP client awaiting approval: addr=%s name=%s", clientAddr.String(), name)
 }
 
+// writeToClient sends data to a specific client and updates bytes sent.
 func (s *Server) writeToClient(clientKey string, clientAddr *net.UDPAddr, data []byte) error {
 	if len(data) == 0 {
 		return nil
 	}
+	_ = s.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	if _, err := s.conn.WriteToUDP(data, clientAddr); err != nil {
 		utils.LogDebug("Failed to send UDP message to %s: %v", clientAddr.String(), err)
 		return err
 	}
+	// Update bytes sent (under client mutex)
 	s.mu.Lock()
 	if client, ok := s.clients[clientKey]; ok {
+		client.mu.Lock()
 		client.BytesSent += int64(len(data))
+		client.mu.Unlock()
 	}
 	s.mu.Unlock()
 	return nil
 }
 
-// Stop the server
+// Stop gracefully stops the UDP server.
 func (s *Server) Stop() {
+	s.mu.Lock()
 	s.running = false
 	if s.conn != nil {
-		s.conn.Close()
+		_ = s.conn.Close()
 	}
-	s.mu.Lock()
 	s.clients = make(map[string]*UDPClient)
 	s.mu.Unlock()
 	utils.LogInfo("UDP discovery server stopped")
@@ -319,7 +349,11 @@ func (s *Server) ApproveDevice(deviceID string) error {
 		client    *UDPClient
 	)
 	for key, c := range s.clients {
-		if c.DeviceID == deviceID || c.Address.String() == deviceID {
+		c.mu.RLock()
+		devID := c.DeviceID
+		addr := c.Address.String()
+		c.mu.RUnlock()
+		if devID == deviceID || addr == deviceID {
 			clientKey = key
 			client = c
 			break
@@ -331,20 +365,30 @@ func (s *Server) ApproveDevice(deviceID string) error {
 		return fmt.Errorf("udp client not found: %s", deviceID)
 	}
 
+	client.mu.Lock()
 	if client.Approved {
+		client.mu.Unlock()
 		return nil
 	}
+	client.mu.Unlock()
 
 	cfg := config.Get()
 	welcome := websocketpkg.WelcomeMessage(cfg.ServerName, cfg.Version)
 	if err := s.writeToClient(clientKey, client.Address, welcome); err != nil {
-		return err
+		return fmt.Errorf("failed to send welcome: %w", err)
 	}
+
+	client.mu.Lock()
 	client.Approved = true
+	client.mu.Unlock()
+
 	control.SetMovementPaused(false)
 	control.ClearPause()
+
 	if s.deviceMgr != nil {
+		client.mu.RLock()
 		updateID := client.DeviceID
+		client.mu.RUnlock()
 		if updateID == "" {
 			updateID = deviceID
 		}
@@ -362,9 +406,11 @@ func (s *Server) GetStats() map[string]interface{} {
 	activeClients := 0
 	now := time.Now()
 	for _, c := range s.clients {
+		c.mu.RLock()
 		if now.Sub(c.LastSeen) < 30*time.Second {
 			activeClients++
 		}
+		c.mu.RUnlock()
 	}
 
 	return map[string]interface{}{
@@ -406,8 +452,9 @@ func (s *Server) BroadcastMessage(msg interface{}) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	_ = s.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	for _, client := range s.clients {
-		s.conn.WriteToUDP(data, client.Address)
+		_, _ = s.conn.WriteToUDP(data, client.Address)
 	}
 	return nil
 }
@@ -424,6 +471,7 @@ func (s *Server) GetConnectedClients() []*UDPClient {
 	return clients
 }
 
+// Helper functions
 func firstNumber(payload map[string]any, keys ...string) float64 {
 	for _, key := range keys {
 		if v, ok := payload[key]; ok {

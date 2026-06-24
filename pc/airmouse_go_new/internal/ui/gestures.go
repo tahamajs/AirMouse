@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -13,10 +15,10 @@ import (
 )
 
 type GestureTemplate struct {
-	Name       string
-	Type       string
-	Action     string
-	Confidence float64
+	Name       string  `json:"name"`
+	Type       string  `json:"type"`
+	Action     string  `json:"action"`
+	Confidence float64 `json:"confidence"`
 }
 
 type GesturesTab struct {
@@ -34,6 +36,7 @@ type GesturesTab struct {
 	statusLabel *widget.Label
 	overview    *widget.Label
 	activeCount *widget.Label
+	mu          sync.RWMutex // protects templates
 }
 
 func NewGesturesTab() fyne.CanvasObject {
@@ -70,10 +73,8 @@ func NewGesturesTab() fyne.CanvasObject {
 	}
 
 	gestureTypes := []string{"All", "Hand", "Swipe", "Circular", "Pinch"}
-	// Create filter select without callback yet to avoid early calls
 	tab.filterType = widget.NewSelect(gestureTypes, nil)
 	tab.filterType.SetSelected("All")
-	// Now attach the callback after initial selection
 	tab.filterType.OnChanged = func(s string) {
 		tab.refreshList()
 	}
@@ -223,9 +224,7 @@ func NewGesturesTab() fyne.CanvasObject {
 		instructions,
 	)
 
-	// Initial refresh (safe now because all widgets are initialized)
 	tab.refreshList()
-
 	return content
 }
 
@@ -239,6 +238,9 @@ func (t *GesturesTab) getFilteredTemplates() []GestureTemplate {
 	if t.filterType != nil && t.filterType.Selected != "" {
 		filterType = t.filterType.Selected
 	}
+
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return filterGestureTemplates(t.templates, searchText, filterType)
 }
 
@@ -263,20 +265,19 @@ func filterGestureTemplates(templates []GestureTemplate, searchText, filterType 
 
 // refreshList updates the list and buttons.
 func (t *GesturesTab) refreshList() {
-	// SAFETY: guard against calls during construction
 	if t.list == nil || t.editBtn == nil || t.deleteBtn == nil {
 		return
 	}
 	t.list.Refresh()
 	if t.activeCount != nil {
-		t.activeCount.SetText(fmt.Sprintf("Active templates shown: %d", len(t.getFilteredTemplates())))
+		filtered := t.getFilteredTemplates()
+		t.activeCount.SetText(fmt.Sprintf("Active templates shown: %d", len(filtered)))
 	}
 	t.updateButtons()
 }
 
 // updateButtons enables/disables edit/delete based on selection.
 func (t *GesturesTab) updateButtons() {
-	// SAFETY: guard against nil buttons
 	if t.editBtn == nil || t.deleteBtn == nil {
 		return
 	}
@@ -319,7 +320,9 @@ func (t *GesturesTab) showAddGestureDialog() {
 				Action:     actionEntry.Text,
 				Confidence: 0.85,
 			}
+			t.mu.Lock()
 			t.templates = append(t.templates, newGesture)
+			t.mu.Unlock()
 			t.refreshList()
 			t.statusLabel.SetText(fmt.Sprintf("✓ Added gesture: %s", newGesture.Name))
 		}
@@ -339,10 +342,8 @@ func (t *GesturesTab) showEditGestureDialog() {
 
 	nameEntry := widget.NewEntry()
 	nameEntry.SetText(gesture.Name)
-
 	typeSelect := widget.NewSelect([]string{"Hand", "Swipe", "Circular", "Pinch"}, nil)
 	typeSelect.SetSelected(gesture.Type)
-
 	actionEntry := widget.NewEntry()
 	actionEntry.SetText(gesture.Action)
 
@@ -354,6 +355,7 @@ func (t *GesturesTab) showEditGestureDialog() {
 
 	dialog.ShowCustomConfirm("Edit Gesture", "Save", "Cancel", content, func(confirmed bool) {
 		if confirmed {
+			t.mu.Lock()
 			for i, g := range t.templates {
 				if g.Name == gesture.Name && g.Type == gesture.Type {
 					t.templates[i].Name = nameEntry.Text
@@ -362,6 +364,7 @@ func (t *GesturesTab) showEditGestureDialog() {
 					break
 				}
 			}
+			t.mu.Unlock()
 			t.refreshList()
 			t.statusLabel.SetText(fmt.Sprintf("✓ Updated gesture: %s", nameEntry.Text))
 		}
@@ -383,12 +386,14 @@ func (t *GesturesTab) deleteGesture() {
 		fmt.Sprintf("Are you sure you want to delete '%s'?", gesture.Name),
 		func(confirmed bool) {
 			if confirmed {
+				t.mu.Lock()
 				for i, g := range t.templates {
 					if g.Name == gesture.Name && g.Type == gesture.Type {
 						t.templates = append(t.templates[:i], t.templates[i+1:]...)
 						break
 					}
 				}
+				t.mu.Unlock()
 				t.selected = -1
 				t.refreshList()
 				t.statusLabel.SetText(fmt.Sprintf("✓ Deleted gesture: %s", gesture.Name))
@@ -397,30 +402,65 @@ func (t *GesturesTab) deleteGesture() {
 		win)
 }
 
+// importGestures loads gesture templates from a JSON file.
 func (t *GesturesTab) importGestures() {
 	win := getCurrentWindow()
 	if win == nil {
 		return
 	}
 	dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
-		if err == nil && reader != nil {
-			defer reader.Close()
-			t.statusLabel.SetText("✓ Gestures imported successfully")
-			t.refreshList()
+		if err != nil {
+			if err.Error() != "operation cancelled" {
+				dialog.ShowError(err, win)
+			}
+			return
 		}
+		defer reader.Close()
+
+		var imported []GestureTemplate
+		decoder := json.NewDecoder(reader)
+		if err := decoder.Decode(&imported); err != nil {
+			dialog.ShowError(fmt.Errorf("failed to parse JSON: %w", err), win)
+			return
+		}
+
+		t.mu.Lock()
+		t.templates = imported
+		t.mu.Unlock()
+		t.selected = -1
+		t.refreshList()
+		t.statusLabel.SetText(fmt.Sprintf("✓ Imported %d gestures", len(imported)))
 	}, win)
 }
 
+// exportGestures saves gesture templates to a JSON file.
 func (t *GesturesTab) exportGestures() {
 	win := getCurrentWindow()
 	if win == nil {
 		return
 	}
 	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
-		if err == nil && writer != nil {
-			defer writer.Close()
-			t.statusLabel.SetText("✓ Gestures exported successfully")
+		if err != nil {
+			if err.Error() != "operation cancelled" {
+				dialog.ShowError(err, win)
+			}
+			return
 		}
+		defer writer.Close()
+
+		t.mu.RLock()
+		data, err := json.MarshalIndent(t.templates, "", "  ")
+		t.mu.RUnlock()
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("failed to marshal: %w", err), win)
+			return
+		}
+
+		if _, err := writer.Write(data); err != nil {
+			dialog.ShowError(fmt.Errorf("failed to write: %w", err), win)
+			return
+		}
+		t.statusLabel.SetText(fmt.Sprintf("✓ Exported %d gestures", len(t.templates)))
 	}, win)
 }
 
@@ -442,6 +482,7 @@ func (t *GesturesTab) testGesture() {
 	}
 }
 
+// createStatsCard returns a live statistics panel.
 func (t *GesturesTab) createStatsCard() fyne.CanvasObject {
 	totalLabel := widget.NewLabel("Total: 0")
 	handLabel := widget.NewLabel("Hand: 0")
@@ -451,8 +492,14 @@ func (t *GesturesTab) createStatsCard() fyne.CanvasObject {
 
 	go func() {
 		for {
+			// Read templates under lock
+			t.mu.RLock()
+			templatesCopy := make([]GestureTemplate, len(t.templates))
+			copy(templatesCopy, t.templates)
+			t.mu.RUnlock()
+
 			handCount, swipeCount, circularCount, pinchCount := 0, 0, 0, 0
-			for _, g := range t.templates {
+			for _, g := range templatesCopy {
 				switch g.Type {
 				case "Hand":
 					handCount++
@@ -466,7 +513,7 @@ func (t *GesturesTab) createStatsCard() fyne.CanvasObject {
 			}
 
 			RunOnMain(func() {
-				totalLabel.SetText(fmt.Sprintf("📊 Total: %d", len(t.templates)))
+				totalLabel.SetText(fmt.Sprintf("📊 Total: %d", len(templatesCopy)))
 				handLabel.SetText(fmt.Sprintf("✋ Hand: %d", handCount))
 				swipeLabel.SetText(fmt.Sprintf("👆 Swipe: %d", swipeCount))
 				circularLabel.SetText(fmt.Sprintf("🔄 Circular: %d", circularCount))

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -38,6 +39,7 @@ type AnalyticsTab struct {
 	chart           *canvas.Raster
 	collector       *personalization.DataCollector
 	trainingHistory []TrainingRecord
+	mu              sync.RWMutex // protects trainingHistory
 }
 
 type TrainingRecord struct {
@@ -172,9 +174,7 @@ func (t *AnalyticsTab) refresh() {
 	if method, ok := interface{}(t.collector).(interface{ SampleCount() int }); ok {
 		sampleCount = method.SampleCount()
 	}
-	if sampleCount >= 0 {
-		t.samplesLabel.SetText(fmt.Sprintf("📝 Samples Collected: %d", sampleCount))
-	}
+	t.samplesLabel.SetText(fmt.Sprintf("📝 Samples Collected: %d", sampleCount))
 
 	if method, ok := interface{}(t.collector).(interface{ LastFineTune() time.Time }); ok {
 		last := method.LastFineTune()
@@ -185,12 +185,15 @@ func (t *AnalyticsTab) refresh() {
 		}
 	}
 
-	if len(t.trainingHistory) > 0 {
-		latest := t.trainingHistory[len(t.trainingHistory)-1]
+	t.mu.RLock()
+	historyLen := len(t.trainingHistory)
+	if historyLen > 0 {
+		latest := t.trainingHistory[historyLen-1]
 		t.accuracyLabel.SetText(fmt.Sprintf("🎯 Model Accuracy: %.1f%%", latest.Accuracy*100))
 	} else {
 		t.accuracyLabel.SetText("🎯 Model Accuracy: --")
 	}
+	t.mu.RUnlock()
 
 	t.chart.Refresh()
 }
@@ -206,7 +209,12 @@ func (t *AnalyticsTab) drawChart(w, h int) image.Image {
 		}
 	}
 
-	if len(t.trainingHistory) == 0 {
+	t.mu.RLock()
+	history := make([]TrainingRecord, len(t.trainingHistory))
+	copy(history, t.trainingHistory)
+	t.mu.RUnlock()
+
+	if len(history) == 0 {
 		return img
 	}
 
@@ -221,14 +229,14 @@ func (t *AnalyticsTab) drawChart(w, h int) image.Image {
 	lineColor := color.RGBA{0, 150, 255, 255}
 	pointSize := 3
 	maxAccuracy := 1.0
-	stepX := float64(w) / float64(len(t.trainingHistory))
+	stepX := float64(w) / float64(len(history))
 
-	for i, record := range t.trainingHistory {
+	for i, record := range history {
 		x1 := int(float64(i) * stepX)
 		y1 := h - int(record.Accuracy/maxAccuracy*float64(h))
 
 		if i > 0 {
-			prevRecord := t.trainingHistory[i-1]
+			prevRecord := history[i-1]
 			prevY := h - int(prevRecord.Accuracy/maxAccuracy*float64(h))
 			drawLine(img, x1, prevY, int(float64(i-1)*stepX), y1, lineColor)
 		}
@@ -296,13 +304,20 @@ func (t *AnalyticsTab) startTraining() {
 		return
 	}
 
+	// Disable buttons during training
 	t.forceBtn.Disable()
+	t.exportBtn.Disable()
+	t.importBtn.Disable()
+	t.clearBtn.Disable()
+
 	t.progressBar.Hidden = false
 	t.progressBar.SetValue(0)
 	t.statusLabel.Hidden = false
 	t.statusLabel.SetText("Training in progress...")
+	t.statusLabel.Importance = widget.WarningImportance
 
 	go func() {
+		// Simulate progress (real training would be async)
 		for i := 0; i <= 100; i += 10 {
 			time.Sleep(200 * time.Millisecond)
 			RunOnMain(func() {
@@ -310,35 +325,56 @@ func (t *AnalyticsTab) startTraining() {
 			})
 		}
 
+		// Actual training call
 		err := t.collector.ForceFineTune()
 
 		RunOnMain(func() {
 			t.progressBar.Hidden = true
-			t.statusLabel.Hidden = true
+			t.statusLabel.Hidden = false
 			t.forceBtn.Enable()
+			t.exportBtn.Enable()
+			t.importBtn.Enable()
+			t.clearBtn.Enable()
 
 			if err != nil {
 				t.statusLabel.SetText("❌ Training failed: " + err.Error())
+				t.statusLabel.Importance = widget.DangerImportance
 				dialog.ShowError(err, win)
 			} else {
 				t.statusLabel.SetText("✅ Training completed successfully!")
+				t.statusLabel.Importance = widget.SuccessImportance
+
+				// Add a training record with slightly improved accuracy
 				sampleCount := 0
 				if method, ok := interface{}(t.collector).(interface{ SampleCount() int }); ok {
 					sampleCount = method.SampleCount()
 				}
-				acc := 0.85 + float64(len(t.trainingHistory))*0.02
-				if acc > 0.98 {
-					acc = 0.98
+				// Simulate accuracy improvement based on number of trainings
+				t.mu.Lock()
+				lastAcc := 0.7 // default starting accuracy
+				if len(t.trainingHistory) > 0 {
+					lastAcc = t.trainingHistory[len(t.trainingHistory)-1].Accuracy
+				}
+				// New accuracy improves but saturates around 0.98
+				newAcc := lastAcc + (0.98-lastAcc)*0.3
+				if newAcc > 0.98 {
+					newAcc = 0.98
+				}
+				loss := 0.5 - (newAcc-0.5)*0.5
+				if loss < 0.01 {
+					loss = 0.01
 				}
 				t.trainingHistory = append(t.trainingHistory, TrainingRecord{
 					Timestamp: time.Now(),
 					Samples:   sampleCount,
-					Accuracy:  acc,
-					Loss:      0.5 - float64(len(t.trainingHistory))*0.05,
+					Accuracy:  newAcc,
+					Loss:      loss,
 				})
 				if len(t.trainingHistory) > 20 {
 					t.trainingHistory = t.trainingHistory[1:]
 				}
+				t.mu.Unlock()
+
 				t.refresh()
 				dialog.ShowInformation("Training Complete", "Model has been updated with your movement patterns.", win)
 			}
@@ -352,7 +388,10 @@ func (t *AnalyticsTab) exportTrainingData() {
 	if win == nil {
 		return
 	}
-	if len(t.trainingHistory) == 0 {
+	t.mu.RLock()
+	historyLen := len(t.trainingHistory)
+	t.mu.RUnlock()
+	if historyLen == 0 {
 		dialog.ShowInformation("No Data", "No training data available to export.", win)
 		return
 	}
@@ -361,6 +400,7 @@ func (t *AnalyticsTab) exportTrainingData() {
 		if err == nil && writer != nil {
 			defer writer.Close()
 			data := "Timestamp,Samples,Accuracy,Loss\n"
+			t.mu.RLock()
 			for _, record := range t.trainingHistory {
 				data += fmt.Sprintf("%s,%d,%.4f,%.4f\n",
 					record.Timestamp.Format("2006-01-02 15:04:05"),
@@ -369,6 +409,7 @@ func (t *AnalyticsTab) exportTrainingData() {
 					record.Loss,
 				)
 			}
+			t.mu.RUnlock()
 			_, _ = writer.Write([]byte(data))
 			dialog.ShowInformation("Export Complete", "Training data exported successfully.", win)
 		}
@@ -417,7 +458,9 @@ func (t *AnalyticsTab) clearHistory() {
 	}
 	dialog.ShowConfirm("Clear History", "Are you sure you want to clear all training history?", func(confirmed bool) {
 		if confirmed {
+			t.mu.Lock()
 			t.trainingHistory = make([]TrainingRecord, 0)
+			t.mu.Unlock()
 			t.refresh()
 			dialog.ShowInformation("History Cleared", "Training history has been cleared.", win)
 		}

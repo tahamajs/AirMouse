@@ -267,7 +267,19 @@ func (t *DevicesTab) getFilteredDevices() []*device.DeviceInfo {
 	return filtered
 }
 
+// getPendingDevices returns all devices with pending approval status.
+func (t *DevicesTab) getPendingDevices() []*device.DeviceInfo {
+	pending := make([]*device.DeviceInfo, 0)
+	for _, d := range t.devices {
+		if d.Status == device.StatusPendingApproval {
+			pending = append(pending, d)
+		}
+	}
+	return pending
+}
+
 // refresh updates the device list and UI state.
+// It also auto‑selects the first pending device if none is selected.
 func (t *DevicesTab) refresh() {
 	if t.list == nil {
 		return
@@ -275,22 +287,75 @@ func (t *DevicesTab) refresh() {
 	t.devices = t.deviceMgr.GetAllDevices()
 	t.list.Refresh()
 
-	if t.selectedID != "" {
+	// If no device is selected, auto‑select the first pending one.
+	if t.selectedID == "" {
+		pending := t.getPendingDevices()
+		if len(pending) > 0 {
+			d := pending[0]
+			t.selectedID = d.ID
+			// Update the list selection to highlight this device
+			filtered := t.getFilteredDevices()
+			for idx, fd := range filtered {
+				if fd.ID == d.ID {
+					t.list.Select(idx)
+					break
+				}
+			}
+			t.showDeviceDetails(d)
+			t.updateButtons(true)
+			if t.approvalLabel != nil {
+				t.approvalLabel.SetText(fmt.Sprintf("⏳ %s", t.getApprovalText(d)))
+			}
+		} else {
+			// No pending devices, clear details if nothing selected
+			if t.selectedID == "" {
+				t.details.SetText("No device selected.\n\nWhen a phone connects, it will appear here for approval.")
+				t.updateButtons(false)
+				if t.approvalLabel != nil {
+					t.approvalLabel.SetText("⏳ No pending approvals. Wait for a device to connect.")
+				}
+			}
+		}
+	} else {
+		// Check if the selected device still exists
 		exists := false
+		var selectedDevice *device.DeviceInfo
 		for _, d := range t.devices {
 			if d.ID == t.selectedID {
 				exists = true
+				selectedDevice = d
 				break
 			}
 		}
 		if !exists {
 			t.selectedID = ""
 			t.updateButtons(false)
-			t.details.SetText("Waiting for approval.\n\nUse Approve to accept the pending connection, or Pair to open the pairing wizard.")
+			t.details.SetText("Device no longer available.\n\nUse Approve when a new device appears.")
 			if t.approvalLabel != nil {
 				t.approvalLabel.SetText("⏳ Approval pending: no device is selected yet. Use Approve to accept the phone, or Pair to open the wizard.")
 			}
+			// Try to select another pending device
+			pending := t.getPendingDevices()
+			if len(pending) > 0 {
+				d := pending[0]
+				t.selectedID = d.ID
+				// Re‑show details
+				filtered := t.getFilteredDevices()
+				for idx, fd := range filtered {
+					if fd.ID == d.ID {
+						t.list.Select(idx)
+						break
+					}
+				}
+				t.showDeviceDetails(d)
+				t.updateButtons(true)
+				if t.approvalLabel != nil {
+					t.approvalLabel.SetText(fmt.Sprintf("⏳ %s", t.getApprovalText(d)))
+				}
+			}
 		} else {
+			// Re‑show details for the still‑selected device (status may have changed)
+			t.showDeviceDetails(selectedDevice)
 			t.updateButtons(true)
 		}
 	}

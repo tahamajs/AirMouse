@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -66,6 +67,11 @@ type SettingsTab struct {
 	autoStartCheck        *widget.Check
 	logLevelSelect        *widget.Select
 
+	// Network settings (now saved)
+	portEntry             *widget.Entry
+	wsPortEntry           *widget.Entry
+	udpPortEntry          *widget.Entry
+
 	// Buttons
 	saveBtn               *widget.Button
 	resetBtn              *widget.Button
@@ -95,7 +101,10 @@ func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.Canv
 	appearanceSection := tab.createAppearanceSection()
 	advancedSection := tab.createAdvancedSection()
 
-	// Action buttons
+	// Action buttons (status label initially hidden)
+	tab.statusLabel = widget.NewLabel("")
+	tab.statusLabel.Hidden = true
+
 	actionButtons := container.NewHBox(
 		tab.saveBtn,
 		tab.resetBtn,
@@ -135,6 +144,11 @@ func (t *SettingsTab) createServerSection() fyne.CanvasObject {
 	t.serverNameEntry = widget.NewEntry()
 	t.serverNameEntry.SetText(t.cfg.ServerName)
 	t.serverNameEntry.SetPlaceHolder("Server Name")
+	t.serverNameEntry.OnChanged = func(s string) {
+		if s != "" {
+			t.cfg.ServerName = s
+		}
+	}
 
 	t.autoStartCheck = widget.NewCheck("Auto-start server on launch", func(on bool) {
 		t.cfg.AutoStartServer = on
@@ -162,7 +176,9 @@ func (t *SettingsTab) createCursorSection() fyne.CanvasObject {
 	t.sensitivityLabel = widget.NewLabel(fmt.Sprintf("Sensitivity: %.2f", t.cfg.Sensitivity))
 	t.sensitivitySlider.OnChanged = func(v float64) {
 		t.cfg.Sensitivity = v
-		t.mouse.SetSensitivity(v)
+		if t.mouse != nil {
+			t.mouse.SetSensitivity(v)
+		}
 		t.sensitivityLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", v))
 	}
 
@@ -173,7 +189,9 @@ func (t *SettingsTab) createCursorSection() fyne.CanvasObject {
 	t.smoothingCheck.SetChecked(t.cfg.SmoothingEnabled)
 
 	t.accelCheck = widget.NewCheck("Mouse Acceleration", func(b bool) {
-		t.mouse.SetAcceleration(b, 1.5)
+		if t.mouse != nil {
+			t.mouse.SetAcceleration(b, 1.5)
+		}
 		t.cfg.AccelerationEnabled = b
 	})
 	t.accelCheck.SetChecked(t.cfg.AccelerationEnabled)
@@ -317,6 +335,9 @@ func (t *SettingsTab) createPersonalizationSection() fyne.CanvasObject {
 	t.serverURLEntry = widget.NewEntry()
 	t.serverURLEntry.SetText(t.cfg.PersonalizationServerURL)
 	t.serverURLEntry.SetPlaceHolder("http://localhost:5001")
+	t.serverURLEntry.OnChanged = func(s string) {
+		t.cfg.PersonalizationServerURL = s
+	}
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Personalization", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -355,19 +376,59 @@ func (t *SettingsTab) createProximitySection() fyne.CanvasObject {
 }
 
 func (t *SettingsTab) createNetworkSection() fyne.CanvasObject {
-	// We'll use entries, but we don't store them to the config yet
-	portEntry := widget.NewEntry()
-	portEntry.SetText(fmt.Sprintf("%d", t.cfg.Port))
-	wsPortEntry := widget.NewEntry()
-	wsPortEntry.SetText(fmt.Sprintf("%d", t.cfg.WebSocketPort))
-	udpPortEntry := widget.NewEntry()
-	udpPortEntry.SetText(fmt.Sprintf("%d", t.cfg.UDPPort))
+	t.portEntry = widget.NewEntry()
+	t.portEntry.SetText(fmt.Sprintf("%d", t.cfg.Port))
+	t.portEntry.SetPlaceHolder("TCP Port")
+	t.portEntry.Validator = func(s string) error {
+		p, err := strconv.Atoi(s)
+		if err != nil || p < 1 || p > 65535 {
+			return fmt.Errorf("port must be between 1 and 65535")
+		}
+		return nil
+	}
+	t.portEntry.OnChanged = func(s string) {
+		if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
+			t.cfg.Port = p
+		}
+	}
+
+	t.wsPortEntry = widget.NewEntry()
+	t.wsPortEntry.SetText(fmt.Sprintf("%d", t.cfg.WebSocketPort))
+	t.wsPortEntry.SetPlaceHolder("WebSocket Port")
+	t.wsPortEntry.Validator = func(s string) error {
+		p, err := strconv.Atoi(s)
+		if err != nil || p < 1 || p > 65535 {
+			return fmt.Errorf("port must be between 1 and 65535")
+		}
+		return nil
+	}
+	t.wsPortEntry.OnChanged = func(s string) {
+		if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
+			t.cfg.WebSocketPort = p
+		}
+	}
+
+	t.udpPortEntry = widget.NewEntry()
+	t.udpPortEntry.SetText(fmt.Sprintf("%d", t.cfg.UDPPort))
+	t.udpPortEntry.SetPlaceHolder("UDP Discovery Port")
+	t.udpPortEntry.Validator = func(s string) error {
+		p, err := strconv.Atoi(s)
+		if err != nil || p < 1 || p > 65535 {
+			return fmt.Errorf("port must be between 1 and 65535")
+		}
+		return nil
+	}
+	t.udpPortEntry.OnChanged = func(s string) {
+		if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
+			t.cfg.UDPPort = p
+		}
+	}
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Network Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("TCP Port:"), portEntry,
-		widget.NewLabel("WebSocket Port:"), wsPortEntry,
-		widget.NewLabel("UDP Port:"), udpPortEntry,
+		widget.NewLabel("TCP Port:"), t.portEntry,
+		widget.NewLabel("WebSocket Port:"), t.wsPortEntry,
+		widget.NewLabel("UDP Port:"), t.udpPortEntry,
 	)
 }
 
@@ -410,8 +471,6 @@ func (t *SettingsTab) createAdvancedSection() fyne.CanvasObject {
 	t.resetBtn = widget.NewButtonWithIcon("Reset to Defaults", theme.ViewRefreshIcon(), t.resetSettings)
 	t.exportBtn = widget.NewButtonWithIcon("Export", theme.DownloadIcon(), t.exportSettings)
 	t.importBtn = widget.NewButtonWithIcon("Import", theme.UploadIcon(), t.importSettings)
-	t.statusLabel = widget.NewLabel("")
-	t.statusLabel.Hidden = true
 
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Advanced Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -454,47 +513,73 @@ func (t *SettingsTab) resetSettings() {
 			t.statusLabel.Importance = widget.SuccessImportance
 			t.statusLabel.Hidden = false
 
-			// Refresh UI
-			t.sensitivitySlider.Value = t.cfg.Sensitivity
-			t.sensitivityLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", t.cfg.Sensitivity))
-			t.themeSelect.SetSelected(t.cfg.Theme)
-			t.languageSelect.SetSelected(t.cfg.Language)
-			t.smoothingCheck.SetChecked(t.cfg.SmoothingEnabled)
-			t.accelCheck.SetChecked(t.cfg.AccelerationEnabled)
-			t.aiCheck.SetChecked(t.cfg.EnableAISmoothing)
-			t.predictiveCheck.SetChecked(t.cfg.EnablePredictive)
-			t.predictiveBlendSlider.Value = t.cfg.PredictiveBlendFactor
-			t.predictiveBlendLabel.SetText(fmt.Sprintf("Prediction blend: %.2f", t.cfg.PredictiveBlendFactor))
-			t.jitterCheck.SetChecked(t.cfg.EnableJitterCompensation)
-			t.jitterBlendSlider.Value = t.cfg.JitterBlendFactor
-			t.jitterBlendLabel.SetText(fmt.Sprintf("Jitter blend: %.2f", t.cfg.JitterBlendFactor))
-			t.personalizationCheck.SetChecked(t.cfg.EnablePersonalization)
-			t.personalizationBuf.Value = float64(t.cfg.PersonalizationBuffer)
-			t.personalizationLbl.SetText(fmt.Sprintf("Buffer size: %d samples", t.cfg.PersonalizationBuffer))
-			t.intervalSlider.Value = float64(t.cfg.PersonalizationInterval)
-			t.intervalLbl.SetText(fmt.Sprintf("Retrain interval: %d seconds", t.cfg.PersonalizationInterval))
-			t.autoSwapCheck.SetChecked(t.cfg.AutoSwapModel)
-			t.serverURLEntry.SetText(t.cfg.PersonalizationServerURL)
-			t.clickThresholdSlider.Value = t.cfg.ClickThreshold
-			t.clickThresholdLabel.SetText(fmt.Sprintf("Click speed: %.1f rad/s", t.cfg.ClickThreshold))
-			t.doubleClickSlider.Value = float64(t.cfg.DoubleClickInterval)
-			t.doubleClickLabel.SetText(fmt.Sprintf("Double click interval: %d ms", t.cfg.DoubleClickInterval))
-			t.rightClickTiltSlider.Value = t.cfg.RightClickTilt
-			t.rightClickTiltLabel.SetText(fmt.Sprintf("Right click tilt: %.0f°", t.cfg.RightClickTilt))
-			t.scrollThresholdSlider.Value = t.cfg.ScrollThreshold
-			t.scrollThresholdLabel.SetText(fmt.Sprintf("Scroll speed: %.1f m/s²", t.cfg.ScrollThreshold))
-			t.hapticCheck.SetChecked(t.cfg.HapticEnabled)
-			t.proximityNearSlider.Value = t.cfg.ProximityNearThreshold
-			t.proximityNearLabel.SetText(fmt.Sprintf("Near threshold: %.1f m", t.cfg.ProximityNearThreshold))
-			t.proximityFarSlider.Value = t.cfg.ProximityFarThreshold
-			t.proximityFarLabel.SetText(fmt.Sprintf("Far threshold: %.1f m", t.cfg.ProximityFarThreshold))
-			t.serverNameEntry.SetText(t.cfg.ServerName)
-			t.autoStartCheck.SetChecked(t.cfg.AutoStartServer)
-			t.logLevelSelect.SetSelected(t.cfg.LogLevel)
+			// Refresh all UI widgets
+			t.refreshUI()
 
 			dialog.ShowInformation("Settings Reset", "All settings have been reset to default values.", win)
 		}
 	}, win)
+}
+
+// refreshUI updates all widgets to reflect the current config.
+func (t *SettingsTab) refreshUI() {
+	// Server
+	t.serverNameEntry.SetText(t.cfg.ServerName)
+	t.autoStartCheck.SetChecked(t.cfg.AutoStartServer)
+	t.logLevelSelect.SetSelected(t.cfg.LogLevel)
+
+	// Cursor
+	t.sensitivitySlider.Value = t.cfg.Sensitivity
+	t.sensitivityLabel.SetText(fmt.Sprintf("Sensitivity: %.2f", t.cfg.Sensitivity))
+	t.smoothingCheck.SetChecked(t.cfg.SmoothingEnabled)
+	t.accelCheck.SetChecked(t.cfg.AccelerationEnabled)
+
+	// Click
+	t.clickThresholdSlider.Value = t.cfg.ClickThreshold
+	t.clickThresholdLabel.SetText(fmt.Sprintf("Click speed: %.1f rad/s", t.cfg.ClickThreshold))
+	t.doubleClickSlider.Value = float64(t.cfg.DoubleClickInterval)
+	t.doubleClickLabel.SetText(fmt.Sprintf("Double click interval: %d ms", t.cfg.DoubleClickInterval))
+	t.rightClickTiltSlider.Value = t.cfg.RightClickTilt
+	t.rightClickTiltLabel.SetText(fmt.Sprintf("Right click tilt: %.0f°", t.cfg.RightClickTilt))
+	t.scrollThresholdSlider.Value = t.cfg.ScrollThreshold
+	t.scrollThresholdLabel.SetText(fmt.Sprintf("Scroll speed: %.1f m/s²", t.cfg.ScrollThreshold))
+	t.hapticCheck.SetChecked(t.cfg.HapticEnabled)
+
+	// AI
+	t.aiCheck.SetChecked(t.cfg.EnableAISmoothing)
+	t.predictiveCheck.SetChecked(t.cfg.EnablePredictive)
+	t.predictiveBlendSlider.Value = t.cfg.PredictiveBlendFactor
+	t.predictiveBlendLabel.SetText(fmt.Sprintf("Prediction blend: %.2f", t.cfg.PredictiveBlendFactor))
+	t.jitterCheck.SetChecked(t.cfg.EnableJitterCompensation)
+	t.jitterBlendSlider.Value = t.cfg.JitterBlendFactor
+	t.jitterBlendLabel.SetText(fmt.Sprintf("Jitter blend: %.2f", t.cfg.JitterBlendFactor))
+
+	// Personalization
+	t.personalizationCheck.SetChecked(t.cfg.EnablePersonalization)
+	t.personalizationBuf.Value = float64(t.cfg.PersonalizationBuffer)
+	t.personalizationLbl.SetText(fmt.Sprintf("Buffer size: %d samples", t.cfg.PersonalizationBuffer))
+	t.intervalSlider.Value = float64(t.cfg.PersonalizationInterval)
+	t.intervalLbl.SetText(fmt.Sprintf("Retrain interval: %d seconds", t.cfg.PersonalizationInterval))
+	t.autoSwapCheck.SetChecked(t.cfg.AutoSwapModel)
+	t.serverURLEntry.SetText(t.cfg.PersonalizationServerURL)
+
+	// Proximity
+	t.proximityNearSlider.Value = t.cfg.ProximityNearThreshold
+	t.proximityNearLabel.SetText(fmt.Sprintf("Near threshold: %.1f m", t.cfg.ProximityNearThreshold))
+	t.proximityFarSlider.Value = t.cfg.ProximityFarThreshold
+	t.proximityFarLabel.SetText(fmt.Sprintf("Far threshold: %.1f m", t.cfg.ProximityFarThreshold))
+
+	// Network
+	t.portEntry.SetText(fmt.Sprintf("%d", t.cfg.Port))
+	t.wsPortEntry.SetText(fmt.Sprintf("%d", t.cfg.WebSocketPort))
+	t.udpPortEntry.SetText(fmt.Sprintf("%d", t.cfg.UDPPort))
+
+	// Appearance
+	t.themeSelect.SetSelected(t.cfg.Theme)
+	if app := fyne.CurrentApp(); app != nil {
+		app.Settings().SetTheme(getThemeByName(t.cfg.Theme))
+	}
+	t.languageSelect.SetSelected(t.cfg.Language)
 }
 
 func (t *SettingsTab) exportSettings() {
@@ -523,7 +608,8 @@ func (t *SettingsTab) importSettings() {
 			buf := make([]byte, 1024*1024)
 			n, _ := reader.Read(buf)
 			if err := t.cfg.FromJSON(string(buf[:n])); err == nil {
-				dialog.ShowInformation("Import Complete", "Settings imported successfully. Please restart the app for changes to take effect.", win)
+				t.refreshUI()
+				dialog.ShowInformation("Import Complete", "Settings imported successfully.", win)
 			} else {
 				dialog.ShowError(err, win)
 			}

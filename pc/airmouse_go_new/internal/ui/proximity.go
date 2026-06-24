@@ -44,6 +44,7 @@ type ProximityTab struct {
 	stopOnce        sync.Once
 	cfg             *config.Config
 	lastLockState   bool
+	mu              sync.RWMutex // protects lastDistance, lastLockState, serviceRunning
 }
 
 // NewProximityTab creates the proximity security tab.
@@ -75,7 +76,7 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 	})
 	tab.enableCheck.SetChecked(tab.cfg.ProximityEnabled)
 
-	// ----- Status labels (initialised here) -----
+	// ----- Status labels -----
 	tab.statusLabel = widget.NewLabel("⚪ Proximity service stopped")
 	tab.statusLabel.Importance = widget.MediumImportance
 	tab.distanceLabel = widget.NewLabel("📏 Current distance: -- m")
@@ -192,10 +193,14 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 // ------------------------------------------------------------
 
 func (t *ProximityTab) startProximityService() {
+	t.mu.Lock()
 	if t.serviceRunning {
+		t.mu.Unlock()
 		return
 	}
 	t.serviceRunning = true
+	t.mu.Unlock()
+
 	t.statusLabel.SetText("🟢 Proximity service running")
 	t.statusLabel.Importance = widget.SuccessImportance
 	t.modeLabel.SetText("Mode: active monitoring")
@@ -205,15 +210,21 @@ func (t *ProximityTab) startProximityService() {
 }
 
 func (t *ProximityTab) stopProximityService() {
+	t.mu.Lock()
 	if !t.serviceRunning {
+		t.mu.Unlock()
 		return
 	}
 	t.serviceRunning = false
+	t.mu.Unlock()
+
 	t.stopOnce.Do(func() {
 		close(t.stopUpdate)
 	})
+	// Create a new channel for future starts
 	t.stopUpdate = make(chan struct{})
 	t.stopOnce = sync.Once{}
+
 	t.statusLabel.SetText("⚪ Proximity service stopped")
 	t.statusLabel.Importance = widget.MediumImportance
 	t.distanceLabel.SetText("📏 Current distance: -- m")
@@ -250,7 +261,9 @@ func (t *ProximityTab) simulateDistanceUpdates() {
 }
 
 func (t *ProximityTab) updateDistance(distance float64) {
+	t.mu.Lock()
 	t.lastDistance = distance
+	t.mu.Unlock()
 
 	// Update history (keep last 60 samples)
 	t.distanceHistory = append(t.distanceHistory, distance)
@@ -276,10 +289,15 @@ func (t *ProximityTab) updateDistance(distance float64) {
 	shouldLock := distance > t.cfg.ProximityFarThreshold
 	shouldUnlock := distance < t.cfg.ProximityNearThreshold
 
+	t.mu.Lock()
+	running := t.serviceRunning
+	lastLocked := t.lastLockState
+	t.mu.Unlock()
+
 	RunOnMain(func() {
 		t.distanceLabel.SetText(fmt.Sprintf("📏 Current distance: %.2f m", distance))
 		t.historyChart.SetText(historyText)
-		t.modeLabel.SetText(fmt.Sprintf("Mode: %s | Near %.1f m | Far %.1f m", proximityModeLabel(t.serviceRunning), t.cfg.ProximityNearThreshold, t.cfg.ProximityFarThreshold))
+		t.modeLabel.SetText(fmt.Sprintf("Mode: %s | Near %.1f m | Far %.1f m", proximityModeLabel(running), t.cfg.ProximityNearThreshold, t.cfg.ProximityFarThreshold))
 
 		// Colour coding
 		if distance < t.cfg.ProximityNearThreshold {
@@ -291,12 +309,16 @@ func (t *ProximityTab) updateDistance(distance float64) {
 		}
 
 		// Auto lock/unlock
-		if shouldLock && !t.lastLockState {
+		if shouldLock && !lastLocked {
 			t.lockScreen()
+			t.mu.Lock()
 			t.lastLockState = true
-		} else if shouldUnlock && t.lastLockState {
+			t.mu.Unlock()
+		} else if shouldUnlock && lastLocked {
 			t.unlockScreen()
+			t.mu.Lock()
 			t.lastLockState = false
+			t.mu.Unlock()
 		}
 	})
 }
@@ -336,7 +358,12 @@ func (t *ProximityTab) startCalibration() {
 	if win == nil {
 		return
 	}
-	if !t.serviceRunning {
+
+	t.mu.RLock()
+	running := t.serviceRunning
+	t.mu.RUnlock()
+
+	if !running {
 		dialog.ShowInformation("Calibration", "Please enable the proximity service first.", win)
 		return
 	}
@@ -378,13 +405,18 @@ func (t *ProximityTab) startCalibration() {
 		}
 
 		step := steps[stepIndex]
+		// Read the current distance under lock
+		t.mu.RLock()
+		dist := t.lastDistance
+		t.mu.RUnlock()
+
 		msg := fmt.Sprintf("%s\n\nCurrent distance: %.2f m\n\nTap OK when ready.",
-			step.label, t.lastDistance)
+			step.label, dist)
 		dialog.ShowConfirm(fmt.Sprintf("Calibration Step %d/%d", stepIndex+1, len(steps)),
 			msg,
 			func(ok bool) {
 				if ok {
-					measurements = append(measurements, t.lastDistance)
+					measurements = append(measurements, dist)
 					stepIndex++
 					showStep()
 				} else {

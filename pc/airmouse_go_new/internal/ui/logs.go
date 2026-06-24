@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -33,7 +34,7 @@ type LogsTab struct {
 	pauseBtn    *widget.Button
 	copyBtn     *widget.Button
 
-	paused     bool
+	paused     atomic.Bool // now safe for concurrent access
 	logMu      sync.RWMutex
 	logEntries []LogEntry
 	filter     string
@@ -57,8 +58,8 @@ func NewLogsTab() fyne.CanvasObject {
 	tab := &LogsTab{
 		logEntries: make([]LogEntry, 0, 1000),
 		level:      "All",
-		paused:     false,
 	}
+	tab.paused.Store(false)
 
 	globalLogsTab = tab
 	utils.LogInfo("Logs tab initialized")
@@ -77,18 +78,20 @@ func NewLogsTab() fyne.CanvasObject {
 		tab.refreshDisplay()
 	}
 
-	// Level filter – create WITHOUT callback to avoid early refresh
+	// Level filter
 	levels := []string{"All", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"}
 	tab.levelSelect = widget.NewSelect(levels, nil)
 	tab.levelSelect.SetSelected("All")
-	// Now attach the callback after selection is set
 	tab.levelSelect.OnChanged = func(s string) {
 		tab.level = s
 		tab.refreshDisplay()
 	}
 
 	// ----- Auto-scroll checkbox -----
-	tab.autoScroll = widget.NewCheck("Auto-scroll", func(on bool) {})
+	tab.autoScroll = widget.NewCheck("Auto-scroll", func(on bool) {
+		// Refresh display to apply auto-scroll setting
+		tab.refreshDisplay()
+	})
 	tab.autoScroll.SetChecked(true)
 
 	// ----- Status label -----
@@ -141,7 +144,7 @@ func NewLogsTab() fyne.CanvasObject {
 		container.NewScroll(tab.logWidget),
 	)
 
-	// ----- Initial refresh (now safe) -----
+	// ----- Initial refresh -----
 	tab.refreshDisplay()
 
 	return content
@@ -149,7 +152,7 @@ func NewLogsTab() fyne.CanvasObject {
 
 // AddLogEntry adds a new log entry (called from the global hook).
 func (t *LogsTab) AddLogEntry(level, message, source string) {
-	if t.paused {
+	if t.paused.Load() {
 		return
 	}
 	t.logMu.Lock()
@@ -167,7 +170,6 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 	if len(t.logEntries) > 1000 {
 		t.logEntries = t.logEntries[len(t.logEntries)-1000:]
 	}
-	t.logMu.Unlock()
 
 	RunOnMain(func() {
 		t.refreshDisplay()
@@ -176,7 +178,7 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 
 // refreshDisplay updates the log view with current filters.
 func (t *LogsTab) refreshDisplay() {
-	// ----- SAFETY GUARD: return if widgets are nil (avoids crash during init) -----
+	// Safety guard: return if widgets are not yet initialized
 	if t.logWidget == nil || t.statusLabel == nil {
 		return
 	}
@@ -259,14 +261,14 @@ func (t *LogsTab) exportLogs() {
 				"----------------------------------------\n\n",
 				time.Now().Format("2006-01-02 15:04:05"),
 				len(t.logEntries))
-			writer.Write([]byte(header))
+			_, _ = writer.Write([]byte(header))
 
 			for _, entry := range t.logEntries {
 				line := fmt.Sprintf("%s [%s] %s\n",
 					entry.Time.Format("2006-01-02 15:04:05.000"),
 					entry.Level,
 					entry.Message)
-				writer.Write([]byte(line))
+				_, _ = writer.Write([]byte(line))
 			}
 
 			dialog.ShowInformation("Export Complete",
@@ -279,8 +281,10 @@ func (t *LogsTab) exportLogs() {
 
 // togglePause pauses/resumes log streaming.
 func (t *LogsTab) togglePause() {
-	t.paused = !t.paused
-	if t.paused {
+	newState := !t.paused.Load()
+	t.paused.Store(newState)
+
+	if newState {
 		t.pauseBtn.SetIcon(theme.MediaPlayIcon())
 		t.pauseBtn.SetText("Resume")
 		utils.LogInfo("Log streaming paused")
