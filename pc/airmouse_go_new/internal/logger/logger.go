@@ -41,30 +41,29 @@ const colorReset = "\033[0m"
 
 // Logger is the main logging structure.
 type Logger struct {
-	level     Level
-	out       io.Writer
-	file      *os.File
-	mu        sync.Mutex
-	useColor  bool
-	timestamp bool
-	hooks     []func(level Level, msg string)
-	// Rotation settings
+	level       Level
+	out         io.Writer
+	file        *os.File
+	mu          sync.Mutex
+	useColor    bool
+	timestamp   bool
+	hooks       []func(level Level, msg string)
 	rotateSize  int64           // max size in bytes before rotation (0 = no rotation)
 	rotateAge   time.Duration   // max age before rotation (0 = no rotation)
-	rotateCount int             // number of rotated files to keep
+	rotateCount int             // number of rotated files to keep (0 = keep all)
 	filePath    string
 	currentSize int64
 }
 
 // Config for initializing the logger.
 type Config struct {
-	Level        string        // "debug", "info", "warn", "error"
-	LogFile      string        // path to log file (empty = stdout only)
-	UseColor     bool          // enable ANSI colors
-	Timestamp    bool          // include timestamps
-	RotateSize   int64         // max file size in MB (0 = no rotation)
-	RotateAge    time.Duration // max age of log file (0 = no rotation)
-	RotateCount  int           // number of rotated files to keep (0 = keep all)
+	Level       string        // "debug", "info", "warn", "error"
+	LogFile     string        // path to log file (empty = stdout only)
+	UseColor    bool          // enable ANSI colours
+	Timestamp   bool          // include timestamps
+	RotateSize  int64         // max file size in MB (0 = no rotation)
+	RotateAge   time.Duration // max age of log file (0 = no rotation)
+	RotateCount int           // number of rotated files to keep (0 = keep all)
 }
 
 var (
@@ -73,7 +72,7 @@ var (
 	pendingHooks  []func(level Level, msg string)
 )
 
-// Init initializes the default logger with the given config.
+// Init initialises the default logger with the given config.
 func Init(cfg Config) {
 	once.Do(func() {
 		lvl := LevelInfo
@@ -90,13 +89,20 @@ func Init(cfg Config) {
 		writers = append(writers, os.Stdout)
 
 		var file *os.File
+		var size int64
 		if cfg.LogFile != "" {
 			dir := filepath.Dir(cfg.LogFile)
 			_ = os.MkdirAll(dir, 0755)
+			// Open with O_APPEND, but we may need to rotate if size exceeds limit
 			f, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 			if err == nil {
 				file = f
 				writers = append(writers, f)
+				// get current file size
+				info, _ := f.Stat()
+				if info != nil {
+					size = info.Size()
+				}
 			} else {
 				fmt.Fprintf(os.Stderr, "Failed to open log file: %v\n", err)
 			}
@@ -113,6 +119,7 @@ func Init(cfg Config) {
 			rotateAge:   cfg.RotateAge,
 			rotateCount: cfg.RotateCount,
 			filePath:    cfg.LogFile,
+			currentSize: size,
 		}
 
 		// Apply pending hooks
@@ -121,7 +128,13 @@ func Init(cfg Config) {
 		}
 		pendingHooks = nil
 
-		// If rotation is enabled, start rotation goroutine.
+		// If rotation is enabled and current file already exceeds size, rotate now.
+		if defaultLogger.rotateSize > 0 && defaultLogger.rotateCount > 0 &&
+			defaultLogger.filePath != "" && defaultLogger.currentSize >= defaultLogger.rotateSize {
+			defaultLogger.rotateNow()
+		}
+
+		// Start age‑based rotation daemon if needed.
 		if defaultLogger.rotateAge > 0 {
 			go defaultLogger.rotationDaemon()
 		}
@@ -177,14 +190,15 @@ func emit(level Level, format string, args ...interface{}) {
 	written, _ := defaultLogger.out.Write([]byte(logMsg))
 	defaultLogger.currentSize += int64(written)
 
-	// Check rotation (size)
-	if defaultLogger.rotateSize > 0 && defaultLogger.currentSize >= defaultLogger.rotateSize {
+	// Check size rotation
+	if defaultLogger.rotateSize > 0 && defaultLogger.rotateCount > 0 &&
+		defaultLogger.currentSize >= defaultLogger.rotateSize {
 		defaultLogger.rotateNow()
 	}
 
 	// Execute hooks
 	for _, hook := range defaultLogger.hooks {
-		hook(level, msg) // hook expects (Level, string)
+		hook(level, msg)
 	}
 
 	if level == LevelFatal {
@@ -193,13 +207,13 @@ func emit(level Level, format string, args ...interface{}) {
 	}
 }
 
-// rotationDaemon checks for age-based rotation periodically.
+// rotationDaemon checks for age‑based rotation periodically.
 func (l *Logger) rotationDaemon() {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 	for range ticker.C {
 		l.mu.Lock()
-		if l.filePath != "" && l.rotateAge > 0 {
+		if l.filePath != "" && l.rotateAge > 0 && l.rotateCount > 0 {
 			info, err := os.Stat(l.filePath)
 			if err == nil && time.Since(info.ModTime()) > l.rotateAge {
 				l.rotateNow()
@@ -209,44 +223,44 @@ func (l *Logger) rotationDaemon() {
 	}
 }
 
-// rotateNow performs log rotation.
+// rotateNow performs log rotation (must be called with lock held).
 func (l *Logger) rotateNow() {
-	if l.filePath == "" || l.file == nil {
+	if l.filePath == "" || l.file == nil || l.rotateCount <= 0 {
 		return
 	}
+
 	// Close current file
-	l.file.Close()
+	_ = l.file.Close()
 
-	// Rotate files
-	for i := l.rotateCount - 1; i >= 0; i-- {
-		src := l.filePath
-		if i > 0 {
-			src = fmt.Sprintf("%s.%d", l.filePath, i)
-		}
+	// Rotate files: shift existing rotated files
+	// We want to keep rotateCount rotated files: .1, .2, ..., .N
+	// where N = rotateCount.
+	// Rename .N to .N+1 and delete if exists (beyond limit)
+	// Then rename .N-1 to .N, ..., .1 to .2, then current to .1
+	for i := l.rotateCount - 1; i >= 1; i-- {
+		src := fmt.Sprintf("%s.%d", l.filePath, i)
 		dst := fmt.Sprintf("%s.%d", l.filePath, i+1)
-		if i == 0 {
-			// Current file is the source; move it to .1
-			dst = fmt.Sprintf("%s.1", l.filePath)
-			_ = os.Rename(l.filePath, dst)
-		} else {
-			_ = os.Rename(src, dst)
-		}
+		_ = os.Rename(src, dst)
 	}
-	// Remove excess files
-	if l.rotateCount > 0 {
-		for i := l.rotateCount; ; i++ {
-			f := fmt.Sprintf("%s.%d", l.filePath, i+1)
-			if _, err := os.Stat(f); os.IsNotExist(err) {
-				break
-			}
-			_ = os.Remove(f)
+	// Now move current to .1
+	_ = os.Rename(l.filePath, fmt.Sprintf("%s.1", l.filePath))
+
+	// Remove files beyond rotateCount (if any exist)
+	for i := l.rotateCount + 1; ; i++ {
+		f := fmt.Sprintf("%s.%d", l.filePath, i)
+		if _, err := os.Stat(f); os.IsNotExist(err) {
+			break
 		}
+		_ = os.Remove(f)
 	}
 
-	// Reopen file
+	// Reopen the log file
 	f, err := os.OpenFile(l.filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to reopen log file: %v\n", err)
+		// Fallback: keep using stdout only
+		l.file = nil
+		l.out = os.Stdout
 		return
 	}
 	l.file = f
@@ -261,12 +275,12 @@ func Warn(format string, args ...interface{})  { emit(LevelWarn, format, args...
 func Error(format string, args ...interface{}) { emit(LevelError, format, args...) }
 func Fatal(format string, args ...interface{}) { emit(LevelFatal, format, args...) }
 
-// SetLevel changes the log level after initialization.
+// SetLevel changes the log level after initialisation.
 func SetLevel(level Level) {
 	if defaultLogger != nil {
 		defaultLogger.mu.Lock()
+		defer defaultLogger.mu.Unlock()
 		defaultLogger.level = level
-		defaultLogger.mu.Unlock()
 	}
 }
 
@@ -280,7 +294,7 @@ func GetLevel() Level {
 	return LevelInfo
 }
 
-// AddHook registers a hook that receives (Level, msg).
+// AddHook registers a hook that receives (level, msg).
 func AddHook(hook func(level Level, msg string)) {
 	if hook == nil {
 		return
@@ -295,7 +309,7 @@ func AddHook(hook func(level Level, msg string)) {
 }
 
 // AddStringHook registers a hook that receives (level string, msg string).
-// This is useful for compatibility with the utils package.
+// Useful for compatibility with the utils package.
 func AddStringHook(hook func(level string, msg string)) {
 	if hook == nil {
 		return

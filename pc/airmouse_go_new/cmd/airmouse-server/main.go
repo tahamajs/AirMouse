@@ -1,315 +1,777 @@
-package main
+// Package device manages connected devices and their state.
+package device
 
 import (
-	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
-	"os/signal"
-	"runtime"
-	"syscall"
+	"path/filepath"
+	"sync"
 	"time"
-
-	"airmouse-go/internal/auth"
-	"airmouse-go/internal/config"
-	"airmouse-go/internal/control"
-	"airmouse-go/internal/device"
-	"airmouse-go/internal/infra/logger"
-	"airmouse-go/internal/protocol"
-	"airmouse-go/internal/ui"
 )
 
-// Build‑time variables (set via -ldflags)
+// DeviceType represents the communication protocol.
+type DeviceType string
+
+const (
+	TypeTCP       DeviceType = "TCP"
+	TypeWebSocket DeviceType = "WebSocket"
+	TypeUDP       DeviceType = "UDP"
+	TypeBluetooth DeviceType = "Bluetooth"
+	TypeUSB       DeviceType = "USB"
+	TypeSerial    DeviceType = "Serial"
+)
+
+// DeviceStatus represents the connection state.
+type DeviceStatus string
+
+const (
+	StatusConnected       DeviceStatus = "connected"
+	StatusDisconnected    DeviceStatus = "disconnected"
+	StatusIdle            DeviceStatus = "idle"
+	StatusPendingApproval DeviceStatus = "pending_approval"
+	StatusBlocked         DeviceStatus = "blocked"
+)
+
+// DeviceInfo holds all information about a connected device.
+type DeviceInfo struct {
+	ID             string       `json:"id"`
+	Fingerprint    string       `json:"fingerprint,omitempty"`
+	Name           string       `json:"name"`
+	Type           DeviceType   `json:"type"`
+	Status         DeviceStatus `json:"status"`
+	ConnectedAt    time.Time    `json:"connected_at"`
+	LastActive     time.Time    `json:"last_active"`
+	BytesSent      int64        `json:"bytes_sent"`
+	BytesRecv      int64        `json:"bytes_recv"`
+	MessagesSent   int64        `json:"messages_sent"`
+	MessagesRecv   int64        `json:"messages_recv"`
+	RSSI           int32        `json:"rssi,omitempty"`
+	MACAddress     string       `json:"mac_address,omitempty"`
+	IPAddress      string       `json:"ip_address,omitempty"`
+	UserAgent      string       `json:"user_agent,omitempty"`
+	Version        string       `json:"version,omitempty"`
+	DeviceModel    string       `json:"device_model,omitempty"`
+	AndroidVersion string       `json:"android_version,omitempty"`
+	Manufacturer   string       `json:"manufacturer,omitempty"`
+	Brand          string       `json:"brand,omitempty"`
+	SDKInt         string       `json:"sdk_int,omitempty"`
+	Protocol       string       `json:"protocol,omitempty"`
+	Transport      string       `json:"transport,omitempty"`
+}
+
+// DeviceEvent is emitted when a device changes state.
+type DeviceEvent struct {
+	Type       string // "registered", "unregistered", "updated", "blocked", "approved", "status_changed"
+	DeviceID   string
+	DeviceName string
+	Timestamp  time.Time
+}
+
+// DeviceManager manages all connected devices.
+type DeviceManager struct {
+	mu          sync.RWMutex
+	devices     map[string]*DeviceInfo
+	blockedIDs  map[string]bool
+	callbacks   []func(event DeviceEvent)
+	maxDevices  int
+	stopped     bool
+	stopChan    chan struct{}
+	initialized bool
+	storePath   string
+}
+
+// Manager is an alias for DeviceManager.
+type Manager = DeviceManager
+
+// Logger functions (injected by main).
 var (
-	version   = "3.0.0"
-	buildTime = "2025-01-15"
-	gitCommit = "unknown"
+	logInfoFn  func(msg string, args ...interface{})
+	logDebugFn func(msg string, args ...interface{})
 )
 
-func main() {
-	// --- 1. Load configuration and initialize logger ---
-	cfg := config.Get()
-	if cfg.DebugMode && cfg.LogLevel == "info" {
-		cfg.LogLevel = "debug"
-	}
-	logger.Init(cfg.LogLevel, cfg.LogFile)
-
-	// Inject logger callbacks into the device package (if the package supports it).
-	device.SetLogger(
-		func(msg string, args ...interface{}) {
-			logger.Info(fmt.Sprintf(msg, args...))
-		},
-		func(msg string, args ...interface{}) {
-			logger.Debug(fmt.Sprintf(msg, args...))
-		},
-	)
-
-	printBanner()
-	logSystemInfo()
-
-	// --- 2. Initialize core components ---
-	mouseController := control.NewMouseController(cfg.Sensitivity)
-	deviceManager := device.NewManager()
-	authManager := initAuth(cfg)
-	protocolServer := protocol.NewProtocolServer(mouseController, deviceManager, authManager)
-	wireLifecycleLogging(protocolServer, deviceManager)
-
-	// --- 3. Build the UI (does NOT start the event loop yet) ---
-	appUI := ui.NewApp(cfg, protocolServer, mouseController, deviceManager)
-
-	// --- 4. Setup graceful shutdown ---
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Handle OS signals in a separate goroutine
-	go handleSignals(ctx, appUI, protocolServer, deviceManager)
-
-	// --- 5. Log server endpoints ---
-	logger.Info("Application started successfully")
-	logger.Info("WebSocket server will listen on port %d", cfg.WebSocketPort)
-	logger.Info("TCP server will listen on port %d", cfg.Port)
-	logger.Info("UDP discovery will listen on port %d", cfg.UDPPort)
-	logger.Info("Active protocols: %v", protocolServer.GetActiveProtocols())
-	logger.Info("Launching desktop UI window...")
-
-	// --- 6. Run the UI (blocks until the window is closed) ---
-	if err := appUI.Run(); err != nil {
-		logger.Error("Application error: %v", err)
-		os.Exit(1)
-	}
-
-	// --- 7. Cleanup after UI exits ---
-	logger.Info("Shutting down...")
-	protocolServer.Stop()
-	deviceManager.Stop()
-	logger.Close()
+// SetLogger sets the logger functions.
+func SetLogger(infoFn, debugFn func(msg string, args ...interface{})) {
+	logInfoFn = infoFn
+	logDebugFn = debugFn
 }
 
-// printBanner displays the startup banner.
-func printBanner() {
-	banner := `
-╔═══════════════════════════════════════════════════════════════╗
-║     Air Mouse Pro Server v%s                                   ║
-║     Turn your phone into a wireless mouse                      ║
-╚═══════════════════════════════════════════════════════════════╝
-`
-	logger.Info(fmt.Sprintf(banner, version))
-}
-
-// logSystemInfo prints system details.
-func logSystemInfo() {
-	logger.Info("System Information:")
-	logger.Info("  OS: %s", runtime.GOOS)
-	logger.Info("  Arch: %s", runtime.GOARCH)
-	logger.Info("  CPUs: %d", runtime.NumCPU())
-	logger.Info("  Go Version: %s", runtime.Version())
-	logger.Info("  Build Time: %s", buildTime)
-	logger.Info("  Git Commit: %s", gitCommit)
-}
-
-// initAuth sets up authentication (if enabled).
-func initAuth(cfg *config.Config) *auth.Manager {
-	authManager := auth.NewManager(cfg.AuthSecret)
-	if cfg.AuthEnabled {
-		for _, token := range cfg.AuthTokens {
-			_, _ = authManager.GenerateAuthToken(token, "")
-		}
-		logger.Info("Authentication enabled with %d tokens", len(cfg.AuthTokens))
+func logInfo(msg string, args ...interface{}) {
+	if logInfoFn != nil {
+		logInfoFn(msg, args...)
 	} else {
-		logger.Info("Authentication disabled")
-	}
-	return authManager
-}
-
-// wireLifecycleLogging attaches lifecycle event listeners to the protocol server and device manager.
-func wireLifecycleLogging(server *protocol.ProtocolServer, deviceMgr *device.DeviceManager) {
-	if server != nil {
-		server.AddEventListener(func(event protocol.ServerEvent) {
-			switch event.Type {
-			case "start":
-				logger.Info("Protocol lifecycle event: start")
-			case "stop":
-				logger.Info("Protocol lifecycle event: stop")
-			case "client_connected":
-				logger.Info("Protocol lifecycle event: client connected id=%s", event.ClientID)
-			case "client_disconnected":
-				logger.Info("Protocol lifecycle event: client disconnected id=%s", event.ClientID)
-			default:
-				logger.Debug("Protocol lifecycle event: %s id=%s", event.Type, event.ClientID)
-			}
-		})
-	}
-
-	if deviceMgr != nil {
-		deviceMgr.AddEventListener(func(event device.DeviceEvent) {
-			logger.Info(
-				"Device lifecycle event: type=%s id=%s name=%s",
-				event.Type,
-				event.DeviceID,
-				event.DeviceName,
-			)
-		})
+		fmt.Printf("[INFO] "+msg+"\n", args...)
 	}
 }
 
-// handleSignals listens for OS signals and performs graceful shutdown.
-func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.ProtocolServer, deviceMgr *device.DeviceManager) {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+func logDebug(msg string, args ...interface{}) {
+	if logDebugFn != nil {
+		logDebugFn(msg, args...)
+	} else {
+		fmt.Printf("[DEBUG] "+msg+"\n", args...)
+	}
+}
 
+// NewManager creates a new device manager.
+func NewManager() *DeviceManager {
+	storePath := deviceStorePath()
+	m := &DeviceManager{
+		devices:     make(map[string]*DeviceInfo),
+		blockedIDs:  make(map[string]bool),
+		callbacks:   make([]func(DeviceEvent), 0),
+		maxDevices:  100,
+		stopChan:    make(chan struct{}),
+		stopped:     false,
+		initialized: true,
+		storePath:   storePath,
+	}
+	m.loadPersistedDevices()
+	go m.backgroundCleanup()
+	return m
+}
+
+// deviceStorePath returns the path where device data is persisted.
+func deviceStorePath() string {
+	if dir, err := os.UserConfigDir(); err == nil && dir != "" {
+		return filepath.Join(dir, "airmouse", "saved_devices.json")
+	}
+	return filepath.Join(os.TempDir(), "airmouse_saved_devices.json")
+}
+
+// loadPersistedDevices loads saved devices from disk.
+func (m *DeviceManager) loadPersistedDevices() {
+	data, err := os.ReadFile(m.storePath)
+	if err != nil {
+		return
+	}
+	var devices []*DeviceInfo
+	if err := json.Unmarshal(data, &devices); err != nil {
+		logDebug("Failed to load persisted devices: %v", err)
+		return
+	}
+	for _, d := range devices {
+		if d == nil || d.ID == "" {
+			continue
+		}
+		m.devices[d.ID] = d
+	}
+}
+
+// persistLocked saves devices to disk (must be called with lock held).
+func (m *DeviceManager) persistLocked() {
+	if m.storePath == "" {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(m.storePath), 0o755); err != nil {
+		logDebug("Failed to create device store dir: %v", err)
+		return
+	}
+	devices := make([]*DeviceInfo, 0, len(m.devices))
+	for _, d := range m.devices {
+		devices = append(devices, d)
+	}
+	data, err := json.MarshalIndent(devices, "", "  ")
+	if err != nil {
+		logDebug("Failed to persist devices: %v", err)
+		return
+	}
+	_ = os.WriteFile(m.storePath, data, 0o644)
+}
+
+// backgroundCleanup periodically removes inactive devices.
+func (m *DeviceManager) backgroundCleanup() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
 	for {
 		select {
-		case sig := <-sigChan:
-			logger.Info("Received signal: %v", sig)
-
-			switch sig {
-			case syscall.SIGHUP:
-				// Reload configuration without restarting.
-				logger.Info("Reloading configuration...")
-				if err := config.Get().Reload(); err != nil {
-					logger.Error("Failed to reload config: %v", err)
-				} else {
-					logger.Info("Configuration reloaded successfully")
-				}
-
-			case syscall.SIGINT, syscall.SIGTERM:
-				// Graceful shutdown.
-				logger.Info("Initiating graceful shutdown...")
-
-				// Stop the protocol server (this will close all active connections).
-				if server != nil {
-					logger.Info("Stopping protocol server...")
-					done := make(chan struct{})
-					go func() {
-						server.Stop()
-						close(done)
-					}()
-					select {
-					case <-done:
-						logger.Info("Protocol server stopped")
-					case <-time.After(2 * time.Second):
-						logger.Warn("Protocol server stop timed out – forcing exit")
-					}
-				}
-
-				// Stop device manager
-				if deviceMgr != nil {
-					logger.Info("Stopping device manager...")
-					deviceMgr.Stop()
-				}
-package main
-
-import (
-    "airmouse-go/internal/handler/websocket"
-    "airmouse-go/infra/http"
-    "airmouse-go/internal/utils"
-)
-
-func main() {
-    // ... initialise hub, services, etc.
-    hub := websocket.NewHub() // your hub constructor
-
-    // Create HTTP router
-    router := http.NewRouter(hub)
-
-    // Start the server (blocking call)
-    if err := router.Start(":8080"); err != nil {
-        utils.LogError("HTTP server failed: %v", err)
-    }
-}// main.go (simplified)
-
-func main() {
-    cfg := config.Get()
-
-    // 1. Create the mouse controller with default sensitivity.
-    mouseController := control.NewMouseController(cfg.Sensitivity)
-
-    // 2. Create the device manager (for tracking connected devices).
-    deviceManager := device.NewManager()
-
-    // 3. Create the protocol server, passing the mouse controller.
-    protocolServer := protocol.NewProtocolServer(mouseController, deviceManager, authManager)
-
-    // 4. Build the UI, also passing the mouse controller (for settings).
-    appUI := ui.NewApp(cfg, protocolServer, mouseController, deviceManager)
-
-    // 5. Run the UI (event loop).
-    appUI.Run()import "airmouse-go/internal/proximity"
-
-// ... inside main() ...
-
-// Create proximity manager
-proxMgr := proximity.NewManager()
-
-// Optional: load saved RSSI fusion state
-fusion := proximity.NewRSSIFusion(-59, 2.0)
-statePath := filepath.Join(cfg.ConfigDir, "proximity_state.json")
-if err := fusion.LoadState(statePath); err == nil {
-    proxMgr.SetRSSIFusion(fusion)
-}
-import (
-    "airmouse-go/internal/proximity"
-    "path/filepath"
-    "time"
-)
-
-// ... inside main() after creating the config ...
-
-// Create the proximity manager
-proxMgr := proximity.NewManager()
-
-// Optional: load saved RSSI fusion parameters
-fusion := proximity.NewRSSIFusion(-59, 2.0)
-statePath := filepath.Join(cfg.ConfigDir, "proximity_state.json")
-_ = fusion.LoadState(statePath) // ignore error if first run
-proxMgr.SetRSSIFusion(fusion)
-
-// Set thresholds from config (or use defaults)
-proxMgr.SetGlobalThresholds(
-    float32(cfg.ProximityNearThreshold), // default 1.5
-    float32(cfg.ProximityFarThreshold),  // default 3.0
-)
-
-// Enable/disable auto‑lock based on config
-proxMgr.EnableAutoLock(cfg.ProximityEnabled)
-proxMgr.EnableAutoUnlock(cfg.ProximityEnabled)
-
-// Optional: save fusion state periodically
-go func() {
-    ticker := time.NewTicker(60 * time.Second)
-    defer ticker.Stop()
-    for range ticker.C {
-        _ = fusion.SaveState(statePath)
-    }
-}()
-// Set thresholds from config (or defaults)
-nearThreshold := float32(cfg.ProximityNearThreshold) // 1.5
-farThreshold := float32(cfg.ProximityFarThreshold)   // 3.0
-proxMgr.SetGlobalThresholds(nearThreshold, farThreshold)
-// If you have a method to save state
-if fusion != nil {
-    _ = fusion.SaveState(statePath)
-}
-// Enable/disable auto‑lock based on config
-proxMgr.EnableAutoLock(cfg.ProximityEnabled)
-proxMgr.EnableAutoUnlock(cfg.ProximityEnabled)
-}
-				// Stop the UI (this will cause appUI.Run() to return).
-				if appUI != nil {
-					logger.Info("Closing UI...")
-					appUI.Stop()
-				}
-
-				logger.Info("Shutdown complete")
-				logger.Close()
-				os.Exit(0)
-
-			default:
-				logger.Debug("Unhandled signal: %v", sig)
+		case <-ticker.C:
+			if m.stopped {
+				return
 			}
-
-		case <-ctx.Done():
-			logger.Debug("Context cancelled, stopping signal handler")
+			m.PruneInactive(10 * time.Minute)
+		case <-m.stopChan:
 			return
 		}
 	}
+}
+
+// StableDeviceID generates a stable device ID from parts.
+// If all parts are empty, it falls back to a timestamp‑based ID.
+func StableDeviceID(parts ...string) string {
+	if len(parts) == 0 {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	h := sha256.New()
+	for _, p := range parts {
+		if p != "" {
+			_, _ = h.Write([]byte(p))
+			_, _ = h.Write([]byte("|"))
+		}
+	}
+	sum := h.Sum(nil)
+	if len(sum) == 0 {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(sum)[:16]
+}
+
+// RegisterDevice registers a new device.
+func (m *DeviceManager) RegisterDevice(id string, deviceType DeviceType, name string) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if id == "" {
+		return fmt.Errorf("device ID cannot be empty")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.blockedIDs[id] {
+		return fmt.Errorf("device is blocked: %s", id)
+	}
+	if len(m.devices) >= m.maxDevices {
+		return fmt.Errorf("max devices reached (%d)", m.maxDevices)
+	}
+	if _, exists := m.devices[id]; exists {
+		return fmt.Errorf("device already registered: %s", id)
+	}
+	now := time.Now()
+	m.devices[id] = &DeviceInfo{
+		ID:          id,
+		Name:        name,
+		Type:        deviceType,
+		Status:      StatusConnected,
+		ConnectedAt: now,
+		LastActive:  now,
+	}
+	m.persistLocked()
+	go m.triggerEvent(DeviceEvent{
+		Type:       "registered",
+		DeviceID:   id,
+		DeviceName: name,
+		Timestamp:  now,
+	})
+	logInfo("Device registered: %s (%s)", name, deviceType)
+	return nil
+}
+
+// UpsertDevice creates or updates a device with metadata.
+// It returns the updated device info.
+func (m *DeviceManager) UpsertDevice(id string, deviceType DeviceType, name string, meta map[string]string) *DeviceInfo {
+	if !m.initialized || id == "" {
+		return nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now()
+	device, exists := m.devices[id]
+	if !exists {
+		device = &DeviceInfo{
+			ID:          id,
+			Name:        name,
+			Type:        deviceType,
+			Status:      StatusConnected,
+			ConnectedAt: now,
+			LastActive:  now,
+		}
+		m.devices[id] = device
+	} else {
+		if deviceType != "" {
+			device.Type = deviceType
+		}
+		if name != "" {
+			device.Name = name
+		}
+		device.Status = StatusConnected
+		device.LastActive = now
+	}
+	// Apply metadata
+	if v, ok := meta["fingerprint"]; ok && v != "" {
+		device.Fingerprint = v
+	}
+	if v, ok := meta["ip_address"]; ok && v != "" {
+		device.IPAddress = v
+	}
+	if v, ok := meta["mac_address"]; ok && v != "" {
+		device.MACAddress = v
+	}
+	if v, ok := meta["rssi"]; ok && v != "" {
+		var rssi int32
+		fmt.Sscanf(v, "%d", &rssi)
+		device.RSSI = rssi
+	}
+	if v, ok := meta["user_agent"]; ok && v != "" {
+		device.UserAgent = v
+	}
+	if v, ok := meta["version"]; ok && v != "" {
+		device.Version = v
+	}
+	if v, ok := meta["device_model"]; ok && v != "" {
+		device.DeviceModel = v
+	}
+	if v, ok := meta["android_version"]; ok && v != "" {
+		device.AndroidVersion = v
+	}
+	if v, ok := meta["manufacturer"]; ok && v != "" {
+		device.Manufacturer = v
+	}
+	if v, ok := meta["brand"]; ok && v != "" {
+		device.Brand = v
+	}
+	if v, ok := meta["sdk_int"]; ok && v != "" {
+		device.SDKInt = v
+	}
+	if v, ok := meta["protocol"]; ok && v != "" {
+		device.Protocol = v
+	}
+	if v, ok := meta["transport"]; ok && v != "" {
+		device.Transport = v
+	}
+	m.persistLocked()
+	return device
+}
+
+// RenameDeviceID merges oldID into newID.
+func (m *DeviceManager) RenameDeviceID(oldID, newID string) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if oldID == "" || newID == "" || oldID == newID {
+		return nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	device, exists := m.devices[oldID]
+	if !exists {
+		return fmt.Errorf("device not found: %s", oldID)
+	}
+	// If newID already exists, merge them (keep the newer device).
+	if existing, exists := m.devices[newID]; exists {
+		existing.LastActive = time.Now()
+		existing.Status = StatusConnected
+		delete(m.devices, oldID)
+		m.persistLocked()
+		return nil
+	}
+	delete(m.devices, oldID)
+	device.ID = newID
+	m.devices[newID] = device
+	m.persistLocked()
+	return nil
+}
+
+// UnregisterDevice removes a device.
+func (m *DeviceManager) UnregisterDevice(id string) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if id == "" {
+		return fmt.Errorf("device ID cannot be empty")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	device, exists := m.devices[id]
+	if !exists {
+		return fmt.Errorf("device not found: %s", id)
+	}
+	delete(m.devices, id)
+	m.persistLocked()
+	go m.triggerEvent(DeviceEvent{
+		Type:       "unregistered",
+		DeviceID:   id,
+		DeviceName: device.Name,
+		Timestamp:  time.Now(),
+	})
+	logInfo("Device unregistered: %s (%s)", device.Name, device.Type)
+	return nil
+}
+
+// UpdateDeviceName changes the device name.
+func (m *DeviceManager) UpdateDeviceName(id string, name string) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if id == "" || name == "" {
+		return fmt.Errorf("device ID and name cannot be empty")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	device, exists := m.devices[id]
+	if !exists {
+		return fmt.Errorf("device not found: %s", id)
+	}
+	device.Name = name
+	device.LastActive = time.Now()
+	m.persistLocked()
+	go m.triggerEvent(DeviceEvent{
+		Type:       "updated",
+		DeviceID:   id,
+		DeviceName: name,
+		Timestamp:  time.Now(),
+	})
+	logInfo("Device renamed: %s (%s)", name, id)
+	return nil
+}
+
+// UpdateDeviceActivity updates traffic and message counters.
+func (m *DeviceManager) UpdateDeviceActivity(id string, sent, recv int64) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if id == "" {
+		return fmt.Errorf("device ID cannot be empty")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	device, exists := m.devices[id]
+	if !exists {
+		return fmt.Errorf("device not found: %s", id)
+	}
+	device.LastActive = time.Now()
+	device.BytesSent += sent
+	device.BytesRecv += recv
+	device.MessagesSent++
+	device.MessagesRecv++
+	m.persistLocked()
+	return nil
+}
+
+// UpdateDeviceStatus updates the device status and triggers an event.
+func (m *DeviceManager) UpdateDeviceStatus(id string, status DeviceStatus) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if id == "" {
+		return fmt.Errorf("device ID cannot be empty")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	device, exists := m.devices[id]
+	if !exists {
+		return fmt.Errorf("device not found: %s", id)
+	}
+	if device.Status == status {
+		return nil
+	}
+	device.Status = status
+	device.LastActive = time.Now()
+	m.persistLocked()
+	eventType := "status_changed"
+	if status == StatusConnected {
+		eventType = "approved"
+	}
+	go m.triggerEvent(DeviceEvent{
+		Type:       eventType,
+		DeviceID:   id,
+		DeviceName: device.Name,
+		Timestamp:  time.Now(),
+	})
+	logInfo("Device status changed: %s -> %s (%s)", id, status, device.Name)
+	return nil
+}
+
+// UpdateBLEDevice updates or creates a Bluetooth device entry.
+func (m *DeviceManager) UpdateBLEDevice(addr, name string, rssi int32) {
+	if !m.initialized || addr == "" {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if device, exists := m.devices[addr]; exists {
+		device.RSSI = rssi
+		device.LastActive = time.Now()
+		if name != "" && device.Name == "" {
+			device.Name = name
+		}
+		m.persistLocked()
+		return
+	}
+	if m.blockedIDs[addr] || len(m.devices) >= m.maxDevices {
+		return
+	}
+	now := time.Now()
+	m.devices[addr] = &DeviceInfo{
+		ID:          addr,
+		Name:        name,
+		Type:        TypeBluetooth,
+		Status:      StatusConnected,
+		ConnectedAt: now,
+		LastActive:  now,
+		RSSI:        rssi,
+		MACAddress:  addr,
+	}
+	m.persistLocked()
+	go m.triggerEvent(DeviceEvent{
+		Type:       "discovered",
+		DeviceID:   addr,
+		DeviceName: name,
+		Timestamp:  now,
+	})
+}
+
+// BlockDevice blocks a device.
+func (m *DeviceManager) BlockDevice(id string) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if id == "" {
+		return fmt.Errorf("device ID cannot be empty")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.blockedIDs[id] = true
+	if device, exists := m.devices[id]; exists {
+		device.Status = StatusBlocked
+		m.persistLocked()
+		go m.triggerEvent(DeviceEvent{
+			Type:       "blocked",
+			DeviceID:   id,
+			DeviceName: device.Name,
+			Timestamp:  time.Now(),
+		})
+		logInfo("Device blocked: %s (%s)", device.Name, id)
+	}
+	return nil
+}
+
+// UnblockDevice unblocks a device.
+func (m *DeviceManager) UnblockDevice(id string) error {
+	if !m.initialized {
+		return fmt.Errorf("device manager not initialized")
+	}
+	if id == "" {
+		return fmt.Errorf("device ID cannot be empty")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.blockedIDs, id)
+	if device, exists := m.devices[id]; exists {
+		device.Status = StatusConnected
+		m.persistLocked()
+		logInfo("Device unblocked: %s (%s)", device.Name, id)
+	}
+	return nil
+}
+
+// IsBlocked checks if a device is blocked.
+func (m *DeviceManager) IsBlocked(id string) bool {
+	if !m.initialized || id == "" {
+		return false
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.blockedIDs[id]
+}
+
+// IsDeviceApproved checks if a device with the given fingerprint is approved.
+func (m *DeviceManager) IsDeviceApproved(fingerprint string) bool {
+	if !m.initialized || fingerprint == "" {
+		return false
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, d := range m.devices {
+		if d.Fingerprint == fingerprint {
+			return d.Status == StatusConnected
+		}
+	}
+	return false
+}
+
+// GetDeviceByFingerprint returns device info by fingerprint.
+func (m *DeviceManager) GetDeviceByFingerprint(fingerprint string) *DeviceInfo {
+	if !m.initialized || fingerprint == "" {
+		return nil
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, d := range m.devices {
+		if d.Fingerprint == fingerprint {
+			copy := *d
+			return &copy
+		}
+	}
+	return nil
+}
+
+// GetAllDevices returns a copy of all devices.
+func (m *DeviceManager) GetAllDevices() []*DeviceInfo {
+	if !m.initialized {
+		return []*DeviceInfo{}
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	devices := make([]*DeviceInfo, 0, len(m.devices))
+	for _, d := range m.devices {
+		devices = append(devices, d)
+	}
+	return devices
+}
+
+// GetDevice returns a device by ID.
+func (m *DeviceManager) GetDevice(id string) *DeviceInfo {
+	if !m.initialized || id == "" {
+		return nil
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if device, exists := m.devices[id]; exists {
+		copy := *device
+		return &copy
+	}
+	return nil
+}
+
+// GetDeviceByMAC returns a device by MAC address.
+func (m *DeviceManager) GetDeviceByMAC(mac string) *DeviceInfo {
+	if !m.initialized || mac == "" {
+		return nil
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, d := range m.devices {
+		if d.MACAddress == mac {
+			copy := *d
+			return &copy
+		}
+	}
+	return nil
+}
+
+// GetActiveDevices returns devices that are connected and recently active.
+func (m *DeviceManager) GetActiveDevices() []*DeviceInfo {
+	if !m.initialized {
+		return []*DeviceInfo{}
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	active := make([]*DeviceInfo, 0)
+	threshold := 30 * time.Second
+	for _, d := range m.devices {
+		if d.Status == StatusConnected && time.Since(d.LastActive) < threshold {
+			active = append(active, d)
+		}
+	}
+	return active
+}
+
+// GetDeviceCount returns the total number of devices.
+func (m *DeviceManager) GetDeviceCount() int {
+	if !m.initialized {
+		return 0
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return len(m.devices)
+}
+
+// GetBlockedCount returns the number of blocked devices.
+func (m *DeviceManager) GetBlockedCount() int {
+	if !m.initialized {
+		return 0
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return len(m.blockedIDs)
+}
+
+// GetStatistics returns aggregated statistics.
+func (m *DeviceManager) GetStatistics() map[string]interface{} {
+	if !m.initialized {
+		return map[string]interface{}{
+			"total_devices":   0,
+			"blocked_devices": 0,
+		}
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var totalSent, totalRecv int64
+	typeCount := make(map[DeviceType]int)
+	statusCount := make(map[DeviceStatus]int)
+	for _, d := range m.devices {
+		totalSent += d.BytesSent
+		totalRecv += d.BytesRecv
+		typeCount[d.Type]++
+		statusCount[d.Status]++
+	}
+	return map[string]interface{}{
+		"total_devices":    len(m.devices),
+		"blocked_devices":  len(m.blockedIDs),
+		"by_type":          typeCount,
+		"by_status":        statusCount,
+		"total_bytes_sent": totalSent,
+		"total_bytes_recv": totalRecv,
+		"max_devices":      m.maxDevices,
+	}
+}
+
+// PruneInactive removes devices that have been idle for longer than maxIdle.
+func (m *DeviceManager) PruneInactive(maxIdle time.Duration) int {
+	if !m.initialized {
+		return 0
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	removed := 0
+	now := time.Now()
+	for id, d := range m.devices {
+		if now.Sub(d.LastActive) > maxIdle {
+			delete(m.devices, id)
+			removed++
+		}
+	}
+	if removed > 0 {
+		m.persistLocked()
+	}
+	return removed
+}
+
+// AddEventListener registers a callback for device events.
+func (m *DeviceManager) AddEventListener(callback func(event DeviceEvent)) {
+	if !m.initialized || callback == nil {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.callbacks = append(m.callbacks, callback)
+}
+
+// triggerEvent fires all registered callbacks.
+func (m *DeviceManager) triggerEvent(event DeviceEvent) {
+	if !m.initialized {
+		return
+	}
+	m.mu.RLock()
+	callbacks := make([]func(DeviceEvent), len(m.callbacks))
+	copy(callbacks, m.callbacks)
+	m.mu.RUnlock()
+	for _, cb := range callbacks {
+		go cb(event)
+	}
+}
+
+// Stop gracefully stops the manager.
+func (m *DeviceManager) Stop() {
+	if !m.initialized {
+		return
+	}
+	m.mu.Lock()
+	if m.stopped {
+		m.mu.Unlock()
+		return
+	}
+	m.stopped = true
+	m.mu.Unlock()
+	select {
+	case <-m.stopChan:
+	default:
+		close(m.stopChan)
+	}
+	logInfo("Device manager stopped")
+}
+
+// IsInitialized returns true if the manager is initialized.
+func (m *DeviceManager) IsInitialized() bool {
+	return m.initialized
 }

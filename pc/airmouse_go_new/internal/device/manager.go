@@ -1,3 +1,4 @@
+// Package device manages connected devices and their state.
 package device
 
 import (
@@ -11,6 +12,7 @@ import (
 	"time"
 )
 
+// DeviceType represents the communication protocol.
 type DeviceType string
 
 const (
@@ -22,6 +24,7 @@ const (
 	TypeSerial    DeviceType = "Serial"
 )
 
+// DeviceStatus represents the connection state.
 type DeviceStatus string
 
 const (
@@ -32,6 +35,7 @@ const (
 	StatusBlocked         DeviceStatus = "blocked"
 )
 
+// DeviceInfo holds all information about a connected device.
 type DeviceInfo struct {
 	ID             string       `json:"id"`
 	Fingerprint    string       `json:"fingerprint,omitempty"`
@@ -58,13 +62,15 @@ type DeviceInfo struct {
 	Transport      string       `json:"transport,omitempty"`
 }
 
+// DeviceEvent is emitted when a device changes state.
 type DeviceEvent struct {
-	Type       string // "registered", "unregistered", "updated", "blocked"
+	Type       string // "registered", "unregistered", "updated", "blocked", "unblocked", "approved", "status_changed"
 	DeviceID   string
 	DeviceName string
 	Timestamp  time.Time
 }
 
+// DeviceManager manages all connected devices.
 type DeviceManager struct {
 	mu          sync.RWMutex
 	devices     map[string]*DeviceInfo
@@ -77,16 +83,16 @@ type DeviceManager struct {
 	storePath   string
 }
 
-// Manager is an alias for DeviceManager
+// Manager is an alias for DeviceManager.
 type Manager = DeviceManager
 
-// Logger functions
+// Logger functions (injected by main).
 var (
 	logInfoFn  func(msg string, args ...interface{})
 	logDebugFn func(msg string, args ...interface{})
 )
 
-// SetLogger sets logger functions
+// SetLogger sets the logger functions.
 func SetLogger(infoFn, debugFn func(msg string, args ...interface{})) {
 	logInfoFn = infoFn
 	logDebugFn = debugFn
@@ -108,7 +114,7 @@ func logDebug(msg string, args ...interface{}) {
 	}
 }
 
-// NewManager creates a new device manager
+// NewManager creates a new device manager.
 func NewManager() *DeviceManager {
 	storePath := deviceStorePath()
 	m := &DeviceManager{
@@ -122,35 +128,11 @@ func NewManager() *DeviceManager {
 		storePath:   storePath,
 	}
 	m.loadPersistedDevices()
-	go m.startBackgroundServices()
+	go m.backgroundCleanup()
 	return m
 }
 
-func (m *DeviceManager) startBackgroundServices() {
-	if !m.initialized {
-		return
-	}
-	time.Sleep(500 * time.Millisecond)
-	go m.deviceDiscoveryLoop()
-}
-
-func (m *DeviceManager) deviceDiscoveryLoop() {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	logInfo("Bluetooth manager started: adapter=default")
-	logInfo("USB serial server started: baud_rate=115200 auto_detect=true")
-	for {
-		select {
-		case <-ticker.C:
-			if m.stopped {
-				return
-			}
-		case <-m.stopChan:
-			return
-		}
-	}
-}
-
+// deviceStorePath returns the path where device data is persisted.
 func deviceStorePath() string {
 	if dir, err := os.UserConfigDir(); err == nil && dir != "" {
 		return filepath.Join(dir, "airmouse", "saved_devices.json")
@@ -158,6 +140,7 @@ func deviceStorePath() string {
 	return filepath.Join(os.TempDir(), "airmouse_saved_devices.json")
 }
 
+// loadPersistedDevices loads saved devices from disk.
 func (m *DeviceManager) loadPersistedDevices() {
 	data, err := os.ReadFile(m.storePath)
 	if err != nil {
@@ -176,6 +159,7 @@ func (m *DeviceManager) loadPersistedDevices() {
 	}
 }
 
+// persistLocked saves devices to disk (must be called with lock held).
 func (m *DeviceManager) persistLocked() {
 	if m.storePath == "" {
 		return
@@ -196,10 +180,31 @@ func (m *DeviceManager) persistLocked() {
 	_ = os.WriteFile(m.storePath, data, 0o644)
 }
 
-// StableDeviceID generates a stable device ID from parts
+// backgroundCleanup periodically removes inactive devices.
+func (m *DeviceManager) backgroundCleanup() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if m.stopped {
+				return
+			}
+			removed := m.PruneInactive(10 * time.Minute)
+			if removed > 0 {
+				logInfo("Pruned %d inactive devices", removed)
+			}
+		case <-m.stopChan:
+			return
+		}
+	}
+}
+
+// StableDeviceID generates a stable device ID from parts.
+// If all parts are empty, it falls back to a timestamp‑based ID.
 func StableDeviceID(parts ...string) string {
 	if len(parts) == 0 {
-		return ""
+		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
 	h := sha256.New()
 	for _, p := range parts {
@@ -208,7 +213,6 @@ func StableDeviceID(parts ...string) string {
 			_, _ = h.Write([]byte("|"))
 		}
 	}
-	// If all parts are empty, fallback to timestamp-based ID
 	sum := h.Sum(nil)
 	if len(sum) == 0 {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
@@ -216,7 +220,7 @@ func StableDeviceID(parts ...string) string {
 	return hex.EncodeToString(sum)[:16]
 }
 
-// RegisterDevice registers a new device
+// RegisterDevice registers a new device.
 func (m *DeviceManager) RegisterDevice(id string, deviceType DeviceType, name string) error {
 	if !m.initialized {
 		return fmt.Errorf("device manager not initialized")
@@ -255,7 +259,8 @@ func (m *DeviceManager) RegisterDevice(id string, deviceType DeviceType, name st
 	return nil
 }
 
-// UpsertDevice creates or updates a device with metadata
+// UpsertDevice creates or updates a device with metadata.
+// It returns the updated device info.
 func (m *DeviceManager) UpsertDevice(id string, deviceType DeviceType, name string, meta map[string]string) *DeviceInfo {
 	if !m.initialized || id == "" {
 		return nil
@@ -275,51 +280,62 @@ func (m *DeviceManager) UpsertDevice(id string, deviceType DeviceType, name stri
 		}
 		m.devices[id] = device
 	} else {
-		device.Type = deviceType
+		if deviceType != "" {
+			device.Type = deviceType
+		}
 		if name != "" {
 			device.Name = name
 		}
 		device.Status = StatusConnected
 		device.LastActive = now
 	}
-	if v := meta["fingerprint"]; v != "" {
+	// Apply metadata
+	if v, ok := meta["fingerprint"]; ok && v != "" {
 		device.Fingerprint = v
 	}
-	if v := meta["ip_address"]; v != "" {
+	if v, ok := meta["ip_address"]; ok && v != "" {
 		device.IPAddress = v
 	}
-	if v := meta["user_agent"]; v != "" {
+	if v, ok := meta["mac_address"]; ok && v != "" {
+		device.MACAddress = v
+	}
+	if v, ok := meta["rssi"]; ok && v != "" {
+		var rssi int32
+		fmt.Sscanf(v, "%d", &rssi)
+		device.RSSI = rssi
+	}
+	if v, ok := meta["user_agent"]; ok && v != "" {
 		device.UserAgent = v
 	}
-	if v := meta["version"]; v != "" {
+	if v, ok := meta["version"]; ok && v != "" {
 		device.Version = v
 	}
-	if v := meta["device_model"]; v != "" {
+	if v, ok := meta["device_model"]; ok && v != "" {
 		device.DeviceModel = v
 	}
-	if v := meta["android_version"]; v != "" {
+	if v, ok := meta["android_version"]; ok && v != "" {
 		device.AndroidVersion = v
 	}
-	if v := meta["manufacturer"]; v != "" {
+	if v, ok := meta["manufacturer"]; ok && v != "" {
 		device.Manufacturer = v
 	}
-	if v := meta["brand"]; v != "" {
+	if v, ok := meta["brand"]; ok && v != "" {
 		device.Brand = v
 	}
-	if v := meta["sdk_int"]; v != "" {
+	if v, ok := meta["sdk_int"]; ok && v != "" {
 		device.SDKInt = v
 	}
-	if v := meta["protocol"]; v != "" {
+	if v, ok := meta["protocol"]; ok && v != "" {
 		device.Protocol = v
 	}
-	if v := meta["transport"]; v != "" {
+	if v, ok := meta["transport"]; ok && v != "" {
 		device.Transport = v
 	}
 	m.persistLocked()
 	return device
 }
 
-// RenameDeviceID merges oldID into newID
+// RenameDeviceID merges oldID into newID.
 func (m *DeviceManager) RenameDeviceID(oldID, newID string) error {
 	if !m.initialized {
 		return fmt.Errorf("device manager not initialized")
@@ -333,8 +349,8 @@ func (m *DeviceManager) RenameDeviceID(oldID, newID string) error {
 	if !exists {
 		return fmt.Errorf("device not found: %s", oldID)
 	}
-	if _, exists := m.devices[newID]; exists {
-		existing := m.devices[newID]
+	// If newID already exists, merge them (keep the newer device).
+	if existing, exists := m.devices[newID]; exists {
 		existing.LastActive = time.Now()
 		existing.Status = StatusConnected
 		delete(m.devices, oldID)
@@ -348,7 +364,7 @@ func (m *DeviceManager) RenameDeviceID(oldID, newID string) error {
 	return nil
 }
 
-// UnregisterDevice removes a device
+// UnregisterDevice removes a device.
 func (m *DeviceManager) UnregisterDevice(id string) error {
 	if !m.initialized {
 		return fmt.Errorf("device manager not initialized")
@@ -374,7 +390,7 @@ func (m *DeviceManager) UnregisterDevice(id string) error {
 	return nil
 }
 
-// UpdateDeviceName updates the name
+// UpdateDeviceName changes the device name.
 func (m *DeviceManager) UpdateDeviceName(id string, name string) error {
 	if !m.initialized {
 		return fmt.Errorf("device manager not initialized")
@@ -401,7 +417,7 @@ func (m *DeviceManager) UpdateDeviceName(id string, name string) error {
 	return nil
 }
 
-// UpdateDeviceActivity updates traffic stats
+// UpdateDeviceActivity updates traffic and message counters.
 func (m *DeviceManager) UpdateDeviceActivity(id string, sent, recv int64) error {
 	if !m.initialized {
 		return fmt.Errorf("device manager not initialized")
@@ -424,7 +440,7 @@ func (m *DeviceManager) UpdateDeviceActivity(id string, sent, recv int64) error 
 	return nil
 }
 
-// UpdateDeviceStatus updates status
+// UpdateDeviceStatus updates the device status and triggers an event.
 func (m *DeviceManager) UpdateDeviceStatus(id string, status DeviceStatus) error {
 	if !m.initialized {
 		return fmt.Errorf("device manager not initialized")
@@ -438,50 +454,66 @@ func (m *DeviceManager) UpdateDeviceStatus(id string, status DeviceStatus) error
 	if !exists {
 		return fmt.Errorf("device not found: %s", id)
 	}
+	if device.Status == status {
+		return nil
+	}
 	device.Status = status
+	device.LastActive = time.Now()
 	m.persistLocked()
+	eventType := "status_changed"
+	if status == StatusConnected {
+		eventType = "approved"
+	}
+	go m.triggerEvent(DeviceEvent{
+		Type:       eventType,
+		DeviceID:   id,
+		DeviceName: device.Name,
+		Timestamp:  time.Now(),
+	})
+	logInfo("Device status changed: %s -> %s (%s)", id, status, device.Name)
 	return nil
 }
 
-// UpdateBLEDevice updates BLE device info
+// UpdateBLEDevice updates or creates a Bluetooth device entry.
 func (m *DeviceManager) UpdateBLEDevice(addr, name string, rssi int32) {
 	if !m.initialized || addr == "" {
 		return
 	}
-	var discovered *DeviceEvent
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	if device, exists := m.devices[addr]; exists {
 		device.RSSI = rssi
 		device.LastActive = time.Now()
 		if name != "" && device.Name == "" {
 			device.Name = name
 		}
-	} else if !m.blockedIDs[addr] && len(m.devices) < m.maxDevices {
-		m.devices[addr] = &DeviceInfo{
-			ID:          addr,
-			Name:        name,
-			Type:        TypeBluetooth,
-			Status:      StatusConnected,
-			ConnectedAt: time.Now(),
-			LastActive:  time.Now(),
-			RSSI:        rssi,
-			MACAddress:  addr,
-		}
-		discovered = &DeviceEvent{
-			Type:       "discovered",
-			DeviceID:   addr,
-			DeviceName: name,
-			Timestamp:  time.Now(),
-		}
+		m.persistLocked()
+		return
+	}
+	if m.blockedIDs[addr] || len(m.devices) >= m.maxDevices {
+		return
+	}
+	now := time.Now()
+	m.devices[addr] = &DeviceInfo{
+		ID:          addr,
+		Name:        name,
+		Type:        TypeBluetooth,
+		Status:      StatusConnected,
+		ConnectedAt: now,
+		LastActive:  now,
+		RSSI:        rssi,
+		MACAddress:  addr,
 	}
 	m.persistLocked()
-	m.mu.Unlock()
-	if discovered != nil {
-		go m.triggerEvent(*discovered)
-	}
+	go m.triggerEvent(DeviceEvent{
+		Type:       "discovered",
+		DeviceID:   addr,
+		DeviceName: name,
+		Timestamp:  now,
+	})
 }
 
-// BlockDevice blocks a device
+// BlockDevice blocks a device.
 func (m *DeviceManager) BlockDevice(id string) error {
 	if !m.initialized {
 		return fmt.Errorf("device manager not initialized")
@@ -490,27 +522,23 @@ func (m *DeviceManager) BlockDevice(id string) error {
 		return fmt.Errorf("device ID cannot be empty")
 	}
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.blockedIDs[id] = true
-	var blocked *DeviceEvent
 	if device, exists := m.devices[id]; exists {
 		device.Status = StatusBlocked
-		blocked = &DeviceEvent{
+		m.persistLocked()
+		go m.triggerEvent(DeviceEvent{
 			Type:       "blocked",
 			DeviceID:   id,
 			DeviceName: device.Name,
 			Timestamp:  time.Now(),
-		}
-	}
-	m.persistLocked()
-	m.mu.Unlock()
-	if blocked != nil {
-		go m.triggerEvent(*blocked)
-		logInfo("Device blocked: %s (%s)", blocked.DeviceName, id)
+		})
+		logInfo("Device blocked: %s (%s)", device.Name, id)
 	}
 	return nil
 }
 
-// UnblockDevice unblocks a device
+// UnblockDevice unblocks a device.
 func (m *DeviceManager) UnblockDevice(id string) error {
 	if !m.initialized {
 		return fmt.Errorf("device manager not initialized")
@@ -523,13 +551,19 @@ func (m *DeviceManager) UnblockDevice(id string) error {
 	delete(m.blockedIDs, id)
 	if device, exists := m.devices[id]; exists {
 		device.Status = StatusConnected
+		m.persistLocked()
+		go m.triggerEvent(DeviceEvent{
+			Type:       "unblocked",
+			DeviceID:   id,
+			DeviceName: device.Name,
+			Timestamp:  time.Now(),
+		})
 		logInfo("Device unblocked: %s (%s)", device.Name, id)
 	}
-	m.persistLocked()
 	return nil
 }
 
-// IsBlocked returns true if device is blocked
+// IsBlocked checks if a device is blocked.
 func (m *DeviceManager) IsBlocked(id string) bool {
 	if !m.initialized || id == "" {
 		return false
@@ -539,7 +573,7 @@ func (m *DeviceManager) IsBlocked(id string) bool {
 	return m.blockedIDs[id]
 }
 
-// IsDeviceApproved checks if a device with the given fingerprint has been approved.
+// IsDeviceApproved checks if a device with the given fingerprint is approved.
 func (m *DeviceManager) IsDeviceApproved(fingerprint string) bool {
 	if !m.initialized || fingerprint == "" {
 		return false
@@ -554,7 +588,7 @@ func (m *DeviceManager) IsDeviceApproved(fingerprint string) bool {
 	return false
 }
 
-// GetDeviceByFingerprint returns device info by fingerprint
+// GetDeviceByFingerprint returns device info by fingerprint.
 func (m *DeviceManager) GetDeviceByFingerprint(fingerprint string) *DeviceInfo {
 	if !m.initialized || fingerprint == "" {
 		return nil
@@ -570,7 +604,7 @@ func (m *DeviceManager) GetDeviceByFingerprint(fingerprint string) *DeviceInfo {
 	return nil
 }
 
-// GetAllDevices returns all devices
+// GetAllDevices returns a copy of all devices.
 func (m *DeviceManager) GetAllDevices() []*DeviceInfo {
 	if !m.initialized {
 		return []*DeviceInfo{}
@@ -584,7 +618,7 @@ func (m *DeviceManager) GetAllDevices() []*DeviceInfo {
 	return devices
 }
 
-// GetDevice returns a device by ID
+// GetDevice returns a device by ID.
 func (m *DeviceManager) GetDevice(id string) *DeviceInfo {
 	if !m.initialized || id == "" {
 		return nil
@@ -598,7 +632,7 @@ func (m *DeviceManager) GetDevice(id string) *DeviceInfo {
 	return nil
 }
 
-// GetDeviceByMAC returns device by MAC
+// GetDeviceByMAC returns a device by MAC address.
 func (m *DeviceManager) GetDeviceByMAC(mac string) *DeviceInfo {
 	if !m.initialized || mac == "" {
 		return nil
@@ -614,7 +648,7 @@ func (m *DeviceManager) GetDeviceByMAC(mac string) *DeviceInfo {
 	return nil
 }
 
-// GetActiveDevices returns active devices
+// GetActiveDevices returns devices that are connected and recently active.
 func (m *DeviceManager) GetActiveDevices() []*DeviceInfo {
 	if !m.initialized {
 		return []*DeviceInfo{}
@@ -631,7 +665,7 @@ func (m *DeviceManager) GetActiveDevices() []*DeviceInfo {
 	return active
 }
 
-// GetDeviceCount returns total device count
+// GetDeviceCount returns the total number of devices.
 func (m *DeviceManager) GetDeviceCount() int {
 	if !m.initialized {
 		return 0
@@ -641,7 +675,7 @@ func (m *DeviceManager) GetDeviceCount() int {
 	return len(m.devices)
 }
 
-// GetBlockedCount returns blocked count
+// GetBlockedCount returns the number of blocked devices.
 func (m *DeviceManager) GetBlockedCount() int {
 	if !m.initialized {
 		return 0
@@ -651,7 +685,7 @@ func (m *DeviceManager) GetBlockedCount() int {
 	return len(m.blockedIDs)
 }
 
-// GetStatistics returns statistics
+// GetStatistics returns aggregated statistics.
 func (m *DeviceManager) GetStatistics() map[string]interface{} {
 	if !m.initialized {
 		return map[string]interface{}{
@@ -681,7 +715,8 @@ func (m *DeviceManager) GetStatistics() map[string]interface{} {
 	}
 }
 
-// PruneInactive removes inactive devices
+// PruneInactive removes devices that have been idle for longer than maxIdle.
+// It returns the number of removed devices and persists changes.
 func (m *DeviceManager) PruneInactive(maxIdle time.Duration) int {
 	if !m.initialized {
 		return 0
@@ -689,16 +724,20 @@ func (m *DeviceManager) PruneInactive(maxIdle time.Duration) int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	removed := 0
+	now := time.Now()
 	for id, d := range m.devices {
-		if time.Since(d.LastActive) > maxIdle {
+		if now.Sub(d.LastActive) > maxIdle {
 			delete(m.devices, id)
 			removed++
 		}
 	}
+	if removed > 0 {
+		m.persistLocked()
+	}
 	return removed
 }
 
-// AddEventListener adds an event listener
+// AddEventListener registers a callback for device events.
 func (m *DeviceManager) AddEventListener(callback func(event DeviceEvent)) {
 	if !m.initialized || callback == nil {
 		return
@@ -708,6 +747,7 @@ func (m *DeviceManager) AddEventListener(callback func(event DeviceEvent)) {
 	m.callbacks = append(m.callbacks, callback)
 }
 
+// triggerEvent fires all registered callbacks.
 func (m *DeviceManager) triggerEvent(event DeviceEvent) {
 	if !m.initialized {
 		return
@@ -721,12 +761,16 @@ func (m *DeviceManager) triggerEvent(event DeviceEvent) {
 	}
 }
 
-// Stop stops the manager
+// Stop gracefully stops the manager.
 func (m *DeviceManager) Stop() {
 	if !m.initialized {
 		return
 	}
 	m.mu.Lock()
+	if m.stopped {
+		m.mu.Unlock()
+		return
+	}
 	m.stopped = true
 	m.mu.Unlock()
 	select {
@@ -737,7 +781,7 @@ func (m *DeviceManager) Stop() {
 	logInfo("Device manager stopped")
 }
 
-// IsInitialized returns true if the manager is initialized
+// IsInitialized returns true if the manager is initialized.
 func (m *DeviceManager) IsInitialized() bool {
 	return m.initialized
 }

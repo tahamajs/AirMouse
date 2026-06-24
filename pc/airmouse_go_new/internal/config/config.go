@@ -8,19 +8,8 @@ import (
 	"sync"
 	"time"
 )
-ProximityEnabled       bool    `json:"proximity_enabled"`
-ProximityNearThreshold float64 `json:"proximity_near_threshold"`
-ProximityFarThreshold  float64 `json:"proximity_far_threshold"`
 
-
-ProximityEnabled:       false,
-ProximityNearThreshold: 1.5,
-ProximityFarThreshold:  3.0,
-ProximityEnabled       bool    `json:"proximity_enabled"`
-ProximityNearThreshold float64 `json:"proximity_near_threshold"`
-ProximityFarThreshold  float64 `json:"proximity_far_threshold"`ProximityEnabled:       false,
-ProximityNearThreshold: 1.5,
-ProximityFarThreshold:  3.0,
+// Config holds all application settings.
 type Config struct {
 	// Server settings
 	Port          int    `json:"port"`
@@ -162,7 +151,7 @@ var (
 	once     sync.Once
 )
 
-// Get returns the singleton config instance
+// Get returns the singleton config instance.
 func Get() *Config {
 	once.Do(func() {
 		instance = loadOrDefault()
@@ -170,7 +159,7 @@ func Get() *Config {
 	return instance
 }
 
-// loadOrDefault loads config from file or returns defaults
+// loadOrDefault loads config from file or returns defaults.
 func loadOrDefault() *Config {
 	cfg := &Config{
 		// Server defaults
@@ -220,7 +209,7 @@ func loadOrDefault() *Config {
 
 		// Proximity defaults
 		ProximityEnabled:       false,
-		ProximityNearThreshold: 1.0,
+		ProximityNearThreshold: 1.5,
 		ProximityFarThreshold:  3.0,
 		ProximityScanInterval:  1000,
 		BluetoothAdapter:       "default",
@@ -313,33 +302,28 @@ func loadOrDefault() *Config {
 			fmt.Printf("Warning: Failed to parse config: %v\n", err)
 		}
 	}
-
 	return cfg
 }
 
-// Save saves the config to file
+// Save saves the config to file.
 func (c *Config) Save() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-
 	configDir := filepath.Dir(c.ConfigPath)
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
-
 	if err := os.WriteFile(c.ConfigPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
-
 	return nil
 }
 
-// Reload reloads config from file
+// Reload reloads config from file.
 func (c *Config) Reload() error {
 	newConfig := loadOrDefault()
 	c.mu.Lock()
@@ -349,7 +333,49 @@ func (c *Config) Reload() error {
 	return nil
 }
 
-// SetSensitivity sets mouse sensitivity
+// --- Proximity helpers ---
+
+// GetProximityConfig returns a struct with proximity settings.
+func (c *Config) GetProximityConfig() struct {
+	Enabled       bool
+	NearThreshold float64
+	FarThreshold  float64
+	ScanInterval  int
+} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return struct {
+		Enabled       bool
+		NearThreshold float64
+		FarThreshold  float64
+		ScanInterval  int
+	}{
+		Enabled:       c.ProximityEnabled,
+		NearThreshold: c.ProximityNearThreshold,
+		FarThreshold:  c.ProximityFarThreshold,
+		ScanInterval:  c.ProximityScanInterval,
+	}
+}
+
+// SetProximityEnabled enables/disables proximity features.
+func (c *Config) SetProximityEnabled(enabled bool) {
+	c.mu.Lock()
+	c.ProximityEnabled = enabled
+	c.mu.Unlock()
+	c.Save()
+}
+
+// SetProximityThresholds updates near and far thresholds.
+func (c *Config) SetProximityThresholds(near, far float64) {
+	c.mu.Lock()
+	c.ProximityNearThreshold = near
+	c.ProximityFarThreshold = far
+	c.mu.Unlock()
+	c.Save()
+}
+
+// --- Other setters (already present but we keep them) ---
+
 func (c *Config) SetSensitivity(s float64) {
 	c.mu.Lock()
 	c.Sensitivity = s
@@ -357,7 +383,6 @@ func (c *Config) SetSensitivity(s float64) {
 	c.Save()
 }
 
-// SetTheme sets UI theme
 func (c *Config) SetTheme(theme string) {
 	c.mu.Lock()
 	c.Theme = theme
@@ -365,7 +390,6 @@ func (c *Config) SetTheme(theme string) {
 	c.Save()
 }
 
-// SetLogLevel sets log level
 func (c *Config) SetLogLevel(level string) {
 	c.mu.Lock()
 	c.LogLevel = level
@@ -373,7 +397,6 @@ func (c *Config) SetLogLevel(level string) {
 	c.Save()
 }
 
-// SetPredictiveEnabled enables/disables predictive movement
 func (c *Config) SetPredictiveEnabled(enabled bool) {
 	c.mu.Lock()
 	c.EnablePredictive = enabled
@@ -381,7 +404,6 @@ func (c *Config) SetPredictiveEnabled(enabled bool) {
 	c.Save()
 }
 
-// SetPredictiveBlendFactor sets predictive blend factor
 func (c *Config) SetPredictiveBlendFactor(factor float64) {
 	c.mu.Lock()
 	c.PredictiveBlendFactor = factor
@@ -389,7 +411,6 @@ func (c *Config) SetPredictiveBlendFactor(factor float64) {
 	c.Save()
 }
 
-// SetAISmoothingEnabled enables/disables AI smoothing
 func (c *Config) SetAISmoothingEnabled(enabled bool) {
 	c.mu.Lock()
 	c.EnableAISmoothing = enabled
@@ -397,7 +418,6 @@ func (c *Config) SetAISmoothingEnabled(enabled bool) {
 	c.Save()
 }
 
-// SetPersonalizationEnabled enables/disables personalization
 func (c *Config) SetPersonalizationEnabled(enabled bool) {
 	c.mu.Lock()
 	c.EnablePersonalization = enabled
@@ -405,7 +425,7 @@ func (c *Config) SetPersonalizationEnabled(enabled bool) {
 	c.Save()
 }
 
-// ToJSON returns config as JSON string
+// ToJSON returns config as JSON string.
 func (c *Config) ToJSON() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -413,7 +433,7 @@ func (c *Config) ToJSON() string {
 	return string(data)
 }
 
-// FromJSON loads config from JSON string
+// FromJSON loads config from JSON string.
 func (c *Config) FromJSON(jsonStr string) error {
 	var newConfig Config
 	if err := json.Unmarshal([]byte(jsonStr), &newConfig); err != nil {
@@ -426,7 +446,7 @@ func (c *Config) FromJSON(jsonStr string) error {
 	return c.Save()
 }
 
-// ResetToDefaults resets config to default values
+// ResetToDefaults resets config to default values.
 func (c *Config) ResetToDefaults() {
 	defaultConfig := loadOrDefault()
 	c.mu.Lock()
@@ -436,7 +456,7 @@ func (c *Config) ResetToDefaults() {
 	c.Save()
 }
 
-// Validate validates config values
+// Validate validates config values.
 func (c *Config) Validate() error {
 	if c.Port < 1 || c.Port > 65535 {
 		return fmt.Errorf("invalid port: %d", c.Port)
@@ -450,10 +470,21 @@ func (c *Config) Validate() error {
 	if c.GestureConfidenceThreshold < 0 || c.GestureConfidenceThreshold > 1 {
 		return fmt.Errorf("invalid confidence threshold: %.2f", c.GestureConfidenceThreshold)
 	}
+	if c.ProximityNearThreshold < 0 || c.ProximityFarThreshold < 0 {
+		return fmt.Errorf("invalid proximity thresholds")
+	}
 	return nil
 }
 
-// getConfigPath returns the config file path
+// String returns a human-readable representation (for debugging).
+func (c *Config) String() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return fmt.Sprintf("Config{ServerName:%s, Port:%d, WebSocketPort:%d, UDPPort:%d, Theme:%s}",
+		c.ServerName, c.Port, c.WebSocketPort, c.UDPPort, c.Theme)
+}
+
+// getConfigPath returns the config file path.
 func getConfigPath() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
@@ -462,7 +493,7 @@ func getConfigPath() string {
 	return filepath.Join(configDir, "airmouse", "config.json")
 }
 
-// getLogPath returns the log directory path
+// getLogPath returns the log directory path.
 func getLogPath() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {

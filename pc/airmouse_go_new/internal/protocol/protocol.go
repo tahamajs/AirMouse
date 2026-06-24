@@ -9,6 +9,7 @@ import (
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
+	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/protocol/bluetooth"
 	"airmouse-go/internal/protocol/tcp"
 	"airmouse-go/internal/protocol/udp"
@@ -17,7 +18,7 @@ import (
 	"airmouse-go/internal/utils"
 )
 
-// Client - Represents a connected client
+// Client represents a connected client (legacy, kept for backward compatibility).
 type Client struct {
 	ID          string
 	Name        string
@@ -30,37 +31,40 @@ type Client struct {
 	BytesRecv   int64
 }
 
-// Interfaces for protocol servers
+// startStopStats is implemented by TCP, UDP, USB, and Bluetooth managers.
 type startStopStats interface {
 	Start() error
 	Stop()
 	GetStats() map[string]interface{}
 }
 
+// websocketStartStopStats is implemented by the WebSocket server.
 type websocketStartStopStats interface {
 	Start() error
 	Stop() error
 	GetStats() map[string]interface{}
 }
 
+// approvableServer is implemented by servers that support device approval.
 type approvableServer interface {
 	ApproveDevice(deviceID string) error
 }
 
+// bluetoothStartStopStats is a subset used by the Bluetooth manager.
 type bluetoothStartStopStats interface {
 	Start() error
 	Stop()
 	GetStats() map[string]interface{}
 }
 
-// ServerEvent - Event structure for callbacks
+// ServerEvent is emitted when the server starts, stops, or a client connects/disconnects.
 type ServerEvent struct {
 	Type      string // "start", "stop", "client_connected", "client_disconnected"
 	ClientID  string
 	Timestamp time.Time
 }
 
-// ProtocolServer - Main server that manages all protocols
+// ProtocolServer is the main server that manages all protocol servers.
 type ProtocolServer struct {
 	tcpServer    startStopStats
 	wsServer     websocketStartStopStats
@@ -71,7 +75,7 @@ type ProtocolServer struct {
 	mouseCtrl    control.MouseController
 	deviceMgr    *device.Manager
 	authMgr      *auth.Manager
-	proximityMgr interface{}
+	proxMgr      *proximity.Manager // proximity manager (optional)
 
 	mu            sync.RWMutex
 	running       bool
@@ -81,27 +85,38 @@ type ProtocolServer struct {
 	callbacks     []func(event ServerEvent)
 }
 
-// NewProtocolServer creates a new protocol server
+// NewProtocolServer creates a new protocol server (without proximity).
 func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *ProtocolServer {
+	return NewProtocolServerWithProximity(mouse, deviceMgr, authMgr, nil)
+}
+
+// NewProtocolServerWithProximity creates a new protocol server with an optional proximity manager.
+func NewProtocolServerWithProximity(
+	mouse control.MouseController,
+	deviceMgr *device.Manager,
+	authMgr *auth.Manager,
+	proxMgr *proximity.Manager,
+) *ProtocolServer {
 	return &ProtocolServer{
 		mouseCtrl: mouse,
 		deviceMgr: deviceMgr,
 		authMgr:   authMgr,
+		proxMgr:   proxMgr,
 		callbacks: make([]func(event ServerEvent), 0),
 	}
 }
 
-// Start starts all enabled protocol servers
+// Start launches all enabled protocol servers.
 func (s *ProtocolServer) Start() error {
 	s.mu.Lock()
 	if s.running {
 		s.mu.Unlock()
 		return fmt.Errorf("server already running")
 	}
-
 	cfg := config.Get()
 	s.startTime = time.Now()
 	var errors []error
+	s.mu.Unlock()
 
 	// Start TCP server
 	if cfg.EnableTCP {
@@ -115,10 +130,10 @@ func (s *ProtocolServer) Start() error {
 		}
 	}
 
-	// Start WebSocket server
+	// Start WebSocket server (pass proximity manager if available)
 	if cfg.EnableWebSocket {
 		utils.LogInfo("Protocol start: initializing WebSocket server port=%d", cfg.WebSocketPort)
-		s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
+		s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr, s.proxMgr)
 		if err := s.wsServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("WebSocket: %w", err))
 			utils.LogError("WebSocket server start failed: %v", err)
@@ -163,6 +178,7 @@ func (s *ProtocolServer) Start() error {
 		}
 	}
 
+	s.mu.Lock()
 	s.running = true
 	s.mu.Unlock()
 
@@ -177,14 +193,14 @@ func (s *ProtocolServer) Start() error {
 	return nil
 }
 
-// Stop stops all protocol servers
+// Stop gracefully stops all protocol servers.
 func (s *ProtocolServer) Stop() {
 	s.mu.Lock()
 	if !s.running {
 		s.mu.Unlock()
 		return
 	}
-
+	// Capture servers and release the lock before stopping them to avoid deadlocks.
 	tcpServer := s.tcpServer
 	wsServer := s.wsServer
 	udpServer := s.udpServer
@@ -224,14 +240,14 @@ func (s *ProtocolServer) Stop() {
 	utils.LogInfo("All protocol servers stopped")
 }
 
-// IsRunning returns true if the server is running
+// IsRunning returns true if the server is running.
 func (s *ProtocolServer) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.running
 }
 
-// GetUptime returns the server uptime
+// GetUptime returns the server uptime.
 func (s *ProtocolServer) GetUptime() time.Duration {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -241,7 +257,7 @@ func (s *ProtocolServer) GetUptime() time.Duration {
 	return time.Since(s.startTime)
 }
 
-// GetConnectedDevices returns all connected devices
+// GetConnectedDevices returns all connected devices.
 func (s *ProtocolServer) GetConnectedDevices() []*device.DeviceInfo {
 	if s.deviceMgr == nil {
 		return []*device.DeviceInfo{}
@@ -249,7 +265,7 @@ func (s *ProtocolServer) GetConnectedDevices() []*device.DeviceInfo {
 	return s.deviceMgr.GetActiveDevices()
 }
 
-// GetDeviceCount returns the number of connected devices
+// GetDeviceCount returns the number of connected devices.
 func (s *ProtocolServer) GetDeviceCount() int {
 	if s.deviceMgr == nil {
 		return 0
@@ -257,7 +273,7 @@ func (s *ProtocolServer) GetDeviceCount() int {
 	return len(s.deviceMgr.GetActiveDevices())
 }
 
-// GetStatistics returns statistics from all servers
+// GetStatistics aggregates statistics from all protocol servers.
 func (s *ProtocolServer) GetStatistics() map[string]interface{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -294,7 +310,7 @@ func (s *ProtocolServer) GetStatistics() map[string]interface{} {
 	return stats
 }
 
-// IncrementMessages increments the message counter
+// IncrementMessages increments the global message counter.
 func (s *ProtocolServer) IncrementMessages(bytes int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -302,7 +318,7 @@ func (s *ProtocolServer) IncrementMessages(bytes int64) {
 	s.totalBytes += bytes
 }
 
-// AddEventListener adds an event listener
+// AddEventListener registers a callback for server events.
 func (s *ProtocolServer) AddEventListener(callback func(event ServerEvent)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -311,7 +327,7 @@ func (s *ProtocolServer) AddEventListener(callback func(event ServerEvent)) {
 	}
 }
 
-// triggerEvent triggers an event
+// triggerEvent fires all registered event callbacks.
 func (s *ProtocolServer) triggerEvent(event ServerEvent) {
 	s.mu.RLock()
 	callbacks := make([]func(ServerEvent), len(s.callbacks))
@@ -324,7 +340,7 @@ func (s *ProtocolServer) triggerEvent(event ServerEvent) {
 	}
 }
 
-// DisconnectDevice disconnects a device
+// DisconnectDevice disconnects a device by ID.
 func (s *ProtocolServer) DisconnectDevice(deviceID string) error {
 	if s.deviceMgr == nil {
 		return fmt.Errorf("device manager not initialized")
@@ -335,7 +351,7 @@ func (s *ProtocolServer) DisconnectDevice(deviceID string) error {
 	return s.deviceMgr.UnregisterDevice(deviceID)
 }
 
-// BlockDevice blocks a device
+// BlockDevice blocks a device by ID.
 func (s *ProtocolServer) BlockDevice(deviceID string) error {
 	if s.deviceMgr == nil {
 		return fmt.Errorf("device manager not initialized")
@@ -347,6 +363,7 @@ func (s *ProtocolServer) BlockDevice(deviceID string) error {
 }
 
 // ApproveDevice approves a pending device and sends the welcome response.
+// It tries each protocol server that supports approval until one succeeds.
 func (s *ProtocolServer) ApproveDevice(deviceID string) error {
 	if deviceID == "" {
 		return fmt.Errorf("device ID cannot be empty")
@@ -383,7 +400,7 @@ func (s *ProtocolServer) ApproveDevice(deviceID string) error {
 	return fmt.Errorf("device not found: %s", deviceID)
 }
 
-// GetActiveProtocols returns a list of active protocols
+// GetActiveProtocols returns a list of enabled protocol names.
 func (s *ProtocolServer) GetActiveProtocols() []string {
 	cfg := config.Get()
 	protocols := make([]string, 0)
@@ -405,39 +422,22 @@ func (s *ProtocolServer) GetActiveProtocols() []string {
 	return protocols
 }
 
-// GetMouseController returns the mouse controller
+// GetMouseController returns the mouse controller.
 func (s *ProtocolServer) GetMouseController() control.MouseController {
 	return s.mouseCtrl
 }
 
-// GetDeviceManager returns the device manager
+// GetDeviceManager returns the device manager.
 func (s *ProtocolServer) GetDeviceManager() *device.Manager {
 	return s.deviceMgr
 }
 
-// GetAuthManager returns the auth manager
+// GetAuthManager returns the authentication manager.
 func (s *ProtocolServer) GetAuthManager() *auth.Manager {
 	return s.authMgr
 }
 
-type ProtocolServer struct {
-    // ... existing fields ...
-    proxMgr *proximity.Manager
+// GetProximityManager returns the proximity manager (may be nil).
+func (s *ProtocolServer) GetProximityManager() *proximity.Manager {
+	return s.proxMgr
 }
-
-func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *ProtocolServer {
-    return &ProtocolServer{
-        // ... existing ...
-        proxMgr: proxMgr,
-    }
-}protocolServer := protocol.NewProtocolServer(mouseController, deviceManager, authManager, proxMgr)type ProtocolServer struct {
-    // ... existing fields ...
-    proxMgr *proximity.Manager
-}
-
-func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *ProtocolServer {
-    return &ProtocolServer{
-        // ... existing ...
-        proxMgr: proxMgr,
-    }
-}s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr, s.proxMgr)
