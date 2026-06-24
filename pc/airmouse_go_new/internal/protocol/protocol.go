@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
+	"airmouse-go/control/mouse"
 	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
-	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/protocol/bluetooth"
@@ -72,7 +72,7 @@ type ProtocolServer struct {
 	usbServer    startStopStats
 	bluetoothMgr bluetoothStartStopStats
 
-	mouseCtrl    control.MouseController
+	mouseCtrl    mouse.Controller
 	deviceMgr    *device.Manager
 	authMgr      *auth.Manager
 	proxMgr      *proximity.Manager // proximity manager (optional)
@@ -86,19 +86,19 @@ type ProtocolServer struct {
 }
 
 // NewProtocolServer creates a new protocol server (without proximity).
-func NewProtocolServer(mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *ProtocolServer {
-	return NewProtocolServerWithProximity(mouse, deviceMgr, authMgr, nil)
+func NewProtocolServer(mouseCtrl mouse.Controller, deviceMgr *device.Manager, authMgr *auth.Manager) *ProtocolServer {
+	return NewProtocolServerWithProximity(mouseCtrl, deviceMgr, authMgr, nil)
 }
 
 // NewProtocolServerWithProximity creates a new protocol server with an optional proximity manager.
 func NewProtocolServerWithProximity(
-	mouse control.MouseController,
+	mouseCtrl mouse.Controller,
 	deviceMgr *device.Manager,
 	authMgr *auth.Manager,
 	proxMgr *proximity.Manager,
 ) *ProtocolServer {
 	return &ProtocolServer{
-		mouseCtrl: mouse,
+		mouseCtrl: mouseCtrl,
 		deviceMgr: deviceMgr,
 		authMgr:   authMgr,
 		proxMgr:   proxMgr,
@@ -390,9 +390,8 @@ func (s *ProtocolServer) ApproveDevice(deviceID string) error {
 	for _, srv := range servers {
 		if err := srv.ApproveDevice(deviceID); err == nil {
 			return nil
-		} else {
-			lastErr = err
 		}
+		lastErr = err
 	}
 	if lastErr != nil {
 		return lastErr
@@ -423,7 +422,7 @@ func (s *ProtocolServer) GetActiveProtocols() []string {
 }
 
 // GetMouseController returns the mouse controller.
-func (s *ProtocolServer) GetMouseController() control.MouseController {
+func (s *ProtocolServer) GetMouseController() mouse.Controller {
 	return s.mouseCtrl
 }
 
