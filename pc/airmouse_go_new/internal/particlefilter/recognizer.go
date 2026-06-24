@@ -20,10 +20,10 @@ type GestureModel struct {
 type Recognizer struct {
 	filter      *Filter
 	gestures    []GestureModel
-	history     [][2]float64 // accumulated deltas
+	history     [][2]float64
 	velocities  [][2]float64
 	maxHistory  int
-	mu          sync.Mutex
+	mu          sync.RWMutex // changed from sync.Mutex
 	lastGesture string
 	lastTime    time.Time
 	cooldown    time.Duration
@@ -142,7 +142,6 @@ func (r *Recognizer) AddMotion(dx, dy float64) {
 		r.velocities = r.velocities[1:]
 	}
 
-	// Update particle filter (optional, can be used for prediction)
 	r.filter.Predict(dt)
 	r.filter.Update(dx, dy)
 	r.lastTime = now
@@ -156,7 +155,6 @@ func (r *Recognizer) GetGesture() (gesture string, confidence float64) {
 	if len(r.history) < 5 {
 		return "none", 0.0
 	}
-	// Cooldown check
 	if time.Since(r.lastTime) < r.cooldown && r.lastGesture != "" {
 		return r.lastGesture, 0.8
 	}
@@ -175,7 +173,6 @@ func (r *Recognizer) GetGesture() (gesture string, confidence float64) {
 		}
 	}
 
-	// Velocity check
 	if bestGesture != "none" && len(r.velocities) > 0 {
 		avgVel := r.calculateAverageVelocity()
 		for _, g := range r.gestures {
@@ -242,7 +239,6 @@ func (r *Recognizer) calculateGestureDuration() time.Duration {
 	if len(r.history) < 2 {
 		return 0
 	}
-	// Approximate duration from history length and average sampling time
 	return r.lastTime.Sub(r.lastTime.Add(-time.Duration(len(r.history)) * 50 * time.Millisecond))
 }
 

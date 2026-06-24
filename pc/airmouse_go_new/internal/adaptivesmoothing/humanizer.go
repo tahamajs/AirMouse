@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 	"sync"
+	"time"
 )
 
 // HumanizerConfig holds configuration for the humanizer.
