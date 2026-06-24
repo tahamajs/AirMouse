@@ -98,15 +98,18 @@ class CalibrationDataSourceImpl @Inject constructor(
             prefs.putFloat(PreferencesKeys.KEY_GYRO_BIAS_X, x)
             prefs.putFloat(PreferencesKeys.KEY_GYRO_BIAS_Y, y)
             prefs.putFloat(PreferencesKeys.KEY_GYRO_BIAS_Z, z)
+            prefs.putFloat(PreferencesKeys.KEY_GYRO_OFFSET_X, x)
+            prefs.putFloat(PreferencesKeys.KEY_GYRO_OFFSET_Y, y)
+            prefs.putFloat(PreferencesKeys.KEY_GYRO_OFFSET_Z, z)
         }
     }
 
     override suspend fun getGyroBias(): Triple<Float, Float, Float> {
         return withContext(Dispatchers.IO) {
             Triple(
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_X, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_Y, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_Z, 0f)
+                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_X, prefs.getFloat(PreferencesKeys.KEY_GYRO_OFFSET_X, 0f)),
+                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_Y, prefs.getFloat(PreferencesKeys.KEY_GYRO_OFFSET_Y, 0f)),
+                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_Z, prefs.getFloat(PreferencesKeys.KEY_GYRO_OFFSET_Z, 0f))
             )
         }
     }
@@ -400,6 +403,9 @@ class CalibrationDataSourceImpl @Inject constructor(
             prefs.remove(PreferencesKeys.KEY_GYRO_BIAS_X)
             prefs.remove(PreferencesKeys.KEY_GYRO_BIAS_Y)
             prefs.remove(PreferencesKeys.KEY_GYRO_BIAS_Z)
+            prefs.remove(PreferencesKeys.KEY_GYRO_OFFSET_X)
+            prefs.remove(PreferencesKeys.KEY_GYRO_OFFSET_Y)
+            prefs.remove(PreferencesKeys.KEY_GYRO_OFFSET_Z)
             prefs.remove(PreferencesKeys.KEY_GYRO_VARIANCE_X)
             prefs.remove(PreferencesKeys.KEY_GYRO_VARIANCE_Y)
             prefs.remove(PreferencesKeys.KEY_GYRO_VARIANCE_Z)

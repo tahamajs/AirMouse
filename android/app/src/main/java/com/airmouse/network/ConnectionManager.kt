@@ -20,12 +20,15 @@ import okhttp3.Request
 import okio.ByteString
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.EOFException
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.ConnectException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
+import java.net.PortUnreachableException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.Socket
 import java.net.UnknownHostException
@@ -62,7 +65,7 @@ class ConnectionManager @Inject constructor(
         private const val MAX_HEARTBEAT_FAILURES = 3
         private const val RETRANSMIT_INTERVAL_MS = 1000L
         private const val MAX_RETRANSMIT_ATTEMPTS = 5
-        private const val ACK_TIMEOUT_MS = 15000L
+        private const val ACK_TIMEOUT_MS = 30000L
     }
 
     // ============================================================
@@ -192,6 +195,7 @@ class ConnectionManager @Inject constructor(
     private var reconnectJob: Job? = null
     private var retransmitJob: Job? = null
     private var welcomeDeferred: CompletableDeferred<Boolean>? = null
+    private var manualDisconnectRequested = false
 
     private var messageIdCounter = 0
     private val pendingAcks = ConcurrentHashMap<String, ReliableMessage>()
@@ -256,7 +260,10 @@ class ConnectionManager @Inject constructor(
             _currentIp.value = ip
             _currentPort.value = port
         }
-        val protocolName = prefs.getString("last_protocol", "WEBSOCKET")?.uppercase() ?: "WEBSOCKET"
+        val protocolName = prefs.getString(
+            "last_protocol",
+            prefs.getString("connection_protocol", "WEBSOCKET")
+        )?.uppercase() ?: "WEBSOCKET"
         currentProtocol = when (protocolName) {
             "UDP" -> ConnectionProtocol.UDP
             "TCP" -> ConnectionProtocol.TCP
@@ -267,6 +274,7 @@ class ConnectionManager @Inject constructor(
     fun setProtocol(protocol: ConnectionProtocol) {
         currentProtocol = protocol
         prefs.putString("last_protocol", protocol.name)
+        prefs.putString("connection_protocol", protocol.name)
     }
 
     // ============================================================
@@ -274,6 +282,7 @@ class ConnectionManager @Inject constructor(
     // ============================================================
 
     suspend fun connect(ip: String = _currentIp.value, port: Int = _currentPort.value): Boolean {
+        Log.d(TAG, "connect() requested ip=$ip port=$port protocol=${currentProtocol.name} status=${_connectionStatus.value.name}")
         if (ip.isEmpty()) {
             _lastError.value = "No IP address configured"
             onError?.invoke("No IP address configured")
@@ -292,22 +301,28 @@ class ConnectionManager @Inject constructor(
 
         return withContext(Dispatchers.IO) {
             try {
-                disconnect()
+                Log.d(TAG, "connect(): cleaning up previous connection state")
+                cleanupConnectionState(emitDisconnected = false)
+                manualDisconnectRequested = false
                 _connectionStatus.value = ConnectionStatus.CONNECTING
                 _lastError.value = null
                 onStatusChanged?.invoke(ConnectionStatus.CONNECTING)
                 onError?.invoke("Waiting for server approval...")
                 val serverWelcome = CompletableDeferred<Boolean>()
                 welcomeDeferred = serverWelcome
+                Log.d(TAG, "connect(): waiting for welcome/approval")
 
                 val success = when (currentProtocol) {
                     ConnectionProtocol.UDP -> connectUdp(ip, port)
                     ConnectionProtocol.WEBSOCKET -> connectWebSocket(ip, port)
                     ConnectionProtocol.TCP -> connectTcp(ip, port)
                 }
+                Log.d(TAG, "connect(): transport setup completed success=$success protocol=${currentProtocol.name}")
 
                 val accepted = if (success) {
-                    withTimeoutOrNull(ACK_TIMEOUT_MS) { serverWelcome.await() } == true
+                    val waited = withTimeoutOrNull(ACK_TIMEOUT_MS) { serverWelcome.await() } == true
+                    Log.d(TAG, "connect(): welcome wait complete accepted=$waited")
+                    waited
                 } else {
                     false
                 }
@@ -326,6 +341,7 @@ class ConnectionManager @Inject constructor(
                     Log.i(TAG, "Connected to $ip:$port via ${currentProtocol.name}")
                     true
                 } else {
+                    Log.w(TAG, "connect(): approval failed or timed out; disconnecting")
                     welcomeDeferred?.complete(false)
                     welcomeDeferred = null
                     disconnect()
@@ -369,6 +385,11 @@ class ConnectionManager @Inject constructor(
                 onStatusChanged?.invoke(ConnectionStatus.ERROR)
                 onError?.invoke(message)
                 false
+            } catch (e: CancellationException) {
+                welcomeDeferred?.complete(false)
+                welcomeDeferred = null
+                Log.i(TAG, "Connection attempt cancelled")
+                false
             } catch (e: Exception) {
                 Log.e(TAG, "Connection failed", e)
                 welcomeDeferred?.complete(false)
@@ -385,12 +406,16 @@ class ConnectionManager @Inject constructor(
     private suspend fun connectUdp(ip: String, port: Int): Boolean {
         return withContext(Dispatchers.IO) {
             try {
+                Log.d(TAG, "connectUdp(): opening datagram socket to $ip:$port")
                 val socket = DatagramSocket()
                 socket.soTimeout = 1000
                 socket.connect(InetSocketAddress(ip, port))
                 udpSocket = socket
                 startUdpReading()
-                sendHello()
+                val helloSent = sendHello()
+                Log.d(TAG, "connectUdp(): helloSent=$helloSent")
+                Log.i(TAG, "Socket opened via UDP")
+                Log.i(TAG, "Hello sent via UDP")
                 true
             } catch (e: ConnectException) {
                 Log.w(TAG, "UDP connection refused", e)
@@ -434,12 +459,17 @@ class ConnectionManager @Inject constructor(
 
                 webSocket = client.newWebSocket(request, object : okhttp3.WebSocketListener() {
                     override fun onOpen(webSocket: okhttp3.WebSocket, response: okhttp3.Response) {
+                        Log.d(TAG, "connectWebSocket(): onOpen responseCode=${response.code}")
+                        Log.i(TAG, "Socket opened via WebSocket")
                         connectSuccess = true
-                        sendHello()
+                        val helloSent = sendHello()
+                        Log.d(TAG, "connectWebSocket(): helloSent=$helloSent")
+                        Log.i(TAG, "Hello sent via WebSocket")
                         latch.countDown()
                     }
 
                     override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
+                        Log.d(TAG, "connectWebSocket(): received text len=${text.length}")
                         onMessage?.invoke(text)
                         handleServerMessage(text)
                     }
@@ -461,6 +491,9 @@ class ConnectionManager @Inject constructor(
 
                     override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: okhttp3.Response?) {
                         Log.e(TAG, "WebSocket failure", t)
+                        if (response != null) {
+                            Log.w(TAG, "WebSocket failure response code=${response.code}")
+                        }
                         connectSuccess = false
                         latch.countDown()
                     }
@@ -492,6 +525,7 @@ class ConnectionManager @Inject constructor(
     private suspend fun connectTcp(ip: String, port: Int): Boolean {
         return withContext(Dispatchers.IO) {
             try {
+                Log.d(TAG, "connectTcp(): opening socket to $ip:$port")
                 val socket = Socket().apply {
                     connect(InetSocketAddress(ip, port), 5000)
                     tcpNoDelay = true
@@ -505,7 +539,10 @@ class ConnectionManager @Inject constructor(
                 tcpWriter = PrintWriter(socket.getOutputStream(), true)
                 tcpReader = BufferedReader(InputStreamReader(socket.getInputStream()))
 
-                sendHello()
+                val helloSent = sendHello()
+                Log.d(TAG, "connectTcp(): helloSent=$helloSent")
+                Log.i(TAG, "Socket opened via TCP")
+                Log.i(TAG, "Hello sent via TCP")
                 startTcpReading()
                 true
             } catch (e: ConnectException) {
@@ -530,10 +567,25 @@ class ConnectionManager @Inject constructor(
             while (tcpSocket?.isConnected == true) {
                 try {
                     val line = tcpReader?.readLine() ?: break
+                    Log.d(TAG, "startTcpReading(): received line len=${line.length}")
                     onMessage?.invoke(line)
                     handleServerMessage(line)
+                } catch (e: SocketException) {
+                    if (tcpSocket?.isClosed == true || manualDisconnectRequested) {
+                        Log.i(TAG, "TCP socket closed")
+                    } else {
+                        Log.w(TAG, "TCP socket error", e)
+                    }
+                    break
+                } catch (e: EOFException) {
+                    Log.i(TAG, "TCP stream ended")
+                    break
                 } catch (e: Exception) {
-                    Log.e(TAG, "TCP read error", e)
+                    if (tcpSocket?.isClosed == true || manualDisconnectRequested) {
+                        Log.d(TAG, "TCP read stopped after disconnect: ${e.message}")
+                    } else {
+                        Log.e(TAG, "TCP read error", e)
+                    }
                     break
                 }
             }
@@ -551,13 +603,20 @@ class ConnectionManager @Inject constructor(
                     val packet = DatagramPacket(buffer, buffer.size)
                     socket.receive(packet)
                     val message = String(packet.data, 0, packet.length)
+                    Log.d(TAG, "startUdpReading(): received packet len=${packet.length}")
                     onMessage?.invoke(message)
                     handleServerMessage(message)
+                } catch (e: PortUnreachableException) {
+                    Log.i(TAG, "UDP endpoint unreachable; closing UDP session")
+                    break
                 } catch (e: SocketTimeoutException) {
                     continue
                 } catch (e: Exception) {
-                    if (socket.isClosed) break
-                    Log.e(TAG, "UDP read error", e)
+                    if (socket.isClosed || manualDisconnectRequested) {
+                        Log.d(TAG, "UDP read stopped after disconnect: ${e.message}")
+                    } else {
+                        Log.w(TAG, "UDP read error", e)
+                    }
                     break
                 }
             }
@@ -585,12 +644,18 @@ class ConnectionManager @Inject constructor(
                     _serverName.value = payload?.optString("server") ?: "Air Mouse"
                     _serverVersion.value = payload?.optString("version") ?: "3.0"
                     welcomeDeferred?.complete(true)
+                    Log.d(TAG, "handleServerMessage(): welcome payload=${payload?.toString()}")
                     Log.i(TAG, "Server: ${_serverName.value} v${_serverVersion.value}")
+                    Log.i(TAG, "Welcome received and approval granted")
                 }
                 MessageTypes.TYPE_PONG -> {
                     val now = System.currentTimeMillis()
                     val ping = now - lastPingTime
                     updateConnectionQuality(ping)
+                }
+                MessageTypes.TYPE_PING -> {
+                    Log.d(TAG, "Server ping received; replying with pong")
+                    sendPong()
                 }
                 MessageTypes.TYPE_ACK -> {
                     val id = json.optString("id")
@@ -630,13 +695,16 @@ class ConnectionManager @Inject constructor(
     }
 
     private fun handleDisconnect() {
+        Log.d(TAG, "handleDisconnect(): status=${_connectionStatus.value.name} manualDisconnectRequested=$manualDisconnectRequested")
         if (_connectionStatus.value == ConnectionStatus.CONNECTED) {
             _connectionStatus.value = ConnectionStatus.DISCONNECTED
             _lastError.value = "Disconnected from server"
             onStatusChanged?.invoke(ConnectionStatus.DISCONNECTED)
             onDisconnected?.invoke()
             onError?.invoke("Disconnected from server")
-            scheduleReconnect()
+            if (!manualDisconnectRequested) {
+                scheduleReconnect()
+            }
         }
     }
 
@@ -651,6 +719,7 @@ class ConnectionManager @Inject constructor(
                 delay(HEARTBEAT_INTERVAL_MS)
                 if (!sendPing()) {
                     consecutiveFailures++
+                    Log.w(TAG, "Heartbeat ping failed ($consecutiveFailures/$MAX_HEARTBEAT_FAILURES)")
                     if (consecutiveFailures >= MAX_HEARTBEAT_FAILURES) {
                         Log.w(TAG, "Too many heartbeat failures, reconnecting...")
                         handleDisconnect()
@@ -685,6 +754,10 @@ class ConnectionManager @Inject constructor(
     }
 
     private fun scheduleReconnect() {
+        if (manualDisconnectRequested) {
+            Log.i(TAG, "Reconnect skipped after manual disconnect")
+            return
+        }
         if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
             _connectionStatus.value = ConnectionStatus.ERROR
             _lastError.value = "Max reconnection attempts reached"
@@ -697,6 +770,7 @@ class ConnectionManager @Inject constructor(
         reconnectJob = scope.launch {
             val delay = RECONNECT_DELAY_MS * (reconnectAttempts + 1)
             val attempt = reconnectAttempts + 1
+            Log.d(TAG, "scheduleReconnect(): delay=${delay}ms attempt=$attempt")
             onError?.invoke("Reconnecting in ${delay/1000}s (attempt $attempt/$MAX_RECONNECT_ATTEMPTS)")
             delay(delay)
             reconnectAttempts++
@@ -713,8 +787,10 @@ class ConnectionManager @Inject constructor(
     private fun sendRawString(message: String, allowWhileConnecting: Boolean = false): Boolean {
         val state = _connectionStatus.value
         if (state != ConnectionStatus.CONNECTED && !(allowWhileConnecting && state == ConnectionStatus.CONNECTING)) {
+            Log.d(TAG, "sendRawString(): blocked state=${state.name} allowWhileConnecting=$allowWhileConnecting payload=${message.take(96)}")
             return false
         }
+        Log.d(TAG, "sendRawString(): state=${state.name} protocol=${currentProtocol.name} bytes=${message.length}")
         return when (currentProtocol) {
             ConnectionProtocol.UDP -> sendUdpBytes(message.toByteArray())
             ConnectionProtocol.WEBSOCKET -> webSocket?.send(message) ?: false
@@ -899,7 +975,7 @@ class ConnectionManager @Inject constructor(
     }
 
     fun sendPong(): Boolean {
-        return sendRawString(AirMouseProtocolMessages.pong())
+        return sendRawString(AirMouseProtocolMessages.pong(), allowWhileConnecting = true)
     }
 
     // ------------------------------------------------------------
@@ -945,30 +1021,9 @@ class ConnectionManager @Inject constructor(
     // ============================================================
 
     fun disconnect() {
-        heartbeatJob?.cancel()
-        reconnectJob?.cancel()
-        retransmitJob?.cancel()
-        welcomeDeferred?.complete(false)
-        welcomeDeferred = null
-        pendingAcks.clear()
-
-        try {
-            webSocket?.close(1000, "Manual disconnect")
-            webSocket = null
-
-            udpSocket?.close()
-            udpSocket = null
-
-            tcpWriter?.close()
-            tcpReader?.close()
-            tcpSocket?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during disconnect", e)
-        }
-
-        tcpWriter = null
-        tcpReader = null
-        tcpSocket = null
+        Log.d(TAG, "disconnect() requested status=${_connectionStatus.value.name} protocol=${currentProtocol.name}")
+        manualDisconnectRequested = true
+        cleanupConnectionState(emitDisconnected = true)
         _connectionStatus.value = ConnectionStatus.DISCONNECTED
         onStatusChanged?.invoke(ConnectionStatus.DISCONNECTED)
     }
@@ -990,6 +1045,7 @@ class ConnectionManager @Inject constructor(
     }
 
     fun cleanup() {
+        Log.d(TAG, "cleanup() requested")
         disconnect()
         scope.cancel()
         soundPool?.release()
@@ -1023,5 +1079,33 @@ class ConnectionManager @Inject constructor(
             "server_version" to _serverVersion.value,
             "pending_acks_count" to pendingAcks.size
         )
+    }
+
+    private fun cleanupConnectionState(emitDisconnected: Boolean) {
+        Log.d(TAG, "cleanupConnectionState(): emitDisconnected=$emitDisconnected status=${_connectionStatus.value.name}")
+        heartbeatJob?.cancel()
+        reconnectJob?.cancel()
+        retransmitJob?.cancel()
+        welcomeDeferred?.complete(false)
+        welcomeDeferred = null
+        pendingAcks.clear()
+
+        try {
+            webSocket?.close(1000, if (emitDisconnected) "Manual disconnect" else "Reconnect cleanup")
+            webSocket = null
+
+            udpSocket?.close()
+            udpSocket = null
+
+            tcpWriter?.close()
+            tcpReader?.close()
+            tcpSocket?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during disconnect cleanup", e)
+        }
+
+        tcpWriter = null
+        tcpReader = null
+        tcpSocket = null
     }
 }

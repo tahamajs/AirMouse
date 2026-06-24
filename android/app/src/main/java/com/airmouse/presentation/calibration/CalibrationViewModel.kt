@@ -1,6 +1,11 @@
 // app/src/main/java/com/airmouse/presentation/ui/calibration/CalibrationViewModel.kt
 package com.airmouse.presentation.ui.calibration
 
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.util.Log
 import android.os.Trace
 import androidx.lifecycle.ViewModel
@@ -12,16 +17,21 @@ import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.domain.usecase.CalibrationUseCase
 import com.airmouse.utils.PreferencesManager
 import com.airmouse.presentation.ui.calibration.CalibrationPhase
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
+import kotlin.math.abs
 import javax.inject.Inject
 
 @HiltViewModel
 class CalibrationViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val dataSource: ICalibrationDataSource,
     private val connectionRepository: IConnectionRepository,
     private val calibrationRepository: ICalibrationRepository,
@@ -37,7 +47,11 @@ class CalibrationViewModel @Inject constructor(
         private const val ACCEL_SAMPLES_PER_POS = 100      // 2 seconds per position
         private const val ACCEL_POSITIONS_NEEDED = 6
         private const val TRANSITION_DELAY = 1000L         // 1s delay to show success
+        private const val SENSOR_TIMEOUT_EXTRA_MS = 2500L
+        private const val GRAVITY_EARTH = 9.80665f
     }
+
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     private val _uiState = MutableStateFlow(CalibrationUiState.initial())
     val uiState: StateFlow<CalibrationUiState> = _uiState.asStateFlow()
@@ -233,35 +247,66 @@ class CalibrationViewModel @Inject constructor(
         calibrationJob = viewModelScope.launch {
             Trace.beginSection("Calibration#gyroSampling")
             try {
-            _uiState.update { it.copy(isCalibrating = true, isCollecting = true, calibrationPhase = CalibrationPhase.SAMPLING, statusMessage = "Sampling Gyro...") }
-            var count = 0
-            while (count < GYRO_SAMPLES_NEEDED) {
-                val data = getSensorData()
-                gyroSamples.add(Triple(data.gyroX, data.gyroY, data.gyroZ))
-                count++
-                updateStepProgress(count.toFloat() / GYRO_SAMPLES_NEEDED)
-                delay(20)
-            }
-            saveGyroData()
-            _isCalibrating.value = false
-            _uiState.update { it.copy(isCalibrating = false, isCollecting = false, calibrationPhase = CalibrationPhase.INTRO, statusMessage = "Gyroscope Complete ✓", stepInstruction = "Next up: magnetometer. Watch the next animation before starting.") }
-            calibrationRepository.updateCalibrationStatus(CalibrationStatus.GYRO_COMPLETE)
-            nextStep()
+                _uiState.update {
+                    it.copy(
+                        isCalibrating = true,
+                        isCollecting = true,
+                        calibrationPhase = CalibrationPhase.SAMPLING,
+                        statusMessage = "Sampling gyroscope...",
+                        stepInstruction = "Keep the phone still on a flat surface.",
+                        samplesCollected = 0,
+                        totalSamplesNeeded = GYRO_SAMPLES_NEEDED,
+                        errorMessage = null
+                    )
+                }
+                val samples = collectSensorSamples(
+                    sensorType = Sensor.TYPE_GYROSCOPE,
+                    samplesNeeded = GYRO_SAMPLES_NEEDED,
+                    timeoutMs = GYRO_SAMPLES_NEEDED * 25L + SENSOR_TIMEOUT_EXTRA_MS
+                ) { sample, count ->
+                    gyroSamples.add(sample)
+                    updateStepProgress(count.toFloat() / GYRO_SAMPLES_NEEDED)
+                }
+                if (samples.size < GYRO_SAMPLES_NEEDED) {
+                    failCurrentStep("Gyroscope data did not arrive. Keep the app open and check that this device has a gyroscope.")
+                    return@launch
+                }
+                saveGyroData()
+                _isCalibrating.value = false
+                _uiState.update {
+                    it.copy(
+                        isCalibrating = false,
+                        isCollecting = false,
+                        calibrationPhase = CalibrationPhase.INTRO,
+                        statusMessage = "Gyroscope complete",
+                        stepInstruction = "Next up: magnetometer. Watch the next animation before starting.",
+                        samplesCollected = GYRO_SAMPLES_NEEDED,
+                        totalSamplesNeeded = GYRO_SAMPLES_NEEDED
+                    )
+                }
+                calibrationRepository.updateCalibrationStatus(CalibrationStatus.GYRO_COMPLETE)
+                calibrationRepository.updateCalibrationProgress(33)
+                nextStep()
             } finally {
                 Trace.endSection()
             }
         }
     }
 
-    private fun saveGyroData() {
+    private suspend fun saveGyroData() {
         if (gyroSamples.isEmpty()) return
         val avgX = gyroSamples.map { it.first }.average().toFloat()
         val avgY = gyroSamples.map { it.second }.average().toFloat()
         val avgZ = gyroSamples.map { it.third }.average().toFloat()
+        val varX = gyroSamples.variance { it.first }
+        val varY = gyroSamples.variance { it.second }
+        val varZ = gyroSamples.variance { it.third }
         prefs.putFloat("gyro_bias_x", avgX)
         prefs.putFloat("gyro_bias_y", avgY)
         prefs.putFloat("gyro_bias_z", avgZ)
-        viewModelScope.launch { dataSource.saveGyroBias(avgX, avgY, avgZ) }
+        dataSource.saveGyroBias(avgX, avgY, avgZ)
+        dataSource.saveGyroVariance(varX, varY, varZ)
+        dataSource.saveGyroSampleCount(gyroSamples.size)
     }
 
     private fun startMagSampling() {
@@ -270,31 +315,70 @@ class CalibrationViewModel @Inject constructor(
         calibrationJob = viewModelScope.launch {
             Trace.beginSection("Calibration#magSampling")
             try {
-            _uiState.update { it.copy(isCalibrating = true, isCollecting = true, calibrationPhase = CalibrationPhase.SAMPLING, statusMessage = "Sampling Mag...") }
-            var count = 0
-            while (count < MAG_SAMPLES_NEEDED) {
-                val data = getSensorData()
-                magSamples.add(Triple(data.magX, data.magY, data.magZ))
-                count++
-                updateStepProgress(count.toFloat() / MAG_SAMPLES_NEEDED)
-                delay(20)
-            }
-            saveMagData()
-            _isCalibrating.value = false
-            _uiState.update { it.copy(isCalibrating = false, isCollecting = false, calibrationPhase = CalibrationPhase.INTRO, statusMessage = "Magnetometer Complete ✓", stepInstruction = "Next up: accelerometer. Watch the next animation before starting.") }
-            calibrationRepository.updateCalibrationStatus(CalibrationStatus.MAG_COMPLETE)
-            nextStep()
+                _uiState.update {
+                    it.copy(
+                        isCalibrating = true,
+                        isCollecting = true,
+                        calibrationPhase = CalibrationPhase.SAMPLING,
+                        statusMessage = "Sampling magnetometer...",
+                        stepInstruction = "Move in a slow figure-eight away from metal and magnets.",
+                        samplesCollected = 0,
+                        totalSamplesNeeded = MAG_SAMPLES_NEEDED,
+                        errorMessage = null
+                    )
+                }
+                val samples = collectSensorSamples(
+                    sensorType = Sensor.TYPE_MAGNETIC_FIELD,
+                    samplesNeeded = MAG_SAMPLES_NEEDED,
+                    timeoutMs = MAG_SAMPLES_NEEDED * 25L + SENSOR_TIMEOUT_EXTRA_MS
+                ) { sample, count ->
+                    magSamples.add(sample)
+                    updateStepProgress(count.toFloat() / MAG_SAMPLES_NEEDED)
+                }
+                if (samples.size < MAG_SAMPLES_NEEDED) {
+                    failCurrentStep("Magnetometer data did not arrive. This device may not have a compass sensor.")
+                    return@launch
+                }
+                saveMagData()
+                _isCalibrating.value = false
+                _uiState.update {
+                    it.copy(
+                        isCalibrating = false,
+                        isCollecting = false,
+                        calibrationPhase = CalibrationPhase.INTRO,
+                        statusMessage = "Magnetometer complete",
+                        stepInstruction = "Next up: accelerometer. Watch the next animation before starting.",
+                        samplesCollected = MAG_SAMPLES_NEEDED,
+                        totalSamplesNeeded = MAG_SAMPLES_NEEDED
+                    )
+                }
+                calibrationRepository.updateCalibrationStatus(CalibrationStatus.MAG_COMPLETE)
+                calibrationRepository.updateCalibrationProgress(66)
+                nextStep()
             } finally {
                 Trace.endSection()
             }
         }
     }
 
-    private fun saveMagData() {
+    private suspend fun saveMagData() {
         if (magSamples.isEmpty()) return
-        val offX = (magSamples.minOf { it.first } + magSamples.maxOf { it.first }) / 2f
-        prefs.putFloat("mag_offset_x", offX)
-        viewModelScope.launch { dataSource.saveMagOffset(offX, 0f, 0f) }
+        val minX = magSamples.minOf { it.first }
+        val maxX = magSamples.maxOf { it.first }
+        val minY = magSamples.minOf { it.second }
+        val maxY = magSamples.maxOf { it.second }
+        val minZ = magSamples.minOf { it.third }
+        val maxZ = magSamples.maxOf { it.third }
+        val offX = (minX + maxX) / 2f
+        val offY = (minY + maxY) / 2f
+        val offZ = (minZ + maxZ) / 2f
+        val rangeX = (maxX - minX).coerceAtLeast(0.0001f)
+        val rangeY = (maxY - minY).coerceAtLeast(0.0001f)
+        val rangeZ = (maxZ - minZ).coerceAtLeast(0.0001f)
+        val avgRange = (rangeX + rangeY + rangeZ) / 3f
+        dataSource.saveMagOffset(offX, offY, offZ)
+        dataSource.saveMagScale(avgRange / rangeX, avgRange / rangeY, avgRange / rangeZ)
+        dataSource.saveMagSampleCount(magSamples.size)
     }
 
     private fun startAccelPositionSampling() {
@@ -315,30 +399,48 @@ class CalibrationViewModel @Inject constructor(
                 )
             }
             delay(900)
-            _uiState.update { it.copy(isCollecting = true, calibrationPhase = CalibrationPhase.SAMPLING, statusMessage = "Sampling: ${accelPositionsList[currentPos]}") }
-            val samples = mutableListOf<Triple<Float, Float, Float>>()
-            var count = 0
-            while (count < ACCEL_SAMPLES_PER_POS) {
-                val data = getSensorData()
-                samples.add(Triple(data.accelX, data.accelY, data.accelZ))
-                count++
+            _uiState.update {
+                it.copy(
+                    isCollecting = true,
+                    calibrationPhase = CalibrationPhase.SAMPLING,
+                    statusMessage = "Sampling: ${accelPositionsList[currentPos]}",
+                    stepInstruction = "Hold this orientation still until the progress finishes.",
+                    samplesCollected = 0,
+                    totalSamplesNeeded = ACCEL_SAMPLES_PER_POS,
+                    errorMessage = null
+                )
+            }
+            val samples = collectSensorSamples(
+                sensorType = Sensor.TYPE_ACCELEROMETER,
+                samplesNeeded = ACCEL_SAMPLES_PER_POS,
+                timeoutMs = ACCEL_SAMPLES_PER_POS * 25L + SENSOR_TIMEOUT_EXTRA_MS
+            ) { sample, count ->
                 updateStepProgress(count.toFloat() / ACCEL_SAMPLES_PER_POS)
-                delay(20)
+            }
+            if (samples.size < ACCEL_SAMPLES_PER_POS) {
+                failCurrentStep("Accelerometer data did not arrive. Keep the phone awake and try again.")
+                return@launch
             }
             accelPositions[currentPos] = samples
+            saveAccelPosition(currentPos, samples)
             val nextPos = currentPos + 1
             _isCalibrating.value = false
             _uiState.update { it.copy(
                 isCalibrating = false, 
                 isCollecting = false, 
                 currentPosition = nextPos,
+                completedPositions = (it.completedPositions + currentPos).distinct(),
                 progress = (nextPos * 100 / ACCEL_POSITIONS_NEEDED),
-                statusMessage = if (nextPos < ACCEL_POSITIONS_NEEDED) "Pos $nextPos Captured ✓" else "Accelerometer Done ✓",
+                statusMessage = if (nextPos < ACCEL_POSITIONS_NEEDED) "Position ${nextPos} captured" else "Accelerometer complete",
                 calibrationPhase = if (nextPos < ACCEL_POSITIONS_NEEDED) CalibrationPhase.COUNTDOWN else CalibrationPhase.INTRO,
-                stepInstruction = if (nextPos < ACCEL_POSITIONS_NEEDED) "Next: ${accelPositionsList.getOrNull(nextPos)}" else "All orientations completed"
+                stepInstruction = if (nextPos < ACCEL_POSITIONS_NEEDED) "Next: ${accelPositionsList.getOrNull(nextPos)}" else "All orientations completed",
+                samplesCollected = samples.size,
+                totalSamplesNeeded = ACCEL_SAMPLES_PER_POS
             ) }
             if (nextPos >= ACCEL_POSITIONS_NEEDED) {
+                saveAccelCalibration()
                 calibrationRepository.updateCalibrationStatus(CalibrationStatus.ACCEL_COMPLETE)
+                calibrationRepository.updateCalibrationProgress(100)
                 nextStep()
             } else {
                 delay(250)
@@ -348,6 +450,39 @@ class CalibrationViewModel @Inject constructor(
                 Trace.endSection()
             }
         }
+    }
+
+    private suspend fun saveAccelPosition(position: Int, samples: List<Triple<Float, Float, Float>>) {
+        if (samples.isEmpty()) return
+        val average = samples.averageTriple()
+        dataSource.saveAccelPosition(position, average)
+        dataSource.saveAccelPositionsCompleted((position + 1).coerceAtMost(ACCEL_POSITIONS_NEEDED))
+    }
+
+    private suspend fun saveAccelCalibration() {
+        if (accelPositions.size < ACCEL_POSITIONS_NEEDED) return
+        val measurements = (0 until ACCEL_POSITIONS_NEEDED).mapNotNull { accelPositions[it]?.averageTriple() }
+        if (measurements.size < ACCEL_POSITIONS_NEEDED) return
+
+        val offsetX = measurements.map { it.first }.average().toFloat()
+        val offsetY = measurements.map { it.second }.average().toFloat()
+        val offsetZ = measurements.map { it.third }.average().toFloat()
+
+        val scaleX = calculateAxisScale(
+            positive = measurements[3].first,
+            negative = measurements[2].first
+        )
+        val scaleY = calculateAxisScale(
+            positive = measurements[4].second,
+            negative = measurements[5].second
+        )
+        val scaleZ = calculateAxisScale(
+            positive = measurements[0].third,
+            negative = measurements[1].third
+        )
+
+        dataSource.saveAccelOffset(offsetX, offsetY, offsetZ)
+        dataSource.saveAccelScale(scaleX, scaleY, scaleZ)
     }
 
     fun nextStep() {
@@ -374,12 +509,59 @@ class CalibrationViewModel @Inject constructor(
             try {
             _uiState.update { it.copy(statusMessage = "Finalizing...", isCollecting = true) }
             delay(TRANSITION_DELAY)
-            val data = CalibrationData(isCalibrated = true, quality = CalibrationQuality.EXCELLENT, timestamp = System.currentTimeMillis())
+            val gyro = dataSource.getGyroBias()
+            val accelOffset = dataSource.getAccelOffset()
+            val accelScale = dataSource.getAccelScale()
+            val magOffset = dataSource.getMagOffset()
+            val magScale = dataSource.getMagScale()
+            val quality = calculateCalibrationQuality()
+            val data = CalibrationData(
+                gyroBias = SensorCalibrationData(
+                    offsetX = gyro.first,
+                    offsetY = gyro.second,
+                    offsetZ = gyro.third
+                ),
+                accelOffset = SensorCalibrationData(
+                    offsetX = accelOffset.first,
+                    offsetY = accelOffset.second,
+                    offsetZ = accelOffset.third,
+                    scaleX = accelScale.first,
+                    scaleY = accelScale.second,
+                    scaleZ = accelScale.third
+                ),
+                magOffset = SensorCalibrationData(
+                    offsetX = magOffset.first,
+                    offsetY = magOffset.second,
+                    offsetZ = magOffset.third,
+                    scaleX = magScale.first,
+                    scaleY = magScale.second,
+                    scaleZ = magScale.third
+                ),
+                isCalibrated = true,
+                quality = quality,
+                timestamp = System.currentTimeMillis()
+            )
             calibrationRepository.saveCalibrationData(data)
             prefs.setCalibrated(true)
             prefs.setCalibrationTimestamp(data.timestamp)
             calibrationRepository.updateCalibrationStatus(CalibrationStatus.COMPLETED)
-            _uiState.update { it.copy(isComplete = true, isCalibrating = false, isCollecting = false, progress = 100, calibrationData = data) }
+            calibrationRepository.updateCalibrationQuality(quality)
+            calibrationRepository.updateCalibrationProgress(100)
+            _calibrationData.value = data
+            _uiState.update {
+                it.copy(
+                    isComplete = true,
+                    isCalibrating = false,
+                    isCollecting = false,
+                    progress = 100,
+                    stepProgress = 1f,
+                    statusMessage = "Calibration complete",
+                    stepInstruction = "Sensor offsets and scale factors are saved.",
+                    calibrationData = data,
+                    calibrationQuality = quality.name,
+                    quality = quality.name
+                )
+            }
             } finally {
                 Trace.endSection()
             }
@@ -413,10 +595,127 @@ class CalibrationViewModel @Inject constructor(
     }
 
     private fun updateStepProgress(value: Float) {
-        _uiState.update { it.copy(stepProgress = value) }
+        val clamped = value.coerceIn(0f, 1f)
+        _uiState.update {
+            it.copy(
+                stepProgress = clamped,
+                progress = (clamped * 100).toInt().coerceIn(0, 100),
+                samplesCollected = if (it.totalSamplesNeeded > 0) {
+                    (clamped * it.totalSamplesNeeded).toInt().coerceIn(0, it.totalSamplesNeeded)
+                } else {
+                    it.samplesCollected
+                }
+            )
+        }
     }
 
     private suspend fun getSensorData(): SensorData = sensorDataProvider?.invoke() ?: SensorData()
+
+    private suspend fun collectSensorSamples(
+        sensorType: Int,
+        samplesNeeded: Int,
+        timeoutMs: Long,
+        onSample: (Triple<Float, Float, Float>, Int) -> Unit
+    ): List<Triple<Float, Float, Float>> {
+        val sensor = sensorManager.getDefaultSensor(sensorType) ?: return emptyList()
+        val samples = mutableListOf<Triple<Float, Float, Float>>()
+        withTimeoutOrNull(timeoutMs) {
+            suspendCancellableCoroutine<Boolean> { continuation ->
+                var resumed = false
+                val listener = object : SensorEventListener {
+                    override fun onSensorChanged(event: SensorEvent) {
+                        if (!continuation.isActive || resumed) return
+                        if (samples.size >= samplesNeeded) return
+                        val sample = Triple(event.values[0], event.values[1], event.values[2])
+                        samples.add(sample)
+                        onSample(sample, samples.size)
+                        _uiState.update {
+                            it.copy(
+                                gyroData = if (sensorType == Sensor.TYPE_GYROSCOPE) sample else it.gyroData,
+                                accelData = if (sensorType == Sensor.TYPE_ACCELEROMETER) sample else it.accelData,
+                                magData = if (sensorType == Sensor.TYPE_MAGNETIC_FIELD) sample else it.magData
+                            )
+                        }
+                        if (samples.size >= samplesNeeded && !resumed) {
+                            resumed = true
+                            sensorManager.unregisterListener(this)
+                            if (continuation.isActive) continuation.resume(true)
+                        }
+                    }
+
+                    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+                }
+
+                continuation.invokeOnCancellation {
+                    sensorManager.unregisterListener(listener)
+                }
+
+                val registered = sensorManager.registerListener(
+                    listener,
+                    sensor,
+                    SensorManager.SENSOR_DELAY_GAME
+                )
+                if (!registered && !resumed && continuation.isActive) {
+                    resumed = true
+                    continuation.resume(false)
+                }
+            }
+        }
+        return samples
+    }
+
+    private suspend fun failCurrentStep(message: String) {
+        _isCalibrating.value = false
+        calibrationRepository.updateCalibrationStatus(CalibrationStatus.FAILED)
+        _uiState.update {
+            it.copy(
+                isCalibrating = false,
+                isCollecting = false,
+                calibrationPhase = CalibrationPhase.INTRO,
+                statusMessage = "Calibration paused",
+                stepInstruction = "Fix the issue and tap Start to retry this step.",
+                errorMessage = message
+            )
+        }
+    }
+
+    private fun calculateAxisScale(positive: Float, negative: Float): Float {
+        val measuredRange = abs(positive - negative)
+        return if (measuredRange > 0.0001f) (2f * GRAVITY_EARTH) / measuredRange else 1f
+    }
+
+    private fun calculateCalibrationQuality(): CalibrationQuality {
+        val gyroVariance = gyroSamples.variance { it.first } +
+            gyroSamples.variance { it.second } +
+            gyroSamples.variance { it.third }
+        val hasAllSamples = gyroSamples.size >= GYRO_SAMPLES_NEEDED &&
+            magSamples.size >= MAG_SAMPLES_NEEDED &&
+            accelPositions.size >= ACCEL_POSITIONS_NEEDED
+        return when {
+            !hasAllSamples -> CalibrationQuality.FAIR
+            gyroVariance < 0.001f -> CalibrationQuality.EXCELLENT
+            gyroVariance < 0.01f -> CalibrationQuality.GOOD
+            else -> CalibrationQuality.FAIR
+        }
+    }
+
+    private fun List<Triple<Float, Float, Float>>.averageTriple(): Triple<Float, Float, Float> {
+        if (isEmpty()) return Triple(0f, 0f, 0f)
+        return Triple(
+            map { it.first }.average().toFloat(),
+            map { it.second }.average().toFloat(),
+            map { it.third }.average().toFloat()
+        )
+    }
+
+    private inline fun List<Triple<Float, Float, Float>>.variance(selector: (Triple<Float, Float, Float>) -> Float): Float {
+        if (isEmpty()) return 0f
+        val mean = map(selector).average().toFloat()
+        return map { value ->
+            val delta = selector(value) - mean
+            delta * delta
+        }.average().toFloat()
+    }
 
     fun resetCalibration() {
         calibrationJob?.cancel()
@@ -428,6 +727,9 @@ class CalibrationViewModel @Inject constructor(
         calibrationJob?.cancel()
         preparationJob?.cancel()
         _isCalibrating.value = false
+        _calibrationData.value = null
+        _calibrationStatus.value = CalibrationStatus.NOT_STARTED
+        _calibrationProgress.value = 0
         gyroSamples.clear()
         magSamples.clear()
         accelPositions.clear()

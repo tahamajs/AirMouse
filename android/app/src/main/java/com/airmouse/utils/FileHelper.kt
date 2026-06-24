@@ -69,10 +69,10 @@ object FileHelper {
 
     fun copyInputStreamToFile(inputStream: InputStream, file: File): Boolean {
         return try {
-            val outputStream = FileOutputStream(file)
-            inputStream.copyTo(outputStream)
-            outputStream.flush()
-            outputStream.close()
+            FileOutputStream(file).use { outputStream ->
+                inputStream.copyTo(outputStream)
+                outputStream.flush()
+            }
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to copy input stream to file", e)

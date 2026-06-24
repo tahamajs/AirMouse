@@ -86,22 +86,22 @@ class PreferencesManager @Inject constructor(
     fun getSensitivity(): Float = getFloat("sensitivity", DEFAULT_SENSITIVITY)
     fun setSensitivity(value: Float) = putFloat("sensitivity", value.coerceIn(0.2f, 2.0f))
 
-    fun getClickThreshold(): Float = getFloat("click_threshold", DEFAULT_CLICK_THRESHOLD)
+    override fun getClickThreshold(): Float = getFloat("click_threshold", DEFAULT_CLICK_THRESHOLD)
     fun setClickThreshold(value: Float) = putFloat("click_threshold", value.coerceIn(3f, 15f))
 
-    fun getDoubleClickInterval(): Long = getLong("double_click_interval", DEFAULT_DOUBLE_CLICK_INTERVAL)
+    override fun getDoubleClickInterval(): Long = getLong("double_click_interval", DEFAULT_DOUBLE_CLICK_INTERVAL)
     fun setDoubleClickInterval(value: Long) = putLong("double_click_interval", value.coerceIn(200L, 800L))
 
-    fun getScrollThreshold(): Float = getFloat("scroll_threshold", DEFAULT_SCROLL_THRESHOLD)
+    override fun getScrollThreshold(): Float = getFloat("scroll_threshold", DEFAULT_SCROLL_THRESHOLD)
     fun setScrollThreshold(value: Float) = putFloat("scroll_threshold", value.coerceIn(3f, 20f))
 
-    fun getScrollDebounce(): Float = getFloat("scroll_debounce", DEFAULT_SCROLL_DEBOUNCE)
+    override fun getScrollDebounce(): Float = getFloat("scroll_debounce", DEFAULT_SCROLL_DEBOUNCE)
     fun setScrollDebounce(value: Float) = putFloat("scroll_debounce", value.coerceIn(1f, 5f))
 
-    fun getRightClickTilt(): Float = getFloat("right_click_tilt", DEFAULT_RIGHT_CLICK_TILT)
+    override fun getRightClickTilt(): Float = getFloat("right_click_tilt", DEFAULT_RIGHT_CLICK_TILT)
     fun setRightClickTilt(value: Float) = putFloat("right_click_tilt", value.coerceIn(20f, 80f))
 
-    fun getRightClickDuration(): Long = getLong("right_click_duration", DEFAULT_RIGHT_CLICK_DURATION)
+    override fun getRightClickDuration(): Long = getLong("right_click_duration", DEFAULT_RIGHT_CLICK_DURATION)
     fun setRightClickDuration(value: Long) = putLong("right_click_duration", value.coerceIn(300L, 1000L))
 
     fun getSwipeThreshold(): Float = getFloat("swipe_threshold", DEFAULT_SWIPE_THRESHOLD)
@@ -110,7 +110,7 @@ class PreferencesManager @Inject constructor(
     fun getGestureCooldown(): Long = getLong("gesture_cooldown", DEFAULT_GESTURE_COOLDOWN)
     fun setGestureCooldown(value: Long) = putLong("gesture_cooldown", value.coerceIn(200L, 1000L))
 
-    fun isHapticEnabled(): Boolean = getBoolean("haptic_enabled", true)
+    override fun isHapticEnabled(): Boolean = getBoolean("haptic_enabled", true)
     fun setHapticEnabled(enabled: Boolean) = putBoolean("haptic_enabled", enabled)
 
     fun isInvertX(): Boolean = getBoolean("invert_x", false)
@@ -286,7 +286,7 @@ class PreferencesManager @Inject constructor(
         putFloat("gyro_offset_z", z)
     }
 
-    fun getGyroBias(): Triple<Float, Float, Float> = Triple(
+    fun getGyroBiasTriple(): Triple<Float, Float, Float> = Triple(
         getFloat("gyro_bias_x", 0f),
         getFloat("gyro_bias_y", 0f),
         getFloat("gyro_bias_z", 0f)

@@ -146,10 +146,10 @@ class ScreenMirroringService : Service() {
 
     private fun sendFrame(bitmap: Bitmap) {
         serviceScope.launch {
-            val stream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream)
-            val data = stream.toByteArray()
-            stream.close()
+            val data = ByteArrayOutputStream().use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream)
+                stream.toByteArray()
+            }
 
             
             val frameMessage = """{"type":"frame","data":"${android.util.Base64.encodeToString(data, android.util.Base64.NO_WRAP)}"}"""

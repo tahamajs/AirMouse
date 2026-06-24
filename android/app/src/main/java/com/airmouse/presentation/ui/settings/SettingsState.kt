@@ -22,6 +22,7 @@ enum class SettingsSection(
     GESTURE("Gesture", "Click and scroll detection", Icons.Default.Gesture),
     AI("AI & Predictive", "Smart movement prediction", Icons.Default.Psychology),
     HAPTIC("Haptic & Sound", "Feedback preferences", Icons.Default.Vibration),
+    NOTIFICATIONS("Notifications", "Alerts and badges", Icons.Default.Notifications),
     DISPLAY("Display", "Theme and appearance", Icons.Default.DisplaySettings),
     THEMES("Themes", "Theme presets and accents", Icons.Default.Palette),
     TOUCHPAD("Touchpad", "Touchpad mode and gesture controls", Icons.Default.TouchApp),
@@ -70,6 +71,7 @@ data class SettingsUiState(
     val soundEnabled: Boolean = false,
     val visualFeedback: Boolean = true,
     val notificationOnGesture: Boolean = false,
+    val notificationsEnabled: Boolean = true,
 
     
     val theme: String = "system",
@@ -164,6 +166,7 @@ sealed class SettingsEvent {
     object ToggleSound : SettingsEvent()
     object ToggleVisualFeedback : SettingsEvent()
     object ToggleNotificationOnGesture : SettingsEvent()
+    object ToggleNotifications : SettingsEvent()
 
     
     data class UpdateTheme(val theme: String) : SettingsEvent()

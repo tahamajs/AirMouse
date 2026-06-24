@@ -135,7 +135,6 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
     private fun enableStrictMode() {
         StrictMode.setThreadPolicy(
             StrictMode.ThreadPolicy.Builder()
-                .detectDiskReads()
                 .detectDiskWrites()
                 .detectNetwork()
                 .penaltyLog()

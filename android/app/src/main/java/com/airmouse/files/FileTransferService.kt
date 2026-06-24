@@ -441,12 +441,12 @@ class FileTransferService @Inject constructor(
     private fun getFileFromUri(uri: Uri, fileName: String): File? {
         val contentResolver = context.contentResolver
         return try {
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
             val tempFile = File(transfersDir, "temp_${System.currentTimeMillis()}_$fileName")
-            tempFile.outputStream().use { output ->
-                inputStream.copyTo(output)
-            }
-            inputStream.close()
+            contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return null
             tempFile.renameTo(File(transfersDir, fileName))
             File(transfersDir, fileName)
         } catch (e: Exception) {

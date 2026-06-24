@@ -109,7 +109,7 @@ class SensorService(
         isCalibrated = calibrationHelper.loadCalibrationStatus()
     }
 
-    fun start() {
+    override fun start() {
         if (isRunning) return
 
         val sensorDelay = if (preferences.getBoolean("battery_saver", false)) {
@@ -139,7 +139,7 @@ class SensorService(
         Log.i(TAG, "Sensor service started")
     }
 
-    fun stop() {
+    override fun stop() {
         if (!isRunning) return
 
         sensorManager.unregisterListener(this)
@@ -147,7 +147,7 @@ class SensorService(
         Log.i(TAG, "Sensor service stopped")
     }
 
-    fun setSamplingRate(delay: Int) {
+    override fun setSamplingRate(delay: Int) {
         if (!isRunning) return
 
         gyroscope?.let { sensorManager.registerListener(this, it, delay, sensorHandler) }

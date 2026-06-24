@@ -69,6 +69,7 @@ fun HomeScreen(
     val presentationState by homeViewModel.presentationState.collectAsStateWithLifecycle()
     val transferState by homeViewModel.transferState.collectAsStateWithLifecycle()
     val networkQuality by homeViewModel.connectionManager.connectionQuality.collectAsStateWithLifecycle()
+    val approvalCountdownMs by homeViewModel.approvalCountdownMs.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var overflowMenuExpanded by remember { mutableStateOf(false) }
 
@@ -91,13 +92,21 @@ fun HomeScreen(
     val selectedProtocol = homeUiState.selectedProtocol
     val isConnectionActive = homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.CONNECTED
     val isConnectionPending = homeUiState.isConnecting
+    val approvalCountdownText = remember(isConnectionPending, approvalCountdownMs) {
+        if (!isConnectionPending || approvalCountdownMs <= 0L) {
+            ""
+        } else {
+            val seconds = (approvalCountdownMs + 999) / 1000
+            "Server approval timeout in ${seconds}s"
+        }
+    }
     val connectionStatusText = when {
         isConnectionActive && homeUiState.isCalibrated -> "Connected"
         isConnectionActive -> "Approved"
-        isConnectionPending -> "Waiting for approval"
-        homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.ERROR -> "Waiting for approval"
+        isConnectionPending -> "Server approving"
+        homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.ERROR -> "Approval needed"
         homeUiState.isCalibrated -> "Approved"
-        else -> "Waiting for approval"
+        else -> "Approval needed"
     }
     val statusAccent = when {
         isConnectionActive && homeUiState.isCalibrated -> Color(0xFF10B981)
@@ -109,9 +118,15 @@ fun HomeScreen(
     val screenSleepHint = if (isConnectionActive && homeUiState.isCalibrated) {
         "Mouse mode is active. You can let the phone display sleep while it keeps sending movement."
     } else {
-        "Calibrate and connect first, then the phone can behave like a cleaner mouse controller."
+        "Calibrate, connect, and wait for the server to approve the session before mouse control starts."
     }
     val quietConnectedMode = isConnectionActive && homeUiState.isCalibrated
+
+    LaunchedEffect(isConnectionPending, approvalCountdownMs) {
+        if (isConnectionPending && approvalCountdownMs <= 0L) {
+            homeViewModel.addLogMessage("Approval timed out; disconnected")
+        }
+    }
 
     DisposableEffect(quietConnectedMode) {
         val activity = context as? Activity
@@ -257,6 +272,7 @@ fun HomeScreen(
                         needsRecalibration = homeUiState.calibrationState.needsRecalibration,
                         isConnecting = isConnectionPending,
                         statusText = connectionStatusText,
+                        approvalCountdownText = approvalCountdownText,
                         accent = statusAccent,
                         serverIp = serverIp,
                         serverPort = serverPort,
@@ -1320,6 +1336,7 @@ private fun StateOverviewBanner(
     needsRecalibration: Boolean,
     isConnecting: Boolean,
     statusText: String,
+    approvalCountdownText: String,
     accent: Color,
     serverIp: String,
     serverPort: Int,
@@ -1374,6 +1391,15 @@ private fun StateOverviewBanner(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            if (approvalCountdownText.isNotBlank()) {
+                Text(
+                    text = approvalCountdownText,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFF59E0B)
+                )
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 FilterChip(
@@ -1791,7 +1817,7 @@ fun ConnectionStatusCard(
                 }
             } else {
                 Text(
-                    text = if (isConnecting) "Waiting for approval from the desktop. The phone is ready and holding the session." else "Tap to connect or scan QR to start a session.",
+                text = if (isConnecting) "Server is approving the connection. The phone is ready and holding the session." else "Tap to connect or scan QR to start a session.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1806,7 +1832,7 @@ fun ConnectionStatusCard(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (isConnecting) "Waiting..." else "Retry")
+                    Text(if (isConnecting) "Approving..." else "Retry")
                 }
             }
         }

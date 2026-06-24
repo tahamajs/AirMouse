@@ -23,21 +23,32 @@ class AutoReconnectManager @Inject constructor(
     val isReconnecting: StateFlow<Boolean> = _isReconnecting.asStateFlow()
 
     private var reconnectJob: Job? = null
+    private var lastStatus: ConnectionManager.ConnectionStatus = ConnectionManager.ConnectionStatus.DISCONNECTED
 
     fun start(autoConnect: Boolean = true) {
         if (!autoConnect) return
 
         scope.launch {
             connectionManager.connectionStatus.collect { status ->
+                val previousStatus = lastStatus
+                lastStatus = status
                 when (status) {
-                    ConnectionManager.ConnectionStatus.DISCONNECTED,
                     ConnectionManager.ConnectionStatus.ERROR -> {
-                        if (!_isReconnecting.value) {
+                        val shouldReconnect =
+                            previousStatus == ConnectionManager.ConnectionStatus.CONNECTED ||
+                                previousStatus == ConnectionManager.ConnectionStatus.RECONNECTING
+                        if (shouldReconnect && !_isReconnecting.value) {
                             scheduleReconnect()
                         }
                     }
                     ConnectionManager.ConnectionStatus.CONNECTED -> {
                         resetReconnectAttempts()
+                    }
+                    ConnectionManager.ConnectionStatus.DISCONNECTED -> {
+                        if (previousStatus == ConnectionManager.ConnectionStatus.CONNECTED ||
+                            previousStatus == ConnectionManager.ConnectionStatus.RECONNECTING) {
+                            resetReconnectAttempts()
+                        }
                     }
                     else -> {}
                 }
@@ -70,11 +81,13 @@ class AutoReconnectManager @Inject constructor(
     fun resetReconnectAttempts() {
         reconnectAttempts = 0
         _isReconnecting.value = false
+        lastStatus = ConnectionManager.ConnectionStatus.CONNECTED
         reconnectJob?.cancel()
     }
 
     fun cancel() {
         resetReconnectAttempts()
+        lastStatus = ConnectionManager.ConnectionStatus.DISCONNECTED
         scope.cancel()
     }
 }

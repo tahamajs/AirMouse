@@ -454,6 +454,7 @@ func (s *Server) ApproveDevice(deviceID string) error {
 
 	client.Approved = true
 	control.SetMovementPaused(false)
+	control.ClearPause()
 	if s.deviceMgr != nil {
 		_ = s.deviceMgr.UpdateDeviceStatus(deviceID, device.StatusConnected)
 	}

@@ -22,7 +22,18 @@ sealed class NetworkMessage {
 
     data class Hello(
         val name: String,
-        val version: String = "3.0"
+        val version: String = "3.0",
+        val device: String? = null,
+        val androidVersion: String? = null,
+        val model: String? = null,
+        val manufacturer: String? = null,
+        val brand: String? = null,
+        val deviceName: String? = null,
+        val sdkInt: String? = null,
+        val deviceId: String? = null,
+        val protocol: String = "3.0",
+        val transport: String = "WEBSOCKET",
+        val authToken: String? = null
     ) : NetworkMessage()
 
     data class Ack(
@@ -70,7 +81,21 @@ sealed class NetworkMessage {
                     }
                     "hello" -> {
                         val p = payload()
-                        Hello(p.optString("name"), p.optString("version", "3.0"))
+                        Hello(
+                            name = p.optString("name"),
+                            version = p.optString("version", "3.0"),
+                            device = p.optString("device").takeIf { it.isNotBlank() },
+                            androidVersion = p.optString("android_version").takeIf { it.isNotBlank() },
+                            model = p.optString("model").takeIf { it.isNotBlank() },
+                            manufacturer = p.optString("manufacturer").takeIf { it.isNotBlank() },
+                            brand = p.optString("brand").takeIf { it.isNotBlank() },
+                            deviceName = p.optString("device_name").takeIf { it.isNotBlank() },
+                            sdkInt = p.optString("sdk_int").takeIf { it.isNotBlank() },
+                            deviceId = p.optString("device_id").takeIf { it.isNotBlank() },
+                            protocol = p.optString("protocol", "3.0"),
+                            transport = p.optString("transport", "WEBSOCKET"),
+                            authToken = p.optString("token").takeIf { it.isNotBlank() }
+                        )
                     }
                     "ack" -> {
                         val p = payload()
@@ -117,8 +142,21 @@ sealed class NetworkMessage {
                 }
                 is Hello -> {
                     jsonObject.put("type", "hello")
-                    jsonObject.put("name", message.name)
-                    jsonObject.put("version", message.version)
+                    val payload = JSONObject()
+                    payload.put("name", message.name)
+                    payload.put("version", message.version)
+                    message.device?.let { payload.put("device", it) }
+                    message.androidVersion?.let { payload.put("android_version", it) }
+                    message.model?.let { payload.put("model", it) }
+                    message.manufacturer?.let { payload.put("manufacturer", it) }
+                    message.brand?.let { payload.put("brand", it) }
+                    message.deviceName?.let { payload.put("device_name", it) }
+                    message.sdkInt?.let { payload.put("sdk_int", it) }
+                    message.deviceId?.let { payload.put("device_id", it) }
+                    payload.put("protocol", message.protocol)
+                    payload.put("transport", message.transport)
+                    message.authToken?.takeIf { it.isNotBlank() }?.let { payload.put("token", it) }
+                    jsonObject.put("payload", payload)
                 }
                 is Ack -> {
                     jsonObject.put("type", "ack")

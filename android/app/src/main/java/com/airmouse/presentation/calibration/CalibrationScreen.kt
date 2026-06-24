@@ -57,7 +57,7 @@ fun CalibrationScreen(
 
 
     val currentStep = if (uiState.isComplete) 3 else (uiState.currentStep - 1).coerceAtLeast(0)
-    val totalSteps = 4
+    val totalSteps = uiState.totalSteps
     val stepName = remember(uiState.currentStep) { calibrationStepName(uiState.currentStep) }
 
     val scale by animateFloatAsState(
@@ -338,6 +338,10 @@ private fun CalibrationSamplingScreen(
                         }
                     }
                 }
+
+                uiState.errorMessage?.let { message ->
+                    CalibrationErrorPanel(message = message)
+                }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -575,6 +579,10 @@ private fun CalibrationStepIntroScreen(
                         }
                     }
                 }
+
+                uiState.errorMessage?.let { message ->
+                    CalibrationErrorPanel(message = message)
+                }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -598,6 +606,25 @@ private fun CalibrationStepIntroScreen(
                     Text("Start", fontWeight = FontWeight.Bold)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CalibrationErrorPanel(message: String) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFFEF4444).copy(alpha = 0.16f),
+        border = BorderStroke(1.dp, Color(0xFFF87171).copy(alpha = 0.42f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFCA5A5))
+            Text(message, color = Color.White, fontSize = 13.sp, lineHeight = 18.sp)
         }
     }
 }

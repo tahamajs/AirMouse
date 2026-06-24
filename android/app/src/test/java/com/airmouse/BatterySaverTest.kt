@@ -35,8 +35,8 @@ class BatterySaverTest {
 
     @Test
     fun `updateMovement with large delta triggers onMovement`() {
-        batterySaver.updateMovement(0f, 0f)
-        batterySaver.updateMovement(0.5f, 0.5f) 
+        batterySaver.updateMovement(0f, 0f, 0f)
+        batterySaver.updateMovement(0.5f, 0.5f, 0.5f)
         
         verify(mockSensorService, atLeastOnce()).setSamplingRate(SensorManager.SENSOR_DELAY_GAME)
     }

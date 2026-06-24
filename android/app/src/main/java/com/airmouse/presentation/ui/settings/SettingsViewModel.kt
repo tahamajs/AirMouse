@@ -126,6 +126,7 @@ class SettingsViewModel @Inject constructor(
                 soundEnabled = prefs.getBoolean("sound_enabled", false),
                 visualFeedback = prefs.getBoolean("visual_feedback", true),
                 notificationOnGesture = prefs.getBoolean("notification_on_gesture", false),
+                notificationsEnabled = prefs.getBoolean("notifications_enabled", true),
 
                 // ==================== DISPLAY SETTINGS ====================
                 theme = normalizeThemeId(savedTheme),
@@ -238,6 +239,7 @@ class SettingsViewModel @Inject constructor(
                 SettingsEvent.ToggleSound -> toggleSound()
                 SettingsEvent.ToggleVisualFeedback -> toggleVisualFeedback()
                 SettingsEvent.ToggleNotificationOnGesture -> toggleNotificationOnGesture()
+                SettingsEvent.ToggleNotifications -> toggleNotifications()
 
                 // ==================== DISPLAY EVENTS ====================
                 is SettingsEvent.UpdateTheme -> updateTheme(event.theme)
@@ -446,6 +448,13 @@ class SettingsViewModel @Inject constructor(
         val current = _uiState.value.notificationOnGesture
         prefs.putBoolean("notification_on_gesture", !current)
         _uiState.update { it.copy(notificationOnGesture = !current) }
+    }
+
+    private suspend fun toggleNotifications() {
+        val current = _uiState.value.notificationsEnabled
+        prefs.putBoolean("notifications_enabled", !current)
+        _uiState.update { it.copy(notificationsEnabled = !current) }
+        showToast("Notifications ${if (!current) "enabled" else "disabled"}")
     }
 
     // ======================================================
@@ -724,6 +733,7 @@ class SettingsViewModel @Inject constructor(
         prefs.putBoolean("sound_enabled", defaultState.soundEnabled)
         prefs.putBoolean("visual_feedback", defaultState.visualFeedback)
         prefs.putBoolean("notification_on_gesture", defaultState.notificationOnGesture)
+        prefs.putBoolean("notifications_enabled", defaultState.notificationsEnabled)
         // Display
         prefs.putString("theme", defaultState.theme)
         prefs.putBoolean("dynamic_colors", defaultState.useDynamicColors)
@@ -809,6 +819,7 @@ class SettingsViewModel @Inject constructor(
             appendLine("Sound Enabled: ${state.soundEnabled}")
             appendLine("Visual Feedback: ${state.visualFeedback}")
             appendLine("Notification on Gesture: ${state.notificationOnGesture}")
+            appendLine("Notifications Enabled: ${state.notificationsEnabled}")
             appendLine()
             appendLine("=== Display Settings ===")
             appendLine("Theme: ${state.theme}")
@@ -913,6 +924,7 @@ class SettingsViewModel @Inject constructor(
                     "Sound Enabled" -> updateOrSkipBoolean("sound_enabled", rawValue)
                     "Visual Feedback" -> updateOrSkipBoolean("visual_feedback", rawValue)
                     "Notification on Gesture" -> updateOrSkipBoolean("notification_on_gesture", rawValue)
+                    "Notifications Enabled" -> updateOrSkipBoolean("notifications_enabled", rawValue)
                     "Theme" -> updateOrSkipString("theme", rawValue)
                     "Dynamic Colors" -> updateOrSkipBoolean("dynamic_colors", rawValue)
                     "Font Size" -> updateOrSkipFloat("font_size", rawValue)
