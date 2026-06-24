@@ -1,4 +1,4 @@
-
+// app/src/main/java/com/airmouse/presentation/navigation/AirMouseBottomBar.kt
 package com.airmouse.presentation.navigation
 
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,10 +8,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/**
+ * Bottom navigation bar for the Air Mouse app.
+ *
+ * @param currentRoute The current route (used to highlight the active tab).
+ * @param onItemSelected Callback when a tab is selected.
+ * @param modifier Modifier for styling.
+ */
 @Composable
 fun AirMouseBottomBar(
     currentRoute: String?,

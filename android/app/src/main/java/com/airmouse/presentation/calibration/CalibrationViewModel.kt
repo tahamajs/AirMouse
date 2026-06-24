@@ -175,13 +175,17 @@ class CalibrationViewModel @Inject constructor(
 
     fun startCalibration() {
         if (_isCalibrating.value) return
-        resetCalibrationState()
-        _uiState.update { it.copy(
-            currentStep = 1, 
-            calibrationPhase = CalibrationPhase.INTRO,
-            statusMessage = "Step 1: Gyroscope",
-            stepInstruction = "Watch the motion preview, then tap Start to begin sampling"
-        ) }
+        viewModelScope.launch {
+            Log.d(TAG, "Starting fresh calibration run")
+            calibrationRepository.resetAllCalibration()
+            resetCalibrationState()
+            _uiState.update { it.copy(
+                currentStep = 1,
+                calibrationPhase = CalibrationPhase.INTRO,
+                statusMessage = "Step 1: Gyroscope",
+                stepInstruction = "Watch the motion preview, then tap Start to begin sampling"
+            ) }
+        }
     }
 
     fun beginCurrentStep() {
@@ -241,6 +245,8 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
+// In CalibrationViewModel.kt – REPLACE startGyroSampling:
+
     private fun startGyroSampling() {
         _isCalibrating.value = true
         gyroSamples.clear()
@@ -259,6 +265,7 @@ class CalibrationViewModel @Inject constructor(
                         errorMessage = null
                     )
                 }
+
                 val samples = collectSensorSamples(
                     sensorType = Sensor.TYPE_GYROSCOPE,
                     samplesNeeded = GYRO_SAMPLES_NEEDED,
@@ -267,25 +274,31 @@ class CalibrationViewModel @Inject constructor(
                     gyroSamples.add(sample)
                     updateStepProgress(count.toFloat() / GYRO_SAMPLES_NEEDED)
                 }
+
                 if (samples.size < GYRO_SAMPLES_NEEDED) {
-                    failCurrentStep("Gyroscope data did not arrive. Keep the app open and check that this device has a gyroscope.")
+                    failCurrentStep("Gyroscope data did not arrive. Make sure your device has a gyroscope.")
                     return@launch
                 }
+
                 saveGyroData()
                 _isCalibrating.value = false
+
                 _uiState.update {
                     it.copy(
                         isCalibrating = false,
                         isCollecting = false,
                         calibrationPhase = CalibrationPhase.INTRO,
-                        statusMessage = "Gyroscope complete",
-                        stepInstruction = "Next up: magnetometer. Watch the next animation before starting.",
+                        statusMessage = "✓ Gyroscope calibrated",
+                        stepInstruction = "Next: Magnetometer",
                         samplesCollected = GYRO_SAMPLES_NEEDED,
-                        totalSamplesNeeded = GYRO_SAMPLES_NEEDED
+                        totalSamplesNeeded = GYRO_SAMPLES_NEEDED,
+                        progress = 33
                     )
                 }
                 calibrationRepository.updateCalibrationStatus(CalibrationStatus.GYRO_COMPLETE)
                 calibrationRepository.updateCalibrationProgress(33)
+
+                // Auto-advance to next step
                 nextStep()
             } finally {
                 Trace.endSection()
@@ -485,83 +498,116 @@ class CalibrationViewModel @Inject constructor(
         dataSource.saveAccelScale(scaleX, scaleY, scaleZ)
     }
 
+// In CalibrationViewModel.kt – REPLACE nextStep:
+
     fun nextStep() {
         val current = _uiState.value.currentStep
         if (current < 3) {
             val next = current + 1
-            _uiState.update { it.copy(
-                currentStep = current + 1, 
-                progress = 0, 
-                stepProgress = 0f, 
-                calibrationPhase = CalibrationPhase.INTRO,
-                statusMessage = "Ready for ${if(next==2) "Magnetometer" else "Accelerometer"}",
-                stepInstruction = "Review the animation, then tap Start to sample the next sensor"
-            ) }
+            _uiState.update {
+                it.copy(
+                    currentStep = next,
+                    progress = 0,
+                    stepProgress = 0f,
+                    calibrationPhase = CalibrationPhase.INTRO,
+                    statusMessage = when (next) {
+                        2 -> "Ready for Magnetometer"
+                        3 -> "Ready for Accelerometer"
+                        else -> "Ready for next step"
+                    },
+                    stepInstruction = "Review the instruction, then tap Start to begin sampling.",
+                    samplesCollected = 0,
+                    totalSamplesNeeded = 0
+                )
+            }
             _calibrationProgress.value = 0
         } else if (current == 3 && _uiState.value.currentPosition >= ACCEL_POSITIONS_NEEDED) {
+            // All steps complete – finalize
             completeCalibration()
         }
     }
+// In CalibrationViewModel.kt – REPLACE completeCalibration:
 
     fun completeCalibration() {
         viewModelScope.launch {
             Trace.beginSection("Calibration#complete")
             try {
-            _uiState.update { it.copy(statusMessage = "Finalizing...", isCollecting = true) }
-            delay(TRANSITION_DELAY)
-            val gyro = dataSource.getGyroBias()
-            val accelOffset = dataSource.getAccelOffset()
-            val accelScale = dataSource.getAccelScale()
-            val magOffset = dataSource.getMagOffset()
-            val magScale = dataSource.getMagScale()
-            val quality = calculateCalibrationQuality()
-            val data = CalibrationData(
-                gyroBias = SensorCalibrationData(
-                    offsetX = gyro.first,
-                    offsetY = gyro.second,
-                    offsetZ = gyro.third
-                ),
-                accelOffset = SensorCalibrationData(
-                    offsetX = accelOffset.first,
-                    offsetY = accelOffset.second,
-                    offsetZ = accelOffset.third,
-                    scaleX = accelScale.first,
-                    scaleY = accelScale.second,
-                    scaleZ = accelScale.third
-                ),
-                magOffset = SensorCalibrationData(
-                    offsetX = magOffset.first,
-                    offsetY = magOffset.second,
-                    offsetZ = magOffset.third,
-                    scaleX = magScale.first,
-                    scaleY = magScale.second,
-                    scaleZ = magScale.third
-                ),
-                isCalibrated = true,
-                quality = quality,
-                timestamp = System.currentTimeMillis()
-            )
-            calibrationRepository.saveCalibrationData(data)
-            prefs.setCalibrated(true)
-            prefs.setCalibrationTimestamp(data.timestamp)
-            calibrationRepository.updateCalibrationStatus(CalibrationStatus.COMPLETED)
-            calibrationRepository.updateCalibrationQuality(quality)
-            calibrationRepository.updateCalibrationProgress(100)
-            _calibrationData.value = data
-            _uiState.update {
-                it.copy(
-                    isComplete = true,
-                    isCalibrating = false,
-                    isCollecting = false,
-                    progress = 100,
-                    stepProgress = 1f,
-                    statusMessage = "Calibration complete",
-                    stepInstruction = "Sensor offsets and scale factors are saved.",
-                    calibrationData = data,
-                    calibrationQuality = quality.name,
-                    quality = quality.name
+                _uiState.update { it.copy(statusMessage = "Finalizing...", isCollecting = true) }
+                delay(TRANSITION_DELAY)
+
+                // Get collected data
+                val gyro = dataSource.getGyroBias()
+                val accelOffset = dataSource.getAccelOffset()
+                val accelScale = dataSource.getAccelScale()
+                val magOffset = dataSource.getMagOffset()
+                val magScale = dataSource.getMagScale()
+
+                // Calculate quality based on gyro variance
+                val quality = calculateCalibrationQuality()
+
+                val data = CalibrationData(
+                    gyroBias = SensorCalibrationData(
+                        offsetX = gyro.first,
+                        offsetY = gyro.second,
+                        offsetZ = gyro.third
+                    ),
+                    accelOffset = SensorCalibrationData(
+                        offsetX = accelOffset.first,
+                        offsetY = accelOffset.second,
+                        offsetZ = accelOffset.third,
+                        scaleX = accelScale.first,
+                        scaleY = accelScale.second,
+                        scaleZ = accelScale.third
+                    ),
+                    magOffset = SensorCalibrationData(
+                        offsetX = magOffset.first,
+                        offsetY = magOffset.second,
+                        offsetZ = magOffset.third,
+                        scaleX = magScale.first,
+                        scaleY = magScale.second,
+                        scaleZ = magScale.third
+                    ),
+                    isCalibrated = true,
+                    quality = quality,
+                    timestamp = System.currentTimeMillis()
                 )
-            }
+
+                // Save to repository
+                calibrationRepository.saveCalibrationData(data)
+                prefs.setCalibrated(true)
+                prefs.setCalibrationTimestamp(data.timestamp)
+                calibrationRepository.updateCalibrationStatus(CalibrationStatus.COMPLETED)
+                calibrationRepository.updateCalibrationQuality(quality)
+                calibrationRepository.updateCalibrationProgress(100)
+
+                _calibrationData.value = data
+
+                _uiState.update {
+                    it.copy(
+                        isComplete = true,
+                        isCalibrating = false,
+                        isCollecting = false,
+                        progress = 100,
+                        stepProgress = 1f,
+                        statusMessage = "✅ Calibration complete!",
+                        stepInstruction = "Sensor offsets and scale factors are saved.",
+                        calibrationData = data,
+                        calibrationQuality = quality.name,
+                        quality = quality.name,
+                        isCalibrationApplied = true
+                    )
+                }
+
+                Log.d(TAG, "Calibration completed successfully with quality: ${quality.name}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to complete calibration", e)
+                _uiState.update {
+                    it.copy(
+                        isCalibrating = false,
+                        isCollecting = false,
+                        errorMessage = "Failed to complete calibration: ${e.message}"
+                    )
+                }
             } finally {
                 Trace.endSection()
             }
@@ -611,6 +657,8 @@ class CalibrationViewModel @Inject constructor(
 
     private suspend fun getSensorData(): SensorData = sensorDataProvider?.invoke() ?: SensorData()
 
+// In CalibrationViewModel.kt – REPLACE the existing collectSensorSamples with this:
+
     private suspend fun collectSensorSamples(
         sensorType: Int,
         samplesNeeded: Int,
@@ -619,51 +667,57 @@ class CalibrationViewModel @Inject constructor(
     ): List<Triple<Float, Float, Float>> {
         val sensor = sensorManager.getDefaultSensor(sensorType) ?: return emptyList()
         val samples = mutableListOf<Triple<Float, Float, Float>>()
-        withTimeoutOrNull(timeoutMs) {
-            suspendCancellableCoroutine<Boolean> { continuation ->
-                var resumed = false
-                val listener = object : SensorEventListener {
-                    override fun onSensorChanged(event: SensorEvent) {
-                        if (!continuation.isActive || resumed) return
-                        if (samples.size >= samplesNeeded) return
-                        val sample = Triple(event.values[0], event.values[1], event.values[2])
-                        samples.add(sample)
-                        onSample(sample, samples.size)
-                        _uiState.update {
-                            it.copy(
-                                gyroData = if (sensorType == Sensor.TYPE_GYROSCOPE) sample else it.gyroData,
-                                accelData = if (sensorType == Sensor.TYPE_ACCELEROMETER) sample else it.accelData,
-                                magData = if (sensorType == Sensor.TYPE_MAGNETIC_FIELD) sample else it.magData
-                            )
+
+        return suspendCancellableCoroutine { continuation ->
+            val listener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent) {
+                    if (samples.size >= samplesNeeded) {
+                        sensorManager.unregisterListener(this)
+                        if (continuation.isActive) {
+                            continuation.resume(samples)
                         }
-                        if (samples.size >= samplesNeeded && !resumed) {
-                            resumed = true
-                            sensorManager.unregisterListener(this)
-                            if (continuation.isActive) continuation.resume(true)
-                        }
+                        return
                     }
+                    val sample = Triple(event.values[0], event.values[1], event.values[2])
+                    samples.add(sample)
+                    onSample(sample, samples.size)
 
-                    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+                    // Update UI progress
+                    _uiState.update {
+                        it.copy(
+                            samplesCollected = samples.size,
+                            totalSamplesNeeded = samplesNeeded,
+                            progress = (samples.size * 100 / samplesNeeded).coerceAtMost(100)
+                        )
+                    }
                 }
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+            }
 
-                continuation.invokeOnCancellation {
+            val registered = sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
+            if (!registered) {
+                if (continuation.isActive) {
+                    continuation.resume(emptyList())
+                }
+                return@suspendCancellableCoroutine
+            }
+
+            continuation.invokeOnCancellation {
+                sensorManager.unregisterListener(listener)
+            }
+
+            // Timeout
+            viewModelScope.launch {
+                delay(timeoutMs)
+                if (samples.size < samplesNeeded) {
                     sensorManager.unregisterListener(listener)
-                }
-
-                val registered = sensorManager.registerListener(
-                    listener,
-                    sensor,
-                    SensorManager.SENSOR_DELAY_GAME
-                )
-                if (!registered && !resumed && continuation.isActive) {
-                    resumed = true
-                    continuation.resume(false)
+                    if (continuation.isActive) {
+                        continuation.resume(samples)
+                    }
                 }
             }
         }
-        return samples
     }
-
     private suspend fun failCurrentStep(message: String) {
         _isCalibrating.value = false
         calibrationRepository.updateCalibrationStatus(CalibrationStatus.FAILED)

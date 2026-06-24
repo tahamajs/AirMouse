@@ -188,7 +188,7 @@ class AdvancedCursorControls @Inject constructor(
         val absVal = abs(value)
         return when (speedCurve) {
             SpeedCurve.LINEAR -> value
-            SpeedCurve.EXPONENTIAL -> signValue * (absVal.pow(1.5f))
+            SpeedCurve.EXPONENTIAL -> signValue * absVal.toDouble().pow(1.5).toFloat()
             SpeedCurve.LOGARITHMIC -> {
                 
                 val logNumerator = ln(1f + absVal * 10f)

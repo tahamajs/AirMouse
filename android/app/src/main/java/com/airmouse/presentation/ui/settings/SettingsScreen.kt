@@ -1,7 +1,9 @@
 // app/src/main/java/com/airmouse/presentation/ui/settings/SettingsScreen.kt
 package com.airmouse.presentation.ui.settings
-
+import androidx.navigation.compose.rememberNavController
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,28 +18,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.platform.LocalContext
 import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.presentation.navigation.NavigationActionsImpl
 import com.airmouse.ui.components.NotificationBadge
+
+// ============================================================
+// MAIN SCREEN
+// ============================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    navigationActions: NavigationActions,
+    navigationActions: NavigationActions = NavigationActionsImpl(rememberNavController()),
     viewModel: SettingsViewModel = hiltViewModel(),
-    onBack: () -> Unit
+    onBack: () -> Unit = { navigationActions.navigateBack() }
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,7 +122,9 @@ fun SettingsScreen(
     }
 }
 
-// ==================== MAIN SCREEN ====================
+// ============================================================
+// MAIN SCREEN COMPOSABLES
+// ============================================================
 
 @Composable
 fun SettingsMainScreen(
@@ -168,8 +174,6 @@ fun SettingsMainScreen(
         item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
-
-// ==================== HEADER ====================
 
 @Composable
 fun SettingsHeader(
@@ -353,7 +357,9 @@ fun SettingsQuickActionsCard(
     }
 }
 
-// ==================== SETTINGS CARD ====================
+// ============================================================
+// SETTINGS CARD
+// ============================================================
 
 @Composable
 fun SettingsCard(
@@ -391,7 +397,9 @@ fun SettingsCard(
     }
 }
 
-// ==================== SECTION DETAIL SCREEN ====================
+// ============================================================
+// SECTION DETAIL SCREEN
+// ============================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -460,7 +468,9 @@ fun SectionDetailScreen(
     }
 }
 
-// ==================== UI COMPONENTS ====================
+// ============================================================
+// UI COMPONENTS
+// ============================================================
 
 @Composable
 fun SettingsSwitch(
@@ -538,7 +548,9 @@ fun SettingsSlider(
     }
 }
 
-// ==================== CURSOR SETTINGS ====================
+// ============================================================
+// CURSOR SETTINGS
+// ============================================================
 
 @Composable
 fun CursorSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
@@ -586,7 +598,9 @@ fun CursorSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     }
 }
 
-// ==================== GESTURE SETTINGS ====================
+// ============================================================
+// GESTURE SETTINGS
+// ============================================================
 
 @Composable
 fun GestureSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
@@ -634,7 +648,9 @@ fun GestureSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     }
 }
 
-// ==================== AI SETTINGS ====================
+// ============================================================
+// AI SETTINGS
+// ============================================================
 
 @Composable
 fun AISettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
@@ -676,7 +692,9 @@ fun AISettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     }
 }
 
-// ==================== HAPTIC SETTINGS ====================
+// ============================================================
+// HAPTIC SETTINGS
+// ============================================================
 
 @Composable
 fun HapticSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
@@ -731,7 +749,9 @@ fun HapticSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     }
 }
 
-// ==================== NOTIFICATION SETTINGS ====================
+// ============================================================
+// NOTIFICATION SETTINGS
+// ============================================================
 
 @Composable
 fun NotificationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
@@ -832,7 +852,9 @@ fun NotificationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
     }
 }
 
-// ==================== DISPLAY SETTINGS ====================
+// ============================================================
+// DISPLAY SETTINGS
+// ============================================================
 
 @Composable
 fun DisplaySettings(
@@ -922,7 +944,9 @@ fun ThemesShortcutCard(navigationActions: NavigationActions? = null) {
     }
 }
 
-// ==================== TOUCHPAD SETTINGS ====================
+// ============================================================
+// TOUCHPAD SETTINGS
+// ============================================================
 
 @Composable
 fun TouchpadSettings(
@@ -931,11 +955,11 @@ fun TouchpadSettings(
     navigationActions: NavigationActions? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp)
-    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(16.dp)
+        ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Touchpad Studio", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
@@ -953,7 +977,7 @@ fun TouchpadSettings(
             title = "Touchpad Active",
             description = "Enable touchpad mode on the phone",
             checked = uiState.touchpadActive,
-                onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadActive) }
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleTouchpadActive) }
         )
         SettingsSwitch(
             title = "Show Touch Points",
@@ -1081,7 +1105,9 @@ fun TouchpadSettings(
     }
 }
 
-// ==================== CONNECTION SETTINGS ====================
+// ============================================================
+// CONNECTION SETTINGS
+// ============================================================
 
 @Composable
 fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
@@ -1123,7 +1149,9 @@ fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     }
 }
 
-// ==================== PRIVACY SETTINGS ====================
+// ============================================================
+// PRIVACY SETTINGS
+// ============================================================
 
 @Composable
 fun PrivacySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
@@ -1204,7 +1232,9 @@ fun PrivacySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     }
 }
 
-// ==================== PRESENTATION SETTINGS ====================
+// ============================================================
+// PRESENTATION SETTINGS
+// ============================================================
 
 @Composable
 fun PresentationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
@@ -1276,7 +1306,9 @@ fun PresentationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
     }
 }
 
-// ==================== ABOUT SECTION ====================
+// ============================================================
+// ABOUT SECTION
+// ============================================================
 
 @Composable
 fun AboutSection(viewModel: SettingsViewModel) {

@@ -34,9 +34,47 @@ class StatisticsViewModel @Inject constructor(
         refreshData()
     }
 
+    fun handleEvent(event: StatisticsScreenEvent) {
+        when (event) {
+            is StatisticsScreenEvent.LoadData -> refreshData()
+            is StatisticsScreenEvent.RefreshData -> refreshData()
+            is StatisticsScreenEvent.SelectTimeRange -> {
+                _uiState.update { it.copy(timeRange = event.timeRange, isLoading = true) }
+                refreshData()
+            }
+            is StatisticsScreenEvent.SelectChart -> {
+                _uiState.update { it.copy(chartType = event.chartType) }
+            }
+            is StatisticsScreenEvent.ShowExportDialog -> {
+                _uiState.update { it.copy(showExportDialog = true) }
+            }
+            is StatisticsScreenEvent.DismissExportDialog -> {
+                _uiState.update { it.copy(showExportDialog = false) }
+            }
+            is StatisticsScreenEvent.ExportData -> {
+                exportStatistics()
+            }
+            is StatisticsScreenEvent.ShowResetDialog -> {
+                _uiState.update { it.copy(showResetDialog = true) }
+            }
+            is StatisticsScreenEvent.DismissResetDialog -> {
+                _uiState.update { it.copy(showResetDialog = false) }
+            }
+            is StatisticsScreenEvent.ConfirmReset -> {
+                resetStatistics()
+            }
+            is StatisticsScreenEvent.DismissError -> {
+                _uiState.update { it.copy(error = null) }
+            }
+            is StatisticsScreenEvent.DismissSuccess -> {
+                _uiState.update { it.copy(success = null) }
+            }
+        }
+    }
+
     fun refreshData() {
         viewModelScope.launch {
-            runCatching {
+            try {
                 val selectedRange = _uiState.value.timeRange
                 val sessionStats = statisticsUseCase.getSessionStats()
                 val historicalStats = statisticsUseCase.getHistoricalStats()
@@ -63,7 +101,7 @@ class StatisticsViewModel @Inject constructor(
                 val autoConnect = prefs.getBoolean("auto_connect", true)
                 val useWebSocket = prefs.getBoolean("use_websocket", true)
                 val useUdpDiscovery = prefs.getBoolean("use_udp_discovery", true)
-                val theme = prefs.getString("theme", "system")
+                val theme = prefs.getString("theme", "system") ?: "system"
                 val language = prefs.getLanguage()
                 val mostUsed = historicalStats.mostUsedGesture
                 val mostUsedCount = historicalStats.gesturesByType[mostUsed] ?: 0
@@ -112,17 +150,15 @@ class StatisticsViewModel @Inject constructor(
                         dailyStats = dailyStats,
                         gestureBreakdown = historicalStats.gesturesByType,
                         summaryStats = sessionStats,
-                        mouseStatistics = MouseStatistics(),
-                        appPreferences = AppPreferences(),
                         isLoading = false,
                         error = null
                     )
                 }
-            }.onFailure { error ->
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = error.message ?: "Failed to load statistics"
+                        error = e.message ?: "Failed to load statistics"
                     )
                 }
             }
@@ -148,16 +184,16 @@ class StatisticsViewModel @Inject constructor(
 
     fun resetStatistics() {
         viewModelScope.launch {
-            val result = statisticsUseCase.resetStats()
-            if (result.isSuccess) {
+            try {
+                statisticsUseCase.resetStats()
                 _uiState.value = createInitialState()
-                _uiState.update { it.copy(showResetDialog = false, success = "Statistics reset") }
+                _uiState.update { it.copy(showResetDialog = false, success = "Statistics reset successfully") }
                 refreshData()
-            } else {
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         showResetDialog = false,
-                        error = result.exceptionOrNull()?.message ?: "Reset failed"
+                        error = e.message ?: "Reset failed"
                     )
                 }
             }
@@ -166,27 +202,26 @@ class StatisticsViewModel @Inject constructor(
 
     fun exportStatistics() {
         viewModelScope.launch {
-            val format = when (_uiState.value.timeRange) {
-                TimeRange.TODAY -> "json"
-                TimeRange.WEEK -> "csv"
-                TimeRange.MONTH -> "json"
-                TimeRange.YEAR -> "csv"
-                TimeRange.ALL_TIME -> "json"
-            }
-            val result = statisticsUseCase.exportStats(format)
-            if (result.isSuccess) {
-                val exported = result.getOrNull().orEmpty()
+            try {
+                val format = when (_uiState.value.timeRange) {
+                    TimeRange.TODAY -> "json"
+                    TimeRange.WEEK -> "csv"
+                    TimeRange.MONTH -> "json"
+                    TimeRange.YEAR -> "csv"
+                    TimeRange.ALL_TIME -> "json"
+                }
+                val result = statisticsUseCase.exportStats(format)
                 _uiState.update {
                     it.copy(
                         showExportDialog = false,
-                        success = "Statistics exported (${format.uppercase(Locale.getDefault())}, ${exported.length} chars)"
+                        success = "Statistics exported successfully ($format)"
                     )
                 }
-            } else {
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         showExportDialog = false,
-                        error = result.exceptionOrNull()?.message ?: "Export failed"
+                        error = e.message ?: "Export failed"
                     )
                 }
             }
@@ -267,9 +302,7 @@ class StatisticsViewModel @Inject constructor(
     private fun mapDailyStats(stats: DomainDailyStats): DailyStats {
         val date = runCatching {
             SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(stats.date) ?: Date()
-        }.getOrElse {
-            Date()
-        }
+        }.getOrElse { Date() }
         return DailyStats(
             date = date,
             clicks = stats.clicks,

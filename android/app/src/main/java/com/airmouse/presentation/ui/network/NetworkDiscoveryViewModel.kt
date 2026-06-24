@@ -22,6 +22,10 @@ import java.net.*
 import java.util.*
 import javax.inject.Inject
 
+/**
+ * ViewModel for discovering Air Mouse servers on the local network.
+ * Uses UDP broadcasts and TCP port scanning to find servers.
+ */
 @HiltViewModel
 class NetworkDiscoveryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -30,12 +34,20 @@ class NetworkDiscoveryViewModel @Inject constructor(
     private val notificationManager: NotificationManager
 ) : ViewModel() {
 
+    // ============================================================
+    // UI State
+    // ============================================================
+
     private val _uiState = MutableStateFlow(NetworkDiscoveryUiState())
     val uiState: StateFlow<NetworkDiscoveryUiState> = _uiState.asStateFlow()
 
     private val discoveredServersMap = mutableMapOf<String, DiscoveredServer>()
     private var isScanning = false
     private var scanJob: Job? = null
+
+    // ============================================================
+    // Constants
+    // ============================================================
 
     companion object {
         private const val DISCOVERY_PORT = 8082
@@ -47,6 +59,10 @@ class NetworkDiscoveryViewModel @Inject constructor(
         private const val CONNECTION_HISTORY_KEY = "connection_history"
     }
 
+    // ============================================================
+    // Initialisation
+    // ============================================================
+
     init {
         loadSavedServers()
         loadConnectionHistory()
@@ -54,6 +70,13 @@ class NetworkDiscoveryViewModel @Inject constructor(
         startAutoDiscovery()
     }
 
+    // ============================================================
+    // Observers
+    // ============================================================
+
+    /**
+     * Observes the connection status from [ConnectionManager] and updates the UI state.
+     */
     private fun observeConnectionStatus() {
         viewModelScope.launch {
             connectionManager.connectionStatus.collect { status ->
@@ -68,19 +91,22 @@ class NetworkDiscoveryViewModel @Inject constructor(
                             state.copy(
                                 savedServers = updatedServers,
                                 isConnecting = false,
-                                connectionProgress = 100
+                                connectionProgress = 100,
+                                errorMessage = null
                             )
                         }
                         ConnectionManager.ConnectionStatus.CONNECTING -> {
                             state.copy(
                                 isConnecting = true,
-                                connectionProgress = (state.connectionProgress + 5).coerceAtMost(90)
+                                connectionProgress = (state.connectionProgress + 5).coerceAtMost(90),
+                                errorMessage = null
                             )
                         }
                         ConnectionManager.ConnectionStatus.ERROR -> {
+                            val lastError = connectionManager.lastError.value ?: "Connection failed"
                             state.copy(
                                 isConnecting = false,
-                                errorMessage = "Connection failed"
+                                errorMessage = lastError
                             )
                         }
                         else -> state
@@ -90,6 +116,13 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
+    // ============================================================
+    // Persistence
+    // ============================================================
+
+    /**
+     * Loads saved servers from SharedPreferences.
+     */
     private fun loadSavedServers() {
         val savedJson = prefs.getString(SAVED_SERVERS_KEY, "")
         if (savedJson.isNotEmpty()) {
@@ -98,30 +131,33 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 val servers = mutableListOf<DiscoveredServer>()
                 for (i in 0 until jsonArray.length()) {
                     val json = jsonArray.getJSONObject(i)
+                    val ip = json.optString("ip", "")
+                    val port = json.optInt("port", 0)
+                    if (ip.isEmpty() || port == 0) continue // skip invalid entries
+
                     servers.add(
                         DiscoveredServer(
                             id = json.optString("id", UUID.randomUUID().toString()),
-                            ip = json.getString("ip"),
-                            port = json.getInt("port"),
+                            ip = ip,
+                            port = port,
                             name = json.optString("name", "Air Mouse Server"),
                             version = json.optString("version", "3.0.0"),
                             isFavorite = json.optBoolean("isFavorite", false),
                             notes = json.optString("notes", ""),
-                            deviceType = try {
-                                DeviceType.valueOf(json.optString("deviceType", "UNKNOWN"))
-                            } catch (_: Exception) {
-                                DeviceType.UNKNOWN
-                            }
+                            deviceType = DeviceType.fromString(json.optString("deviceType", "UNKNOWN"))
                         )
                     )
                 }
                 _uiState.update { it.copy(savedServers = servers) }
             } catch (_: Exception) {
-                
+                // If parsing fails, ignore and start empty
             }
         }
     }
 
+    /**
+     * Saves the list of servers to SharedPreferences.
+     */
     private fun saveServersToPrefs(servers: List<DiscoveredServer>) {
         val jsonArray = JSONArray()
         servers.forEach { server ->
@@ -140,6 +176,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
         prefs.putString(SAVED_SERVERS_KEY, jsonArray.toString())
     }
 
+    /**
+     * Loads connection history from SharedPreferences.
+     */
     private fun loadConnectionHistory() {
         val historyJson = prefs.getString(CONNECTION_HISTORY_KEY, "")
         if (historyJson.isNotEmpty()) {
@@ -148,13 +187,17 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 val history = mutableListOf<ConnectionHistoryItem>()
                 for (i in 0 until jsonArray.length()) {
                     val json = jsonArray.getJSONObject(i)
+                    val ip = json.optString("ip", "")
+                    val port = json.optInt("port", 0)
+                    if (ip.isEmpty() || port == 0) continue
+
                     history.add(
                         ConnectionHistoryItem(
                             id = json.optString("id", UUID.randomUUID().toString()),
                             serverId = json.optString("serverId", ""),
-                            ip = json.getString("ip"),
-                            port = json.getInt("port"),
-                            timestamp = json.getLong("timestamp"),
+                            ip = ip,
+                            port = port,
+                            timestamp = json.optLong("timestamp", System.currentTimeMillis()),
                             serverName = json.optString("serverName", "Unknown"),
                             status = json.optString("status", "Disconnected")
                         )
@@ -162,11 +205,14 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 }
                 _uiState.update { it.copy(connectionHistory = history.sortedByDescending { it.timestamp }) }
             } catch (_: Exception) {
-                
+                // Ignore on parse error
             }
         }
     }
 
+    /**
+     * Saves a connection history entry.
+     */
     private fun saveConnectionHistory(serverName: String, ip: String, port: Int, status: String) {
         val history = ConnectionHistoryItem(
             id = UUID.randomUUID().toString(),
@@ -199,6 +245,13 @@ class NetworkDiscoveryViewModel @Inject constructor(
         _uiState.update { it.copy(connectionHistory = currentHistory) }
     }
 
+    // ============================================================
+    // Auto Discovery
+    // ============================================================
+
+    /**
+     * Starts automatic discovery after a delay if the preference is enabled.
+     */
     private fun startAutoDiscovery() {
         if (prefs.getBoolean("auto_discovery_enabled", true)) {
             viewModelScope.launch {
@@ -210,6 +263,25 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Toggles the auto‑discovery preference.
+     */
+    fun toggleAutoDiscovery() {
+        val current = prefs.getBoolean("auto_discovery_enabled", true)
+        prefs.putBoolean("auto_discovery_enabled", !current)
+        // Optionally restart discovery if turned on
+        if (!current) {
+            scanNetwork()
+        }
+    }
+
+    // ============================================================
+    // Scanning
+    // ============================================================
+
+    /**
+     * Starts a full network scan.
+     */
     fun scanNetwork() {
         if (isScanning) return
 
@@ -281,6 +353,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Performs UDP broadcast discovery.
+     */
     private suspend fun startUdpDiscovery() {
         withContext(Dispatchers.IO) {
             var socket: DatagramSocket? = null
@@ -344,7 +419,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                             }
                         }
                     } catch (_: SocketTimeoutException) {
-                        
+                        // Ignore, continue
                     }
                 }
             } catch (e: Exception) {
@@ -355,6 +430,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Scans the local IP range for open ports (TCP).
+     */
     private suspend fun scanIpRange(localIp: String) {
         val ipPrefix = getNetworkPrefix(localIp)
         val ports = listOf(8080, 8081, 8082)
@@ -407,7 +485,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
                             updateDiscoveredServers()
                         }
                     } catch (_: IOException) {
-                        
+                        // Ignore
                     }
                 }
             }
@@ -417,6 +495,13 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
+    // ============================================================
+    // Helper Methods
+    // ============================================================
+
+    /**
+     * Calculates ping time to an IP address.
+     */
     private fun calculatePing(ip: String): Int {
         return try {
             val start = System.currentTimeMillis()
@@ -427,6 +512,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Converts ping to a signal strength indicator (0‑100).
+     */
     private fun calculateSignalStrength(ping: Int): Int {
         return when {
             ping < 0 -> 0
@@ -438,6 +526,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Detects device type from the server name.
+     */
     private fun detectDeviceType(name: String): DeviceType {
         val lowerName = name.lowercase()
         return when {
@@ -449,10 +540,12 @@ class NetworkDiscoveryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Gets the broadcast address for the current WiFi network.
+     */
+    @Suppress("DEPRECATION")
     private fun getBroadcastAddress(): InetAddress {
-        @Suppress("DEPRECATION")
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        @Suppress("DEPRECATION")
         val dhcpInfo = wifiManager.dhcpInfo
         val broadcast = (dhcpInfo.ipAddress.toInt() and dhcpInfo.netmask.toInt()) or dhcpInfo.netmask.toInt().inv()
         return InetAddress.getByAddress(intToByteArray(broadcast))
@@ -467,6 +560,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Gets the local IPv4 address.
+     */
     fun getLocalIpAddress(): String? {
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces()
@@ -481,7 +577,6 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 }
             }
         } catch (_: Exception) {
-            
         }
         return null
     }
@@ -491,6 +586,9 @@ class NetworkDiscoveryViewModel @Inject constructor(
         return if (parts.size == 4) "${parts[0]}.${parts[1]}.${parts[2]}" else ip
     }
 
+    /**
+     * Checks if WiFi is connected.
+     */
     fun isWifiConnected(): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -503,6 +601,10 @@ class NetworkDiscoveryViewModel @Inject constructor(
             return info != null && info.type == ConnectivityManager.TYPE_WIFI
         }
     }
+
+    // ============================================================
+    // User Actions
+    // ============================================================
 
     fun addServerToSaved(server: DiscoveredServer) {
         val current = _uiState.value.savedServers.toMutableList()
@@ -528,7 +630,14 @@ class NetworkDiscoveryViewModel @Inject constructor(
     }
 
     suspend fun connectToServer(server: DiscoveredServer) {
-        _uiState.update { it.copy(isConnecting = true, selectedServerId = server.id, connectionProgress = 0) }
+        _uiState.update {
+            it.copy(
+                isConnecting = true,
+                selectedServerId = server.id,
+                connectionProgress = 0,
+                errorMessage = null
+            )
+        }
 
         prefs.setLastIp(server.ip)
         prefs.setLastPort(server.port)
@@ -546,11 +655,21 @@ class NetworkDiscoveryViewModel @Inject constructor(
         if (success) {
             saveConnectionHistory(server.name, server.ip, server.port, "Connected")
             addServerToSaved(server)
-            _uiState.update { it.copy(isConnecting = false, connectionProgress = 100) }
+            _uiState.update {
+                it.copy(
+                    isConnecting = false,
+                    connectionProgress = 100,
+                    errorMessage = null
+                )
+            }
         } else {
+            val lastError = connectionManager.lastError.value ?: "Failed to connect"
             saveConnectionHistory(server.name, server.ip, server.port, "Failed")
             _uiState.update {
-                it.copy(isConnecting = false, errorMessage = "Failed to connect to ${server.ip}:${server.port}")
+                it.copy(
+                    isConnecting = false,
+                    errorMessage = "Failed to connect to ${server.ip}:${server.port} – $lastError"
+                )
             }
         }
     }
@@ -574,6 +693,10 @@ class NetworkDiscoveryViewModel @Inject constructor(
         connectionManager.disconnect()
         _uiState.update { it.copy(isConnecting = false, connectionProgress = 0) }
     }
+
+    // ============================================================
+    // Sorting & Filtering
+    // ============================================================
 
     fun sortServers(servers: List<DiscoveredServer>, sortBy: SortBy): List<DiscoveredServer> {
         return when (sortBy) {
@@ -612,6 +735,10 @@ class NetworkDiscoveryViewModel @Inject constructor(
         _uiState.update { it.copy(activeTab = tab) }
     }
 
+    // ============================================================
+    // Internal UI Updates
+    // ============================================================
+
     private fun updateDiscoveredServers() {
         val servers = discoveredServersMap.values.toList()
         val sorted = sortServers(servers, _uiState.value.sortBy)
@@ -622,6 +749,10 @@ class NetworkDiscoveryViewModel @Inject constructor(
         val progress = (current * 100 / total).coerceIn(0, 99)
         _uiState.update { it.copy(scanProgress = progress) }
     }
+
+    // ============================================================
+    // Cleanup
+    // ============================================================
 
     override fun onCleared() {
         super.onCleared()

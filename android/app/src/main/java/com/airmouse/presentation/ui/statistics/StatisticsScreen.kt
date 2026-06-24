@@ -1,4 +1,3 @@
-
 package com.airmouse.presentation.ui.statistics
 
 import androidx.compose.animation.*
@@ -81,7 +80,7 @@ fun StatisticsScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-
+                // Time Range Selector
                 item {
                     AnimatedContent(targetState = uiState.timeRange) { _ ->
                         Card(
@@ -130,7 +129,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Loading state
                 if (uiState.isLoading) {
                     item {
                         Box(
@@ -144,7 +143,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Error message
                 uiState.error?.let { error ->
                     item {
                         Card(
@@ -173,7 +172,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Success message
                 uiState.success?.let { message ->
                     item {
                         Card(
@@ -202,7 +201,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Session Overview
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -277,6 +276,7 @@ fun StatisticsScreen(
                     }
                 }
 
+                // Domain Summary
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -307,6 +307,7 @@ fun StatisticsScreen(
                     }
                 }
 
+                // Domain Summary (additional)
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -341,7 +342,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Gesture Distribution
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -351,7 +352,7 @@ fun StatisticsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                text = "Gesture distribution",
+                                    text = "Gesture distribution",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -393,7 +394,7 @@ fun StatisticsScreen(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-
+                                // Pie Chart
                                 Canvas(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -429,7 +430,7 @@ fun StatisticsScreen(
                                         startAngle += sweepAngle
                                     }
 
-
+                                    // Center circle
                                     drawCircle(
                                         color = surfaceColor,
                                         radius = radius * 0.5f,
@@ -441,7 +442,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Movement Statistics
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -480,7 +481,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Connection Statistics
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -523,7 +524,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Daily Activity
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -565,7 +566,7 @@ fun StatisticsScreen(
                                         )
                                     }
 
-
+                                    // Line
                                     for (i in 0 until points.size - 1) {
                                         drawLine(
                                             color = Color(0xFF00BCD4),
@@ -575,7 +576,7 @@ fun StatisticsScreen(
                                         )
                                     }
 
-
+                                    // Fill area
                                     val path = Path().apply {
                                         moveTo(0f, height)
                                         points.forEach { lineTo(it.x, it.y) }
@@ -584,7 +585,7 @@ fun StatisticsScreen(
                                     }
                                     drawPath(path, Color(0xFF00BCD4).copy(alpha = 0.2f))
 
-
+                                    // Points
                                     points.forEach { point ->
                                         drawCircle(
                                             color = Color(0xFF00BCD4),
@@ -598,7 +599,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Performance Metrics
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -621,7 +622,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Session Information
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -662,7 +663,7 @@ fun StatisticsScreen(
                     }
                 }
 
-
+                // Footer spacer
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -670,9 +671,7 @@ fun StatisticsScreen(
         }
     }
 
-
-
-
+    // Reset Dialog
     if (uiState.showResetDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showResetDialog(false) },
@@ -713,7 +712,7 @@ fun StatisticsScreen(
         )
     }
 
-
+    // Export Dialog
     if (uiState.showExportDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showExportDialog(false) },
@@ -762,7 +761,9 @@ fun StatisticsScreen(
     }
 }
 
-
+// ============================================================
+// COMPONENTS
+// ============================================================
 
 @Composable
 fun GlassCard(
@@ -900,6 +901,10 @@ fun SummaryInfoChip(
     }
 }
 
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
 private fun getGestureColor(gesture: String): Color {
     return when (gesture.lowercase(Locale.getDefault())) {
         "click" -> Color(0xFF4CAF50)
@@ -916,4 +921,22 @@ private fun formatDuration(seconds: Long): String {
     val secs = seconds % 60
     return if (hours > 0) String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, secs)
     else String.format(Locale.getDefault(), "%02d:%02d", minutes, secs)
+}
+
+// ============================================================
+// EXTENSION FUNCTIONS
+// ============================================================
+
+private fun StatisticsUiState.getSuccessRate(): Float {
+    return if (connectionAttempts > 0) {
+        (successfulConnections.toFloat() / connectionAttempts) * 100
+    } else 0f
+}
+
+private fun StatisticsSummary.getSessionDurationFormatted(): String {
+    return formatDuration(sessionDuration / 1000L)
+}
+
+private fun StatisticsSummary.getAverageSpeedFormatted(): String {
+    return String.format(Locale.getDefault(), "%.1f", averageSpeed)
 }

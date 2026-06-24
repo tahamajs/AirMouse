@@ -32,6 +32,11 @@ sealed class Destinations(
         title = "Home",
         icon = Icons.Filled.Home
     )
+    object FileTransfer : Destinations(
+        route = ROUTE_FILE_TRANSFER,
+        title = "File Transfer",
+        icon = Icons.Default.Folder
+    )
 
     /** Statistics dashboard */
     object Statistics : Destinations(
@@ -184,9 +189,11 @@ sealed class Destinations(
     // ==========================================
 
     companion object {
-        // ==========================================
+        // ------------------------------------------
         // ROUTE CONSTANTS
-        // ==========================================
+        // ------------------------------------------
+
+        const val ROUTE_FILE_TRANSFER = "file_transfer"
 
         const val ROUTE_HOME = "home"
         const val ROUTE_STATISTICS = "statistics"
@@ -195,7 +202,6 @@ sealed class Destinations(
         const val ROUTE_ABOUT = "about"
         const val ROUTE_CALIBRATION = "calibration"
         const val ROUTE_CALIBRATION_PROCESS = "calibration_process"
-
         const val ROUTE_CALIBRATION_RESULT = "calibration_result"
         const val ROUTE_SENSOR_VISUALIZER = "sensor_visualizer"
         const val ROUTE_GESTURE_STUDIO = "gesture_studio"
@@ -212,9 +218,9 @@ sealed class Destinations(
         const val ROUTE_ACCESSIBILITY = "accessibility"
         const val ROUTE_ONBOARDING = "onboarding"
 
-        // ==========================================
+        // ------------------------------------------
         // BOTTOM NAVIGATION
-        // ==========================================
+        // ------------------------------------------
 
         private val bottomNavRoutes: Set<String> = setOf(
             ROUTE_HOME,
@@ -237,32 +243,30 @@ sealed class Destinations(
          * @param route The route string to check
          * @return True if the route is in the bottom navigation
          */
-        fun isBottomNavScreen(route: String?): Boolean {
-            return route != null && bottomNavRoutes.contains(route)
-        }
+        fun isBottomNavScreen(route: String?): Boolean =
+            route != null && bottomNavRoutes.contains(route)
 
         /**
          * Gets the current bottom navigation destination based on route.
          * @param route The route string
          * @return The Destinations object or null if not found
          */
-        fun getBottomNavDestination(route: String?): Destinations? {
-            return when (route) {
+        fun getBottomNavDestination(route: String?): Destinations? =
+            when (route) {
                 ROUTE_HOME -> Home
                 ROUTE_STATISTICS -> Statistics
                 ROUTE_SETTINGS -> Settings
                 ROUTE_HELP -> Help
                 else -> null
             }
-        }
 
         /**
          * Converts a route string to a Destinations object.
          * @param route The route string
          * @return The Destinations object or null if not found
          */
-        fun fromRoute(route: String): Destinations? {
-            return when (route) {
+        fun fromRoute(route: String): Destinations? =
+            when (route) {
                 ROUTE_HOME -> Home
                 ROUTE_STATISTICS -> Statistics
                 ROUTE_SETTINGS -> Settings
@@ -287,34 +291,28 @@ sealed class Destinations(
                 ROUTE_ONBOARDING -> Onboarding
                 else -> null
             }
-        }
 
         /**
          * Gets the title for a given route.
          * @param route The route string
          * @return The title or null if not found
          */
-        fun getTitleForRoute(route: String): String? {
-            return fromRoute(route)?.title
-        }
+        fun getTitleForRoute(route: String): String? = fromRoute(route)?.title
 
         /**
          * Gets the icon for a given route.
          * @param route The route string
          * @return The icon or null if not found
          */
-        fun getIconForRoute(route: String): ImageVector? {
-            return fromRoute(route)?.icon
-        }
+        fun getIconForRoute(route: String): ImageVector? = fromRoute(route)?.icon
 
         /**
          * Checks if a route is a top-level destination.
          * @param route The route string
          * @return True if the route is a top-level destination
          */
-        fun isTopLevelDestination(route: String?): Boolean {
-            if (route == null) return false
-            return route in listOf(
+        fun isTopLevelDestination(route: String?): Boolean =
+            route != null && route in listOf(
                 ROUTE_HOME,
                 ROUTE_STATISTICS,
                 ROUTE_SETTINGS,
@@ -322,16 +320,14 @@ sealed class Destinations(
                 ROUTE_ABOUT,
                 ROUTE_CALIBRATION
             )
-        }
 
         /**
-         * Checks if a route should show back button.
+         * Checks if a route should show the back button.
          * @param route The route string
          * @return True if the route should show back button
          */
-        fun shouldShowBackButton(route: String?): Boolean {
-            if (route == null) return false
-            return route in listOf(
+        fun shouldShowBackButton(route: String?): Boolean =
+            route != null && route in listOf(
                 ROUTE_ABOUT,
                 ROUTE_CALIBRATION_PROCESS,
                 ROUTE_CALIBRATION_RESULT,
@@ -350,22 +346,15 @@ sealed class Destinations(
                 ROUTE_TOUCHPAD,
                 ROUTE_ONBOARDING
             )
-        }
-    }
 
-    // ==========================================
-    // UTILITY METHODS
-    // ==========================================
-
-    /**
-     * Creates a navigation route with optional arguments.
-     * @param args Optional arguments to append to the route
-     * @return The full route string
-     */
-    fun createRoute(vararg args: Pair<String, String>): String {
-        if (args.isEmpty()) return route
-        val queryString = args.joinToString("&") { "${it.first}=${it.second}" }
-        return "$route?$queryString"
+        /**
+         * Creates a navigation route with optional arguments.
+         * @param args Optional arguments to append to the route
+         * @return The full route string
+         */
+        fun createRoute(baseRoute: String, vararg args: Pair<String, String>): String =
+            if (args.isEmpty()) baseRoute
+            else "$baseRoute?${args.joinToString("&") { "${it.first}=${it.second}" }}"
     }
 
     /**
@@ -373,11 +362,7 @@ sealed class Destinations(
      * @param route The route to check
      * @return True if this destination matches the route
      */
-    fun matchesRoute(route: String?): Boolean {
-        return this.route == route
-    }
+    fun matchesRoute(route: String?): Boolean = this.route == route
 
-    override fun toString(): String {
-        return "Destinations(route='$route', title='$title')"
-    }
+    override fun toString(): String = "Destinations(route='$route', title='$title')"
 }

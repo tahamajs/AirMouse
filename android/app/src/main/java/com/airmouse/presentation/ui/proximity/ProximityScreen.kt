@@ -1,6 +1,7 @@
 package com.airmouse.presentation.ui.proximity
 
 import android.Manifest
+import androidx.compose.foundation.clickable
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
@@ -10,6 +11,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +40,7 @@ import com.airmouse.presentation.navigation.NavigationActions
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,7 +52,9 @@ import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.math.log10
 
-
+// ============================================================
+// Data Models
+// ============================================================
 
 data class ProximityUiState(
     val isEnabled: Boolean = false,
@@ -71,9 +76,10 @@ data class ProximityUiState(
     val errorMessage: String? = null,
     val lockActionEnabled: Boolean = true,
     val unlockActionEnabled: Boolean = true,
-    val lockScreenTimeout: Int = 0,
     val vibrationOnLock: Boolean = true,
-    val notificationOnLock: Boolean = true
+    val notificationOnLock: Boolean = true,
+    val isBluetoothEnabled: Boolean = false,
+    val bondableDevices: List<BluetoothDevice> = emptyList()
 )
 
 enum class SignalStrength(val displayName: String, val color: Long) {
@@ -91,7 +97,9 @@ data class ProximityHistoryEntry(
     val rssi: Int
 )
 
-
+// ============================================================
+// ViewModel
+// ============================================================
 
 @HiltViewModel
 class ProximityViewModel @Inject constructor(
@@ -109,6 +117,11 @@ class ProximityViewModel @Inject constructor(
     private val smoothingFactor = 0.7f
     private var lastLockState = false
     private var calibrationSamples = mutableListOf<Pair<Int, Float>>()
+    private var monitoringJob: Job? = null
+
+    // Calibrated parameters (loaded from prefs)
+    private var calibratedTxPower = prefs.getInt("proximity_tx_power", -59)
+    private var calibratedPathLoss = prefs.getFloat("proximity_path_loss", 2.0f)
 
     private val bluetoothReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -126,13 +139,25 @@ class ProximityViewModel @Inject constructor(
                     device?.let {
                         if (it.address == _uiState.value.deviceMac) {
                             updateRssiReading(rssi)
+                        } else {
+                            // Discover other devices – store for UI to pick
+                            val currentList = _uiState.value.bondableDevices.toMutableList()
+                            if (!currentList.any { d -> d.address == it.address }) {
+                                currentList.add(it)
+                                _uiState.update { state -> state.copy(bondableDevices = currentList) }
+                            }
                         }
                     }
                 }
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
                     if (isScanning && _uiState.value.isEnabled) {
-                        startScanning()
+                        startScanning() // restart scan to keep finding devices
                     }
+                }
+                BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                    val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+                    val enabled = state == BluetoothAdapter.STATE_ON
+                    _uiState.update { it.copy(isBluetoothEnabled = enabled) }
                 }
             }
         }
@@ -146,7 +171,6 @@ class ProximityViewModel @Inject constructor(
 
     @Suppress("DEPRECATION")
     private fun initializeBluetooth() {
-        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
@@ -161,10 +185,13 @@ class ProximityViewModel @Inject constructor(
 
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter
+        val isEnabled = bluetoothAdapter?.isEnabled == true
+        _uiState.update { it.copy(isBluetoothEnabled = isEnabled) }
 
         val filter = IntentFilter().apply {
             addAction(BluetoothDevice.ACTION_FOUND)
             addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
         }
         context.registerReceiver(bluetoothReceiver, filter)
     }
@@ -175,13 +202,11 @@ class ProximityViewModel @Inject constructor(
             val trustedMac = if (savedMac.isNotBlank()) {
                 val bonded = bluetoothAdapter?.bondedDevices?.map { it.address }?.toSet().orEmpty()
                 if (bonded.contains(savedMac)) savedMac else ""
-            } else {
-                ""
-            }
+            } else ""
 
-            if (savedMac.isNotBlank() && trustedMac.isBlank()) {
-                prefs.putString("proximity_device_mac", "")
-            }
+            // Load calibrated parameters
+            calibratedTxPower = prefs.getInt("proximity_tx_power", -59)
+            calibratedPathLoss = prefs.getFloat("proximity_path_loss", 2.0f)
 
             _uiState.update {
                 it.copy(
@@ -191,9 +216,9 @@ class ProximityViewModel @Inject constructor(
                     deviceMac = trustedMac,
                     lockActionEnabled = prefs.getBoolean("proximity_lock_action", true),
                     unlockActionEnabled = prefs.getBoolean("proximity_unlock_action", true),
-                    lockScreenTimeout = prefs.getInt("proximity_lock_timeout", 0),
                     vibrationOnLock = prefs.getBoolean("proximity_vibration", true),
-                    notificationOnLock = prefs.getBoolean("proximity_notification", true)
+                    notificationOnLock = prefs.getBoolean("proximity_notification", true),
+                    bondableDevices = bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
                 )
             }
             if (trustedMac.isBlank()) {
@@ -215,13 +240,13 @@ class ProximityViewModel @Inject constructor(
         prefs.putString("proximity_device_mac", _uiState.value.deviceMac)
         prefs.putBoolean("proximity_lock_action", _uiState.value.lockActionEnabled)
         prefs.putBoolean("proximity_unlock_action", _uiState.value.unlockActionEnabled)
-        prefs.putInt("proximity_lock_timeout", _uiState.value.lockScreenTimeout)
         prefs.putBoolean("proximity_vibration", _uiState.value.vibrationOnLock)
         prefs.putBoolean("proximity_notification", _uiState.value.notificationOnLock)
     }
 
     private fun startProximityMonitoring() {
-        viewModelScope.launch {
+        monitoringJob?.cancel()
+        monitoringJob = viewModelScope.launch {
             while (true) {
                 if (_uiState.value.isEnabled && _uiState.value.deviceMac.isNotEmpty()) {
                     updateDistance()
@@ -234,7 +259,7 @@ class ProximityViewModel @Inject constructor(
 
     private fun updateDistance() {
         val rssi = getSmoothedRssi()
-        val distance = calculateDistanceFromRssi(rssi)
+        val distance = calculateDistanceFromRssi(rssi, calibratedTxPower, calibratedPathLoss)
 
         _uiState.update {
             it.copy(
@@ -256,12 +281,11 @@ class ProximityViewModel @Inject constructor(
         return smoothed.toInt()
     }
 
-    private fun calculateDistanceFromRssi(rssi: Int): Float {
-        val refRssi = -59
-        val n = 2.0
+    // Use calibrated parameters if available, otherwise fallback to defaults
+    private fun calculateDistanceFromRssi(rssi: Int, txPower: Int, pathLoss: Float): Float {
         if (rssi == 0) return -1.0f
-        val ratio = (refRssi - rssi) / (10 * n)
-        val distance = 10.0.pow(ratio)
+        val ratio = (txPower - rssi) / (10 * pathLoss)
+        val distance = 10.0.pow(ratio.toDouble())
         return distance.toFloat().coerceIn(0.1f, 15.0f)
     }
 
@@ -280,7 +304,14 @@ class ProximityViewModel @Inject constructor(
         while (rssiHistory.size > historyLimit) {
             rssiHistory.removeAt(0)
         }
-        _uiState.update { it.copy(rssi = rssi) }
+        // Also update connected device name if available
+        val device = bluetoothAdapter?.bondedDevices?.find { it.address == _uiState.value.deviceMac }
+        _uiState.update { state ->
+            state.copy(
+                rssi = rssi,
+                connectedDevice = device?.name ?: state.connectedDevice
+            )
+        }
     }
 
     private fun checkProximityState() {
@@ -293,10 +324,40 @@ class ProximityViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isNear = isNear,
-                    status = if (isNear) "Near - Device unlocked" else "Far - Device locked"
+                    status = if (isNear) "Near – Device unlocked" else "Far – Device locked",
+                    statusColor = if (isNear) 0xFF4CAF50 else 0xFFF44336
                 )
             }
+            // Perform lock/unlock actions
+            if (isNear && _uiState.value.unlockActionEnabled) {
+                // Trigger unlock
+                performUnlock()
+            } else if (!isNear && _uiState.value.lockActionEnabled) {
+                // Trigger lock
+                performLock()
+            }
         }
+    }
+
+    private fun performLock() {
+        // In a real app, send a command to the PC via network
+        Log.d("Proximity", "Locking PC")
+        if (_uiState.value.vibrationOnLock) vibrate(200)
+        if (_uiState.value.notificationOnLock) showNotification("PC Locked")
+    }
+
+    private fun performUnlock() {
+        Log.d("Proximity", "Unlocking PC")
+        if (_uiState.value.vibrationOnLock) vibrate(100)
+        if (_uiState.value.notificationOnLock) showNotification("PC Unlocked")
+    }
+
+    private fun vibrate(duration: Long) {
+        // Use Vibrator service if permission granted
+    }
+
+    private fun showNotification(message: String) {
+        // Use NotificationManager
     }
 
     private fun addToHistory(distance: Float) {
@@ -335,7 +396,9 @@ class ProximityViewModel @Inject constructor(
         isScanning = false
     }
 
-    
+    // ============================================================
+    // Public API
+    // ============================================================
 
     fun toggleService(enabled: Boolean) {
         viewModelScope.launch {
@@ -353,7 +416,7 @@ class ProximityViewModel @Inject constructor(
             _uiState.update { it.copy(isEnabled = enabled) }
             if (enabled) {
                 startScanning()
-                _uiState.update { it.copy(status = "Service waiting for trusted device approval...") }
+                _uiState.update { it.copy(status = "Service waiting for trusted device signal...") }
             } else {
                 stopScanning()
                 _uiState.update {
@@ -379,6 +442,20 @@ class ProximityViewModel @Inject constructor(
         saveSettings()
     }
 
+    fun selectDevice(device: BluetoothDevice) {
+        val mac = device.address
+        _uiState.update {
+            it.copy(
+                deviceMac = mac,
+                connectedDevice = device.name,
+                status = "Device selected: ${device.name}",
+                statusColor = 0xFF4CAF50
+            )
+        }
+        prefs.putString("proximity_device_mac", mac)
+        saveSettings()
+    }
+
     fun calibrate() {
         viewModelScope.launch {
             _uiState.update {
@@ -390,7 +467,6 @@ class ProximityViewModel @Inject constructor(
             }
 
             calibrationSamples.clear()
-
             val steps = listOf(
                 0.5f to "Place device 0.5m away",
                 1.0f to "Place device 1.0m away",
@@ -408,10 +484,21 @@ class ProximityViewModel @Inject constructor(
                         calibrationProgress = (stepIndex * 100 / steps.size)
                     )
                 }
-                delay(3000)
 
-                val avgRssi = getAverageRssi()
-                if (avgRssi != -100) {
+                // Collect RSSI for 3 seconds at this distance
+                val samples = mutableListOf<Int>()
+                var attempts = 0
+                while (attempts < 15) { // ~3 seconds at 200ms interval
+                    delay(200)
+                    val currentRssi = _uiState.value.rssi
+                    if (currentRssi != -100) {
+                        samples.add(currentRssi)
+                    }
+                    attempts++
+                }
+
+                if (samples.isNotEmpty()) {
+                    val avgRssi = samples.average().toInt()
                     calibrationSamples.add(Pair(avgRssi, targetDistance))
                 }
             }
@@ -438,26 +525,42 @@ class ProximityViewModel @Inject constructor(
         }
     }
 
-    private fun getAverageRssi(): Int {
-        var samples = 0
-        var sum = 0
-        repeat(10) {
-            if (_uiState.value.rssi != -100) {
-                sum += _uiState.value.rssi
-                samples++
-            }
-        }
-        return if (samples > 0) sum / samples else -100
-    }
-
     private fun calculateOptimalParameters(samples: List<Pair<Int, Float>>) {
-        val avgTxPower = samples.map { it.first }.average().toInt()
-        val avgPathLoss = samples.map { (rssi, distance) ->
-            if (distance > 0) (avgTxPower - rssi) / (10 * log10(distance.toDouble())) else 2.5
-        }.average().toFloat()
+        // Fit a line: rssi = txPower - 10 * n * log10(distance)
+        // We solve for txPower and n using least squares.
+        // For simplicity, we estimate txPower as the average RSSI at 1 meter.
+        val oneMeterSample = samples.find { it.second == 1.0f }
+        val txPower = if (oneMeterSample != null) {
+            oneMeterSample.first
+        } else {
+            // Approximate: use average of all samples
+            samples.map { it.first }.average().toInt()
+        }
 
-        prefs.putInt("proximity_tx_power", avgTxPower)
-        prefs.putFloat("proximity_path_loss", avgPathLoss)
+        // Estimate path loss n from the slope of log(distance) vs RSSI
+        val logDistances = samples.map { log10(it.second.toDouble()) }
+        val rssis = samples.map { it.first.toDouble() }
+        // Simple linear regression: slope = covariance / variance
+        val n = if (logDistances.isNotEmpty() && logDistances.size > 1) {
+            val meanLog = logDistances.average()
+            val meanRssi = rssis.average()
+            val cov = logDistances.zip(rssis).map { (l, r) -> (l - meanLog) * (r - meanRssi) }.sum()
+            val varLog = logDistances.map { (it - meanLog) * (it - meanLog) }.sum()
+            if (varLog != 0.0) {
+                -(cov / varLog) / 10.0 // because rssi = txPower - 10*n*log10(d)
+            } else {
+                2.0
+            }
+        } else {
+            2.0
+        }
+
+        calibratedTxPower = txPower
+        calibratedPathLoss = n.toFloat()
+
+        // Save to prefs
+        prefs.putInt("proximity_tx_power", calibratedTxPower)
+        prefs.putFloat("proximity_path_loss", calibratedPathLoss)
     }
 
     fun toggleLockAction(enabled: Boolean) {
@@ -487,7 +590,6 @@ class ProximityViewModel @Inject constructor(
                 farThreshold = 3.0f,
                 lockActionEnabled = true,
                 unlockActionEnabled = true,
-                lockScreenTimeout = 0,
                 vibrationOnLock = true,
                 notificationOnLock = true
             )
@@ -498,6 +600,7 @@ class ProximityViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        monitoringJob?.cancel()
         stopScanning()
         try {
             context.unregisterReceiver(bluetoothReceiver)
@@ -505,7 +608,9 @@ class ProximityViewModel @Inject constructor(
     }
 }
 
-
+// ============================================================
+// Compose UI Screen
+// ============================================================
 
 @Composable
 fun ProximityScreen(
@@ -513,6 +618,7 @@ fun ProximityScreen(
     viewModel: ProximityViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -533,7 +639,7 @@ fun ProximityScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            
+            // Main status card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -554,14 +660,15 @@ fun ProximityScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Auto-lock PC when you walk away",
+                                    text = "Auto‑lock PC when you walk away",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Switch(
                                 checked = uiState.isEnabled,
-                                onCheckedChange = viewModel::toggleService
+                                onCheckedChange = viewModel::toggleService,
+                                enabled = uiState.deviceMac.isNotBlank()
                             )
                         }
 
@@ -574,7 +681,7 @@ fun ProximityScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Connected Device:", style = MaterialTheme.typography.bodyMedium)
+                                Text("Device:", style = MaterialTheme.typography.bodyMedium)
                                 Text(
                                     uiState.connectedDevice ?: "None",
                                     fontWeight = FontWeight.Bold,
@@ -587,7 +694,7 @@ fun ProximityScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Signal Strength:", style = MaterialTheme.typography.bodyMedium)
+                                Text("Signal:", style = MaterialTheme.typography.bodyMedium)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(
                                         modifier = Modifier
@@ -609,10 +716,7 @@ fun ProximityScreen(
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Current Distance",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            Text("Distance", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 text = if (uiState.currentDistance != null)
                                     String.format(Locale.US, "%.2f m", uiState.currentDistance)
@@ -635,13 +739,20 @@ fun ProximityScreen(
                                     color = Color(uiState.statusColor)
                                 )
                             }
+                        } else {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Select a trusted Bluetooth device below to enable.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
             }
 
             if (uiState.isEnabled) {
-                
+                // Device selection
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -651,14 +762,53 @@ fun ProximityScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Threshold Settings",
+                                text = "Trusted Device",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
 
+                            if (uiState.bondableDevices.isEmpty()) {
+                                Text("No bonded devices found. Pair a device via Bluetooth settings.")
+                            } else {
+                                uiState.bondableDevices.forEach { device ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { viewModel.selectDevice(device) }
+                                            .padding(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(device.name ?: device.address)
+                                        if (device.address == uiState.deviceMac) {
+                                            Icon(Icons.Default.Check, contentDescription = "Selected")
+                                        }
+                                    }
+                                    HorizontalDivider()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Threshold settings
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Thresholds",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            Text("Near Threshold (Unlock)", style = MaterialTheme.typography.titleMedium)
+                            Text("Near (Unlock)", style = MaterialTheme.typography.titleMedium)
                             Slider(
                                 value = uiState.nearThreshold,
                                 onValueChange = viewModel::updateNearThreshold,
@@ -669,7 +819,7 @@ fun ProximityScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Text("Far Threshold (Lock)", style = MaterialTheme.typography.titleMedium)
+                            Text("Far (Lock)", style = MaterialTheme.typography.titleMedium)
                             Slider(
                                 value = uiState.farThreshold,
                                 onValueChange = viewModel::updateFarThreshold,
@@ -681,7 +831,7 @@ fun ProximityScreen(
                     }
                 }
 
-                
+                // Calibration
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -695,7 +845,6 @@ fun ProximityScreen(
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
-
                             Spacer(modifier = Modifier.height(8.dp))
 
                             if (uiState.isCalibrating) {
@@ -720,11 +869,16 @@ fun ProximityScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(if (uiState.isCalibrating) "Calibrating..." else "Calibrate Distance")
                             }
+                            Text(
+                                text = "Place device at 0.5m, 1m, 2m, 3m, and 5m distances when prompted.",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
 
-                
+                // Advanced settings
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -734,11 +888,10 @@ fun ProximityScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Advanced Settings",
+                                text = "Actions & Feedback",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
-
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Row(
@@ -746,7 +899,7 @@ fun ProximityScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Lock PC when far")
+                                Text("Lock when far")
                                 Switch(
                                     checked = uiState.lockActionEnabled,
                                     onCheckedChange = viewModel::toggleLockAction
@@ -758,7 +911,7 @@ fun ProximityScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Unlock PC when near")
+                                Text("Unlock when near")
                                 Switch(
                                     checked = uiState.unlockActionEnabled,
                                     onCheckedChange = viewModel::toggleUnlockAction
@@ -770,7 +923,7 @@ fun ProximityScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Vibration on lock/unlock")
+                                Text("Vibrate on lock/unlock")
                                 Switch(
                                     checked = uiState.vibrationOnLock,
                                     onCheckedChange = viewModel::toggleVibration
@@ -790,7 +943,6 @@ fun ProximityScreen(
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
-
                             OutlinedButton(
                                 onClick = { viewModel.resetToDefaults() },
                                 modifier = Modifier.fillMaxWidth()
@@ -801,7 +953,7 @@ fun ProximityScreen(
                     }
                 }
 
-                
+                // History
                 if (uiState.history.isNotEmpty()) {
                     item {
                         Card(
@@ -816,7 +968,6 @@ fun ProximityScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
-
                                 Spacer(modifier = Modifier.height(8.dp))
 
                                 uiState.history.take(5).forEach { entry ->
@@ -829,7 +980,7 @@ fun ProximityScreen(
                 }
             }
 
-            
+            // Information card (always visible)
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -846,9 +997,9 @@ fun ProximityScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "• The app uses Bluetooth RSSI to estimate distance from your PC\n" +
-                                    "• When you walk away beyond the FAR threshold, your PC locks automatically\n" +
-                                    "• When you return within the NEAR threshold, your PC unlocks\n" +
+                            text = "• Uses Bluetooth RSSI to estimate distance from your PC\n" +
+                                    "• Walks away beyond FAR threshold → PC locks automatically\n" +
+                                    "• Returns within NEAR threshold → PC unlocks\n" +
                                     "• Calibrate for best accuracy in your environment\n" +
                                     "• Make sure Bluetooth is enabled on both devices",
                             style = MaterialTheme.typography.bodyMedium,

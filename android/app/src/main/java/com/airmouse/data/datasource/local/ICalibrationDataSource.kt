@@ -78,3 +78,13 @@ interface ICalibrationDataSource {
     suspend fun resetMag()
     suspend fun getCalibrationSummary(): Map<String, Any>
 }
+
+package com.airmouse.data.datasource.local
+
+import com.airmouse.domain.model.CalibrationData
+
+interface ICalibrationDataSource {
+    suspend fun getCalibrationData(): CalibrationData?
+    suspend fun saveCalibrationData(data: CalibrationData)
+    suspend fun clearCalibrationData()
+}

@@ -1,11 +1,13 @@
 // app/src/main/java/com/airmouse/presentation/ui/touchpad/TouchpadScreen.kt
 package com.airmouse.presentation.ui.touchpad
 
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,7 +30,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import android.widget.Toast
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -292,6 +296,10 @@ fun TouchpadScreen(
     }
 }
 
+// ============================================================
+// UI COMPONENTS
+// ============================================================
+
 @Composable
 private fun TouchpadDomainSummaryCard(uiState: TouchpadUiState) {
     Card(
@@ -315,10 +323,6 @@ private fun TouchpadDomainSummaryCard(uiState: TouchpadUiState) {
     }
 }
 
-// ==========================================
-// UI COMPONENTS
-// ==========================================
-
 @Composable
 fun TouchpadSurface(
     uiState: TouchpadUiState,
@@ -327,6 +331,7 @@ fun TouchpadSurface(
     onLongPress: () -> Unit,
     onGestureEnd: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val surfaceFill = if (uiState.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f) else MaterialTheme.colorScheme.surfaceVariant
     val gridAccent = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
     val gridLine = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
@@ -338,30 +343,40 @@ fun TouchpadSurface(
             .height(350.dp)
             .clip(RoundedCornerShape(28.dp))
             .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onTap(it) },
-                    onLongPress = { onLongPress() }
-                )
-            }
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var isLongPress = false
+                    var longPressJob: Job? = null
+
+                    // ✅ FIXED: Use the coroutine scope from rememberCoroutineScope
+                    longPressJob = scope.launch {
+                        delay(500)
+                        if (!isLongPress) {
+                            isLongPress = true
+                            onLongPress()
+                        }
+                    }
+
                     while (true) {
                         val event = awaitPointerEvent()
-                        val changes = event.changes
-                        val pointers = changes.filter { it.pressed }
-
-                        if (pointers.isNotEmpty()) {
-                            val first = pointers.first()
+                        val pressed = event.changes.filter { it.pressed }
+                        if (pressed.isEmpty()) {
+                            longPressJob?.cancel()
+                            if (!isLongPress && event.changes.size == 1) {
+                                onTap(down.position)
+                            }
+                            onGestureEnd()
+                            break
+                        } else {
+                            val first = pressed.first()
                             onTouchEvent(
                                 first.position.x,
                                 first.position.y,
-                                pointers.size,
-                                pointers.map { it.position.x to it.position.y },
+                                pressed.size,
+                                pressed.map { it.position.x to it.position.y },
                                 first.pressure
                             )
-                            changes.forEach { it.consume() }
-                        } else {
-                            onGestureEnd()
+                            pressed.forEach { it.consume() }
                         }
                     }
                 }
@@ -373,6 +388,7 @@ fun TouchpadSurface(
         shape = RoundedCornerShape(28.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            // Grid background
             Canvas(modifier = Modifier.fillMaxSize()) {
                 drawRoundRect(
                     color = gridAccent,
@@ -393,6 +409,8 @@ fun TouchpadSurface(
                     strokeWidth = 2f
                 )
             }
+
+            // Touch point visualisation
             if (uiState.showTouchPoints) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     uiState.touchPoints.forEach { point ->
@@ -415,6 +433,7 @@ fun TouchpadSurface(
                 }
             }
 
+            // Placeholder text when inactive
             if (!uiState.isActive) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),

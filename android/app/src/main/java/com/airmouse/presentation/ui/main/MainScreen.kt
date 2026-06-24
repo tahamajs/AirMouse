@@ -1,7 +1,5 @@
-@file:Suppress("unused")
-
 package com.airmouse.presentation.ui.main
-import androidx.compose.ui.graphics.graphicsLayer
+import com.airmouse.presentation.ui.files.FileTransferScreen
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -11,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,26 +17,165 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.airmouse.network.ConnectionManager
 import com.airmouse.presentation.navigation.Destinations
+import com.airmouse.presentation.navigation.NavigationActionsImpl
+import com.airmouse.presentation.ui.about.AboutScreen
+import com.airmouse.presentation.ui.accessibility.AccessibilityScreen
+import com.airmouse.presentation.ui.battery.BatteryScreen
+import com.airmouse.presentation.ui.calibration.CalibrationResultScreen
+import com.airmouse.presentation.ui.calibration.CalibrationScreen
+import com.airmouse.presentation.ui.edge.EdgeGesturesScreen
+import com.airmouse.presentation.ui.gesture.GestureStudioScreen
+import com.airmouse.presentation.ui.help.HelpScreen
+import com.airmouse.presentation.ui.home.HomeScreen
+import com.airmouse.presentation.ui.logs.ServerLogsScreen
+import com.airmouse.presentation.ui.network.NetworkDiscoveryScreen
+import com.airmouse.presentation.ui.onboarding.OnboardingScreen
+import com.airmouse.presentation.ui.profiles.ProfilesScreen
+import com.airmouse.presentation.ui.proximity.ProximityScreen
+import com.airmouse.presentation.ui.sensor.SensorVisualizerScreen
+import com.airmouse.presentation.ui.settings.SettingsScreen
+import com.airmouse.presentation.ui.statistics.StatisticsScreen
+import com.airmouse.presentation.ui.themes.ThemesScreen
+import com.airmouse.presentation.ui.touchpad.TouchpadScreen
+import com.airmouse.presentation.ui.voice.VoiceCommandsScreen
+import com.airmouse.utils.PreferencesManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Locale
+import javax.inject.Inject
 
+// ============================================================
+// MainViewModel
+// ============================================================
 
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val prefs: PreferencesManager,
+    private val connectionManager: ConnectionManager
+) : ViewModel() {
 
+    private val _uiState = MutableStateFlow(MainUiState())
+    val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
+    private val _isConnected = MutableStateFlow(false)
+    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
+    @Suppress("UNUSED")
+    private val _connectionQuality = MutableStateFlow<ConnectionQuality?>(null)
+    val connectionQuality: StateFlow<ConnectionQuality?> = _connectionQuality.asStateFlow()
+
+    private val _serverInfo = MutableStateFlow(Pair("", ""))
+    val serverInfo: StateFlow<Pair<String, String>> = _serverInfo.asStateFlow()
+
+    data class ConnectionQuality(
+        val ping: Int,
+        val signalStrength: Int,
+        val isStable: Boolean
+    )
+
+    data class MainUiState(
+        val controlMode: String = "motion",
+        val isLoading: Boolean = false,
+        val error: String? = null,
+        val isRegistered: Boolean = false,
+        val isCalibrated: Boolean = false,
+        val userName: String = ""
+    )
+
+    init {
+        viewModelScope.launch {
+            connectionManager.connectionStatus.collect { status ->
+                _isConnected.value = status == ConnectionManager.ConnectionStatus.CONNECTED
+            }
+        }
+
+        viewModelScope.launch {
+            connectionManager.connectionQuality.collect { quality ->
+                _connectionQuality.value = ConnectionQuality(
+                    ping = quality.ping,
+                    signalStrength = quality.level(),
+                    isStable = quality.isHealthy()
+                )
+            }
+        }
+
+        viewModelScope.launch {
+            connectionManager.serverName.collect { name ->
+                _serverInfo.value = Pair(name, _serverInfo.value.second)
+            }
+        }
+
+        viewModelScope.launch {
+            connectionManager.serverVersion.collect { version ->
+                _serverInfo.value = Pair(_serverInfo.value.first, version)
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                controlMode = prefs.getString("control_mode", "motion"),
+                isRegistered = !prefs.isFirstLaunch() && prefs.getUserName().isNotBlank(),
+                isCalibrated = prefs.getBoolean("calibration_complete", false) ||
+                        prefs.getBoolean("is_calibrated", false),
+                userName = prefs.getUserName()
+            )
+        }
+    }
+
+    fun updateControlMode(mode: String) {
+        prefs.putString("control_mode", mode)
+        _uiState.update { it.copy(controlMode = mode) }
+    }
+
+    fun disconnect() {
+        viewModelScope.launch {
+            connectionManager.disconnect()
+        }
+    }
+
+    fun reconnect() {
+        viewModelScope.launch {
+            connectionManager.reconnect()
+        }
+    }
+
+    @Suppress("unused")
+    fun showArmCalibrationDialog() {
+        _uiState.update { it.copy(error = "Arm calibration coming soon") }
+    }
+
+    @Suppress("unused")
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
+}
+
+// ============================================================
+// Bottom Navigation Data
+// ============================================================
 
 data class BottomNavItem(
     val route: String,
@@ -57,6 +195,22 @@ fun getSelectedBottomNavIndex(currentRoute: String?): Int {
     return if (index != -1) index else 0
 }
 
+// ============================================================
+// Drawer Data
+// ============================================================
+
+data class DrawerItem(
+    val route: String,
+    val title: String,
+    val icon: ImageVector,
+    val subtitle: String,
+    val enabled: Boolean = true,
+    val badge: String? = null
+)
+
+// ============================================================
+// Main Screen
+// ============================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,16 +257,16 @@ fun MainScreen(
                 onDisconnect = { viewModel.disconnect() }
             )
         },
-            gesturesEnabled = true
-        ) {
-            Scaffold(
+        gesturesEnabled = true
+    ) {
+        Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
                     title = {
                         Column {
                             Text("Air Mouse Pro", fontWeight = FontWeight.Bold)
-                            Text("Telegram-style control center", fontSize = 11.sp, color = Color(0xFF96A0AE))
+                            Text("Telegram‑style control center", fontSize = 11.sp, color = Color(0xFF96A0AE))
                         }
                     },
                     navigationIcon = {
@@ -176,11 +330,11 @@ fun MainScreen(
             },
             floatingActionButtonPosition = FabPosition.End,
             containerColor = Color(0xFF0F1115)
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(Color(0xFF1A1D24), Color(0xFF0F1115))
@@ -197,6 +351,10 @@ fun MainScreen(
         }
     }
 }
+
+// ============================================================
+// Bottom Bar
+// ============================================================
 
 @Composable
 fun ModernBottomBar(
@@ -240,6 +398,10 @@ fun ModernBottomBar(
         }
     }
 }
+
+// ============================================================
+// Drawer Content
+// ============================================================
 
 @Composable
 fun ModernDrawerContent(
@@ -429,11 +591,11 @@ fun ModernDrawerContent(
 
         HorizontalDivider(color = Color(0xFF2B3341))
 
-                DrawerSection(
-                    title = "System",
-                    subtitle = "Network and diagnostics",
-                    items = listOf(
-                DrawerItem(Destinations.ServerLogs.route, "Server Logs", Icons.Default.List, "Debug", badge = if (isConnected) "LIVE" else "WAIT"),
+        DrawerSection(
+            title = "System",
+            subtitle = "Network and diagnostics",
+            items = listOf(
+                DrawerItem(Destinations.ServerLogs.route, "Server Logs", Icons.AutoMirrored.Filled.List, "Debug", badge = if (isConnected) "LIVE" else "WAIT"),
                 DrawerItem(Destinations.Battery.route, "Battery Monitor", Icons.Default.BatteryFull, "Power"),
                 DrawerItem(Destinations.Accessibility.route, "Accessibility", Icons.Default.Accessibility, "System"),
                 DrawerItem(Destinations.Profiles.route, "Profiles", Icons.Default.Person, "Users"),
@@ -467,14 +629,9 @@ fun ModernDrawerContent(
     }
 }
 
-data class DrawerItem(
-    val route: String,
-    val title: String,
-    val icon: ImageVector,
-    val subtitle: String,
-    val enabled: Boolean = true,
-    val badge: String? = null
-)
+// ============================================================
+// Drawer Helper Composables
+// ============================================================
 
 @Composable
 fun DrawerSection(
@@ -596,6 +753,87 @@ private fun StatusChip(label: String, color: Color) {
 }
 
 @Composable
+private fun DrawerIdentityCard(
+    isConnected: Boolean,
+    isConnecting: Boolean,
+    isRegistered: Boolean,
+    isCalibrated: Boolean,
+    controlMode: String,
+    userName: String,
+    serverName: String,
+    serverVersion: String
+) {
+    val title = when {
+        isConnected -> "Approved and connected"
+        isConnecting -> "Waiting for approval"
+        else -> "Approval needed"
+    }
+    val subtitle = when {
+        !isRegistered -> "Register first, then pair with the desktop."
+        !isCalibrated -> "Calibration is required before touchpad or motion control."
+        isConnected -> "This phone is stored as a known device on the server."
+        else -> "The desktop is waiting to accept this connection."
+    }
+    val badgeColor = when {
+        isConnected && isCalibrated -> Color(0xFF22C55E)
+        isConnecting -> Color(0xFFF59E0B)
+        isRegistered -> Color(0xFF3B82F6)
+        else -> Color(0xFF64748B)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color(0xFF0F172A),
+        border = BorderStroke(1.dp, Color(0xFF2B3341))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusChip(label = title, color = badgeColor)
+                StatusChip(
+                    label = controlMode.replace('_', ' ').lowercase(Locale.ROOT)
+                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
+                    color = Color(0xFF38BDF8)
+                )
+            }
+            Text(
+                userName.ifBlank { "Unknown user" },
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                serverName.ifBlank { "No server discovered yet" },
+                color = Color(0xFFE5E7EB),
+                fontSize = 11.sp
+            )
+            if (serverVersion.isNotBlank()) {
+                Text(
+                    "Server v$serverVersion",
+                    color = Color(0xFF96A0AE),
+                    fontSize = 10.sp
+                )
+            }
+            Text(
+                subtitle,
+                color = Color(0xFF96A0AE),
+                fontSize = 11.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusChip(label = if (isRegistered) "Registered" else "Locked", color = if (isRegistered) Color(0xFF22C55E) else Color(0xFFF59E0B))
+                StatusChip(label = if (isCalibrated) "Calibrated" else "Needs calibration", color = if (isCalibrated) Color(0xFF10B981) else Color(0xFFF97316))
+                StatusChip(label = "Identity", color = Color(0xFF8B5CF6))
+            }
+        }
+    }
+}
+
+// ============================================================
+// Animated FAB
+// ============================================================
+
+@Composable
 fun AnimatedFAB(
     onClick: () -> Unit,
     icon: ImageVector,
@@ -657,81 +895,164 @@ fun AnimatedFAB(
     }
 }
 
-@Composable
-private fun DrawerIdentityCard(
-    isConnected: Boolean,
-    isConnecting: Boolean,
-    isRegistered: Boolean,
-    isCalibrated: Boolean,
-    controlMode: String,
-    userName: String,
-    serverName: String,
-    serverVersion: String
-) {
-    val title = when {
-        isConnected -> "Approved and connected"
-        isConnecting -> "Waiting for approval"
-        else -> "Approval needed"
-    }
-    val subtitle = when {
-        !isRegistered -> "Register first, then pair with the desktop."
-        !isCalibrated -> "Calibration is required before touchpad or motion control."
-        isConnected -> "This phone is stored as a known device on the server."
-        else -> "The desktop is waiting to accept this connection."
-    }
-    val badgeColor = when {
-        isConnected && isCalibrated -> Color(0xFF22C55E)
-        isConnecting -> Color(0xFFF59E0B)
-        isRegistered -> Color(0xFF3B82F6)
-        else -> Color(0xFF64748B)
-    }
+// ============================================================
+// Navigation Host
+// ============================================================
 
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF0F172A),
-        border = BorderStroke(1.dp, Color(0xFF2B3341))
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun MainNavHost(
+
+    modifier: Modifier = Modifier,
+    navController: NavHostController = rememberNavController(),
+    startDestination: String = Destinations.Home.route,
+    onOpenDrawer: (() -> Unit)? = null
+) {
+    val navigationActions = NavigationActionsImpl(navController)
+
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        modifier = modifier,
+        enterTransition = {
+            fadeIn(animationSpec = tween(300)) +
+                    slideInHorizontally(animationSpec = tween(300)) { it }
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(300)) +
+                    slideOutHorizontally(animationSpec = tween(300)) { -it }
+        },
+        popEnterTransition = {
+            fadeIn(animationSpec = tween(300)) +
+                    slideInHorizontally(animationSpec = tween(300)) { -it }
+        },
+        popExitTransition = {
+            fadeOut(animationSpec = tween(300)) +
+                    slideOutHorizontally(animationSpec = tween(300)) { it }
+        }
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        // Bottom navigation screens
+        composable(Destinations.Home.route) {
+            HomeScreen(
+                navigationActions = navigationActions,
+                onOpenDrawer = onOpenDrawer
+            )
+        }
+
+        composable(Destinations.Statistics.route) {
+            StatisticsScreen(navigationActions = navigationActions)
+        }
+
+        composable(Destinations.Settings.route) {
+            SettingsScreen(
+                navigationActions = navigationActions,
+                onBack = { navigationActions.navigateBack() }
+            )
+        }
+
+        composable(Destinations.Help.route) {
+            HelpScreen(navigationActions = navigationActions)
+        }
+
+        // Info screens
+        composable(Destinations.About.route) {
+            AboutScreen(navigationActions = navigationActions)
+        }
+
+        // Calibration
+        composable(Destinations.Calibration.route) {
+            CalibrationScreen(
+                navigationActions = navigationActions,
+                onComplete = { }
+            )
+        }
+
+        composable(
+            route = "${Destinations.ROUTE_CALIBRATION_RESULT}?quality={quality}",
+            arguments = listOf(
+                navArgument("quality") {
+                    type = NavType.StringType
+                    defaultValue = "UNKNOWN"
+                    nullable = false
+                }
+            )
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatusChip(label = title, color = badgeColor)
-                StatusChip(
-                    label = controlMode.replace('_', ' ').lowercase(Locale.ROOT).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
-                    color = Color(0xFF38BDF8)
-                )
-            }
-            Text(
-                userName.ifBlank { "Unknown user" },
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
+            CalibrationResultScreen(
+                navigationActions = navigationActions,
+                onContinue = { navigationActions.navigateToHome() },
+                onRecalibrate = { navigationActions.navigateTo(Destinations.Calibration.route) }
             )
-            Text(
-                serverName.ifBlank { "No server discovered yet" },
-                color = Color(0xFFE5E7EB),
-                fontSize = 11.sp
+        }
+
+        composable(Destinations.SensorVisualizer.route) {
+            SensorVisualizerScreen(navigationActions = navigationActions)
+        }
+
+        // Gestures and touch
+        composable(Destinations.GestureStudio.route) {
+            GestureStudioScreen(navigationActions = navigationActions)
+        }
+
+        composable(Destinations.EdgeGestures.route) {
+            EdgeGesturesScreen(navigationActions = navigationActions)
+        }
+
+        composable(Destinations.Touchpad.route) {
+            TouchpadScreen(navigationActions = navigationActions)
+        }
+
+        // Network and logs
+        composable(Destinations.NetworkDiscovery.route) {
+            NetworkDiscoveryScreen(navigationActions = navigationActions)
+        }
+
+        composable(Destinations.ServerLogs.route) {
+            ServerLogsScreen(navigationActions = navigationActions)
+        }
+
+        // Proximity and voice
+        composable(Destinations.Proximity.route) {
+            ProximityScreen(navigationActions = navigationActions)
+        }
+
+        composable(Destinations.VoiceCommands.route) {
+            VoiceCommandsScreen(navigationActions = navigationActions)
+        }
+
+        // Profiles, themes
+        composable(Destinations.Profiles.route) {
+            ProfilesScreen(
+                navigationActions = navigationActions,
+                onNavigateBack = { navigationActions.navigateBack() }
             )
-            if (serverVersion.isNotBlank()) {
-                Text(
-                    "Server v$serverVersion",
-                    color = Color(0xFF96A0AE),
-                    fontSize = 10.sp
-                )
-            }
-            Text(
-                subtitle,
-                color = Color(0xFF96A0AE),
-                fontSize = 11.sp
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatusChip(label = if (isRegistered) "Registered" else "Locked", color = if (isRegistered) Color(0xFF22C55E) else Color(0xFFF59E0B))
-                StatusChip(label = if (isCalibrated) "Calibrated" else "Needs calibration", color = if (isCalibrated) Color(0xFF10B981) else Color(0xFFF97316))
-                StatusChip(label = "Identity", color = Color(0xFF8B5CF6))
-            }
+        }
+
+        composable(Destinations.Themes.route) {
+            ThemesScreen(navigationActions = navigationActions)
+        }
+
+        // Battery and accessibility
+        composable(Destinations.Battery.route) {
+            BatteryScreen(navigationActions = navigationActions)
+        }
+
+        composable(Destinations.Accessibility.route) {
+            AccessibilityScreen(navigationActions = navigationActions)
+        }
+        composable(Destinations.FileTransfer.route) {
+            FileTransferScreen(navigationActions = navigationActions)
+        }
+
+        // Onboarding
+        composable(Destinations.Onboarding.route) {
+            OnboardingScreen(navigationActions = navigationActions)
         }
     }
 }
+
+// ============================================================
+// Helpers
+// ============================================================
 
 private fun shouldShowBottomBar(route: String?): Boolean {
     return when (route) {

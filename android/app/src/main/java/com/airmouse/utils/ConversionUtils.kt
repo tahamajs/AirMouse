@@ -196,7 +196,7 @@ object ConversionUtils {
     }
 
     fun roundTo(value: Float, places: Int): Float {
-        val factor = 10f.pow(places.toFloat())
+        val factor = 10.0.pow(places.toDouble()).toFloat()
         return (value * factor).roundToInt() / factor
     }
 

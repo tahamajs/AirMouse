@@ -1,4 +1,3 @@
-
 package com.airmouse.presentation.ui.home
 
 import android.Manifest
@@ -8,9 +7,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -31,28 +33,48 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import com.airmouse.presentation.theme.AirMouseTheme
 import com.airmouse.presentation.ui.main.MainScreen
+import com.airmouse.network.ConnectionManager
 import com.airmouse.sensors.SensorService
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class HomeActivity : ComponentActivity() {
 
+    // ============================================================
+    // Dependencies
+    // ============================================================
+
     @Inject
     lateinit var prefs: PreferencesManager
 
+    private val viewModel: HomeViewModel by viewModels()
+
     @Inject
     lateinit var sensorService: SensorService
+
+    @Inject
+    lateinit var connectionManager: ConnectionManager
+
+    // ============================================================
+    // State
+    // ============================================================
 
     private var isReady = false
     private var permissionGranted = false
     private var isInitialLaunch = true
 
-    
+    // ============================================================
+    // Permission Launchers
+    // ============================================================
+
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -86,23 +108,38 @@ class HomeActivity : ComponentActivity() {
         }
     }
 
+    // ============================================================
+    // Lifecycle
+    // ============================================================
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { !isReady }
 
         super.onCreate(savedInstanceState)
 
-        
+        // First launch flag
         isInitialLaunch = prefs.getBoolean("is_first_launch", true)
         if (isInitialLaunch) {
             prefs.putBoolean("is_first_launch", false)
         }
 
+        // Setup sensor callback – sends movement data to the server
+        sensorService.onOrientationChanged = { roll, yaw ->
+            val sensitivity = prefs.getSensitivity()
+            val dx = yaw * sensitivity * 0.5f
+            val dy = roll * sensitivity * 0.5f
+            Log.d("HomeActivity", "Orientation callback -> sendMove dx=$dx dy=$dy")
+            lifecycleScope.launch(Dispatchers.IO) {
+                connectionManager.sendMove(dx, dy)
+            }
+        }
         sensorService.start()
+
+        // Apply theme (affects the splash screen and UI)
         applyTheme()
 
-        
+        // Check permissions
         val missingPerms = getMissingPermissions()
         if (missingPerms.isEmpty()) {
             permissionGranted = true
@@ -111,7 +148,7 @@ class HomeActivity : ComponentActivity() {
             requestPermissions()
         }
 
-        
+        // Safety timeout – if permissions are granted but UI didn't load
         Handler(Looper.getMainLooper()).postDelayed({
             if (permissionGranted && !isReady) {
                 proceedToMain()
@@ -119,42 +156,43 @@ class HomeActivity : ComponentActivity() {
         }, 1000)
     }
 
-    private fun proceedToMain() {
-        if (isReady) return
-        isReady = true
-
-        setContent {
-            val isDarkTheme = when (prefs.getString("theme", "system")) {
-                "dark", "pure_black" -> true
-                "light" -> false
-                "high_contrast" -> false
-                else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            }
-
-            AirMouseTheme(
-                darkTheme = isDarkTheme,
-                useDynamicColor = prefs.getBoolean("dynamic_colors", true)
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    MainScreen()
-                }
-            }
+    override fun onResume() {
+        super.onResume()
+        // If permissions were granted while app was in background, proceed
+        if (!isReady && getMissingPermissions().isEmpty()) {
+            permissionGranted = true
+            proceedToMain()
         }
     }
 
-    private fun applyTheme() {
-        val theme = prefs.getString("theme", "dark")
-        when (theme) {
-            "light" -> setTheme(com.airmouse.R.style.Theme_AirMouse_Light)
-            "dark" -> setTheme(com.airmouse.R.style.Theme_AirMouse_Dark)
-            "pure_black" -> setTheme(com.airmouse.R.style.Theme_AirMouse_PureBlack)
-            "high_contrast" -> setTheme(com.airmouse.R.style.Theme_AirMouse_HighContrast)
-            else -> setTheme(com.airmouse.R.style.Theme_AirMouse)
-        }
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyTheme()
     }
+
+    override fun onDestroy() {
+        sensorService.stop()
+        super.onDestroy()
+    }
+
+    // ============================================================
+    // Volume Key Toggle (Air Mouse activation)
+    // ============================================================
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (prefs.isVolumeKeyToggleEnabled()) {
+            if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                // Toggle Air Mouse activation
+                viewModel.toggleAirMouse()
+                return true // Consume the key event (prevents volume change)
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    // ============================================================
+    // Permission Handling
+    // ============================================================
 
     private fun requestPermissions() {
         val missingPerms = getMissingPermissions()
@@ -180,13 +218,13 @@ class HomeActivity : ComponentActivity() {
     private fun getMissingPermissions(): List<String> {
         val perms = mutableListOf<String>()
 
-        
+        // Camera
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.CAMERA)
         }
 
-        
+        // Bluetooth (Android 12+ split permissions)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -201,7 +239,7 @@ class HomeActivity : ComponentActivity() {
                 perms.add(Manifest.permission.BLUETOOTH_ADVERTISE)
             }
         } else {
-            
+            // Legacy Bluetooth permissions
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BLUETOOTH)
@@ -210,7 +248,7 @@ class HomeActivity : ComponentActivity() {
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BLUETOOTH_ADMIN)
             }
-            
+            // Location required for Bluetooth scanning on older Android
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -221,13 +259,13 @@ class HomeActivity : ComponentActivity() {
             }
         }
 
-        
+        // Microphone (voice commands)
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.RECORD_AUDIO)
         }
 
-        
+        // Notifications (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -235,7 +273,7 @@ class HomeActivity : ComponentActivity() {
             }
         }
 
-        
+        // Body sensors (Android 12+ for heart rate, etc.)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -278,10 +316,54 @@ class HomeActivity : ComponentActivity() {
         }
     }
 
-    override fun onDestroy() {
-        sensorService.stop()
-        super.onDestroy()
+    // ============================================================
+    // Launch Main Screen
+    // ============================================================
+
+    private fun proceedToMain() {
+        if (isReady) return
+        isReady = true
+
+        setContent {
+            val isDarkTheme = when (prefs.getString("theme", "system")) {
+                "dark", "pure_black" -> true
+                "light" -> false
+                "high_contrast" -> false
+                else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            }
+
+            AirMouseTheme(
+                darkTheme = isDarkTheme,
+                useDynamicColor = prefs.getBoolean("dynamic_colors", true)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MainScreen()
+                }
+            }
+        }
     }
+
+    // ============================================================
+    // Theme
+    // ============================================================
+
+    private fun applyTheme() {
+        val theme = prefs.getString("theme", "dark")
+        when (theme) {
+            "light" -> setTheme(com.airmouse.R.style.Theme_AirMouse_Light)
+            "dark" -> setTheme(com.airmouse.R.style.Theme_AirMouse_Dark)
+            "pure_black" -> setTheme(com.airmouse.R.style.Theme_AirMouse_PureBlack)
+            "high_contrast" -> setTheme(com.airmouse.R.style.Theme_AirMouse_HighContrast)
+            else -> setTheme(com.airmouse.R.style.Theme_AirMouse)
+        }
+    }
+
+    // ============================================================
+    // Permission Rationale Screen (Composable)
+    // ============================================================
 
     @Composable
     fun PermissionRationaleScreen(onRetry: () -> Unit, onContinue: () -> Unit) {
@@ -349,7 +431,7 @@ class HomeActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        
+                        // Permission list
                         PermissionItem(
                             icon = "📷",
                             name = "Camera",
@@ -431,19 +513,5 @@ class HomeActivity : ComponentActivity() {
                 )
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        
-        if (!isReady && getMissingPermissions().isEmpty()) {
-            permissionGranted = true
-            proceedToMain()
-        }
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        applyTheme()
     }
 }

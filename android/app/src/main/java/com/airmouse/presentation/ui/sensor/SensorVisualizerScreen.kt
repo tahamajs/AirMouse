@@ -6,8 +6,10 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import androidx.compose.animation.*
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +27,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -39,10 +42,11 @@ import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.math.*
 import kotlin.math.sqrt
-import androidx.compose.ui.draw.clip
 import kotlin.math.pow
 
-
+// ============================================================
+// Data Models
+// ============================================================
 
 data class SensorVisualizerUiState(
     val roll: Float = 0f,
@@ -163,7 +167,9 @@ data class SensorStatistics(
     val sampleCount: Int = 0
 )
 
-
+// ============================================================
+// Main Screen
+// ============================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,6 +187,8 @@ fun SensorVisualizerScreen(
     var magHistory by remember { mutableStateOf(listOf<Float>()) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
+
+    // Helper to update statistics
     fun updateStatistics() {
         val points = history.dataPoints.takeLast(100)
         if (points.isNotEmpty()) {
@@ -189,26 +197,37 @@ fun SensorVisualizerScreen(
             val yaws = points.map { it.yaw }
 
             val stability = 1f - (rolls.std() + pitches.std() + yaws.std()) / 3f
+            val intensity = ((rolls.map { abs(it) }.average() +
+                    pitches.map { abs(it) }.average() +
+                    yaws.map { abs(it) }.average()) / 3.0).toFloat()
 
             statistics = SensorStatistics(
                 minRoll = rolls.minOrNull() ?: 0f,
                 maxRoll = rolls.maxOrNull() ?: 0f,
                 avgRoll = rolls.average().toFloat(),
-                
+                minPitch = pitches.minOrNull() ?: 0f,
+                maxPitch = pitches.maxOrNull() ?: 0f,
+                avgPitch = pitches.average().toFloat(),
+                minYaw = yaws.minOrNull() ?: 0f,
+                maxYaw = yaws.maxOrNull() ?: 0f,
+                avgYaw = yaws.average().toFloat(),
                 stabilityScore = stability.coerceIn(0f, 1f),
+                movementIntensity = intensity.coerceIn(0f, 5f),
                 sampleCount = points.size
             )
         }
     }
+
+    // Sensor listener
     DisposableEffect(Unit) {
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
                 when (event.sensor.type) {
                     Sensor.TYPE_GAME_ROTATION_VECTOR -> {
-                        val orientation = FloatArray(3)
                         if (event.values.size >= 4) {
                             val rotMat = FloatArray(9)
                             SensorManager.getRotationMatrixFromVector(rotMat, event.values)
+                            val orientation = FloatArray(3)
                             SensorManager.getOrientation(rotMat, orientation)
                             uiState = uiState.copy(
                                 roll = orientation[2],
@@ -218,16 +237,16 @@ fun SensorVisualizerScreen(
                                 gameRotationY = event.values[1],
                                 gameRotationZ = event.values[2]
                             )
-                        }
-                        if (history.isRecording) {
-                            history = history.copy(
-                                dataPoints = (history.dataPoints + SensorDataPoint(
-                                    timestamp = System.currentTimeMillis(),
-                                    roll = uiState.roll,
-                                    pitch = uiState.pitch,
-                                    yaw = uiState.yaw
-                                )).takeLast(history.maxHistorySize)
-                            )
+                            if (history.isRecording) {
+                                history = history.copy(
+                                    dataPoints = (history.dataPoints + SensorDataPoint(
+                                        timestamp = System.currentTimeMillis(),
+                                        roll = orientation[2],
+                                        pitch = orientation[1],
+                                        yaw = orientation[0]
+                                    )).takeLast(history.maxHistorySize)
+                                )
+                            }
                         }
                     }
                     Sensor.TYPE_ROTATION_VECTOR -> {
@@ -247,8 +266,8 @@ fun SensorVisualizerScreen(
                         )
                         gyroHistory = (gyroHistory + sqrt(
                             event.values[0] * event.values[0] +
-                                event.values[1] * event.values[1] +
-                                event.values[2] * event.values[2]
+                                    event.values[1] * event.values[1] +
+                                    event.values[2] * event.values[2]
                         )).takeLast(40)
                     }
                     Sensor.TYPE_ACCELEROMETER -> {
@@ -259,8 +278,8 @@ fun SensorVisualizerScreen(
                         )
                         accelHistory = (accelHistory + sqrt(
                             event.values[0] * event.values[0] +
-                                event.values[1] * event.values[1] +
-                                event.values[2] * event.values[2]
+                                    event.values[1] * event.values[1] +
+                                    event.values[2] * event.values[2]
                         )).takeLast(40)
                     }
                     Sensor.TYPE_MAGNETIC_FIELD -> {
@@ -271,8 +290,8 @@ fun SensorVisualizerScreen(
                         )
                         magHistory = (magHistory + sqrt(
                             event.values[0] * event.values[0] +
-                                event.values[1] * event.values[1] +
-                                event.values[2] * event.values[2]
+                                    event.values[1] * event.values[1] +
+                                    event.values[2] * event.values[2]
                         )).takeLast(40)
                     }
                     Sensor.TYPE_GRAVITY -> uiState = uiState.copy(
@@ -310,37 +329,7 @@ fun SensorVisualizerScreen(
             }
         }
 
-        fun updateStatistics() {
-            val points = history.dataPoints.takeLast(100)
-
-            if (points.isNotEmpty()) {
-                val rolls = points.map { it.roll }
-                val pitches = points.map { it.pitch }
-                val yaws = points.map { it.yaw }
-
-
-                val stability = (1f - (rolls.std() + pitches.std() + yaws.std()) / 3f).toFloat()
-                val intensity = ((rolls.map { abs(it) }.average() +
-                        pitches.map { abs(it) }.average() +
-                        yaws.map { abs(it) }.average()) / 3.0).toFloat()
-
-                statistics = SensorStatistics(
-                    minRoll = rolls.minOrNull() ?: 0f,
-                    maxRoll = rolls.maxOrNull() ?: 0f,
-                    avgRoll = rolls.average().toFloat(),
-                    minPitch = pitches.minOrNull() ?: 0f,
-                    maxPitch = pitches.maxOrNull() ?: 0f,
-                    avgPitch = pitches.average().toFloat(),
-                    minYaw = yaws.minOrNull() ?: 0f,
-                    maxYaw = yaws.maxOrNull() ?: 0f,
-                    avgYaw = yaws.average().toFloat(),
-                    stabilityScore = stability.coerceIn(0f, 1f),
-                    movementIntensity = intensity.coerceIn(0f, 5f),
-                    sampleCount = points.size
-                )            }
-        }
-
-        
+        // Register sensors
         fun registerSensor(type: Int) {
             sensorManager.getDefaultSensor(type)?.let {
                 sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME)
@@ -368,7 +357,7 @@ fun SensorVisualizerScreen(
         onDispose { sensorManager.unregisterListener(listener) }
     }
 
-    
+    // Recording timer
     LaunchedEffect(history.isRecording) {
         if (history.isRecording) {
             while (history.isRecording) {
@@ -378,6 +367,7 @@ fun SensorVisualizerScreen(
         }
     }
 
+    // UI Scaffold
     Scaffold(
         topBar = {
             TopAppBar(
@@ -409,7 +399,10 @@ fun SensorVisualizerScreen(
                         Icon(Icons.Filled.Code, contentDescription = "Raw Data")
                     }
                     IconButton(onClick = {
-                        history = history.copy(isRecording = !history.isRecording, startTime = System.currentTimeMillis())
+                        history = history.copy(
+                            isRecording = !history.isRecording,
+                            startTime = System.currentTimeMillis()
+                        )
                     }) {
                         Icon(
                             if (history.isRecording) Icons.Filled.Stop else Icons.Filled.FiberManualRecord,
@@ -445,12 +438,12 @@ fun SensorVisualizerScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            
+            // Signal Quality Card
             item {
                 SignalQualityCard(quality = uiState.signalQuality, calibration = uiState.calibrationStatus)
             }
 
-            
+            // 3D Cube
             if (uiState.show3DModel) {
                 item {
                     GlowingCard(
@@ -481,11 +474,8 @@ fun SensorVisualizerScreen(
                                     .size(cubeSize)
                                     .shadow(20.dp, RoundedCornerShape(24.dp))
                                     .clip(RoundedCornerShape(24.dp)),
-                                showAxes = uiState.showAxes,
-                                showGrid = uiState.showGrid,
-                                showTextures = true,
-                                cubeColor = uiState.cubeColor,
-                                backgroundColor = uiState.backgroundColor
+                                isInteractive = true,
+                                colorPalette = SensorCubePalette.ELECTRIC
                             )
 
                             Spacer(modifier = Modifier.height(20.dp))
@@ -503,7 +493,7 @@ fun SensorVisualizerScreen(
                 }
             }
 
-            
+            // Sensor Type Selector
             item {
                 SensorTypeSelector(
                     selectedSensor = uiState.activeSensor,
@@ -511,6 +501,7 @@ fun SensorVisualizerScreen(
                 )
             }
 
+            // Sensor Charts
             item {
                 SensorChartsCard(
                     gyroHistory = gyroHistory,
@@ -519,7 +510,7 @@ fun SensorVisualizerScreen(
                 )
             }
 
-            
+            // Live Data Card
             item {
                 SensorDataCard(
                     uiState = uiState,
@@ -527,14 +518,14 @@ fun SensorVisualizerScreen(
                 )
             }
 
-            
+            // Raw Data
             if (uiState.showRawData) {
                 item {
                     RawDataCard(uiState = uiState)
                 }
             }
 
-            
+            // Recording status
             if (history.isRecording) {
                 item {
                     RecordingCard(
@@ -544,7 +535,7 @@ fun SensorVisualizerScreen(
                 }
             }
 
-            
+            // History Chart
             if (history.dataPoints.isNotEmpty()) {
                 item {
                     HistoryChartCard(
@@ -554,7 +545,7 @@ fun SensorVisualizerScreen(
                 }
             }
 
-            
+            // Statistics
             if (statistics.sampleCount > 0) {
                 item {
                     StatisticsCard(statistics = statistics)
@@ -563,7 +554,7 @@ fun SensorVisualizerScreen(
         }
     }
 
-    
+    // Dialogs
     if (showExportDialog) {
         ExportDialog(
             onDismiss = { showExportDialog = false },
@@ -574,7 +565,6 @@ fun SensorVisualizerScreen(
         )
     }
 
-    
     if (showStatsDialog) {
         StatisticsDialog(
             statistics = statistics,
@@ -584,7 +574,9 @@ fun SensorVisualizerScreen(
     }
 }
 
-
+// ============================================================
+// UI Components (fully defined)
+// ============================================================
 
 @Composable
 fun SignalQualityCard(quality: SignalQuality, calibration: CalibrationStatus) {
@@ -620,9 +612,6 @@ fun SignalQualityCard(quality: SignalQuality, calibration: CalibrationStatus) {
         )
     }
 }
-
-
-
 
 @Composable
 fun SensorTypeSelector(selectedSensor: ActiveSensor, onSensorSelected: (ActiveSensor) -> Unit) {
@@ -674,9 +663,9 @@ fun SensorDataCard(uiState: SensorVisualizerUiState, activeSensor: ActiveSensor)
 
             when (activeSensor) {
                 ActiveSensor.ORIENTATION -> {
-                    AnimatedSensorBar("Roll", uiState.roll, -PI.toFloat(), PI.toFloat(), "rad")
-                    AnimatedSensorBar("Pitch", uiState.pitch, -PI.toFloat() / 2, PI.toFloat() / 2, "rad")
-                    AnimatedSensorBar("Yaw", uiState.yaw, -PI.toFloat(), PI.toFloat(), "rad")
+                    AnimatedSensorBar("Roll", uiState.roll, (-PI).toFloat(), PI.toFloat(), "rad")
+                    AnimatedSensorBar("Pitch", uiState.pitch, (-PI / 2).toFloat(), (PI / 2).toFloat(), "rad")
+                    AnimatedSensorBar("Yaw", uiState.yaw, (-PI).toFloat(), PI.toFloat(), "rad")
                 }
                 ActiveSensor.GYROSCOPE -> {
                     AnimatedSensorBar("X", uiState.gyroX, -10f, 10f, "rad/s")
@@ -687,7 +676,9 @@ fun SensorDataCard(uiState: SensorVisualizerUiState, activeSensor: ActiveSensor)
                     AnimatedSensorBar("X", uiState.accelX, -20f, 20f, "m/s²")
                     AnimatedSensorBar("Y", uiState.accelY, -20f, 20f, "m/s²")
                     AnimatedSensorBar("Z", uiState.accelZ, -20f, 20f, "m/s²")
-                    val magnitude = sqrt(uiState.accelX * uiState.accelX + uiState.accelY * uiState.accelY + uiState.accelZ * uiState.accelZ)
+                    val magnitude = sqrt(uiState.accelX * uiState.accelX +
+                            uiState.accelY * uiState.accelY +
+                            uiState.accelZ * uiState.accelZ)
                     AnimatedSensorBar("Magnitude", magnitude, 0f, 30f, "m/s²")
                 }
                 ActiveSensor.MAGNETOMETER -> {
@@ -697,25 +688,32 @@ fun SensorDataCard(uiState: SensorVisualizerUiState, activeSensor: ActiveSensor)
                 }
                 ActiveSensor.ENVIRONMENTAL -> {
                     if (uiState.temperature != 0f) {
-                        SensorInfoRow(Icons.Default.Thermostat, "Temperature", String.format(Locale.US, "%.1f°C", uiState.temperature))
+                        SensorInfoRow(Icons.Default.Thermostat, "Temperature",
+                            String.format(Locale.US, "%.1f°C", uiState.temperature))
                     }
                     if (uiState.pressure != 0f) {
-                        SensorInfoRow(Icons.Default.Assessment, "Pressure", String.format(Locale.US, "%.1f hPa", uiState.pressure))
+                        SensorInfoRow(Icons.Default.Assessment, "Pressure",
+                            String.format(Locale.US, "%.1f hPa", uiState.pressure))
                     }
                     if (uiState.light != 0f) {
-                        SensorInfoRow(Icons.Default.Lightbulb, "Light", String.format(Locale.US, "%.0f lx", uiState.light))
+                        SensorInfoRow(Icons.Default.Lightbulb, "Light",
+                            String.format(Locale.US, "%.0f lx", uiState.light))
                     }
                     if (uiState.humidity != 0f) {
-                        SensorInfoRow(Icons.Default.WaterDrop, "Humidity", String.format(Locale.US, "%.0f%%", uiState.humidity))
+                        SensorInfoRow(Icons.Default.WaterDrop, "Humidity",
+                            String.format(Locale.US, "%.0f%%", uiState.humidity))
                     }
                     if (uiState.proximity != 0f) {
-                        SensorInfoRow(Icons.Default.Radar, "Proximity", String.format(Locale.US, "%.0f cm", uiState.proximity))
+                        SensorInfoRow(Icons.Default.Radar, "Proximity",
+                            String.format(Locale.US, "%.0f cm", uiState.proximity))
                     }
                     if (uiState.steps > 0) {
-                        SensorInfoRow(Icons.AutoMirrored.Filled.DirectionsWalk, "Steps", uiState.steps.toString())
+                        SensorInfoRow(Icons.AutoMirrored.Filled.DirectionsWalk, "Steps",
+                            uiState.steps.toString())
                     }
                     if (uiState.heartRate > 0) {
-                        SensorInfoRow(Icons.Default.Favorite, "Heart Rate", String.format(Locale.US, "%.0f BPM", uiState.heartRate))
+                        SensorInfoRow(Icons.Default.Favorite, "Heart Rate",
+                            String.format(Locale.US, "%.0f BPM", uiState.heartRate))
                     }
                 }
             }
@@ -770,6 +768,7 @@ fun SensorChartsCard(
     }
 }
 
+// FIXED: private fun SensorChartBlock (was private func)
 @Composable
 private fun SensorChartBlock(
     title: String,
@@ -880,12 +879,13 @@ fun RecordingCard(duration: Long, sampleCount: Int) {
                 Box(
                     modifier = Modifier
                         .size(12.dp)
-                        .graphicsLayer { 
+                        .graphicsLayer {
                             scaleX = pulse
                             scaleY = pulse
                         }
                         .clip(CircleShape)
-                        .background(Color.Red)                )
+                        .background(Color.Red)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text("Recording...", fontWeight = FontWeight.Bold)
@@ -978,18 +978,27 @@ fun StatisticsDialog(statistics: SensorStatistics, onDismiss: () -> Unit, onRese
         title = { Text("Sensor Statistics") },
         text = {
             Column {
-                StatisticsRow("Min Roll", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.minRoll, Math.toDegrees(statistics.minRoll.toDouble())))
-                StatisticsRow("Max Roll", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.maxRoll, Math.toDegrees(statistics.maxRoll.toDouble())))
-                StatisticsRow("Avg Roll", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.avgRoll, Math.toDegrees(statistics.avgRoll.toDouble())))
+                StatisticsRow("Min Roll", String.format(Locale.US, "%.2f rad (%.1f°)",
+                    statistics.minRoll, Math.toDegrees(statistics.minRoll.toDouble())))
+                StatisticsRow("Max Roll", String.format(Locale.US, "%.2f rad (%.1f°)",
+                    statistics.maxRoll, Math.toDegrees(statistics.maxRoll.toDouble())))
+                StatisticsRow("Avg Roll", String.format(Locale.US, "%.2f rad (%.1f°)",
+                    statistics.avgRoll, Math.toDegrees(statistics.avgRoll.toDouble())))
                 HorizontalDivider()
-                StatisticsRow("Min Pitch", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.minPitch, Math.toDegrees(statistics.minPitch.toDouble())))
-                StatisticsRow("Max Pitch", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.maxPitch, Math.toDegrees(statistics.maxPitch.toDouble())))
-                StatisticsRow("Avg Pitch", String.format(Locale.US, "%.2f rad (%.1f°)", statistics.avgPitch, Math.toDegrees(statistics.avgPitch.toDouble())))
+                StatisticsRow("Min Pitch", String.format(Locale.US, "%.2f rad (%.1f°)",
+                    statistics.minPitch, Math.toDegrees(statistics.minPitch.toDouble())))
+                StatisticsRow("Max Pitch", String.format(Locale.US, "%.2f rad (%.1f°)",
+                    statistics.maxPitch, Math.toDegrees(statistics.maxPitch.toDouble())))
+                StatisticsRow("Avg Pitch", String.format(Locale.US, "%.2f rad (%.1f°)",
+                    statistics.avgPitch, Math.toDegrees(statistics.avgPitch.toDouble())))
                 HorizontalDivider()
-                StatisticsRow("Stability Score", String.format(Locale.US, "%.1f%%", statistics.stabilityScore * 100))
-                StatisticsRow("Movement Intensity", String.format(Locale.US, "%.2f", statistics.movementIntensity))
+                StatisticsRow("Stability Score", String.format(Locale.US, "%.1f%%",
+                    statistics.stabilityScore * 100))
+                StatisticsRow("Movement Intensity", String.format(Locale.US, "%.2f",
+                    statistics.movementIntensity))
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onReset, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                TextButton(onClick = onReset, modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                     Text("Reset Statistics")
                 }
             }
@@ -1132,7 +1141,7 @@ fun SmoothLineChart(dataPoints: List<SensorDataPoint>) {
     if (dataPoints.isEmpty()) return
 
     val animatedAlpha by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
-    androidx.compose.foundation.Canvas(
+    Canvas(
         modifier = Modifier
             .fillMaxWidth()
             .height(160.dp)
@@ -1148,12 +1157,12 @@ fun SmoothLineChart(dataPoints: List<SensorDataPoint>) {
         val range = (maxRoll - minRoll).coerceAtLeast(0.1f)
 
         val points = dataPoints.mapIndexed { i, point ->
-            val x = i * stepX
+            val x = i.toFloat() * stepX
             val y = height - ((point.roll - minRoll) / range) * height
             Offset(x, y)
         }
 
-        
+        // Fill area
         val path = Path().apply {
             moveTo(0f, height)
             points.forEach { lineTo(it.x, it.y) }
@@ -1170,7 +1179,7 @@ fun SmoothLineChart(dataPoints: List<SensorDataPoint>) {
             )
         )
 
-        
+        // Line
         for (i in 0 until points.size - 1) {
             drawLine(
                 color = Color(0xFFFF5722).copy(alpha = animatedAlpha),
@@ -1181,12 +1190,12 @@ fun SmoothLineChart(dataPoints: List<SensorDataPoint>) {
             )
         }
 
-        
+        // Points
         points.forEach { point ->
             drawCircle(color = Color(0xFFFF5722), radius = 3f, center = point)
         }
 
-        
+        // Grid
         for (i in 0..4) {
             val y = height * i / 4
             drawLine(
@@ -1219,7 +1228,9 @@ fun StatisticsRow(label: String, value: String) {
     }
 }
 
-
+// ============================================================
+// Utility Functions
+// ============================================================
 
 private fun formatDuration(millis: Long): String {
     val seconds = (millis / 1000) % 60
@@ -1241,6 +1252,6 @@ private fun getColorForValue(value: Float, min: Float, max: Float): Color {
 private fun List<Float>.std(): Float {
     if (isEmpty()) return 0f
     val mean = this.average().toFloat()
-    val variance = this.map { (it - mean).pow(2f) }.average().toFloat()
+    val variance = this.map { (it - mean).toDouble().pow(2.0) }.average().toFloat()
     return sqrt(variance)
 }

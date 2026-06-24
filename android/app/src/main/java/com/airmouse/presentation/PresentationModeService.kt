@@ -5,6 +5,7 @@ package com.airmouse.presentation
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.airmouse.network.ConnectionManager
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.*
@@ -214,8 +215,8 @@ class PresentationModeService(
         val savedAnnotations = prefs.getString("presentation_saved_annotations", "")
         if (savedAnnotations.isNotEmpty()) {
             try {
-                // Parse and restore annotations
-                android.util.Log.d(TAG, "Restored saved annotations")
+                // Parse and restore annotations (stub – implement JSON serialization for production)
+                Log.d(TAG, "Restored saved annotations")
             } catch (_: Exception) { /* Ignore */ }
         }
     }
@@ -242,7 +243,7 @@ class PresentationModeService(
         connectionManager.sendControl("presentation_mode_start")
         resetInactivityTimer()
         requestPresentationInfo()
-        android.util.Log.i(TAG, "Presentation mode enabled")
+        Log.i(TAG, "Presentation mode enabled")
         onStateChanged?.invoke(_state.value)
     }
 
@@ -260,7 +261,7 @@ class PresentationModeService(
         stopRecording()
         if (laserPointerActive) disableLaserPointer()
         connectionManager.sendControl("presentation_mode_stop")
-        android.util.Log.i(TAG, "Presentation mode disabled")
+        Log.i(TAG, "Presentation mode disabled")
         onStateChanged?.invoke(_state.value)
     }
 
@@ -359,7 +360,7 @@ class PresentationModeService(
             recordAction("action", mapOf("action" to action.name))
         } catch (e: Exception) {
             onError?.invoke("Failed to perform action: ${e.message}")
-            android.util.Log.e(TAG, "Action failed: ${e.message}", e)
+            Log.e(TAG, "Action failed: ${e.message}", e)
         }
     }
 
@@ -407,7 +408,6 @@ class PresentationModeService(
         pendingAnnotation.add(Pair(x, y))
         if (pendingAnnotation.size >= 5) {
             finalizeAnnotation(color)
-            // Send incremental update
             val lastPoints = pendingAnnotation.takeLast(5)
             val pointsJson = lastPoints.joinToString(",") { (px, py) -> "{\"x\":$px,\"y\":$py}" }
             connectionManager.send("""{"type":"annotation","action":"draw","points":[$pointsJson]}""")
@@ -730,7 +730,7 @@ class PresentationModeService(
 
     private fun exportRecording() {
         // In production, save to file
-        android.util.Log.d(TAG, "Exporting recording with ${recordedActions.size} actions")
+        Log.d(TAG, "Exporting recording with ${recordedActions.size} actions")
     }
 
     private fun formatDuration(duration: Long): String {
@@ -810,7 +810,7 @@ class PresentationModeService(
         }
 
         // In production, save to file or share
-        android.util.Log.d(TAG, "Exporting ${annotations.size} annotations")
+        Log.d(TAG, "Exporting ${annotations.size} annotations")
         onAction?.invoke(PresentationAction.EXPORT_ANNOTATIONS, annotations)
     }
 
@@ -822,7 +822,7 @@ class PresentationModeService(
     private fun saveSession() {
         if (!_state.value.isActive) return
 
-        // Save state
+        // Save state – in production use JSON serialization
         prefs.putString("presentation_saved_state", _state.value.toString())
         prefs.putString("presentation_saved_metadata", _metadata.value.toString())
 
@@ -878,7 +878,7 @@ class PresentationModeService(
         val newTimer = Runnable {
             if (_state.value.isActive && laserPointerActive) {
                 disableLaserPointer()
-                android.util.Log.d(TAG, "Laser pointer disabled due to inactivity")
+                Log.d(TAG, "Laser pointer disabled due to inactivity")
             }
         }
         inactivityTimer = newTimer
@@ -919,6 +919,6 @@ class PresentationModeService(
         autoSaveJob?.cancel()
         handler.removeCallbacksAndMessages(null)
         scope.cancel()
-        android.util.Log.d(TAG, "Cleanup complete")
+        Log.d(TAG, "Cleanup complete")
     }
 }

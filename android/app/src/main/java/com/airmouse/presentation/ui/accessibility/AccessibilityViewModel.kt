@@ -26,6 +26,10 @@ class AccessibilityViewModel @Inject constructor(
         loadSettings()
     }
 
+    // ============================================================
+    // LOAD SETTINGS
+    // ============================================================
+
     private fun loadSettings() {
         _uiState.update {
             it.copy(
@@ -52,7 +56,12 @@ class AccessibilityViewModel @Inject constructor(
                 dwellClick = prefs.getBoolean("dwell_click", false),
                 dwellTime = prefs.getInt("dwell_time", 1000),
                 audioCues = prefs.getBoolean("audio_cues", true),
-                flashOnClick = prefs.getBoolean("flash_on_click", false)
+                flashOnClick = prefs.getBoolean("flash_on_click", false),
+                isMouseEnabled = prefs.getBoolean("is_mouse_enabled", true),
+                mousePointerLarge = prefs.getBoolean("mouse_pointer_large", false),
+                mouseTrails = prefs.getBoolean("mouse_trails", false),
+                snapToDefault = prefs.getBoolean("snap_to_default", false),
+                controlMode = prefs.getString("control_mode", "motion")
             )
         }
     }
@@ -74,6 +83,10 @@ class AccessibilityViewModel @Inject constructor(
             HapticIntensity.MEDIUM
         }
     }
+
+    // ============================================================
+    // UI HELPERS
+    // ============================================================
 
     private fun showSuccess(message: String) {
         viewModelScope.launch {
@@ -97,7 +110,10 @@ class AccessibilityViewModel @Inject constructor(
         context.sendBroadcast(intent)
     }
 
-    // --- Display ---
+    // ============================================================
+    // DISPLAY
+    // ============================================================
+
     fun setHighContrast(enabled: Boolean) {
         prefs.putBoolean("high_contrast", enabled)
         _uiState.update { it.copy(highContrast = enabled) }
@@ -137,7 +153,10 @@ class AccessibilityViewModel @Inject constructor(
         showSuccess("Color blind mode set to ${mode.displayName}")
     }
 
-    // --- Feedback ---
+    // ============================================================
+    // FEEDBACK
+    // ============================================================
+
     fun setHapticFeedback(enabled: Boolean) {
         prefs.putBoolean("haptic_enabled", enabled)
         _uiState.update { it.copy(hapticFeedback = enabled) }
@@ -162,7 +181,10 @@ class AccessibilityViewModel @Inject constructor(
         showSuccess("Voice feedback ${if (enabled) "enabled" else "disabled"}")
     }
 
-    // --- Gesture ---
+    // ============================================================
+    // GESTURE
+    // ============================================================
+
     fun setSimplifiedGestures(enabled: Boolean) {
         prefs.putBoolean("simplified_gestures", enabled)
         _uiState.update { it.copy(simplifiedGestures = enabled) }
@@ -193,7 +215,10 @@ class AccessibilityViewModel @Inject constructor(
         showSuccess("Gesture sensitivity set to $sensitivity")
     }
 
-    // --- Voice ---
+    // ============================================================
+    // VOICE
+    // ============================================================
+
     fun setVoiceWakeWord(enabled: Boolean) {
         prefs.putBoolean("voice_wake_word", enabled)
         _uiState.update { it.copy(voiceWakeWord = enabled) }
@@ -218,7 +243,10 @@ class AccessibilityViewModel @Inject constructor(
         showSuccess("Continuous listening ${if (enabled) "enabled" else "disabled"}")
     }
 
-    // --- Advanced ---
+    // ============================================================
+    // ADVANCED
+    // ============================================================
+
     fun setSwitchAccess(enabled: Boolean) {
         prefs.putBoolean("switch_access", enabled)
         _uiState.update { it.copy(switchAccess = enabled) }
@@ -249,7 +277,48 @@ class AccessibilityViewModel @Inject constructor(
         showSuccess("Flash on click ${if (enabled) "enabled" else "disabled"}")
     }
 
-    // --- Reset ---
+    // ============================================================
+    // MOUSE CONTROL
+    // ============================================================
+
+    fun setMouseEnabled(enabled: Boolean) {
+        prefs.putBoolean("is_mouse_enabled", enabled)
+        _uiState.update { it.copy(isMouseEnabled = enabled) }
+        showSuccess("Mouse control ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    fun setMousePointerLarge(enabled: Boolean) {
+        prefs.putBoolean("mouse_pointer_large", enabled)
+        _uiState.update { it.copy(mousePointerLarge = enabled) }
+        showSuccess("Large mouse pointer ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    fun setMouseTrails(enabled: Boolean) {
+        prefs.putBoolean("mouse_trails", enabled)
+        _uiState.update { it.copy(mouseTrails = enabled) }
+        showSuccess("Mouse trails ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    fun setSnapToDefault(enabled: Boolean) {
+        prefs.putBoolean("snap_to_default", enabled)
+        _uiState.update { it.copy(snapToDefault = enabled) }
+        showSuccess("Snap to default ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    // ============================================================
+    // CONTROL MODE
+    // ============================================================
+
+    fun setControlMode(mode: String) {
+        prefs.putString("control_mode", mode)
+        _uiState.update { it.copy(controlMode = mode) }
+        showSuccess("Control mode set to $mode")
+    }
+
+    // ============================================================
+    // RESET
+    // ============================================================
+
     fun resetToDefaults() {
         setHighContrast(false)
         setLargeText(false)
@@ -257,29 +326,29 @@ class AccessibilityViewModel @Inject constructor(
         setDarkMode(false)
         setCustomFontSize(16f)
         setColorBlindMode(ColorBlindMode.NONE)
-
         setHapticFeedback(true)
         setHapticIntensity(HapticIntensity.MEDIUM)
         setSoundFeedback(false)
         setVoiceFeedback(false)
-
         setSimplifiedGestures(false)
         setScreenReader(false)
         setAnnounceMovement(false)
         setAnnounceClicks(false)
         setGestureSensitivity(1.0f)
-
         setVoiceWakeWord(true)
         setWakeWord("Hey Air Mouse")
         setVoiceConfirmation(true)
         setVoiceContinuousListening(false)
-
         setSwitchAccess(false)
         setDwellClick(false)
         setDwellTime(1000)
         setAudioCues(true)
         setFlashOnClick(false)
-
+        setMouseEnabled(true)
+        setMousePointerLarge(false)
+        setMouseTrails(false)
+        setSnapToDefault(false)
+        setControlMode("motion")
         applyTheme()
         showSuccess("All accessibility settings reset to defaults")
     }
