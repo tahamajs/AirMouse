@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	user32             = windows.NewLazySystemDLL("user32.dll")
-	powrprof           = windows.NewLazySystemDLL("powrprof.dll")
+	user32              = windows.NewLazySystemDLL("user32.dll")
+	powrprof            = windows.NewLazySystemDLL("powrprof.dll")
 	procLockWorkStation = user32.NewProc("LockWorkStation")
 	procSetSuspendState = powrprof.NewProc("SetSuspendState")
 )
@@ -53,9 +53,9 @@ func (wp *WindowsProximity) SetSuspendState(hibernate, forceCritical bool) error
 	return nil
 }
 
-// GetSystemPowerStatus returns the system power status using windows.SystemPowerStatus.
-func (wp *WindowsProximity) GetSystemPowerStatus() (*windows.SystemPowerStatus, error) {
-	var ps windows.SystemPowerStatus
+// GetSystemPowerStatus returns the system power status using windows.SYSTEM_POWER_STATUS.
+func (wp *WindowsProximity) GetSystemPowerStatus() (*windows.SYSTEM_POWER_STATUS, error) {
+	var ps windows.SYSTEM_POWER_STATUS
 	if err := windows.GetSystemPowerStatus(&ps); err != nil {
 		return nil, err
 	}

@@ -16,13 +16,15 @@ type Particle struct {
 
 // Filter is a basic particle filter (sequential Monte Carlo).
 type Filter struct {
-	particles        []Particle
-	numParticles     int
-	resampleThresh   float64
-	effectiveN       float64
-	mu               sync.RWMutex
-	stats            FilterStats
-	callbacks        []func(event FilterEvent)
+	particles      []Particle
+	numParticles   int
+	resampleThresh float64
+	effectiveN     float64
+	mu             sync.RWMutex
+	stats          FilterStats
+	callbacks      []func(event FilterEvent)
+	rng            *rand.Rand
+	rngMu          sync.Mutex
 }
 
 // FilterStats holds statistics about the filter.
@@ -49,6 +51,7 @@ func NewFilter(numParticles int) *Filter {
 		numParticles:   numParticles,
 		resampleThresh: 0.5,
 		callbacks:      make([]func(FilterEvent), 0),
+		rng:            rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	f.initializeParticles()
 	return f
@@ -56,14 +59,15 @@ func NewFilter(numParticles int) *Filter {
 
 // initializeParticles distributes particles randomly.
 func (f *Filter) initializeParticles() {
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	f.rngMu.Lock()
+	defer f.rngMu.Unlock()
 	for i := 0; i < f.numParticles; i++ {
 		f.particles[i] = Particle{
 			State: [4]float64{
-				rng.Float64() * 100,
-				rng.Float64() * 100,
-				(rng.Float64() - 0.5) * 20,
-				(rng.Float64() - 0.5) * 20,
+				f.rng.Float64() * 100,
+				f.rng.Float64() * 100,
+				(f.rng.Float64() - 0.5) * 20,
+				(f.rng.Float64() - 0.5) * 20,
 			},
 			Weight:  1.0 / float64(f.numParticles),
 			History: make([][]float64, 0, 50),
@@ -75,20 +79,20 @@ func (f *Filter) initializeParticles() {
 func (f *Filter) Predict(dt float64) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.rngMu.Lock()
+	defer f.rngMu.Unlock()
 
 	processNoise := 5.0
 	velocityNoise := 2.0
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	for i := range f.particles {
 		p := &f.particles[i]
 		x, y, vx, vy := p.State[0], p.State[1], p.State[2], p.State[3]
 
-		// Simple constant‑velocity model with noise
-		newX := x + vx*dt + rng.NormFloat64()*processNoise
-		newY := y + vy*dt + rng.NormFloat64()*processNoise
-		newVx := vx + rng.NormFloat64()*velocityNoise
-		newVy := vy + rng.NormFloat64()*velocityNoise
+		newX := x + vx*dt + f.rng.NormFloat64()*processNoise
+		newY := y + vy*dt + f.rng.NormFloat64()*processNoise
+		newVx := vx + f.rng.NormFloat64()*velocityNoise
+		newVy := vy + f.rng.NormFloat64()*velocityNoise
 
 		p.State = [4]float64{newX, newY, newVx, newVy}
 		p.History = append(p.History, []float64{newX, newY})
@@ -165,7 +169,9 @@ func (f *Filter) resample() {
 	}
 
 	step := 1.0 / float64(f.numParticles)
-	u := rand.Float64() * step
+	f.rngMu.Lock()
+	u := f.rng.Float64() * step
+	f.rngMu.Unlock()
 	j := 0
 
 	for i := 0; i < f.numParticles; i++ {

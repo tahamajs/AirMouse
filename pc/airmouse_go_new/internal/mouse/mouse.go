@@ -1,144 +1,268 @@
-//go:build linux
-
 package mouse
 
 import (
-	"os"
-	"syscall"
+	"math"
+	"sync"
+	"sync/atomic"
 	"time"
-	"unsafe"
+
+	"airmouse-go/control/common"
+	"airmouse-go/control/predict"
 )
 
-var uinputFd int
-
-func init() {
-	fd, err := os.OpenFile("/dev/uinput", os.O_RDWR, 0)
-	if err == nil {
-		uinputFd = int(fd.Fd())
-	}
+// Controller defines the interface for mouse operations.
+type Controller interface {
+	Move(dx, dy float64)
+	Click(button string)
+	DoubleClick()
+	Scroll(delta int)
+	Stats() (clicks, dbl, right, scroll int64)
+	SetSensitivity(s float64)
+	GetSensitivity() float64
+	SetSmoothing(enabled bool)
+	SetAcceleration(enabled bool, factor float64)
+	EnablePredictive(enabled bool)
+	SetPredictiveBlendFactor(factor float64)
+	EnableAISmoothing(enabled bool)
+	SetAISmoother(s *predict.AISmoother)
+	EnableMLPrediction(enabled bool)
+	SetMLBlendFactor(factor float64)
+	ResetStats()
+	GetPosition() (x, y float64)
 }
 
-// inputEvent represents a Linux input event (24 bytes).
-type inputEvent struct {
-	Time  syscall.Timeval
-	Type  uint16
-	Code  uint16
-	Value int32
+type mouseController struct {
+	sensitivity    float64
+	clickCount     int64
+	doubleClickCnt int64
+	rightClickCnt  int64
+	scrollCount    int64
+	smoothing      bool
+	acceleration   bool
+	accelFactor    float64
+	lastX, lastY   float64
+	lastMoveTime   time.Time
+	moveCount      int
+	moveRateLimit  int
+	moveMu         sync.Mutex
+	lastClickTime  time.Time
+	clickWindow    int
+	predictor      *predict.MovementPredictor
+	predEnabled    bool
+	aiSmoother     *predict.AISmoother
+	aiEnabled      bool
+	aiBlendFactor  float64
+	mlPredictor    *predict.MLPredictor
+	mlEnabled      bool
+	mlBlend        float64
+	lastCursorX, lastCursorY float64
 }
 
-// Input event constants.
 const (
-	EV_REL    = 0x02
-	EV_KEY    = 0x01
-	EV_SYN    = 0x00
-	REL_X     = 0x00
-	REL_Y     = 0x01
-	REL_WHEEL = 0x08
-	BTN_LEFT  = 0x110
-	BTN_RIGHT = 0x111
-	BTN_MIDDLE = 0x112
+	minMoveDelta    = 0.01
+	rateLimitPerSec = 200
 )
 
-// LinuxMouse implements MouseController for Linux using uinput.
-type LinuxMouse struct {
-	*BaseMouse
+// NewController creates a new mouse controller with default settings.
+func NewController(sensitivity float64) Controller {
+	if sensitivity <= 0 {
+		sensitivity = 1.0
+	}
+	return &mouseController{
+		sensitivity:   sensitivity,
+		smoothing:     true,
+		acceleration:  true,
+		accelFactor:   1.5,
+		moveRateLimit: rateLimitPerSec,
+		predEnabled:   true,
+		aiEnabled:     false,
+		aiBlendFactor: 0.6,
+		mlEnabled:     false,
+		mlBlend:       0.6,
+		predictor:     predict.NewMovementPredictor(0.02, 0.6),
+	}
 }
 
-// NewMouseController creates a new Linux mouse controller.
-func NewMouseController(sensitivity float64) (MouseController, error) {
-	return &LinuxMouse{
-		BaseMouse: NewBaseMouse(sensitivity),
-	}, nil
+func (m *mouseController) SetSmoothing(enabled bool)               { m.smoothing = enabled }
+func (m *mouseController) SetAcceleration(enabled bool, factor float64) {
+	m.acceleration = enabled
+	if factor > 0 {
+		m.accelFactor = factor
+	}
 }
+func (m *mouseController) GetSensitivity() float64                  { return m.sensitivity }
+func (m *mouseController) SetSensitivity(s float64) {
+	if s < 0.1 {
+		s = 0.1
+	}
+	if s > 3.0 {
+		s = 3.0
+	}
+	m.sensitivity = s
+}
+func (m *mouseController) EnablePredictive(enabled bool) {
+	m.predEnabled = enabled
+	if m.predictor != nil {
+		m.predictor.SetEnabled(enabled)
+	}
+}
+func (m *mouseController) SetPredictiveBlendFactor(factor float64) {
+	if m.predictor != nil {
+		m.predictor.SetBlendFactor(factor)
+	}
+}
+func (m *mouseController) EnableAISmoothing(enabled bool) {
+	m.aiEnabled = enabled
+	if m.aiSmoother != nil {
+		m.aiSmoother.SetEnabled(enabled)
+	}
+}
+func (m *mouseController) SetAISmoother(s *predict.AISmoother) {
+	m.aiSmoother = s
+	if s != nil {
+		m.aiEnabled = true
+	}
+}
+func (m *mouseController) EnableMLPrediction(enabled bool) {
+	m.mlEnabled = enabled
+	if m.mlPredictor != nil {
+		m.mlPredictor.SetEnabled(enabled)
+	}
+}
+func (m *mouseController) SetMLBlendFactor(factor float64)         { m.mlBlend = factor }
+func (m *mouseController) ResetStats() {
+	atomic.StoreInt64(&m.clickCount, 0)
+	atomic.StoreInt64(&m.doubleClickCnt, 0)
+	atomic.StoreInt64(&m.rightClickCnt, 0)
+	atomic.StoreInt64(&m.scrollCount, 0)
+}
+func (m *mouseController) GetPosition() (x, y float64)              { return m.lastCursorX, m.lastCursorY }
 
-// Move sends relative movement events.
-func (m *LinuxMouse) Move(dx, dy float64) {
-	if uinputFd == 0 {
+// Move applies all filters (smoothing, prediction, acceleration) and executes the movement.
+func (m *mouseController) Move(dx, dy float64) {
+	if common.IsMovementPaused() {
 		return
 	}
-	m.mu.RLock()
-	sx, sy := m.applySensitivity(dx, dy)
-	m.mu.RUnlock()
-
-	// Clamp to int32 range.
-	if sx > 32767 {
-		sx = 32767
-	} else if sx < -32767 {
-		sx = -32767
+	m.moveMu.Lock()
+	now := time.Now()
+	if now.Sub(m.lastMoveTime) > time.Second {
+		m.moveCount = 0
+		m.lastMoveTime = now
 	}
-	if sy > 32767 {
-		sy = 32767
-	} else if sy < -32767 {
-		sy = -32767
-	}
-
-	events := []inputEvent{
-		{Type: EV_REL, Code: REL_X, Value: int32(sx)},
-		{Type: EV_REL, Code: REL_Y, Value: int32(sy)},
-		{Type: EV_SYN, Code: 0, Value: 0},
-	}
-	m.writeEvents(events)
-}
-
-// Click simulates a mouse button click.
-func (m *LinuxMouse) Click(button string) {
-	if uinputFd == 0 {
+	m.moveCount++
+	if m.moveCount > m.moveRateLimit {
+		m.moveMu.Unlock()
 		return
 	}
-	btn := BTN_LEFT
+	m.moveMu.Unlock()
+
+	dx *= m.sensitivity
+	dy *= m.sensitivity
+	if math.Abs(dx) < 0.5 {
+		dx = 0
+	}
+	if math.Abs(dy) < 0.5 {
+		dy = 0
+	}
+	if dx == 0 && dy == 0 {
+		return
+	}
+
+	if m.predEnabled && m.predictor != nil {
+		dx, dy = m.predictor.AddMovement(dx, dy)
+	} else {
+		dx, dy = m.applySmoothing(dx, dy)
+	}
+
+	if m.aiEnabled && m.aiSmoother != nil {
+		m.aiSmoother.AddPoint(m.lastCursorX, m.lastCursorY)
+		predDx, predDy, _ := m.aiSmoother.PredictDelta()
+		if predDx != 0 || predDy != 0 {
+			dx = (1-m.aiBlendFactor)*dx + m.aiBlendFactor*predDx
+			dy = (1-m.aiBlendFactor)*dy + m.aiBlendFactor*predDy
+		}
+	}
+
+	if m.mlEnabled && m.mlPredictor != nil {
+		m.mlPredictor.AddPoint(m.lastCursorX, m.lastCursorY)
+		predDx, predDy, _, _ := m.mlPredictor.PredictDelta()
+		dx = (1-m.mlBlend)*dx + m.mlBlend*predDx
+		dy = (1-m.mlBlend)*dy + m.mlBlend*predDy
+	}
+
+	if m.acceleration {
+		speed := math.Hypot(dx, dy)
+		if speed > 5 {
+			factor := 1.0 + m.accelFactor*(speed/50.0)
+			if factor > 3.0 {
+				factor = 3.0
+			}
+			dx *= factor
+			dy *= factor
+		}
+	}
+
+	if math.Abs(dx) < minMoveDelta && math.Abs(dy) < minMoveDelta {
+		return
+	}
+	m.executeMove(dx, dy)
+	m.lastCursorX += dx
+	m.lastCursorY += dy
+}
+
+// Click handles single clicks with double‑click detection.
+func (m *mouseController) Click(button string) {
+	now := time.Now()
+	if button == "left" {
+		if now.Sub(m.lastClickTime) < 300*time.Millisecond {
+			m.clickWindow++
+			if m.clickWindow >= 2 {
+				m.DoubleClick()
+				m.clickWindow = 0
+				m.lastClickTime = time.Time{}
+				return
+			}
+		} else {
+			m.clickWindow = 1
+			m.lastClickTime = now
+		}
+	}
+	m.executeClick(button)
 	switch button {
+	case "left":
+		atomic.AddInt64(&m.clickCount, 1)
 	case "right":
-		btn = BTN_RIGHT
-		m.mu.Lock()
-		m.rightClicks++
-		m.mu.Unlock()
-	case "middle":
-		btn = BTN_MIDDLE
-		m.mu.Lock()
-		m.clicks++
-		m.mu.Unlock()
-	default:
-		m.mu.Lock()
-		m.clicks++
-		m.mu.Unlock()
+		atomic.AddInt64(&m.rightClickCnt, 1)
 	}
-	events := []inputEvent{
-		{Type: EV_KEY, Code: uint16(btn), Value: 1},
-		{Type: EV_SYN, Code: 0, Value: 0},
-		{Type: EV_KEY, Code: uint16(btn), Value: 0},
-		{Type: EV_SYN, Code: 0, Value: 0},
-	}
-	m.writeEvents(events)
 }
 
-// DoubleClick sends two left‑clicks.
-func (m *LinuxMouse) DoubleClick() {
-	m.mu.Lock()
-	m.doubleClicks++
-	m.mu.Unlock()
-	m.Click("left")
-	time.Sleep(50 * time.Millisecond)
-	m.Click("left")
+// DoubleClick sends a double‑click event.
+func (m *mouseController) DoubleClick() {
+	m.executeDoubleClick()
+	atomic.AddInt64(&m.doubleClickCnt, 1)
 }
 
-// Scroll sends wheel events.
-func (m *LinuxMouse) Scroll(delta int) {
-	if uinputFd == 0 {
-		return
-	}
-	m.mu.Lock()
-	m.scrolls++
-	m.mu.Unlock()
-	events := []inputEvent{
-		{Type: EV_REL, Code: REL_WHEEL, Value: int32(delta)},
-		{Type: EV_SYN, Code: 0, Value: 0},
-	}
-	m.writeEvents(events)
+// Scroll sends a scroll event.
+func (m *mouseController) Scroll(delta int) {
+	m.executeScroll(delta)
+	atomic.AddInt64(&m.scrollCount, 1)
 }
 
-// writeEvents writes the input events to /dev/uinput.
-func (m *LinuxMouse) writeEvents(events []inputEvent) {
-	for _, ev := range events {
-		syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+// Stats returns current usage counters.
+func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
+	return atomic.LoadInt64(&m.clickCount),
+		atomic.LoadInt64(&m.doubleClickCnt),
+		atomic.LoadInt64(&m.rightClickCnt),
+		atomic.LoadInt64(&m.scrollCount)
+}
+
+// applySmoothing performs exponential moving average smoothing.
+func (m *mouseController) applySmoothing(dx, dy float64) (float64, float64) {
+	if !m.smoothing {
+		return dx, dy
 	}
+	const alpha = 0.3
+	m.lastX = alpha*dx + (1-alpha)*m.lastX
+	m.lastY = alpha*dy + (1-alpha)*m.lastY
+	return m.lastX, m.lastY
 }

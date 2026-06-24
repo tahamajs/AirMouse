@@ -22,7 +22,7 @@ import (
 
 // GetPlatformModifier returns the appropriate modifier key for the platform.
 func GetPlatformModifier() string {
-	return "Ctrl" // Fyne handles Cmd on macOS automatically via theme shortcuts
+	return "Ctrl"
 }
 
 // IsDarkTheme returns true if the current theme is dark.
@@ -31,6 +31,9 @@ func IsDarkTheme() bool {
 }
 
 // GetWindowSize returns a size that works well across platforms.
+func GetWindowSize() (width, height float32) {
+	return 1200, 800
+}
 
 // CenterWindow centers a window on screen.
 func CenterWindow(w fyne.Window) {
@@ -148,7 +151,6 @@ func ShowWelcomeDialog(parent fyne.Window) {
 			return
 		}
 	}
-
 	content := widget.NewRichTextFromMarkdown(
 		"# Welcome to Air Mouse Pro! 🚀\n\n" +
 			"## Quick Start\n" +
@@ -162,7 +164,6 @@ func ShowWelcomeDialog(parent fyne.Window) {
 			"- Check the **Logs** tab for troubleshooting.\n\n" +
 			"💡 *Pro tip: Grant Accessibility permission on macOS for mouse control.*",
 	)
-
 	dialog.ShowCustom("Welcome to Air Mouse Pro", "Get Started", content, parent)
 }
 
@@ -178,44 +179,37 @@ func ShowContextHelp(parent fyne.Window, context string) {
 			return
 		}
 	}
-
 	helpMap := map[string]string{
 		"dashboard": "## Dashboard\n\n" +
 			"**Start/Stop Server** – controls the service.\n" +
 			"**Approval Center** – shows devices waiting for approval.\n" +
 			"**Statistics** – live click and device counts.\n" +
 			"**Quick Actions** – pause/resume movement, reset stats.",
-
 		"devices": "## Devices\n\n" +
 			"**Pending devices** – appear with an orange dot.\n" +
 			"**Approve** – tap to allow mouse control.\n" +
 			"**Block** – prevent a device from connecting.\n" +
 			"**Rename** – give devices friendly names.",
-
 		"network": "## Network\n\n" +
 			"**IP Address** – select the correct network interface.\n" +
 			"**Ports** – TCP (8080), WebSocket (8081), UDP discovery (8082).\n" +
 			"**QR Code** – scan with the Android app to pair.\n" +
 			"**Test Connection** – verify the server is reachable.",
-
 		"gestures": "## Gestures\n\n" +
 			"**Templates** – pre‑defined gestures for common actions.\n" +
 			"**Add/Edit/Delete** – manage your own gesture library.\n" +
 			"**Test Gesture** – try a gesture before using it.\n" +
 			"**Import/Export** – share gesture templates.",
-
 		"proximity": "## Proximity\n\n" +
 			"**Enable** – turn on auto‑lock/unlock.\n" +
 			"**Thresholds** – near (unlock) and far (lock) distances.\n" +
 			"**Calibrate** – adjust for your environment.\n" +
 			"**Lock/Unlock Now** – manual override.",
 	}
-
 	markdown, ok := helpMap[context]
 	if !ok {
 		markdown = "## Help\n\nNo specific help available for this context."
 	}
-
 	content := widget.NewRichTextFromMarkdown(markdown)
 	dialog.ShowCustom("Help", "Close", content, parent)
 }
@@ -257,7 +251,6 @@ func FormatDuration(d time.Duration) string {
 	hours := int(d.Hours())
 	minutes := int(d.Minutes()) % 60
 	seconds := int(d.Seconds()) % 60
-
 	if hours > 0 {
 		return fmt.Sprintf("%dh %dm %ds", hours, minutes, seconds)
 	}
@@ -349,7 +342,14 @@ func toLower(s string) string {
 // Window / Platform Helpers
 // ============================================================
 
-
+// RunOnMain executes fn on the UI thread.
+func RunOnMain(fn func()) {
+	if driver, ok := fyne.CurrentApp().Driver().(interface{ RunOnMain(func()) }); ok {
+		driver.RunOnMain(fn)
+	} else {
+		fn()
+	}
+}
 
 // getCurrentWindow returns the first application window, or nil if none.
 func getCurrentWindow() fyne.Window {

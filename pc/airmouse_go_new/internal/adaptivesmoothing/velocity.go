@@ -3,7 +3,6 @@ package adaptivesmoothing
 import (
 	"math"
 	"math/rand"
-	"time"
 )
 
 // LogNormalVelocity models velocity using a log‑normal distribution.
