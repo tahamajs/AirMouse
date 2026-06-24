@@ -8,38 +8,80 @@ import (
     "time"
 
     "airmouse-go/internal/handler/websocket"
+    "airmouse-go/internal/utils"
 )
 
-func NewRouter(hub *websocket.Hub) *http.ServeMux {
-    mux := http.NewServeMux()
-    
-    // WebSocket endpoint
-    mux.HandleFunc("/ws", websocket.WebSocketHandler(hub))
-    
-    // Health check
-    mux.HandleFunc("/health", healthHandler)
-    
-    // Metrics
-    mux.HandleFunc("/metrics", metricsHandler)
-    
-    // Status
-    mux.HandleFunc("/api/status", statusHandler(hub))
-    
-    // API endpoints
-    mux.HandleFunc("/api/clients", clientsHandler(hub))
-    mux.HandleFunc("/api/stats", statsHandler(hub))
-    
-    // Static files
-    mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
-    
-    return mux
+// Router wraps the HTTP serve mux with additional configuration.
+type Router struct {
+    mux     *http.ServeMux
+    hub     *websocket.Hub
+    middlewares []Middleware
 }
+
+// NewRouter creates a new HTTP router with the given WebSocket hub.
+func NewRouter(hub *websocket.Hub) *Router {
+    r := &Router{
+        mux:     http.NewServeMux(),
+        hub:     hub,
+        middlewares: []Middleware{
+            CORSMiddleware,
+            RecoverMiddleware,
+            LoggingMiddleware,
+        },
+    }
+    r.setupRoutes()
+    return r
+}
+
+// setupRoutes registers all HTTP endpoints.
+func (r *Router) setupRoutes() {
+    // WebSocket endpoint
+    r.mux.HandleFunc("/ws", websocket.WebSocketHandler(r.hub))
+
+    // Health check
+    r.mux.HandleFunc("/health", healthHandler)
+
+    // Prometheus-style metrics
+    r.mux.HandleFunc("/metrics", metricsHandler)
+
+    // API endpoints
+    r.mux.HandleFunc("/api/status", r.statusHandler())
+    r.mux.HandleFunc("/api/clients", r.clientsHandler())
+    r.mux.HandleFunc("/api/stats", r.statsHandler())
+
+    // Static files (optional)
+    r.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+}
+
+// Handler returns the fully wrapped http.Handler with all middlewares applied.
+func (r *Router) Handler() http.Handler {
+    var handler http.Handler = r.mux
+    for i := len(r.middlewares) - 1; i >= 0; i-- {
+        handler = r.middlewares[i](handler)
+    }
+    return handler
+}
+
+// Start starts the HTTP server on the given address.
+func (r *Router) Start(addr string) error {
+    utils.LogInfo("Starting HTTP server on %s", addr)
+    server := &http.Server{
+        Addr:         addr,
+        Handler:      r.Handler(),
+        ReadTimeout:  10 * time.Second,
+        WriteTimeout: 10 * time.Second,
+        IdleTimeout:  60 * time.Second,
+    }
+    return server.ListenAndServe()
+}
+
+// --- Handlers ---
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(map[string]interface{}{
-        "status": "ok",
+        "status":    "ok",
         "timestamp": time.Now().Unix(),
     })
 }
@@ -47,49 +89,51 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
     var memStats runtime.MemStats
     runtime.ReadMemStats(&memStats)
-    
+
     w.Header().Set("Content-Type", "text/plain")
     w.WriteHeader(http.StatusOK)
-    
+
+    // In production, you would use a proper Prometheus registry.
+    // For now, we output simple gauge metrics.
     w.Write([]byte("# HELP airmouse_clients Connected clients\n"))
     w.Write([]byte("# TYPE airmouse_clients gauge\n"))
     w.Write([]byte("airmouse_clients 0\n\n"))
-    
+
     w.Write([]byte("# HELP airmouse_goroutines Number of goroutines\n"))
     w.Write([]byte("# TYPE airmouse_goroutines gauge\n"))
     w.Write([]byte(fmt.Sprintf("airmouse_goroutines %d\n\n", runtime.NumGoroutine())))
-    
-    w.Write([]byte("# HELP airmouse_memory_alloc_bytes Memory allocated\n"))
+
+    w.Write([]byte("# HELP airmouse_memory_alloc_bytes Memory allocated (bytes)\n"))
     w.Write([]byte("# TYPE airmouse_memory_alloc_bytes gauge\n"))
     w.Write([]byte(fmt.Sprintf("airmouse_memory_alloc_bytes %d\n", memStats.Alloc)))
 }
 
-func statusHandler(hub *websocket.Hub) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        stats := hub.GetStats()
+func (r *Router) statusHandler() http.HandlerFunc {
+    return func(w http.ResponseWriter, req *http.Request) {
+        stats := r.hub.GetStats()
         w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(map[string]interface{}{
             "status": "running",
-            "stats": stats,
+            "stats":  stats,
             "uptime": time.Since(stats.StartTime).Seconds(),
         })
     }
 }
 
-func clientsHandler(hub *websocket.Hub) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        clients := hub.GetConnectedClients()
+func (r *Router) clientsHandler() http.HandlerFunc {
+    return func(w http.ResponseWriter, req *http.Request) {
+        clients := r.hub.GetConnectedClients()
         w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(map[string]interface{}{
             "clients": clients,
-            "count": len(clients),
+            "count":   len(clients),
         })
     }
 }
 
-func statsHandler(hub *websocket.Hub) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        stats := hub.GetStats()
+func (r *Router) statsHandler() http.HandlerFunc {
+    return func(w http.ResponseWriter, req *http.Request) {
+        stats := r.hub.GetStats()
         w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(stats)
     }

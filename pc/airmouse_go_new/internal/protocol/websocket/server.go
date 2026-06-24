@@ -789,3 +789,21 @@ func (s *Server) IsRunning() bool {
 	defer s.mu.RUnlock()
 	return s.running
 }
+case "proximity":
+    if s.proxMgr == nil {
+        break
+    }
+    deviceID, _ := payload["device_id"].(string)
+    isNear, _ := payload["is_near"].(bool)
+    distance := firstNumber(payload, "distance")
+    rssi := int32(firstNumber(payload, "rssi"))
+
+    update := proximity.ProximityUpdate{
+        DeviceID:  deviceID,
+        IsNear:    isNear,
+        Distance:  float32(distance),
+        RSSI:      rssi,
+        Timestamp: time.Now().Unix(),
+    }
+    s.proxMgr.ProcessUpdate(update)
+    utils.LogDebug("Proximity update: device=%s near=%v dist=%.2f", deviceID, isNear, distance)

@@ -4,6 +4,7 @@ package control
 
 import (
     "syscall"
+    "time"   // <-- ADDED
 )
 
 var (
@@ -36,7 +37,7 @@ func (m *mouseController) executeClick(button string) {
 
 func (m *mouseController) executeDoubleClick() { 
     m.executeClick("left")
-    time.Sleep(50 * time.Millisecond)
+    time.Sleep(50 * time.Millisecond)   // <-- now works with time import
     m.executeClick("left")
 }
 

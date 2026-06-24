@@ -196,7 +196,103 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 					logger.Info("Stopping device manager...")
 					deviceMgr.Stop()
 				}
+package main
 
+import (
+    "airmouse-go/internal/handler/websocket"
+    "airmouse-go/infra/http"
+    "airmouse-go/internal/utils"
+)
+
+func main() {
+    // ... initialise hub, services, etc.
+    hub := websocket.NewHub() // your hub constructor
+
+    // Create HTTP router
+    router := http.NewRouter(hub)
+
+    // Start the server (blocking call)
+    if err := router.Start(":8080"); err != nil {
+        utils.LogError("HTTP server failed: %v", err)
+    }
+}// main.go (simplified)
+
+func main() {
+    cfg := config.Get()
+
+    // 1. Create the mouse controller with default sensitivity.
+    mouseController := control.NewMouseController(cfg.Sensitivity)
+
+    // 2. Create the device manager (for tracking connected devices).
+    deviceManager := device.NewManager()
+
+    // 3. Create the protocol server, passing the mouse controller.
+    protocolServer := protocol.NewProtocolServer(mouseController, deviceManager, authManager)
+
+    // 4. Build the UI, also passing the mouse controller (for settings).
+    appUI := ui.NewApp(cfg, protocolServer, mouseController, deviceManager)
+
+    // 5. Run the UI (event loop).
+    appUI.Run()import "airmouse-go/internal/proximity"
+
+// ... inside main() ...
+
+// Create proximity manager
+proxMgr := proximity.NewManager()
+
+// Optional: load saved RSSI fusion state
+fusion := proximity.NewRSSIFusion(-59, 2.0)
+statePath := filepath.Join(cfg.ConfigDir, "proximity_state.json")
+if err := fusion.LoadState(statePath); err == nil {
+    proxMgr.SetRSSIFusion(fusion)
+}
+import (
+    "airmouse-go/internal/proximity"
+    "path/filepath"
+    "time"
+)
+
+// ... inside main() after creating the config ...
+
+// Create the proximity manager
+proxMgr := proximity.NewManager()
+
+// Optional: load saved RSSI fusion parameters
+fusion := proximity.NewRSSIFusion(-59, 2.0)
+statePath := filepath.Join(cfg.ConfigDir, "proximity_state.json")
+_ = fusion.LoadState(statePath) // ignore error if first run
+proxMgr.SetRSSIFusion(fusion)
+
+// Set thresholds from config (or use defaults)
+proxMgr.SetGlobalThresholds(
+    float32(cfg.ProximityNearThreshold), // default 1.5
+    float32(cfg.ProximityFarThreshold),  // default 3.0
+)
+
+// Enable/disable auto‑lock based on config
+proxMgr.EnableAutoLock(cfg.ProximityEnabled)
+proxMgr.EnableAutoUnlock(cfg.ProximityEnabled)
+
+// Optional: save fusion state periodically
+go func() {
+    ticker := time.NewTicker(60 * time.Second)
+    defer ticker.Stop()
+    for range ticker.C {
+        _ = fusion.SaveState(statePath)
+    }
+}()
+// Set thresholds from config (or defaults)
+nearThreshold := float32(cfg.ProximityNearThreshold) // 1.5
+farThreshold := float32(cfg.ProximityFarThreshold)   // 3.0
+proxMgr.SetGlobalThresholds(nearThreshold, farThreshold)
+// If you have a method to save state
+if fusion != nil {
+    _ = fusion.SaveState(statePath)
+}
+// Enable/disable auto‑lock based on config
+proxMgr.EnableAutoLock(cfg.ProximityEnabled)
+proxMgr.EnableAutoUnlock(cfg.ProximityEnabled)
+}
 				// Stop the UI (this will cause appUI.Run() to return).
 				if appUI != nil {
 					logger.Info("Closing UI...")
