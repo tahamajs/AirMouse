@@ -66,7 +66,7 @@ class StatisticsViewModel @Inject constructor(
                 val theme = prefs.getString("theme", "system")
                 val language = prefs.getLanguage()
                 val mostUsed = historicalStats.mostUsedGesture
-                val mostUsedCount = historicalStats.mostUsedCount
+                val mostUsedCount = historicalStats.gesturesByType[mostUsed] ?: 0
                 val gestureTypeCount = historicalStats.gesturesByType.size
                 val customGestureCount = historicalStats.customGestureUsage.values.sum()
 

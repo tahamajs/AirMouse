@@ -4,6 +4,7 @@ package com.airmouse.sensor
 import com.airmouse.sensors.EnhancedGestureDetector
 import android.content.Context
 import android.os.Vibrator
+import com.airmouse.PreferencesManager
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -30,7 +31,7 @@ class GestureDetectorTest {
         every { mockPrefs.getClickThreshold() } returns 8f
         every { mockPrefs.getDoubleClickInterval() } returns 400L
         every { mockPrefs.getScrollThreshold() } returns 6f
-        every { mockPrefs.getScrollDebounce() } returns 100L
+        every { mockPrefs.getScrollDebounce() } returns 100f
         every { mockPrefs.getRightClickTilt() } returns 45f
         every { mockPrefs.getRightClickDuration() } returns 500L
         every { mockPrefs.isHapticEnabled() } returns true

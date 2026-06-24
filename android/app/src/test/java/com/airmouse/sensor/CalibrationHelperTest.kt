@@ -2,6 +2,7 @@
 package com.airmouse.sensor
 
 import android.content.Context
+import com.airmouse.PreferencesManager
 import com.airmouse.sensors.CalibrationHelper
 import io.mockk.*
 import kotlinx.coroutines.runBlocking

@@ -363,6 +363,7 @@ func (s *Server) ApproveDevice(deviceID string) error {
 	client.BytesSent += int64(len(welcome))
 	client.Approved = true
 	control.SetMovementPaused(false)
+	control.ClearPause()
 	if s.deviceMgr != nil {
 		deviceIDToUpdate := client.DeviceID
 		if deviceIDToUpdate == "" {

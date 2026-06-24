@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -90,20 +91,6 @@ fun ServerLogsScreen(
                         }
                     }
                     
-                    IconButton(onClick = { viewModel.toggleSelectionMode() }) {
-                        Icon(
-                            if (uiState.isSelectionMode) Icons.Outlined.CheckBox else Icons.Outlined.CheckBox,
-                            contentDescription = "Select"
-                        )
-                    }
-                    
-                    IconButton(onClick = { viewModel.toggleAutoScroll() }) {
-                        Icon(
-                            if (uiState.isAutoScroll) Icons.Outlined.VerticalAlignBottom else Icons.Outlined.VerticalAlignBottom,
-                            contentDescription = "Auto-scroll"
-                        )
-                    }
-                    
                     IconButton(onClick = { viewModel.refreshLogs() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
@@ -152,38 +139,16 @@ fun ServerLogsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "📊 ${statistics.totalCount} logs",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (uiState.filter.isNotEmpty()) {
-                        Text(
-                            text = "🔍 ${uiState.searchResultsCount} matches",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Text(
-                        text = if (uiState.sortOrder == SortOrder.NEWEST_FIRST) "🕐 Newest first" else "🕐 Oldest first",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            LogOverviewCard(
+                statistics = statistics,
+                uiState = uiState,
+                onToggleSelectionMode = { viewModel.toggleSelectionMode() },
+                onToggleAutoScroll = { viewModel.toggleAutoScroll() },
+                onClearFilter = {
+                    viewModel.setFilter("")
+                    viewModel.setLevel("All")
                 }
-            }
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -379,66 +344,66 @@ fun LogEntryItem(
             else 
                 MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { if (isSelectionMode) onSelect() }
                 .padding(if (compactView) 8.dp else 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Top
         ) {
-            
             if (isSelectionMode) {
                 Checkbox(
                     checked = isSelected,
                     onCheckedChange = { onSelect() },
                     modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
             }
-            
-            
+
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(if (compactView) 48.dp else 72.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(log.levelColor)
+            )
+
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(log.levelColor)
-                    )
-                    
-                    
-                    Text(
-                        text = log.levelIcon + " " + log.level.displayName,
-                        fontSize = if (compactView) 9.sp else 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = log.levelColor,
-                        fontFamily = FontFamily.Monospace
-                    )
-                    
-                    
+                    Surface(
+                        color = log.levelColor.copy(alpha = 0.14f),
+                        contentColor = log.levelColor,
+                        shape = RoundedCornerShape(999.dp)
+                    ) {
+                        Text(
+                            text = log.level.displayName,
+                            fontSize = if (compactView) 9.sp else 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
                     if (showTags) {
                         Surface(
                             modifier = Modifier.clickable { onTagClick(log.tag) },
-                            shape = RoundedCornerShape(4.dp),
+                            shape = RoundedCornerShape(999.dp),
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
                                 text = log.tag,
                                 fontSize = if (compactView) 9.sp else 10.sp,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 fontFamily = FontFamily.Monospace
                             )
                         }
                     }
-                    
-                    
+
                     if (showTimestamps) {
                         Text(
                             text = log.formattedTime,
@@ -448,58 +413,180 @@ fun LogEntryItem(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
-                
+
                 Text(
                     text = log.message,
                     fontSize = fontSize.sp,
-                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
                     softWrap = wordWrap,
-                    maxLines = if (compactView && !wordWrap) 2 else Int.MAX_VALUE
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = if (compactView && !wordWrap) 2 else 4
                 )
-                
-                
+
                 if (log.details != null && !compactView) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "📎 ${log.details}",
-                        fontSize = (fontSize - 1).sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = log.details,
+                            fontSize = (fontSize - 1).sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
                 }
-                
-                
+
                 if (log.stackTrace != null && !compactView) {
                     var expanded by remember { mutableStateOf(false) }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { expanded = !expanded }
-                            .padding(top = 4.dp),
+                            .padding(top = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             if (expanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text("Stack Trace", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Stack trace",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     if (expanded) {
-                        Text(
-                            text = log.stackTrace,
-                            fontSize = (fontSize - 1).sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 20.dp, top = 4.dp)
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Text(
+                                text = log.stackTrace,
+                                fontSize = (fontSize - 1).sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun LogOverviewCard(
+    statistics: LogStatistics,
+    uiState: ServerLogsUiState,
+    onToggleSelectionMode: () -> Unit,
+    onToggleAutoScroll: () -> Unit,
+    onClearFilter: () -> Unit
+) {
+    val activeLogs = uiState.searchResultsCount
+    val criticalLogs = statistics.warnCount + statistics.errorCount + statistics.fatalCount
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Log stream",
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (uiState.filter.isNotEmpty() || uiState.level != "All") {
+                    TextButton(onClick = onClearFilter) {
+                        Text("Clear filters")
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                LogMetricChip(label = "Total", value = statistics.totalCount.toString(), modifier = Modifier.weight(1f))
+                LogMetricChip(label = "Visible", value = activeLogs.toString(), modifier = Modifier.weight(1f))
+                LogMetricChip(label = "Critical", value = criticalLogs.toString(), modifier = Modifier.weight(1f))
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                FilterChip(
+                    selected = uiState.isSelectionMode,
+                    onClick = onToggleSelectionMode,
+                    label = { Text("Selection") },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = uiState.isAutoScroll,
+                    onClick = onToggleAutoScroll,
+                    label = { Text("Auto-scroll") },
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = if (uiState.sortOrder == SortOrder.NEWEST_FIRST) "Newest first" else "Oldest first",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LogMetricChip(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -521,13 +608,13 @@ fun EmptyLogsState(hasFilter: Boolean, onClearFilter: () -> Unit, onAddTestLog: 
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "No Logs to Display",
+            text = "No logs to display",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (hasFilter) "Try clearing your filters" else "Logs from the server will appear here",
+            text = if (hasFilter) "Try clearing your filters to widen the feed." else "Logs from the server will appear here.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
@@ -570,7 +657,8 @@ fun PaginationControls(
         Text(
             text = "Page ${currentPage + 1} of $totalPages",
             modifier = Modifier.padding(horizontal = 16.dp),
-            fontSize = 12.sp
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
         IconButton(
@@ -586,26 +674,29 @@ fun PaginationControls(
 fun StatisticsDialog(statistics: LogStatistics, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Log Statistics") },
+        title = { Text("Log statistics") },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
-                StatisticRow("Total Logs", statistics.totalCount.toString())
-                Divider()
-                StatisticRow("🔍 Debug", statistics.debugCount.toString(), Color(0xFF9E9E9E))
-                StatisticRow("ℹ️ Info", statistics.infoCount.toString(), Color(0xFF2196F3))
-                StatisticRow("⚠️ Warning", statistics.warnCount.toString(), Color(0xFFFF9800))
-                StatisticRow("❌ Error", statistics.errorCount.toString(), Color(0xFFF44336))
-                StatisticRow("📝 Verbose", statistics.verboseCount.toString(), Color(0xFF8BC34A))
-                StatisticRow("💀 Fatal", statistics.fatalCount.toString(), Color(0xFF9C27B0))
-                Divider()
-                StatisticRow("Unique Tags", statistics.uniqueTags.toString())
-                StatisticRow("Oldest Log", statistics.formattedOldest)
-                StatisticRow("Newest Log", statistics.formattedNewest)
-                StatisticRow("Average Logs/Hour", String.format(java.util.Locale.US, "%.1f", statistics.averageLogsPerHour))
+                StatisticRow("Total logs", statistics.totalCount.toString())
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                StatisticRow("Debug", statistics.debugCount.toString(), Color(0xFF9E9E9E))
+                StatisticRow("Info", statistics.infoCount.toString(), Color(0xFF2196F3))
+                StatisticRow("Warning", statistics.warnCount.toString(), Color(0xFFFF9800))
+                StatisticRow("Error", statistics.errorCount.toString(), Color(0xFFF44336))
+                StatisticRow("Verbose", statistics.verboseCount.toString(), Color(0xFF8BC34A))
+                StatisticRow("Fatal", statistics.fatalCount.toString(), Color(0xFF9C27B0))
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                StatisticRow("Unique tags", statistics.uniqueTags.toString())
+                StatisticRow("Oldest log", statistics.formattedOldest)
+                StatisticRow("Newest log", statistics.formattedNewest)
+                StatisticRow(
+                    "Average logs/hour",
+                    String.format(java.util.Locale.US, "%.1f", statistics.averageLogsPerHour)
+                )
             }
         },
         confirmButton = {
@@ -635,6 +726,20 @@ fun StatisticRow(label: String, value: String, color: Color? = null) {
 }
 
 @Composable
+fun SectionHeader(
+    title: String,
+    color: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Text(
+        text = title,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = color,
+        modifier = Modifier.padding(bottom = 6.dp)
+    )
+}
+
+@Composable
 fun SettingsDialog(
     uiState: ServerLogsUiState,
     onAutoRefreshChange: () -> Unit,
@@ -651,7 +756,7 @@ fun SettingsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Log Settings") },
+        title = { Text("Log settings") },
         text = {
             Column(
                 modifier = Modifier
@@ -661,12 +766,13 @@ fun SettingsDialog(
                     .padding(vertical = 8.dp)
             ) {
                 
+                SectionHeader("Live updates")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Auto Refresh")
+                    Text("Auto refresh")
                     Switch(
                         checked = uiState.autoRefreshEnabled,
                         onCheckedChange = { onAutoRefreshChange() }
@@ -675,7 +781,7 @@ fun SettingsDialog(
                 
                 if (uiState.autoRefreshEnabled) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Refresh Interval (seconds)", fontSize = 12.sp)
+                    Text("Refresh interval (seconds)", fontSize = 12.sp)
                     Slider(
                         value = uiState.autoRefreshInterval.toFloat(),
                         onValueChange = { onAutoRefreshIntervalChange(it.toInt()) },
@@ -688,12 +794,13 @@ fun SettingsDialog(
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
                 
+                SectionHeader("Display")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Compact View")
+                    Text("Compact view")
                     Switch(
                         checked = uiState.compactView,
                         onCheckedChange = { onCompactViewChange() }
@@ -705,7 +812,7 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Word Wrap")
+                    Text("Word wrap")
                     Switch(
                         checked = uiState.wordWrap,
                         onCheckedChange = { onWordWrapChange() }
@@ -717,7 +824,7 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Show Timestamps")
+                    Text("Show timestamps")
                     Switch(
                         checked = uiState.showTimestamps,
                         onCheckedChange = { onShowTimestampsChange() }
@@ -729,7 +836,7 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Show Tags")
+                    Text("Show tags")
                     Switch(
                         checked = uiState.showTags,
                         onCheckedChange = { onShowTagsChange() }
@@ -737,7 +844,7 @@ fun SettingsDialog(
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Font Size: ${uiState.fontSize.toInt()}sp", fontSize = 12.sp)
+                Text("Font size: ${uiState.fontSize.toInt()}sp", fontSize = 12.sp)
                 Slider(
                     value = uiState.fontSize,
                     onValueChange = onFontSizeChange,
@@ -748,7 +855,8 @@ fun SettingsDialog(
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
                 
-                Text("Log Retention (days)", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                SectionHeader("Retention")
+                Text("Log retention (days)", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 Slider(
                     value = uiState.logRetentionDays.toFloat(),
                     onValueChange = { onRetentionDaysChange(it.toInt()) },
@@ -760,7 +868,8 @@ fun SettingsDialog(
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
                 
-                Text("Export Format", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                SectionHeader("Export")
+                Text("Export format", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -782,7 +891,7 @@ fun SettingsDialog(
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
                 
-                Text("Danger Zone", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                SectionHeader("Danger zone", color = MaterialTheme.colorScheme.error)
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onClearLogs,
@@ -816,7 +925,7 @@ fun FilterDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Filter Logs") },
+        title = { Text("Filter logs") },
         text = {
             Column(
                 modifier = Modifier
@@ -838,7 +947,7 @@ fun FilterDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 
-                Text("Log Level", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                SectionHeader("Log level")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -856,7 +965,7 @@ fun FilterDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 
-                Text("Sort By", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                SectionHeader("Sort by")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -873,7 +982,7 @@ fun FilterDialog(
                 
                 if (availableTags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Filter by Tag", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    SectionHeader("Filter by tag")
                     LazyColumn(
                         modifier = Modifier.heightIn(max = 150.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)

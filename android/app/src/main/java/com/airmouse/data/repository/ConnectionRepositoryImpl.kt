@@ -5,6 +5,7 @@ import com.airmouse.domain.model.*
 import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.network.ConnectionManager
 import com.airmouse.network.UdpDiscovery
+import com.airmouse.utils.ConnectedDeviceStore
 import com.airmouse.utils.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,11 +52,12 @@ class ConnectionRepositoryImpl @Inject constructor(
     private fun loadConfig() {
         val ip = prefs.getString("last_ip", "")
         val port = prefs.getInt("last_port", 8080)
-        val protocol = prefs.getString("connection_protocol", "TCP")
+        val protocol = prefs.getString("last_protocol", prefs.getString("connection_protocol", "WEBSOCKET"))
+            ?: "WEBSOCKET"
         val protocolEnum = try {
             ConnectionProtocol.valueOf(protocol.uppercase())
         } catch (e: IllegalArgumentException) {
-            ConnectionProtocol.TCP
+            ConnectionProtocol.WEBSOCKET
         }
         _config.value = ConnectionConfig(ip = ip, port = port, protocol = protocolEnum).normalized()
     }
@@ -109,7 +111,18 @@ class ConnectionRepositoryImpl @Inject constructor(
                 ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
             }
         )
-        return connectionManager.connect(normalized.ip, normalized.port)
+        val success = connectionManager.connect(normalized.ip, normalized.port)
+        if (success) {
+            ConnectedDeviceStore.rememberConnection(
+                prefs = prefs,
+                serverName = connectionManager.serverName.value.ifBlank { normalized.ip },
+                ip = normalized.ip,
+                port = normalized.port,
+                protocol = protocol.name,
+                version = connectionManager.serverVersion.value.ifBlank { "3.0.0" }
+            )
+        }
+        return success
     }
 
     override suspend fun disconnect() {
@@ -130,6 +143,7 @@ class ConnectionRepositoryImpl @Inject constructor(
         _config.value = normalized
         prefs.putString("last_ip", normalized.ip)
         prefs.putInt("last_port", normalized.port)
+        prefs.putString("last_protocol", normalized.protocol.name)
         prefs.putString("connection_protocol", normalized.protocol.name)
         prefs.putBoolean("use_ssl", normalized.useSSL)
         if (normalized.authToken != null) {
@@ -178,10 +192,18 @@ class ConnectionRepositoryImpl @Inject constructor(
                     ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
                 }
             })
-            connectionManager.connect(ip, port)
+            val success = connectionManager.connect(ip, port)
             val latency = System.currentTimeMillis() - startTime
             connectionManager.disconnect()
-            TestResult(success = true, message = "Connection successful", latency = latency)
+            if (success) {
+                TestResult(success = true, message = "Connection successful", latency = latency)
+            } else {
+                TestResult(
+                    success = false,
+                    message = connectionManager.lastError.value ?: "Connection failed",
+                    latency = latency
+                )
+            }
         } catch (e: Exception) {
             TestResult(success = false, message = e.message ?: "Connection failed")
         }

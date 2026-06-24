@@ -2,6 +2,7 @@
 package com.airmouse.presentation.ui.statistics
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -41,11 +42,14 @@ fun StatisticsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "📊 Statistics",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
+                    Column {
+                        Text("Statistics", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Text(
+                            "Live session, connection, and usage summary",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
@@ -64,7 +68,7 @@ fun StatisticsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
@@ -83,33 +87,43 @@ fun StatisticsScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                containerColor = MaterialTheme.colorScheme.surface
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                TimeRange.entries.forEach { range ->
-                                    FilterChip(
-                                        selected = uiState.timeRange == range,
-                                        onClick = { viewModel.updateTimeRange(range) },
-                                        label = {
-                                            Text(
-                                                range.displayName,
-                                                fontSize = 12.sp,
-                                                fontWeight = if (uiState.timeRange == range) FontWeight.Bold else FontWeight.Normal
+                                Text(
+                                    text = "Time range",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    TimeRange.entries.forEach { range ->
+                                        FilterChip(
+                                            selected = uiState.timeRange == range,
+                                            onClick = { viewModel.updateTimeRange(range) },
+                                            label = {
+                                                Text(
+                                                    range.displayName,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (uiState.timeRange == range) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                                                selectedLabelColor = MaterialTheme.colorScheme.primary
                                             )
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                                         )
-                                    )
+                                    }
                                 }
                             }
                         }
@@ -191,65 +205,73 @@ fun StatisticsScreen(
 
                 item {
                     GlassCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text(
-                                text = "📈 Session Overview",
+                                text = "Session overview",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Live session metrics, connection quality, and calibration state.",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                StatCircle(
-                                    value = formatDuration(uiState.sessionTime),
-                                    label = "Session Time",
-                                    color = Color(0xFF2196F3)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                SummaryInfoChip(
+                                    label = "Tracking",
+                                    value = if (uiState.isTracking) "Live" else "Idle",
+                                    modifier = Modifier.weight(1f)
                                 )
-                                StatCircle(
-                                    value = uiState.summaryStats.totalActions.toString(),
-                                    label = "Total Actions",
-                                    color = Color(0xFF4CAF50)
+                                SummaryInfoChip(
+                                    label = "Calibration",
+                                    value = if (uiState.calibrationComplete) "Ready" else "Pending",
+                                    modifier = Modifier.weight(1f)
                                 )
-                                StatCircle(
-                                    value = uiState.gesturesDetected.toString(),
-                                    label = "Gestures",
-                                    color = Color(0xFFFF9800)
+                                SummaryInfoChip(
+                                    label = "Protocol",
+                                    value = if (uiState.useUdpDiscovery) "UDP" else "Manual",
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Success Rate", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        String.format(Locale.getDefault(), "%.1f%%", uiState.getSuccessRate()),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Avg Ping", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        if (uiState.averagePing > 0) "${uiState.averagePing} ms" else "No data",
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Last Activity", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(uiState.lastActivityTime)),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                MetricTile(
+                                    value = formatDuration(uiState.sessionTime),
+                                    label = "Session Time",
+                                    accent = Color(0xFF2196F3),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricTile(
+                                    value = uiState.summaryStats.totalActions.toString(),
+                                    label = "Actions",
+                                    accent = Color(0xFF4CAF50),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricTile(
+                                    value = uiState.gesturesDetected.toString(),
+                                    label = "Gestures",
+                                    accent = Color(0xFFFF9800),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                MetricTile(
+                                    value = String.format(Locale.getDefault(), "%.1f%%", uiState.getSuccessRate()),
+                                    label = "Success",
+                                    accent = Color(0xFF22C55E),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricTile(
+                                    value = if (uiState.averagePing > 0) "${uiState.averagePing} ms" else "No data",
+                                    label = "Avg Ping",
+                                    accent = Color(0xFF38BDF8),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricTile(
+                                    value = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(uiState.lastActivityTime)),
+                                    label = "Last Activity",
+                                    accent = Color(0xFFF59E0B),
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
                         }
                     }
@@ -329,7 +351,7 @@ fun StatisticsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "🎯 Gesture Distribution",
+                                text = "Gesture distribution",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -424,7 +446,7 @@ fun StatisticsScreen(
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "🏃 Movement Statistics",
+                                text = "Movement statistics",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -463,7 +485,7 @@ fun StatisticsScreen(
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "🔌 Connection Statistics",
+                                text = "Connection statistics",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -506,7 +528,7 @@ fun StatisticsScreen(
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "📊 Daily Activity (Clicks)",
+                                text = "Daily activity (clicks)",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -581,7 +603,7 @@ fun StatisticsScreen(
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "⚡ Performance Metrics",
+                                text = "Performance metrics",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -604,7 +626,7 @@ fun StatisticsScreen(
                     GlassCard {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "📋 Session Information",
+                                text = "Session information",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -751,10 +773,11 @@ fun GlassCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
+            defaultElevation = 0.dp
         )
     ) {
         content()
@@ -770,8 +793,8 @@ fun StatCircle(value: String, label: String, color: Color) {
         Surface(
             modifier = Modifier.size(72.dp),
             shape = CircleShape,
-            color = color.copy(alpha = 0.15f),
-            shadowElevation = 4.dp
+            color = color.copy(alpha = 0.12f),
+            border = BorderStroke(1.dp, color.copy(alpha = 0.22f))
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
@@ -797,45 +820,83 @@ fun StatCircle(value: String, label: String, color: Color) {
 
 @Composable
 fun StatBox(label: String, value: String, color: Color) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(70.dp)
-    ) {
-        Text(
-            value,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Text(
-            label,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-    }
+    MetricTile(
+        value = value,
+        label = label,
+        accent = color
+    )
 }
 
 @Composable
 fun GestureStatItem(label: String, value: Int, color: Color) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(70.dp)
+    MetricTile(
+        value = value.toString(),
+        label = label,
+        accent = color
+    )
+}
+
+@Composable
+fun MetricTile(
+    value: String,
+    label: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = accent.copy(alpha = 0.10f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
     ) {
-        Text(
-            value.toString(),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Text(
-            label,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                value,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = accent
+            )
+            Text(
+                label,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
+            )
+        }
+    }
+}
+
+@Composable
+fun SummaryInfoChip(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                label,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                value,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 

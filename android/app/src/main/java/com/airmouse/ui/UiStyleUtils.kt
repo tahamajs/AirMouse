@@ -43,7 +43,7 @@ object UiStyleUtils {
     fun styleCard(card: Any) {
         when (card) {
             is MaterialCardView -> {
-                card.isUseCompatPadding = true
+                card.useCompatPadding = true
                 card.radius = 16f
             }
             is CardView -> {

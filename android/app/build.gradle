@@ -218,10 +218,6 @@ dependencies {
     implementation 'androidx.hilt:hilt-navigation-fragment:1.2.0'
     ksp 'androidx.hilt:hilt-compiler:1.2.0'
 
-    // ==================== TENSORFLOW LITE ====================
-    implementation 'org.tensorflow:tensorflow-lite:2.16.1'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
-
     // ==================== DATASTORE & ROOM ====================
     implementation 'androidx.datastore:datastore-preferences:1.1.1'
     implementation 'androidx.datastore:datastore-preferences-core:1.1.1'

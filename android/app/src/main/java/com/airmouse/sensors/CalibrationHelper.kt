@@ -156,6 +156,9 @@ class CalibrationHelper(
         prefs.putFloat("gyro_bias_x", gyroBiasX)
         prefs.putFloat("gyro_bias_y", gyroBiasY)
         prefs.putFloat("gyro_bias_z", gyroBiasZ)
+        prefs.putFloat("gyro_offset_x", gyroBiasX)
+        prefs.putFloat("gyro_offset_y", gyroBiasY)
+        prefs.putFloat("gyro_offset_z", gyroBiasZ)
         prefs.putFloat("gyro_variance_x", gyroVarianceX)
         prefs.putFloat("gyro_variance_y", gyroVarianceY)
         prefs.putFloat("gyro_variance_z", gyroVarianceZ)
@@ -612,9 +615,30 @@ class CalibrationHelper(
         magEllipsoidB = 1f
         magEllipsoidC = 1f
         
+        prefs.putFloat("gyro_bias_x", 0f)
+        prefs.putFloat("gyro_bias_y", 0f)
+        prefs.putFloat("gyro_bias_z", 0f)
+        prefs.putFloat("gyro_variance_x", 0f)
+        prefs.putFloat("gyro_variance_y", 0f)
+        prefs.putFloat("gyro_variance_z", 0f)
+        prefs.putFloat("accel_offset_x", 0f)
+        prefs.putFloat("accel_offset_y", 0f)
+        prefs.putFloat("accel_offset_z", 0f)
+        prefs.putFloat("accel_scale_x", 1f)
+        prefs.putFloat("accel_scale_y", 1f)
+        prefs.putFloat("accel_scale_z", 1f)
+        prefs.putFloat("mag_offset_x", 0f)
+        prefs.putFloat("mag_offset_y", 0f)
+        prefs.putFloat("mag_offset_z", 0f)
+        prefs.putFloat("mag_scale_x", 1f)
+        prefs.putFloat("mag_scale_y", 1f)
+        prefs.putFloat("mag_scale_z", 1f)
+        prefs.putFloat("mag_ellipsoid_a", 1f)
+        prefs.putFloat("mag_ellipsoid_b", 1f)
+        prefs.putFloat("mag_ellipsoid_c", 1f)
         prefs.putBoolean("calibration_complete", false)
         prefs.putBoolean("is_calibrated", false)
-        saveCalibrationData()
+        prefs.putLong("calibration_timestamp", 0L)
         
         _calibrationState.value = CalibrationState.IDLE
         _calibrationQuality.value = CalibrationQuality.UNKNOWN

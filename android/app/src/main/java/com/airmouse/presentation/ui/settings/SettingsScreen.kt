@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +30,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.ui.components.NotificationBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,6 +99,7 @@ fun SettingsScreen(
     ) { paddingValues ->
         if (selectedSection == null) {
             SettingsMainScreen(
+                uiState = uiState,
                 onSectionSelected = { selectedSection = it },
                 navigationActions = navigationActions,
                 viewModel = viewModel,
@@ -119,6 +122,7 @@ fun SettingsScreen(
 
 @Composable
 fun SettingsMainScreen(
+    uiState: SettingsUiState,
     onSectionSelected: (SettingsSection) -> Unit,
     navigationActions: NavigationActions,
     viewModel: SettingsViewModel,
@@ -128,15 +132,24 @@ fun SettingsMainScreen(
         modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { SettingsHeader() }
+        item {
+            SettingsHeader(
+                onSectionSelected = onSectionSelected,
+                navigationActions = navigationActions
+            )
+        }
+        item {
+            SettingsOverviewCard(
+                uiState = uiState,
+                onSectionSelected = onSectionSelected,
+                navigationActions = navigationActions
+            )
+        }
         item {
             SettingsQuickActionsCard(
                 navigationActions = navigationActions,
                 viewModel = viewModel
             )
-        }
-        item {
-            SettingsStateHintCard()
         }
         items(SettingsSection.entries) { section ->
             SettingsCard(
@@ -159,10 +172,13 @@ fun SettingsMainScreen(
 // ==================== HEADER ====================
 
 @Composable
-fun SettingsHeader() {
+fun SettingsHeader(
+    onSectionSelected: (SettingsSection) -> Unit,
+    navigationActions: NavigationActions
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -185,33 +201,117 @@ fun SettingsHeader() {
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                AssistChip(onClick = { }, label = { Text("Motion") })
-                AssistChip(onClick = { }, label = { Text("Connection") })
-                AssistChip(onClick = { }, label = { Text("Theme") })
+                AssistChip(
+                    onClick = { onSectionSelected(SettingsSection.CURSOR) },
+                    label = { Text("Motion") },
+                    modifier = Modifier.weight(1f)
+                )
+                AssistChip(
+                    onClick = { onSectionSelected(SettingsSection.CONNECTION) },
+                    label = { Text("Connection") },
+                    modifier = Modifier.weight(1f)
+                )
+                AssistChip(
+                    onClick = { navigationActions.navigateToThemes() },
+                    label = { Text("Theme") },
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
 }
 
 @Composable
-fun SettingsStateHintCard() {
+fun SettingsOverviewCard(
+    uiState: SettingsUiState,
+    onSectionSelected: (SettingsSection) -> Unit,
+    navigationActions: NavigationActions
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Fast access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Live overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-                "Use the section cards below for focused changes. Theme and connection options are available without leaving this screen.",
+                "Jump straight into the parts you change most, with current values visible at a glance.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                FilterChip(selected = true, onClick = { }, label = { Text("Live state") })
-                FilterChip(selected = false, onClick = { }, label = { Text("One tap save") })
-                FilterChip(selected = false, onClick = { }, label = { Text("Easy access") })
+                AssistChip(
+                    onClick = { onSectionSelected(SettingsSection.CURSOR) },
+                    label = { Text("Motion") },
+                    modifier = Modifier.weight(1f)
+                )
+                AssistChip(
+                    onClick = { onSectionSelected(SettingsSection.CONNECTION) },
+                    label = { Text("Network") },
+                    modifier = Modifier.weight(1f)
+                )
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                AssistChip(
+                    onClick = { onSectionSelected(SettingsSection.NOTIFICATIONS) },
+                    label = { Text("Alerts") },
+                    modifier = Modifier.weight(1f)
+                )
+                AssistChip(
+                    onClick = { navigationActions.navigateToTouchpad() },
+                    label = { Text("Touchpad") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                StatusChip(
+                    label = "Theme",
+                    value = uiState.theme.replace('_', ' '),
+                    modifier = Modifier.weight(1f)
+                )
+                StatusChip(
+                    label = "Notifications",
+                    value = if (uiState.notificationsEnabled) "On" else "Off",
+                    modifier = Modifier.weight(1f)
+                )
+                StatusChip(
+                    label = "UDP",
+                    value = if (uiState.useUdpDiscovery) "Enabled" else "Off",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun StatusChip(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(999.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -223,7 +323,7 @@ fun SettingsQuickActionsCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(18.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -328,7 +428,7 @@ fun SectionDetailScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(24.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -346,6 +446,7 @@ fun SectionDetailScreen(
                 SettingsSection.GESTURE -> item { GestureSettings(uiState, viewModel) }
                 SettingsSection.AI -> item { AISettings(uiState, viewModel) }
                 SettingsSection.HAPTIC -> item { HapticSettings(uiState, viewModel) }
+                SettingsSection.NOTIFICATIONS -> item { NotificationSettings(uiState, viewModel) }
                 SettingsSection.DISPLAY -> item { DisplaySettings(uiState, viewModel, navigationActions) }
                 SettingsSection.THEMES -> item { ThemesShortcutCard(navigationActions) }
                 SettingsSection.TOUCHPAD -> item { TouchpadSettings(uiState, viewModel, navigationActions) }
@@ -366,10 +467,14 @@ fun SettingsSwitch(
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    description: String? = null
+    description: String? = null,
+    enabled: Boolean = true
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else 0.58f)
+            .clickable(enabled = enabled) { onCheckedChange(!checked) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -386,6 +491,7 @@ fun SettingsSwitch(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
+                enabled = enabled,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.primary,
                     checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -625,6 +731,107 @@ fun HapticSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     }
 }
 
+// ==================== NOTIFICATION SETTINGS ====================
+
+@Composable
+fun NotificationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(52.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(30.dp)
+                        )
+                        NotificationBadge(
+                            count = if (uiState.notificationsEnabled) 1 else 0,
+                            modifier = Modifier.align(Alignment.TopEnd)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Notifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Control badges, alerts, and gesture notifications from one place.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    FilterChip(
+                        selected = uiState.notificationsEnabled,
+                        onClick = { viewModel.handleEvent(SettingsEvent.ToggleNotifications) },
+                        label = { Text("Enabled") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = uiState.notificationOnGesture,
+                        onClick = { viewModel.handleEvent(SettingsEvent.ToggleNotificationOnGesture) },
+                        label = { Text("Gesture") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = uiState.soundEnabled,
+                        onClick = { viewModel.handleEvent(SettingsEvent.ToggleSound) },
+                        label = { Text("Sound") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = uiState.visualFeedback,
+                        onClick = { viewModel.handleEvent(SettingsEvent.ToggleVisualFeedback) },
+                        label = { Text("Visual") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        SettingsSwitch(
+            title = "App Notifications",
+            description = "Show in-app notification badges and alerts",
+            checked = uiState.notificationsEnabled,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleNotifications) }
+        )
+        SettingsSwitch(
+            title = "Gesture Notifications",
+            description = "Notify when a gesture is detected",
+            checked = uiState.notificationOnGesture,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleNotificationOnGesture) },
+            enabled = uiState.notificationsEnabled
+        )
+        SettingsSwitch(
+            title = "Sound Alerts",
+            description = "Play a sound for notification events",
+            checked = uiState.soundEnabled,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleSound) },
+            enabled = uiState.notificationsEnabled
+        )
+        SettingsSwitch(
+            title = "Visual Feedback",
+            description = "Show on-screen feedback for actions",
+            checked = uiState.visualFeedback,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleVisualFeedback) },
+            enabled = uiState.notificationsEnabled
+        )
+    }
+}
+
 // ==================== DISPLAY SETTINGS ====================
 
 @Composable
@@ -702,7 +909,7 @@ fun DisplaySettings(
 fun ThemesShortcutCard(navigationActions: NavigationActions? = null) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -724,11 +931,11 @@ fun TouchpadSettings(
     navigationActions: NavigationActions? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            shape = RoundedCornerShape(16.dp)
-        ) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp)
+    ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Touchpad Studio", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(

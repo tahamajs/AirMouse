@@ -4,6 +4,7 @@ package com.airmouse.network
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.os.Build
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import org.json.JSONObject
@@ -45,11 +46,13 @@ object WebSocketManager {
                 isConnected = true
                 reconnectAttempts = 0
                 Log.i("WebSocket", "Connected to $url")
+                sendHello(deviceName = Build.MODEL ?: "Android")
                 mainHandler.post { onConnected?.invoke() }
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 Log.d("WebSocket", "Received: $text")
+                handleServerMessage(text)
                 mainHandler.post { onMessage?.invoke(text) }
             }
 
@@ -66,6 +69,23 @@ object WebSocketManager {
                 mainHandler.post { onDisconnected?.invoke() }
             }
         })
+    }
+
+    private fun handleServerMessage(message: String) {
+        try {
+            val json = JSONObject(message)
+            when (json.optString("type")) {
+                "welcome" -> {
+                    val payload = json.optJSONObject("payload")
+                    Log.i("WebSocket", "Server welcome: ${payload?.optString("server")} v${payload?.optString("version")}")
+                }
+                "pong" -> Log.d("WebSocket", "Pong received")
+                "ack" -> Log.d("WebSocket", "ACK received for ${json.optString("id")}")
+                "error" -> Log.w("WebSocket", json.optJSONObject("payload")?.optString("message") ?: "Unknown error")
+            }
+        } catch (_: Exception) {
+            // Ignore non-JSON messages
+        }
     }
 
     private fun scheduleReconnect() {
@@ -111,7 +131,27 @@ object WebSocketManager {
     }
 
     fun sendHello(deviceName: String, version: String = "3.0") {
-        send(NetworkMessage.toJson(NetworkMessage.Hello(deviceName, version)))
+        val androidVersion = Build.VERSION.RELEASE ?: "unknown"
+        val sdkInt = Build.VERSION.SDK_INT.toString()
+        send(
+            NetworkMessage.toJson(
+                NetworkMessage.Hello(
+                    name = "Air Mouse Android",
+                    version = version,
+                    device = "android",
+                    androidVersion = androidVersion,
+                    model = Build.MODEL,
+                    manufacturer = Build.MANUFACTURER,
+                    brand = Build.BRAND,
+                    deviceName = deviceName,
+                    sdkInt = sdkInt,
+                    deviceId = null,
+                    protocol = version,
+                    transport = "WEBSOCKET",
+                    authToken = null
+                )
+            )
+        )
     }
 
     fun sendCommand(command: String, delta: Int = 0) {

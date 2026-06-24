@@ -7,10 +7,6 @@
 -keep class androidx.lifecycle.** { *; }
 -keep class androidx.navigation.** { *; }
 
-# Keep TensorFlow Lite
--keep class org.tensorflow.** { *; }
--keep class org.tensorflow.lite.** { *; }
-
 # Keep OkHttp
 -keep class okhttp3.** { *; }
 -keep interface okhttp3.** { *; }

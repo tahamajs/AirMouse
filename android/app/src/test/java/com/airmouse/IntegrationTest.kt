@@ -5,7 +5,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.airmouse.network.WebSocketManager
-import com.airmouse.sensor.SensorService
+import com.airmouse.sensors.SensorService
+import io.mockk.mockk
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -28,7 +29,7 @@ class IntegrationTest {
         mockServer = MockWebServer()
         mockServer.start()
         context = ApplicationProvider.getApplicationContext()
-        sensorService = SensorService(context)
+        sensorService = mockk(relaxed = true)
     }
 
     @After
@@ -43,7 +44,7 @@ class IntegrationTest {
         val latch = CountDownLatch(1)
         var messageReceived = false
         
-        mockServer.enqueue(MockResponse().withWebSocketUpgrade(object : okhttp3.mockwebsocket.WebSocketListener() {
+        mockServer.enqueue(MockResponse().withWebSocketUpgrade(object : okhttp3.WebSocketListener() {
             override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
                 if (text.contains("hello")) {
                     messageReceived = true
@@ -68,7 +69,7 @@ class IntegrationTest {
         var clickReceived = false
         var gestureReceived = false
         
-        mockServer.enqueue(MockResponse().withWebSocketUpgrade(object : okhttp3.mockwebsocket.WebSocketListener() {
+        mockServer.enqueue(MockResponse().withWebSocketUpgrade(object : okhttp3.WebSocketListener() {
             override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
                 when {
                     text.contains("move") -> {

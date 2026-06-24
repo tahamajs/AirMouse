@@ -32,11 +32,13 @@ import com.airmouse.files.FileTransferService
 import com.airmouse.presentation.PresentationModeService
 import com.airmouse.notifications.NotificationManager
 import com.airmouse.network.ConnectionManager
+import com.airmouse.utils.ConnectedDeviceStore
 import com.airmouse.utils.QRScanner
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,6 +74,9 @@ class HomeViewModel @Inject constructor(
 
     private val _connectionQuality = MutableStateFlow(ConnectionQuality.UNKNOWN)
     val connectionQuality: StateFlow<ConnectionQuality> = _connectionQuality.asStateFlow()
+
+    private val _approvalCountdownMs = MutableStateFlow(0L)
+    val approvalCountdownMs: StateFlow<Long> = _approvalCountdownMs.asStateFlow()
 
     private val _calibrationStatus = MutableStateFlow<CalibrationQuality>(CalibrationQuality.UNKNOWN)
     val calibrationStatus: StateFlow<CalibrationQuality> = _calibrationStatus.asStateFlow()
@@ -115,6 +120,7 @@ class HomeViewModel @Inject constructor(
     private var samplesProcessed = 0
     private var lastSampleTime = 0L
     private var currentFps = 0
+    private var approvalTimerJob: Job? = null
 
     
     private val motionHistory = mutableListOf<MotionSample>()
@@ -268,7 +274,10 @@ class HomeViewModel @Inject constructor(
             ip = prefs.getString("last_ip", ""),
             port = prefs.getInt("last_port", 0),
             protocol = try {
-                ConnectionProtocol.valueOf(prefs.getString("last_protocol", "WEBSOCKET").uppercase())
+                ConnectionProtocol.valueOf(
+                    (prefs.getString("last_protocol", prefs.getString("connection_protocol", "WEBSOCKET"))
+                        ?: "WEBSOCKET").uppercase()
+                )
             } catch (_: Exception) {
                 ConnectionProtocol.WEBSOCKET
             },
@@ -338,9 +347,9 @@ class HomeViewModel @Inject constructor(
         }
 
         
-        gyroOffsetX = prefs.getFloat("gyro_offset_x", 0f)
-        gyroOffsetY = prefs.getFloat("gyro_offset_y", 0f)
-        gyroOffsetZ = prefs.getFloat("gyro_offset_z", 0f)
+        gyroOffsetX = prefs.getFloat("gyro_offset_x", prefs.getFloat("gyro_bias_x", 0f))
+        gyroOffsetY = prefs.getFloat("gyro_offset_y", prefs.getFloat("gyro_bias_y", 0f))
+        gyroOffsetZ = prefs.getFloat("gyro_offset_z", prefs.getFloat("gyro_bias_z", 0f))
 
         
         val gyroOk = gyroOffsetX != 0f || gyroOffsetY != 0f || gyroOffsetZ != 0f
@@ -384,10 +393,13 @@ class HomeViewModel @Inject constructor(
 
                 when (status) {
                     ConnectionManager.ConnectionStatus.CONNECTING -> {
-                        addLogMessage("Waiting for server approval...")
+                        addLogMessage("Server is approving the connection...")
+                        startApprovalCountdown()
                         notificationManager.showConnectionPendingNotification(connectionManager.serverName.value.ifBlank { connectionManager.currentIp.value })
                     }
                     ConnectionManager.ConnectionStatus.CONNECTED -> {
+                        stopApprovalCountdown()
+                        addLogMessage("Approved")
                         addLogMessage("Connected to ${connectionManager.currentIp.value}")
                         notificationManager.showConnectedNotification(
                             connectionManager.serverName.value.ifBlank { connectionManager.currentIp.value }
@@ -401,10 +413,12 @@ class HomeViewModel @Inject constructor(
                         }
                         updateConnectionQuality()
                         startSensors()
+                        addLogMessage("Control enabled")
                         
                         syncCalibrationToServer()
                     }
                     ConnectionManager.ConnectionStatus.DISCONNECTED -> {
+                        stopApprovalCountdown()
                         addLogMessage("Disconnected")
                         notificationManager.showDisconnectedNotification()
                         _uiState.update {
@@ -417,6 +431,7 @@ class HomeViewModel @Inject constructor(
                         stopSensors()
                     }
                     ConnectionManager.ConnectionStatus.ERROR -> {
+                        stopApprovalCountdown()
                         addLogMessage(connectionManager.lastError.value ?: "Connection error")
                         notificationManager.showConnectionErrorNotification(connectionManager.lastError.value ?: "Connection error")
                         _uiState.update {
@@ -446,6 +461,25 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { it.copy(connectionQuality = mapped) }
             }
         }
+    }
+
+    private fun startApprovalCountdown() {
+        approvalTimerJob?.cancel()
+        approvalTimerJob = viewModelScope.launch {
+            var remaining = 30_000L
+            _approvalCountdownMs.value = remaining
+            while (remaining > 0 && _uiState.value.isConnecting) {
+                delay(1_000)
+                remaining -= 1_000
+                _approvalCountdownMs.value = remaining.coerceAtLeast(0L)
+            }
+        }
+    }
+
+    private fun stopApprovalCountdown() {
+        approvalTimerJob?.cancel()
+        approvalTimerJob = null
+        _approvalCountdownMs.value = 0L
     }
 
     private fun updateConnectionQuality() {
@@ -849,6 +883,7 @@ class HomeViewModel @Inject constructor(
             protocol = protocol
         ).normalized().port
         prefs.putString("last_protocol", protocol.name)
+        prefs.putString("connection_protocol", protocol.name)
         _uiState.update {
             it.copy(
                 selectedProtocol = protocol,
@@ -862,39 +897,51 @@ class HomeViewModel @Inject constructor(
     fun applyScannedConnection(data: QRScanner.ConnectionData) {
         val protocol = runCatching { ConnectionProtocol.valueOf(data.protocol.uppercase(Locale.US)) }
             .getOrDefault(ConnectionProtocol.WEBSOCKET)
+        val normalized = ConnectionConfig(
+            ip = data.ip,
+            port = data.port,
+            protocol = protocol
+        ).normalized()
         _uiState.update {
             it.copy(
                 serverIp = data.ip,
-                serverPort = data.port,
+                serverPort = normalized.port,
                 selectedProtocol = protocol,
-                connectionConfig = it.connectionConfig.copy(protocol = protocol),
+                connectionConfig = it.connectionConfig.copy(
+                    ip = normalized.ip,
+                    port = normalized.port,
+                    protocol = protocol
+                ),
                 isConnecting = true
             )
         }
         prefs.putString("last_ip", data.ip)
-        prefs.putString("connection_protocol", protocol.name)
         prefs.putString("last_protocol", protocol.name)
+        prefs.putString("connection_protocol", protocol.name)
         data.token?.let { prefs.putString("auth_token", it) }
         viewModelScope.launch {
-            val normalized = ConnectionConfig(
-                ip = data.ip,
-                port = data.port,
-                protocol = protocol
-            ).normalized()
             prefs.putInt("last_port", normalized.port)
             connectionManager.setProtocol(
-                if (protocol == ConnectionProtocol.TCP) {
-                    ConnectionManager.ConnectionProtocol.TCP
-                } else {
-                    ConnectionManager.ConnectionProtocol.WEBSOCKET
+                when (protocol) {
+                    ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
+                    ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
+                    ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
                 }
             )
             val success = connectionManager.connect(normalized.ip, normalized.port)
             if (success) {
+                ConnectedDeviceStore.rememberConnection(
+                    prefs = prefs,
+                    serverName = connectionManager.serverName.value.ifBlank { data.name },
+                    ip = normalized.ip,
+                    port = normalized.port,
+                    protocol = protocol.name,
+                    version = connectionManager.serverVersion.value.ifBlank { "3.0.0" }
+                )
                 addLogMessage("Connected to ${data.name}")
                 _uiState.update { it.copy(isConnecting = false) }
             } else {
-                addLogMessage("Connection failed")
+                connectionManager.lastError.value?.let { addLogMessage(it) }
                 _uiState.update { it.copy(isConnecting = false) }
             }
         }
@@ -903,41 +950,61 @@ class HomeViewModel @Inject constructor(
     fun connect() {
         Trace.beginSection("AirMouse#connect")
         try {
-        val ip = _uiState.value.serverIp
-        if (ip.isBlank()) {
-            addLogMessage("Please enter server IP")
-            return
-        }
-
-        val protocol = _uiState.value.selectedProtocol
-        _uiState.update { it.copy(connectionConfig = it.connectionConfig.copy(protocol = protocol)) }
-        prefs.putString("last_protocol", protocol.name)
-        connectionManager.setProtocol(
-            if (protocol == ConnectionProtocol.TCP) {
-                ConnectionManager.ConnectionProtocol.TCP
-            } else if (protocol == ConnectionProtocol.UDP) {
-                ConnectionManager.ConnectionProtocol.UDP
-            } else {
-                ConnectionManager.ConnectionProtocol.WEBSOCKET
+            val ip = _uiState.value.serverIp
+            if (ip.isBlank()) {
+                addLogMessage("Please enter server IP")
+                return
             }
-        )
-        val normalizedPort = when {
-            _uiState.value.serverPort > 0 -> _uiState.value.serverPort
-            protocol == ConnectionProtocol.WEBSOCKET -> ConnectionConfig.DEFAULT_WEBSOCKET_PORT
-            protocol == ConnectionProtocol.UDP -> ConnectionConfig.DEFAULT_UDP_PORT
-            else -> ConnectionConfig.DEFAULT_TCP_PORT
-        }
 
-        _uiState.update { it.copy(isConnecting = true) }
-        addLogMessage("Waiting for desktop approval...")
+            val protocol = _uiState.value.selectedProtocol
+            val normalized = ConnectionConfig(
+                ip = ip,
+                port = _uiState.value.serverPort,
+                protocol = protocol
+            ).normalized()
 
-        viewModelScope.launch {
-            val success = connectionManager.connect(ip, normalizedPort)
-            if (!success) {
-                addLogMessage(connectionManager.lastError.value ?: "Connection failed")
-                _uiState.update { it.copy(isConnecting = false) }
+            _uiState.update {
+                it.copy(
+                    serverPort = normalized.port,
+                    connectionConfig = it.connectionConfig.copy(
+                        ip = normalized.ip,
+                        port = normalized.port,
+                        protocol = protocol
+                    ),
+                    isConnecting = true
+                )
             }
-        }
+            prefs.putString("last_protocol", protocol.name)
+            prefs.putString("connection_protocol", protocol.name)
+            prefs.putInt("last_port", normalized.port)
+            connectionManager.setProtocol(
+                when (protocol) {
+                    ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
+                    ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
+                    ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+                }
+            )
+
+            addLogMessage("Waiting for server approval...")
+            _approvalCountdownMs.value = 30_000L
+
+            viewModelScope.launch {
+                val success = connectionManager.connect(normalized.ip, normalized.port)
+                if (!success) {
+                    connectionManager.lastError.value?.let { addLogMessage(it) }
+                    _uiState.update { it.copy(isConnecting = false) }
+                    stopApprovalCountdown()
+                } else {
+                    ConnectedDeviceStore.rememberConnection(
+                        prefs = prefs,
+                        serverName = connectionManager.serverName.value.ifBlank { ip },
+                        ip = normalized.ip,
+                        port = normalized.port,
+                        protocol = protocol.name,
+                        version = connectionManager.serverVersion.value.ifBlank { "3.0.0" }
+                    )
+                }
+            }
         } finally {
             Trace.endSection()
         }
@@ -945,6 +1012,7 @@ class HomeViewModel @Inject constructor(
 
     fun disconnect() {
         connectionManager.disconnect()
+        stopApprovalCountdown()
         _uiState.update {
             it.copy(
                 isActive = false,
@@ -1139,6 +1207,7 @@ class HomeViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         stopSensors()
+        stopApprovalCountdown()
         addLogMessage("ViewModel cleared")
     }
 

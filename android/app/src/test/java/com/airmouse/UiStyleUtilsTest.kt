@@ -22,7 +22,7 @@ class UiStyleUtilsTest {
 
         UiStyleUtils.styleCard(card)
 
-        assertTrue(card.isUseCompatPadding)
+        assertTrue(card.useCompatPadding)
     }
 
     @Test

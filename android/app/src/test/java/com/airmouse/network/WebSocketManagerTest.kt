@@ -1,10 +1,9 @@
 
 package com.airmouse.network
 
-import okhttp3.*
+import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -68,10 +67,8 @@ class WebSocketManagerTest {
         
         WebSocketManager.sendMove(10.5f, -3.2f)
         
-        val request = webSocketListener.awaitRequest(latchTimeout, latchTimeoutUnit)
-        assertNotNull("Message should be sent", request)
-        
-        val json = request?.body?.utf8()
+        val json = webSocketListener.awaitMessage(latchTimeout, latchTimeoutUnit)
+        assertNotNull("Message should be sent", json)
         assertTrue("Should contain move type", json?.contains("\"type\":\"move\"") == true)
         assertTrue("Should contain dx", json?.contains("10.5") == true)
         assertTrue("Should contain dy", json?.contains("-3.2") == true)
@@ -89,8 +86,7 @@ class WebSocketManagerTest {
         
         WebSocketManager.sendClick("left")
         
-        val request = webSocketListener.awaitRequest(latchTimeout, latchTimeoutUnit)
-        val json = request?.body?.utf8()
+        val json = webSocketListener.awaitMessage(latchTimeout, latchTimeoutUnit)
         
         assertTrue("Should contain click type", json?.contains("\"type\":\"click\"") == true)
         assertTrue("Should contain left button", json?.contains("left") == true)
@@ -108,8 +104,7 @@ class WebSocketManagerTest {
         
         WebSocketManager.sendGesture("ThumbsUp", 0.92f)
         
-        val request = webSocketListener.awaitRequest(latchTimeout, latchTimeoutUnit)
-        val json = request?.body?.utf8()
+        val json = webSocketListener.awaitMessage(latchTimeout, latchTimeoutUnit)
         
         assertTrue("Should contain gesture type", json?.contains("\"type\":\"gesture\"") == true)
         assertTrue("Should contain gesture name", json?.contains("ThumbsUp") == true)
@@ -121,7 +116,7 @@ class WebSocketManagerTest {
         val latch = CountDownLatch(2) 
         var connectionCount = 0
         
-        val webSocketListener = object : okhttp3.mockwebserver.WebSocketListener() {
+        val webSocketListener = object : okhttp3.WebSocketListener() {
             override fun onOpen(webSocket: okhttp3.WebSocket, response: okhttp3.Response) {
                 connectionCount++
                 latch.countDown()
@@ -153,19 +148,17 @@ class WebSocketManagerTest {
     }
 }
 
-class TestWebSocketListener : okhttp3.mockwebsocket.WebSocketListener() {
-    private var lastRequest: RecordedRequest? = null
+class TestWebSocketListener : okhttp3.WebSocketListener() {
+    private var lastMessage: String? = null
     private val latch = CountDownLatch(1)
 
     override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
-        lastRequest = RecordedRequest().apply {
-            setBody(okio.Buffer().writeUtf8(text))
-        }
+        lastMessage = text
         latch.countDown()
     }
 
-    fun awaitRequest(timeout: Long, unit: TimeUnit): RecordedRequest? {
+    fun awaitMessage(timeout: Long, unit: TimeUnit): String? {
         latch.await(timeout, unit)
-        return lastRequest
+        return lastMessage
     }
 }

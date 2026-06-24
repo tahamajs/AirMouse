@@ -73,6 +73,7 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val isConnected by viewModel.isConnected.collectAsState()
+    val serverInfo by viewModel.serverInfo.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -97,10 +98,12 @@ fun MainScreen(
                 isRegistered = uiState.isRegistered,
                 isCalibrated = uiState.isCalibrated,
                 userName = uiState.userName,
+                serverName = serverInfo.first,
+                serverVersion = serverInfo.second,
                 onDisconnect = { viewModel.disconnect() }
-                )
-            },
-            gesturesEnabled = drawerState.isOpen
+            )
+        },
+            gesturesEnabled = true
         ) {
             Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -249,12 +252,14 @@ fun ModernDrawerContent(
     isRegistered: Boolean,
     isCalibrated: Boolean,
     userName: String,
+    serverName: String,
+    serverVersion: String,
     onDisconnect: () -> Unit
 ) {
     ModalDrawerSheet(
         drawerContainerColor = Color(0xFF1A1D24),
         drawerContentColor = Color(0xFFE5E7EB),
-        modifier = Modifier.width(320.dp)
+        modifier = Modifier.fillMaxWidth(0.88f).widthIn(max = 420.dp)
     ) {
 
         Box(
@@ -321,7 +326,9 @@ fun ModernDrawerContent(
                     isRegistered = isRegistered,
                     isCalibrated = isCalibrated,
                     controlMode = controlMode,
-                    userName = userName
+                    userName = userName,
+                    serverName = serverName,
+                    serverVersion = serverVersion
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
@@ -657,7 +664,9 @@ private fun DrawerIdentityCard(
     isRegistered: Boolean,
     isCalibrated: Boolean,
     controlMode: String,
-    userName: String
+    userName: String,
+    serverName: String,
+    serverVersion: String
 ) {
     val title = when {
         isConnected -> "Approved and connected"
@@ -699,6 +708,18 @@ private fun DrawerIdentityCard(
                 fontWeight = FontWeight.SemiBold
             )
             Text(
+                serverName.ifBlank { "No server discovered yet" },
+                color = Color(0xFFE5E7EB),
+                fontSize = 11.sp
+            )
+            if (serverVersion.isNotBlank()) {
+                Text(
+                    "Server v$serverVersion",
+                    color = Color(0xFF96A0AE),
+                    fontSize = 10.sp
+                )
+            }
+            Text(
                 subtitle,
                 color = Color(0xFF96A0AE),
                 fontSize = 11.sp
@@ -706,6 +727,7 @@ private fun DrawerIdentityCard(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatusChip(label = if (isRegistered) "Registered" else "Locked", color = if (isRegistered) Color(0xFF22C55E) else Color(0xFFF59E0B))
                 StatusChip(label = if (isCalibrated) "Calibrated" else "Needs calibration", color = if (isCalibrated) Color(0xFF10B981) else Color(0xFFF97316))
+                StatusChip(label = "Identity", color = Color(0xFF8B5CF6))
             }
         }
     }
