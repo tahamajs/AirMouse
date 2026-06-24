@@ -132,21 +132,19 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		}
 		s.clients[clientKey] = client
 	}
-	// Update last seen and bytes received (under client mutex)
 	client.mu.Lock()
 	client.LastSeen = time.Now()
 	client.BytesRecv += int64(len(msg))
 	client.mu.Unlock()
 	s.mu.Unlock()
 
-	// Handle discovery requests (both spellings)
+	// Handle discovery requests
 	if msg == "AIRMOUSE_DISCOVER" || msg == "AIRMOUSE_DISCOVERY" {
 		s.sendDiscoveryResponse(clientAddr)
 		utils.LogDebug("UDP discovery request from %s", clientIP)
 		return
 	}
 
-	// Try JSON parsing for structured messages
 	msgType, payload, id, err := websocketpkg.DecodeWireMessage([]byte(msg))
 	if err != nil {
 		if msg == "AIRMOUSE_HELLO" {
@@ -161,7 +159,6 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		return
 	}
 
-	// Send ACK for messages with ID
 	if id != nil {
 		ack := websocketpkg.AckMessage(id)
 		if len(ack) > 0 {
@@ -170,7 +167,6 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		}
 	}
 
-	// Check approval status (under client mutex)
 	client.mu.RLock()
 	approved := client.Approved
 	client.mu.RUnlock()
@@ -287,13 +283,17 @@ func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *
 		}
 	}
 
-	// Update client fields (under client mutex)
+	// 🔁 Auto-approve if device was previously approved
+	if s.autoApproveUDPClient(clientKey, client, fingerprint) {
+		return
+	}
+
+	// Otherwise, mark as pending approval
 	client.mu.Lock()
 	client.DeviceName = name
 	client.DeviceID = fingerprint
 	client.mu.Unlock()
 
-	// Register with device manager
 	if s.deviceMgr != nil {
 		_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeUDP, name, map[string]string{
 			"fingerprint":     fingerprint,
@@ -324,7 +324,6 @@ func (s *Server) writeToClient(clientKey string, clientAddr *net.UDPAddr, data [
 		utils.LogDebug("Failed to send UDP message to %s: %v", clientAddr.String(), err)
 		return err
 	}
-	// Update bytes sent (under client mutex)
 	s.mu.Lock()
 	if client, ok := s.clients[clientKey]; ok {
 		client.mu.Lock()
@@ -402,6 +401,25 @@ func (s *Server) ApproveDevice(deviceID string) error {
 	}
 	utils.LogInfo("UDP approval accepted: device=%s", deviceID)
 	return nil
+}
+
+// autoApproveUDPClient checks if the device is known and auto-approves it.
+func (s *Server) autoApproveUDPClient(clientKey string, client *UDPClient, fingerprint string) bool {
+	if s.deviceMgr == nil {
+		return false
+	}
+	if s.deviceMgr.IsDeviceApproved(fingerprint) {
+		_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
+		cfg := config.Get()
+		welcome := websocketpkg.WelcomeMessage(cfg.ServerName, cfg.Version)
+		if err := s.writeToClient(clientKey, client.Address, welcome); err == nil {
+			client.Approved = true
+			client.DeviceID = fingerprint
+			utils.LogInfo("UDP auto-approved known device: %s (fingerprint: %s)", client.Address.String(), fingerprint)
+			return true
+		}
+	}
+	return false
 }
 
 // GetStats – server statistics

@@ -222,6 +222,34 @@ func (s *Server) handleClient(conn net.Conn) {
 	})
 }
 
+// autoApproveTCPClient checks if the device is known and auto‑approves it.
+// Returns true if auto‑approved, false otherwise.
+func (s *Server) autoApproveTCPClient(client *Client, fingerprint string) bool {
+	if s.deviceMgr == nil {
+		return false
+	}
+	if s.deviceMgr.IsDeviceApproved(fingerprint) {
+		// Update device status to connected
+		_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
+		// Send welcome
+		cfg := config.Get()
+		welcome := fmt.Sprintf(`{"type":"welcome","payload":{"server":"%s","version":"%s","client_id":"%s"}}`+"\n",
+			cfg.ServerName, cfg.Version, client.ID)
+		if _, err := client.Conn.Write([]byte(welcome)); err == nil {
+			client.mu.Lock()
+			client.Approved = true
+			client.DeviceID = fingerprint
+			client.BytesSent += int64(len(welcome))
+			client.mu.Unlock()
+			control.SetMovementPaused(false)
+			control.ClearPause()
+			utils.LogInfo("TCP auto-approved known device: %s (fingerprint: %s)", client.ID, fingerprint)
+			return true
+		}
+	}
+	return false
+}
+
 // processLine processes a single line of input.
 func (s *Server) processLine(client *Client, line []byte) {
 	msgType, payload, id, err := decodeWireMessage(line)
@@ -327,6 +355,13 @@ func (s *Server) processLine(client *Client, line []byte) {
 			}
 		}
 
+		// ---- AUTO‑APPROVAL LOGIC ----
+		if s.autoApproveTCPClient(client, fingerprint) {
+			// Device was auto‑approved – skip rest of hello processing
+			break
+		}
+		// ---- END AUTO‑APPROVAL ----
+
 		// Update client fields (with mutex)
 		client.mu.Lock()
 		if name != "" {
@@ -354,7 +389,6 @@ func (s *Server) processLine(client *Client, line []byte) {
 		client.mu.Unlock()
 
 		utils.LogInfo("TCP client awaiting approval: id=%s name=%s", client.ID, client.Name)
-		// Note: Approved flag is still false; will be set by ApproveDevice
 
 	case "ping":
 		utils.LogDebug("TCP ping received from client=%s, sending pong", client.ID)
@@ -569,7 +603,7 @@ func (s *Server) SendToClient(clientID string, msg interface{}) error {
 	return nil
 }
 
-// Helper functions (unchanged)
+// Helper functions
 func firstNumber(payload map[string]any, keys ...string) float64 {
 	for _, key := range keys {
 		if v, ok := payload[key]; ok {

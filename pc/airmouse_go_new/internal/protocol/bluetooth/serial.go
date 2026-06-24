@@ -287,9 +287,9 @@ func (sm *SerialManager) GetStats() map[string]interface{} {
     }
     
     return map[string]interface{}{
-        "connections":    len(sm.connections),
-        "running":        sm.running,
-        "total_bytes_sent": totalSent,
-        "total_bytes_recv": totalRecv,
+        "connections":       len(sm.connections),
+        "running":           sm.running,
+        "total_bytes_sent":  totalSent,
+        "total_bytes_recv":  totalRecv,
     }
 }
