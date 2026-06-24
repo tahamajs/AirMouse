@@ -244,6 +244,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 		fingerprint := device.StableDeviceID(deviceIDValue, name, version, deviceName, model, manufacturer, brand, androidVersion, sdkInt, protocolName, transport)
 		token, _ := payload["token"].(string)
 		utils.LogInfo("Handshake received from Android (TCP): id=%s name=%s", client.ID, name)
+		utils.LogDebug("TCP hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
 		if config.Get().AuthEnabled {
 			if token == "" || s.authMgr == nil || !s.authMgr.ValidateToken(token) {
 				errMsg := `{"type":"error","payload":{"message":"connection rejected: invalid pairing token"}}` + "\n"
@@ -287,6 +288,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 		client.BytesSent += int64(len(welcome))
 		utils.LogInfo("TCP approval accepted: id=%s name=%s", client.ID, client.Name)
 		utils.LogInfo("TCP client connected: id=%s name=%s", client.ID, client.Name)
+		utils.LogDebug("TCP approval state set: id=%s approved=%v device_id=%s", client.ID, client.Approved, client.DeviceID)
 
 	case "ping":
 		client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))

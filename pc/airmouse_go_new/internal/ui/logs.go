@@ -148,7 +148,6 @@ func NewLogsTab() fyne.CanvasObject {
 // AddLogEntry adds a new log entry (called from the global hook).
 func (t *LogsTab) AddLogEntry(level, message, source string) {
 	if t.paused {
-		utils.LogDebug("Log entry dropped because streaming is paused: level=%s message=%s", level, message)
 		return
 	}
 	t.logMu.Lock()
@@ -161,7 +160,6 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 		Source:  source,
 	}
 	t.logEntries = append(t.logEntries, entry)
-	utils.LogDebug("Log entry added: level=%s count=%d", level, len(t.logEntries))
 
 	// Keep last 1000 entries
 	if len(t.logEntries) > 1000 {
@@ -208,7 +206,6 @@ func (t *LogsTab) refreshDisplay() {
 	// Update status and content
 	t.statusLabel.SetText(fmt.Sprintf("📊 %d / %d entries", filteredCount, len(t.logEntries)))
 	t.logWidget.SetText(buf.String())
-	utils.LogDebug("Logs display refreshed: filtered=%d total=%d level=%s filter=%q", filteredCount, len(t.logEntries), t.level, t.filter)
 
 	// Auto-scroll to bottom
 	if t.autoScroll.Checked && filteredCount > 0 {

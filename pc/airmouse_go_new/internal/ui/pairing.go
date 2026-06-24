@@ -64,20 +64,24 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	// Instructions
 	instructions := widget.NewRichTextFromMarkdown(
 		"# How to pair your device\n\n" +
+			"**Pending approval:** the server will not enable mouse control until this session is approved from the panel.\n\n" +
 			"## Method 1: QR Code\n" +
 			"1. Open the Air Mouse Android app\n" +
 			"2. Tap the QR scanner icon in the top right\n" +
 			"3. Scan this QR code\n" +
-			"4. The app will show waiting for approval, then approved, then connected\n\n" +
+			"4. The app will show waiting for approval, then approved, then connected\n" +
+			"5. Return here if the session does not become active\n\n" +
 			"## Method 2: Manual Entry\n" +
 			"1. Open Air Mouse app\n" +
 			"2. Tap **Manual Connection**\n" +
 			"3. Enter the IP address and port below\n" +
-			"4. Tap **Connect**\n\n" +
+			"4. Tap **Connect**\n" +
+			"5. Approve the session in this panel after Android connects\n\n" +
 			"## Method 3: UDP Discovery\n" +
 			"1. Make sure both devices are on the same network\n" +
 			"2. The app will automatically discover the server\n" +
-			"3. Tap on the discovered server to connect")
+			"3. Tap on the discovered server to connect\n" +
+			"4. Approve the session in this panel when it appears")
 
 	// Server info
 	serverInfo := widget.NewRichTextFromMarkdown(fmt.Sprintf(
@@ -145,7 +149,7 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 		widget.NewLabelWithStyle("🔗 Pair New Device", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		widget.NewRichTextFromMarkdown(
-			"**Approval required:** the Android app can discover the server, but it will not control the mouse until this server approves the session.",
+			"**Approval required:** Android can discover and connect, but it will not control the mouse until this server approves the session.",
 		),
 		widget.NewLabel("The QR code opens the Android pairing flow with the correct WebSocket endpoint and protocol."),
 		instructions,
