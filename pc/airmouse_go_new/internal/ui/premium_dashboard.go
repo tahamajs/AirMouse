@@ -1,5 +1,6 @@
 package ui
 
+
 import (
 	"fmt"
 	"image/color"
@@ -14,15 +15,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"airmouse-go/internal/config"
-	"airmouse-go/internal/control"
+	mctl mctl "airmouse-go/control/mouse"   // alias
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/protocol"
 )
-
-// ------------------------------------------------------------
-//  Premium Dashboard
-// ------------------------------------------------------------
-
 type PremiumDashboard struct {
 	// Status
 	statusCircle *canvas.Circle
@@ -42,7 +38,7 @@ type PremiumDashboard struct {
 	// Internal
 	stopChan    chan struct{}
 	mu          sync.Mutex
-	mouse       control.MouseController
+	mouse mctl.Controller
 	server      *protocol.ProtocolServer
 	deviceMgr   *device.Manager
 	cfg         *config.Config
@@ -50,8 +46,8 @@ type PremiumDashboard struct {
 }
 
 // NewPremiumDashboard creates a premium dashboard
-func NewPremiumDashboard(server *protocol.ProtocolServer, mouse control.MouseController, deviceMgr *device.Manager) fyne.CanvasObject {
-	if server == nil || mouse == nil || deviceMgr == nil {
+func NewPremiumDashboard(server *protocol.ProtocolServer, mouse mctl.Controller, deviceMgr *device.Manager) fyne.CanvasObject {
+		if server == nil || mouse == nil || deviceMgr == nil {
 		return widget.NewLabelWithStyle("⚠️ Dashboard unavailable",
 			fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	}

@@ -1,9 +1,7 @@
 package ui
-
 import (
 	"fmt"
 	"strconv"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -12,10 +10,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"airmouse-go/internal/config"
-	"airmouse-go/internal/control"
+	mctl mctl "airmouse-go/control/mouse"
 )
 
-// ------------------------------------------------------------
+
 //  SettingsTab
 // ------------------------------------------------------------
 
@@ -82,11 +80,11 @@ type SettingsTab struct {
 	statusLabel           *widget.Label
 
 	cfg                   *config.Config
-	mouse                 control.MouseController
+	mouse                 mctl.Controller
 }
 
 // NewSettingsTab creates the settings tab.
-func NewSettingsTab(cfg *config.Config, mouse control.MouseController) fyne.CanvasObject {
+func NewSettingsTab(cfg *config.Config, mouse mctl.Controller) fyne.CanvasObject {
 	tab := &SettingsTab{
 		cfg:   cfg,
 		mouse: mouse,

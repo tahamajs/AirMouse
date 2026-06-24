@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+func init() {
+	execute = execLinux
+}
+
 func execLinux(command string) error {
 	var cmd *exec.Cmd
 	switch command {
@@ -20,7 +24,6 @@ func execLinux(command string) error {
 	case "window_close":
 		cmd = exec.Command("xdotool", "key", "alt+F4")
 	case "lock_screen":
-		// Try multiple lock commands
 		lockCmds := [][]string{
 			{"loginctl", "lock-session"},
 			{"gnome-screensaver-command", "-l"},
