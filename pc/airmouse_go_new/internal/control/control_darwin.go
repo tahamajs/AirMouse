@@ -9,7 +9,11 @@ package control
 #include <ApplicationServices/ApplicationServices.h>
 
 void moveMouse(float dx, float dy) {
-    CGEventRef event = CGEventCreateMouseEvent(NULL, kCGEventMouseMoved, CGPointMake(dx, dy), kCGMouseButtonLeft);
+    CGEventRef probe = CGEventCreate(NULL);
+    CGPoint point = CGEventGetLocation(probe);
+    CFRelease(probe);
+    CGPoint dest = CGPointMake(point.x + dx, point.y + dy);
+    CGEventRef event = CGEventCreateMouseEvent(NULL, kCGEventMouseMoved, dest, kCGMouseButtonLeft);
     CGEventPost(kCGHIDEventTap, event);
     CFRelease(event);
 }
@@ -24,7 +28,10 @@ void clickMouse(int button, int down) {
         type = down ? kCGEventRightMouseDown : kCGEventRightMouseUp;
         btn = kCGMouseButtonRight;
     }
-    CGEventRef event = CGEventCreateMouseEvent(NULL, type, CGPointMake(0, 0), btn);
+    CGEventRef probe = CGEventCreate(NULL);
+    CGPoint point = CGEventGetLocation(probe);
+    CFRelease(probe);
+    CGEventRef event = CGEventCreateMouseEvent(NULL, type, point, btn);
     CGEventPost(kCGHIDEventTap, event);
     CFRelease(event);
 }
@@ -60,27 +67,27 @@ import "time"
 import "os/exec"
 
 func (m *mouseController) executeMove(dx, dy float64) {
-    C.moveMouse(C.float(dx), C.float(dy))
+	C.moveMouse(C.float(dx), C.float(dy))
 }
 
 func (m *mouseController) executeClick(button string) {
-    if button == "left" {
-        C.clickMouse(0, 1)
-        time.Sleep(10 * time.Millisecond)
-        C.clickMouse(0, 0)
-    } else if button == "right" {
-        C.clickMouse(1, 1)
-        time.Sleep(10 * time.Millisecond)
-        C.clickMouse(1, 0)
-    }
+	if button == "left" {
+		C.clickMouse(0, 1)
+		time.Sleep(10 * time.Millisecond)
+		C.clickMouse(0, 0)
+	} else if button == "right" {
+		C.clickMouse(1, 1)
+		time.Sleep(10 * time.Millisecond)
+		C.clickMouse(1, 0)
+	}
 }
 
-func (m *mouseController) executeDoubleClick() { 
-    C.doubleClick()
+func (m *mouseController) executeDoubleClick() {
+	C.doubleClick()
 }
 
 func (m *mouseController) executeScroll(delta int) {
-    C.scrollWheel(C.int(delta))
+	C.scrollWheel(C.int(delta))
 }
 
 // HasAccessibilityPermission reports whether macOS accessibility control is enabled.
