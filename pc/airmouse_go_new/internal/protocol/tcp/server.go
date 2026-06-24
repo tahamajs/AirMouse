@@ -145,7 +145,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	})
 
 	reader := bufio.NewReader(conn)
-	heartbeat := time.NewTicker(10 * time.Second)
+	heartbeat := time.NewTicker(30 * time.Second)
 	defer heartbeat.Stop()
 
 	// Heartbeat goroutine
@@ -161,7 +161,7 @@ func (s *Server) handleClient(conn net.Conn) {
 			c.mu.RLock()
 			idle := time.Since(c.LastActive)
 			c.mu.RUnlock()
-			if idle > 30*time.Second {
+			if idle > 120*time.Second {
 				utils.LogInfo("TCP client timeout: id=%s", clientID)
 				_ = conn.Close()
 				return
@@ -174,6 +174,7 @@ func (s *Server) handleClient(conn net.Conn) {
 				_ = conn.Close()
 				return
 			}
+			utils.LogDebug("TCP ping sent to client=%s", clientID)
 		}
 	}()
 
@@ -184,6 +185,7 @@ func (s *Server) handleClient(conn net.Conn) {
 			utils.LogDebug("TCP read loop ending for client=%s err=%v", clientID, err)
 			break
 		}
+		utils.LogDebug("TCP raw line from %s: %q", clientID, line)
 
 		// Update last active and bytes received (with mutex)
 		client.mu.Lock()
@@ -242,6 +244,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 		dx := firstNumber(payload, "dx", "DeltaX", "deltaX")
 		dy := firstNumber(payload, "dy", "DeltaY", "deltaY")
+		utils.LogInfo("TCP move: client=%s dx=%.2f dy=%.2f", client.ID, dx, dy)
 		if s.mouse != nil {
 			s.mouse.Move(dx, dy)
 		}
@@ -354,8 +357,12 @@ func (s *Server) processLine(client *Client, line []byte) {
 		// Note: Approved flag is still false; will be set by ApproveDevice
 
 	case "ping":
+		utils.LogDebug("TCP ping received from client=%s, sending pong", client.ID)
 		_ = client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		_, _ = client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))
+
+	case "pong":
+		utils.LogDebug("TCP pong received from client=%s", client.ID)
 
 	case "gesture":
 		if !approved {
