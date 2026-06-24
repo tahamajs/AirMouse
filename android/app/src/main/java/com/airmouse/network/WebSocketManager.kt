@@ -162,13 +162,13 @@ object WebSocketManager {
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                Log.d(TAG, "Received text: ${text.length} chars")
+                Log.d(TAG, "📥 Received text: ${text.length} chars")
                 onMessage?.invoke(text)
                 handleServerMessage(text)
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                Log.d(TAG, "Received binary: ${bytes.size} bytes")
+                Log.d(TAG, "📥 Received binary: ${bytes.size} bytes")
                 onBinaryMessage?.invoke(bytes.toByteArray())
             }
 
@@ -186,12 +186,16 @@ object WebSocketManager {
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 isConnected.set(false)
-                Log.e(TAG, "Error: ${t.message}")
+                Log.e(TAG, "❌ WebSocket error: ${t.message}")
                 onError?.invoke(t.message ?: "Unknown error")
                 scheduleReconnect()
             }
         })
     }
+
+    // ============================================================
+    // Message Handling
+    // ============================================================
 
     private fun handleServerMessage(message: String) {
         try {
@@ -199,30 +203,34 @@ object WebSocketManager {
             when (json.optString("type")) {
                 MessageTypes.TYPE_WELCOME -> {
                     val payload = json.optJSONObject("payload")
-                    Log.i(TAG, "Server: ${payload?.optString("server")} v${payload?.optString("version")}")
+                    Log.i(TAG, "✅ Server: ${payload?.optString("server")} v${payload?.optString("version")}")
                 }
                 MessageTypes.TYPE_PONG -> {
-                    // Heartbeat received
-                    Log.d(TAG, "Pong received")
+                    Log.d(TAG, "✅ Pong received")
                 }
                 MessageTypes.TYPE_ACK -> {
                     val id = json.optString("id")
-                    Log.d(TAG, "ACK received for: $id")
+                    Log.d(TAG, "✅ ACK received for: $id")
                     onAckReceived?.invoke(id)
                 }
                 MessageTypes.TYPE_ERROR -> {
                     val error = json.optJSONObject("payload")?.optString("message") ?: "Unknown error"
+                    Log.e(TAG, "❌ Server error: $error")
                     onError?.invoke(error)
                 }
             }
         } catch (e: Exception) {
-            // Not JSON, ignore
+            Log.d(TAG, "Non-JSON message: $message")
         }
     }
 
+    // ============================================================
+    // Reconnection Logic
+    // ============================================================
+
     private fun scheduleReconnect() {
         if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-            Log.w(TAG, "Max reconnect attempts reached")
+            Log.w(TAG, "⚠️ Max reconnect attempts reached")
             onError?.invoke("Max reconnection attempts reached")
             return
         }
@@ -233,7 +241,7 @@ object WebSocketManager {
 
         reconnectAttempts++
         val delay = (reconnectAttempts * 2000L).coerceAtMost(30000L)
-        Log.i(TAG, "Reconnecting in ${delay}ms (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
+        Log.i(TAG, "🔄 Reconnecting in ${delay}ms (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
         onReconnecting?.invoke(reconnectAttempts)
 
         reconnectRunnable = Runnable {
@@ -264,10 +272,12 @@ object WebSocketManager {
 
     private fun sendText(message: String): Boolean {
         if (!isConnected.get()) {
-            Log.w(TAG, "Cannot send message, not connected")
+            Log.w(TAG, "❌ Cannot send message, not connected")
             return false
         }
-        return webSocket?.send(message) ?: false
+        val sent = webSocket?.send(message) ?: false
+        Log.d(TAG, "📤 Sent: ${message.take(96)}${if (message.length > 96) "..." else ""} (success=$sent)")
+        return sent
     }
 
     @Deprecated("Use ConnectionManager.send() instead", ReplaceWith("connectionManager.send(message)"))
@@ -280,7 +290,9 @@ object WebSocketManager {
     fun sendBinary(data: ByteArray): Boolean {
         Log.w(TAG, DEPRECATION_WARNING)
         if (!isConnected.get()) return false
-        return webSocket?.send(ByteString.of(*data)) ?: false
+        val sent = webSocket?.send(ByteString.of(*data)) ?: false
+        Log.d(TAG, "📤 Sent binary: ${data.size} bytes (success=$sent)")
+        return sent
     }
 
     @Deprecated("Use ConnectionManager.sendMove() instead", ReplaceWith("connectionManager.sendMove(dx, dy)"))
@@ -383,6 +395,7 @@ object WebSocketManager {
                 put("version", version)
             })
         }
+        Log.d(TAG, "📤 Sending hello: $json")
         return sendText(json.toString())
     }
 

@@ -4,9 +4,17 @@ import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import com.airmouse.R
 
+/**
+ * Data class representing a single onboarding page.
+ *
+ * @param imageRes The drawable resource ID for the illustration.
+ * @param title The title text.
+ * @param description The descriptive text.
+ * @param bgColor The background color resource ID (defaults to the first page's color).
+ */
 data class OnboardingItem(
-    @get:DrawableRes val imageRes: Int,
+    @DrawableRes val imageRes: Int,
     val title: String,
     val description: String,
-    @get:ColorRes val bgColor: Int = R.color.onboarding_1_bg
+    @ColorRes val bgColor: Int = R.color.onboarding_1_bg
 )

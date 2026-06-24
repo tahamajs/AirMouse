@@ -1,4 +1,3 @@
-
 package com.airmouse.network
 
 import android.util.Log
@@ -8,21 +7,27 @@ import java.net.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * UDP Discovery for finding Air Mouse servers on the local network.
+ *
+ * Sends a broadcast message and listens for responses from servers.
+ * Supports both the legacy text format and JSON responses.
+ */
 @Singleton
 class UdpDiscovery @Inject constructor() {
 
     companion object {
         private const val TAG = "UdpDiscovery"
 
+        // Discovery protocol constants
         private const val DISCOVERY_MESSAGE = "AIRMOUSE_DISCOVER"
-
         private const val DISCOVERY_PORT = 8082
         private const val TIMEOUT_MS = 2000L
         private const val SCAN_DURATION_MS = 5000L
         private const val MAX_PACKET_SIZE = 2048
         private const val MAX_SERVERS = 10
 
-        
+        // Common broadcast addresses to try
         private val BROADCAST_ADDRESSES = listOf(
             "255.255.255.255",
             "192.168.1.255",
@@ -37,16 +42,19 @@ class UdpDiscovery @Inject constructor() {
     private var socket: DatagramSocket? = null
     private var isScanning = false
     private var scanJob: Job? = null
-    private var foundServers = mutableSetOf<String>()
+    private val foundServers = mutableSetOf<String>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    
+    // Callbacks
     var onServerFound: ((ip: String, port: Int, name: String, version: String) -> Unit)? = null
     var onScanComplete: (() -> Unit)? = null
     var onError: ((String) -> Unit)? = null
     var onScanStart: (() -> Unit)? = null
     var onScanProgress: ((progress: Int, found: Int) -> Unit)? = null
 
+    /**
+     * Start a full UDP discovery scan.
+     */
     fun startDiscovery() {
         if (isScanning) {
             Log.d(TAG, "Discovery already in progress")
@@ -61,16 +69,17 @@ class UdpDiscovery @Inject constructor() {
         scanJob = scope.launch {
             var discoveredServers = 0
             try {
+                // Create a broadcast socket
                 socket = DatagramSocket().apply {
                     soTimeout = TIMEOUT_MS.toInt()
                     broadcast = true
                     reuseAddress = true
                 }
 
-                
+                // Send discovery broadcasts to multiple addresses
                 sendDiscoveryBroadcasts()
 
-                
+                // Listen for responses
                 val buffer = ByteArray(MAX_PACKET_SIZE)
                 val startTime = System.currentTimeMillis()
 
@@ -80,9 +89,9 @@ class UdpDiscovery @Inject constructor() {
                         socket?.receive(receivePacket)
 
                         val message = String(receivePacket.data, 0, receivePacket.length)
-                        val ip = receivePacket.address.hostAddress
+                        val ip = receivePacket.address.hostAddress ?: continue
 
-                        
+                        // Parse response
                         val (port, name, version) = parseResponse(message, ip)
 
                         val serverKey = "$ip:$port"
@@ -96,17 +105,17 @@ class UdpDiscovery @Inject constructor() {
                                 onScanProgress?.invoke(progress, discoveredServers)
                             }
 
-                            Log.i(TAG, "Found server: $ip:$port ($name) v$version")
+                            Log.i(TAG, "✅ Found server: $ip:$port ($name) v$version")
                         }
                     } catch (e: SocketTimeoutException) {
-                        
+                        // Timeout is expected between packets – update progress
                         val progress = ((System.currentTimeMillis() - startTime) * 100 / SCAN_DURATION_MS).toInt()
                         withContext(Dispatchers.Main) {
                             onScanProgress?.invoke(progress, discoveredServers)
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Receive error: ${e.message}")
                         if (isScanning) {
+                            Log.e(TAG, "Receive error", e)
                             withContext(Dispatchers.Main) {
                                 onError?.invoke("Receive error: ${e.message}")
                             }
@@ -122,42 +131,54 @@ class UdpDiscovery @Inject constructor() {
                 Log.i(TAG, "Discovery scan complete, found $discoveredServers server(s)")
 
             } catch (e: Exception) {
-                Log.e(TAG, "Discovery error: ${e.message}")
+                Log.e(TAG, "Discovery error", e)
                 withContext(Dispatchers.Main) {
                     onError?.invoke(e.message ?: "Discovery failed")
                 }
             } finally {
+                // Ensure cleanup
                 stopDiscovery()
             }
         }
     }
 
+    /**
+     * Send UDP broadcast messages to all known broadcast addresses.
+     */
     private fun sendDiscoveryBroadcasts() {
         val sendData = DISCOVERY_MESSAGE.toByteArray()
+        var sentCount = 0
 
         for (address in BROADCAST_ADDRESSES) {
             try {
                 val broadcastAddr = InetAddress.getByName(address)
                 val sendPacket = DatagramPacket(sendData, sendData.size, broadcastAddr, DISCOVERY_PORT)
                 socket?.send(sendPacket)
+                sentCount++
                 Log.d(TAG, "Discovery broadcast sent to $address")
             } catch (e: Exception) {
                 Log.d(TAG, "Failed to send broadcast to $address: ${e.message}")
             }
         }
+
+        if (sentCount == 0) {
+            Log.w(TAG, "No broadcast packets were sent – check network permissions")
+        }
     }
 
+    /**
+     * Parse a server response, supporting both legacy text and JSON formats.
+     */
     private fun parseResponse(message: String, defaultIp: String): Triple<Int, String, String> {
-        
+        // Try JSON format first
         if (message.startsWith("{") && message.endsWith("}")) {
             try {
                 val json = JSONObject(message)
                 val type = json.optString("type", "")
 
-                
+                // Accept either "discovery_response" or no type (fallback)
                 if (type.isEmpty() || type == "discovery_response") {
                     val port = json.optInt("port", 8080)
-                    
                     val name = json.optString("name", "Air Mouse Server")
                     val version = json.optString("version", "3.0")
                     return Triple(port, name, version)
@@ -167,7 +188,7 @@ class UdpDiscovery @Inject constructor() {
             }
         }
 
-        
+        // Legacy format: AIRMOUSE_SERVER:<port>:<name>:<version>
         if (message.startsWith("AIRMOUSE_SERVER")) {
             val parts = message.split(":")
             val port = when {
@@ -185,7 +206,7 @@ class UdpDiscovery @Inject constructor() {
             return Triple(port, name, version)
         }
 
-        
+        // Fallback: try to guess from simple "ip:port" or "ip:port:name"
         if (message.contains(":")) {
             val parts = message.split(":")
             when (parts.size) {
@@ -196,10 +217,13 @@ class UdpDiscovery @Inject constructor() {
             }
         }
 
-        
+        // Fallback default
         return Triple(8080, "Air Mouse Server", "3.0")
     }
 
+    /**
+     * Stop the current discovery scan.
+     */
     fun stopDiscovery() {
         if (!isScanning) {
             Log.d(TAG, "Discovery not active")
@@ -220,8 +244,14 @@ class UdpDiscovery @Inject constructor() {
         Log.d(TAG, "Discovery stopped")
     }
 
+    /**
+     * Check if a discovery scan is currently running.
+     */
     fun isScanning(): Boolean = isScanning
 
+    /**
+     * Quickly start a new scan (restarts if already running).
+     */
     fun quickScan() {
         if (isScanning) {
             stopDiscovery()
@@ -229,10 +259,15 @@ class UdpDiscovery @Inject constructor() {
         startDiscovery()
     }
 
+    /**
+     * Probe a specific IP address to check if an Air Mouse server is running.
+     * Returns true if a server responds.
+     */
     suspend fun probeServer(ip: String, port: Int = DISCOVERY_PORT): Boolean {
         return withContext(Dispatchers.IO) {
+            var tempSocket: DatagramSocket? = null
             try {
-                val tempSocket = DatagramSocket()
+                tempSocket = DatagramSocket()
                 tempSocket.soTimeout = TIMEOUT_MS.toInt()
 
                 val sendData = DISCOVERY_MESSAGE.toByteArray()
@@ -243,29 +278,31 @@ class UdpDiscovery @Inject constructor() {
                 val buffer = ByteArray(MAX_PACKET_SIZE)
                 val receivePacket = DatagramPacket(buffer, buffer.size)
 
-                try {
-                    tempSocket.receive(receivePacket)
-                    val response = String(receivePacket.data, 0, receivePacket.length)
-                    val (responsePort, name, version) = parseResponse(response, ip)
-                    tempSocket.close()
+                tempSocket.receive(receivePacket)
+                val response = String(receivePacket.data, 0, receivePacket.length)
+                val (responsePort, name, version) = parseResponse(response, ip)
+                tempSocket.close()
 
-                    withContext(Dispatchers.Main) {
-                        onServerFound?.invoke(ip, responsePort, name, version)
-                    }
-                    return@withContext true
-                } catch (e: SocketTimeoutException) {
-                    tempSocket.close()
-                    return@withContext false
+                withContext(Dispatchers.Main) {
+                    onServerFound?.invoke(ip, responsePort, name, version)
                 }
+                return@withContext true
+            } catch (e: SocketTimeoutException) {
+                Log.d(TAG, "Probe timeout for $ip")
+                return@withContext false
             } catch (e: Exception) {
                 Log.e(TAG, "Probe failed for $ip: ${e.message}")
                 return@withContext false
+            } finally {
+                tempSocket?.close()
             }
         }
     }
 
+    /**
+     * Get a list of discovered servers as simple maps.
+     */
     fun getDiscoveredServers(): List<Map<String, Any>> {
-        
         return foundServers.map { key ->
             val parts = key.split(":")
             mutableMapOf<String, Any>().apply {
@@ -275,10 +312,16 @@ class UdpDiscovery @Inject constructor() {
         }
     }
 
+    /**
+     * Clear the list of discovered servers.
+     */
     fun clearDiscoveredServers() {
         foundServers.clear()
     }
 
+    /**
+     * Get status information about the discovery socket.
+     */
     fun getSocketStatus(): Map<String, Any> {
         return mapOf(
             "is_scanning" to isScanning,
@@ -290,15 +333,32 @@ class UdpDiscovery @Inject constructor() {
         )
     }
 
+    /**
+     * Get the number of found servers.
+     */
     fun getFoundServerCount(): Int = foundServers.size
 
+    /**
+     * Check if a specific server was found.
+     */
     fun isServerFound(ip: String, port: Int = 8080): Boolean {
         return foundServers.contains("$ip:$port")
     }
 
+    /**
+     * Get the IP addresses of all found servers.
+     */
     fun getFoundServerIPs(): List<String> {
         return foundServers.map { key ->
             key.substringBefore(":")
         }
+    }
+
+    /**
+     * Clean up resources when the object is no longer needed.
+     */
+    fun cleanup() {
+        stopDiscovery()
+        scope.cancel()
     }
 }
