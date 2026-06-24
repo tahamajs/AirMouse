@@ -2746,3 +2746,14 @@
 2026-06-24 12:06:07.572 [INFO] manager.go:95: Bluetooth manager started: adapter=default
 2026-06-24 12:06:07.573 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
 2026-06-24 12:06:07.573 [INFO] main.go:129: Protocol lifecycle event: start
+2026-06-24 13:30:00.983 [INFO] main.go:162: Received signal: interrupt
+2026-06-24 13:30:00.986 [INFO] main.go:176: Initiating graceful shutdown...
+2026-06-24 13:30:00.986 [INFO] main.go:180: Stopping protocol server...
+2026-06-24 13:30:00.989 [INFO] manager.go:368: Bluetooth manager stopped
+2026-06-24 13:30:00.991 [INFO] server.go:381: USB serial server stopped
+2026-06-24 13:30:00.991 [INFO] main.go:188: Protocol server stopped
+2026-06-24 13:30:00.991 [INFO] main.go:196: Stopping device manager...
+2026-06-24 13:30:00.991 [INFO] main.go:39: Device manager stopped
+2026-06-24 13:30:00.991 [INFO] main.go:202: Closing UI...
+2026-06-24 13:30:00.992 [INFO] main.go:131: Protocol lifecycle event: stop
+2026-06-24 13:30:01.006 [INFO] main.go:206: Shutdown complete
