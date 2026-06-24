@@ -77,11 +77,20 @@ func TestTCPProcessLine_SimulatedAndroidSession(t *testing.T) {
 		ConnectedAt: time.Now(),
 		LastActive:  time.Now(),
 	}
+	s.mu.Lock()
+	s.clients[client.ID] = client
+	s.mu.Unlock()
 
-	// hello -> welcome
+	// hello -> pending approval
 	s.processLine(client, []byte(`{"type":"hello","name":"Pixel 8","version":"3.0"}`+"\n"))
+	if got := client.Conn.(*fakeConn).writes.String(); got != "" {
+		t.Fatalf("did not expect welcome before approval, got %q", got)
+	}
+	if err := s.ApproveDevice(client.DeviceID); err != nil {
+		t.Fatalf("approve device: %v", err)
+	}
 	if got := client.Conn.(*fakeConn).writes.String(); got == "" || !bytes.Contains([]byte(got), []byte(`"type":"welcome"`)) {
-		t.Fatalf("expected welcome message, got %q", got)
+		t.Fatalf("expected welcome message after approval, got %q", got)
 	}
 	client.Conn.(*fakeConn).writes.Reset()
 

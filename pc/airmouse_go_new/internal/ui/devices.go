@@ -21,29 +21,33 @@ import (
 // ------------------------------------------------------------
 
 type DevicesTab struct {
-	list          *widget.List
-	devices       []*device.DeviceInfo
-	deviceMgr     *device.Manager
-	details       *widget.Label
-	refreshBtn    *widget.Button
-	disconnectBtn *widget.Button
-	blockBtn      *widget.Button
-	renameBtn     *widget.Button
-	statusLabel   *widget.Label
-	approvalLabel *widget.Label
-	searchEntry   *widget.Entry
-	filterSelect  *widget.Select
-	selectedID    string
+	server          interface{ ApproveDevice(string) error }
+	list            *widget.List
+	devices         []*device.DeviceInfo
+	deviceMgr       *device.Manager
+	details         *widget.Label
+	refreshBtn      *widget.Button
+	approveBtn      *widget.Button
+	approvePanelBtn *widget.Button
+	disconnectBtn   *widget.Button
+	blockBtn        *widget.Button
+	renameBtn       *widget.Button
+	statusLabel     *widget.Label
+	approvalLabel   *widget.Label
+	searchEntry     *widget.Entry
+	filterSelect    *widget.Select
+	selectedID      string
 }
 
 // NewDevicesTab creates a new devices management tab.
-func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
+func NewDevicesTab(server interface{ ApproveDevice(string) error }, deviceMgr *device.Manager) fyne.CanvasObject {
 	if deviceMgr == nil {
 		return widget.NewLabelWithStyle("⚠️ Device Manager unavailable",
 			fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	}
 
 	tab := &DevicesTab{
+		server:     server,
 		deviceMgr:  deviceMgr,
 		devices:    deviceMgr.GetAllDevices(),
 		selectedID: "",
@@ -93,10 +97,17 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 				timeLabel := hbox.Objects[3].(*widget.Label)
 				pairBtn := hbox.Objects[4].(*widget.Button)
 
-				if time.Since(d.LastActive) < 10*time.Second {
-					statusIcon.SetText("🟢")
-				} else {
-					statusIcon.SetText("🟡")
+				switch d.Status {
+				case device.StatusPendingApproval:
+					statusIcon.SetText("🟠")
+				case device.StatusBlocked:
+					statusIcon.SetText("🔴")
+				default:
+					if time.Since(d.LastActive) < 10*time.Second {
+						statusIcon.SetText("🟢")
+					} else {
+						statusIcon.SetText("🟡")
+					}
 				}
 
 				nameLabel.SetText(d.Name)
@@ -140,6 +151,22 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 	})
 	tab.disconnectBtn.Disable()
 
+	tab.approveBtn = widget.NewButtonWithIcon("Approve", theme.ConfirmIcon(), func() {
+		if tab.selectedID != "" {
+			tab.approveDevice()
+		}
+	})
+	tab.approveBtn.Disable()
+	tab.approveBtn.Importance = widget.HighImportance
+
+	tab.approvePanelBtn = widget.NewButtonWithIcon("Approve Selected Device", theme.ConfirmIcon(), func() {
+		if tab.selectedID != "" {
+			tab.approveDevice()
+		}
+	})
+	tab.approvePanelBtn.Disable()
+	tab.approvePanelBtn.Importance = widget.HighImportance
+
 	tab.blockBtn = widget.NewButtonWithIcon("Block", theme.ErrorIcon(), func() {
 		if tab.selectedID != "" {
 			tab.blockDevice()
@@ -173,6 +200,7 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 	)
 
 	buttonBar := container.NewHBox(
+		tab.approveBtn,
 		tab.disconnectBtn,
 		tab.blockBtn,
 		tab.renameBtn,
@@ -189,7 +217,7 @@ func NewDevicesTab(deviceMgr *device.Manager) fyne.CanvasObject {
 		widget.NewLabelWithStyle("Device Details", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		statsPanel,
 		nil, nil,
-		container.NewVBox(tab.approvalLabel, container.NewScroll(tab.details)),
+		container.NewVBox(tab.approvalLabel, tab.approvePanelBtn, container.NewScroll(tab.details)),
 	)
 
 	split := container.NewHSplit(leftPanel, rightPanel)
@@ -258,10 +286,12 @@ func (t *DevicesTab) refresh() {
 		if !exists {
 			t.selectedID = ""
 			t.updateButtons(false)
-			t.details.SetText("Waiting for approval.\n\nTap Pair on a device to open the pairing wizard and approve the session.")
+			t.details.SetText("Waiting for approval.\n\nUse Approve to accept the pending connection, or Pair to open the pairing wizard.")
 			if t.approvalLabel != nil {
-				t.approvalLabel.SetText("⏳ Approval pending: no device is selected yet. Use Pair to approve a phone.")
+				t.approvalLabel.SetText("⏳ Approval pending: no device is selected yet. Use Approve to accept the phone, or Pair to open the wizard.")
 			}
+		} else {
+			t.updateButtons(true)
 		}
 	}
 }
@@ -283,7 +313,7 @@ func (t *DevicesTab) showDeviceDetails(d *device.DeviceInfo) {
 			"Name: %s\n"+
 			"Type: %s\n"+
 			"Status: %s\n\n"+
-			"Approval: pending until Pair is tapped\n\n"+
+			"Approval: %s\n\n"+
 			"━━━━━━━━━━━━━━━━━━━━━━━━\n"+
 			"⏱️ TIMING\n"+
 			"━━━━━━━━━━━━━━━━━━━━━━━━\n"+
@@ -301,6 +331,7 @@ func (t *DevicesTab) showDeviceDetails(d *device.DeviceInfo) {
 		d.Name,
 		d.Type,
 		t.getStatusText(d),
+		t.getApprovalText(d),
 		d.ConnectedAt.Format("2006-01-02 15:04:05"),
 		d.LastActive.Format("2006-01-02 15:04:05"),
 		FormatDuration(uptime),
@@ -311,8 +342,9 @@ func (t *DevicesTab) showDeviceDetails(d *device.DeviceInfo) {
 	)
 	t.details.SetText(details)
 	if t.approvalLabel != nil {
-		t.approvalLabel.SetText(fmt.Sprintf("⏳ Approval pending for %s. Tap Pair to open the pairing wizard and approve this device.", d.Name))
+		t.approvalLabel.SetText(fmt.Sprintf("⏳ %s", t.getApprovalText(d)))
 	}
+	t.updateButtons(true)
 }
 
 func (t *DevicesTab) showPairingForDevice(d *device.DeviceInfo) {
@@ -321,15 +353,42 @@ func (t *DevicesTab) showPairingForDevice(d *device.DeviceInfo) {
 		return
 	}
 	if t.approvalLabel != nil {
-		t.approvalLabel.SetText(fmt.Sprintf("✅ Pairing wizard opened for %s. Approve the session to enable control.", d.Name))
+		t.approvalLabel.SetText(fmt.Sprintf("🔗 Pairing wizard opened for %s. Use Approve in this panel to accept the session.", d.Name))
 	}
 	ShowPairingWizard(win, fmt.Sprintf("ws://%s:%d/ws", utils.GetLocalIP(), config.Get().WebSocketPort))
+}
+
+func (t *DevicesTab) approveDevice() {
+	if t.server == nil || t.selectedID == "" {
+		return
+	}
+	if err := t.server.ApproveDevice(t.selectedID); err != nil {
+		win := getCurrentWindow()
+		if win != nil {
+			dialog.ShowError(err, win)
+		}
+		if t.approvalLabel != nil {
+			t.approvalLabel.SetText(fmt.Sprintf("⚠️ Could not approve %s: %v", t.selectedID, err))
+		}
+		return
+	}
+	t.refresh()
+	if d := t.deviceMgr.GetDevice(t.selectedID); d != nil && t.approvalLabel != nil {
+		t.approvalLabel.SetText(fmt.Sprintf("✅ %s is approved and ready for control.", d.Name))
+		t.showDeviceDetails(d)
+	}
 }
 
 // getStatusText returns a status string with emoji.
 func (t *DevicesTab) getStatusText(d *device.DeviceInfo) string {
 	if d == nil {
 		return "Unknown"
+	}
+	if d.Status == device.StatusPendingApproval {
+		return "🟠 Pending approval"
+	}
+	if d.Status == device.StatusBlocked {
+		return "⛔ Blocked"
 	}
 	if time.Since(d.LastActive) < 10*time.Second {
 		return "🟢 Active"
@@ -339,19 +398,44 @@ func (t *DevicesTab) getStatusText(d *device.DeviceInfo) string {
 	return "🔴 Inactive"
 }
 
+func (t *DevicesTab) getApprovalText(d *device.DeviceInfo) string {
+	if d == nil {
+		return "Pending approval"
+	}
+	switch d.Status {
+	case device.StatusPendingApproval:
+		return "Pending approval - tap Approve to allow mouse control."
+	case device.StatusConnected:
+		return "Approved and connected."
+	case device.StatusBlocked:
+		return "Blocked."
+	default:
+		return "Waiting for approval."
+	}
+}
+
 // updateButtons enables/disables action buttons.
 func (t *DevicesTab) updateButtons(enabled bool) {
-	if t.disconnectBtn == nil || t.blockBtn == nil || t.renameBtn == nil {
+	if t.disconnectBtn == nil || t.blockBtn == nil || t.renameBtn == nil || t.approveBtn == nil || t.approvePanelBtn == nil {
 		return
 	}
 	if enabled {
 		t.disconnectBtn.Enable()
 		t.blockBtn.Enable()
 		t.renameBtn.Enable()
+		if d := t.deviceMgr.GetDevice(t.selectedID); d != nil && d.Status == device.StatusPendingApproval {
+			t.approveBtn.Enable()
+			t.approvePanelBtn.Enable()
+		} else {
+			t.approveBtn.Disable()
+			t.approvePanelBtn.Disable()
+		}
 	} else {
 		t.disconnectBtn.Disable()
 		t.blockBtn.Disable()
 		t.renameBtn.Disable()
+		t.approveBtn.Disable()
+		t.approvePanelBtn.Disable()
 	}
 }
 

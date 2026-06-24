@@ -66,7 +66,7 @@ func NewLogsTab() fyne.CanvasObject {
 	// ----- Main log display -----
 	tab.logWidget = widget.NewMultiLineEntry()
 	tab.logWidget.Disable()
-	tab.logWidget.SetMinRowsVisible(25)
+	tab.logWidget.SetMinRowsVisible(32)
 	tab.logWidget.Wrapping = fyne.TextWrapBreak
 
 	// ----- Filter controls -----
@@ -114,9 +114,11 @@ func NewLogsTab() fyne.CanvasObject {
 
 	// ----- Statistics card -----
 	statsCard := tab.createStatsCard()
+	title := widget.NewLabelWithStyle("🧾 Live Log Stream", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
 	// ----- Toolbar -----
 	toolbar := container.NewVBox(
+		title,
 		container.NewHBox(
 			widget.NewLabel("🔍 Filter:"), tab.filterEntry,
 			widget.NewLabel("Level:"), tab.levelSelect,
@@ -165,8 +167,11 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 	if len(t.logEntries) > 1000 {
 		t.logEntries = t.logEntries[len(t.logEntries)-1000:]
 	}
+	t.logMu.Unlock()
 
-	t.refreshDisplay()
+	RunOnMain(func() {
+		t.refreshDisplay()
+	})
 }
 
 // refreshDisplay updates the log view with current filters.
@@ -177,19 +182,24 @@ func (t *LogsTab) refreshDisplay() {
 	}
 
 	t.logMu.RLock()
-	defer t.logMu.RUnlock()
+	entries := make([]LogEntry, len(t.logEntries))
+	copy(entries, t.logEntries)
+	filterText := t.filter
+	level := t.level
+	autoScroll := t.autoScroll != nil && t.autoScroll.Checked
+	t.logMu.RUnlock()
 
 	var buf bytes.Buffer
 	filteredCount := 0
 
-	for _, entry := range t.logEntries {
+	for _, entry := range entries {
 		// Level filter
-		if t.level != "All" && entry.Level != t.level {
+		if level != "All" && entry.Level != level {
 			continue
 		}
 		// Text filter
-		if t.filter != "" && !bytes.Contains([]byte(entry.Message), []byte(t.filter)) &&
-			!bytes.Contains([]byte(entry.Level), []byte(t.filter)) {
+		if filterText != "" && !bytes.Contains([]byte(entry.Message), []byte(filterText)) &&
+			!bytes.Contains([]byte(entry.Level), []byte(filterText)) {
 			continue
 		}
 		filteredCount++
@@ -204,11 +214,11 @@ func (t *LogsTab) refreshDisplay() {
 	}
 
 	// Update status and content
-	t.statusLabel.SetText(fmt.Sprintf("📊 %d / %d entries", filteredCount, len(t.logEntries)))
+	t.statusLabel.SetText(fmt.Sprintf("📊 %d / %d entries", filteredCount, len(entries)))
 	t.logWidget.SetText(buf.String())
 
 	// Auto-scroll to bottom
-	if t.autoScroll.Checked && filteredCount > 0 {
+	if autoScroll && filteredCount > 0 {
 		t.logWidget.CursorRow = len(t.logWidget.Text) - 1
 	}
 }
@@ -278,7 +288,9 @@ func (t *LogsTab) togglePause() {
 		t.pauseBtn.SetIcon(theme.MediaPauseIcon())
 		t.pauseBtn.SetText("Pause")
 		utils.LogInfo("Log streaming resumed")
-		t.refreshDisplay()
+		RunOnMain(func() {
+			t.refreshDisplay()
+		})
 	}
 }
 

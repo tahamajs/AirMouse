@@ -105,7 +105,7 @@ func (a *App) Run() error {
 	// Status bar
 	a.statusBar = NewStatusBar()
 	a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval in Devices")
-	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts. Open Devices and tap Pair to approve Android.")
+	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts. Open Devices and tap Approve to accept Android.")
 	a.summaryStatus.Wrapping = fyne.TextWrapWord
 
 	// ----- Create all tabs (using safeTab to catch nil) -----
@@ -117,7 +117,7 @@ func (a *App) Run() error {
 		a.dashboardTab = safeTab(nil, "Dashboard")
 	}
 	utils.LogInfo("Building devices tab...")
-	a.devicesTab = safeTab(NewDevicesTab(a.deviceMgr), "Devices")
+	a.devicesTab = safeTab(NewDevicesTab(a.server, a.deviceMgr), "Devices")
 	utils.LogInfo("Building network tab...")
 	a.networkTab = safeTab(NewNetworkTab(a.cfg), "Network")
 	utils.LogInfo("Building gestures tab...")
@@ -376,11 +376,20 @@ func (a *App) refreshConnectionSummary() {
 		return
 	}
 
-	deviceCount := 0
+	activeCount := 0
+	pendingCount := 0
+	totalCount := 0
 	if a.deviceMgr != nil {
-		deviceCount = len(a.deviceMgr.GetActiveDevices())
+		allDevices := a.deviceMgr.GetAllDevices()
+		totalCount = len(allDevices)
+		activeCount = len(a.deviceMgr.GetActiveDevices())
+		for _, d := range allDevices {
+			if d.Status == device.StatusPendingApproval {
+				pendingCount++
+			}
+		}
 	}
-	utils.LogDebug("Refreshing connection summary: server_nil=%t running=%t devices=%d", a.server == nil, a.server != nil && a.server.IsRunning(), deviceCount)
+	utils.LogDebug("Refreshing connection summary: server_nil=%t running=%t active=%d pending=%d total=%d", a.server == nil, a.server != nil && a.server.IsRunning(), activeCount, pendingCount, totalCount)
 
 	if a.server == nil {
 		a.connectionStatus.SetText("⚪ Status: Server unavailable")
@@ -399,17 +408,39 @@ func (a *App) refreshConnectionSummary() {
 	}
 
 	ip := utils.GetLocalIP()
-	a.connectionStatus.SetText(fmt.Sprintf("🟢 Active devices: %d", deviceCount))
+	switch {
+	case activeCount > 0 && pendingCount == 0:
+		a.connectionStatus.SetText(fmt.Sprintf("🟢 Connected devices: %d", activeCount))
+	case pendingCount > 0:
+		a.connectionStatus.SetText(fmt.Sprintf("🟡 Connected: %d | Pending approvals: %d", activeCount, pendingCount))
+	default:
+		a.connectionStatus.SetText("🟢 Connected devices: 0")
+	}
 	if a.summaryStatus != nil {
-		a.summaryStatus.SetText(fmt.Sprintf(
-			"Waiting for approval on %s:%d | ws://%s:%d/ws | UDP %d | Theme: %s",
-			ip,
-			a.cfg.Port,
-			ip,
-			a.cfg.WebSocketPort,
-			a.cfg.UDPPort,
-			a.cfg.Theme,
-		))
+		if pendingCount > 0 {
+			a.summaryStatus.SetText(fmt.Sprintf(
+				"Pending approval on %s:%d | ws://%s:%d/ws | UDP %d | Connected: %d | Pending: %d | Theme: %s",
+				ip,
+				a.cfg.Port,
+				ip,
+				a.cfg.WebSocketPort,
+				a.cfg.UDPPort,
+				activeCount,
+				pendingCount,
+				a.cfg.Theme,
+			))
+		} else {
+			a.summaryStatus.SetText(fmt.Sprintf(
+				"Approved and connected on %s:%d | ws://%s:%d/ws | UDP %d | Connected: %d | Theme: %s",
+				ip,
+				a.cfg.Port,
+				ip,
+				a.cfg.WebSocketPort,
+				a.cfg.UDPPort,
+				activeCount,
+				a.cfg.Theme,
+			))
+		}
 	}
 }
 

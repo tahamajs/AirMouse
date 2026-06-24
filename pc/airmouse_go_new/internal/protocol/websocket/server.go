@@ -188,15 +188,12 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Register device
 	if s.deviceMgr != nil {
 		_ = s.deviceMgr.RegisterDevice(id, device.TypeWebSocket, "Android")
+		_ = s.deviceMgr.UpdateDeviceStatus(id, device.StatusPendingApproval)
 	}
 
 	utils.LogInfo("WebSocket client connected: id=%s, ip=%s", id, client.IP)
 	utils.LogInfo("WebSocket approval pending: id=%s", id)
 	utils.LogDebug("WebSocket initial client state: id=%s approved=%v device=%s", id, client.Approved, client.DeviceID)
-
-	// Send welcome message
-	welcome := WelcomeMessage(cfg.ServerName, cfg.Version)
-	client.Send <- welcome
 
 	go s.readLoop(client)
 	go s.writeLoop(client)
@@ -377,7 +374,6 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
 		utils.LogDebug("WebSocket hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
 		client.Name = name
-		client.Approved = true
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.RenameDeviceID(client.ID, fingerprint)
 			client.DeviceID = fingerprint
@@ -396,16 +392,10 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 				"transport":       transport,
 				"user_agent":      client.UserAgent,
 			})
+			_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusPendingApproval)
 		}
-		utils.LogInfo("WebSocket approval accepted: id=%s, name=%s", client.ID, name)
-		utils.LogInfo("WebSocket client connected: id=%s, name=%s", client.ID, name)
-
-		// Send welcome response
-		cfg := config.Get()
-		welcome := WelcomeMessage(cfg.ServerName, cfg.Version)
-		client.Send <- welcome
-		utils.LogInfo("Approval sent to device (WebSocket): id=%s name=%s", client.ID, name)
-		utils.LogDebug("WebSocket approval state set: id=%s approved=%v device_id=%s", client.ID, client.Approved, client.DeviceID)
+		utils.LogInfo("WebSocket client awaiting approval: id=%s, name=%s", client.ID, name)
+		utils.LogDebug("WebSocket approval state pending: id=%s approved=%v device_id=%s", client.ID, client.Approved, client.DeviceID)
 
 	case "gesture":
 		gesture, _ := payload["gesture"].(string)
@@ -440,6 +430,37 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	default:
 		utils.LogDebug("Unknown message type: %s from device: %s", msgType, client.ID)
 	}
+}
+
+// ApproveDevice approves a pending WebSocket client and sends the welcome message.
+func (s *Server) ApproveDevice(deviceID string) error {
+	s.mu.RLock()
+	var client *WSClient
+	for _, c := range s.clients {
+		if c.DeviceID == deviceID || c.ID == deviceID {
+			client = c
+			break
+		}
+	}
+	s.mu.RUnlock()
+
+	if client == nil {
+		return fmt.Errorf("websocket client not found: %s", deviceID)
+	}
+
+	if client.Approved {
+		return nil
+	}
+
+	client.Approved = true
+	control.SetMovementPaused(false)
+	if s.deviceMgr != nil {
+		_ = s.deviceMgr.UpdateDeviceStatus(deviceID, device.StatusConnected)
+	}
+	cfg := config.Get()
+	client.Send <- WelcomeMessage(cfg.ServerName, cfg.Version)
+	utils.LogInfo("WebSocket approval accepted: device=%s", deviceID)
+	return nil
 }
 
 func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {

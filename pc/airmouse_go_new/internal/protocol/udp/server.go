@@ -259,7 +259,6 @@ func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *
 	}
 
 	s.mu.Lock()
-	client.Approved = true
 	client.DeviceName = name
 	client.DeviceID = fingerprint
 	s.mu.Unlock()
@@ -279,11 +278,9 @@ func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *
 			"protocol":        protocolName,
 			"transport":       transport,
 		})
+		_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusPendingApproval)
 	}
-
-	welcome := websocketpkg.WelcomeMessage(cfg.ServerName, cfg.Version)
-	s.writeToClient(clientKey, clientAddr, welcome)
-	utils.LogInfo("UDP approval accepted: addr=%s name=%s", clientAddr.String(), name)
+	utils.LogInfo("UDP client awaiting approval: addr=%s name=%s", clientAddr.String(), name)
 }
 
 func (s *Server) writeToClient(clientKey string, clientAddr *net.UDPAddr, data []byte) error {
@@ -312,6 +309,48 @@ func (s *Server) Stop() {
 	s.clients = make(map[string]*UDPClient)
 	s.mu.Unlock()
 	utils.LogInfo("UDP discovery server stopped")
+}
+
+// ApproveDevice approves a pending UDP client and sends the welcome message.
+func (s *Server) ApproveDevice(deviceID string) error {
+	s.mu.RLock()
+	var (
+		clientKey string
+		client    *UDPClient
+	)
+	for key, c := range s.clients {
+		if c.DeviceID == deviceID || c.Address.String() == deviceID {
+			clientKey = key
+			client = c
+			break
+		}
+	}
+	s.mu.RUnlock()
+
+	if client == nil || client.Address == nil {
+		return fmt.Errorf("udp client not found: %s", deviceID)
+	}
+
+	if client.Approved {
+		return nil
+	}
+
+	cfg := config.Get()
+	welcome := websocketpkg.WelcomeMessage(cfg.ServerName, cfg.Version)
+	if err := s.writeToClient(clientKey, client.Address, welcome); err != nil {
+		return err
+	}
+	client.Approved = true
+	control.SetMovementPaused(false)
+	if s.deviceMgr != nil {
+		updateID := client.DeviceID
+		if updateID == "" {
+			updateID = deviceID
+		}
+		_ = s.deviceMgr.UpdateDeviceStatus(updateID, device.StatusConnected)
+	}
+	utils.LogInfo("UDP approval accepted: device=%s", deviceID)
+	return nil
 }
 
 // GetStats – server statistics

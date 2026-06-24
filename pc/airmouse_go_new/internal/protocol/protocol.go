@@ -49,6 +49,10 @@ type websocketStartStopStats interface {
 	GetStats() map[string]interface{}
 }
 
+type approvableServer interface {
+	ApproveDevice(deviceID string) error
+}
+
 type bluetoothStartStopStats interface {
 	Start() error
 	Stop()
@@ -358,6 +362,43 @@ func (s *ProtocolServer) BlockDevice(deviceID string) error {
 		return fmt.Errorf("device ID cannot be empty")
 	}
 	return s.deviceMgr.BlockDevice(deviceID)
+}
+
+// ApproveDevice approves a pending device and sends the welcome response.
+func (s *ProtocolServer) ApproveDevice(deviceID string) error {
+	if deviceID == "" {
+		return fmt.Errorf("device ID cannot be empty")
+	}
+
+	servers := []approvableServer{}
+	if s.tcpServer != nil {
+		if srv, ok := s.tcpServer.(approvableServer); ok {
+			servers = append(servers, srv)
+		}
+	}
+	if s.wsServer != nil {
+		if srv, ok := s.wsServer.(approvableServer); ok {
+			servers = append(servers, srv)
+		}
+	}
+	if s.udpServer != nil {
+		if srv, ok := s.udpServer.(approvableServer); ok {
+			servers = append(servers, srv)
+		}
+	}
+
+	var lastErr error
+	for _, srv := range servers {
+		if err := srv.ApproveDevice(deviceID); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+	}
+	if lastErr != nil {
+		return lastErr
+	}
+	return fmt.Errorf("device not found: %s", deviceID)
 }
 
 // GetActiveProtocols returns a list of active protocols

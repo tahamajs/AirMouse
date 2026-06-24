@@ -43,7 +43,7 @@ func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServ
 		widget.NewLabelWithStyle("Handshake", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("1. Android connects over WebSocket or TCP and waits for approval."),
 		widget.NewLabel("2. Android sends hello with device name, app version, and pairing token."),
-		widget.NewLabel("3. Go replies with welcome to approve the session."),
+		widget.NewLabel("3. The server panel shows the device as pending until you tap Approve, then Go replies with welcome."),
 		widget.NewLabel("4. Cursor, click, and scroll messages begin after approval and the session becomes connected."),
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Message Rules", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
