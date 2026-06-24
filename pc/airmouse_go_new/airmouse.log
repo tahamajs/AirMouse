@@ -2757,3 +2757,50 @@
 2026-06-24 13:30:00.991 [INFO] main.go:202: Closing UI...
 2026-06-24 13:30:00.992 [INFO] main.go:131: Protocol lifecycle event: stop
 2026-06-24 13:30:01.006 [INFO] main.go:206: Shutdown complete
+2026-06-24 16:22:55.117 [INFO] main.go:95: 
+╔═══════════════════════════════════════════════════════════════╗
+║     Air Mouse Pro Server v3.0.0                                   ║
+║     Turn your phone into a wireless mouse                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+2026-06-24 16:22:55.118 [INFO] main.go:100: System Information:
+2026-06-24 16:22:55.118 [INFO] main.go:101:   OS: darwin
+2026-06-24 16:22:55.118 [INFO] main.go:102:   Arch: arm64
+2026-06-24 16:22:55.118 [INFO] main.go:103:   CPUs: 8
+2026-06-24 16:22:55.118 [INFO] main.go:104:   Go Version: go1.25.0
+2026-06-24 16:22:55.118 [INFO] main.go:105:   Build Time: 2025-01-15
+2026-06-24 16:22:55.118 [INFO] main.go:106:   Git Commit: unknown
+2026-06-24 16:22:55.119 [INFO] main.go:118: Authentication disabled
+2026-06-24 16:22:55.140 [INFO] main.go:67: Application started successfully
+2026-06-24 16:22:55.140 [INFO] main.go:68: WebSocket server will listen on port 8081
+2026-06-24 16:22:55.140 [INFO] main.go:69: TCP server will listen on port 8080
+2026-06-24 16:22:55.140 [INFO] main.go:70: UDP discovery will listen on port 8082
+2026-06-24 16:22:55.140 [INFO] main.go:71: Active protocols: [TCP WebSocket UDP Bluetooth USB]
+2026-06-24 16:22:55.140 [INFO] main.go:72: Launching desktop UI window...
+2026-06-24 16:22:55.620 [INFO] main.go:39: Bluetooth manager started: adapter=default
+2026-06-24 16:22:55.620 [INFO] main.go:39: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 16:23:02.206 [INFO] manager.go:95: Bluetooth manager started: adapter=default
+2026-06-24 16:23:02.207 [INFO] server.go:117: USB serial server started: baud_rate=115200 auto_detect=true
+2026-06-24 16:23:02.207 [INFO] main.go:129: Protocol lifecycle event: start
+2026-06-24 16:23:24.409 [INFO] main.go:39: Device registered: Android (WebSocket)
+2026-06-24 16:23:24.411 [INFO] main.go:144: Device lifecycle event: type=registered id=de7e3f0663280d8c27b973f0e8b51228 name=Android
+2026-06-24 16:24:05.243 [INFO] main.go:39: Device registered: Android (WebSocket)
+2026-06-24 16:24:05.245 [INFO] main.go:144: Device lifecycle event: type=registered id=44dc8295ce9bbf0fdc3f5db0094dcd50 name=Android
+2026-06-24 16:26:45.869 [INFO] main.go:39: Device registered: Unknown (TCP)
+2026-06-24 16:26:45.871 [INFO] main.go:144: Device lifecycle event: type=registered id=6e250e13932dfe1c25a39420eed977cf name=Unknown
+2026-06-24 16:35:26.759 [INFO] main.go:39: Device registered: Unknown (TCP)
+2026-06-24 16:35:26.760 [INFO] main.go:144: Device lifecycle event: type=registered id=0e590d601544122077ab4812208341ec name=Unknown
+2026-06-24 16:36:35.702 [INFO] main.go:39: Device registered: Unknown (TCP)
+2026-06-24 16:36:35.704 [INFO] main.go:144: Device lifecycle event: type=registered id=78d82d22ac938acd20fe8adf9f1fe95c name=Unknown
+2026-06-24 16:40:19.045 [INFO] main.go:39: Device registered: Android (WebSocket)
+2026-06-24 16:40:19.046 [INFO] main.go:144: Device lifecycle event: type=registered id=f0f038174d7b0384f453b226f9f7c56a name=Android
+2026-06-24 16:41:16.223 [INFO] main.go:39: Device registered: Unknown (TCP)
+2026-06-24 16:41:16.223 [INFO] main.go:144: Device lifecycle event: type=registered id=0793466bdc54403244ae7699be8b2c42 name=Unknown
+2026-06-24 16:59:41.157 [INFO] main.go:39: Device registered: Unknown (TCP)
+2026-06-24 16:59:41.160 [INFO] main.go:144: Device lifecycle event: type=registered id=fdcc2536947cedf0ad2fe2e0e9e13cf8 name=Unknown
+2026-06-24 17:02:24.932 [INFO] main.go:39: Device registered: Unknown (TCP)
+2026-06-24 17:02:24.934 [INFO] main.go:144: Device lifecycle event: type=registered id=e89b1091ba2e4151067d98b025a96605 name=Unknown
+2026-06-24 17:46:39.646 [INFO] main.go:39: Device registered: Unknown (TCP)
+2026-06-24 17:46:39.651 [INFO] main.go:144: Device lifecycle event: type=registered id=c8b1906569e690681803724764861c18 name=Unknown
+2026-06-24 18:02:27.691 [INFO] main.go:39: Device registered: Unknown (TCP)
+2026-06-24 18:02:27.694 [INFO] main.go:144: Device lifecycle event: type=registered id=af6bb1627196ee391daf38a9175ff271 name=Unknown
