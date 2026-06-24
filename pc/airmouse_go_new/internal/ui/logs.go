@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	infraLogger "airmouse-go/internal/infra/logger"
 	"airmouse-go/internal/utils"
 )
 
@@ -43,14 +44,62 @@ type LogsTab struct {
 
 var (
 	globalLogsTab *LogsTab
+	pendingLogsMu sync.Mutex
+	pendingLogs   []LogEntry
 )
 
 func init() {
 	utils.SetLogHook(func(level, msg string) {
-		if globalLogsTab != nil {
-			globalLogsTab.AddLogEntry(level, msg, "")
-		}
+		handleLogHook(level, msg)
 	})
+	infraLogger.AddHook(func(level infraLogger.Level, msg string) {
+		handleLogHook(infraLoggerLevelToString(level), msg)
+	})
+}
+
+func handleLogHook(level, msg string) {
+	if globalLogsTab != nil {
+		globalLogsTab.AddLogEntry(level, msg, "")
+		return
+	}
+
+	pendingLogsMu.Lock()
+	pendingLogs = append(pendingLogs, LogEntry{
+		Time:    time.Now(),
+		Level:   level,
+		Message: msg,
+	})
+	pendingLogsMu.Unlock()
+}
+
+func drainPendingLogs(tab *LogsTab) {
+	pendingLogsMu.Lock()
+	defer pendingLogsMu.Unlock()
+	if len(pendingLogs) == 0 {
+		return
+	}
+	tab.logMu.Lock()
+	tab.logEntries = append(tab.logEntries, pendingLogs...)
+	if len(tab.logEntries) > 1000 {
+		tab.logEntries = tab.logEntries[len(tab.logEntries)-1000:]
+	}
+	tab.logMu.Unlock()
+	pendingLogs = nil
+}
+
+func infraLoggerLevelToString(level infraLogger.Level) string {
+	switch level {
+	case infraLogger.LevelDebug:
+		return "DEBUG"
+	case infraLogger.LevelInfo:
+		return "INFO"
+	case infraLogger.LevelWarn:
+		return "WARN"
+	case infraLogger.LevelError:
+		return "ERROR"
+	default:
+		return "FATAL"
+	}
 }
 
 // NewLogsTab creates a new logs management tab.
@@ -62,6 +111,7 @@ func NewLogsTab() fyne.CanvasObject {
 	tab.paused.Store(false)
 
 	globalLogsTab = tab
+	drainPendingLogs(tab)
 	utils.LogInfo("Logs tab initialized")
 
 	// ----- Main log display -----
