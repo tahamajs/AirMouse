@@ -17,10 +17,7 @@ import (
 	"airmouse-go/internal/utils"
 )
 
-// ------------------------------------------------------------
 // Client - Represents a connected client
-// ------------------------------------------------------------
-
 type Client struct {
 	ID          string
 	Name        string
@@ -33,10 +30,7 @@ type Client struct {
 	BytesRecv   int64
 }
 
-// ------------------------------------------------------------
 // Interfaces for protocol servers
-// ------------------------------------------------------------
-
 type startStopStats interface {
 	Start() error
 	Stop()
@@ -59,20 +53,14 @@ type bluetoothStartStopStats interface {
 	GetStats() map[string]interface{}
 }
 
-// ------------------------------------------------------------
 // ServerEvent - Event structure for callbacks
-// ------------------------------------------------------------
-
 type ServerEvent struct {
 	Type      string // "start", "stop", "client_connected", "client_disconnected"
 	ClientID  string
 	Timestamp time.Time
 }
 
-// ------------------------------------------------------------
 // ProtocolServer - Main server that manages all protocols
-// ------------------------------------------------------------
-
 type ProtocolServer struct {
 	tcpServer    startStopStats
 	wsServer     websocketStartStopStats
@@ -205,13 +193,10 @@ func (s *ProtocolServer) Stop() {
 	s.running = false
 	s.mu.Unlock()
 
-	// Stop subsystems outside the protocol lock so shutdown cannot deadlock
-	// if any backend stop path needs to inspect server state or emit events.
 	if tcpServer != nil {
 		tcpServer.Stop()
 		utils.LogInfo("TCP server stopped")
 	}
-
 	if wsServer != nil {
 		if err := wsServer.Stop(); err != nil {
 			utils.LogError("WebSocket stop error: %v", err)
@@ -219,17 +204,14 @@ func (s *ProtocolServer) Stop() {
 			utils.LogInfo("WebSocket server stopped")
 		}
 	}
-
 	if udpServer != nil {
 		udpServer.Stop()
 		utils.LogInfo("UDP server stopped")
 	}
-
 	if bluetoothMgr != nil {
 		bluetoothMgr.Stop()
 		utils.LogInfo("Bluetooth manager stopped")
 	}
-
 	if usbServer != nil {
 		usbServer.Stop()
 		utils.LogInfo("USB server stopped")

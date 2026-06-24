@@ -7,7 +7,7 @@ import (
     "strings"
     "time"
 
-    "airmouse-go/internal/infra/logger"
+    "airmouse-go/internal/utils"
 )
 
 // USBGadget represents a Linux USB gadget configuration
@@ -85,7 +85,7 @@ func (g *USBGadget) Setup() error {
     if err := os.MkdirAll(stringsDir, 0755); err != nil {
         return err
     }
-    
+
     if err := g.writeFile(filepath.Join(stringsDir, "manufacturer"), g.manufacturer); err != nil {
         return err
     }
@@ -181,7 +181,7 @@ func (g *USBGadget) Setup() error {
     // Find and bind to UDC
     matches, err := filepath.Glob("/sys/class/udc/*")
     if err != nil || len(matches) == 0 {
-        logger.Warn("No UDC found, USB gadget not bound")
+        utils.LogWarn("No UDC found, USB gadget not bound")
         return nil
     }
 
@@ -191,7 +191,7 @@ func (g *USBGadget) Setup() error {
     }
 
     g.enabled = true
-    logger.Info("USB gadget enabled as HID mouse: udc=%s", udc)
+    utils.LogInfo("USB gadget enabled as HID mouse: udc=%s", udc)
     return nil
 }
 
@@ -224,7 +224,7 @@ func (g *USBGadget) Teardown() {
     _ = os.RemoveAll(g.gadgetDir)
 
     g.enabled = false
-    logger.Info("USB gadget torn down")
+    utils.LogInfo("USB gadget torn down")
 }
 
 // IsEnabled returns whether the gadget is enabled
@@ -239,14 +239,14 @@ func (g *USBGadget) SendMouseReport(dx, dy int16, buttons byte, wheel int8) erro
     }
 
     report := []byte{
-        buttons,           // Button state
-        byte(dx & 0xFF),   // X low byte
-        byte((dx >> 8) & 0xFF), // X high byte
-        byte(dy & 0xFF),   // Y low byte
-        byte((dy >> 8) & 0xFF), // Y high byte
-        byte(wheel),       // Wheel delta
-        0x00,              // Padding
-        0x00,              // Padding
+        buttons,                      // Button state
+        byte(dx & 0xFF),              // X low byte
+        byte((dx >> 8) & 0xFF),       // X high byte
+        byte(dy & 0xFF),              // Y low byte
+        byte((dy >> 8) & 0xFF),       // Y high byte
+        byte(wheel),                  // Wheel delta
+        0x00,                         // Padding
+        0x00,                         // Padding
     }
 
     hidDev := filepath.Join(g.gadgetDir, "functions/hid.usb0/dev")
@@ -266,12 +266,12 @@ func (g *USBGadget) GetUDC() string {
 // GetStatus returns gadget status
 func (g *USBGadget) GetStatus() map[string]interface{} {
     return map[string]interface{}{
-        "enabled":     g.enabled,
-        "gadget_dir":  g.gadgetDir,
-        "vendor_id":   g.vendorID,
-        "product_id":  g.productID,
+        "enabled":      g.enabled,
+        "gadget_dir":   g.gadgetDir,
+        "vendor_id":    g.vendorID,
+        "product_id":   g.productID,
         "manufacturer": g.manufacturer,
-        "product":     g.product,
-        "udc":         g.GetUDC(),
+        "product":      g.product,
+        "udc":          g.GetUDC(),
     }
 }
