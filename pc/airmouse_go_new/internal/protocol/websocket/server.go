@@ -21,6 +21,7 @@ import (
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/control"
 	"airmouse-go/internal/device"
+	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/utils"
 )
 
@@ -62,6 +63,7 @@ type Server struct {
 	mouse        control.MouseController
 	deviceMgr    *device.Manager
 	authMgr      *auth.Manager
+	proxMgr      *proximity.Manager // proximity manager (optional)
 	mu           sync.RWMutex
 	server       *http.Server
 	running      bool
@@ -84,13 +86,14 @@ type fileSession struct {
 }
 
 // NewServer creates a new WebSocket server.
-func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager) *Server {
+func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manager, authMgr *auth.Manager, proxMgr *proximity.Manager) *Server {
 	return &Server{
 		port:         port,
 		clients:      make(map[string]*WSClient),
 		mouse:        mouse,
 		deviceMgr:    deviceMgr,
 		authMgr:      authMgr,
+		proxMgr:      proxMgr,
 		fileSessions: make(map[string]*fileSession),
 		startTime:    time.Now(),
 	}
@@ -401,9 +404,8 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
 		utils.LogDebug("WebSocket hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
 
-		// 🔁 Auto-approve if device was previously approved
+		// Auto-approve if device was previously approved
 		if s.autoApproveWSClient(client, fingerprint) {
-			// Device auto-approved – skip pending approval flow
 			break
 		}
 
@@ -441,9 +443,24 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		utils.LogInfo("Gesture received: device=%s, gesture=%s, confidence=%.2f", client.ID, gesture, confidence)
 
 	case "proximity":
+		if s.proxMgr == nil {
+			utils.LogDebug("Proximity manager not available, ignoring proximity update")
+			break
+		}
+		deviceID, _ := payload["device_id"].(string)
 		isNear, _ := payload["is_near"].(bool)
-		distance := toFloat64(payload["distance"])
-		utils.LogInfo("Proximity update: device=%s, near=%v, distance=%.2f", client.ID, isNear, distance)
+		distance := firstFloat64(payload, "distance")
+		rssi := int32(firstFloat64(payload, "rssi"))
+
+		update := proximity.ProximityUpdate{
+			DeviceID:  deviceID,
+			IsNear:    isNear,
+			Distance:  float32(distance),
+			RSSI:      rssi,
+			Timestamp: time.Now().Unix(),
+		}
+		s.proxMgr.ProcessUpdate(update)
+		utils.LogDebug("Proximity update: device=%s near=%v dist=%.2f", deviceID, isNear, distance)
 
 	case "control":
 		command, _ := payload["command"].(string)
@@ -535,7 +552,7 @@ func (s *Server) autoApproveWSClient(client *WSClient, fingerprint string) bool 
 }
 
 // ---------------------------------------------------------------------
-// File transfer helpers (unchanged)
+// File transfer helpers
 // ---------------------------------------------------------------------
 
 func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
@@ -789,21 +806,3 @@ func (s *Server) IsRunning() bool {
 	defer s.mu.RUnlock()
 	return s.running
 }
-case "proximity":
-    if s.proxMgr == nil {
-        break
-    }
-    deviceID, _ := payload["device_id"].(string)
-    isNear, _ := payload["is_near"].(bool)
-    distance := firstNumber(payload, "distance")
-    rssi := int32(firstNumber(payload, "rssi"))
-
-    update := proximity.ProximityUpdate{
-        DeviceID:  deviceID,
-        IsNear:    isNear,
-        Distance:  float32(distance),
-        RSSI:      rssi,
-        Timestamp: time.Now().Unix(),
-    }
-    s.proxMgr.ProcessUpdate(update)
-    utils.LogDebug("Proximity update: device=%s near=%v dist=%.2f", deviceID, isNear, distance)
