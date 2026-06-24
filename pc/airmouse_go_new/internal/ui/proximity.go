@@ -13,13 +13,10 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	"airmouse-go/control/common"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/utils"
 )
-
-// ------------------------------------------------------------
-// ProximityTab
-// ------------------------------------------------------------
 
 type ProximityTab struct {
 	enableCheck     *widget.Check
@@ -31,6 +28,8 @@ type ProximityTab struct {
 	calibrateBtn    *widget.Button
 	lockNowBtn      *widget.Button
 	unlockNowBtn    *widget.Button
+	pauseMouseCheck *widget.Check      // 👈 new: manual pause toggle
+	mouseStateLabel *widget.Label     // 👈 new: shows "Paused" or "Active"
 	statusLabel     *widget.Label
 	distanceLabel   *widget.Label
 	deviceLabel     *widget.Label
@@ -47,7 +46,6 @@ type ProximityTab struct {
 	mu              sync.RWMutex
 }
 
-// NewProximityTab creates the proximity security tab.
 func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 	tab := &ProximityTab{
 		stopUpdate:      make(chan struct{}),
@@ -61,12 +59,14 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 	tab.modeLabel = widget.NewLabel("Mode: waiting for enable")
 	tab.thresholdLabel = widget.NewLabel("")
 
-	// ----- Header -----
+	// 👇 New mouse state label
+	tab.mouseStateLabel = widget.NewLabel("🖱️ Mouse: Active")
+	tab.mouseStateLabel.Importance = widget.SuccessImportance
+
 	header := container.NewHBox(
 		widget.NewLabelWithStyle("📡 Proximity Security", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
-	// ----- Enable checkbox -----
 	tab.enableCheck = widget.NewCheck("Enable Proximity Lock/Unlock", func(enabled bool) {
 		if enabled {
 			tab.startProximityService()
@@ -76,13 +76,19 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 	})
 	tab.enableCheck.SetChecked(tab.cfg.ProximityEnabled)
 
-	// ----- Status labels -----
+	// 👇 New manual pause checkbox
+	tab.pauseMouseCheck = widget.NewCheck("Pause Mouse (manual)", func(paused bool) {
+		common.SetMovementPaused(paused)
+		tab.updateMouseStateLabel(paused)
+	})
+	tab.pauseMouseCheck.SetChecked(common.IsMovementPaused())
+
 	tab.statusLabel = widget.NewLabel("⚪ Proximity service stopped")
 	tab.statusLabel.Importance = widget.MediumImportance
 	tab.distanceLabel = widget.NewLabel("📏 Current distance: -- m")
 	tab.deviceLabel = widget.NewLabel("📱 Paired device: None")
 
-	// Status card
+	// Status card (now includes mouse state)
 	statusCard := container.NewVBox(
 		widget.NewLabelWithStyle("Status", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -90,9 +96,11 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		tab.distanceLabel,
 		tab.deviceLabel,
 		tab.modeLabel,
+		tab.mouseStateLabel,
+		tab.pauseMouseCheck,
 	)
 
-	// ----- Thresholds -----
+	// Thresholds (unchanged)
 	tab.nearSlider = widget.NewSlider(0.5, 5.0)
 	tab.nearSlider.Step = 0.1
 	tab.nearSlider.Value = tab.cfg.ProximityNearThreshold
@@ -138,7 +146,7 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		tab.thresholdLabel,
 	)
 
-	// ----- Actions -----
+	// Actions (unchanged)
 	tab.calibrateBtn = widget.NewButtonWithIcon("Start Calibration", theme.SettingsIcon(), tab.startCalibration)
 	tab.lockNowBtn = widget.NewButtonWithIcon("Lock Now", theme.CancelIcon(), func() {
 		tab.lockScreen()
@@ -154,7 +162,7 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		widget.NewLabel("Use calibration to match your room and movement habits before enabling auto lock."),
 	)
 
-	// ----- History -----
+	// History (unchanged)
 	tab.historyChart = widget.NewLabel("Distance History:\n")
 	tab.historyChart.Wrapping = fyne.TextWrapWord
 
@@ -165,7 +173,6 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		container.NewScroll(tab.historyChart),
 	)
 
-	// ----- Main layout -----
 	overviewCard := container.NewVBox(
 		widget.NewLabelWithStyle("Proximity Security", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -185,10 +192,56 @@ func NewProximityTab() (fyne.CanvasObject, *ProximityTab) {
 		historyCard,
 	)
 
+	// 👇 Periodic update to sync mouse state
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			RunOnMain(func() {
+				if tab.pauseMouseCheck != nil {
+					tab.pauseMouseCheck.SetChecked(common.IsMovementPaused())
+				}
+			})
+		}
+	}()
+
 	return container.NewScroll(content), tab
 }
 
-// ------------------------------------------------------------
+// updateMouseStateLabel updates the label based on pause state
+func (t *ProximityTab) updateMouseStateLabel(paused bool) {
+	if paused {
+		t.mouseStateLabel.SetText("🖱️ Mouse: Paused")
+		t.mouseStateLabel.Importance = widget.DangerImportance
+	} else {
+		t.mouseStateLabel.SetText("🖱️ Mouse: Active")
+		t.mouseStateLabel.Importance = widget.SuccessImportance
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Service lifecycle
 // ------------------------------------------------------------
 
@@ -418,3 +471,4 @@ func (t *ProximityTab) startCalibration() {
 	}
 	showStep()
 }
+
