@@ -30,7 +30,7 @@ func main() {
 	cfg := config.Get()
 	logger.Init(cfg.LogLevel, cfg.LogFile)
 
-	// Inject logger callbacks into the device package.
+	// Inject logger callbacks into the device package (if the package supports it).
 	device.SetLogger(
 		func(msg string, args ...interface{}) {
 			logger.Info(fmt.Sprintf(msg, args...))
@@ -53,7 +53,7 @@ func main() {
 	// --- 3. Build the UI (does NOT start the event loop yet) ---
 	appUI := ui.NewApp(cfg, protocolServer, mouseController, deviceManager)
 
-	// --- 5. Setup graceful shutdown ---
+	// --- 4. Setup graceful shutdown ---
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -117,6 +117,7 @@ func initAuth(cfg *config.Config) *auth.Manager {
 	return authManager
 }
 
+// wireLifecycleLogging attaches lifecycle event listeners to the protocol server and device manager.
 func wireLifecycleLogging(server *protocol.ProtocolServer, deviceMgr *device.DeviceManager) {
 	if server != nil {
 		server.AddEventListener(func(event protocol.ServerEvent) {
@@ -174,7 +175,6 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 				// Stop the protocol server (this will close all active connections).
 				if server != nil {
 					logger.Info("Stopping protocol server...")
-					// Give it a short timeout.
 					done := make(chan struct{})
 					go func() {
 						server.Stop()
