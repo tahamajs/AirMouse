@@ -3,6 +3,8 @@ package ui
 import (
 	"bytes"
 	"fmt"
+	"image"
+	"image/color"
 	"image/png"
 	"net"
 	"net/url"
@@ -38,6 +40,7 @@ type NetworkTab struct {
 	overviewLabel *widget.Label
 	refreshBtn    *widget.Button
 	copyBtn       *widget.Button
+	copyAllBtn    *widget.Button
 	genQrBtn      *widget.Button
 	saveQrBtn     *widget.Button
 	testConnBtn   *widget.Button
@@ -172,6 +175,25 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 		dialog.ShowInformation("Copied", "WebSocket approval endpoint copied to clipboard", win)
 	})
 
+	tab.copyAllBtn = widget.NewButtonWithIcon("Copy All", theme.ContentCopyIcon(), func() {
+		win := getCurrentWindow()
+		if win == nil {
+			return
+		}
+		info := fmt.Sprintf(
+			"Server: %s\nIP: %s\nTCP Port: %s\nWebSocket Port: %s\nUDP Port: %s\nEndpoint: ws://%s:%s/ws",
+			tab.cfg.ServerName,
+			tab.ipEntry.Text,
+			tab.portEntry.Text,
+			tab.wsPortEntry.Text,
+			tab.udpPortEntry.Text,
+			tab.ipEntry.Text,
+			tab.wsPortEntry.Text,
+		)
+		win.Clipboard().SetContent(info)
+		dialog.ShowInformation("Copied", "All network details copied to clipboard", win)
+	})
+
 	tab.genQrBtn = widget.NewButtonWithIcon("Generate QR", theme.InfoIcon(), tab.updateQR)
 
 	tab.saveQrBtn = widget.NewButtonWithIcon("Save QR", theme.DownloadIcon(), func() {
@@ -183,19 +205,26 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 			if err == nil && writer != nil {
 				defer writer.Close()
 				data := tab.pairingURI()
-				pngBytes, _ := qrcode.Encode(data, qrcode.High, 300)
-				_, _ = writer.Write(pngBytes)
+				pngBytes, err := qrcode.Encode(data, qrcode.High, 300)
+				if err != nil {
+					dialog.ShowError(fmt.Errorf("QR generation failed: %w", err), win)
+					return
+				}
+				_, err = writer.Write(pngBytes)
+				if err != nil {
+					dialog.ShowError(fmt.Errorf("failed to save QR: %w", err), win)
+					return
+				}
 				dialog.ShowInformation("Saved", "QR code saved successfully", win)
 			}
 		}, win)
 	})
 
-	// QR code display
-	tab.qrImage = canvas.NewImageFromResource(nil)
+	// QR code display – start with a placeholder
+	tab.qrImage = canvas.NewImageFromImage(generatePlaceholderQR())
 	tab.qrImage.FillMode = canvas.ImageFillContain
 	tab.qrImage.SetMinSize(fyne.NewSize(210, 210))
 	tab.updateQR()
-	tab.qrImage.Refresh()
 
 	// Auto-save when fields change
 	tab.ipEntry.OnChanged = func(s string) {
@@ -257,7 +286,7 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 			tab.wsPortEntry,
 			tab.udpPortEntry,
 		),
-		container.NewHBox(tab.refreshBtn, tab.testConnBtn, tab.copyBtn),
+		container.NewHBox(tab.refreshBtn, tab.testConnBtn, tab.copyBtn, tab.copyAllBtn),
 	)))
 
 	qrCard := NewGlassCard(container.NewPadded(container.NewVBox(
@@ -281,19 +310,46 @@ func NewNetworkTab(cfg *config.Config) fyne.CanvasObject {
 }
 
 // updateQR refreshes the QR code image based on the current IP and port.
+// If generation fails, a placeholder image is displayed and an error dialog is shown.
 func (t *NetworkTab) updateQR() {
 	data := buildPairingURI(t.safeIP(), t.portEntry.Text, t.wsPortEntry.Text, t.udpPortEntry.Text, t.cfg.ServerName)
 
 	pngBytes, err := qrcode.Encode(data, qrcode.High, 250)
 	if err != nil {
+		utils.LogError("QR encode failed: %v", err)
+		t.qrImage.Image = generatePlaceholderQR()
+		t.qrImage.Refresh()
+		win := getCurrentWindow()
+		if win != nil {
+			dialog.ShowError(fmt.Errorf("QR generation failed: %v", err), win)
+		}
 		return
 	}
 	img, err := png.Decode(bytes.NewReader(pngBytes))
 	if err != nil {
+		utils.LogError("QR decode failed: %v", err)
+		t.qrImage.Image = generatePlaceholderQR()
+		t.qrImage.Refresh()
+		win := getCurrentWindow()
+		if win != nil {
+			dialog.ShowError(fmt.Errorf("QR decode failed: %v", err), win)
+		}
 		return
 	}
 	t.qrImage.Image = img
 	t.qrImage.Refresh()
+}
+
+// generatePlaceholderQR returns a simple placeholder image (gray rectangle with text).
+func generatePlaceholderQR() image.Image {
+	img := image.NewRGBA(image.Rect(0, 0, 250, 250))
+	// Fill with gray
+	for x := 0; x < 250; x++ {
+		for y := 0; y < 250; y++ {
+			img.Set(x, y, color.RGBA{200, 200, 200, 255})
+		}
+	}
+	return img
 }
 
 func (t *NetworkTab) pairingSummary() string {
@@ -346,15 +402,16 @@ func (t *NetworkTab) testConnection() {
 				dialog.ShowError(fmt.Errorf("Cannot connect to %s:%s\n\nMake sure the server is running and firewall allows the port", ip, port), win)
 			} else {
 				_ = conn.Close()
-				t.statusLabel.SetText(fmt.Sprintf("✅ Approval handshake successful with %s:%s", ip, port))
+				t.statusLabel.SetText(fmt.Sprintf("✅ Connection successful to %s:%s", ip, port))
 				t.statusLabel.Importance = widget.SuccessImportance
-				dialog.ShowInformation("Connection Test", fmt.Sprintf("Approval handshake succeeded with %s:%s", ip, port), win)
+				dialog.ShowInformation("Connection Test", fmt.Sprintf("Connection succeeded to %s:%s", ip, port), win)
 			}
 		})
 	}()
 }
 
-// getIPList returns a list of all non‑loopback IPv4 addresses on the machine.
+// getIPList returns a list of all non‑loopback IPv4 addresses on the machine,
+// with the most likely LAN IP (private, non‑loopback) placed first.
 func getIPList() []string {
 	var ips []string
 	ifaces, err := net.Interfaces()
@@ -375,8 +432,21 @@ func getIPList() []string {
 			}
 		}
 	}
+	// If no IPs found, fallback to loopback
 	if len(ips) == 0 {
 		ips = append(ips, "127.0.0.1")
 	}
-	return ips
+	// Sort: put private IPs first (e.g., 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+	// Simple: prefer IPs that are not in the 169.254.x.x (link-local) range.
+	var preferred, others []string
+	for _, ip := range ips {
+		if strings.HasPrefix(ip, "169.254.") {
+			others = append(others, ip)
+		} else {
+			preferred = append(preferred, ip)
+		}
+	}
+	// Combine preferred first, then others
+	result := append(preferred, others...)
+	return result
 }

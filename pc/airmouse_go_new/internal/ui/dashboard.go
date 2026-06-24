@@ -48,6 +48,9 @@ type DashboardTab struct {
 	approvalDetail  *widget.Label
 	approvalCount   *widget.Label
 
+	// Dynamic approval list
+	pendingList *fyne.Container
+
 	controlBtn *widget.Button
 	qrBtn      *widget.Button
 	refreshBtn *widget.Button
@@ -121,6 +124,11 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 	tab.approvalDetail = widget.NewLabel("Approve pending Android connections from the Devices tab. The pending device will stay here until you tap Approve.")
 	tab.approvalDetail.Wrapping = fyne.TextWrapWord
 	tab.approvalCount = widget.NewLabel("⏳ Pending approvals: 0")
+
+	// Create dynamic pending list (initially empty)
+	tab.pendingList = container.NewVBox(
+		widget.NewLabel("No pending devices"),
+	)
 
 	utils.AddLogHook(func(level, msg string) {
 		tab.addRecentLog(level, msg)
@@ -271,12 +279,14 @@ func NewDashboardTab(server *protocol.ProtocolServer, mouse control.MouseControl
 		tab.aiStatusLabel,
 	)))
 
+	// Approval card with dynamic pending list
 	approvalCard := NewGlassCard(container.NewPadded(container.NewVBox(
 		tab.approvalTitle,
 		widget.NewSeparator(),
 		tab.approvalBanner,
 		tab.approvalDetail,
 		tab.approvalCount,
+		container.NewScroll(tab.pendingList),
 		container.NewHBox(
 			widget.NewButton("Open Devices", func() {
 				tab.showDeviceManagerHint()
@@ -447,7 +457,7 @@ func (t *DashboardTab) statsUpdater() {
 // ------------------------------------------------------------
 
 func (t *DashboardTab) refreshStats() {
-	if t.mouse == nil {
+	if t.mouse == nil || t.deviceMgr == nil {
 		return
 	}
 
@@ -473,8 +483,10 @@ func (t *DashboardTab) refreshStats() {
 			pendingDevices = append(pendingDevices, d)
 		}
 	}
+
 	// Update UI in one batch
 	RunOnMain(func() {
+		// Update permission hint
 		if t.permissionHint != nil {
 			if control.HasAccessibilityPermission() {
 				t.permissionHint.SetText("✅ Accessibility permission is enabled. Mouse control is ready.")
@@ -482,11 +494,15 @@ func (t *DashboardTab) refreshStats() {
 				t.permissionHint.SetText("⛔ Accessibility permission is missing. Mouse control is blocked until you enable it in System Settings.")
 			}
 		}
+
+		// Update stats labels
 		t.statsLabel.SetText(fmt.Sprintf(
 			"📊 Clicks: %d  |  Double: %d  |  Right: %d  |  Scroll: %d",
 			clicks, dbl, right, scroll,
 		))
 		t.connLabel.SetText(fmt.Sprintf("📱 Active devices: %d  |  Saved devices: %d", deviceCount, savedCount))
+
+		// Update device details
 		if deviceCount > 0 {
 			t.deviceDetailBox.SetText(strings.Join(deviceDetails, "\n\n"))
 			if savedCount > 0 {
@@ -501,6 +517,8 @@ func (t *DashboardTab) refreshStats() {
 			utils.LogDebug("Dashboard device list empty")
 		}
 		t.nearbyDetailBox.SetText(t.buildNearbyDeviceSummary(activeDevices))
+
+		// Update approval count and banner
 		if t.approvalCount != nil {
 			t.approvalCount.SetText(fmt.Sprintf("⏳ Pending approvals: %d", len(pendingDevices)))
 		}
@@ -519,10 +537,45 @@ func (t *DashboardTab) refreshStats() {
 			if len(pendingDevices) == 0 {
 				t.approvalDetail.SetText("The approval queue is empty. Open the Devices tab when a phone connects and use the big Approve button.")
 			} else {
-				t.approvalDetail.SetText("Tap Approve in the Devices tab to send welcome and unlock mouse control. The Android app will keep waiting until you do.")
+				t.approvalDetail.SetText("Tap Approve below to accept the pending device(s). The Android app will receive the welcome message immediately.")
 			}
 		}
 
+		// ----- Dynamic pending list -----
+		if t.pendingList != nil {
+			var children []fyne.CanvasObject
+			if len(pendingDevices) == 0 {
+				children = append(children, widget.NewLabel("✅ No pending devices"))
+			} else {
+				// Add an "Approve All" button if more than one
+				if len(pendingDevices) > 1 {
+					approveAllBtn := widget.NewButtonWithIcon("✅ Approve All", theme.ConfirmIcon(), func() {
+						t.approveAllPending(pendingDevices)
+					})
+					approveAllBtn.Importance = widget.HighImportance
+					children = append(children, approveAllBtn)
+					children = append(children, widget.NewSeparator())
+				}
+
+				// List each pending device with an Approve button
+				for _, d := range pendingDevices {
+					deviceLabel := widget.NewLabel(fmt.Sprintf("📱 %s [%s] - %s", d.Name, d.Type, d.ID[:8]))
+					deviceLabel.Wrapping = fyne.TextWrapWord
+					approveBtn := widget.NewButton("Approve", func(devID string) func() {
+						return func() {
+							t.approvePending(devID)
+						}
+					}(d.ID))
+					approveBtn.Importance = widget.HighImportance
+					row := container.NewHBox(deviceLabel, approveBtn)
+					children = append(children, row)
+				}
+			}
+			t.pendingList.Objects = children
+			t.pendingList.Refresh()
+		}
+
+		// Update uptime and summary
 		t.mu.Lock()
 		if !t.serverStart.IsZero() {
 			uptime := time.Since(t.serverStart)
@@ -543,6 +596,7 @@ func (t *DashboardTab) refreshStats() {
 		}
 		t.mu.Unlock()
 
+		// Update protocol/status labels
 		if t.server != nil && t.server.IsRunning() {
 			ip := utils.GetLocalIP()
 			t.endpointLabel.SetText(fmt.Sprintf("🔌 Endpoint: http://%s:%d | ws://%s:%d/ws", ip, t.cfg.Port, ip, t.cfg.WebSocketPort))
@@ -557,6 +611,68 @@ func (t *DashboardTab) refreshStats() {
 			t.retryLabel.SetText("🔁 ACK / Retry: waiting for approval")
 		}
 	})
+}
+
+// approvePending approves a single device by ID.
+func (t *DashboardTab) approvePending(deviceID string) {
+	if t.server == nil || deviceID == "" {
+		return
+	}
+	utils.LogInfo("Dashboard: approving device %s", deviceID)
+	if err := t.server.ApproveDevice(deviceID); err != nil {
+		win := getCurrentWindow()
+		if win != nil {
+			dialog.ShowError(fmt.Errorf("Failed to approve %s: %v", deviceID, err), win)
+		}
+		utils.LogError("ApproveDevice failed: %v", err)
+		return
+	}
+	// Refresh stats to update UI
+	t.refreshStats()
+	// Show a brief success message in the approval banner
+	RunOnMain(func() {
+		if t.approvalBanner != nil {
+			t.approvalBanner.SetText(fmt.Sprintf("✅ Device %s approved successfully!", deviceID[:8]))
+		}
+	})
+}
+
+// approveAllPending approves all pending devices.
+func (t *DashboardTab) approveAllPending(pending []*device.DeviceInfo) {
+	if len(pending) == 0 || t.server == nil {
+		return
+	}
+	win := getCurrentWindow()
+	dialog.ShowConfirm("Approve All",
+		fmt.Sprintf("Are you sure you want to approve %d pending device(s)?", len(pending)),
+		func(confirmed bool) {
+			if !confirmed {
+				return
+			}
+			var errs []string
+			for _, d := range pending {
+				if err := t.server.ApproveDevice(d.ID); err != nil {
+					errs = append(errs, fmt.Sprintf("%s: %v", d.ID[:8], err))
+					utils.LogError("ApproveAll: failed for %s: %v", d.ID, err)
+				} else {
+					utils.LogInfo("ApproveAll: approved %s", d.ID)
+				}
+			}
+			t.refreshStats()
+			if len(errs) > 0 {
+				if win != nil {
+					dialog.ShowInformation("Approval Complete",
+						fmt.Sprintf("Approved %d devices, but %d failed:\n%s", len(pending)-len(errs), len(errs), strings.Join(errs, "\n")),
+						win)
+				}
+			} else {
+				if win != nil {
+					dialog.ShowInformation("Approval Complete",
+						fmt.Sprintf("All %d devices approved successfully!", len(pending)),
+						win)
+				}
+			}
+		}, win)
 }
 
 func (t *DashboardTab) addRecentLog(level, msg string) {

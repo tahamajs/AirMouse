@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	gorilla "github.com/gorilla/websocket"
@@ -46,7 +48,7 @@ type WSClient struct {
 	BytesRecv   int64
 	UserAgent   string
 	IP          string
-	Approved    bool
+	Approved    atomic.Bool // atomic for safe concurrent access
 }
 
 // ------------------------------------------------------------
@@ -55,6 +57,7 @@ type WSClient struct {
 
 type Server struct {
 	port         int
+	listener     net.Listener
 	clients      map[string]*WSClient
 	mouse        control.MouseController
 	deviceMgr    *device.Manager
@@ -95,25 +98,33 @@ func NewServer(port int, mouse control.MouseController, deviceMgr *device.Manage
 
 // Start starts the WebSocket server.
 func (s *Server) Start() error {
+	// Bind synchronously so we can return an error if the port is already used.
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	if err != nil {
+		return fmt.Errorf("failed to bind WebSocket port %d: %w", s.port, err)
+	}
+	s.listener = listener
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", s.handleWebSocket)
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/stats", s.handleStats)
 
 	s.server = &http.Server{
-		Addr:         fmt.Sprintf(":%d", s.port),
 		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
+	s.mu.Lock()
 	s.running = true
 	s.startTime = time.Now()
+	s.mu.Unlock()
 
 	go func() {
 		utils.LogInfo("WebSocket server starting on port %d", s.port)
-		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.server.Serve(s.listener); err != nil && err != http.ErrServerClosed {
 			utils.LogError("WebSocket server error: %v", err)
 		}
 	}()
@@ -123,20 +134,28 @@ func (s *Server) Start() error {
 // Stop stops the WebSocket server.
 func (s *Server) Stop() error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if !s.running {
+		s.mu.Unlock()
 		return nil
 	}
-
 	s.running = false
-	if s.server != nil {
-		if err := s.server.Close(); err != nil {
-			return err
-		}
+	s.mu.Unlock()
+
+	// Close the listener to stop accepting new connections.
+	if s.listener != nil {
+		_ = s.listener.Close()
 	}
 
+	// Close the HTTP server (this will also close the listener).
+	if s.server != nil {
+		_ = s.server.Close()
+	}
+
+	// Close all client connections and their channels.
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	for _, c := range s.clients {
+		// Close channels to signal writeLoop to exit.
 		close(c.Send)
 		close(c.BinarySend)
 		_ = c.Conn.Close()
@@ -179,6 +198,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		UserAgent:   r.UserAgent(),
 		IP:          r.RemoteAddr,
 	}
+	client.Approved.Store(false)
 
 	s.mu.Lock()
 	s.clients[id] = client
@@ -193,7 +213,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	utils.LogInfo("WebSocket client connected: id=%s, ip=%s", id, client.IP)
 	utils.LogInfo("WebSocket approval pending: id=%s", id)
-	utils.LogDebug("WebSocket initial client state: id=%s approved=%v device=%s", id, client.Approved, client.DeviceID)
+	utils.LogDebug("WebSocket initial client state: id=%s approved=%v device=%s", id, client.Approved.Load(), client.DeviceID)
 
 	go s.readLoop(client)
 	go s.writeLoop(client)
@@ -218,11 +238,19 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 // readLoop reads messages from the client.
 func (s *Server) readLoop(client *WSClient) {
 	defer func() {
+		// Close the WebSocket connection.
 		_ = client.Conn.Close()
+
+		// Close the send channels to signal writeLoop to exit.
+		close(client.Send)
+		close(client.BinarySend)
+
+		// Remove from server map.
 		s.mu.Lock()
 		delete(s.clients, client.ID)
 		delete(s.fileSessions, client.ID)
 		s.mu.Unlock()
+
 		if s.deviceMgr != nil {
 			deviceID := client.DeviceID
 			if deviceID == "" {
@@ -242,8 +270,11 @@ func (s *Server) readLoop(client *WSClient) {
 			return
 		}
 
+		// Update last active and bytes received (using mutex for safe update)
+		s.mu.Lock()
 		client.LastActive = time.Now()
 		client.BytesRecv += int64(len(data))
+		s.mu.Unlock()
 
 		if messageType == gorilla.BinaryMessage {
 			if s.handleBinaryFileChunk(client, data) {
@@ -272,6 +303,7 @@ func (s *Server) writeLoop(client *WSClient) {
 		select {
 		case msg, ok := <-client.Send:
 			if !ok {
+				// Send channel closed -> exit.
 				return
 			}
 			_ = client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
@@ -279,7 +311,11 @@ func (s *Server) writeLoop(client *WSClient) {
 				utils.LogDebug("WebSocket write error: %v", err)
 				return
 			}
+			// Update bytes sent (mutex)
+			s.mu.Lock()
 			client.BytesSent += int64(len(msg))
+			s.mu.Unlock()
+
 		case data, ok := <-client.BinarySend:
 			if !ok {
 				return
@@ -289,10 +325,12 @@ func (s *Server) writeLoop(client *WSClient) {
 				utils.LogDebug("WebSocket binary write error: %v", err)
 				return
 			}
+			s.mu.Lock()
 			client.BytesSent += int64(len(data))
+			s.mu.Unlock()
 
 		case <-ticker.C:
-			// Send ping to keep connection alive
+			// Send ping to keep connection alive.
 			_ = client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := client.Conn.WriteMessage(gorilla.PingMessage, nil); err != nil {
 				return
@@ -306,11 +344,18 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	// Send ACK for commands that expect it
 	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll") {
 		if ack := AckMessage(id); len(ack) > 0 {
-			client.Send <- ack
+			// Non‑blocking send to avoid blocking if client is gone.
+			select {
+			case client.Send <- ack:
+			default:
+				utils.LogDebug("WebSocket ack dropped (client send buffer full): %s", client.ID)
+			}
 		}
 	}
 
-	if !client.Approved && msgType != "hello" && msgType != "ping" {
+	// Check approval status (atomic load)
+	approved := client.Approved.Load()
+	if !approved && msgType != "hello" && msgType != "ping" {
 		utils.LogDebug("Ignoring WebSocket %s while waiting for approval: device=%s", msgType, client.ID)
 		return
 	}
@@ -373,6 +418,8 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
 		utils.LogDebug("WebSocket hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
+
+		s.mu.Lock()
 		client.Name = name
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.RenameDeviceID(client.ID, fingerprint)
@@ -394,8 +441,10 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			})
 			_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusPendingApproval)
 		}
+		s.mu.Unlock()
+
 		utils.LogInfo("WebSocket client awaiting approval: id=%s, name=%s", client.ID, name)
-		utils.LogDebug("WebSocket approval state pending: id=%s approved=%v device_id=%s", client.ID, client.Approved, client.DeviceID)
+		utils.LogDebug("WebSocket approval state pending: id=%s approved=%v device_id=%s", client.ID, client.Approved.Load(), client.DeviceID)
 
 	case "gesture":
 		gesture, _ := payload["gesture"].(string)
@@ -421,7 +470,11 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 
 	case "ping":
-		client.Send <- PongMessage()
+		// Non‑blocking send
+		select {
+		case client.Send <- PongMessage():
+		default:
+		}
 
 	case "pong":
 		// Heartbeat received
@@ -434,7 +487,9 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 
 // ApproveDevice approves a pending WebSocket client and sends the welcome message.
 func (s *Server) ApproveDevice(deviceID string) error {
-	s.mu.RLock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var client *WSClient
 	for _, c := range s.clients {
 		if c.DeviceID == deviceID || c.ID == deviceID {
@@ -442,27 +497,37 @@ func (s *Server) ApproveDevice(deviceID string) error {
 			break
 		}
 	}
-	s.mu.RUnlock()
-
 	if client == nil {
 		return fmt.Errorf("websocket client not found: %s", deviceID)
 	}
 
-	if client.Approved {
+	if client.Approved.Load() {
 		return nil
 	}
 
-	client.Approved = true
+	client.Approved.Store(true)
 	control.SetMovementPaused(false)
 	control.ClearPause()
+
 	if s.deviceMgr != nil {
 		_ = s.deviceMgr.UpdateDeviceStatus(deviceID, device.StatusConnected)
 	}
+
 	cfg := config.Get()
-	client.Send <- WelcomeMessage(cfg.ServerName, cfg.Version)
-	utils.LogInfo("WebSocket approval accepted: device=%s", deviceID)
+	welcomeMsg := WelcomeMessage(cfg.ServerName, cfg.Version)
+	// Non‑blocking send to avoid blocking if client channel is full.
+	select {
+	case client.Send <- welcomeMsg:
+		utils.LogInfo("WebSocket approval accepted and welcome sent: device=%s", deviceID)
+	default:
+		utils.LogWarn("WebSocket approval accepted but welcome send blocked (channel full): device=%s", deviceID)
+	}
 	return nil
 }
+
+// ---------------------------------------------------------------------
+// File transfer helpers (unchanged, but kept for completeness)
+// ---------------------------------------------------------------------
 
 func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 	action, _ := payload["action"].(string)
@@ -472,7 +537,10 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 	switch action {
 	case "start":
 		if id == "" || name == "" {
-			client.Send <- []byte(`{"type":"file","action":"error","message":"missing file metadata"}` + "\n")
+			select {
+			case client.Send <- []byte(`{"type":"file","action":"error","message":"missing file metadata"}` + "\n"):
+			default:
+			}
 			return
 		}
 		s.mu.Lock()
@@ -482,7 +550,10 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 		file, err := os.OpenFile(tempPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			s.mu.Unlock()
-			client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, err.Error()))
+			select {
+			case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, err.Error())):
+			default:
+			}
 			return
 		}
 		session := &fileSession{
@@ -498,7 +569,10 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 		}
 		s.fileSessions[client.ID] = session
 		s.mu.Unlock()
-		client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"ack","id":"%s"}`+"\n", id))
+		select {
+		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"ack","id":"%s"}`+"\n", id)):
+		default:
+		}
 
 	case "complete":
 		s.mu.Lock()
@@ -519,20 +593,32 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 			_ = os.Remove(session.tempPath)
 		}
 		if session.md5Hex != "" && actualMD5 != session.md5Hex {
-			client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"md5 mismatch"}`+"\n", id))
+			select {
+			case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"md5 mismatch"}`+"\n", id)):
+			default:
+			}
 			return
 		}
-		client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, actualMD5, session.received))
+		select {
+		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, actualMD5, session.received)):
+		default:
+		}
 
 	case "download":
 		if name == "" {
-			client.Send <- []byte(`{"type":"file","action":"error","message":"missing file name"}` + "\n")
+			select {
+			case client.Send <- []byte(`{"type":"file","action":"error","message":"missing file name"}` + "\n"):
+			default:
+			}
 			return
 		}
 		path := filepath.Join(s.fileTransferDir(), sanitizeFileName(name))
 		data, err := os.ReadFile(path)
 		if err != nil {
-			client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, err.Error()))
+			select {
+			case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, err.Error())):
+			default:
+			}
 			return
 		}
 		sum := md5.Sum(data)
@@ -548,7 +634,10 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 			"direction": "download",
 		}
 		if raw, err := json.Marshal(start); err == nil {
-			client.Send <- append(raw, '\n')
+			select {
+			case client.Send <- append(raw, '\n'):
+			default:
+			}
 		}
 		chunkSize := 64 * 1024
 		for offset := 0; offset < len(data); offset += chunkSize {
@@ -556,9 +645,17 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 			if end > len(data) {
 				end = len(data)
 			}
-			client.BinarySend <- append([]byte(nil), data[offset:end]...)
+			// Use non‑blocking send; if channel full, we drop the chunk (should not happen with large buffer)
+			select {
+			case client.BinarySend <- append([]byte(nil), data[offset:end]...):
+			default:
+				utils.LogWarn("Binary send channel full for client %s, dropping chunk", client.ID)
+			}
 		}
-		client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, md5Hex, len(data)))
+		select {
+		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, md5Hex, len(data))):
+		default:
+		}
 	}
 }
 
@@ -582,7 +679,10 @@ func (s *Server) handleBinaryFileChunk(client *WSClient, data []byte) bool {
 		return false
 	}
 	if _, err := session.file.Write(data); err != nil {
-		client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", session.id, err.Error()))
+		select {
+		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", session.id, err.Error())):
+		default:
+		}
 		return true
 	}
 	session.received += int64(len(data))

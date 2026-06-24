@@ -48,12 +48,12 @@ func ShowPairingWizard(parent fyne.Window, wsURL string) {
 	// Generate QR code
 	pngBytes, err := qrcode.Encode(pairingData, qrcode.High, 300)
 	if err != nil {
-		dialog.ShowError(err, parent)
+		dialog.ShowError(fmt.Errorf("QR generation failed: %w", err), parent)
 		return
 	}
 	img, err := png.Decode(bytes.NewReader(pngBytes))
 	if err != nil {
-		dialog.ShowError(err, parent)
+		dialog.ShowError(fmt.Errorf("QR decoding failed: %w", err), parent)
 		return
 	}
 
@@ -180,9 +180,21 @@ func QuickPairDialog(parent fyne.Window) {
 	ip := utils.GetLocalIP()
 
 	pairingData := fmt.Sprintf("airmouse://pair?ws=%s&protocol=WEBSOCKET&name=%s&ip=%s&port=%d&version=3.0",
-		url.QueryEscape(fmt.Sprintf("ws://%s:%d/ws", ip, cfg.WebSocketPort)), url.QueryEscape(cfg.ServerName), url.QueryEscape(ip), cfg.WebSocketPort)
-	pngBytes, _ := qrcode.Encode(pairingData, qrcode.Medium, 200)
-	img, _ := png.Decode(bytes.NewReader(pngBytes))
+		url.QueryEscape(fmt.Sprintf("ws://%s:%d/ws", ip, cfg.WebSocketPort)),
+		url.QueryEscape(cfg.ServerName),
+		url.QueryEscape(ip),
+		cfg.WebSocketPort)
+
+	pngBytes, err := qrcode.Encode(pairingData, qrcode.Medium, 200)
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("QR generation failed: %w", err), parent)
+		return
+	}
+	img, err := png.Decode(bytes.NewReader(pngBytes))
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("QR decoding failed: %w", err), parent)
+		return
+	}
 
 	qrImage := canvas.NewImageFromImage(img)
 	qrImage.FillMode = canvas.ImageFillContain
