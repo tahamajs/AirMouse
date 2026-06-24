@@ -100,23 +100,22 @@ func NewApp(cfg *config.Config, server *protocol.ProtocolServer, mouseController
 // ============================================================
 
 func (a *App) Run() error {
-	// Use size from helpers.go – no duplicate here
 	width, height := GetWindowSize()
 	a.window = a.fyneApp.NewWindow(fmt.Sprintf("Air Mouse Pro Server - %s", a.cfg.ServerName))
 	a.window.Resize(fyne.NewSize(width, height))
 	a.window.CenterOnScreen()
 	a.window.SetMaster()
 
-	// Ensure the window is brought to front on macOS
-	a.window.RequestFocus()
-
+	// Build status bar and labels
 	a.statusBar = NewStatusBar()
 	a.connectionStatus = widget.NewLabel("🔌 Status: Waiting for approval in Devices")
 	a.summaryStatus = widget.NewLabel("Server details will appear here once it starts. Open Devices and tap Approve to accept Android.")
 	a.summaryStatus.Wrapping = fyne.TextWrapWord
 
+	// Build all tabs
 	a.buildTabs()
 
+	// Tab container
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), a.dashboardTab),
 		container.NewTabItemWithIcon("Devices", theme.ComputerIcon(), a.devicesTab),
@@ -134,10 +133,12 @@ func (a *App) Run() error {
 		a.onTabSelected(ti)
 	}
 
+	// Menu and toolbar
 	mainMenu := a.createMenuBar()
 	a.window.SetMainMenu(mainMenu)
 	toolbar := a.createToolbar()
 
+	// Main layout
 	content := container.NewBorder(
 		toolbar,
 		a.statusBar.Widget(),
@@ -148,20 +149,18 @@ func (a *App) Run() error {
 	a.window.SetContent(content)
 	utils.LogInfo("Content set, window ready")
 
-	// Force window to appear and raise
-	a.window.Show()
-	time.Sleep(100 * time.Millisecond)
-	a.window.RequestFocus()
-
+	// Window close handler
 	a.window.SetCloseIntercept(func() {
 		a.onWindowClose()
 	})
 
+	// Start background tasks
 	go a.connectionStatusUpdater()
 
+	// Show welcome dialog on first launch (after window appears)
 	if a.cfg.IsFirstLaunch() {
 		go func() {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1 * time.Second) // wait for window to render
 			RunOnMain(func() {
 				ShowWelcomeDialog(a.window)
 			})
@@ -169,27 +168,44 @@ func (a *App) Run() error {
 		_ = a.cfg.SetFirstLaunchComplete()
 	}
 
-	utils.LogInfo("Showing window")
+	// === FIX: Force window to appear before event loop ===
+	utils.LogInfo("Showing window...")
+	a.window.Show()
+	a.window.RequestFocus()
+	time.Sleep(200 * time.Millisecond) // allow window manager to process
+
+	// === Start the event loop ===
+	utils.LogInfo("Entering ShowAndRun...")
 	a.window.ShowAndRun()
 	utils.LogInfo("Window closed")
 	return nil
 }
-
 // ============================================================
 // buildTabs – creates all tabs with error handling
 // ============================================================
-
+func (a *App) showNetworkProtocolGuide() {
+    if a.window == nil {
+        return
+    }
+    dialog.ShowCustom("Network Protocol", "Close", buildProtocolGuideContent(a.cfg, a.server), a.window)
+}
 func (a *App) buildTabs() {
-	utils.LogInfo("Building dashboard tab...")
-	if dashboardTab, dashboardCtrl := NewDashboardTab(a.server, a.mouse, a.deviceMgr); dashboardTab != nil {
-		a.dashboardTab = safeTab(dashboardTab, "Dashboard")
-		a.dashboardCtrl = dashboardCtrl
-	} else {
-		a.dashboardTab = safeTab(nil, "Dashboard")
-	}
+	    utils.LogInfo("Building dashboard tab...")
+    if dashboardTab, dashboardCtrl := NewDashboardTab(a.server, a.mouse, a.deviceMgr); dashboardTab != nil {
+        a.dashboardTab = safeTab(dashboardTab, "Dashboard")
+        a.dashboardCtrl = dashboardCtrl
+    } else {
+        a.dashboardTab = safeTab(nil, "Dashboard")
+    }
+    utils.LogInfo("Dashboard tab done")  // ← add
 
-	utils.LogInfo("Building devices tab...")
-	a.devicesTab = safeTab(NewDevicesTab(a.server, a.deviceMgr), "Devices")
+    utils.LogInfo("Building devices tab...")
+    a.devicesTab = safeTab(NewDevicesTab(a.server, a.deviceMgr), "Devices")
+    utils.LogInfo("Devices tab done")    // ← add
+
+
+
+
 
 	utils.LogInfo("Building network tab...")
 	a.networkTab = safeTab(NewNetworkTab(a.cfg), "Network")
@@ -215,9 +231,8 @@ func (a *App) buildTabs() {
 	a.logsTab = safeTab(NewLogsTab(), "Logs")
 
 	utils.LogInfo("Building protocol tab...")
-	a.protocolTab = safeTab(NewProtocolGuideTab(a.cfg, a.server), "Network Protocol")
-
-	utils.LogInfo("All tabs created successfully")
+	a.protocolTab = widget.NewLabel("Protocol Guide (coming soon)")
+	utils.LogInfo("Protocol tab done")
 }
 
 // ============================================================
@@ -525,7 +540,7 @@ func (a *App) stopBackgroundUI() {
 }
 
 // ============================================================
-// Dialog helpers (all methods unchanged – they are correct)
+// Dialog helpers
 // ============================================================
 
 func (a *App) exportConfig() {

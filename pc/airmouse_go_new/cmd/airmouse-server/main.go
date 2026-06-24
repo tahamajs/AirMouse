@@ -60,11 +60,10 @@ func main() {
 		cfg.LogLevel = "debug"
 	}
 
-	// --- 3. Initialise logger (fixed signature) ---
+	// Initialise logger
 	logger.Init(logger.Config{
 		Level: cfg.LogLevel,
 	})
-
 	defer logger.Close()
 
 	device.SetLogger(
@@ -83,39 +82,36 @@ func main() {
 	deviceMgr := device.NewManager()
 	authMgr := initAuth(cfg)
 
-	// --- Proximity manager (with stubbed persistence) ---
+	// Proximity manager
 	proxMgr := proximity.NewManager()
-	nearThreshold := float32(cfg.ProximityNearThreshold)
-	farThreshold := float32(cfg.ProximityFarThreshold)
-	proxMgr.SetGlobalThresholds(nearThreshold, farThreshold)
+	proxMgr.SetGlobalThresholds(float32(cfg.ProximityNearThreshold), float32(cfg.ProximityFarThreshold))
 	proxMgr.EnableAutoLock(cfg.ProximityEnabled)
 	proxMgr.EnableAutoUnlock(cfg.ProximityEnabled)
 
-	// Create RSSI fusion with persistence stubs (we'll add methods later)
 	fusion := proximity.NewRSSIFusion(-59, 2.0)
 	if cfg.ProximityEnabled {
-		// Compute config directory – use filepath.Dir(cfg.ConfigPath)
 		configDir := filepath.Dir(cfg.ConfigPath)
 		statePath := filepath.Join(configDir, "proximity_state.json")
-		_ = fusion.LoadState(statePath) // stub: does nothing
-		proxMgr.SetRSSIFusion(fusion)    // stub: does nothing
+		_ = fusion.LoadState(statePath) // stub – implement if needed
+		proxMgr.SetRSSIFusion(fusion)   // stub – implement if needed
 		go func() {
 			ticker := time.NewTicker(60 * time.Second)
 			defer ticker.Stop()
 			for range ticker.C {
-				_ = fusion.SaveState(statePath) // stub: does nothing
+				_ = fusion.SaveState(statePath)
 			}
 		}()
 	}
 
-	// Create protocol server (accepts 4 arguments; proximity is passed inside)
+	// Protocol server – expects mouse, device, auth, proximity
 	protocolServer := protocol.NewProtocolServerWithProximity(mouseCtrl, deviceMgr, authMgr, proxMgr)
 
 	wireLifecycleLogging(protocolServer, deviceMgr)
 
-	// --- UI: now takes 4 arguments (proxMgr removed) ---
+	// Create UI
 	appUI := ui.NewApp(cfg, protocolServer, mouseCtrl, deviceMgr)
 
+	// Context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -128,6 +124,7 @@ func main() {
 	logger.Info("Active protocols: %v", protocolServer.GetActiveProtocols())
 	logger.Info("Launching desktop UI window...")
 
+	// Run the UI – this blocks until window closes
 	if err := appUI.Run(); err != nil {
 		logger.Error("Application error: %v", err)
 		os.Exit(1)

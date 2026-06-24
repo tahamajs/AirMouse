@@ -18,21 +18,24 @@ func LogWarn(msg string, args ...interface{}) {
 	logger.Warn(msg, args...)
 }
 
-// Backward-compatible wrappers used by older tests and call sites.
+// InitLogger initialises the logger with default settings.
 func InitLogger() {
 	logger.Init(logger.Config{})
 }
 
+// AddLogHook registers a hook that receives log entries as (level, message).
 func AddLogHook(hook func(level string, msg string)) {
 	logger.AddHook(func(level logger.Level, msg string) {
 		hook(levelString(level), msg)
 	})
 }
 
+// SetLogHook is an alias for AddLogHook.
 func SetLogHook(hook func(level string, msg string)) {
 	AddLogHook(hook)
 }
 
+// levelString converts a logger.Level to its uppercase string representation.
 func levelString(level logger.Level) string {
 	switch level {
 	case logger.LevelDebug:

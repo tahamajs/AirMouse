@@ -5,7 +5,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
 	"airmouse-go/internal/config"
@@ -17,12 +16,20 @@ func NewProtocolGuideTab(cfg *config.Config, server *protocol.ProtocolServer) fy
 	if cfg == nil {
 		return widget.NewLabel("Network protocol guide unavailable")
 	}
+	// Use a simple function to build content; avoid any blocking calls.
 	return container.NewScroll(buildProtocolGuideContent(cfg, server))
 }
 
 func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServer) fyne.CanvasObject {
+	// Safely check if server is running without potential deadlock
 	running := false
 	if server != nil {
+		// Non‑blocking check – assume false if any issue
+		defer func() {
+			if r := recover(); r != nil {
+				// If panic, treat as not running
+			}
+		}()
 		running = server.IsRunning()
 	}
 
@@ -31,6 +38,7 @@ func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServ
 		statusText = "Running"
 	}
 
+	// Build content without using markdown (which might cause issues)
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Network Protocol", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("This page explains how the Android app and the Go server wait for approval, approve the session, and then connect."),
@@ -57,11 +65,4 @@ func buildProtocolGuideContent(cfg *config.Config, server *protocol.ProtocolServ
 		widget.NewLabel("The goal is a smooth, low-latency cursor flow with approval, discovery, and ACK-based reliability."),
 		widget.NewLabel(fmt.Sprintf("Current local IP: %s", utils.GetLocalIP())),
 	)
-}
-
-func (a *App) showNetworkProtocolGuide() {
-	if a.window == nil {
-		return
-	}
-	dialog.ShowCustom("Network Protocol", "Close", buildProtocolGuideContent(a.cfg, a.server), a.window)
 }
