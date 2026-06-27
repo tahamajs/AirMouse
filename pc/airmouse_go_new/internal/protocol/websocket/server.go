@@ -629,18 +629,22 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 			_ = session.file.Close()
 		}
 		actualMD5 := ""
-		if data, err := os.ReadFile(session.tempPath); err == nil {
+		data, readErr := os.ReadFile(session.tempPath)
+		if readErr == nil {
 			sum := md5.Sum(data)
 			actualMD5 = hex.EncodeToString(sum[:])
-			_ = os.WriteFile(session.path, data, 0644)
-			_ = os.Remove(session.tempPath)
 		}
 		if session.md5Hex != "" && actualMD5 != session.md5Hex {
+			_ = os.Remove(session.tempPath)
 			select {
 			case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"md5 mismatch"}`+"\n", id)):
 			default:
 			}
 			return
+		}
+		if readErr == nil {
+			_ = os.WriteFile(session.path, data, 0644)
+			_ = os.Remove(session.tempPath)
 		}
 		select {
 		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, actualMD5, session.received)):
