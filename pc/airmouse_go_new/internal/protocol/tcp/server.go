@@ -402,9 +402,18 @@ func (s *Server) processLine(client *Client, line []byte) {
 			} else {
 				utils.LogInfo("TCP system command executed: client=%s command=%s", client.ID, command)
 			}
+		case "calibrate":
+			utils.LogInfo("TCP calibration control command received: client=%s", client.ID)
 		default:
 			utils.LogDebug("Unknown TCP control command: %s", command)
 		}
+
+	case "calibration_data":
+		if !approved {
+			utils.LogDebug("Ignoring TCP calibration_data while waiting for approval: client=%s", client.ID)
+			return
+		}
+		utils.LogInfo("TCP calibration_data received: client=%s", client.ID)
 
 	default:
 		utils.LogDebug("Unknown TCP message type: type=%s client=%s", msgType, client.ID)

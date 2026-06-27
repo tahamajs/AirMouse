@@ -478,9 +478,18 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			} else {
 				utils.LogInfo("WebSocket system command executed: device=%s command=%s", client.ID, command)
 			}
+		case "calibrate":
+			utils.LogInfo("WebSocket calibration control command received: device=%s", client.ID)
 		default:
 			utils.LogDebug("Unknown control command: %s", command)
 		}
+
+	case "calibration_data":
+		if !client.Approved.Load() {
+			utils.LogDebug("Ignoring WebSocket calibration_data while waiting for approval: %s", client.ID)
+			return
+		}
+		utils.LogInfo("WebSocket calibration_data received: device=%s", client.ID)
 
 	case "ping":
 		select {

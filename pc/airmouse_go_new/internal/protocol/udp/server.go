@@ -205,9 +205,17 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 			} else {
 				utils.LogInfo("UDP system command executed: %s command=%s", clientIP, command)
 			}
+		case "calibrate":
+			utils.LogInfo("UDP calibration control command received: %s", clientIP)
 		default:
 			utils.LogDebug("Unknown UDP control command: %s", command)
 		}
+	case "calibration_data":
+		if !approved {
+			utils.LogDebug("Ignoring UDP calibration_data while waiting for approval: %s", clientIP)
+			return
+		}
+		utils.LogInfo("UDP calibration_data received: %s", clientIP)
 	case "ping":
 		s.writeToClient(clientKey, clientAddr, websocketpkg.PongMessage())
 	case "pong":
