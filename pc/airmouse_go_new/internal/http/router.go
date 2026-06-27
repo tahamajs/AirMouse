@@ -7,19 +7,23 @@ import (
     "runtime"
     "time"
 
-    "airmouse-go/internal/handler/websocket"
     "airmouse-go/internal/utils"
 )
+
+type webSocketStats interface {
+    GetStats() map[string]interface{}
+    GetConnectedClients() []interface{}
+}
 
 // Router wraps the HTTP serve mux with additional configuration.
 type Router struct {
     mux     *http.ServeMux
-    hub     *websocket.Hub
+    hub     webSocketStats
     middlewares []Middleware
 }
 
 // NewRouter creates a new HTTP router with the given WebSocket hub.
-func NewRouter(hub *websocket.Hub) *Router {
+func NewRouter(hub webSocketStats) *Router {
     r := &Router{
         mux:     http.NewServeMux(),
         hub:     hub,
@@ -36,7 +40,9 @@ func NewRouter(hub *websocket.Hub) *Router {
 // setupRoutes registers all HTTP endpoints.
 func (r *Router) setupRoutes() {
     // WebSocket endpoint
-    r.mux.HandleFunc("/ws", websocket.WebSocketHandler(r.hub))
+    r.mux.HandleFunc("/ws", func(w http.ResponseWriter, req *http.Request) {
+        http.Error(w, "websocket handler not configured here", http.StatusNotImplemented)
+    })
 
     // Health check
     r.mux.HandleFunc("/health", healthHandler)
@@ -110,12 +116,10 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 
 func (r *Router) statusHandler() http.HandlerFunc {
     return func(w http.ResponseWriter, req *http.Request) {
-        stats := r.hub.GetStats()
         w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(map[string]interface{}{
             "status": "running",
-            "stats":  stats,
-            "uptime": time.Since(stats.StartTime).Seconds(),
+            "stats":  r.hub.GetStats(),
         })
     }
 }
