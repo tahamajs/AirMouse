@@ -558,6 +558,8 @@ func (s *Server) ApproveDevice(deviceID string) error {
 	}
 
 	cfg := config.Get()
+	cfg.AddTrustedDevice(deviceID)
+
 	welcomeMsg := WelcomeMessage(cfg.ServerName, cfg.Version)
 	select {
 	case client.Send <- welcomeMsg:

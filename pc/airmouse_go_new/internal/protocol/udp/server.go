@@ -362,6 +362,9 @@ func (s *Server) ApproveDevice(deviceID string) error {
 			updateID = deviceID
 		}
 		_ = s.deviceMgr.UpdateDeviceStatus(updateID, device.StatusConnected)
+		cfg.AddTrustedDevice(updateID)
+	} else {
+		cfg.AddTrustedDevice(deviceID)
 	}
 	utils.LogInfo("UDP approval accepted: device=%s", deviceID)
 	return nil
