@@ -514,6 +514,41 @@ func TestProtocolMessageSizes(t *testing.T) {
 }
 
 // ============================================================
+// FILE TRANSFER TESTS
+// ============================================================
+
+func TestProtocolFileTransferMessages(t *testing.T) {
+	// Start upload message
+	startUploadMsg := map[string]interface{}{
+		"type":   "file",
+		"action": "start",
+		"id":     "file_123",
+		"name":   "test.txt",
+		"size":   1024,
+		"md5":    "098f6bcd4621d373cade4e832627b4f6",
+	}
+	validateMessage(t, startUploadMsg, "file")
+
+	// Complete upload message
+	completeUploadMsg := map[string]interface{}{
+		"type":   "file",
+		"action": "complete",
+		"id":     "file_123",
+		"md5":    "098f6bcd4621d373cade4e832627b4f6",
+		"bytes":  1024,
+	}
+	validateMessage(t, completeUploadMsg, "file")
+
+	// Download message
+	downloadMsg := map[string]interface{}{
+		"type":   "file",
+		"action": "download",
+		"name":   "test.txt",
+	}
+	validateMessage(t, downloadMsg, "file")
+}
+
+// ============================================================
 // TABLE-DRIVEN MAIN TEST
 // ============================================================
 
@@ -536,4 +571,5 @@ func TestAllProtocols(t *testing.T) {
 	t.Run("Aliases", TestProtocolAliases)
 	t.Run("Concurrency", TestProtocolConcurrentMarshal)
 	t.Run("Sizes", TestProtocolMessageSizes)
+	t.Run("FileTransfer", TestProtocolFileTransferMessages)
 }
