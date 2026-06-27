@@ -336,15 +336,21 @@ func (c *Config) AddTrustedDevice(fingerprint string) {
 		return
 	}
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	exists := false
 	for _, f := range c.TrustedDevices {
 		if f == fingerprint {
-			return
+			exists = true
+			break
 		}
 	}
-	c.TrustedDevices = append(c.TrustedDevices, fingerprint)
+	if !exists {
+		c.TrustedDevices = append(c.TrustedDevices, fingerprint)
+	}
 	c.mu.Unlock()
-	_ = c.Save()
+
+	if !exists {
+		_ = c.Save()
+	}
 }
 
 // RemoveTrustedDevice removes a fingerprint from the trusted list and saves.
@@ -353,14 +359,20 @@ func (c *Config) RemoveTrustedDevice(fingerprint string) {
 		return
 	}
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	foundIndex := -1
 	for i, f := range c.TrustedDevices {
 		if f == fingerprint {
-			c.TrustedDevices = append(c.TrustedDevices[:i], c.TrustedDevices[i+1:]...)
-			c.mu.Unlock()
-			_ = c.Save()
-			return
+			foundIndex = i
+			break
 		}
+	}
+	if foundIndex != -1 {
+		c.TrustedDevices = append(c.TrustedDevices[:foundIndex], c.TrustedDevices[foundIndex+1:]...)
+	}
+	c.mu.Unlock()
+
+	if foundIndex != -1 {
+		_ = c.Save()
 	}
 }
 

@@ -467,6 +467,9 @@ func (s *Server) ApproveDevice(deviceID string) error {
 			deviceIDToUpdate = client.ID
 		}
 		_ = s.deviceMgr.UpdateDeviceStatus(deviceIDToUpdate, device.StatusConnected)
+		cfg.AddTrustedDevice(deviceIDToUpdate)
+	} else {
+		cfg.AddTrustedDevice(deviceID)
 	}
 	utils.LogInfo("TCP approval accepted: device=%s", deviceID)
 	return nil
