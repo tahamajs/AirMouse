@@ -489,6 +489,44 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			utils.LogDebug("Unknown control command: %s", command)
 		}
 
+	case "presentation":
+		action, _ := payload["action"].(string)
+		utils.LogInfo("Presentation action received: device=%s action=%s", client.ID, action)
+		switch action {
+		case "prev":
+			_ = syscmd.ExecuteSystemCommand("prev_track")
+		case "next":
+			_ = syscmd.ExecuteSystemCommand("next_track")
+		case "fullscreen":
+			_ = syscmd.ExecuteSystemCommand("window_fullscreen")
+		}
+
+	case "media":
+		action, _ := payload["action"].(string)
+		utils.LogInfo("Media action received: device=%s action=%s", client.ID, action)
+		switch action {
+		case "playpause":
+			_ = syscmd.ExecuteSystemCommand("play_pause")
+		case "prev":
+			_ = syscmd.ExecuteSystemCommand("prev_track")
+		case "next":
+			_ = syscmd.ExecuteSystemCommand("next_track")
+		case "volumeup":
+			_ = syscmd.ExecuteSystemCommand("volume_up")
+		case "volumedown":
+			_ = syscmd.ExecuteSystemCommand("volume_down")
+		}
+
+	case "laser", "draw", "annotation":
+		utils.LogInfo("Received %s data from client %s", msgType, client.ID)
+
+	case "keypress", "keydown", "keyup", "type":
+		utils.LogInfo("Received keyboard event %s from client %s", msgType, client.ID)
+
+	case "smarthome":
+		utils.LogInfo("Received smarthome command from client %s", client.ID)
+
+
 	case "calibration_data":
 		if !client.Approved.Load() {
 			utils.LogDebug("Ignoring WebSocket calibration_data while waiting for approval: %s", client.ID)
