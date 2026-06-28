@@ -203,7 +203,7 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 			"volume_up", "volume_down", "mute", "play_pause", "next_track", "prev_track", "stop",
 			"window_maximize", "window_minimize", "window_fullscreen",
 			"browser_back", "browser_forward", "browser_refresh", "browser_home":
-h			go func(cmd string) {
+			go func(cmd string) {
 				if err := syscmd.ExecuteSystemCommand(cmd); err != nil {
 					utils.LogError("UDP system command failed: %s command=%s err=%v", clientIP, cmd, err)
 				} else {
@@ -215,6 +215,49 @@ h			go func(cmd string) {
 		default:
 			utils.LogDebug("Unknown UDP control command: %s", command)
 		}
+
+	case "presentation":
+		if !approved {
+			return
+		}
+		action, _ := payload["action"].(string)
+		utils.LogInfo("UDP presentation action received: client=%s action=%s", clientIP, action)
+		switch action {
+		case "prev":
+			_ = syscmd.ExecuteSystemCommand("prev_track")
+		case "next":
+			_ = syscmd.ExecuteSystemCommand("next_track")
+		case "fullscreen":
+			_ = syscmd.ExecuteSystemCommand("window_fullscreen")
+		}
+
+	case "media":
+		if !approved {
+			return
+		}
+		action, _ := payload["action"].(string)
+		utils.LogInfo("UDP media action received: client=%s action=%s", clientIP, action)
+		switch action {
+		case "playpause":
+			_ = syscmd.ExecuteSystemCommand("play_pause")
+		case "prev":
+			_ = syscmd.ExecuteSystemCommand("prev_track")
+		case "next":
+			_ = syscmd.ExecuteSystemCommand("next_track")
+		case "volumeup":
+			_ = syscmd.ExecuteSystemCommand("volume_up")
+		case "volumedown":
+			_ = syscmd.ExecuteSystemCommand("volume_down")
+		}
+
+	case "laser", "draw", "annotation":
+		utils.LogInfo("Received %s data from client %s over UDP", msgType, clientIP)
+
+	case "keypress", "keydown", "keyup", "type":
+		utils.LogInfo("Received keyboard event %s from client %s over UDP", msgType, clientIP)
+
+	case "smarthome":
+		utils.LogInfo("Received smarthome command from client %s over UDP", clientIP)
 	case "calibration_data":
 		if !approved {
 			utils.LogDebug("Ignoring UDP calibration_data while waiting for approval: %s", clientIP)
