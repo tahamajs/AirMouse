@@ -469,15 +469,20 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		case "start", "touchpad_start", "resume", "resume_movement":
 			common.SetMovementPaused(false)
 			utils.LogInfo("Movement resumed by device: %s command=%s", client.ID, command)
-		case "stop", "touchpad_stop", "pause", "pause_movement":
+		case "touchpad_stop", "pause", "pause_movement":
 			common.SetMovementPaused(true)
 			utils.LogInfo("Movement paused by device: %s command=%s", client.ID, command)
-		case "show_desktop", "task_view", "switch_window", "lock_screen", "window_close", "zoom_in", "zoom_out", "zoom_reset":
-			if err := syscmd.ExecuteSystemCommand(command); err != nil {
-				utils.LogError("WebSocket system command failed: device=%s command=%s err=%v", client.ID, command, err)
-			} else {
-				utils.LogInfo("WebSocket system command executed: device=%s command=%s", client.ID, command)
-			}
+		case "show_desktop", "task_view", "switch_window", "lock_screen", "window_close", "zoom_in", "zoom_out", "zoom_reset",
+			"volume_up", "volume_down", "mute", "play_pause", "next_track", "prev_track", "stop",
+			"window_maximize", "window_minimize", "window_fullscreen",
+			"browser_back", "browser_forward", "browser_refresh", "browser_home":
+			go func(cmd string) {
+				if err := syscmd.ExecuteSystemCommand(cmd); err != nil {
+					utils.LogError("WebSocket system command failed: device=%s command=%s err=%v", client.ID, cmd, err)
+				} else {
+					utils.LogInfo("WebSocket system command executed: device=%s command=%s", client.ID, cmd)
+				}
+			}(command)
 		case "calibrate":
 			utils.LogInfo("WebSocket calibration control command received: device=%s", client.ID)
 		default:

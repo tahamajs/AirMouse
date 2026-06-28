@@ -196,15 +196,20 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		case "start", "touchpad_start", "resume", "resume_movement":
 			common.SetMovementPaused(false)
 			utils.LogInfo("Movement resumed by UDP client: %s command=%s", clientIP, command)
-		case "stop", "touchpad_stop", "pause", "pause_movement":
+		case "touchpad_stop", "pause", "pause_movement":
 			common.SetMovementPaused(true)
 			utils.LogInfo("Movement paused by UDP client: %s command=%s", clientIP, command)
-		case "show_desktop", "task_view", "switch_window", "lock_screen", "window_close", "zoom_in", "zoom_out", "zoom_reset":
-			if err := syscmd.ExecuteSystemCommand(command); err != nil {
-				utils.LogError("UDP system command failed: %s command=%s err=%v", clientIP, command, err)
-			} else {
-				utils.LogInfo("UDP system command executed: %s command=%s", clientIP, command)
-			}
+		case "show_desktop", "task_view", "switch_window", "lock_screen", "window_close", "zoom_in", "zoom_out", "zoom_reset",
+			"volume_up", "volume_down", "mute", "play_pause", "next_track", "prev_track", "stop",
+			"window_maximize", "window_minimize", "window_fullscreen",
+			"browser_back", "browser_forward", "browser_refresh", "browser_home":
+			go func(cmd string) {
+				if err := syscmd.ExecuteSystemCommand(cmd); err != nil {
+					utils.LogError("UDP system command failed: %s command=%s err=%v", clientIP, cmd, err)
+				} else {
+					utils.LogInfo("UDP system command executed: %s command=%s", clientIP, cmd)
+				}
+			}(command)
 		case "calibrate":
 			utils.LogInfo("UDP calibration control command received: %s", clientIP)
 		default:
