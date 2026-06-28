@@ -3,12 +3,14 @@ package tcp
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
 	"airmouse-go/control/common"
+	"airmouse-go/control/predict"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 )
@@ -54,7 +56,7 @@ func (m *MockMouseController) SetAcceleration(enabled bool, factor float64) {}
 func (m *MockMouseController) EnablePredictive(enabled bool) {}
 func (m *MockMouseController) SetPredictiveBlendFactor(factor float64) {}
 func (m *MockMouseController) EnableAISmoothing(enabled bool) {}
-func (m *MockMouseController) SetAISmoother(s *any) {} // Just use interface or dummy type if needed. Wait, in mouse.go it was *predict.AISmoother. We can import airmouse-go/control/predict or use it. Actually, wait! Let's check predict import.
+func (m *MockMouseController) SetAISmoother(s *predict.AISmoother) {}
 func (m *MockMouseController) EnableMLPrediction(enabled bool) {}
 func (m *MockMouseController) SetMLBlendFactor(factor float64) {}
 func (m *MockMouseController) ResetStats() {}
@@ -63,7 +65,6 @@ func (m *MockMouseController) GetPosition() (x, y float64) { return 0, 0 }
 
 func TestTCPServerHandshakeAndControl(t *testing.T) {
 	// Initialize configuration
-	config.Init()
 	cfg := config.Get()
 	cfg.AuthEnabled = false // disable auth for easy testing
 
