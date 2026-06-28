@@ -56,6 +56,7 @@ type mouseController struct {
 	mlEnabled                bool
 	mlBlend                  float64
 	lastCursorX, lastCursorY float64
+	lastEventTime            time.Time
 }
 
 const (
@@ -80,6 +81,7 @@ func NewController(sensitivity float64) Controller {
 		mlEnabled:     false,
 		mlBlend:       0.6,
 		predictor:     predict.NewMovementPredictor(0.02, 0.6),
+		lastEventTime: time.Now(),
 	}
 }
 
@@ -156,6 +158,23 @@ func (m *mouseController) Move(dx, dy float64) {
 	}
 	m.moveMu.Unlock()
 
+	// Clamp giant cursor jumps from input spikes
+	const maxInputSpike = 150.0
+	if math.Abs(dx) > maxInputSpike {
+		if dx > 0 {
+			dx = maxInputSpike
+		} else {
+			dx = -maxInputSpike
+		}
+	}
+	if math.Abs(dy) > maxInputSpike {
+		if dy > 0 {
+			dy = maxInputSpike
+		} else {
+			dy = -maxInputSpike
+		}
+	}
+
 	dx *= m.sensitivity
 	dy *= m.sensitivity
 	if math.Abs(dx) < 0.5 {
@@ -170,7 +189,8 @@ func (m *mouseController) Move(dx, dy float64) {
 
 	if m.predEnabled && m.predictor != nil {
 		dx, dy = m.predictor.AddMovement(dx, dy)
-	} else {
+	}
+	if m.smoothing {
 		dx, dy = m.applySmoothing(dx, dy)
 	}
 
@@ -208,6 +228,7 @@ func (m *mouseController) Move(dx, dy float64) {
 	m.executeMove(dx, dy)
 	m.lastCursorX += dx
 	m.lastCursorY += dy
+	m.lastEventTime = now
 }
 
 // Click handles single clicks with double‑click detection.
@@ -259,6 +280,12 @@ func (m *mouseController) Stats() (clicks, dbl, right, scroll int64) {
 // applySmoothing performs exponential moving average smoothing.
 func (m *mouseController) applySmoothing(dx, dy float64) (float64, float64) {
 	if !m.smoothing {
+		return dx, dy
+	}
+	// Reset the smoothing history if there has been a pause to avoid snapping back to old coordinates
+	if time.Since(m.lastEventTime) > 150*time.Millisecond {
+		m.lastX = dx
+		m.lastY = dy
 		return dx, dy
 	}
 	const alpha = 0.3
