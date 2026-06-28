@@ -61,7 +61,7 @@ type mouseController struct {
 
 const (
 	minMoveDelta    = 0.01
-	rateLimitPerSec = 200
+	rateLimitPerSec = 2000
 )
 
 // NewController creates a new mouse controller with default settings.

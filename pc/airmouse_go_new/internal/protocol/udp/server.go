@@ -203,7 +203,7 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 			"volume_up", "volume_down", "mute", "play_pause", "next_track", "prev_track", "stop",
 			"window_maximize", "window_minimize", "window_fullscreen",
 			"browser_back", "browser_forward", "browser_refresh", "browser_home":
-			go func(cmd string) {
+h			go func(cmd string) {
 				if err := syscmd.ExecuteSystemCommand(cmd); err != nil {
 					utils.LogError("UDP system command failed: %s command=%s err=%v", clientIP, cmd, err)
 				} else {
