@@ -10,10 +10,10 @@ type Action string
 
 const (
 	// Media Controls
-	ActionPlayPause   Action = "play_pause"
-	ActionNextTrack   Action = "next_track"
-	ActionPrevTrack   Action = "prev_track"
-	ActionStop        Action = "stop"
+	ActionPlayPause Action = "play_pause"
+	ActionNextTrack Action = "next_track"
+	ActionPrevTrack Action = "prev_track"
+	ActionStop      Action = "stop"
 
 	// Volume Controls
 	ActionVolumeUp   Action = "volume_up"
@@ -60,15 +60,15 @@ const (
 	ActionSelectAll Action = "select_all"
 
 	// Navigation
-	ActionPageUp   Action = "page_up"
-	ActionPageDown Action = "page_down"
-	ActionHome     Action = "home"
-	ActionEnd      Action = "end"
-	ActionDelete   Action = "delete"
+	ActionPageUp    Action = "page_up"
+	ActionPageDown  Action = "page_down"
+	ActionHome      Action = "home"
+	ActionEnd       Action = "end"
+	ActionDelete    Action = "delete"
 	ActionBackspace Action = "backspace"
-	ActionEnter    Action = "enter"
-	ActionEscape   Action = "escape"
-	ActionTab      Action = "tab"
+	ActionEnter     Action = "enter"
+	ActionEscape    Action = "escape"
+	ActionTab       Action = "tab"
 
 	// Function Keys
 	ActionF1  Action = "f1"
@@ -93,22 +93,22 @@ const (
 
 // ActionMap maps gesture names to system actions.
 var ActionMap = map[string]Action{
-	"ThumbsUp":     ActionPlayPause,
-	"ThumbsDown":   ActionStop,
-	"LeftSwipe":    ActionPrevTrack,
-	"RightSwipe":   ActionNextTrack,
-	"UpSwipe":      ActionVolumeUp,
-	"DownSwipe":    ActionVolumeDown,
-	"CircleCW":     ActionVolumeUp,
-	"CircleCCW":    ActionVolumeDown,
-	"Peace":        ActionLockScreen,
-	"Fist":         ActionMute,
-	"ZoomIn":       ActionZoomIn,
-	"ZoomOut":      ActionZoomOut,
-	"DoubleTap":    ActionDoubleClick,
-	"LongPress":    ActionRightClick,
-	"Shake":        ActionShowDesktop,
-	"Pinch":        ActionZoomReset,
+	"ThumbsUp":   ActionPlayPause,
+	"ThumbsDown": ActionStop,
+	"LeftSwipe":  ActionPrevTrack,
+	"RightSwipe": ActionNextTrack,
+	"UpSwipe":    ActionVolumeUp,
+	"DownSwipe":  ActionVolumeDown,
+	"CircleCW":   ActionVolumeUp,
+	"CircleCCW":  ActionVolumeDown,
+	"Peace":      ActionLockScreen,
+	"Fist":       ActionMute,
+	"ZoomIn":     ActionZoomIn,
+	"ZoomOut":    ActionZoomOut,
+	"DoubleTap":  ActionDoubleClick,
+	"LongPress":  ActionRightClick,
+	"Shake":      ActionShowDesktop,
+	"Pinch":      ActionZoomReset,
 }
 
 // Execute performs the given system action.
@@ -296,38 +296,38 @@ func GetAvailableActions() []Action {
 // GetActionDescription returns a human-readable description.
 func GetActionDescription(a Action) string {
 	descriptions := map[Action]string{
-		ActionPlayPause:     "Play/Pause Media",
-		ActionNextTrack:     "Next Track",
-		ActionPrevTrack:     "Previous Track",
-		ActionStop:          "Stop Media",
-		ActionVolumeUp:      "Volume Up",
-		ActionVolumeDown:    "Volume Down",
-		ActionMute:          "Mute",
-		ActionLeftClick:     "Left Click",
-		ActionRightClick:    "Right Click",
-		ActionMiddleClick:   "Middle Click",
-		ActionDoubleClick:   "Double Click",
-		ActionScrollUp:      "Scroll Up",
-		ActionScrollDown:    "Scroll Down",
-		ActionLockScreen:    "Lock Screen",
-		ActionShowDesktop:   "Show Desktop",
-		ActionTaskView:      "Task View",
-		ActionBrowserBack:   "Browser Back",
+		ActionPlayPause:      "Play/Pause Media",
+		ActionNextTrack:      "Next Track",
+		ActionPrevTrack:      "Previous Track",
+		ActionStop:           "Stop Media",
+		ActionVolumeUp:       "Volume Up",
+		ActionVolumeDown:     "Volume Down",
+		ActionMute:           "Mute",
+		ActionLeftClick:      "Left Click",
+		ActionRightClick:     "Right Click",
+		ActionMiddleClick:    "Middle Click",
+		ActionDoubleClick:    "Double Click",
+		ActionScrollUp:       "Scroll Up",
+		ActionScrollDown:     "Scroll Down",
+		ActionLockScreen:     "Lock Screen",
+		ActionShowDesktop:    "Show Desktop",
+		ActionTaskView:       "Task View",
+		ActionBrowserBack:    "Browser Back",
 		ActionBrowserForward: "Browser Forward",
 		ActionBrowserRefresh: "Browser Refresh",
-		ActionZoomIn:        "Zoom In",
-		ActionZoomOut:       "Zoom Out",
-		ActionZoomReset:     "Zoom Reset",
-		ActionCopy:          "Copy",
-		ActionCut:           "Cut",
-		ActionPaste:         "Paste",
-		ActionUndo:          "Undo",
-		ActionRedo:          "Redo",
-		ActionSelectAll:     "Select All",
-		ActionSleep:         "Sleep",
-		ActionShutdown:      "Shutdown",
-		ActionRestart:       "Restart",
-		ActionLogout:        "Logout",
+		ActionZoomIn:         "Zoom In",
+		ActionZoomOut:        "Zoom Out",
+		ActionZoomReset:      "Zoom Reset",
+		ActionCopy:           "Copy",
+		ActionCut:            "Cut",
+		ActionPaste:          "Paste",
+		ActionUndo:           "Undo",
+		ActionRedo:           "Redo",
+		ActionSelectAll:      "Select All",
+		ActionSleep:          "Sleep",
+		ActionShutdown:       "Shutdown",
+		ActionRestart:        "Restart",
+		ActionLogout:         "Logout",
 	}
 	if desc, ok := descriptions[a]; ok {
 		return desc
@@ -338,28 +338,28 @@ func GetActionDescription(a Action) string {
 // The following functions are platform-specific and defined in the respective
 // *_linux.go, *_darwin.go, *_windows.go files.
 var (
-	mediaKey       func(key string)
-	volumeUp       func()
-	volumeDown     func()
-	volumeMute     func()
-	mouseClick     func(btn string)
+	mediaKey         func(key string)
+	volumeUp         func()
+	volumeDown       func()
+	volumeMute       func()
+	mouseClick       func(btn string)
 	mouseDoubleClick func()
-	mouseScroll    func(delta int)
-	lockScreen     func()
-	showDesktop    func()
-	taskView       func()
-	switchWindow   func()
-	keyCombination func(key, modifier string)
-	keyTap         func(key string)
-	zoomIn         func()
-	zoomOut        func()
-	zoomReset      func()
-	minimizeWindow func()
-	maximizeWindow func()
-	closeWindow    func()
-	altTab         func()
-	sleepSystem    func()
-	shutdownSystem func()
-	restartSystem  func()
-	logoutSystem   func()
+	mouseScroll      func(delta int)
+	lockScreen       func()
+	showDesktop      func()
+	taskView         func()
+	switchWindow     func()
+	keyCombination   func(key, modifier string)
+	keyTap           func(key string)
+	zoomIn           func()
+	zoomOut          func()
+	zoomReset        func()
+	minimizeWindow   func()
+	maximizeWindow   func()
+	closeWindow      func()
+	altTab           func()
+	sleepSystem      func()
+	shutdownSystem   func()
+	restartSystem    func()
+	logoutSystem     func()
 )

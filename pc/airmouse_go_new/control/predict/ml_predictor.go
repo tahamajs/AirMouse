@@ -13,15 +13,15 @@ import (
 
 // MLPredictor uses an ONNX LSTM model for movement prediction.
 type MLPredictor struct {
-	predictor   *predictiveml.Predictor
-	cfg         predictiveml.PredictionConfig
-	mu          sync.Mutex
-	enabled     bool
-	stats       MLPredictorStats
-	fallback    *MovementPredictor
-	history     []Point
-	maxHistory  int
-	confidence  float64
+	predictor  *predictiveml.Predictor
+	cfg        predictiveml.PredictionConfig
+	mu         sync.Mutex
+	enabled    bool
+	stats      MLPredictorStats
+	fallback   *MovementPredictor
+	history    []Point
+	maxHistory int
+	confidence float64
 }
 
 // MLPredictorStats holds statistics.
@@ -229,15 +229,4 @@ func (m *MLPredictor) Close() error {
 		return m.predictor.Close()
 	}
 	return nil
-}//go:build ml
-
-package predict
-
-import ( ... ) // full implementation
-
-// Stub:
-//go:build !ml
-package predict
-
-type MLPredictor struct{}
-// ... all stub methods
+}

@@ -11,11 +11,11 @@ import (
 
 // HIDService represents a Bluetooth HID service
 type HIDService struct {
-	manager      *Manager
-	connections  map[string]*HIDConnection
-	mu           sync.RWMutex
-	reportMap    []byte
-	running      bool
+	manager     *Manager
+	connections map[string]*HIDConnection
+	mu          sync.RWMutex
+	reportMap   []byte
+	running     bool
 }
 
 // HIDConnection represents an active HID connection
@@ -59,8 +59,8 @@ var HIDReportDescriptor = []byte{
 	0x75, 0x08, //     Report Size (8)
 	0x95, 0x01, //     Report Count (1)
 	0x81, 0x06, //     Input (Data, Var, Rel)
-	0xC0,       //   End Collection
-	0xC0,       // End Collection
+	0xC0, //   End Collection
+	0xC0, // End Collection
 }
 
 // NewHIDService creates a new HID service

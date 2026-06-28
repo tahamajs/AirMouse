@@ -21,21 +21,21 @@ var linuxKeyMap = map[string]string{
 	"Mute":       "XF86AudioMute",
 
 	// Browser Keys
-	"browser_back":     "Alt+Left",
-	"browser_forward":  "Alt+Right",
-	"browser_refresh":  "Ctrl+R",
-	"browser_home":     "Alt+Home",
+	"browser_back":    "Alt+Left",
+	"browser_forward": "Alt+Right",
+	"browser_refresh": "Ctrl+R",
+	"browser_home":    "Alt+Home",
 
 	// Navigation
-	"page_up":    "Page_Up",
-	"page_down":  "Page_Down",
-	"home":       "Home",
-	"end":        "End",
-	"delete":     "Delete",
-	"backspace":  "BackSpace",
-	"enter":      "Return",
-	"escape":     "Escape",
-	"tab":        "Tab",
+	"page_up":   "Page_Up",
+	"page_down": "Page_Down",
+	"home":      "Home",
+	"end":       "End",
+	"delete":    "Delete",
+	"backspace": "BackSpace",
+	"enter":     "Return",
+	"escape":    "Escape",
+	"tab":       "Tab",
 
 	// Function Keys
 	"f1":  "F1",

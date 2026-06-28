@@ -8,12 +8,12 @@ import (
 
 // GestureModel defines a gesture template.
 type GestureModel struct {
-	Name       string
-	Templates  [][]float64 // sequence of (dx, dy) points
-	Tolerance  float64
-	MinLength  int
-	MaxLength  int
-	Velocity   float64 // minimum average velocity
+	Name      string
+	Templates [][]float64 // sequence of (dx, dy) points
+	Tolerance float64
+	MinLength int
+	MaxLength int
+	Velocity  float64 // minimum average velocity
 }
 
 // Recognizer uses a particle filter and DTW to detect gestures.
@@ -55,68 +55,68 @@ func NewRecognizer() *Recognizer {
 func predefinedGestures() []GestureModel {
 	return []GestureModel{
 		{
-			Name:       "swipe_left",
-			Templates:  [][]float64{{-15, 0}, {-15, 0}, {-15, 0}, {-10, 0}, {-10, 0}},
-			Tolerance:  8.0,
-			MinLength:  3,
-			MaxLength:  8,
-			Velocity:   50,
+			Name:      "swipe_left",
+			Templates: [][]float64{{-15, 0}, {-15, 0}, {-15, 0}, {-10, 0}, {-10, 0}},
+			Tolerance: 8.0,
+			MinLength: 3,
+			MaxLength: 8,
+			Velocity:  50,
 		},
 		{
-			Name:       "swipe_right",
-			Templates:  [][]float64{{15, 0}, {15, 0}, {15, 0}, {10, 0}, {10, 0}},
-			Tolerance:  8.0,
-			MinLength:  3,
-			MaxLength:  8,
-			Velocity:   50,
+			Name:      "swipe_right",
+			Templates: [][]float64{{15, 0}, {15, 0}, {15, 0}, {10, 0}, {10, 0}},
+			Tolerance: 8.0,
+			MinLength: 3,
+			MaxLength: 8,
+			Velocity:  50,
 		},
 		{
-			Name:       "swipe_up",
-			Templates:  [][]float64{{0, -15}, {0, -15}, {0, -15}, {0, -10}, {0, -10}},
-			Tolerance:  8.0,
-			MinLength:  3,
-			MaxLength:  8,
-			Velocity:   50,
+			Name:      "swipe_up",
+			Templates: [][]float64{{0, -15}, {0, -15}, {0, -15}, {0, -10}, {0, -10}},
+			Tolerance: 8.0,
+			MinLength: 3,
+			MaxLength: 8,
+			Velocity:  50,
 		},
 		{
-			Name:       "swipe_down",
-			Templates:  [][]float64{{0, 15}, {0, 15}, {0, 15}, {0, 10}, {0, 10}},
-			Tolerance:  8.0,
-			MinLength:  3,
-			MaxLength:  8,
-			Velocity:   50,
+			Name:      "swipe_down",
+			Templates: [][]float64{{0, 15}, {0, 15}, {0, 15}, {0, 10}, {0, 10}},
+			Tolerance: 8.0,
+			MinLength: 3,
+			MaxLength: 8,
+			Velocity:  50,
 		},
 		{
-			Name:       "circle_cw",
-			Templates:  [][]float64{{5, 5}, {0, 10}, {-5, 5}, {-10, 0}, {-5, -5}, {0, -10}, {5, -5}, {10, 0}, {5, 5}},
-			Tolerance:  5.0,
-			MinLength:  8,
-			MaxLength:  15,
-			Velocity:   30,
+			Name:      "circle_cw",
+			Templates: [][]float64{{5, 5}, {0, 10}, {-5, 5}, {-10, 0}, {-5, -5}, {0, -10}, {5, -5}, {10, 0}, {5, 5}},
+			Tolerance: 5.0,
+			MinLength: 8,
+			MaxLength: 15,
+			Velocity:  30,
 		},
 		{
-			Name:       "circle_ccw",
-			Templates:  [][]float64{{-5, 5}, {0, 10}, {5, 5}, {10, 0}, {5, -5}, {0, -10}, {-5, -5}, {-10, 0}, {-5, 5}},
-			Tolerance:  5.0,
-			MinLength:  8,
-			MaxLength:  15,
-			Velocity:   30,
+			Name:      "circle_ccw",
+			Templates: [][]float64{{-5, 5}, {0, 10}, {5, 5}, {10, 0}, {5, -5}, {0, -10}, {-5, -5}, {-10, 0}, {-5, 5}},
+			Tolerance: 5.0,
+			MinLength: 8,
+			MaxLength: 15,
+			Velocity:  30,
 		},
 		{
-			Name:       "zigzag",
-			Templates:  [][]float64{{10, 0}, {0, 10}, {-10, 0}, {0, -10}, {10, 0}, {0, 10}, {-10, 0}},
-			Tolerance:  7.0,
-			MinLength:  6,
-			MaxLength:  12,
-			Velocity:   40,
+			Name:      "zigzag",
+			Templates: [][]float64{{10, 0}, {0, 10}, {-10, 0}, {0, -10}, {10, 0}, {0, 10}, {-10, 0}},
+			Tolerance: 7.0,
+			MinLength: 6,
+			MaxLength: 12,
+			Velocity:  40,
 		},
 		{
-			Name:       "check_mark",
-			Templates:  [][]float64{{10, 5}, {5, 10}, {-5, -5}, {-10, -10}},
-			Tolerance:  6.0,
-			MinLength:  3,
-			MaxLength:  6,
-			Velocity:   35,
+			Name:      "check_mark",
+			Templates: [][]float64{{10, 5}, {5, 10}, {-5, -5}, {-10, -10}},
+			Tolerance: 6.0,
+			MinLength: 3,
+			MaxLength: 6,
+			Velocity:  35,
 		},
 	}
 }

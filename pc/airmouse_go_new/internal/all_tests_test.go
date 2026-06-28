@@ -97,7 +97,7 @@ func TestProtocolScrollMessage(t *testing.T) {
 		msg := map[string]interface{}{
 			"type": "scroll",
 			"payload": map[string]int{
-				"delta": delta,
+				"delta":  delta,
 				"Scroll": delta, // alias
 			},
 		}
@@ -194,10 +194,10 @@ func TestProtocolControlMessage(t *testing.T) {
 
 func TestProtocolHelloMessage(t *testing.T) {
 	payload := map[string]string{
-		"name":     "TestDevice",
-		"version":  "3.0",
-		"device":   "Pixel 8 Pro",
-		"protocol": "WEBSOCKET",
+		"name":      "TestDevice",
+		"version":   "3.0",
+		"device":    "Pixel 8 Pro",
+		"protocol":  "WEBSOCKET",
 		"transport": "websocket",
 	}
 	msg := map[string]interface{}{
@@ -365,8 +365,8 @@ func TestProtocolInvalidMessages(t *testing.T) {
 
 func TestProtocolIDField(t *testing.T) {
 	msg := map[string]interface{}{
-		"type": "click",
-		"id":   "msg_7",
+		"type":   "click",
+		"id":     "msg_7",
 		"button": "left",
 	}
 	validateMessage(t, msg, "click")
@@ -488,20 +488,20 @@ func TestProtocolConcurrentMarshal(t *testing.T) {
 
 func TestProtocolMessageSizes(t *testing.T) {
 	messages := map[string]interface{}{
-		"move":      map[string]interface{}{"type": "move", "dx": 10.5, "dy": -3.2},
-		"click":     map[string]interface{}{"type": "click", "button": "left"},
+		"move":        map[string]interface{}{"type": "move", "dx": 10.5, "dy": -3.2},
+		"click":       map[string]interface{}{"type": "click", "button": "left"},
 		"doubleclick": map[string]interface{}{"type": "doubleclick"},
 		"rightclick":  map[string]interface{}{"type": "rightclick"},
-		"scroll":    map[string]interface{}{"type": "scroll", "delta": 5},
-		"gesture":   map[string]interface{}{"type": "gesture", "gesture": "ThumbsUp", "confidence": 0.95},
-		"proximity": map[string]interface{}{"type": "proximity", "device_id": "test-device", "is_near": true, "distance": 1.5},
-		"control":   map[string]interface{}{"type": "control", "command": "pause_movement"},
-		"hello":     map[string]interface{}{"type": "hello", "name": "TestDevice", "version": "3.0"},
-		"ack":       map[string]interface{}{"type": "ack", "id": "msg_123"},
-		"ping":      map[string]interface{}{"type": "ping"},
-		"pong":      map[string]interface{}{"type": "pong"},
-		"welcome":   map[string]interface{}{"type": "welcome", "server": "AirMouse", "version": "3.0.0"},
-		"error":     map[string]interface{}{"type": "error", "message": "Something went wrong"},
+		"scroll":      map[string]interface{}{"type": "scroll", "delta": 5},
+		"gesture":     map[string]interface{}{"type": "gesture", "gesture": "ThumbsUp", "confidence": 0.95},
+		"proximity":   map[string]interface{}{"type": "proximity", "device_id": "test-device", "is_near": true, "distance": 1.5},
+		"control":     map[string]interface{}{"type": "control", "command": "pause_movement"},
+		"hello":       map[string]interface{}{"type": "hello", "name": "TestDevice", "version": "3.0"},
+		"ack":         map[string]interface{}{"type": "ack", "id": "msg_123"},
+		"ping":        map[string]interface{}{"type": "ping"},
+		"pong":        map[string]interface{}{"type": "pong"},
+		"welcome":     map[string]interface{}{"type": "welcome", "server": "AirMouse", "version": "3.0.0"},
+		"error":       map[string]interface{}{"type": "error", "message": "Something went wrong"},
 	}
 	for name, msg := range messages {
 		data, err := json.Marshal(msg)

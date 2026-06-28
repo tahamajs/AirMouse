@@ -32,29 +32,29 @@ type Controller interface {
 }
 
 type mouseController struct {
-	sensitivity    float64
-	clickCount     int64
-	doubleClickCnt int64
-	rightClickCnt  int64
-	scrollCount    int64
-	smoothing      bool
-	acceleration   bool
-	accelFactor    float64
-	lastX, lastY   float64
-	lastMoveTime   time.Time
-	moveCount      int
-	moveRateLimit  int
-	moveMu         sync.Mutex
-	lastClickTime  time.Time
-	clickWindow    int
-	predictor      *predict.MovementPredictor
-	predEnabled    bool
-	aiSmoother     *predict.AISmoother
-	aiEnabled      bool
-	aiBlendFactor  float64
-	mlPredictor    *predict.MLPredictor
-	mlEnabled      bool
-	mlBlend        float64
+	sensitivity              float64
+	clickCount               int64
+	doubleClickCnt           int64
+	rightClickCnt            int64
+	scrollCount              int64
+	smoothing                bool
+	acceleration             bool
+	accelFactor              float64
+	lastX, lastY             float64
+	lastMoveTime             time.Time
+	moveCount                int
+	moveRateLimit            int
+	moveMu                   sync.Mutex
+	lastClickTime            time.Time
+	clickWindow              int
+	predictor                *predict.MovementPredictor
+	predEnabled              bool
+	aiSmoother               *predict.AISmoother
+	aiEnabled                bool
+	aiBlendFactor            float64
+	mlPredictor              *predict.MLPredictor
+	mlEnabled                bool
+	mlBlend                  float64
 	lastCursorX, lastCursorY float64
 }
 
@@ -83,14 +83,14 @@ func NewController(sensitivity float64) Controller {
 	}
 }
 
-func (m *mouseController) SetSmoothing(enabled bool)               { m.smoothing = enabled }
+func (m *mouseController) SetSmoothing(enabled bool) { m.smoothing = enabled }
 func (m *mouseController) SetAcceleration(enabled bool, factor float64) {
 	m.acceleration = enabled
 	if factor > 0 {
 		m.accelFactor = factor
 	}
 }
-func (m *mouseController) GetSensitivity() float64                  { return m.sensitivity }
+func (m *mouseController) GetSensitivity() float64 { return m.sensitivity }
 func (m *mouseController) SetSensitivity(s float64) {
 	if s < 0.1 {
 		s = 0.1
@@ -129,14 +129,14 @@ func (m *mouseController) EnableMLPrediction(enabled bool) {
 		m.mlPredictor.SetEnabled(enabled)
 	}
 }
-func (m *mouseController) SetMLBlendFactor(factor float64)         { m.mlBlend = factor }
+func (m *mouseController) SetMLBlendFactor(factor float64) { m.mlBlend = factor }
 func (m *mouseController) ResetStats() {
 	atomic.StoreInt64(&m.clickCount, 0)
 	atomic.StoreInt64(&m.doubleClickCnt, 0)
 	atomic.StoreInt64(&m.rightClickCnt, 0)
 	atomic.StoreInt64(&m.scrollCount, 0)
 }
-func (m *mouseController) GetPosition() (x, y float64)              { return m.lastCursorX, m.lastCursorY }
+func (m *mouseController) GetPosition() (x, y float64) { return m.lastCursorX, m.lastCursorY }
 
 // Move applies all filters (smoothing, prediction, acceleration) and executes the movement.
 func (m *mouseController) Move(dx, dy float64) {

@@ -41,17 +41,17 @@ const colorReset = "\033[0m"
 
 // Logger is the main logging structure.
 type Logger struct {
-	level       Level
-	    mu          sync.RWMutex
+	level Level
+	mu    sync.RWMutex
 
 	out         io.Writer
 	file        *os.File
 	useColor    bool
 	timestamp   bool
 	hooks       []func(level Level, msg string)
-	rotateSize  int64           // max size in bytes before rotation (0 = no rotation)
-	rotateAge   time.Duration   // max age before rotation (0 = no rotation)
-	rotateCount int             // number of rotated files to keep (0 = keep all)
+	rotateSize  int64         // max size in bytes before rotation (0 = no rotation)
+	rotateAge   time.Duration // max age before rotation (0 = no rotation)
+	rotateCount int           // number of rotated files to keep (0 = keep all)
 	filePath    string
 	currentSize int64
 }
@@ -287,12 +287,12 @@ func SetLevel(level Level) {
 
 // GetLevel returns the current log level.
 func GetLevel() Level {
-    if defaultLogger != nil {
-        defaultLogger.mu.RLock()
-        defer defaultLogger.mu.RUnlock()
-        return defaultLogger.level
-    }
-    return LevelInfo
+	if defaultLogger != nil {
+		defaultLogger.mu.RLock()
+		defer defaultLogger.mu.RUnlock()
+		return defaultLogger.level
+	}
+	return LevelInfo
 }
 
 // AddHook registers a hook that receives (level, msg).

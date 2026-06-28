@@ -40,23 +40,23 @@ func defaultGestures() []GestureTemplate {
 
 // GesturesTab is the gestures management tab.
 type GesturesTab struct {
-	list          *widget.List
-	templates     []GestureTemplate
-	selected      int
-	searchEntry   *widget.Entry
-	filterType    *widget.Select
-	addBtn        *widget.Button
-	editBtn       *widget.Button
-	deleteBtn     *widget.Button
-	importBtn     *widget.Button
-	exportBtn     *widget.Button
-	resetBtn      *widget.Button
-	helpBtn       *widget.Button
-	testBtn       *widget.Button
-	statusLabel   *widget.Label
-	overview      *widget.Label
-	activeCount   *widget.Label
-	mu            sync.RWMutex // protects templates
+	list        *widget.List
+	templates   []GestureTemplate
+	selected    int
+	searchEntry *widget.Entry
+	filterType  *widget.Select
+	addBtn      *widget.Button
+	editBtn     *widget.Button
+	deleteBtn   *widget.Button
+	importBtn   *widget.Button
+	exportBtn   *widget.Button
+	resetBtn    *widget.Button
+	helpBtn     *widget.Button
+	testBtn     *widget.Button
+	statusLabel *widget.Label
+	overview    *widget.Label
+	activeCount *widget.Label
+	mu          sync.RWMutex // protects templates
 }
 
 // NewGesturesTab creates the gestures management tab.

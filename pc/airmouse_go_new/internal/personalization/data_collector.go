@@ -174,14 +174,14 @@ func (dc *DataCollector) performTraining(samples []MovementSample) error {
 	trainingData := make([]map[string]interface{}, len(samples))
 	for i, s := range samples {
 		trainingData[i] = map[string]interface{}{
-			"x":     s.X,
-			"y":     s.Y,
-			"vx":    s.VX,
-			"vy":    s.VY,
-			"ax":    s.AX,
-			"ay":    s.AY,
-			"time":  s.Timestamp.UnixNano(),
-			"conf":  s.Confidence,
+			"x":    s.X,
+			"y":    s.Y,
+			"vx":   s.VX,
+			"vy":   s.VY,
+			"ax":   s.AX,
+			"ay":   s.AY,
+			"time": s.Timestamp.UnixNano(),
+			"conf": s.Confidence,
 		}
 	}
 
@@ -222,10 +222,10 @@ func (dc *DataCollector) ExportData(filePath string) error {
 	defer dc.mu.Unlock()
 
 	data := map[string]interface{}{
-		"session_id":     dc.sessionID,
-		"session_start":  dc.sessionStart,
-		"total_samples":  dc.totalSamples,
-		"samples":        dc.buffer,
+		"session_id":    dc.sessionID,
+		"session_start": dc.sessionStart,
+		"total_samples": dc.totalSamples,
+		"samples":       dc.buffer,
 	}
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
@@ -295,14 +295,14 @@ func (dc *DataCollector) GetStatistics() map[string]interface{} {
 		avgConf /= float64(count)
 	}
 	return map[string]interface{}{
-		"buffer_size":       count,
-		"max_size":          dc.maxSize,
-		"total_samples":     dc.totalSamples,
-		"avg_velocity_x":    avgVX,
-		"avg_velocity_y":    avgVY,
-		"avg_confidence":    avgConf,
-		"session_id":        dc.sessionID,
-		"session_duration":  time.Since(dc.sessionStart).Seconds(),
-		"last_training":     dc.lastFineTune,
+		"buffer_size":      count,
+		"max_size":         dc.maxSize,
+		"total_samples":    dc.totalSamples,
+		"avg_velocity_x":   avgVX,
+		"avg_velocity_y":   avgVY,
+		"avg_confidence":   avgConf,
+		"session_id":       dc.sessionID,
+		"session_duration": time.Since(dc.sessionStart).Seconds(),
+		"last_training":    dc.lastFineTune,
 	}
 }

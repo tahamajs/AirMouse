@@ -29,10 +29,10 @@ type Filter struct {
 
 // FilterStats holds statistics about the filter.
 type FilterStats struct {
-	Iterations        int64
-	AvgWeight         float64
+	Iterations         int64
+	AvgWeight          float64
 	EffectiveParticles float64
-	LastResample      time.Time
+	LastResample       time.Time
 }
 
 // FilterEvent is emitted when the filter resamples.

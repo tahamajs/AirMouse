@@ -8,14 +8,14 @@ import (
 )
 
 var (
-	user32     = syscall.NewLazyDLL("user32.dll")
-	kernel32   = syscall.NewLazyDLL("kernel32.dll")
-	powrprof   = syscall.NewLazyDLL("powrprof.dll")
+	user32   = syscall.NewLazyDLL("user32.dll")
+	kernel32 = syscall.NewLazyDLL("kernel32.dll")
+	powrprof = syscall.NewLazyDLL("powrprof.dll")
 
-	procKeybdEvent = user32.NewProc("keybd_event")
-	procMouseEvent = user32.NewProc("mouse_event")
+	procKeybdEvent      = user32.NewProc("keybd_event")
+	procMouseEvent      = user32.NewProc("mouse_event")
 	procLockWorkStation = user32.NewProc("LockWorkStation")
-	procExitWindowsEx = user32.NewProc("ExitWindowsEx")
+	procExitWindowsEx   = user32.NewProc("ExitWindowsEx")
 	procSetSuspendState = powrprof.NewProc("SetSuspendState")
 )
 
@@ -39,42 +39,42 @@ const (
 
 // Virtual key codes (simplified)
 var winKeyMap = map[string]byte{
-	"PlayPause": 0xB3,
-	"Next":      0xB0,
-	"Previous":  0xB1,
-	"Stop":      0xB2,
-	"VolumeUp":  0xAF,
-	"VolumeDown": 0xAE,
-	"Mute":      0xAD,
-	"browser_back": 0xA6,
+	"PlayPause":       0xB3,
+	"Next":            0xB0,
+	"Previous":        0xB1,
+	"Stop":            0xB2,
+	"VolumeUp":        0xAF,
+	"VolumeDown":      0xAE,
+	"Mute":            0xAD,
+	"browser_back":    0xA6,
 	"browser_forward": 0xA7,
 	"browser_refresh": 0xA8,
-	"browser_home": 0xAC,
-	"page_up":    0x21,
-	"page_down":  0x22,
-	"home":       0x24,
-	"end":        0x23,
-	"delete":     0x2E,
-	"backspace":  0x08,
-	"enter":      0x0D,
-	"escape":     0x1B,
-	"tab":        0x09,
-	"f1":         0x70,
-	"f2":         0x71,
-	"f3":         0x72,
-	"f4":         0x73,
-	"f5":         0x74,
-	"f6":         0x75,
-	"f7":         0x76,
-	"f8":         0x77,
-	"f9":         0x78,
-	"f10":        0x79,
-	"f11":        0x7A,
-	"f12":        0x7B,
-	"ctrl":       0x11,
-	"alt":        0x12,
-	"shift":      0x10,
-	"win":        0x5B,
+	"browser_home":    0xAC,
+	"page_up":         0x21,
+	"page_down":       0x22,
+	"home":            0x24,
+	"end":             0x23,
+	"delete":          0x2E,
+	"backspace":       0x08,
+	"enter":           0x0D,
+	"escape":          0x1B,
+	"tab":             0x09,
+	"f1":              0x70,
+	"f2":              0x71,
+	"f3":              0x72,
+	"f4":              0x73,
+	"f5":              0x74,
+	"f6":              0x75,
+	"f7":              0x76,
+	"f8":              0x77,
+	"f9":              0x78,
+	"f10":             0x79,
+	"f11":             0x7A,
+	"f12":             0x7B,
+	"ctrl":            0x11,
+	"alt":             0x12,
+	"shift":           0x10,
+	"win":             0x5B,
 }
 
 func init() {

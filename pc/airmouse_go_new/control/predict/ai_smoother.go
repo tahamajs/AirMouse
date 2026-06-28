@@ -32,12 +32,12 @@ type AISmoother struct {
 
 // AISmootherStats holds statistics.
 type AISmootherStats struct {
-	Predictions     int64
-	AvgLatencyMs    float64
-	LastPrediction  time.Time
-	ModelLoadTime   time.Duration
-	InferenceCount  int64
-	AvgConfidence   float64
+	Predictions    int64
+	AvgLatencyMs   float64
+	LastPrediction time.Time
+	ModelLoadTime  time.Duration
+	InferenceCount int64
+	AvgConfidence  float64
 }
 
 // NewAISmoother creates a new AI smoother (ONNX).
@@ -83,18 +83,18 @@ func NewAISmoother(modelPath string, historySize int) (*AISmoother, error) {
 	}
 
 	smoother := &AISmoother{
-		session:             session,
-		inputTensor:         inputTensor,
-		outputTensor:        outputTensor,
-		history:             make([][4]float32, 0, historySize),
-		maxHistory:          historySize,
-		enabled:             true,
-		modelPath:           modelPath,
-		inputName:           "input_sequence",
-		outputName:          "movement_delta",
-		predictionInterval:  16 * time.Millisecond,
-		smoothingWindow:     make([]float32, 0, 5),
-		windowSize:          5,
+		session:            session,
+		inputTensor:        inputTensor,
+		outputTensor:       outputTensor,
+		history:            make([][4]float32, 0, historySize),
+		maxHistory:         historySize,
+		enabled:            true,
+		modelPath:          modelPath,
+		inputName:          "input_sequence",
+		outputName:         "movement_delta",
+		predictionInterval: 16 * time.Millisecond,
+		smoothingWindow:    make([]float32, 0, 5),
+		windowSize:         5,
 	}
 	smoother.stats.ModelLoadTime = time.Since(startTime)
 
@@ -242,17 +242,17 @@ func (a *AISmoother) GetModelInfo() map[string]interface{} {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return map[string]interface{}{
-		"model_path":              a.modelPath,
-		"input_name":              a.inputName,
-		"output_name":             a.outputName,
-		"history_size":            a.maxHistory,
-		"enabled":                 a.enabled,
-		"predictions":             a.stats.Predictions,
-		"inference_count":         a.stats.InferenceCount,
-		"avg_latency_ms":          a.stats.AvgLatencyMs,
-		"avg_confidence":          a.stats.AvgConfidence,
-		"model_load_ms":           a.stats.ModelLoadTime.Milliseconds(),
-		"prediction_interval_ms":  a.predictionInterval.Milliseconds(),
+		"model_path":             a.modelPath,
+		"input_name":             a.inputName,
+		"output_name":            a.outputName,
+		"history_size":           a.maxHistory,
+		"enabled":                a.enabled,
+		"predictions":            a.stats.Predictions,
+		"inference_count":        a.stats.InferenceCount,
+		"avg_latency_ms":         a.stats.AvgLatencyMs,
+		"avg_confidence":         a.stats.AvgConfidence,
+		"model_load_ms":          a.stats.ModelLoadTime.Milliseconds(),
+		"prediction_interval_ms": a.predictionInterval.Milliseconds(),
 	}
 }
 
@@ -271,114 +271,3 @@ func (a *AISmoother) Close() error {
 	ort.DestroyEnvironment()
 	return nil
 }
-
-//go:build ai
-
-package predict
-
-import (
-	"fmt"
-	"math"
-	"sync"
-	"time"
-	ort "github.com/yalue/onnxruntime_go"
-)
-
-type AISmoother struct {
-	session            *ort.AdvancedSession
-	inputTensor        *ort.Tensor[float32]
-	outputTensor       *ort.Tensor[float32]
-	history            [][4]float32
-	maxHistory         int
-	enabled            bool
-	mu                 sync.Mutex
-	stats              AISmootherStats
-	modelPath          string
-	inputName          string
-	outputName         string
-	predictionInterval time.Duration
-	lastPrediction     time.Time
-	smoothingWindow    []float32
-	windowSize         int
-}
-
-type AISmootherStats struct {
-	Predictions     int64
-	AvgLatencyMs    float64
-	LastPrediction  time.Time
-	ModelLoadTime   time.Duration
-	InferenceCount  int64
-	AvgConfidence   float64
-}
-
-func NewAISmoother(modelPath string, historySize int) (*AISmoother, error) {
-	if historySize <= 0 {
-		historySize = 30
-	}
-	startTime := time.Now()
-	if err := ort.InitializeEnvironment(); err != nil {
-		return nil, fmt.Errorf("ONNX init failed: %w", err)
-	}
-	inputShape := []int64{1, int64(historySize), 4}
-	inputTensor, err := ort.NewEmptyTensor[float32](inputShape)
-	if err != nil {
-		ort.DestroyEnvironment()
-		return nil, fmt.Errorf("failed to create input tensor: %w", err)
-	}
-	outputShape := []int64{1, 2}
-	outputTensor, err := ort.NewEmptyTensor[float32](outputShape)
-	if err != nil {
-		inputTensor.Destroy()
-		ort.DestroyEnvironment()
-		return nil, fmt.Errorf("failed to create output tensor: %w", err)
-	}
-	session, err := ort.NewAdvancedSession(
-		modelPath,
-		[]string{"input_sequence"},
-		[]string{"movement_delta"},
-		[]ort.ArbitraryTensor{inputTensor},
-		[]ort.ArbitraryTensor{outputTensor},
-		nil,
-	)
-	if err != nil {
-		inputTensor.Destroy()
-		outputTensor.Destroy()
-		ort.DestroyEnvironment()
-		return nil, fmt.Errorf("failed to create session: %w", err)
-	}
-	smoother := &AISmoother{
-		session:             session,
-		inputTensor:         inputTensor,
-		outputTensor:        outputTensor,
-		history:             make([][4]float32, 0, historySize),
-		maxHistory:          historySize,
-		enabled:             true,
-		modelPath:           modelPath,
-		inputName:           "input_sequence",
-		outputName:          "movement_delta",
-		predictionInterval:  16 * time.Millisecond,
-		smoothingWindow:     make([]float32, 0, 5),
-		windowSize:          5,
-	}
-	smoother.stats.ModelLoadTime = time.Since(startTime)
-	return smoother, nil
-}
-
-func (a *AISmoother) AddPoint(x, y float64) { /* see previous full code */ }
-// ... all other methods (PredictDelta, normalizeSequence, applySmoothing, etc.)
-// (We’ve already given the full code in the earlier answer – I’ll include the rest here for completeness if needed, but it’s identical.)
-
-// Stub version:
-//go:build !ai
-package predict
-
-type AISmoother struct{}
-func NewAISmoother(modelPath string, historySize int) (*AISmoother, error) { return &AISmoother{}, nil }
-func (a *AISmoother) AddPoint(x, y float64) {}
-func (a *AISmoother) PredictDelta() (dx, dy float64, err error) { return 0,0,nil }
-func (a *AISmoother) SetEnabled(enabled bool) {}
-func (a *AISmoother) IsEnabled() bool { return false }
-func (a *AISmoother) Reset() {}
-func (a *AISmoother) GetStats() AISmootherStats { return AISmootherStats{} }
-func (a *AISmoother) GetModelInfo() map[string]interface{} { return map[string]interface{}{"enabled":false} }
-func (a *AISmoother) Close() error { return nil }

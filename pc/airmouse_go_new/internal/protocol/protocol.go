@@ -9,12 +9,12 @@ import (
 	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
-	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/protocol/bluetooth"
 	"airmouse-go/internal/protocol/tcp"
 	"airmouse-go/internal/protocol/udp"
 	"airmouse-go/internal/protocol/usb"
 	websocketpkg "airmouse-go/internal/protocol/websocket"
+	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/utils"
 )
 
@@ -72,10 +72,10 @@ type ProtocolServer struct {
 	usbServer    startStopStats
 	bluetoothMgr bluetoothStartStopStats
 
-	mouseCtrl    mouse.Controller
-	deviceMgr    *device.Manager
-	authMgr      *auth.Manager
-	proxMgr      *proximity.Manager // proximity manager (optional)
+	mouseCtrl mouse.Controller
+	deviceMgr *device.Manager
+	authMgr   *auth.Manager
+	proxMgr   *proximity.Manager // proximity manager (optional)
 
 	mu            sync.RWMutex
 	running       bool

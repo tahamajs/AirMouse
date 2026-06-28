@@ -34,9 +34,9 @@ type TrainingSample struct {
 
 // TrainRequest is the payload sent to the training endpoint.
 type TrainRequest struct {
-	Samples   []TrainingSample        `json:"samples"`
-	ModelPath string                  `json:"model_path"`
-	Config    map[string]interface{}  `json:"config"`
+	Samples   []TrainingSample       `json:"samples"`
+	ModelPath string                 `json:"model_path"`
+	Config    map[string]interface{} `json:"config"`
 }
 
 // TrainResponse is the response from the training server.
