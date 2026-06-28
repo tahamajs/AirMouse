@@ -413,6 +413,49 @@ func (s *Server) processLine(client *Client, line []byte) {
 			utils.LogDebug("Unknown TCP control command: %s", command)
 		}
 
+	case "presentation":
+		if !approved {
+			return
+		}
+		action, _ := payload["action"].(string)
+		utils.LogInfo("TCP presentation action received: client=%s action=%s", client.ID, action)
+		switch action {
+		case "prev":
+			_ = syscmd.ExecuteSystemCommand("prev_track")
+		case "next":
+			_ = syscmd.ExecuteSystemCommand("next_track")
+		case "fullscreen":
+			_ = syscmd.ExecuteSystemCommand("window_fullscreen")
+		}
+
+	case "media":
+		if !approved {
+			return
+		}
+		action, _ := payload["action"].(string)
+		utils.LogInfo("TCP media action received: client=%s action=%s", client.ID, action)
+		switch action {
+		case "playpause":
+			_ = syscmd.ExecuteSystemCommand("play_pause")
+		case "prev":
+			_ = syscmd.ExecuteSystemCommand("prev_track")
+		case "next":
+			_ = syscmd.ExecuteSystemCommand("next_track")
+		case "volumeup":
+			_ = syscmd.ExecuteSystemCommand("volume_up")
+		case "volumedown":
+			_ = syscmd.ExecuteSystemCommand("volume_down")
+		}
+
+	case "laser", "draw", "annotation":
+		utils.LogInfo("Received %s data from client %s over TCP", msgType, client.ID)
+
+	case "keypress", "keydown", "keyup", "type":
+		utils.LogInfo("Received keyboard event %s from client %s over TCP", msgType, client.ID)
+
+	case "smarthome":
+		utils.LogInfo("Received smarthome command from client %s over TCP", client.ID)
+
 	case "calibration_data":
 		if !approved {
 			utils.LogDebug("Ignoring TCP calibration_data while waiting for approval: client=%s", client.ID)
