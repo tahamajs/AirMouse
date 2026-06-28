@@ -11,14 +11,14 @@ import (
 // State vector: [x, y, vx, vy].
 type KalmanFilter2D struct {
 	// State vector [x, y, vx, vy]
-	x  [4]float64
-	P  [4][4]float64 // Covariance matrix
-	F  [4][4]float64 // State transition matrix
-	H  [4][4]float64 // Observation matrix (identity)
-	Q  [4][4]float64 // Process noise covariance
-	R  [4][4]float64 // Measurement noise covariance
-	dt float64
-	mu sync.RWMutex
+	x           [4]float64
+	P           [4][4]float64 // Covariance matrix
+	F           [4][4]float64 // State transition matrix
+	H           [4][4]float64 // Observation matrix (identity)
+	Q           [4][4]float64 // Process noise covariance
+	R           [4][4]float64 // Measurement noise covariance
+	dt          float64
+	mu          sync.RWMutex
 	initialized bool
 	stats       KalmanStats
 }

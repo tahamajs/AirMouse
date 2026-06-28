@@ -526,7 +526,6 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	case "smarthome":
 		utils.LogInfo("Received smarthome command from client %s", client.ID)
 
-
 	case "calibration_data":
 		if !client.Approved.Load() {
 			utils.LogDebug("Ignoring WebSocket calibration_data while waiting for approval: %s", client.ID)

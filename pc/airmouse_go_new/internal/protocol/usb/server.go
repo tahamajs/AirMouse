@@ -32,18 +32,18 @@ type SerialDevice struct {
 }
 
 type Server struct {
-	devices     map[string]*SerialDevice
-	mouse       mouse.Controller
-	deviceMgr   *device.Manager
-	mu          sync.RWMutex
-	running     bool
-	baudRate    int
-	dataBits    int
-	stopBits    int
-	parity      string
-	callbacks   []func(event USBEvent)
-	gadget      *USBGadget
-	autoDetect  bool
+	devices    map[string]*SerialDevice
+	mouse      mouse.Controller
+	deviceMgr  *device.Manager
+	mu         sync.RWMutex
+	running    bool
+	baudRate   int
+	dataBits   int
+	stopBits   int
+	parity     string
+	callbacks  []func(event USBEvent)
+	gadget     *USBGadget
+	autoDetect bool
 }
 
 type USBMessage struct {
@@ -426,17 +426,17 @@ func (s *Server) GetStats() map[string]interface{} {
 		}
 	}
 	return map[string]interface{}{
-		"devices":      len(s.devices),
-		"connected":    connectedCount,
-		"bytes_sent":   totalSent,
-		"bytes_recv":   totalRecv,
-		"running":      s.running,
-		"baud_rate":    s.baudRate,
-		"data_bits":    s.dataBits,
-		"stop_bits":    s.stopBits,
-		"parity":       s.parity,
-		"auto_detect":  s.autoDetect,
-		"gadget":       s.gadget.GetStatus(),
+		"devices":     len(s.devices),
+		"connected":   connectedCount,
+		"bytes_sent":  totalSent,
+		"bytes_recv":  totalRecv,
+		"running":     s.running,
+		"baud_rate":   s.baudRate,
+		"data_bits":   s.dataBits,
+		"stop_bits":   s.stopBits,
+		"parity":      s.parity,
+		"auto_detect": s.autoDetect,
+		"gadget":      s.gadget.GetStatus(),
 	}
 }
 

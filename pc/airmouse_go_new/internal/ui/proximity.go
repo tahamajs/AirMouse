@@ -28,8 +28,8 @@ type ProximityTab struct {
 	calibrateBtn    *widget.Button
 	lockNowBtn      *widget.Button
 	unlockNowBtn    *widget.Button
-	pauseMouseCheck *widget.Check      // 👈 new: manual pause toggle
-	mouseStateLabel *widget.Label     // 👈 new: shows "Paused" or "Active"
+	pauseMouseCheck *widget.Check // 👈 new: manual pause toggle
+	mouseStateLabel *widget.Label // 👈 new: shows "Paused" or "Active"
 	statusLabel     *widget.Label
 	distanceLabel   *widget.Label
 	deviceLabel     *widget.Label
@@ -217,30 +217,6 @@ func (t *ProximityTab) updateMouseStateLabel(paused bool) {
 		t.mouseStateLabel.Importance = widget.SuccessImportance
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Service lifecycle
 // ------------------------------------------------------------
@@ -471,4 +447,3 @@ func (t *ProximityTab) startCalibration() {
 	}
 	showStep()
 }
-

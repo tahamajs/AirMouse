@@ -11,8 +11,8 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	"airmouse-go/internal/config"
 	mctl "airmouse-go/control/mouse"
+	"airmouse-go/internal/config"
 )
 
 type SettingsTab struct {

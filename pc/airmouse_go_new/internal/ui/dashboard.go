@@ -48,11 +48,11 @@ type DashboardTab struct {
 	approvalCount   *widget.Label
 	pendingList     *fyne.Container
 
-	statusCircle   *canvas.Circle
-	controlBtn     *widget.Button
-	qrBtn          *widget.Button
-	refreshBtn     *widget.Button
-	helpBtn        *widget.Button
+	statusCircle *canvas.Circle
+	controlBtn   *widget.Button
+	qrBtn        *widget.Button
+	refreshBtn   *widget.Button
+	helpBtn      *widget.Button
 
 	serverStart time.Time
 	mu          sync.Mutex
@@ -884,11 +884,11 @@ func (t *DashboardTab) showPairingQRDialog() {
 	qrImage := canvas.NewImageFromImage(img)
 	qrImage.FillMode = canvas.ImageFillOriginal
 	instructions := widget.NewLabel(
-		"📱 How to pair:\n\n"+
-			"1. Open Air Mouse on your phone\n"+
-			"2. Tap the QR scanner icon\n"+
-			"3. Scan this QR code\n"+
-			"4. The phone will show waiting for approval, then approved, then connected\n\n"+
+		"📱 How to pair:\n\n" +
+			"1. Open Air Mouse on your phone\n" +
+			"2. Tap the QR scanner icon\n" +
+			"3. Scan this QR code\n" +
+			"4. The phone will show waiting for approval, then approved, then connected\n\n" +
 			fmt.Sprintf("Server: %s\nIP: %s\nPort: %d\nVersion: %s",
 				t.cfg.ServerName, ip, port, t.cfg.Version),
 	)
