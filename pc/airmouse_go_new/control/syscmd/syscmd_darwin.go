@@ -45,6 +45,32 @@ func appleScriptForCommand(command string) (string, error) {
 		return `tell application "System Events" to keystroke "-" using command down`, nil
 	case "zoom_reset":
 		return `tell application "System Events" to keystroke "0" using command down`, nil
+	case "volume_up":
+		return `tell application "System Events" to key code 72`, nil
+	case "volume_down":
+		return `tell application "System Events" to key code 73`, nil
+	case "mute":
+		return `tell application "System Events" to key code 74`, nil
+	case "play_pause":
+		return `tell application "System Events" to key code 100`, nil
+	case "next_track":
+		return `tell application "System Events" to key code 101`, nil
+	case "prev_track":
+		return `tell application "System Events" to key code 98`, nil
+	case "window_maximize":
+		return `tell application "System Events" to keystroke "m" using {command down, option down}`, nil
+	case "window_minimize":
+		return `tell application "System Events" to keystroke "m" using command down`, nil
+	case "window_fullscreen":
+		return `tell application "System Events" to keystroke "f" using {command down, control down}`, nil
+	case "browser_back":
+		return `tell application "System Events" to keystroke "[" using command down`, nil
+	case "browser_forward":
+		return `tell application "System Events" to keystroke "]" using command down`, nil
+	case "browser_refresh":
+		return `tell application "System Events" to keystroke "r" using command down`, nil
+	case "browser_home":
+		return `tell application "System Events" to keystroke "h" using {command down, shift down}`, nil
 	default:
 		return "", nil
 	}
