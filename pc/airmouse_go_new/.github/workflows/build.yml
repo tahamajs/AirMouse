@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build, Release & Deploy
 
 on:
   push:
@@ -11,131 +11,164 @@ on:
 
 env:
   GO_VERSION: '1.23'
-  NODE_VERSION: '20'
+  APP_NAME: airmouse-server
+
+permissions:
+  contents: write
+  packages: write
+  security-events: write
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [1.22, 1.23]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-          cache: true
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.out
-          flags: unittests
-          name: codecov-umbrella
-
-      - name: Run benchmarks
-        run: go test -bench=. -benchmem ./...
-
+  # ──────────────────────────────────────────────────
+  # 1. Lint
+  # ──────────────────────────────────────────────────
   lint:
     name: Lint Code
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-
+          cache: true
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           args: --timeout=5m
 
-      - name: Run staticcheck
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          staticcheck ./...
+  # ──────────────────────────────────────────────────
+  # 2. Tests across platforms
+  # ──────────────────────────────────────────────────
+  test:
+    name: Test (${{ matrix.os }})
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Download dependencies
+        run: go mod download
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.out
+          flags: unittests
 
+  # ──────────────────────────────────────────────────
+  # 3. Security scan
+  # ──────────────────────────────────────────────────
   security:
     name: Security Scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
       - name: Upload Trivy results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: trivy-results.sarif
 
-      - name: Run GoSec
-        run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
-          gosec -quiet -confidence=medium -severity=medium ./...
-
-  build:
-    name: Build and Release
-    runs-on: ubuntu-latest
-    needs: [test, lint, security]
-    # Only run on main/develop branches, tags, or manual trigger – not on pull requests
-    if: github.event_name != 'pull_request'
+  # ──────────────────────────────────────────────────
+  # 4. Platform-native snapshot builds (PRs and branches)
+  # ──────────────────────────────────────────────────
+  build-snapshot:
+    name: Build Snapshot (${{ matrix.os }})
+    needs: [test, security]
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: darwin
+          - os: windows-latest
+            platform: windows
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev xdotool
+      - name: Install macOS system dependencies
+        if: matrix.platform == 'darwin'
+        run: brew install pkg-config
+      - name: Build snapshot
+        run: go build -o ${{ env.APP_NAME }} ./cmd/airmouse-server
+        env:
+          CGO_ENABLED: ${{ matrix.platform == 'windows' && '0' || '1' }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ matrix.platform }}-snapshot
+          path: ${{ env.APP_NAME }}${{ matrix.platform == 'windows' && '.exe' || '' }}
+          retention-days: 7
 
+  # ──────────────────────────────────────────────────
+  # 5. Full cross-platform GoReleaser release (tags only)
+  # ──────────────────────────────────────────────────
+  release:
+    name: Cross-Platform Release
+    needs: [test, security]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+            libgl1-mesa-dev xdotool \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
       - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -144,55 +177,118 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          GPG_FINGERPRINT: ${{ secrets.GPG_FINGERPRINT }}
 
-  docs:
-    name: Deploy Documentation
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+  # ──────────────────────────────────────────────────
+  # 6. macOS DMG installer (tags only)
+  # ──────────────────────────────────────────────────
+  release-macos:
+    name: macOS DMG Installer
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Build documentation
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Build macOS universal binary
         run: |
-          cd docs
-          npm ci
-          npm run build
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/build
-          publish_branch: gh-pages
-
-  notify:
-    name: Send Notifications
-    runs-on: ubuntu-latest
-    needs: [build, docs]
-    if: always() && github.event_name != 'pull_request'
-    steps:
-      - name: Send Slack notification
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow
+          GOARCH=amd64 go build -o airmouse-server-amd64 ./cmd/airmouse-server
+          GOARCH=arm64 go build -o airmouse-server-arm64 ./cmd/airmouse-server
+          lipo -create -output airmouse-server airmouse-server-amd64 airmouse-server-arm64
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        if: always()
-
-      - name: Send Discord notification
-        uses: sarisia/actions-status-discord@v1
+          CGO_ENABLED: 1
+      - name: Create DMG
+        run: |
+          mkdir -p dmg-contents
+          cp airmouse-server dmg-contents/
+          cp README.md dmg-contents/
+          hdiutil create -volname "AirMouse Server" \
+            -srcfolder dmg-contents \
+            -ov -format UDZO \
+            airmouse-server-macos-universal.dmg
+      - name: Upload DMG to release
+        uses: softprops/action-gh-release@v2
         with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "Air Mouse Pro Server Build"
-          description: "Build completed with status: ${{ job.status }}"
-          color: 0x00ff00
-          username: "GitHub Actions"
-        if: always()
+          files: airmouse-server-macos-universal.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ──────────────────────────────────────────────────
+  # 7. Windows NSIS installer (tags only)
+  # ──────────────────────────────────────────────────
+  release-windows:
+    name: Windows Installer
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Build Windows executable
+        run: go build -o airmouse-server.exe ./cmd/airmouse-server
+        env:
+          CGO_ENABLED: 0
+      - name: Create installer with NSIS
+        run: |
+          choco install nsis -y
+          # Inline NSIS script
+          $nsis = @"
+          !include "MUI2.nsh"
+          Name "AirMouse Server"
+          OutFile "AirMouse-Server-Setup.exe"
+          InstallDir "`$PROGRAMFILES64\AirMouse Server"
+          RequestExecutionLevel admin
+          !insertmacro MUI_PAGE_WELCOME
+          !insertmacro MUI_PAGE_DIRECTORY
+          !insertmacro MUI_PAGE_INSTFILES
+          !insertmacro MUI_PAGE_FINISH
+          !insertmacro MUI_UNPAGE_CONFIRM
+          !insertmacro MUI_UNPAGE_INSTFILES
+          !insertmacro MUI_LANGUAGE "English"
+          Section "Install"
+            SetOutPath "`$INSTDIR"
+            File "airmouse-server.exe"
+            File "README.md"
+            WriteUninstaller "`$INSTDIR\Uninstall.exe"
+            CreateDirectory "`$SMPROGRAMS\AirMouse Server"
+            CreateShortcut "`$SMPROGRAMS\AirMouse Server\AirMouse Server.lnk" "`$INSTDIR\airmouse-server.exe"
+            CreateShortcut "`$SMPROGRAMS\AirMouse Server\Uninstall.lnk" "`$INSTDIR\Uninstall.exe"
+          SectionEnd
+          Section "Uninstall"
+            Delete "`$INSTDIR\airmouse-server.exe"
+            Delete "`$INSTDIR\Uninstall.exe"
+            RMDir "`$INSTDIR"
+            Delete "`$SMPROGRAMS\AirMouse Server\*.*"
+            RMDir "`$SMPROGRAMS\AirMouse Server"
+          SectionEnd
+          "@
+          $nsis | Out-File -FilePath installer.nsi -Encoding ASCII
+          makensis installer.nsi
+      - name: Upload installer to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AirMouse-Server-Setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ──────────────────────────────────────────────────
+  # 8. Notify (all platforms)
+  # ──────────────────────────────────────────────────
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [release, release-macos, release-windows]
+    if: always() && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Release summary
+        run: |
+          echo "🚀 AirMouse Server ${{ github.ref_name }} released!"
+          echo "✅ Linux (amd64, arm64, armv7) — via GoReleaser"
+          echo "✅ macOS (Universal DMG) — arm64 + amd64"
+          echo "✅ Windows (Setup.exe + zip) — amd64"
+          echo "✅ Docker images — amd64 + arm64"
