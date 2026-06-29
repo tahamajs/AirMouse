@@ -39,6 +39,7 @@ type LogsTab struct {
 	logEntries []LogEntry
 	filter     string
 	level      string
+	dirty      bool
 }
 
 var (
@@ -140,6 +141,29 @@ func NewLogsTab() fyne.CanvasObject {
 	)
 
 	tab.refreshDisplay()
+
+	// Periodic throttled UI refresh loop to prevent UI hangs during high rate logging
+	go func() {
+		ticker := time.NewTicker(150 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			if globalLogsTab == nil {
+				continue
+			}
+			tab.logMu.Lock()
+			if !tab.dirty {
+				tab.logMu.Unlock()
+				continue
+			}
+			tab.dirty = false
+			tab.logMu.Unlock()
+
+			RunOnMain(func() {
+				tab.refreshDisplay()
+			})
+		}
+	}()
+
 	return content
 }
 
@@ -149,8 +173,6 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 		return
 	}
 	t.logMu.Lock()
-	defer t.logMu.Unlock()
-
 	entry := LogEntry{
 		Time:    time.Now(),
 		Level:   level,
@@ -161,10 +183,8 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 	if len(t.logEntries) > 1000 {
 		t.logEntries = t.logEntries[len(t.logEntries)-1000:]
 	}
-
-	RunOnMain(func() {
-		t.refreshDisplay()
-	})
+	t.dirty = true
+	t.logMu.Unlock()
 }
 
 // refreshDisplay updates the log view with current filters.
