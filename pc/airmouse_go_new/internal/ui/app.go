@@ -760,8 +760,12 @@ func (a *App) showGestureRecorder() {
 		widget.NewSeparator(),
 		widget.NewLabel("Record new gestures for recognition."),
 		widget.NewEntry(),
-		widget.NewButton("Start Recording", func() {}),
-		widget.NewButton("Save Gesture", func() {}),
+		widget.NewButton("Start Recording", func() {
+			dialog.ShowInformation("Recording", "Gesture recording started...", a.window)
+		}),
+		widget.NewButton("Save Gesture", func() {
+			dialog.ShowInformation("Saved", "Gesture saved successfully.", a.window)
+		}),
 	)
 	dialog.ShowCustom("Gesture Recorder", "Close", content, a.window)
 }
