@@ -14,6 +14,8 @@ import (
 type Controller interface {
 	Move(dx, dy float64)
 	Click(button string)
+	MouseDown(button string)
+	MouseUp(button string)
 	DoubleClick()
 	Scroll(delta int)
 	Stats() (clicks, dbl, right, scroll int64)
@@ -256,6 +258,17 @@ func (m *mouseController) Click(button string) {
 		atomic.AddInt64(&m.rightClickCnt, 1)
 	}
 }
+
+// MouseDown holds the mouse button down.
+func (m *mouseController) MouseDown(button string) {
+	m.executeMouseDown(button)
+}
+
+// MouseUp releases the mouse button.
+func (m *mouseController) MouseUp(button string) {
+	m.executeMouseUp(button)
+}
+
 
 // DoubleClick sends a double‑click event.
 func (m *mouseController) DoubleClick() {

@@ -18,6 +18,8 @@ const (
 	MOUSEEVENTF_LEFTUP    = 0x0004
 	MOUSEEVENTF_RIGHTDOWN = 0x0008
 	MOUSEEVENTF_RIGHTUP   = 0x0010
+	MOUSEEVENTF_MIDDLEDOWN = 0x0020
+	MOUSEEVENTF_MIDDLEUP   = 0x0040
 	MOUSEEVENTF_WHEEL     = 0x0800
 )
 
@@ -34,6 +36,26 @@ func (m *mouseController) executeClick(button string) {
 		mouseEvent.Call(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
 	} else if button == "middle" {
 		mouseEvent.Call(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0)
+		mouseEvent.Call(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0)
+	}
+}
+
+func (m *mouseController) executeMouseDown(button string) {
+	if button == "left" {
+		mouseEvent.Call(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+	} else if button == "right" {
+		mouseEvent.Call(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
+	} else if button == "middle" {
+		mouseEvent.Call(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0)
+	}
+}
+
+func (m *mouseController) executeMouseUp(button string) {
+	if button == "left" {
+		mouseEvent.Call(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+	} else if button == "right" {
+		mouseEvent.Call(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
+	} else if button == "middle" {
 		mouseEvent.Call(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0)
 	}
 }

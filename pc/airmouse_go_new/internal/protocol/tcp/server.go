@@ -281,6 +281,26 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 		utils.LogDebug("TCP click forwarded: client=%s button=%s", client.ID, button)
 
+	case "mouse_down":
+		button, _ := payload["button"].(string)
+		if button == "" {
+			button = "left"
+		}
+		if s.mouse != nil {
+			s.mouse.MouseDown(button)
+		}
+		utils.LogDebug("TCP mouse_down forwarded: client=%s button=%s", client.ID, button)
+
+	case "mouse_up":
+		button, _ := payload["button"].(string)
+		if button == "" {
+			button = "left"
+		}
+		if s.mouse != nil {
+			s.mouse.MouseUp(button)
+		}
+		utils.LogDebug("TCP mouse_up forwarded: client=%s button=%s", client.ID, button)
+
 	case "doubleclick", "double_click":
 		if s.mouse != nil {
 			s.mouse.DoubleClick()

@@ -72,6 +72,44 @@ func (m *mouseController) executeClick(button string) {
 	}
 }
 
+func (m *mouseController) executeMouseDown(button string) {
+	if uinputFd == 0 {
+		return
+	}
+	btn := BTN_LEFT
+	if button == "right" {
+		btn = BTN_RIGHT
+	} else if button == "middle" {
+		btn = BTN_MIDDLE
+	}
+	events := []inputEvent{
+		{Type: EV_KEY, Code: uint16(btn), Value: 1},
+		{Type: EV_SYN, Code: 0, Value: 0},
+	}
+	for _, ev := range events {
+		syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+	}
+}
+
+func (m *mouseController) executeMouseUp(button string) {
+	if uinputFd == 0 {
+		return
+	}
+	btn := BTN_LEFT
+	if button == "right" {
+		btn = BTN_RIGHT
+	} else if button == "middle" {
+		btn = BTN_MIDDLE
+	}
+	events := []inputEvent{
+		{Type: EV_KEY, Code: uint16(btn), Value: 0},
+		{Type: EV_SYN, Code: 0, Value: 0},
+	}
+	for _, ev := range events {
+		syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
+	}
+}
+
 func (m *mouseController) executeDoubleClick() {
 	m.executeClick("left")
 	time.Sleep(50 * time.Millisecond)

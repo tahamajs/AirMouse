@@ -148,6 +148,33 @@ func (m *mouseController) executeClick(button string) {
 	}
 }
 
+func (m *mouseController) executeMouseDown(button string) {
+	darwinMouseMu.Lock()
+	defer darwinMouseMu.Unlock()
+
+	if button == "left" {
+		C.clickMouse(0, 1)
+	} else if button == "right" {
+		C.clickMouse(1, 1)
+	} else if button == "middle" {
+		C.clickMouse(2, 1)
+	}
+}
+
+func (m *mouseController) executeMouseUp(button string) {
+	darwinMouseMu.Lock()
+	defer darwinMouseMu.Unlock()
+
+	if button == "left" {
+		C.clickMouse(0, 0)
+	} else if button == "right" {
+		C.clickMouse(1, 0)
+	} else if button == "middle" {
+		C.clickMouse(2, 0)
+	}
+}
+
+
 func (m *mouseController) executeDoubleClick() {
 	darwinMouseMu.Lock()
 	defer darwinMouseMu.Unlock()

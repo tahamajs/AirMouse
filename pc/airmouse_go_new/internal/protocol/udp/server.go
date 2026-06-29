@@ -163,6 +163,24 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 			s.mouse.Click(button)
 		}
 		utils.LogDebug("UDP click received: client=%s button=%s", clientIP, button)
+	case "mouse_down":
+		button, _ := payload["button"].(string)
+		if button == "" {
+			button = "left"
+		}
+		if s.mouse != nil {
+			s.mouse.MouseDown(button)
+		}
+		utils.LogDebug("UDP mouse_down received: client=%s button=%s", clientIP, button)
+	case "mouse_up":
+		button, _ := payload["button"].(string)
+		if button == "" {
+			button = "left"
+		}
+		if s.mouse != nil {
+			s.mouse.MouseUp(button)
+		}
+		utils.LogDebug("UDP mouse_up received: client=%s button=%s", clientIP, button)
 	case "doubleclick":
 		if s.mouse != nil {
 			s.mouse.DoubleClick()

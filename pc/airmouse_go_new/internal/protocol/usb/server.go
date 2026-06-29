@@ -285,6 +285,24 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 		if s.mouse != nil {
 			s.mouse.Click(button)
 		}
+	case "mouse_down":
+		var p ClickPayload
+		button := "left"
+		if err := json.Unmarshal(msg.Payload, &p); err == nil && p.Button != "" {
+			button = p.Button
+		}
+		if s.mouse != nil {
+			s.mouse.MouseDown(button)
+		}
+	case "mouse_up":
+		var p ClickPayload
+		button := "left"
+		if err := json.Unmarshal(msg.Payload, &p); err == nil && p.Button != "" {
+			button = p.Button
+		}
+		if s.mouse != nil {
+			s.mouse.MouseUp(button)
+		}
 	case "rightclick":
 		if s.mouse != nil {
 			s.mouse.Click("right")
