@@ -470,28 +470,34 @@ func (s *Server) processLine(client *Client, line []byte) {
 	case "laser", "draw", "annotation":
 		utils.LogInfo("Received %s data from client %s over TCP", msgType, client.ID)
 
-	case "keypress", "keydown", "keyup", "type":
-		utils.LogInfo("Received keyboard event %s from client %s over TCP", msgType, client.ID)
+	case "keypress", "keydown", "keyup", "key":
+		keyVal, _ := payload["key"].(string)
+		if keyVal == "" {
+			keyVal, _ = payload["code"].(string)
+		}
+		if keyVal == "" {
+			keyVal, _ = payload["value"].(string)
+		}
+		if keyVal != "" {
+			utils.LogInfo("TCP key event %s: key=%s client=%s", msgType, keyVal, client.ID)
+			go sysaction.KeyTap(keyVal)
+		}
+
+	case "type", "text":
+		textVal, _ := payload["text"].(string)
+		if textVal == "" {
+			textVal, _ = payload["value"].(string)
+		}
+		if textVal != "" {
+			utils.LogInfo("TCP type event %s: client=%s", msgType, client.ID)
+			go sysaction.TypeText(textVal)
+		}
 
 	case "smarthome":
 		utils.LogInfo("Received smarthome command from client %s over TCP", client.ID)
 
 	case "calibration_data":
 		utils.LogInfo("TCP calibration_data received: client=%s", client.ID)
-
-	case "key":
-		keyVal, _ := payload["key"].(string)
-		if keyVal != "" {
-			utils.LogInfo("TCP key press: key=%s client=%s", keyVal, client.ID)
-			go sysaction.KeyTap(keyVal)
-		}
-
-	case "text":
-		textVal, _ := payload["text"].(string)
-		if textVal != "" {
-			utils.LogInfo("TCP type text: client=%s", client.ID)
-			go sysaction.TypeText(textVal)
-		}
 
 	case "voice_command":
 		command, _ := payload["command"].(string)

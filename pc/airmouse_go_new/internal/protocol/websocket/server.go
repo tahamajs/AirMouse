@@ -75,7 +75,8 @@ type Server struct {
 	totalClients int64
 	startTime    time.Time
 	fileSessions map[string]*fileSession
-	latestAndroidScreenFrame []byte
+	latestAndroidScreenFrame     []byte
+	latestAndroidScreenFrameTime time.Time
 }
 
 type fileSession struct {
@@ -121,6 +122,19 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/download/", s.handleHTTPDownload)
 	mux.HandleFunc("/mirror", s.handleScreenMirror)
 	mux.HandleFunc("/screen", s.handleScreenMirror)
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			path := filepath.Join("web", filepath.Clean(r.URL.Path))
+			if _, err := os.Stat(path); err == nil {
+				http.ServeFile(w, r, path)
+				return
+			}
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeFile(w, r, "web/index.html")
+	})
 
 	s.server = &http.Server{
 		Handler:      mux,
@@ -252,7 +266,13 @@ func (s *Server) readLoop(client *WSClient) {
 
 		s.mu.Lock()
 		delete(s.clients, client.ID)
-		delete(s.fileSessions, client.ID)
+		if session, ok := s.fileSessions[client.ID]; ok {
+			if session.file != nil {
+				_ = session.file.Close()
+			}
+			_ = os.Remove(session.tempPath)
+			delete(s.fileSessions, client.ID)
+		}
 		s.mu.Unlock()
 
 		if s.deviceMgr != nil {
@@ -293,6 +313,7 @@ func (s *Server) readLoop(client *WSClient) {
 			}
 			s.mu.Lock()
 			s.latestAndroidScreenFrame = data
+			s.latestAndroidScreenFrameTime = time.Now()
 			s.mu.Unlock()
 			continue
 		}
@@ -596,8 +617,28 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	case "laser", "draw", "annotation":
 		utils.LogInfo("Received %s data from client %s", msgType, client.ID)
 
-	case "keypress", "keydown", "keyup", "type":
-		utils.LogInfo("Received keyboard event %s from client %s", msgType, client.ID)
+	case "keypress", "keydown", "keyup", "key":
+		keyVal, _ := payload["key"].(string)
+		if keyVal == "" {
+			keyVal, _ = payload["code"].(string)
+		}
+		if keyVal == "" {
+			keyVal, _ = payload["value"].(string)
+		}
+		if keyVal != "" {
+			utils.LogInfo("WebSocket key event %s: key=%s client=%s", msgType, keyVal, client.ID)
+			go sysaction.KeyTap(keyVal)
+		}
+
+	case "type", "text":
+		textVal, _ := payload["text"].(string)
+		if textVal == "" {
+			textVal, _ = payload["value"].(string)
+		}
+		if textVal != "" {
+			utils.LogInfo("WebSocket type event %s: client=%s", msgType, client.ID)
+			go sysaction.TypeText(textVal)
+		}
 
 	case "smarthome":
 		utils.LogInfo("Received smarthome command from client %s", client.ID)
@@ -617,20 +658,6 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 
 	case "pong":
 		utils.LogDebug("Pong received from: %s", client.ID)
-
-	case "key":
-		keyVal, _ := payload["key"].(string)
-		if keyVal != "" {
-			utils.LogInfo("WebSocket key press: key=%s client=%s", keyVal, client.ID)
-			go sysaction.KeyTap(keyVal)
-		}
-
-	case "text":
-		textVal, _ := payload["text"].(string)
-		if textVal != "" {
-			utils.LogInfo("WebSocket type text: client=%s", client.ID)
-			go sysaction.TypeText(textVal)
-		}
 
 	case "voice_command":
 		command, _ := payload["command"].(string)
@@ -754,6 +781,121 @@ func (s *Server) ApproveDevice(deviceID string) error {
 // File transfer helpers
 // ---------------------------------------------------------------------
 
+func (s *Server) safeSendBinary(client *WSClient, data []byte) bool {
+	defer func() {
+		_ = recover()
+	}()
+	client.BinarySend <- data
+	return true
+}
+
+func (s *Server) safeSendText(client *WSClient, data []byte) bool {
+	defer func() {
+		_ = recover()
+	}()
+	client.Send <- data
+	return true
+}
+
+func fileMD5(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := md5.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func moveFile(src, dst string) error {
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err = io.Copy(out, in); err != nil {
+		return err
+	}
+	in.Close()
+	return os.Remove(src)
+}
+
+func (s *Server) handleWSDownload(client *WSClient, id string, name string) {
+	dir := s.fileTransferDir()
+	path := filepath.Join(dir, sanitizeFileName(name))
+
+	md5Hex, err := fileMD5(path)
+	if err != nil {
+		errEscaped := strings.ReplaceAll(err.Error(), `"`, `\"`)
+		s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, errEscaped)))
+		return
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		errEscaped := strings.ReplaceAll(err.Error(), `"`, `\"`)
+		s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, errEscaped)))
+		return
+	}
+	defer file.Close()
+
+	fi, err := file.Stat()
+	if err != nil {
+		errEscaped := strings.ReplaceAll(err.Error(), `"`, `\"`)
+		s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, errEscaped)))
+		return
+	}
+	fileSize := fi.Size()
+
+	start := map[string]any{
+		"type":      "file",
+		"action":    "start",
+		"id":        id,
+		"name":      name,
+		"size":      fileSize,
+		"md5":       md5Hex,
+		"version":   1,
+		"direction": "download",
+	}
+
+	if raw, err := json.Marshal(start); err == nil {
+		s.safeSendText(client, append(raw, '\n'))
+	}
+
+	buf := make([]byte, 64*1024)
+	var sentBytes int64
+	for {
+		nr, rerr := file.Read(buf)
+		if nr > 0 {
+			chunk := make([]byte, nr)
+			copy(chunk, buf[:nr])
+			if !s.safeSendBinary(client, chunk) {
+				return
+			}
+			sentBytes += int64(nr)
+		}
+		if rerr != nil {
+			break
+		}
+	}
+
+	s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, md5Hex, sentBytes)))
+}
+
 func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 	action, _ := payload["action"].(string)
 	id, _ := payload["id"].(string)
@@ -762,10 +904,7 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 	switch action {
 	case "start":
 		if id == "" || name == "" {
-			select {
-			case client.Send <- []byte(`{"type":"file","action":"error","message":"missing file metadata"}` + "\n"):
-			default:
-			}
+			s.safeSendText(client, []byte(`{"type":"file","action":"error","message":"missing file metadata"}`+"\n"))
 			return
 		}
 		s.mu.Lock()
@@ -775,10 +914,8 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 		file, err := os.OpenFile(tempPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			s.mu.Unlock()
-			select {
-			case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, err.Error())):
-			default:
-			}
+			errEscaped := strings.ReplaceAll(err.Error(), `"`, `\"`)
+			s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, errEscaped)))
 			return
 		}
 		session := &fileSession{
@@ -794,10 +931,7 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 		}
 		s.fileSessions[client.ID] = session
 		s.mu.Unlock()
-		select {
-		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"ack","id":"%s"}`+"\n", id)):
-		default:
-		}
+		s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"ack","id":"%s"}`+"\n", id)))
 
 	case "complete":
 		s.mu.Lock()
@@ -810,80 +944,26 @@ func (s *Server) processFileMessage(client *WSClient, payload map[string]any) {
 		if session.file != nil {
 			_ = session.file.Close()
 		}
-		actualMD5 := ""
-		data, readErr := os.ReadFile(session.tempPath)
-		if readErr == nil {
-			sum := md5.Sum(data)
-			actualMD5 = hex.EncodeToString(sum[:])
-		}
+		actualMD5 := hex.EncodeToString(session.hasher.Sum(nil))
 		if session.md5Hex != "" && actualMD5 != session.md5Hex {
 			_ = os.Remove(session.tempPath)
-			select {
-			case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"md5 mismatch"}`+"\n", id)):
-			default:
-			}
+			s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"md5 mismatch"}`+"\n", id)))
 			return
 		}
-		if readErr == nil {
-			_ = os.WriteFile(session.path, data, 0644)
+		if err := moveFile(session.tempPath, session.path); err != nil {
 			_ = os.Remove(session.tempPath)
+			errEscaped := strings.ReplaceAll(err.Error(), `"`, `\"`)
+			s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, errEscaped)))
+			return
 		}
-		select {
-		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, actualMD5, session.received)):
-		default:
-		}
+		s.safeSendText(client, []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, actualMD5, session.received)))
 
 	case "download":
 		if name == "" {
-			select {
-			case client.Send <- []byte(`{"type":"file","action":"error","message":"missing file name"}` + "\n"):
-			default:
-			}
+			s.safeSendText(client, []byte(`{"type":"file","action":"error","message":"missing file name"}`+"\n"))
 			return
 		}
-		path := filepath.Join(s.fileTransferDir(), sanitizeFileName(name))
-		data, err := os.ReadFile(path)
-		if err != nil {
-			select {
-			case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", id, err.Error())):
-			default:
-			}
-			return
-		}
-		sum := md5.Sum(data)
-		md5Hex := hex.EncodeToString(sum[:])
-		start := map[string]any{
-			"type":      "file",
-			"action":    "start",
-			"id":        id,
-			"name":      name,
-			"size":      len(data),
-			"md5":       md5Hex,
-			"version":   1,
-			"direction": "download",
-		}
-		if raw, err := json.Marshal(start); err == nil {
-			select {
-			case client.Send <- append(raw, '\n'):
-			default:
-			}
-		}
-		chunkSize := 64 * 1024
-		for offset := 0; offset < len(data); offset += chunkSize {
-			end := offset + chunkSize
-			if end > len(data) {
-				end = len(data)
-			}
-			select {
-			case client.BinarySend <- append([]byte(nil), data[offset:end]...):
-			default:
-				utils.LogWarn("Binary send channel full for client %s, dropping chunk", client.ID)
-			}
-		}
-		select {
-		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"complete","id":"%s","md5":"%s","bytes":%d}`+"\n", id, md5Hex, len(data))):
-		default:
-		}
+		go s.handleWSDownload(client, id, name)
 	}
 }
 
@@ -921,9 +1001,10 @@ func (s *Server) handleBinaryFileChunk(client *WSClient, data []byte) bool {
 }
 
 func sanitizeFileName(name string) string {
+	name = strings.ReplaceAll(name, "\\", "/")
 	name = filepath.Base(name)
 	name = strings.TrimSpace(name)
-	if name == "." || name == string(filepath.Separator) || name == "" {
+	if name == "." || name == "/" || name == "" {
 		return "file.bin"
 	}
 	return name
@@ -1117,9 +1198,10 @@ func (s *Server) handleScreenMirror(w http.ResponseWriter, r *http.Request) {
 		case <-ticker.C:
 			s.mu.RLock()
 			imgData := s.latestAndroidScreenFrame
+			stale := time.Since(s.latestAndroidScreenFrameTime) > 2*time.Second
 			s.mu.RUnlock()
 
-			if len(imgData) == 0 {
+			if stale || len(imgData) == 0 {
 				if err := captureScreenshot(tmpFile); err != nil {
 					utils.LogDebug("Screen capture failed: %v", err)
 					continue
