@@ -120,8 +120,8 @@ func (s *ProtocolServer) Start() error {
 
 	// Start TCP server
 	if cfg.EnableTCP {
-		utils.LogInfo("Protocol start: initializing TCP server host=%s port=%d", cfg.Host, cfg.Port)
-		s.tcpServer = tcp.NewServer(cfg.Host, cfg.Port, s.mouseCtrl, s.deviceMgr, s.authMgr)
+		utils.LogInfo("Protocol start: initializing TCP server host=%s (bound to 0.0.0.0) port=%d", cfg.Host, cfg.Port)
+		s.tcpServer = tcp.NewServer("0.0.0.0", cfg.Port, s.mouseCtrl, s.deviceMgr, s.authMgr)
 		if err := s.tcpServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("TCP: %w", err))
 			utils.LogError("TCP server start failed: %v", err)
