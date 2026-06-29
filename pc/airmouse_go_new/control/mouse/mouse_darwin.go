@@ -8,12 +8,18 @@ package mouse
 #include <CoreGraphics/CoreGraphics.h>
 #include <ApplicationServices/ApplicationServices.h>
 
-void moveMouse(float dx, float dy) {
+CGPoint getMousePos() {
     CGEventRef probe = CGEventCreate(NULL);
     CGPoint point = CGEventGetLocation(probe);
     CFRelease(probe);
-    CGPoint dest = CGPointMake(point.x + dx, point.y + dy);
+    return point;
+}
+
+void moveMouseTo(float x, float y, float dx, float dy) {
+    CGPoint dest = CGPointMake(x, y);
     CGEventRef event = CGEventCreateMouseEvent(NULL, kCGEventMouseMoved, dest, kCGMouseButtonLeft);
+    CGEventSetIntegerValueField(event, kCGMouseEventDeltaX, (int64_t)dx);
+    CGEventSetIntegerValueField(event, kCGMouseEventDeltaY, (int64_t)dy);
     CGEventPost(kCGHIDEventTap, event);
     CFRelease(event);
 }
@@ -68,11 +74,47 @@ int requestAccessibilityPermission() {
 import "C"
 import (
 	"os/exec"
+	"sync"
 	"time"
 )
 
+var (
+	darwinMouseMu  sync.Mutex
+	lastDarwinTime time.Time
+	fracX          float64
+	fracY          float64
+)
+
 func (m *mouseController) executeMove(dx, dy float64) {
-	C.moveMouse(C.float(dx), C.float(dy))
+	darwinMouseMu.Lock()
+	defer darwinMouseMu.Unlock()
+
+	now := time.Now()
+	
+	// Reset fractional accumulation if there is a long pause
+	if now.Sub(lastDarwinTime) > 100*time.Millisecond {
+		fracX = 0
+		fracY = 0
+	}
+
+	fracX += dx
+	fracY += dy
+
+	intDx := float64(int64(fracX))
+	intDy := float64(int64(fracY))
+
+	if intDx != 0 || intDy != 0 {
+		fracX -= intDx
+		fracY -= intDy
+
+		pos := C.getMousePos()
+		destX := float64(pos.x) + intDx
+		destY := float64(pos.y) + intDy
+
+		C.moveMouseTo(C.float(destX), C.float(destY), C.float(intDx), C.float(intDy))
+	}
+
+	lastDarwinTime = now
 }
 
 func (m *mouseController) executeClick(button string) {
