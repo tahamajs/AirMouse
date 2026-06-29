@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/png"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -489,9 +490,16 @@ func (a *App) refreshConnectionSummary() {
 
 	activeCount := 0
 	pendingCount := 0
+	var activeNames []string
 	if a.deviceMgr != nil {
 		allDevices := a.deviceMgr.GetAllDevices()
-		activeCount = len(a.deviceMgr.GetActiveDevices())
+		activeDevices := a.deviceMgr.GetActiveDevices()
+		activeCount = len(activeDevices)
+		for _, d := range activeDevices {
+			if d.Name != "" {
+				activeNames = append(activeNames, d.Name)
+			}
+		}
 		for _, d := range allDevices {
 			if d.Status == device.StatusPendingApproval {
 				pendingCount++
@@ -516,26 +524,31 @@ func (a *App) refreshConnectionSummary() {
 	}
 
 	ip := utils.GetLocalIP()
+	namesStr := ""
+	if len(activeNames) > 0 {
+		namesStr = " (" + strings.Join(activeNames, ", ") + ")"
+	}
+
 	switch {
 	case activeCount > 0 && pendingCount == 0:
-		a.connectionStatus.SetText(fmt.Sprintf("🟢 Connected devices: %d", activeCount))
+		a.connectionStatus.SetText(fmt.Sprintf("🟢 Connected: %d%s", activeCount, namesStr))
 	case pendingCount > 0:
-		a.connectionStatus.SetText(fmt.Sprintf("🟡 Connected: %d | Pending approvals: %d", activeCount, pendingCount))
+		a.connectionStatus.SetText(fmt.Sprintf("🟡 Connected: %d%s | Pending approvals: %d", activeCount, namesStr, pendingCount))
 	default:
 		a.connectionStatus.SetText("🟢 Connected devices: 0")
 	}
 	if a.summaryStatus != nil {
 		if pendingCount > 0 {
 			a.summaryStatus.SetText(fmt.Sprintf(
-				"Pending approval on %s:%d | ws://%s:%d/ws | UDP %d | Connected: %d | Pending: %d | Theme: %s",
+				"Pending approval on %s:%d | ws://%s:%d/ws | UDP %d | Connected: %d%s | Pending: %d | Theme: %s",
 				ip, a.cfg.Port, ip, a.cfg.WebSocketPort, a.cfg.UDPPort,
-				activeCount, pendingCount, a.cfg.Theme,
+				activeCount, namesStr, pendingCount, a.cfg.Theme,
 			))
 		} else {
 			a.summaryStatus.SetText(fmt.Sprintf(
-				"Approved and connected on %s:%d | ws://%s:%d/ws | UDP %d | Connected: %d | Theme: %s",
+				"Approved and connected on %s:%d | ws://%s:%d/ws | UDP %d | Connected: %d%s | Theme: %s",
 				ip, a.cfg.Port, ip, a.cfg.WebSocketPort, a.cfg.UDPPort,
-				activeCount, a.cfg.Theme,
+				activeCount, namesStr, a.cfg.Theme,
 			))
 		}
 	}
