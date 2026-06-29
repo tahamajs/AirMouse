@@ -31,9 +31,18 @@ func (p *MovementPredictor) AddMovement(dx, dy float64) (smoothedDx, smoothedDy 
 		return dx, dy
 	}
 	now := time.Now()
-	dt := now.Sub(p.lastTime).Seconds()
-	if dt < 0.001 {
-		dt = 0.001
+	var dt float64
+	if now.Sub(p.lastTime) > 100*time.Millisecond {
+		p.kf.Reset()
+		dt = 0.02
+	} else {
+		dt = now.Sub(p.lastTime).Seconds()
+		if dt < 0.001 {
+			dt = 0.001
+		}
+		if dt > 0.05 {
+			dt = 0.05
+		}
 	}
 	p.kf.SetDT(dt)
 	p.kf.Predict()

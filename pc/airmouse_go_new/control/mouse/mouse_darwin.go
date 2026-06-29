@@ -83,6 +83,8 @@ var (
 	lastDarwinTime time.Time
 	fracX          float64
 	fracY          float64
+	cachedX        float64
+	cachedY        float64
 )
 
 func (m *mouseController) executeMove(dx, dy float64) {
@@ -91,10 +93,13 @@ func (m *mouseController) executeMove(dx, dy float64) {
 
 	now := time.Now()
 	
-	// Reset fractional accumulation if there is a long pause
+	// Reset fractional accumulation and resync with OS cursor on a pause
 	if now.Sub(lastDarwinTime) > 100*time.Millisecond {
 		fracX = 0
 		fracY = 0
+		pos := C.getMousePos()
+		cachedX = float64(pos.x)
+		cachedY = float64(pos.y)
 	}
 
 	fracX += dx
@@ -107,11 +112,10 @@ func (m *mouseController) executeMove(dx, dy float64) {
 		fracX -= intDx
 		fracY -= intDy
 
-		pos := C.getMousePos()
-		destX := float64(pos.x) + intDx
-		destY := float64(pos.y) + intDy
+		cachedX += intDx
+		cachedY += intDy
 
-		C.moveMouseTo(C.float(destX), C.float(destY), C.float(intDx), C.float(intDy))
+		C.moveMouseTo(C.float(cachedX), C.float(cachedY), C.float(intDx), C.float(intDy))
 	}
 
 	lastDarwinTime = now

@@ -77,8 +77,8 @@ func NewKalmanFilter2D(dt float64) *KalmanFilter2D {
 	kf.R = [4][4]float64{
 		{5, 0, 0, 0},
 		{0, 5, 0, 0},
-		{0, 0, 1, 0},
-		{0, 0, 0, 1},
+		{0, 0, 15, 0},
+		{0, 0, 0, 15},
 	}
 
 	return kf
