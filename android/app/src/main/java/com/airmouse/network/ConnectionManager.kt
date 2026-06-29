@@ -11,6 +11,8 @@ import android.provider.Settings
 import android.util.Log
 import com.airmouse.utils.LogManager
 import com.airmouse.utils.PreferencesManager
+import com.airmouse.domain.repository.IStatisticsRepository
+import android.bluetooth.BluetoothAdapter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,7 +79,10 @@ data class ConnectionQuality(
 @Singleton
 class ConnectionManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val prefs: PreferencesManager
+    private val prefs: PreferencesManager,
+    private val bluetoothAdapter: BluetoothAdapter?,
+    private val bluetoothHidMouseHelper: BluetoothHidMouseHelper,
+    private val statisticsRepository: IStatisticsRepository
 ) {
     private var wakeLock: android.os.PowerManager.WakeLock? = null
 
@@ -176,7 +181,7 @@ class ConnectionManager @Inject constructor(
         DISCONNECTED, CONNECTING, CONNECTED, RECONNECTING, ERROR
     }
 
-    enum class ConnectionProtocol { UDP, TCP, WEBSOCKET }
+    enum class ConnectionProtocol { UDP, TCP, WEBSOCKET, BLUETOOTH }
 
     // ============================================================
     // Data Classes
@@ -301,6 +306,7 @@ class ConnectionManager @Inject constructor(
         currentProtocol = when (protocolName) {
             "UDP" -> ConnectionProtocol.UDP
             "TCP" -> ConnectionProtocol.TCP
+            "BLUETOOTH" -> ConnectionProtocol.BLUETOOTH
             else -> ConnectionProtocol.WEBSOCKET
         }
     }
@@ -350,10 +356,21 @@ class ConnectionManager @Inject constructor(
                     ConnectionProtocol.UDP -> connectUdp(ip, port)
                     ConnectionProtocol.WEBSOCKET -> connectWebSocket(ip, port)
                     ConnectionProtocol.TCP -> connectTcp(ip, port)
+                    ConnectionProtocol.BLUETOOTH -> {
+                        val paired = bluetoothAdapter?.bondedDevices?.firstOrNull { it.address == ip }
+                            ?: bluetoothAdapter?.bondedDevices?.firstOrNull()
+                        if (paired != null) {
+                            bluetoothHidMouseHelper.connect(paired)
+                        } else {
+                            false
+                        }
+                    }
                 }
                 LogManager.debug("connect(): transport setup completed success=$success protocol=${currentProtocol.name}")
 
-                val accepted = if (success) {
+                val accepted = if (currentProtocol == ConnectionProtocol.BLUETOOTH) {
+                    success
+                } else if (success) {
                     val waited = withTimeoutOrNull(ACK_TIMEOUT_MS) { serverWelcome.await() } == true
                     LogManager.debug("connect(): welcome wait complete accepted=$waited")
                     waited
@@ -504,7 +521,7 @@ class ConnectionManager @Inject constructor(
                     }
 
                     override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
-                        LogManager.debug("connectWebSocket(): received text len=${text.length}")
+                        LogManager.debug("📥 Received via WebSocket: $text")
                         onMessage?.invoke(text)
                         handleServerMessage(text)
                     }
@@ -608,7 +625,7 @@ class ConnectionManager @Inject constructor(
             while (tcpSocket?.isConnected == true) {
                 try {
                     val line = tcpReader?.readLine() ?: break
-                    LogManager.debug("startTcpReading(): received line len=${line.length}")
+                    LogManager.debug("📥 Received via TCP: $line")
                     onMessage?.invoke(line)
                     handleServerMessage(line)
                 } catch (e: SocketException) {
@@ -644,7 +661,7 @@ class ConnectionManager @Inject constructor(
                     val packet = DatagramPacket(buffer, buffer.size)
                     socket.receive(packet)
                     val message = String(packet.data, 0, packet.length)
-                    LogManager.debug("startUdpReading(): received packet len=${packet.length}")
+                    LogManager.debug("📥 Received via UDP: $message")
                     onMessage?.invoke(message)
                     handleServerMessage(message)
                 } catch (e: PortUnreachableException) {
@@ -913,16 +930,49 @@ class ConnectionManager @Inject constructor(
     fun removeBinaryMessageListener(listener: (ByteArray) -> Unit) {
         extraBinaryListeners.remove(listener)
     }
-
     // ------------------------------------------------------------
     // Mouse Commands
     // ------------------------------------------------------------
 
+    private val _isMouseControlEnabled = MutableStateFlow(false)
+    val isMouseControlEnabledFlow = _isMouseControlEnabled.asStateFlow()
+
+    var isMouseControlEnabled: Boolean
+        get() = _isMouseControlEnabled.value
+        set(value) {
+            _isMouseControlEnabled.value = value
+            LogManager.info("Mouse control enabled changed: $value", TAG)
+        }
+
     fun sendMove(dx: Float, dy: Float): Boolean {
+        if (!isMouseControlEnabled) return false
+        scope.launch {
+            val dist = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+            statisticsRepository.recordMovement(dist, 10)
+        }
+        if (currentProtocol == ConnectionProtocol.BLUETOOTH) {
+            val byteDx = dx.coerceIn(-127f, 127f).toInt().toByte()
+            val byteDy = dy.coerceIn(-127f, 127f).toInt().toByte()
+            return bluetoothHidMouseHelper.sendMouseReport(0, byteDx, byteDy, 0)
+        }
         return sendRawString(AirMouseProtocolMessages.move(dx, dy))
     }
 
     fun sendClick(button: String = MessageTypes.BUTTON_LEFT): Boolean {
+        if (!isMouseControlEnabled) return false
+        scope.launch {
+            if (button == MessageTypes.BUTTON_RIGHT) {
+                statisticsRepository.recordRightClick()
+            } else {
+                statisticsRepository.recordClick()
+            }
+        }
+        if (currentProtocol == ConnectionProtocol.BLUETOOTH) {
+            val mask = if (button == MessageTypes.BUTTON_RIGHT) 0x02.toByte() else 0x01.toByte()
+            bluetoothHidMouseHelper.sendMouseReport(mask, 0, 0, 0)
+            bluetoothHidMouseHelper.sendMouseReport(0, 0, 0, 0)
+            return true
+        }
         return sendReliablePacket(MessageTypes.TYPE_CLICK) {
             put("button", button)
             put("Click", button)
@@ -930,6 +980,18 @@ class ConnectionManager @Inject constructor(
     }
 
     fun sendDoubleClick(): Boolean {
+        if (!isMouseControlEnabled) return false
+        scope.launch {
+            statisticsRepository.recordDoubleClick()
+        }
+        if (currentProtocol == ConnectionProtocol.BLUETOOTH) {
+            bluetoothHidMouseHelper.sendMouseReport(0x01.toByte(), 0, 0, 0)
+            bluetoothHidMouseHelper.sendMouseReport(0, 0, 0, 0)
+            Thread.sleep(100)
+            bluetoothHidMouseHelper.sendMouseReport(0x01.toByte(), 0, 0, 0)
+            bluetoothHidMouseHelper.sendMouseReport(0, 0, 0, 0)
+            return true
+        }
         return sendReliablePacket(MessageTypes.TYPE_DOUBLE_CLICK) {
             put("button", "double")
             put("Click", "double")
@@ -937,6 +999,15 @@ class ConnectionManager @Inject constructor(
     }
 
     fun sendRightClick(): Boolean {
+        if (!isMouseControlEnabled) return false
+        scope.launch {
+            statisticsRepository.recordRightClick()
+        }
+        if (currentProtocol == ConnectionProtocol.BLUETOOTH) {
+            bluetoothHidMouseHelper.sendMouseReport(0x02.toByte(), 0, 0, 0)
+            bluetoothHidMouseHelper.sendMouseReport(0, 0, 0, 0)
+            return true
+        }
         return sendReliablePacket(MessageTypes.TYPE_RIGHT_CLICK) {
             put("button", "right")
             put("Click", "right")
@@ -944,6 +1015,14 @@ class ConnectionManager @Inject constructor(
     }
 
     fun sendScroll(delta: Int): Boolean {
+        if (!isMouseControlEnabled) return false
+        scope.launch {
+            statisticsRepository.recordScroll(delta)
+        }
+        if (currentProtocol == ConnectionProtocol.BLUETOOTH) {
+            val byteScroll = delta.coerceIn(-127, 127).toByte()
+            return bluetoothHidMouseHelper.sendMouseReport(0, 0, 0, byteScroll)
+        }
         return sendReliablePacket(MessageTypes.TYPE_SCROLL) {
             put("delta", delta)
             put("Scroll", delta)
@@ -955,6 +1034,9 @@ class ConnectionManager @Inject constructor(
     // ------------------------------------------------------------
 
     fun sendGesture(gesture: String, confidence: Float): Boolean {
+        scope.launch {
+            statisticsRepository.recordGesture(gesture, confidence)
+        }
         return sendRawString(AirMouseProtocolMessages.gesture(gesture, confidence))
     }
 
@@ -1079,6 +1161,9 @@ class ConnectionManager @Inject constructor(
     fun disconnect() {
         LogManager.debug("disconnect() requested status=${_connectionStatus.value.name} protocol=${currentProtocol.name}")
         manualDisconnectRequested = true
+        if (currentProtocol == ConnectionProtocol.BLUETOOTH) {
+            bluetoothHidMouseHelper.disconnect()
+        }
         cleanupConnectionState(emitDisconnected = true)
         _connectionStatus.value = ConnectionStatus.DISCONNECTED
         onStatusChanged?.invoke(ConnectionStatus.DISCONNECTED)

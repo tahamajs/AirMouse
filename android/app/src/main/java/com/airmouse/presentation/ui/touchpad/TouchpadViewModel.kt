@@ -213,6 +213,13 @@ class TouchpadViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            connectionManager.isMouseControlEnabledFlow.collect { enabled ->
+                _uiState.update {
+                    it.copy(isMouseControlEnabled = enabled)
+                }
+            }
+        }
     }
 
     // ============================================================
@@ -258,6 +265,9 @@ class TouchpadViewModel @Inject constructor(
 
             TouchpadEvent.NavigateBack -> navigateBack()
             TouchpadEvent.NavigateToSettings -> navigateToSettings()
+            is TouchpadEvent.ToggleMouseControl -> {
+                connectionManager.isMouseControlEnabled = event.enabled
+            }
         }
     }
 
