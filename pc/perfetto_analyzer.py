@@ -195,12 +195,12 @@ def analyze_trace(trace_file: str):
     """
     df_q6 = query(tp, q6_query)
     print_table("Q6: Filter slice statistics", df_q6)
-    if not df_q6.empty and "avg_ms" in df_q6:
+    if not df_q6.empty and "avg_ms" in df_q6 and pd.notna(df_q6["avg_ms"].iloc[0]):
         avg = df_q6["avg_ms"].iloc[0]
         total = df_q6["total_ms"].iloc[0]
         print(f"Average filter duration: {avg:.4f} ms, total CPU time in trace: {total:.2f} ms")
     else:
-        print("No filter slices found.")
+        print("No filter slices found (ensure AirMouse app is active during trace).")
 
     # -----------------------------------------------------------------
     # Q7: Most processing‑intensive sensor
@@ -283,7 +283,7 @@ def analyze_trace(trace_file: str):
     """
     df_q9 = query(tp, q9_query)
     print_table("Q9: Sensor‑to‑send latency", df_q9)
-    if not df_q9.empty and "avg_ms" in df_q9:
+    if not df_q9.empty and "avg_ms" in df_q9 and pd.notna(df_q9["avg_ms"].iloc[0]):
         avg_lat = df_q9["avg_ms"].iloc[0]
         print(f"Average local latency: {avg_lat:.2f} ms")
         print("Add network RTT (~1 ms) and server rendering (~2 ms) for total pointer latency.")
