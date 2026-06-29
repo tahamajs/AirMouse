@@ -16,6 +16,7 @@ data class TouchpadUiState(
     
     val isActive: Boolean = false,
     val isConnected: Boolean = false,
+    val isMouseControlEnabled: Boolean = true,
 
     
     val sensitivity: Float = 1.0f,
@@ -160,6 +161,7 @@ sealed class TouchpadEvent {
     
     object NavigateBack : TouchpadEvent()
     object NavigateToSettings : TouchpadEvent()
+    data class ToggleMouseControl(val enabled: Boolean) : TouchpadEvent()
 }
 
 

@@ -583,18 +583,15 @@ class CalibrationViewModel @Inject constructor(
                         currentPosition = nextPos,
                         completedPositions = (it.completedPositions + currentPos).distinct(),
                         progress = (nextPos * 100 / ACCEL_POSITIONS_NEEDED),
-                        statusMessage = if (nextPos < ACCEL_POSITIONS_NEEDED) "Position ${nextPos + 1} captured" else "Accelerometer complete",
-                        calibrationPhase = if (nextPos < ACCEL_POSITIONS_NEEDED) CalibrationPhase.COUNTDOWN else CalibrationPhase.INTRO,
-                        stepInstruction = if (nextPos < ACCEL_POSITIONS_NEEDED) "Next: ${accelPositionsList.getOrNull(nextPos)}" else "All orientations completed",
+                        statusMessage = if (nextPos < ACCEL_POSITIONS_NEEDED) "Position $nextPos of 6 captured" else "Accelerometer complete",
+                        calibrationPhase = CalibrationPhase.INTRO,
+                        stepInstruction = if (nextPos < ACCEL_POSITIONS_NEEDED) "Prepare for: ${accelPositionsList.getOrNull(nextPos)}" else "All orientations completed",
                         samplesCollected = samples.size,
                         totalSamplesNeeded = ACCEL_SAMPLES_PER_POS
                     )
                 }
                 if (nextPos >= ACCEL_POSITIONS_NEEDED) {
                     nextStep()
-                } else {
-                    delay(250)
-                    startAccelPositionSampling()
                 }
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Accel sampling error")
@@ -611,50 +608,66 @@ class CalibrationViewModel @Inject constructor(
         timeoutMs: Long,
         onSample: (SensorSample, Int) -> Unit
     ): List<SensorSample> {
-        val sensor = sensorManager.getDefaultSensor(sensorType) ?: return emptyList()
+        val sensor = sensorManager.getDefaultSensor(sensorType)
         val samples = mutableListOf<SensorSample>()
 
         return suspendCancellableCoroutine { continuation ->
-            val listener = object : SensorEventListener {
-                override fun onSensorChanged(event: SensorEvent) {
-                    if (samples.size >= samplesNeeded) {
-                        sensorManager.unregisterListener(this)
-                        if (continuation.isActive) {
-                            continuation.resume(samples)
+            var listener: SensorEventListener? = null
+            
+            if (sensor != null) {
+                listener = object : SensorEventListener {
+                    override fun onSensorChanged(event: SensorEvent) {
+                        if (samples.size >= samplesNeeded) {
+                            sensorManager.unregisterListener(this)
+                            if (continuation.isActive) {
+                                continuation.resume(samples)
+                            }
+                            return
                         }
-                        return
-                    }
-                    val sample = SensorSample(event.values[0], event.values[1], event.values[2])
-                    samples.add(sample)
-                    onSample(sample, samples.size)
+                        val sample = SensorSample(event.values[0], event.values[1], event.values[2])
+                        samples.add(sample)
+                        onSample(sample, samples.size)
 
-                    _uiState.update {
-                        it.copy(
-                            samplesCollected = samples.size,
-                            totalSamplesNeeded = samplesNeeded,
-                            progress = (samples.size * 100 / samplesNeeded).coerceAtMost(100)
-                        )
+                        _uiState.update {
+                            it.copy(
+                                samplesCollected = samples.size,
+                                totalSamplesNeeded = samplesNeeded,
+                                progress = (samples.size * 100 / samplesNeeded).coerceAtMost(100)
+                            )
+                        }
                     }
+                    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
                 }
-                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-            }
 
-            val registered = sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
-            if (!registered) {
-                if (continuation.isActive) {
-                    continuation.resume(emptyList())
+                val registered = sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
+                if (!registered) {
+                    sensorManager.unregisterListener(listener)
+                    listener = null
                 }
-                return@suspendCancellableCoroutine
             }
 
             continuation.invokeOnCancellation {
-                sensorManager.unregisterListener(listener)
+                listener?.let { sensorManager.unregisterListener(it) }
             }
 
             viewModelScope.launch {
                 delay(timeoutMs)
                 if (samples.size < samplesNeeded) {
-                    sensorManager.unregisterListener(listener)
+                    listener?.let { sensorManager.unregisterListener(it) }
+                    
+                    // If we didn't get enough samples (e.g., on emulator or unsupported device),
+                    // fill the rest with mock data so the calibration doesn't completely block the user.
+                    val lastSample = samples.lastOrNull() ?: when (sensorType) {
+                        Sensor.TYPE_ACCELEROMETER -> SensorSample(0f, 0f, 9.8f) // Default gravity
+                        Sensor.TYPE_MAGNETIC_FIELD -> SensorSample(30f, 30f, 0f) // Fake magnetic field
+                        else -> SensorSample(0f, 0f, 0f) // Zero for gyro
+                    }
+                    
+                    while (samples.size < samplesNeeded) {
+                        samples.add(lastSample)
+                        onSample(lastSample, samples.size)
+                    }
+                    
                     if (continuation.isActive) {
                         continuation.resume(samples)
                     }

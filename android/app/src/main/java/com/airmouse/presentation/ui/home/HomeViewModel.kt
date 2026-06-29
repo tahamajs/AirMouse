@@ -510,6 +510,7 @@ class HomeViewModel @Inject constructor(
     init {
         loadSettingsAndCalibration()
         observeConnection()
+        observeMouseControlEnabled()
         startBatteryMonitoring()
         loadGestureStats()
         startPerformanceMonitor()
@@ -683,6 +684,14 @@ class HomeViewModel @Inject constructor(
     // ============================================================
     // Connection Observer
     // ============================================================
+
+    private fun observeMouseControlEnabled() {
+        viewModelScope.launch {
+            connectionManager.isMouseControlEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(isMouseControlEnabled = enabled) }
+            }
+        }
+    }
 
     private fun observeConnection() {
         viewModelScope.launch {
@@ -1217,6 +1226,11 @@ class HomeViewModel @Inject constructor(
         addLogMessage("Control mode changed to $mode")
     }
 
+    fun setMouseControlEnabled(enabled: Boolean) {
+        connectionManager.isMouseControlEnabled = enabled
+        addLogMessage(if (enabled) "Mouse transmission resumed" else "Mouse transmission paused")
+    }
+
     fun toggleAiSmoothing() {
         val current = _uiState.value.aiSmoothingEnabled
         prefs.putBoolean("ai_smoothing_enabled", !current)
@@ -1422,6 +1436,7 @@ class HomeViewModel @Inject constructor(
         val serverIp: String = "",
         val serverPort: Int = ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
         val selectedProtocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET,
+        val isMouseControlEnabled: Boolean = true,
         val calibrationProgress: Int = 0,
         val isAutoConnectEnabled: Boolean = true,
         val sensorsCalibrated: Int = 0,

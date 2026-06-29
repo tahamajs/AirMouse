@@ -280,6 +280,8 @@ fun HomeScreen(
                         isConnecting = isConnectionPending,
                         statusText = connectionStatusText,
                         accentColor = statusAccent,
+                        isMouseControlEnabled = homeUiState.isMouseControlEnabled,
+                        onToggleMouseControl = { homeViewModel.setMouseControlEnabled(it) },
                         onToggle = { toggleConnection() }
                     )
                 }
@@ -598,6 +600,8 @@ fun ConnectionToggleButton(
     isAutoConnectEnabled: Boolean,
     statusText: String,
     accentColor: Color,
+    isMouseControlEnabled: Boolean,
+    onToggleMouseControl: (Boolean) -> Unit,
     onToggle: () -> Unit,
     onToggleAutoConnect: () -> Unit
 ) {
@@ -711,6 +715,50 @@ fun ConnectionToggleButton(
                     Icon(Icons.Default.PlayArrow, contentDescription = "Connect")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Connect")
+                }
+            }
+
+            if (isConnected) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = if (isMouseControlEnabled) Icons.Default.Sensors else Icons.Default.SensorsOff,
+                            contentDescription = null,
+                            tint = if (isMouseControlEnabled) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Column {
+                            Text(
+                                text = "Active Mouse Transmission",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isMouseControlEnabled) "Sending phone sensors to PC" else "Transmission paused",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = isMouseControlEnabled,
+                        onCheckedChange = onToggleMouseControl,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = accentColor,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
                 }
             }
 

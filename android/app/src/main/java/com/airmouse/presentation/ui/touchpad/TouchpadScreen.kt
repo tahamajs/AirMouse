@@ -96,7 +96,10 @@ fun TouchpadScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                TouchpadHeroCard(uiState)
+                TouchpadHeroCard(
+                    uiState = uiState,
+                    onToggleMouseControl = { viewModel.handleEvent(TouchpadEvent.ToggleMouseControl(it)) }
+                )
             }
             item {
                 TouchpadDomainSummaryCard(uiState)
@@ -492,7 +495,10 @@ fun TouchpadSurface(
 }
 
 @Composable
-private fun TouchpadHeroCard(uiState: TouchpadUiState) {
+private fun TouchpadHeroCard(
+    uiState: TouchpadUiState,
+    onToggleMouseControl: (Boolean) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -525,6 +531,47 @@ private fun TouchpadHeroCard(uiState: TouchpadUiState) {
                     Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)) {
                         Text(label, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), style = MaterialTheme.typography.labelSmall)
                     }
+                }
+            }
+
+            if (uiState.isConnected) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.isMouseControlEnabled) Icons.Default.Sensors else Icons.Default.SensorsOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                "Mouse Transmission",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                if (uiState.isMouseControlEnabled) "Active and sending moves" else "Paused",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = uiState.isMouseControlEnabled,
+                        onCheckedChange = onToggleMouseControl,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primaryContainer,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
                 }
             }
         }

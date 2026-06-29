@@ -24,418 +24,485 @@ class HelpViewModel @Inject constructor(
             content = "Air Mouse Pro turns your Android phone into a wireless mouse, touchpad, and remote for your PC. Follow these steps to get up and running in minutes.",
             category = HelpCategory.GETTING_STARTED,
             steps = listOf(
-                "Install the Air Mouse app on your Android phone from the Play Store or side-load the APK.",
-                "Download and launch the Air Mouse Go Server on your Windows, macOS, or Linux PC.",
-                "Make sure both devices are connected to the same WiFi network (preferably 5 GHz for lower latency).",
-                "Open the app and enter the IP address shown in the Go Server window (e.g. 192.168.1.42).",
-                "Choose a protocol: UDP (fast, best for mouse) or TCP (reliable, best for file transfer).",
-                "Tap 'Connect' — a green status indicator confirms the link.",
-                "Calibrate your phone's sensors from the Calibration screen for best accuracy.",
-                "Start moving your phone to control the cursor, or switch to Touchpad mode."
+                "Complete first-time setup walkthrough:",
+                "1. Install the Air Mouse app on your Android phone.",
+                "2. Download and install the Air Mouse Go Server on your PC.",
+                "3. Make sure both devices are connected to the same WiFi network.",
+                "4. Open the app and enter the IP address shown in the Go Server window, or use Network Discovery.",
+                "5. Tap 'Connect' — a green status indicator confirms the link.",
+                "6. Calibrate your phone's sensors from the Calibration screen for best accuracy.",
+                "System Requirements:",
+                "  • Android 10+ (API 29 and above)",
+                "  • PC OS support: Windows 10/11, macOS 12+, Linux (x86_64, ARM64)",
+                "  • Network: Local WiFi (5GHz recommended for low latency) or Bluetooth",
+                "Quick start in under 2 minutes:",
+                "Install server, run it, open app on same WiFi, tap auto-scan, connect, move phone!"
             ),
             tips = listOf(
                 "Keep your phone steady during initial calibration for the best results.",
-                "Hold the phone with the screen facing you; tilt forward/backward and left/right to move the cursor.",
                 "Start with medium sensitivity and adjust later in Settings.",
-                "If you don't know your PC's IP address, use the Network Discovery feature to find it automatically."
+                "Use the 'Quick Start' widget to reconnect instantly."
             ),
-            relatedTopics = listOf("Connection Guide", "Calibration Guide", "Touchpad Controls")
+            relatedTopics = listOf("Connection Guide", "Calibration Guide", "Server Setup Guide")
         ),
 
         // ── Connection Guide ─────────────────────────────────────────────
         HelpSection(
             id = "connection",
             title = "Connection Guide",
-            content = "Connect your phone to the PC server over WiFi. Both devices must be on the same local network.",
+            content = "Detailed instructions for connecting your phone to the PC server securely and reliably.",
             category = HelpCategory.CONNECTION,
             steps = listOf(
-                "Launch the Air Mouse Go Server on your PC. The server window displays the IP address and port.",
-                "Note the IP address (e.g. 192.168.1.42) and port (default: 8080).",
-                "On your phone, open Air Mouse and enter the IP address and port.",
-                "Alternatively, tap 'Scan QR Code' and scan the QR code shown on the Go Server.",
-                "Or use Network Discovery to auto-detect servers on the local network.",
-                "Choose your preferred protocol:",
-                "  • UDP — Lower latency, ideal for real-time mouse movement.",
-                "  • TCP — Reliable delivery, better for keyboard input and file operations.",
-                "Tap 'Connect'. A green indicator confirms a successful connection.",
-                "The cursor on your PC will now follow your phone's movement."
+                "WiFi Connection Step-by-Step:",
+                "  1. Launch the Go Server on your PC. It will display an IP address (e.g. 192.168.1.42) and port (default 8080).",
+                "  2. On your phone, tap 'Connect' and enter the IP and port, or use Network Discovery.",
+                "UDP vs TCP vs WebSocket:",
+                "  • UDP: Fastest, lowest latency. Best for mouse movement and gaming. Can drop packets.",
+                "  • TCP: Reliable delivery, slightly higher latency. Best for file transfer and keyboard input.",
+                "  • WebSocket: Uses HTTP/S. Good for bypassing restrictive firewalls.",
+                "Bluetooth Connection:",
+                "  • Go to Settings -> Connection -> Bluetooth.",
+                "  • Pair your phone with the PC. No server needed; phone acts as a standard Bluetooth HID mouse.",
+                "Network Discovery (Auto-scan):",
+                "  • The app broadcasts a UDP packet to find the server automatically. Tap 'Scan' to use this.",
+                "QR Code Scanning:",
+                "  • Tap 'Scan QR Code' in the app and point your camera at the QR code shown in the PC server.",
+                "Manual IP Entry:",
+                "  • Type the IP directly if auto-scan fails. Find your PC's IP in your router settings or via 'ipconfig'/'ifconfig'.",
+                "Firewall Configuration:",
+                "  • Windows: Allow the Go Server through Windows Defender Firewall.",
+                "  • Mac: Allow the app in System Settings > Network > Firewall.",
+                "  • Linux: Ensure ports (8080 by default) are open in ufw or iptables.",
+                "Troubleshooting Connection Drops:",
+                "  • Use 5GHz WiFi.",
+                "  • Disable Android battery optimization for the app.",
+                "  • Enable Background Mode.",
+                "Saving Server Profiles:",
+                "  • Once connected, tap the 'Save' icon to add the server to your saved profiles list for quick access."
             ),
             tips = listOf(
-                "Both devices must be on the same WiFi network (same subnet).",
                 "Use 5 GHz WiFi instead of 2.4 GHz for noticeably lower latency.",
-                "If connection fails, check your PC's firewall settings — allow the Go Server through.",
-                "You can save frequently used connections for quick reconnect."
+                "If connection fails, check your PC's firewall settings."
             ),
-            relatedTopics = listOf("Troubleshooting", "Network Discovery", "Bluetooth Connection")
+            relatedTopics = listOf("Troubleshooting", "Bluetooth", "Background Mode")
         ),
 
         // ── Mouse / Touchpad Control ─────────────────────────────────────
         HelpSection(
             id = "mouse_control",
             title = "Mouse & Touchpad Control",
-            content = "Air Mouse supports two input modes: motion-based (gyroscope) control and a virtual touchpad. Learn how to click, scroll, drag, and more.",
+            content = "Air Mouse supports motion-based (gyroscope) control and a virtual touchpad. Learn all the controls and gestures.",
             category = HelpCategory.MOUSE_CONTROL,
             steps = listOf(
-                "Motion Mode (Gyroscope):",
+                "Gyroscope/Motion Mode:",
                 "  • Tilt / rotate your phone to move the cursor on-screen.",
-                "  • The cursor follows the phone's orientation in real time.",
-                "",
-                "Touchpad Mode:",
-                "  • Swipe one finger on the touchpad area to move the cursor.",
-                "  • Tap once for a left click.",
-                "  • Tap with two fingers for a right click.",
-                "  • Swipe two fingers up/down to scroll.",
-                "  • Double-tap and hold, then drag to perform a click-and-drag.",
-                "",
-                "Common Actions:",
-                "  • Left Click — Single tap (touchpad) or quick flick (motion).",
-                "  • Right Click — Two-finger tap (touchpad) or hold tilt 0.5 s (motion).",
-                "  • Double Click — Double tap (touchpad) or two quick flicks (motion).",
-                "  • Scroll — Two-finger swipe (touchpad) or fast up/down movement (motion).",
-                "  • Drag — Double-tap-hold then move (touchpad), or click-lock gesture (motion)."
+                "  • Hold the phone naturally, screen facing you.",
+                "Touchpad Mode (All Gestures):",
+                "  • Move Cursor: Swipe one finger.",
+                "  • Left Click: Tap once.",
+                "  • Right Click: Tap with two fingers.",
+                "  • Middle Click: Tap with three fingers.",
+                "  • Scrolling (Vertical & Horizontal): Swipe two fingers in the desired direction.",
+                "  • Click-and-Drag: Double-tap, hold on the second tap, and drag.",
+                "  • Multi-finger gestures: Three-finger swipe up for task switcher, down for desktop.",
+                "Sensitivity Adjustment:",
+                "  • Go to Settings > Sensitivity. Adjust the slider to change cursor speed.",
+                "AI Smoothing:",
+                "  • Machine learning-based algorithm that reduces hand jitter without adding input lag. Enable it in Settings."
             ),
             tips = listOf(
                 "Switch between Motion and Touchpad mode from the main screen's mode selector.",
-                "Adjust cursor speed in Settings → Sensitivity.",
-                "Enable 'AI Smoothing' for smoother, less jittery cursor movement.",
-                "Use Edge Gestures (volume buttons) for quick click shortcuts."
+                "Enable 'AI Smoothing' for smoother, less jittery cursor movement."
             ),
-            relatedTopics = listOf("Gesture Controls", "Calibration Guide", "Settings")
+            relatedTopics = listOf("Gestures", "Calibration Guide", "Settings")
         ),
 
         // ── Calibration ─────────────────────────────────────────────────
         HelpSection(
             id = "calibration",
             title = "Calibration Guide",
-            content = "Calibration aligns your phone's sensors so cursor movement is accurate and drift-free. Calibrate after installing the app and whenever you notice the cursor drifting.",
+            content = "Calibration aligns your phone's sensors so cursor movement is accurate and drift-free. Crucial for motion mode.",
             category = HelpCategory.CALIBRATION,
             steps = listOf(
-                "Open Calibration from the main menu or the sidebar.",
-                "",
+                "Why Calibration Matters:",
+                "  • Sensors drift over time due to temperature changes and magnetic interference. Calibration resets them to a zero state.",
                 "Gyroscope Calibration:",
-                "  • Place your phone on a flat, stable surface.",
-                "  • Keep perfectly still for 10 seconds while the sensor zeroes itself.",
-                "  • This eliminates rotational drift.",
-                "",
-                "Accelerometer Calibration:",
-                "  • Hold your phone in 6 different orientations as prompted (flat, on each edge, upside down).",
-                "  • Each position is held for 5 seconds.",
-                "",
+                "  • Keep phone flat on a table. Do not touch it.",
+                "  • The numbers show the rotational offset being zeroed out. Wait 10 seconds.",
                 "Magnetometer Calibration:",
-                "  • Move your phone slowly in a figure-8 pattern in the air.",
-                "  • Continue for about 15 seconds until the progress bar fills.",
-                "",
-                "After calibration, test the cursor movement on the preview screen.",
-                "If you still notice drift or inaccuracy, re-run calibration."
+                "  • Move your phone in a figure-8 motion in the air.",
+                "  • Avoid large metal objects or strong magnetic fields.",
+                "Accelerometer Calibration (6 positions):",
+                "  1. Face up on table.",
+                "  2. Face down on table.",
+                "  3. Right edge down.",
+                "  4. Left edge down.",
+                "  5. Top edge down.",
+                "  6. Bottom edge down.",
+                "  • Hold each for 5 seconds.",
+                "Calibration Quality Ratings:",
+                "  • Excellent: Sensors perfectly aligned. No drift.",
+                "  • Good: Minor variance, acceptable for normal use.",
+                "  • Fair: Noticeable drift, recalibration recommended.",
+                "  • Poor: Failed calibration, please retry.",
+                "When to Recalibrate:",
+                "  • When the cursor drifts on its own, or movements feel 'off'.",
+                "Troubleshooting Bad Calibration:",
+                "  • Move away from electronics.",
+                "  • Ensure the surface is perfectly flat during gyro calibration."
             ),
             tips = listOf(
                 "Calibrate on a flat, stable surface away from magnets and electronics.",
-                "Recalibrate when switching which hand holds the phone.",
-                "Calibration data persists across app restarts — you don't need to redo it every time.",
-                "If accuracy degrades over time, a quick gyroscope-only recalibration usually fixes it."
+                "Calibration data persists across app restarts."
             ),
-            relatedTopics = listOf("Sensor Settings", "Troubleshooting", "Mouse & Touchpad Control")
+            relatedTopics = listOf("Troubleshooting", "Mouse Control")
+        ),
+
+        // ── Gestures & Shortcuts ─────────────────────────────────────────
+        HelpSection(
+            id = "gestures",
+            title = "Gestures & Shortcuts",
+            content = "Speed up your workflow using custom gestures and keyboard shortcuts.",
+            category = HelpCategory.GESTURES,
+            steps = listOf(
+                "All Available Gestures:",
+                "  • Flick left/right/up/down.",
+                "  • Shake phone.",
+                "  • Figure-8 motion.",
+                "Edge Gestures:",
+                "  • Configure swipe-from-edge actions (e.g., swipe from left edge to go Back).",
+                "  • Go to Settings > Gestures > Edge Gestures.",
+                "Custom Shortcut Mapping:",
+                "  • Map any gesture to a custom action (e.g., open browser, mute volume).",
+                "Keyboard Shortcuts Sent to PC:",
+                "  • You can bind gestures to send specific keystrokes (e.g., Ctrl+C, Ctrl+V).",
+                "Gaming Mode Gestures:",
+                "  • In Gaming Mode, gestures can be mapped to reload, jump, or crouch."
+            ),
+            tips = listOf(
+                "Adjust gesture sensitivity in Settings if gestures trigger too easily."
+            ),
+            relatedTopics = listOf("Gaming Mode", "Voice Commands")
+        ),
+
+        // ── Gaming Mode ──────────────────────────────────────────────────
+        HelpSection(
+            id = "gaming",
+            title = "Gaming Mode",
+            content = "Optimize Air Mouse for playing PC games.",
+            category = HelpCategory.GAMING,
+            steps = listOf(
+                "How to Enable Gaming Mode:",
+                "  • Select the 'Gaming' profile from the Profiles menu, or toggle Gaming Mode on the main screen.",
+                "Virtual Gamepad Controls:",
+                "  • Shows an on-screen D-pad, analog stick, and action buttons (A, B, X, Y).",
+                "Motion-based Game Controls:",
+                "  • Steer in racing games by tilting your phone left/right like a steering wheel.",
+                "Button Mapping Customization:",
+                "  • Long-press any virtual button to remap it to a keyboard key or mouse click.",
+                "Latency Optimization for Gaming:",
+                "  • Forces UDP protocol.",
+                "  • Disables battery saving features to ensure maximum polling rate.",
+                "Supported Game Types:",
+                "  • Racing simulators, flight simulators, casual platformers, and point-and-click games."
+            ),
+            tips = listOf(
+                "Keep your phone plugged into a charger during long gaming sessions, as Gaming Mode uses more battery."
+            ),
+            relatedTopics = listOf("Profiles", "Connection Guide")
+        ),
+
+        // ── Screen Mirroring ─────────────────────────────────────────────
+        HelpSection(
+            id = "screen_mirroring",
+            title = "Screen Mirroring",
+            content = "View your PC screen on your phone.",
+            category = HelpCategory.SCREEN_MIRRORING,
+            steps = listOf(
+                "How to Set Up Screen Mirroring:",
+                "  • Tap the 'Screen Mirror' icon in the app.",
+                "  • Ensure the PC server has screen capture permissions enabled.",
+                "Quality Settings:",
+                "  • Low: 480p, 30fps (Best for low latency/poor network).",
+                "  • Medium: 720p, 30fps.",
+                "  • High: 1080p, 60fps (Requires strong 5GHz WiFi).",
+                "Troubleshooting Lag:",
+                "  • Switch to a lower quality setting.",
+                "  • Move closer to your router.",
+                "  • Use TCP protocol if UDP packets are dropping excessively."
+            ),
+            tips = listOf(
+                "Screen mirroring consumes significant battery. Use it only when necessary."
+            ),
+            relatedTopics = listOf("Battery & Performance")
+        ),
+
+        // ── File Transfer ────────────────────────────────────────────────
+        HelpSection(
+            id = "file_transfer",
+            title = "File Transfer",
+            content = "Send files wirelessly between your phone and PC.",
+            category = HelpCategory.FILE_TRANSFER,
+            steps = listOf(
+                "How to Send Files Between Phone and PC:",
+                "  • To PC: Tap 'Send File' in the app menu, select the file. It will be saved to the PC's Downloads folder.",
+                "  • To Phone: Drag and drop a file onto the Go Server window on your PC.",
+                "Supported File Types:",
+                "  • All file types are supported (images, documents, videos, apks, etc.).",
+                "Transfer Speed Optimization:",
+                "  • File transfers automatically use the reliable TCP protocol.",
+                "  • For large files, ensure both devices are on a fast 5GHz WiFi network."
+            ),
+            tips = listOf(
+                "You can change the default save location on the PC via the Go Server settings."
+            ),
+            relatedTopics = listOf("Connection Guide")
+        ),
+
+        // ── Voice Commands ───────────────────────────────────────────────
+        HelpSection(
+            id = "voice_commands",
+            title = "Voice Commands",
+            content = "Control your PC hands-free using your voice.",
+            category = HelpCategory.VOICE_COMMANDS,
+            steps = listOf(
+                "How to Enable Voice Control:",
+                "  • Tap the microphone icon, or enable 'Always Listening' in Voice Settings.",
+                "Available Voice Commands:",
+                "  • 'Click', 'Right Click', 'Double Click'",
+                "  • 'Scroll Up', 'Scroll Down'",
+                "  • 'Volume Up', 'Volume Down', 'Mute'",
+                "  • 'Play', 'Pause', 'Next Track'",
+                "  • 'Open Browser', 'Show Desktop'",
+                "Custom Voice Commands:",
+                "  • Go to Settings > Voice Commands > Custom to add your own trigger words and map them to keystrokes.",
+                "Microphone Permissions:",
+                "  • The app requires 'Record Audio' permission to process voice commands. Processing is done locally on-device."
+            ),
+            tips = listOf(
+                "Voice commands work best in quiet environments."
+            ),
+            relatedTopics = listOf("Advanced")
+        ),
+
+        // ── Themes & Appearance ──────────────────────────────────────────
+        HelpSection(
+            id = "themes",
+            title = "Themes & Appearance",
+            content = "Customize the look and feel of the app.",
+            category = HelpCategory.THEMES,
+            steps = listOf(
+                "How to Change Themes:",
+                "  • Go to Settings > Appearance.",
+                "Dark Mode vs Light Mode:",
+                "  • Choose Dark, Light, or System Default.",
+                "Available Theme Presets:",
+                "  • Midnight Blue, Amoled Black, Forest Green, Cyberpunk.",
+                "Color Customization:",
+                "  • Use the color picker to set a custom primary accent color."
+            ),
+            tips = listOf(
+                "Amoled Black theme saves battery on OLED screens."
+            ),
+            relatedTopics = listOf("Settings")
+        ),
+
+        // ── Notifications ────────────────────────────────────────────────
+        HelpSection(
+            id = "notifications",
+            title = "Notifications",
+            content = "Manage how Air Mouse alerts you.",
+            category = HelpCategory.NOTIFICATIONS,
+            steps = listOf(
+                "Notification Types Explained:",
+                "  • Connection Status: Alerts when connected/disconnected.",
+                "  • Background Service: Persistent notification keeping the app alive.",
+                "  • Battery Warnings: Alerts when phone battery is low.",
+                "How to Configure Notifications:",
+                "  • Go to Settings > Notifications to toggle specific alerts.",
+                "Connection Notifications:",
+                "  • Haptic feedback and sound on connect/disconnect.",
+                "Battery Warnings:",
+                "  • Prompts you to disable high-drain features (like Screen Mirroring) when battery drops below 20%."
+            ),
+            tips = listOf(
+                "Keep the Background Service notification enabled for a stable connection when the app is minimized."
+            ),
+            relatedTopics = listOf("Background Mode", "Battery & Performance")
+        ),
+
+        // ── Battery & Performance ────────────────────────────────────────
+        HelpSection(
+            id = "battery",
+            title = "Battery & Performance",
+            content = "Optimize battery usage and performance.",
+            category = HelpCategory.BATTERY,
+            steps = listOf(
+                "Battery Optimization Tips:",
+                "  • Use the Touchpad instead of Motion Mode when possible (sensors use more power).",
+                "  • Use Amoled Black theme on OLED screens.",
+                "  • Lower the sensor polling rate in Advanced Settings.",
+                "Background Mode Settings:",
+                "  • Allows the app to run when the screen is locked, but consumes battery via WakeLocks.",
+                "Reducing Battery Drain:",
+                "  • Disable Screen Mirroring and always-listening Voice Commands.",
+                "Performance vs Battery Tradeoffs:",
+                "  • High polling rate = smoother cursor but higher battery drain.",
+                "  • AI Smoothing requires processing power, slightly increasing battery usage."
+            ),
+            tips = listOf(
+                "Check the in-app Battery monitor for real-time consumption stats."
+            ),
+            relatedTopics = listOf("Settings", "Background Mode")
+        ),
+
+        // ── Profiles ─────────────────────────────────────────────────────
+        HelpSection(
+            id = "profiles",
+            title = "Profiles",
+            content = "Save and switch between different configuration sets.",
+            category = HelpCategory.PROFILES,
+            steps = listOf(
+                "Creating Usage Profiles:",
+                "  • Go to Profiles > Add New.",
+                "  • Recommended profiles: Work (standard settings), Gaming (high sensitivity, UDP), Presentation (low sensitivity, volume button clicks).",
+                "Switching Between Profiles:",
+                "  • Tap the profile name at the top of the main screen to quick-switch.",
+                "Profile-Specific Settings:",
+                "  • Each profile saves its own Sensitivity, Protocol, Theme, and Custom Gestures."
+            ),
+            tips = listOf(
+                "Profiles are automatically backed up to your Google account."
+            ),
+            relatedTopics = listOf("Settings", "Gaming Mode")
+        ),
+
+        // ── Accessibility ────────────────────────────────────────────────
+        HelpSection(
+            id = "accessibility",
+            title = "Accessibility Options",
+            content = "Features to make the app usable by everyone.",
+            category = HelpCategory.ACCESSIBILITY,
+            steps = listOf(
+                "Accessibility Features Overview:",
+                "  • Designed to be compatible with standard Android accessibility tools.",
+                "Large Text Mode:",
+                "  • Scales all text in the app. Matches system font size settings.",
+                "High Contrast:",
+                "  • Increases contrast ratios for better visibility of buttons and text.",
+                "Screen Reader Compatibility:",
+                "  • Full support for Android TalkBack. Every interactive element has content descriptions.",
+                "Motor Accessibility Options:",
+                "  • 'Tap and Hold to Click' instead of quick taps.",
+                "  • 'Stabilization' filter to ignore hand tremors."
+            ),
+            tips = listOf(
+                "If you rely on Voice Access, use the Voice Commands feature natively built into the app for faster response."
+            ),
+            relatedTopics = listOf("Settings")
+        ),
+
+        // ── Server Setup Guide ───────────────────────────────────────────
+        HelpSection(
+            id = "server_setup",
+            title = "Server Setup Guide",
+            content = "How to install and configure the Go Server on your PC.",
+            category = HelpCategory.SERVER_SETUP,
+            steps = listOf(
+                "Installing Go Server on Windows:",
+                "  1. Download the .exe from our website.",
+                "  2. Run the installer.",
+                "  3. Allow through Windows Firewall when prompted.",
+                "Installing Go Server on macOS:",
+                "  1. Download the .dmg.",
+                "  2. Drag the app to the Applications folder.",
+                "  3. Go to System Settings > Privacy & Security > Accessibility and grant permission to Air Mouse Go Server (required for moving the mouse).",
+                "Installing Go Server on Linux:",
+                "  1. Download the AppImage or use the apt repository.",
+                "  2. Make executable: chmod +x AirMouseServer.AppImage",
+                "  3. Note: Requires uinput permissions (see documentation).",
+                "Server Configuration Options:",
+                "  • Right-click the system tray icon to access Settings: change port, toggle startup on boot, set password.",
+                "Running Server on Startup:",
+                "  • Enable 'Launch at Login' in the server settings.",
+                "Multi-user Setup:",
+                "  • The server runs per-user. Each user account on the PC must run their own instance."
+            ),
+            tips = listOf(
+                "If the mouse won't move on Mac, you MUST grant Accessibility permissions in System Settings."
+            ),
+            relatedTopics = listOf("Connection Guide", "Troubleshooting")
         ),
 
         // ── Troubleshooting ─────────────────────────────────────────────
         HelpSection(
             id = "troubleshooting",
             title = "Troubleshooting",
-            content = "Solutions for the most common issues you might encounter.",
+            content = "Solutions for common issues.",
             category = HelpCategory.TROUBLESHOOTING,
             steps = listOf(
-                "Cannot Connect to Server:",
-                "  • Verify both devices are on the same WiFi network and subnet.",
-                "  • Check that the Go Server is running and showing an IP address.",
-                "  • Temporarily disable your PC firewall, or add an exception for the Go Server executable.",
-                "  • On Windows, allow the server through Windows Defender Firewall → 'Allow an app through firewall'.",
-                "  • Try the QR code or Network Discovery method instead of manual IP entry.",
-                "  • Restart both the app and the server.",
-                "",
-                "Connection Drops Frequently:",
-                "  • Switch to 5 GHz WiFi — 2.4 GHz is more congested.",
-                "  • Move closer to the WiFi router to improve signal strength.",
-                "  • Disable battery optimization for Air Mouse in Android Settings → Apps → Battery.",
-                "  • Enable Background Mode (WakeLock) to prevent Android from killing the connection.",
-                "",
-                "Laggy / Jittery Cursor:",
-                "  • Use UDP protocol instead of TCP for lower latency.",
-                "  • Reduce sensitivity in Settings if the cursor is over-responsive.",
-                "  • Enable 'Predictive Movement' (Kalman filter) to smooth out lag.",
-                "  • Enable 'AI Smoothing' for machine-learning based jitter reduction.",
-                "  • Close bandwidth-heavy apps on your network (streaming, downloads).",
-                "",
-                "Gestures Not Detected:",
-                "  • Recalibrate sensors from the Calibration screen.",
-                "  • Increase gesture sensitivity in Settings.",
-                "  • Practice the movement pattern — gestures require deliberate motions.",
-                "  • Check that the gesture is enabled in Gesture Studio.",
-                "",
-                "Cursor Drifting on Its Own:",
-                "  • Recalibrate the gyroscope (place phone flat and still for 10 s).",
-                "  • Ensure the phone is at room temperature — extreme temps affect sensors.",
-                "  • Enable 'Auto Re-center' in Settings."
+                "Connection won't establish:",
+                "  • Verify both devices are on the exact same WiFi network/subnet.",
+                "  • Check PC firewall settings. Disable it temporarily to test.",
+                "Cursor is jittery or jumpy:",
+                "  • Enable AI Smoothing in settings.",
+                "  • Switch to 5GHz WiFi.",
+                "Cursor moves in wrong direction:",
+                "  • Recalibrate the Accelerometer.",
+                "High latency / input lag:",
+                "  • Use UDP protocol.",
+                "  • Close background downloads.",
+                "App crashes on startup:",
+                "  • Clear app cache and data in Android settings.",
+                "Sensor not detected:",
+                "  • Ensure your phone has a physical gyroscope. Some budget phones lack it.",
+                "Bluetooth pairing fails:",
+                "  • Remove the device from PC Bluetooth settings and try again.",
+                "Server not found on network:",
+                "  • Ensure your router doesn't have 'AP Isolation' or 'Client Isolation' enabled.",
+                "Calibration keeps failing:",
+                "  • Keep the phone perfectly still during Gyro calibration.",
+                "Phone gets hot during use:",
+                "  • Disable Screen Mirroring and always-on Voice Commands."
             ),
             tips = listOf(
-                "Restart the app and server if issues persist after trying the above steps.",
-                "Clear the app cache in Android Settings → Apps → Air Mouse → Clear Cache.",
-                "Make sure you're running the latest version of both the app and the Go Server.",
-                "Join our Discord community or file a GitHub issue for further help."
+                "Restarting both the app and the PC server fixes 90% of issues."
             ),
-            relatedTopics = listOf("Connection Guide", "Calibration Guide", "Settings")
-        ),
-
-        // ── Go Server Shortcuts ─────────────────────────────────────────
-        HelpSection(
-            id = "server_shortcuts",
-            title = "Go Server Keyboard Shortcuts",
-            content = "The Air Mouse Go Server running on your PC supports keyboard shortcuts for quick control.",
-            category = HelpCategory.SERVER_SHORTCUTS,
-            steps = listOf(
-                "Escape — Hide/minimize the server window to the system tray.",
-                "Ctrl + H — Hide the server window (same as Escape).",
-                "F1 — Open the server's built-in help documentation.",
-                "Ctrl + Q — Quit the server gracefully.",
-                "Ctrl + R — Restart the server listener (useful after network changes).",
-                "Ctrl + L — Open the server log viewer.",
-                "",
-                "System Tray:",
-                "  • Right-click the tray icon to access Show, Restart, and Quit options.",
-                "  • Double-click the tray icon to restore the server window."
-            ),
-            tips = listOf(
-                "The server runs in the background even when minimized to tray.",
-                "Use Ctrl+H to keep the server hidden while presenting or sharing your screen.",
-                "Server logs are useful for diagnosing connection issues — share them when reporting bugs."
-            ),
-            relatedTopics = listOf("Connection Guide", "Troubleshooting")
-        ),
-
-        // ── Gesture Controls ─────────────────────────────────────────────
-        HelpSection(
-            id = "gestures",
-            title = "Gesture Controls",
-            content = "Air Mouse recognizes motion gestures performed with your phone to trigger mouse and system actions.",
-            category = HelpCategory.GESTURES,
-            steps = listOf(
-                "Built-in Gestures (Motion Mode):",
-                "  • Move Cursor — Rotate phone around X-axis (tilt) and Z-axis (pan).",
-                "  • Left Click — Quick flick / rotation around Y-axis.",
-                "  • Right Click — Hold a tilt position for 0.5 seconds.",
-                "  • Double Click — Two quick flicks in rapid succession.",
-                "  • Scroll Up — Fast upward movement.",
-                "  • Scroll Down — Fast downward movement.",
-                "",
-                "Touchpad Gestures:",
-                "  • One-finger swipe — Move cursor.",
-                "  • Single tap — Left click.",
-                "  • Two-finger tap — Right click.",
-                "  • Two-finger swipe — Scroll vertically.",
-                "  • Three-finger swipe up — Show task switcher / Alt+Tab.",
-                "  • Three-finger swipe down — Show desktop / Win+D.",
-                "",
-                "Custom Gestures:",
-                "  • Open Gesture Studio to train your own gestures.",
-                "  • Draw or perform a motion, then assign it to any keyboard shortcut or action.",
-                "  • Custom gestures use on-device ML for recognition."
-            ),
-            tips = listOf(
-                "Adjust gesture sensitivity in Settings → Gestures.",
-                "Practice gestures a few times — the recognition improves with deliberate motion.",
-                "Use voice commands ('click', 'scroll up') as an alternative to gestures.",
-                "Edge Gestures (volume buttons) provide quick shortcuts without motion."
-            ),
-            relatedTopics = listOf("Gesture Studio", "Mouse & Touchpad Control", "Voice Commands")
-        ),
-
-        // ── Bluetooth Connection ─────────────────────────────────────────
-        HelpSection(
-            id = "bluetooth",
-            title = "Bluetooth Connection",
-            content = "Air Mouse can connect to your PC via Bluetooth HID, turning your phone into a standard Bluetooth mouse without needing the Go Server or WiFi.",
-            category = HelpCategory.BLUETOOTH,
-            steps = listOf(
-                "Enable Bluetooth on both your phone and PC.",
-                "On your phone, go to Air Mouse Settings → Connection → Bluetooth.",
-                "Tap 'Scan for Devices' to discover your PC.",
-                "Select your PC from the list and tap 'Pair'.",
-                "Accept the pairing request on your PC (a PIN may be shown on both devices).",
-                "Once paired, Air Mouse registers as a Bluetooth HID mouse.",
-                "Your phone now controls the PC cursor over Bluetooth — no WiFi needed.",
-                "",
-                "Switching Between WiFi and Bluetooth:",
-                "  • Go to Settings → Connection and choose your preferred method.",
-                "  • Bluetooth has slightly higher latency than WiFi but works without a network.",
-                "  • WiFi (UDP) is recommended for lowest latency."
-            ),
-            tips = listOf(
-                "Bluetooth range is typically 10 meters (30 feet) — stay within range.",
-                "Bluetooth HID mode doesn't require the Go Server to be running.",
-                "If pairing fails, remove the device from your PC's Bluetooth list and try again.",
-                "Some older PCs may not support Bluetooth HID — use WiFi in that case."
-            ),
-            relatedTopics = listOf("Connection Guide", "Troubleshooting", "Settings")
-        ),
-
-        // ── Background Mode ─────────────────────────────────────────────
-        HelpSection(
-            id = "background_mode",
-            title = "Background Mode & WakeLock",
-            content = "Background Mode keeps the connection alive even when your phone screen is off or you switch to another app. It uses Android's WakeLock to prevent the system from killing the service.",
-            category = HelpCategory.BACKGROUND_MODE,
-            steps = listOf(
-                "Enable Background Mode in Settings → Connection → Background Mode.",
-                "When enabled, Air Mouse acquires a partial WakeLock to keep the CPU active.",
-                "The connection stays alive even when:",
-                "  • You turn off the phone screen.",
-                "  • You switch to another app.",
-                "  • Android would normally suspend background processes.",
-                "",
-                "A persistent notification appears in the notification shade while Background Mode is active.",
-                "To stop, either disable Background Mode in Settings or tap 'Disconnect' in the notification.",
-                "",
-                "Battery Impact:",
-                "  • Background Mode increases battery usage moderately.",
-                "  • Disable it when not actively using Air Mouse to conserve battery.",
-                "  • Check the Battery screen in-app for real-time power consumption stats."
-            ),
-            tips = listOf(
-                "Disable battery optimization for Air Mouse in Android Settings for best reliability.",
-                "Background Mode is especially useful during presentations where you lock your phone between slides.",
-                "If you notice Android killing the connection, enable Background Mode + disable battery optimization.",
-                "The persistent notification shows connection status and provides a quick disconnect button."
-            ),
-            relatedTopics = listOf("Connection Guide", "Troubleshooting", "Settings")
-        ),
-
-        // ── Settings ─────────────────────────────────────────────────────
-        HelpSection(
-            id = "settings",
-            title = "Settings Overview",
-            content = "Customize Air Mouse's behavior to match your preferences. Here's what each setting does.",
-            category = HelpCategory.SETTINGS,
-            steps = listOf(
-                "Sensitivity — Controls how fast the cursor moves relative to phone movement. Range: 0.1× (slow) to 5× (fast). Default: 1×.",
-                "",
-                "Smoothing — Applies a low-pass filter to reduce cursor jitter. Higher values = smoother but slightly delayed cursor. Range: 0–100%. Default: 50%.",
-                "",
-                "Acceleration — Enables mouse acceleration: slow movements = precise, fast movements = large jumps. Toggle on/off. Fine-tune the curve in Advanced Settings.",
-                "",
-                "Protocol — Choose between UDP (low latency, no delivery guarantee) and TCP (reliable, slightly higher latency). Default: UDP.",
-                "",
-                "AI Smoothing — Uses an on-device ML model for intelligent jitter reduction without adding latency. Toggle on/off.",
-                "",
-                "Predictive Movement — Applies a Kalman filter to predict cursor position, reducing perceived lag. Toggle on/off.",
-                "",
-                "Auto Re-center — Automatically re-centers the cursor reference point after a period of stillness. Prevents long-term drift.",
-                "",
-                "Gesture Sensitivity — Controls how easily gestures are triggered. Lower = requires more deliberate motion. Range: 1–10.",
-                "",
-                "Theme — Choose between Light, Dark, or System Default. Customize accent colors in the Themes screen.",
-                "",
-                "Connection Timeout — How long to wait before declaring a connection lost. Default: 5 seconds."
-            ),
-            tips = listOf(
-                "Start with default settings and adjust one parameter at a time.",
-                "Use Profiles to save different setting combinations for different use cases (e.g. presentations vs. gaming).",
-                "If the cursor feels too fast, lower Sensitivity. If it feels laggy, enable Predictive Movement.",
-                "UDP protocol is recommended for mouse control; TCP is better for keyboard/text input."
-            ),
-            relatedTopics = listOf("Mouse & Touchpad Control", "Calibration Guide", "Profiles")
-        ),
-
-        // ── Advanced Features ────────────────────────────────────────────
-        HelpSection(
-            id = "advanced",
-            title = "Advanced Features",
-            content = "Power-user features to get the most out of Air Mouse.",
-            category = HelpCategory.ADVANCED,
-            steps = listOf(
-                "Voice Commands — Say 'click', 'right click', 'scroll up', 'scroll down', 'double click' for hands-free control.",
-                "Custom Gestures — Train your own motion patterns in Gesture Studio and bind them to any action.",
-                "Proximity Lock — Automatically locks your PC when your phone moves out of Bluetooth range, and unlocks when you return.",
-                "Edge Gestures — Map volume-up/volume-down buttons to quick actions (click, scroll, etc.).",
-                "Multiple Profiles — Save and switch between profiles with different sensitivity, smoothing, and gesture settings.",
-                "AI Smoothing — Machine-learning powered cursor smoothing that adapts to your movement patterns.",
-                "Predictive Movement — Kalman filter that predicts cursor position to compensate for network lag.",
-                "Sensor Visualizer — View real-time graphs of gyroscope, accelerometer, and magnetometer data for debugging.",
-                "Server Logs — View and export connection logs for troubleshooting."
-            ),
-            tips = listOf(
-                "Enable AI features for the smoothest cursor experience.",
-                "Create different profiles for presentations, general use, and gaming.",
-                "Voice commands work offline using on-device speech recognition.",
-                "Use Proximity Lock if you frequently step away from your PC."
-            ),
-            relatedTopics = listOf("Voice Commands", "Gesture Studio", "Proximity Lock")
-        ),
-
-        // ── Accessibility ────────────────────────────────────────────────
-        HelpSection(
-            id = "accessibility",
-            title = "Accessibility Features",
-            content = "Air Mouse includes accessibility options to ensure the app is usable by everyone.",
-            category = HelpCategory.ACCESSIBILITY,
-            steps = listOf(
-                "High Contrast Mode — Increases contrast ratios for better visibility.",
-                "Large Text — Enlarges all text throughout the app.",
-                "Screen Reader Support — Full compatibility with Android TalkBack for voice feedback.",
-                "Announce Movement — Provides spoken announcements of cursor direction and actions.",
-                "Reduce Motion — Minimizes or disables animations for users who are sensitive to motion.",
-                "Color Blind Mode — Adjusts the color palette to be distinguishable for common types of color blindness (deuteranopia, protanopia, tritanopia)."
-            ),
-            tips = listOf(
-                "Enable accessibility features in Settings → Accessibility.",
-                "Customize individual options to match your specific needs.",
-                "All accessibility features work alongside Android's system accessibility services.",
-                "If you need additional accessibility support, please contact us."
-            ),
-            relatedTopics = listOf("Settings", "Voice Commands")
+            relatedTopics = listOf("Connection Guide", "Calibration Guide")
         ),
 
         // ── FAQ ──────────────────────────────────────────────────────────
         HelpSection(
             id = "faq",
             title = "Frequently Asked Questions",
-            content = "Quick answers to the most common questions about Air Mouse.",
+            content = "Answers to common questions.",
             category = HelpCategory.FAQ,
             steps = listOf(
-                "Q: Does Air Mouse work without an internet connection?",
-                "A: Yes! It only needs a local WiFi network. No internet or cloud servers are involved.",
-                "",
-                "Q: What Android versions are supported?",
-                "A: Android 10 (API 29) and above.",
-                "",
-                "Q: Does it drain a lot of battery?",
-                "A: Battery usage is moderate. Disable Background Mode when not in use to save power. Check the in-app Battery screen for real-time stats.",
-                "",
-                "Q: Can I use Bluetooth instead of WiFi?",
-                "A: Yes. Air Mouse supports Bluetooth HID mode — your phone acts as a standard Bluetooth mouse. No Go Server needed for Bluetooth.",
-                "",
-                "Q: Is my data private and secure?",
-                "A: Absolutely. All communication is local (device-to-device on your LAN). No data is sent to the cloud, and no accounts are required.",
-                "",
-                "Q: What operating systems does the Go Server support?",
-                "A: Windows 10/11, macOS 12+, and Linux (x86_64 and ARM64).",
-                "",
-                "Q: Can I control multiple PCs?",
-                "A: Currently Air Mouse connects to one PC at a time. You can switch between saved connections quickly.",
-                "",
-                "Q: The cursor is too fast / too slow. How do I fix it?",
-                "A: Go to Settings → Sensitivity and adjust the slider. You can also enable/disable acceleration.",
-                "",
-                "Q: How do I update the Go Server?",
-                "A: Download the latest version from GitHub Releases or the Air Mouse website. The server will prompt you when an update is available.",
-                "",
-                "Q: Can I use Air Mouse for presentations?",
-                "A: Yes! It works great as a wireless presenter. Use gestures or volume buttons for slide navigation, and enable Background Mode so the connection stays alive when your phone screen is off."
+                "Q: Does it work without WiFi? A: Yes, via Bluetooth mode.",
+                "Q: What's the maximum range? A: WiFi range depends on your router (typically up to 150ft). Bluetooth is ~30ft.",
+                "Q: Can I use it as a presentation remote? A: Yes, use volume buttons or gestures for slides.",
+                "Q: Does it work with games? A: Yes, enable Gaming Mode for low latency and custom buttons.",
+                "Q: How secure is the connection? A: 100% local. Optional AES encryption can be enabled in settings.",
+                "Q: Can multiple phones connect to one PC? A: Currently, only one active connection is supported.",
+                "Q: Does it work on all Android versions? A: Android 10 and newer.",
+                "Q: What sensors does my phone need? A: Gyroscope and Accelerometer are required for motion mode.",
+                "Q: Can I use it with a tablet? A: Yes, the UI is optimized for tablets too.",
+                "Q: How do I update the app? A: Via the Google Play Store.",
+                "Q: Is my data sent to any servers? A: No, everything is completely local.",
+                "Q: Can I use keyboard input too? A: Yes, tap the keyboard icon.",
+                "Q: What's the difference between UDP and TCP? A: UDP is faster (less lag), TCP is more reliable (no dropped inputs).",
+                "Q: Why does calibration matter? A: It removes drift so the cursor only moves when you intend it to.",
+                "Q: Can I customize the touchpad size? A: Yes, in Accessibility settings.",
+                "Q: Does it support mouse acceleration? A: Yes, toggle it in Settings.",
+                "Q: How do I reduce battery usage? A: Use Amoled Black theme and disable Screen Mirroring.",
+                "Q: Can I lock the screen and still use it? A: Yes, if Background Mode is enabled.",
+                "Q: What ports does the server use? A: Default is 8080 (TCP/UDP), customizable in server settings.",
+                "Q: How do I report bugs? A: Use the Feedback dialog in the Help Screen."
             ),
             tips = listOf(
-                "Check the GitHub repository for the latest updates and release notes.",
-                "Report bugs or request features on GitHub Issues.",
-                "Join our Discord community for live support and tips from other users."
+                "Join our Discord for more help!"
             ),
-            relatedTopics = listOf("Getting Started", "Troubleshooting", "Settings")
+            relatedTopics = listOf("Troubleshooting", "Settings")
         )
     )
 
