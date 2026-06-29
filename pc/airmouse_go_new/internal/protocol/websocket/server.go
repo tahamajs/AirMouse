@@ -403,6 +403,26 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 		utils.LogDebug("Click received: device=%s, button=%s", client.ID, button)
 
+	case "mouse_down":
+		button, _ := payload["button"].(string)
+		if button == "" {
+			button = "left"
+		}
+		if s.mouse != nil {
+			s.mouse.MouseDown(button)
+		}
+		utils.LogDebug("Mouse down received: device=%s, button=%s", client.ID, button)
+
+	case "mouse_up":
+		button, _ := payload["button"].(string)
+		if button == "" {
+			button = "left"
+		}
+		if s.mouse != nil {
+			s.mouse.MouseUp(button)
+		}
+		utils.LogDebug("Mouse up received: device=%s, button=%s", client.ID, button)
+
 	case "doubleclick", "double_click":
 		if s.mouse != nil {
 			s.mouse.DoubleClick()
