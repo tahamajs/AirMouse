@@ -298,7 +298,10 @@ func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *
 	protocolName, _ := payload["protocol"].(string)
 	transport, _ := payload["transport"].(string)
 	token, _ := payload["token"].(string)
-	fingerprint := device.StableDeviceID(deviceIDValue, name, version, deviceName, model, manufacturer, brand, androidVersion, sdkInt, protocolName, transport)
+	fingerprint := deviceIDValue
+	if fingerprint == "" {
+		fingerprint = device.StableDeviceID(name, deviceName, model, manufacturer, brand)
+	}
 
 	if name == "" {
 		name = "Unknown"
