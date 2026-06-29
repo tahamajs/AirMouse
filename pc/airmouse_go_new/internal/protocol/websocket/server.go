@@ -106,7 +106,7 @@ func NewServer(port int, mouseCtrl mouse.Controller, deviceMgr *device.Manager, 
 
 // Start starts the WebSocket server.
 func (s *Server) Start() error {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", s.port))
 	if err != nil {
 		return fmt.Errorf("failed to bind WebSocket port %d: %w", s.port, err)
 	}
