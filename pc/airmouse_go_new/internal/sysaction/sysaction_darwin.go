@@ -35,7 +35,7 @@ func init() {
 		_ = exec.Command("osascript", "-e", `tell application "System Events" to key code 72`).Run()
 	}
 	mouseClick = func(btn string) {
-		// Use `cliclick` if available, else fallback to print.
+		// Use `cliclick` if available, else fallback to python3 Quartz.
 		if _, err := exec.LookPath("cliclick"); err == nil {
 			switch btn {
 			case "left":
@@ -45,14 +45,32 @@ func init() {
 			case "middle":
 				_ = exec.Command("cliclick", "mc:.").Run()
 			}
-		} else {
-			fmt.Printf("cliclick not installed; simulate %s click\n", btn)
+			return
 		}
+
+		var pyCode string
+		switch btn {
+		case "left":
+			pyCode = `from Quartz.CoreGraphics import CGEventCreate, CGEventGetLocation, CGEventCreateMouseEvent, CGEventPost, kCGEventLeftMouseDown, kCGEventLeftMouseUp, kCGMouseButtonLeft, kCGHIDEventTap; pos = CGEventGetLocation(CGEventCreate(None)); CGEventPost(kCGHIDEventTap, CGEventCreateMouseEvent(None, kCGEventLeftMouseDown, pos, kCGMouseButtonLeft)); CGEventPost(kCGHIDEventTap, CGEventCreateMouseEvent(None, kCGEventLeftMouseUp, pos, kCGMouseButtonLeft))`
+		case "right":
+			pyCode = `from Quartz.CoreGraphics import CGEventCreate, CGEventGetLocation, CGEventCreateMouseEvent, CGEventPost, kCGEventRightMouseDown, kCGEventRightMouseUp, kCGMouseButtonRight, kCGHIDEventTap; pos = CGEventGetLocation(CGEventCreate(None)); CGEventPost(kCGHIDEventTap, CGEventCreateMouseEvent(None, kCGEventRightMouseDown, pos, kCGMouseButtonRight)); CGEventPost(kCGHIDEventTap, CGEventCreateMouseEvent(None, kCGEventRightMouseUp, pos, kCGMouseButtonRight))`
+		case "middle":
+			pyCode = `from Quartz.CoreGraphics import CGEventCreate, CGEventGetLocation, CGEventCreateMouseEvent, CGEventPost, kCGEventOtherMouseDown, kCGEventOtherMouseUp, kCGMouseButtonCenter, kCGHIDEventTap; pos = CGEventGetLocation(CGEventCreate(None)); CGEventPost(kCGHIDEventTap, CGEventCreateMouseEvent(None, kCGEventOtherMouseDown, pos, kCGMouseButtonCenter)); CGEventPost(kCGHIDEventTap, CGEventCreateMouseEvent(None, kCGEventOtherMouseUp, pos, kCGMouseButtonCenter))`
+		}
+		if pyCode != "" {
+			if exec.Command("python3", "-c", pyCode).Run() == nil {
+				return
+			}
+		}
+		fmt.Printf("cliclick and python3 Quartz not available; simulate %s click\n", btn)
 	}
 	mouseDoubleClick = func() {
 		if _, err := exec.LookPath("cliclick"); err == nil {
 			_ = exec.Command("cliclick", "dc:.").Run()
+			return
 		}
+		pyCode := `from Quartz.CoreGraphics import CGEventCreate, CGEventGetLocation, CGEventCreateMouseEvent, CGEventPost, kCGEventLeftMouseDown, kCGEventLeftMouseUp, kCGMouseButtonLeft, kCGHIDEventTap, kCGMouseEventClickState; pos = CGEventGetLocation(CGEventCreate(None)); d1 = CGEventCreateMouseEvent(None, kCGEventLeftMouseDown, pos, kCGMouseButtonLeft); u1 = CGEventCreateMouseEvent(None, kCGEventLeftMouseUp, pos, kCGMouseButtonLeft); d2 = CGEventCreateMouseEvent(None, kCGEventLeftMouseDown, pos, kCGMouseButtonLeft); d2.setIntegerValueField(kCGMouseEventClickState, 2); u2 = CGEventCreateMouseEvent(None, kCGEventLeftMouseUp, pos, kCGMouseButtonLeft); u2.setIntegerValueField(kCGMouseEventClickState, 2); CGEventPost(kCGHIDEventTap, d1); CGEventPost(kCGHIDEventTap, u1); CGEventPost(kCGHIDEventTap, d2); CGEventPost(kCGHIDEventTap, u2)`
+		_ = exec.Command("python3", "-c", pyCode).Run()
 	}
 	mouseScroll = func(delta int) {
 		// cliclick scroll: https://github.com/BlueM/cliclick
@@ -62,7 +80,14 @@ func init() {
 			} else {
 				_ = exec.Command("cliclick", "wd:5").Run()
 			}
+			return
 		}
+		amount := 5
+		if delta < 0 {
+			amount = -5
+		}
+		pyCode := fmt.Sprintf(`from Quartz.CoreGraphics import CGEventCreateScrollWheelEvent, CGEventPost, kCGHIDEventTap; CGEventPost(kCGHIDEventTap, CGEventCreateScrollWheelEvent(None, 0, 1, %d))`, amount)
+		_ = exec.Command("python3", "-c", pyCode).Run()
 	}
 	lockScreen = func() {
 		_ = exec.Command("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession", "-suspend").Run()
