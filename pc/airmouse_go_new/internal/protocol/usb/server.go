@@ -239,6 +239,9 @@ func (s *Server) handleDevice(dev *SerialDevice) {
 		}
 		dev.LastActive = time.Now()
 		dev.BytesRecv += int64(len(line))
+		if s.deviceMgr != nil {
+			_ = s.deviceMgr.UpdateDeviceActivity(dev.Path, 0, int64(len(line)))
+		}
 		line = trimSpace(line)
 		if line == "" {
 			continue
@@ -339,6 +342,9 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 				cfg.ServerName, cfg.Version)
 			if _, err := dev.File.Write([]byte(response)); err == nil {
 				dev.BytesSent += int64(len(response))
+				if s.deviceMgr != nil {
+					_ = s.deviceMgr.UpdateDeviceActivity(dev.Path, int64(len(response)), 0)
+				}
 				utils.LogInfo("USB device auto‑approved: %s (fingerprint: %s)", dev.Path, fingerprint)
 			}
 			// Clear any pending state
@@ -353,13 +359,20 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 			cfg.ServerName, cfg.Version)
 		if _, err := dev.File.Write([]byte(response)); err == nil {
 			dev.BytesSent += int64(len(response))
+			if s.deviceMgr != nil {
+				_ = s.deviceMgr.UpdateDeviceActivity(dev.Path, int64(len(response)), 0)
+			}
 		}
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.UpdateDeviceStatus(dev.Path, device.StatusPendingApproval)
 		}
 	case "ping":
-		if _, err := dev.File.Write([]byte(`{"type":"pong"}` + "\n")); err == nil {
-			dev.BytesSent += 4
+		pong := []byte(`{"type":"pong"}` + "\n")
+		if _, err := dev.File.Write(pong); err == nil {
+			dev.BytesSent += int64(len(pong))
+			if s.deviceMgr != nil {
+				_ = s.deviceMgr.UpdateDeviceActivity(dev.Path, int64(len(pong)), 0)
+			}
 		}
 	default:
 		utils.LogDebug("Unknown USB message type: %s", msg.Type)
@@ -368,6 +381,9 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 		ack := fmt.Sprintf(`{"type":"ack","id":"%s"}`+"\n", *msg.ID)
 		if _, err := dev.File.Write([]byte(ack)); err == nil {
 			dev.BytesSent += int64(len(ack))
+			if s.deviceMgr != nil {
+				_ = s.deviceMgr.UpdateDeviceActivity(dev.Path, int64(len(ack)), 0)
+			}
 		}
 	}
 }
@@ -386,6 +402,9 @@ func (s *Server) SendMessage(devicePath string, msg interface{}) error {
 	_, err = dev.File.Write(append(data, '\n'))
 	if err == nil {
 		dev.BytesSent += int64(len(data) + 1)
+		if s.deviceMgr != nil {
+			_ = s.deviceMgr.UpdateDeviceActivity(devicePath, int64(len(data)+1), 0)
+		}
 	}
 	return err
 }

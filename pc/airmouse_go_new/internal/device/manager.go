@@ -434,9 +434,12 @@ func (m *DeviceManager) UpdateDeviceActivity(id string, sent, recv int64) error 
 	device.LastActive = time.Now()
 	device.BytesSent += sent
 	device.BytesRecv += recv
-	device.MessagesSent++
-	device.MessagesRecv++
-	m.persistLocked()
+	if sent > 0 {
+		device.MessagesSent++
+	}
+	if recv > 0 {
+		device.MessagesRecv++
+	}
 	return nil
 }
 

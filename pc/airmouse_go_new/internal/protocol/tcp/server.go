@@ -176,7 +176,14 @@ func (s *Server) handleClient(conn net.Conn) {
 		client.mu.Lock()
 		client.LastActive = time.Now()
 		client.BytesRecv += int64(len(line))
+		devID := client.DeviceID
+		if devID == "" {
+			devID = client.ID
+		}
 		client.mu.Unlock()
+		if s.deviceMgr != nil {
+			_ = s.deviceMgr.UpdateDeviceActivity(devID, 0, int64(len(line)))
+		}
 		s.processLine(client, []byte(line))
 	}
 
@@ -522,7 +529,14 @@ func (s *Server) writeAck(client *Client, id *string) {
 	}
 	client.mu.Lock()
 	client.BytesSent += int64(len(ack))
+	devID := client.DeviceID
+	if devID == "" {
+		devID = client.ID
+	}
 	client.mu.Unlock()
+	if s.deviceMgr != nil {
+		_ = s.deviceMgr.UpdateDeviceActivity(devID, int64(len(ack)), 0)
+	}
 }
 
 func (s *Server) ApproveDevice(deviceID string) error {
@@ -647,7 +661,14 @@ func (s *Server) SendToClient(clientID string, msg interface{}) error {
 	}
 	client.mu.Lock()
 	client.BytesSent += int64(len(data) + 1)
+	devID := client.DeviceID
+	if devID == "" {
+		devID = client.ID
+	}
 	client.mu.Unlock()
+	if s.deviceMgr != nil {
+		_ = s.deviceMgr.UpdateDeviceActivity(devID, int64(len(data)+1), 0)
+	}
 	return nil
 }
 
