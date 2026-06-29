@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash"
+	"io"
 	"net"
 	"net/http"
 	"os"
