@@ -540,6 +540,9 @@ func (t *DashboardTab) refreshStats() {
 			pendingDevices = append(pendingDevices, d)
 		}
 	}
+	t.logMu.Lock()
+	logsText := strings.Join(t.recentLogs, "\n")
+	t.logMu.Unlock()
 
 	RunOnMain(func() {
 		if t.permissionHint != nil {
@@ -654,6 +657,10 @@ func (t *DashboardTab) refreshStats() {
 		} else {
 			t.retryLabel.SetText("🔁 ACK / Retry: waiting for approval")
 		}
+
+		if t.recentLogsBox != nil {
+			t.recentLogsBox.SetText(logsText)
+		}
 	})
 }
 
@@ -727,12 +734,6 @@ func (t *DashboardTab) addRecentLog(level, msg string) {
 	if len(t.recentLogs) > 12 {
 		t.recentLogs = truncateRecentLogs(t.recentLogs, 12)
 	}
-	text := strings.Join(t.recentLogs, "\n")
-	RunOnMain(func() {
-		if t.recentLogsBox != nil {
-			t.recentLogsBox.SetText(text)
-		}
-	})
 }
 
 // ------------------------------------------------------------
