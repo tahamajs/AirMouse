@@ -9,7 +9,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -24,6 +26,7 @@ import (
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/proximity"
+	"airmouse-go/internal/sysaction"
 	"airmouse-go/internal/utils"
 )
 
@@ -113,6 +116,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/ws", s.handleWebSocket)
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/stats", s.handleStats)
+	mux.HandleFunc("/upload", s.handleHTTPUpload)
+	mux.HandleFunc("/download/", s.handleHTTPDownload)
+	mux.HandleFunc("/mirror", s.handleScreenMirror)
+	mux.HandleFunc("/screen", s.handleScreenMirror)
 
 	s.server = &http.Server{
 		Handler:      mux,
@@ -330,7 +337,9 @@ func (s *Server) writeLoop(client *WSClient) {
 
 // processMessage processes incoming messages.
 func (s *Server) processMessage(client *WSClient, msgType string, payload map[string]any, id *string) {
-	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll") {
+	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll" ||
+		msgType == "left_click" || msgType == "right_click" || msgType == "double_click" || msgType == "middle_click" ||
+		msgType == "key" || msgType == "text" || msgType == "voice_command") {
 		if ack := AckMessage(id); len(ack) > 0 {
 			select {
 			case client.Send <- ack:
@@ -341,7 +350,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	}
 
 	approved := client.Approved.Load()
-	if !approved && msgType != "hello" && msgType != "ping" {
+	if !approved && msgType != "hello" && msgType != "device_info" && msgType != "ping" {
 		utils.LogDebug("Ignoring WebSocket %s while waiting for approval: device=%s", msgType, client.ID)
 		return
 	}
@@ -357,7 +366,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			s.mouse.Move(dx, dy)
 		}
 
-	case "click":
+	case "click", "left_click":
 		button, _ := payload["button"].(string)
 		if button == "" {
 			button = "left"
@@ -367,26 +376,32 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 		utils.LogDebug("Click received: device=%s, button=%s", client.ID, button)
 
-	case "doubleclick":
+	case "doubleclick", "double_click":
 		if s.mouse != nil {
 			s.mouse.DoubleClick()
 		}
 		utils.LogDebug("Double click received: device=%s", client.ID)
 
-	case "rightclick":
+	case "rightclick", "right_click":
 		if s.mouse != nil {
 			s.mouse.Click("right")
 		}
 		utils.LogDebug("Right click received: device=%s", client.ID)
 
+	case "middle_click":
+		if s.mouse != nil {
+			s.mouse.Click("middle")
+		}
+		utils.LogDebug("Middle click received: device=%s", client.ID)
+
 	case "scroll":
-		delta := firstInt(payload, "delta", "Scroll", "scroll")
+		delta := firstInt(payload, "delta", "Scroll", "scroll", "amount", "dy")
 		if s.mouse != nil {
 			s.mouse.Scroll(delta)
 		}
 		utils.LogDebug("Scroll received: device=%s, delta=%d", client.ID, delta)
 
-	case "hello":
+	case "hello", "device_info":
 		name, _ := payload["name"].(string)
 		version, _ := payload["version"].(string)
 		deviceName, _ := payload["device_name"].(string)
@@ -405,15 +420,11 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		if name == "" {
 			name = "Unknown"
 		}
-		utils.LogInfo("Handshake received from Android (WebSocket): id=%s name=%s", client.ID, name)
-		utils.LogDebug("WebSocket hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
+		utils.LogInfo("Handshake/Device info received from Android (WebSocket): id=%s name=%s", client.ID, name)
+		utils.LogDebug("WebSocket handshake payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
 
-		// Auto-approve if trusted
-		if s.autoApproveWSClient(client, fingerprint) {
-			break
-		}
+		isDeviceInfo := (msgType == "device_info")
 
-		// Otherwise mark pending
 		s.mu.Lock()
 		client.Name = name
 		if s.deviceMgr != nil {
@@ -438,13 +449,25 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 		s.mu.Unlock()
 
+		if isDeviceInfo || s.autoApproveWSClient(client, fingerprint) {
+			_ = s.ApproveDevice(fingerprint)
+			break
+		}
+
 		utils.LogInfo("WebSocket client awaiting approval: id=%s, name=%s", client.ID, name)
 		utils.LogDebug("WebSocket approval state pending: id=%s approved=%v device_id=%s", client.ID, client.Approved.Load(), client.DeviceID)
 
 	case "gesture":
 		gesture, _ := payload["gesture"].(string)
+		if gesture == "" {
+			gesture, _ = payload["name"].(string)
+		}
 		confidence := toFloat64(payload["confidence"])
+		if confidence == 0 {
+			confidence = 1.0
+		}
 		utils.LogInfo("Gesture received: device=%s, gesture=%s, confidence=%.2f", client.ID, gesture, confidence)
+		go sysaction.ExecuteGesture(gesture, confidence)
 
 	case "proximity":
 		if s.proxMgr == nil {
@@ -544,6 +567,59 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 
 	case "pong":
 		utils.LogDebug("Pong received from: %s", client.ID)
+
+	case "key":
+		keyVal, _ := payload["key"].(string)
+		if keyVal != "" {
+			utils.LogInfo("WebSocket key press: key=%s client=%s", keyVal, client.ID)
+			go sysaction.KeyTap(keyVal)
+		}
+
+	case "text":
+		textVal, _ := payload["text"].(string)
+		if textVal != "" {
+			utils.LogInfo("WebSocket type text: client=%s", client.ID)
+			go sysaction.TypeText(textVal)
+		}
+
+	case "voice_command":
+		command, _ := payload["command"].(string)
+		utils.LogInfo("WebSocket voice command received: command=%s client=%s", command, client.ID)
+		cmdLower := strings.ToLower(strings.TrimSpace(command))
+		var act sysaction.Action
+		switch {
+		case strings.Contains(cmdLower, "play") || strings.Contains(cmdLower, "pause") || strings.Contains(cmdLower, "resume"):
+			act = sysaction.ActionPlayPause
+		case strings.Contains(cmdLower, "next"):
+			act = sysaction.ActionNextTrack
+		case strings.Contains(cmdLower, "previous") || strings.Contains(cmdLower, "prev"):
+			act = sysaction.ActionPrevTrack
+		case strings.Contains(cmdLower, "stop"):
+			act = sysaction.ActionStop
+		case strings.Contains(cmdLower, "volume up") || strings.Contains(cmdLower, "louder"):
+			act = sysaction.ActionVolumeUp
+		case strings.Contains(cmdLower, "volume down") || strings.Contains(cmdLower, "quieter"):
+			act = sysaction.ActionVolumeDown
+		case strings.Contains(cmdLower, "mute"):
+			act = sysaction.ActionMute
+		case strings.Contains(cmdLower, "lock"):
+			act = sysaction.ActionLockScreen
+		case strings.Contains(cmdLower, "desktop") || strings.Contains(cmdLower, "home"):
+			act = sysaction.ActionShowDesktop
+		case strings.Contains(cmdLower, "close"):
+			act = sysaction.ActionCloseWindow
+		case strings.Contains(cmdLower, "copy"):
+			act = sysaction.ActionCopy
+		case strings.Contains(cmdLower, "paste"):
+			act = sysaction.ActionPaste
+		case strings.Contains(cmdLower, "undo"):
+			act = sysaction.ActionUndo
+		case strings.Contains(cmdLower, "redo"):
+			act = sysaction.ActionRedo
+		}
+		if act != "" {
+			go sysaction.Execute(act)
+		}
 
 	default:
 		utils.LogDebug("Unknown message type: %s from device: %s", msgType, client.ID)
@@ -882,4 +958,166 @@ func (s *Server) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.running
+}
+
+// handleHTTPUpload handles multipart file uploads.
+func (s *Server) handleHTTPUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"failed to parse form: %v"}`, err), http.StatusBadRequest)
+		return
+	}
+
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, `{"error":"missing file field"}`, http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	dir := s.fileTransferDir()
+	_ = os.MkdirAll(dir, 0755)
+	filename := sanitizeFileName(handler.Filename)
+	destPath := filepath.Join(dir, filename)
+
+	destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"failed to write file: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+	defer destFile.Close()
+
+	hasher := md5.New()
+	var written int64
+	buf := make([]byte, 32*1024)
+	for {
+		nr, rerr := file.Read(buf)
+		if nr > 0 {
+			nw, werr := destFile.Write(buf[0:nr])
+			if nw > 0 {
+				written += int64(nw)
+				_, _ = hasher.Write(buf[0:nw])
+			}
+			if werr != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"write error: %v"}`, werr), http.StatusInternalServerError)
+				return
+			}
+		}
+		if rerr != nil {
+			break
+		}
+	}
+
+	actualMD5 := hex.EncodeToString(hasher.Sum(nil))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(fmt.Sprintf(`{"status":"success","filename":"%s","bytes":%d,"md5":"%s"}`+"\n", filename, written, actualMD5)))
+}
+
+// handleHTTPDownload serves files from the transfer directory.
+func (s *Server) handleHTTPDownload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	filename := strings.TrimPrefix(r.URL.Path, "/download/")
+	filename = sanitizeFileName(filename)
+	if filename == "" || filename == "file.bin" {
+		http.Error(w, `{"error":"invalid filename"}`, http.StatusBadRequest)
+		return
+	}
+
+	dir := s.fileTransferDir()
+	filePath := filepath.Join(dir, filename)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		http.Error(w, `{"error":"file not found"}`, http.StatusNotFound)
+		return
+	}
+
+	http.ServeFile(w, r, filePath)
+}
+
+// handleScreenMirror handles screen mirroring WebSocket connections.
+func (s *Server) handleScreenMirror(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		utils.LogError("Screen mirror WebSocket upgrade failed: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	utils.LogInfo("Screen mirror client connected: %s", r.RemoteAddr)
+
+	ticker := time.NewTicker(200 * time.Millisecond) // ~5 FPS
+	defer ticker.Stop()
+
+	tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("airmouse_mirror_%s.jpg", utils.GenerateID()))
+	defer os.Remove(tmpFile)
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := captureScreenshot(tmpFile); err != nil {
+				utils.LogDebug("Screen capture failed: %v", err)
+				continue
+			}
+
+			imgData, err := os.ReadFile(tmpFile)
+			if err != nil {
+				continue
+			}
+
+			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+			if err := conn.WriteMessage(gorilla.BinaryMessage, imgData); err != nil {
+				utils.LogInfo("Screen mirror client disconnected: %v", err)
+				return
+			}
+		}
+	}
+}
+
+// captureScreenshot grabs a JPEG screenshot on Darwin, Windows, or Linux.
+func captureScreenshot(path string) error {
+	switch runtime.GOOS {
+	case "darwin":
+		cmd := exec.Command("screencapture", "-x", "-t", "jpeg", path)
+		return cmd.Run()
+	case "windows":
+		psScript := fmt.Sprintf(`
+Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+$screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+$bitmap = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+$graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+$graphics.CopyFromScreen($screen.X, $screen.Y, 0, 0, $bitmap.Size)
+$bitmap.Save('%s', [System.Drawing.Imaging.ImageFormat]::Jpeg)
+$graphics.Dispose()
+$bitmap.Dispose()
+`, path)
+		cmd := exec.Command("powershell", "-Command", psScript)
+		return cmd.Run()
+	case "linux":
+		if err := exec.Command("scrot", "-z", path).Run(); err == nil {
+			return nil
+		}
+		if err := exec.Command("gnome-screenshot", "-f", path).Run(); err == nil {
+			return nil
+		}
+		if err := exec.Command("maim", path).Run(); err == nil {
+			return nil
+		}
+		if err := exec.Command("import", "-window", "root", path).Run(); err == nil {
+			return nil
+		}
+		return fmt.Errorf("no screenshot utility found (scrot, gnome-screenshot, maim, import)")
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
 }

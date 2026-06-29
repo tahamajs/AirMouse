@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
+	"airmouse-go/internal/sysaction"
 	"airmouse-go/internal/utils"
 )
 
@@ -236,12 +238,19 @@ func (s *Server) processLine(client *Client, line []byte) {
 	approved := client.Approved
 	client.mu.RUnlock()
 
+	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll" ||
+		msgType == "left_click" || msgType == "right_click" || msgType == "double_click" || msgType == "middle_click" ||
+		msgType == "key" || msgType == "text" || msgType == "voice_command") {
+		s.writeAck(client, id)
+	}
+
+	if !approved && msgType != "hello" && msgType != "device_info" && msgType != "ping" {
+		utils.LogDebug("Ignoring TCP %s while waiting for approval: client=%s", msgType, client.ID)
+		return
+	}
+
 	switch msgType {
 	case "move":
-		if !approved {
-			utils.LogDebug("Ignoring TCP move while waiting for approval: client=%s", client.ID)
-			return
-		}
 		dx := firstNumber(payload, "dx", "DeltaX", "deltaX")
 		dy := firstNumber(payload, "dy", "DeltaY", "deltaY")
 		utils.LogInfo("TCP move: client=%s dx=%.2f dy=%.2f", client.ID, dx, dy)
@@ -250,11 +259,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 		utils.LogDebug("TCP move forwarded: client=%s dx=%.2f dy=%.2f", client.ID, dx, dy)
 
-	case "click":
-		if !approved {
-			utils.LogDebug("Ignoring TCP click while waiting for approval: client=%s", client.ID)
-			return
-		}
+	case "click", "left_click":
 		button, _ := payload["button"].(string)
 		if button == "" {
 			button = "left"
@@ -263,41 +268,30 @@ func (s *Server) processLine(client *Client, line []byte) {
 			s.mouse.Click(button)
 		}
 		utils.LogDebug("TCP click forwarded: client=%s button=%s", client.ID, button)
-		s.writeAck(client, id)
 
-	case "doubleclick":
-		if !approved {
-			utils.LogDebug("Ignoring TCP doubleclick while waiting for approval: client=%s", client.ID)
-			return
-		}
+	case "doubleclick", "double_click":
 		if s.mouse != nil {
 			s.mouse.DoubleClick()
 		}
-		s.writeAck(client, id)
 
-	case "rightclick":
-		if !approved {
-			utils.LogDebug("Ignoring TCP rightclick while waiting for approval: client=%s", client.ID)
-			return
-		}
+	case "rightclick", "right_click":
 		if s.mouse != nil {
 			s.mouse.Click("right")
 		}
-		s.writeAck(client, id)
+
+	case "middle_click":
+		if s.mouse != nil {
+			s.mouse.Click("middle")
+		}
 
 	case "scroll":
-		if !approved {
-			utils.LogDebug("Ignoring TCP scroll while waiting for approval: client=%s", client.ID)
-			return
-		}
-		delta := int(firstNumber(payload, "delta", "Scroll", "scroll"))
+		delta := firstInt(payload, "delta", "Scroll", "scroll", "amount", "dy")
 		if s.mouse != nil {
 			s.mouse.Scroll(delta)
 		}
 		utils.LogDebug("TCP scroll forwarded: client=%s delta=%d", client.ID, delta)
-		s.writeAck(client, id)
 
-	case "hello":
+	case "hello", "device_info":
 		name, _ := payload["name"].(string)
 		version, _ := payload["version"].(string)
 		deviceName, _ := payload["device_name"].(string)
@@ -315,7 +309,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 		token, _ := payload["token"].(string)
 
-		utils.LogInfo("Handshake received from Android (TCP): id=%s name=%s", client.ID, name)
+		utils.LogInfo("Handshake/Device info received from Android (TCP): id=%s name=%s", client.ID, name)
 		utils.LogDebug("TCP hello payload: id=%s version=%s device=%s model=%s android=%s protocol=%s transport=%s", client.ID, version, deviceName, model, androidVersion, protocolName, transport)
 
 		if config.Get().AuthEnabled {
@@ -329,10 +323,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 			}
 		}
 
-		// Auto‑approval check
-		if s.autoApproveTCPClient(client, fingerprint) {
-			break
-		}
+		isDeviceInfo := (msgType == "device_info")
 
 		client.mu.Lock()
 		if name != "" {
@@ -358,6 +349,11 @@ func (s *Server) processLine(client *Client, line []byte) {
 			_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusPendingApproval)
 		}
 		client.mu.Unlock()
+
+		if isDeviceInfo || s.autoApproveTCPClient(client, fingerprint) {
+			_ = s.ApproveDevice(fingerprint)
+			break
+		}
 		utils.LogInfo("TCP client awaiting approval: id=%s name=%s", client.ID, client.Name)
 
 	case "ping":
@@ -369,28 +365,23 @@ func (s *Server) processLine(client *Client, line []byte) {
 		utils.LogDebug("TCP pong received from client=%s", client.ID)
 
 	case "gesture":
-		if !approved {
-			utils.LogDebug("Ignoring TCP gesture while waiting for approval: client=%s", client.ID)
-			return
-		}
 		gesture, _ := payload["gesture"].(string)
+		if gesture == "" {
+			gesture, _ = payload["name"].(string)
+		}
 		confidence := number(payload["confidence"])
+		if confidence == 0 {
+			confidence = 1.0
+		}
 		utils.LogInfo("TCP gesture received: client=%s gesture=%s confidence=%.2f", client.ID, gesture, confidence)
+		go sysaction.ExecuteGesture(gesture, confidence)
 
 	case "proximity":
-		if !approved {
-			utils.LogDebug("Ignoring TCP proximity while waiting for approval: client=%s", client.ID)
-			return
-		}
 		isNear, _ := payload["is_near"].(bool)
 		distance := number(payload["distance"])
 		utils.LogInfo("TCP proximity update: client=%s near=%v distance=%.2f", client.ID, isNear, distance)
 
 	case "control":
-		if !approved {
-			utils.LogDebug("Ignoring TCP control while waiting for approval: client=%s", client.ID)
-			return
-		}
 		command, _ := payload["command"].(string)
 		switch command {
 		case "start", "touchpad_start", "resume", "resume_movement":
@@ -417,9 +408,6 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 
 	case "presentation":
-		if !approved {
-			return
-		}
 		action, _ := payload["action"].(string)
 		utils.LogInfo("TCP presentation action received: client=%s action=%s", client.ID, action)
 		switch action {
@@ -432,9 +420,6 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 
 	case "media":
-		if !approved {
-			return
-		}
 		action, _ := payload["action"].(string)
 		utils.LogInfo("TCP media action received: client=%s action=%s", client.ID, action)
 		switch action {
@@ -460,11 +445,60 @@ func (s *Server) processLine(client *Client, line []byte) {
 		utils.LogInfo("Received smarthome command from client %s over TCP", client.ID)
 
 	case "calibration_data":
-		if !approved {
-			utils.LogDebug("Ignoring TCP calibration_data while waiting for approval: client=%s", client.ID)
-			return
-		}
 		utils.LogInfo("TCP calibration_data received: client=%s", client.ID)
+
+	case "key":
+		keyVal, _ := payload["key"].(string)
+		if keyVal != "" {
+			utils.LogInfo("TCP key press: key=%s client=%s", keyVal, client.ID)
+			go sysaction.KeyTap(keyVal)
+		}
+
+	case "text":
+		textVal, _ := payload["text"].(string)
+		if textVal != "" {
+			utils.LogInfo("TCP type text: client=%s", client.ID)
+			go sysaction.TypeText(textVal)
+		}
+
+	case "voice_command":
+		command, _ := payload["command"].(string)
+		utils.LogInfo("TCP voice command received: command=%s client=%s", command, client.ID)
+		cmdLower := strings.ToLower(strings.TrimSpace(command))
+		var act sysaction.Action
+		switch {
+		case strings.Contains(cmdLower, "play") || strings.Contains(cmdLower, "pause") || strings.Contains(cmdLower, "resume"):
+			act = sysaction.ActionPlayPause
+		case strings.Contains(cmdLower, "next"):
+			act = sysaction.ActionNextTrack
+		case strings.Contains(cmdLower, "previous") || strings.Contains(cmdLower, "prev"):
+			act = sysaction.ActionPrevTrack
+		case strings.Contains(cmdLower, "stop"):
+			act = sysaction.ActionStop
+		case strings.Contains(cmdLower, "volume up") || strings.Contains(cmdLower, "louder"):
+			act = sysaction.ActionVolumeUp
+		case strings.Contains(cmdLower, "volume down") || strings.Contains(cmdLower, "quieter"):
+			act = sysaction.ActionVolumeDown
+		case strings.Contains(cmdLower, "mute"):
+			act = sysaction.ActionMute
+		case strings.Contains(cmdLower, "lock"):
+			act = sysaction.ActionLockScreen
+		case strings.Contains(cmdLower, "desktop") || strings.Contains(cmdLower, "home"):
+			act = sysaction.ActionShowDesktop
+		case strings.Contains(cmdLower, "close"):
+			act = sysaction.ActionCloseWindow
+		case strings.Contains(cmdLower, "copy"):
+			act = sysaction.ActionCopy
+		case strings.Contains(cmdLower, "paste"):
+			act = sysaction.ActionPaste
+		case strings.Contains(cmdLower, "undo"):
+			act = sysaction.ActionUndo
+		case strings.Contains(cmdLower, "redo"):
+			act = sysaction.ActionRedo
+		}
+		if act != "" {
+			go sysaction.Execute(act)
+		}
 
 	default:
 		utils.LogDebug("Unknown TCP message type: type=%s client=%s", msgType, client.ID)
@@ -616,6 +650,15 @@ func firstNumber(payload map[string]any, keys ...string) float64 {
 	for _, key := range keys {
 		if v, ok := payload[key]; ok {
 			return number(v)
+		}
+	}
+	return 0
+}
+
+func firstInt(payload map[string]any, keys ...string) int {
+	for _, key := range keys {
+		if v, ok := payload[key]; ok {
+			return int(number(v))
 		}
 	}
 	return 0
