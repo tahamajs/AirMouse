@@ -124,6 +124,20 @@ func main() {
 	logger.Info("TCP server will listen on port %d", cfg.Port)
 	logger.Info("UDP discovery will listen on port %d", cfg.UDPPort)
 	logger.Info("Active protocols: %v", protocolServer.GetActiveProtocols())
+	// Auto-detect non-GUI environments (e.g. Linux display server absent or SSH connection)
+	if !headless && runtime.GOOS != "windows" {
+		if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+			if runtime.GOOS == "linux" || runtime.GOOS == "freebsd" || runtime.GOOS == "openbsd" {
+				logger.Info("No display server detected. Auto-falling back to headless mode.")
+				headless = true
+			}
+		}
+		if (os.Getenv("SSH_CLIENT") != "" || os.Getenv("SSH_TTY") != "") && os.Getenv("DISPLAY") == "" {
+			logger.Info("SSH session detected without X11 forwarding. Auto-falling back to headless mode.")
+			headless = true
+		}
+	}
+
 	if headless {
 		logger.Info("Running in headless mode...")
 		if err := protocolServer.Start(); err != nil {
