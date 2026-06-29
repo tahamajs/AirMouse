@@ -303,7 +303,7 @@ def analyze_trace(trace_file: str):
         FROM slice
         JOIN thread_track ON slice.track_id = thread_track.id
         JOIN thread USING(utid)
-        WHERE slice.name GLOB 'AirMouseApp.*' OR slice.name GLOB 'Madgwick*'
+        WHERE slice.name GLOB 'AirMouse#*' OR slice.name GLOB 'Madgwick*'
         ORDER BY thread_name, activity
     """
     df_q10 = query(tp, q10_query)
