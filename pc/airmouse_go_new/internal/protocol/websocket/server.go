@@ -75,6 +75,7 @@ type Server struct {
 	totalClients int64
 	startTime    time.Time
 	fileSessions map[string]*fileSession
+	latestAndroidScreenFrame []byte
 }
 
 type fileSession struct {
@@ -290,7 +291,9 @@ func (s *Server) readLoop(client *WSClient) {
 			if s.handleBinaryFileChunk(client, data) {
 				continue
 			}
-			utils.LogDebug("Unexpected binary frame from device: %s", client.ID)
+			s.mu.Lock()
+			s.latestAndroidScreenFrame = data
+			s.mu.Unlock()
 			continue
 		}
 
@@ -1112,14 +1115,21 @@ func (s *Server) handleScreenMirror(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-ticker.C:
-			if err := captureScreenshot(tmpFile); err != nil {
-				utils.LogDebug("Screen capture failed: %v", err)
-				continue
-			}
+			s.mu.RLock()
+			imgData := s.latestAndroidScreenFrame
+			s.mu.RUnlock()
 
-			imgData, err := os.ReadFile(tmpFile)
-			if err != nil {
-				continue
+			if len(imgData) == 0 {
+				if err := captureScreenshot(tmpFile); err != nil {
+					utils.LogDebug("Screen capture failed: %v", err)
+					continue
+				}
+
+				var err error
+				imgData, err = os.ReadFile(tmpFile)
+				if err != nil {
+					continue
+				}
 			}
 
 			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
