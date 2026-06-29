@@ -230,8 +230,25 @@ func (t *CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 		return t.shadowColor
 	case theme.ColorNameHyperlink:
 		return t.hyperlinkColor
+	case theme.ColorNameHeaderBackground:
+		return t.backgroundColor
+	case theme.ColorNameMenuBackground:
+		return t.secondaryColor
+	case theme.ColorNameSeparator:
+		if t.name == "light" {
+			return color.RGBA{0, 0, 0, 40}
+		}
+		return color.RGBA{255, 255, 255, 40}
+	case theme.ColorNameOverlayBackground:
+		return t.backgroundColor
+	case theme.ColorNameSelection:
+		return t.primaryColor
 	default:
-		return theme.DefaultTheme().Color(name, variant)
+		themeVariant := theme.VariantDark
+		if t.name == "light" {
+			themeVariant = theme.VariantLight
+		}
+		return theme.DefaultTheme().Color(name, themeVariant)
 	}
 }
 
