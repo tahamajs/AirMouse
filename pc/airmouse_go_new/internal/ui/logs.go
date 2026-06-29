@@ -37,6 +37,7 @@ type LogsTab struct {
 	paused     atomic.Bool
 	logMu      sync.RWMutex
 	logEntries []LogEntry
+	logChan    chan LogEntry
 	filter     string
 	level      string
 	dirty      bool
@@ -59,8 +60,22 @@ func NewLogsTab() fyne.CanvasObject {
 	tab := &LogsTab{
 		logEntries: make([]LogEntry, 0, 1000),
 		level:      "All",
+		logChan:    make(chan LogEntry, 1000),
 	}
 	tab.paused.Store(false)
+
+	// Async log consumer goroutine to decouple lock from logger callers
+	go func() {
+		for entry := range tab.logChan {
+			tab.logMu.Lock()
+			tab.logEntries = append(tab.logEntries, entry)
+			if len(tab.logEntries) > 1000 {
+				tab.logEntries = tab.logEntries[len(tab.logEntries)-1000:]
+			}
+			tab.dirty = true
+			tab.logMu.Unlock()
+		}
+	}()
 
 	// 🔥 FIX: Assign global BEFORE using the logger to avoid deadlock
 	globalLogsTab = tab
@@ -172,19 +187,17 @@ func (t *LogsTab) AddLogEntry(level, message, source string) {
 	if t.paused.Load() {
 		return
 	}
-	t.logMu.Lock()
 	entry := LogEntry{
 		Time:    time.Now(),
 		Level:   level,
 		Message: message,
 		Source:  source,
 	}
-	t.logEntries = append(t.logEntries, entry)
-	if len(t.logEntries) > 1000 {
-		t.logEntries = t.logEntries[len(t.logEntries)-1000:]
+	select {
+	case t.logChan <- entry:
+	default:
+		// Drop log if channel is full to prevent blocking key threads
 	}
-	t.dirty = true
-	t.logMu.Unlock()
 }
 
 // refreshDisplay updates the log view with current filters.

@@ -15,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"fyne.io/fyne/v2/driver/desktop"
 	"github.com/skip2/go-qrcode"
 
 	"airmouse-go/control/mouse"
@@ -148,6 +149,28 @@ func (a *App) Run() error {
 	a.window.SetContent(content)
 	fmt.Println("Content set")
 
+	// Register window hide shortcuts
+	a.window.Canvas().AddShortcut(&desktop.CustomShortcut{
+		KeyName:  fyne.KeyEscape,
+		Modifier: 0,
+	}, func(shortcut fyne.Shortcut) {
+		a.window.Hide()
+	})
+
+	a.window.Canvas().AddShortcut(&desktop.CustomShortcut{
+		KeyName:  fyne.KeyH,
+		Modifier: fyne.KeyModifierSuper,
+	}, func(shortcut fyne.Shortcut) {
+		a.window.Hide()
+	})
+
+	a.window.Canvas().AddShortcut(&desktop.CustomShortcut{
+		KeyName:  fyne.KeyH,
+		Modifier: fyne.KeyModifierControl,
+	}, func(shortcut fyne.Shortcut) {
+		a.window.Hide()
+	})
+
 	a.window.SetCloseIntercept(func() {
 		a.onWindowClose()
 	})
@@ -162,6 +185,13 @@ func (a *App) Run() error {
 			})
 		}()
 		_ = a.cfg.SetFirstLaunchComplete()
+	}
+
+	if a.cfg.AutoStartServer {
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			a.startServerAsync("autostart")
+		}()
 	}
 
 	fmt.Println("Entering ShowAndRun...")
