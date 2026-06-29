@@ -276,7 +276,15 @@ func (s *Server) readLoop(client *WSClient) {
 		s.mu.Lock()
 		client.LastActive = time.Now()
 		client.BytesRecv += int64(len(data))
+		devID := client.DeviceID
+		if devID == "" {
+			devID = client.ID
+		}
 		s.mu.Unlock()
+
+		if s.deviceMgr != nil {
+			_ = s.deviceMgr.UpdateDeviceActivity(devID, 0, int64(len(data)))
+		}
 
 		if messageType == gorilla.BinaryMessage {
 			if s.handleBinaryFileChunk(client, data) {
@@ -314,7 +322,15 @@ func (s *Server) writeLoop(client *WSClient) {
 			}
 			s.mu.Lock()
 			client.BytesSent += int64(len(msg))
+			devID := client.DeviceID
+			if devID == "" {
+				devID = client.ID
+			}
 			s.mu.Unlock()
+
+			if s.deviceMgr != nil {
+				_ = s.deviceMgr.UpdateDeviceActivity(devID, int64(len(msg)), 0)
+			}
 
 		case data, ok := <-client.BinarySend:
 			if !ok {
@@ -327,7 +343,15 @@ func (s *Server) writeLoop(client *WSClient) {
 			}
 			s.mu.Lock()
 			client.BytesSent += int64(len(data))
+			devID := client.DeviceID
+			if devID == "" {
+				devID = client.ID
+			}
 			s.mu.Unlock()
+
+			if s.deviceMgr != nil {
+				_ = s.deviceMgr.UpdateDeviceActivity(devID, int64(len(data)), 0)
+			}
 
 		case <-ticker.C:
 			_ = client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))

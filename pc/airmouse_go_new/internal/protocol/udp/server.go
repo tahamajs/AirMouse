@@ -77,28 +77,19 @@ func (s *Server) Start() error {
 func (s *Server) listenLoop() {
 	buf := make([]byte, 4096)
 	for {
-		s.mu.RLock()
-		running := s.running
-		s.mu.RUnlock()
-		if !running {
-			break
-		}
-		_ = s.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 		n, clientAddr, err := s.conn.ReadFromUDP(buf)
 		if err != nil {
-			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				continue
-			}
 			s.mu.RLock()
-			running = s.running
+			running := s.running
 			s.mu.RUnlock()
-			if running {
-				utils.LogDebug("UDP read error: %v", err)
+			if !running {
+				break
 			}
+			utils.LogDebug("UDP read error: %v", err)
 			continue
 		}
 		msg := strings.TrimSpace(string(buf[:n]))
-		s.handleMessage(msg, clientAddr)
+		go s.handleMessage(msg, clientAddr)
 	}
 }
 
@@ -116,8 +107,13 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 	client.mu.Lock()
 	client.LastSeen = time.Now()
 	client.BytesRecv += int64(len(msg))
+	devID := client.DeviceID
 	client.mu.Unlock()
 	s.mu.Unlock()
+
+	if devID != "" && s.deviceMgr != nil {
+		_ = s.deviceMgr.UpdateDeviceActivity(devID, 0, int64(len(msg)))
+	}
 
 	if msg == "AIRMOUSE_DISCOVER" || msg == "AIRMOUSE_DISCOVERY" {
 		s.sendDiscoveryResponse(clientAddr)
@@ -276,7 +272,6 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 func (s *Server) sendDiscoveryResponse(clientAddr *net.UDPAddr) {
 	cfg := config.Get()
 	response := fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s", cfg.UDPPort, cfg.ServerName, cfg.Version)
-	_ = s.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	_, err := s.conn.WriteToUDP([]byte(response), clientAddr)
 	if err != nil {
 		utils.LogDebug("Failed to send discovery response: %v", err)
@@ -349,18 +344,23 @@ func (s *Server) writeToClient(clientKey string, clientAddr *net.UDPAddr, data [
 	if len(data) == 0 {
 		return nil
 	}
-	_ = s.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	if _, err := s.conn.WriteToUDP(data, clientAddr); err != nil {
 		utils.LogDebug("Failed to send UDP message to %s: %v", clientAddr.String(), err)
 		return err
 	}
 	s.mu.Lock()
+	var devID string
 	if client, ok := s.clients[clientKey]; ok {
 		client.mu.Lock()
 		client.BytesSent += int64(len(data))
+		devID = client.DeviceID
 		client.mu.Unlock()
 	}
 	s.mu.Unlock()
+
+	if devID != "" && s.deviceMgr != nil {
+		_ = s.deviceMgr.UpdateDeviceActivity(devID, int64(len(data)), 0)
+	}
 	return nil
 }
 
@@ -502,7 +502,6 @@ func (s *Server) BroadcastMessage(msg interface{}) error {
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	_ = s.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	for _, client := range s.clients {
 		_, _ = s.conn.WriteToUDP(data, client.Address)
 	}
