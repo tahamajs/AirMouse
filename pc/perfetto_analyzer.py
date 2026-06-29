@@ -20,13 +20,13 @@ from perfetto.trace_processor import TraceProcessor
 # 1. Configuration – adjust slice names to match your app's tracepoints
 # ---------------------------------------------------------------------
 TRACEPOINTS = {
-    "sensor_read":      "AirMouseApp.Sensors.sensor_read",    # start of sensor callback
-    "filter":           "AirMouseApp.Filter.complementary",   # sensor fusion update
-    "compute_delta":    "AirMouseApp.Filter.compute_delta",   # delta calculation
-    "send_move":        "AirMouseApp.Communication.send",     # move packet
-    "send_click":       "AirMouseApp.Communication.send",     # click/scroll packet (same)
-    "click_detect":     "AirMouseApp.ClickDetect",            # optional custom click trace
-    "scroll_detect":    "AirMouseApp.ScrollDetect",           # optional scroll trace
+    "sensor_read":      "AirMouse#onSensorChanged_Gyro",      # start of sensor callback
+    "filter":           "AirMouse#onSensorChanged_Gyro",      # sensor fusion update
+    "compute_delta":    "AirMouse#onSensorChanged_Gyro",      # delta calculation
+    "send_move":        "AirMouse#onSensorChanged_Gyro",      # move packet
+    "send_click":       "AirMouse#detectGesture",             # click/scroll packet
+    "click_detect":     "AirMouse#detectGesture",             # custom click trace
+    "scroll_detect":    "AirMouse#detectGesture",             # scroll trace
 }
 
 # ---------------------------------------------------------------------
@@ -60,13 +60,16 @@ def print_table(title: str, df: pd.DataFrame, max_rows=20):
 def analyze_trace(trace_file: str):
     print(f"🔍 Loading trace: {trace_file}")
 
-    # Try direct loading; if it fails, instruct user to use HTTP server
+    # Use local prebuilt trace_processor binary to bypass download errors
+    from perfetto.trace_processor import TraceProcessorConfig
+    config = TraceProcessorConfig(
+        bin_path='/Users/tahamajs/.local/share/perfetto/prebuilts/trace_processor_shell'
+    )
+
     try:
-        tp = TraceProcessor(trace=trace_file)
-    except Exception:
-        print("❌ Direct file load failed. Try starting the trace processor HTTP server:")
-        print("   ./trace_processor_shell.exe --httpd")
-        print("   Then modify the script to use TraceProcessor(addr='http://127.0.0.1:9001')")
+        tp = TraceProcessor(trace=trace_file, config=config)
+    except Exception as e:
+        print(f"❌ Direct file load failed: {e}")
         sys.exit(1)
 
     # -----------------------------------------------------------------
