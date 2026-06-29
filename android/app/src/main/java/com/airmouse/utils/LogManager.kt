@@ -31,14 +31,16 @@ object LogManager {
         logFile = File(logDir, "airmouse_${dateFormat.format(Date())}.log")
     }
 
-    fun add(message: String, level: String = "INFO", tag: String = "AirMouse") {
+    fun add(message: String, level: String = "INFO", tag: String = "AirMouse", throwable: Throwable? = null) {
         if (!isEnabled) return
 
         val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date())
+        val finalMessage = if (throwable != null) "$message\n${Log.getStackTraceString(throwable)}" else message
+
         val entry = LogEntry(
             timestampMs = System.currentTimeMillis(),
             timestamp = timestamp,
-            message = message,
+            message = finalMessage,
             level = level.uppercase(),
             tag = tag
         )
@@ -51,10 +53,10 @@ object LogManager {
 
         
         when (level.uppercase()) {
-            "ERROR" -> Log.e(tag, message)
-            "WARN" -> Log.w(tag, message)
-            "DEBUG" -> Log.d(tag, message)
-            else -> Log.i(tag, message)
+            "ERROR" -> if (throwable != null) Log.e(tag, message, throwable) else Log.e(tag, message)
+            "WARN" -> if (throwable != null) Log.w(tag, message, throwable) else Log.w(tag, message)
+            "DEBUG" -> if (throwable != null) Log.d(tag, message, throwable) else Log.d(tag, message)
+            else -> if (throwable != null) Log.i(tag, message, throwable) else Log.i(tag, message)
         }
 
         
@@ -73,6 +75,11 @@ object LogManager {
     fun info(message: String, tag: String = "AirMouse") = add(message, "INFO", tag)
     fun warn(message: String, tag: String = "AirMouse") = add(message, "WARN", tag)
     fun error(message: String, tag: String = "AirMouse") = add(message, "ERROR", tag)
+
+    fun debug(message: String, throwable: Throwable?, tag: String = "AirMouse") = add(message, "DEBUG", tag, throwable)
+    fun info(message: String, throwable: Throwable?, tag: String = "AirMouse") = add(message, "INFO", tag, throwable)
+    fun warn(message: String, throwable: Throwable?, tag: String = "AirMouse") = add(message, "WARN", tag, throwable)
+    fun error(message: String, throwable: Throwable?, tag: String = "AirMouse") = add(message, "ERROR", tag, throwable)
 
     fun clear() {
         entries.clear()

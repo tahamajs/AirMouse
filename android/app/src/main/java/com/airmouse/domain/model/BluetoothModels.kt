@@ -1,4 +1,3 @@
-
 package com.airmouse.domain.model
 
 import android.os.Parcelable
@@ -36,9 +35,7 @@ data class BLECharacteristic(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-
         other as BLECharacteristic
-
         if (uuid != other.uuid) return false
         if (name != other.name) return false
         if (properties != other.properties) return false
@@ -49,10 +46,8 @@ data class BLECharacteristic(
         if (isNotifiable != other.isNotifiable) return false
         if (isReadable != other.isReadable) return false
         if (isWritable != other.isWritable) return false
-
         return true
     }
-
     override fun hashCode(): Int {
         var result = uuid.hashCode()
         result = 31 * result + name.hashCode()

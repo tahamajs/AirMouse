@@ -1,18 +1,22 @@
-
 package com.airmouse.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.airmouse.data.mapper.EntityToDomainMapper
+import com.airmouse.data.mapper.DomainToEntityMapper
 import com.airmouse.domain.model.CalibrationData
-import com.airmouse.domain.model.CalibrationQuality
 
+/**
+ * Room entity for storing sensor calibration parameters.
+ * All fields are primitive types, making it safe for Room persistence.
+ */
 @Entity(tableName = "calibration")
 data class CalibrationEntity(
     @PrimaryKey
     val id: String = "default",
 
-    
+    // Gyroscope bias (rad/s)
     @ColumnInfo(name = "gyro_bias_x")
     val gyroBiasX: Float = 0f,
 
@@ -31,7 +35,7 @@ data class CalibrationEntity(
     @ColumnInfo(name = "gyro_variance_z")
     val gyroVarianceZ: Float = 0f,
 
-    
+    // Accelerometer offset (m/s²) and scale factors
     @ColumnInfo(name = "accel_offset_x")
     val accelOffsetX: Float = 0f,
 
@@ -50,7 +54,7 @@ data class CalibrationEntity(
     @ColumnInfo(name = "accel_scale_z")
     val accelScaleZ: Float = 1f,
 
-    
+    // Magnetometer offset (µT) and scale factors
     @ColumnInfo(name = "mag_offset_x")
     val magOffsetX: Float = 0f,
 
@@ -69,12 +73,12 @@ data class CalibrationEntity(
     @ColumnInfo(name = "mag_scale_z")
     val magScaleZ: Float = 1f,
 
-    
+    // Calibration status
     @ColumnInfo(name = "is_calibrated")
     val isCalibrated: Boolean = false,
 
     @ColumnInfo(name = "calibration_quality")
-    val calibrationQuality: String = "UNKNOWN",
+    val calibrationQuality: String = "UNKNOWN",  // Use String to avoid enum conversion issues
 
     @ColumnInfo(name = "calibration_timestamp")
     val timestamp: Long = System.currentTimeMillis(),
@@ -88,61 +92,9 @@ data class CalibrationEntity(
     @ColumnInfo(name = "android_version")
     val androidVersion: String = ""
 ) {
-    fun toDomainModel(): CalibrationData {
-        return CalibrationData(
-            gyroBias = com.airmouse.domain.model.SensorCalibrationData(
-                offsetX = gyroBiasX,
-                offsetY = gyroBiasY,
-                offsetZ = gyroBiasZ
-            ),
-            accelOffset = com.airmouse.domain.model.SensorCalibrationData(
-                offsetX = accelOffsetX,
-                offsetY = accelOffsetY,
-                offsetZ = accelOffsetZ,
-                scaleX = accelScaleX,
-                scaleY = accelScaleY,
-                scaleZ = accelScaleZ
-            ),
-            magOffset = com.airmouse.domain.model.SensorCalibrationData(
-                offsetX = magOffsetX,
-                offsetY = magOffsetY,
-                offsetZ = magOffsetZ,
-                scaleX = magScaleX,
-                scaleY = magScaleY,
-                scaleZ = magScaleZ
-            ),
-            isCalibrated = isCalibrated,
-            quality = try {
-                CalibrationQuality.valueOf(calibrationQuality)
-            } catch (e: Exception) {
-                CalibrationQuality.UNKNOWN
-            },
-            timestamp = timestamp
-        )
-    }
+    fun toDomainModel(): CalibrationData = EntityToDomainMapper.mapToDomain(this)
 
     companion object {
-        fun fromDomainModel(data: CalibrationData): CalibrationEntity {
-            return CalibrationEntity(
-                gyroBiasX = data.gyroBias.offsetX,
-                gyroBiasY = data.gyroBias.offsetY,
-                gyroBiasZ = data.gyroBias.offsetZ,
-                accelOffsetX = data.accelOffset.offsetX,
-                accelOffsetY = data.accelOffset.offsetY,
-                accelOffsetZ = data.accelOffset.offsetZ,
-                accelScaleX = data.accelOffset.scaleX,
-                accelScaleY = data.accelOffset.scaleY,
-                accelScaleZ = data.accelOffset.scaleZ,
-                magOffsetX = data.magOffset.offsetX,
-                magOffsetY = data.magOffset.offsetY,
-                magOffsetZ = data.magOffset.offsetZ,
-                magScaleX = data.magOffset.scaleX,
-                magScaleY = data.magOffset.scaleY,
-                magScaleZ = data.magOffset.scaleZ,
-                isCalibrated = data.isCalibrated,
-                calibrationQuality = data.quality.name,
-                timestamp = data.timestamp,
-            )
-        }
+        fun fromDomainModel(data: CalibrationData): CalibrationEntity = DomainToEntityMapper.mapToEntity(data)
     }
 }

@@ -37,11 +37,13 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSkip"
-            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/onboarding_skip"
-            android:textColor="@color/white" />
+            android:textColor="@color/white"
+            app:backgroundTint="@android:color/transparent"
+            app:strokeColor="@android:color/transparent"
+            app:strokeWidth="0dp" />
 
         <View
             android:layout_width="0dp"
@@ -50,7 +52,6 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnNext"
-            style="@style/Widget.Material3.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/onboarding_next"
@@ -59,7 +60,6 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGetStarted"
-            style="@style/Widget.Material3.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/onboarding_get_started"

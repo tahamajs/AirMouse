@@ -22,15 +22,6 @@ data class GestureStatsEntity(
     @ColumnInfo(name = "detection_rate")
     val detectionRate: Float = 0f,
 
-    @androidx.room.Ignore
-    val gestureName: String = gesture_name,
-
-    @androidx.room.Ignore
-    val detectionCount: Int = count,
-
-    @androidx.room.Ignore
-    val confidencePercentage: Float = avgConfidence,
-
-    @androidx.room.Ignore
+    @ColumnInfo(name = "is_custom")  // ✅ ADD THIS
     val isCustom: Boolean = false
 )

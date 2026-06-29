@@ -23,12 +23,19 @@ class OrientationTracker {
     private var lastYaw = 0f
     private var lastPitch = 0f
     private var lastRoll = 0f
+    private var prevYaw = 0f
+    private var prevPitch = 0f
+    private var prevRoll = 0f
     private var lastTimestamp = 0L
 
     private val rotationMatrix = FloatArray(9)
     private val orientationValues = FloatArray(3)
 
     fun updateFromRotationVector(rotationVector: FloatArray, timestamp: Long): Orientation {
+        prevYaw = lastYaw
+        prevPitch = lastPitch
+        prevRoll = lastRoll
+
         SensorManager.getRotationMatrixFromVector(rotationMatrix, rotationVector)
         SensorManager.getOrientation(rotationMatrix, orientationValues)
 
@@ -49,6 +56,10 @@ class OrientationTracker {
         accelX: Float, accelY: Float, accelZ: Float,
         timestamp: Long
     ): Orientation {
+        prevYaw = lastYaw
+        prevPitch = lastPitch
+        prevRoll = lastRoll
+
         val dt = if (lastTimestamp > 0) (timestamp - lastTimestamp) / 1000f else 0.016f
 
         
@@ -76,10 +87,18 @@ class OrientationTracker {
     }
 
     fun getRotationDelta(): RotationDelta {
+        val deltaYaw = lastYaw - prevYaw
+        val deltaPitch = lastPitch - prevPitch
+        val deltaRoll = lastRoll - prevRoll
+
+        prevYaw = lastYaw
+        prevPitch = lastPitch
+        prevRoll = lastRoll
+
         return RotationDelta(
-            deltaYaw = lastYaw - lastYaw,
-            deltaPitch = lastPitch - lastPitch,
-            deltaRoll = lastRoll - lastRoll,
+            deltaYaw = deltaYaw,
+            deltaPitch = deltaPitch,
+            deltaRoll = deltaRoll,
             timestamp = System.currentTimeMillis()
         )
     }
@@ -108,6 +127,9 @@ class OrientationTracker {
         lastYaw = 0f
         lastPitch = 0f
         lastRoll = 0f
+        prevYaw = 0f
+        prevPitch = 0f
+        prevRoll = 0f
         lastTimestamp = 0L
     }
 }

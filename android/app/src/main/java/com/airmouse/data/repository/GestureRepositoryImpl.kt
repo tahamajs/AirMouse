@@ -1,29 +1,33 @@
-
 package com.airmouse.data.repository
 
-import android.content.Context
 import com.airmouse.data.datasource.local.IGestureDataSource
 import com.airmouse.domain.model.*
 import com.airmouse.domain.repository.IGestureRepository
 import com.airmouse.sensors.EnhancedGestureDetector
-import com.airmouse.utils.PreferencesManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlin.math.abs
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class GestureRepositoryImpl @Inject constructor(
-    private val context: Context,
-    private val prefs: PreferencesManager,
     private val gestureDetector: EnhancedGestureDetector,
     private val dataSource: IGestureDataSource
 ) : IGestureRepository {
 
-    
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // ============================================================
+    // State Flows
+    // ============================================================
 
     private val _customGestures = MutableStateFlow<List<CustomGestureTemplate>>(emptyList())
     override fun observeCustomGestures(): Flow<List<CustomGestureTemplate>> = _customGestures.asStateFlow()
@@ -36,69 +40,88 @@ class GestureRepositoryImpl @Inject constructor(
 
     private val _detectedGestures = MutableStateFlow<List<GestureEvent>>(emptyList())
 
-    
+    // ============================================================
+    // Init
+    // ============================================================
 
     init {
         loadData()
     }
 
     private fun loadData() {
-        loadCustomGestures()
-        loadGestureStats()
-        loadFavoriteGestures()
+        scope.launch {
+            loadCustomGestures()
+            loadGestureStats()
+            loadFavoriteGestures()
+        }
     }
 
-    private fun loadCustomGestures() {
-        
-        
+    private suspend fun loadCustomGestures() {
+        try {
+            val templates = dataSource.getAllTemplates()
+            _customGestures.value = templates
+        } catch (_: Exception) {
+            Timber.e("Failed to load custom gestures")
+        }
     }
 
-    private fun loadGestureStats() {
-        
-        
+    private suspend fun loadGestureStats() {
+        try {
+            val stats = dataSource.getGestureStats()
+            _gestureStats.value = stats
+        } catch (_: Exception) {
+            Timber.e("Failed to load gesture stats")
+        }
     }
 
-    private fun loadFavoriteGestures() {
-        
-        
+    private suspend fun loadFavoriteGestures() {
+        try {
+            val favorites = dataSource.getFavoriteTemplates()
+            _favoriteGestures.value = favorites
+        } catch (_: Exception) {
+            Timber.e("Failed to load favorite gestures")
+        }
     }
 
-    
+    // ============================================================
+    // Gesture Detection
+    // ============================================================
 
     override suspend fun detectGesture(sensorData: FloatArray): GestureEvent {
-        val gesture = gestureDetector.detect(
-            sensorData[0], sensorData[1], sensorData[2],
-            sensorData[3], sensorData[4], sensorData[5],
-            sensorData[6]
-        )
+        return try {
+            val gesture = gestureDetector.detect(
+                sensorData[0], sensorData[1], sensorData[2],
+                sensorData[3], sensorData[4], sensorData[5],
+                sensorData[6]
+            )
 
-        val gestureType = mapToGestureType(gesture)
-        val confidence = 0.9f 
+            val gestureType = mapToGestureType(gesture)
+            val confidence = 0.9f
 
-        val event = GestureEvent(
-            type = gestureType,
-            name = gestureType.name,
-            confidence = confidence,
-            timestamp = System.currentTimeMillis()
-        )
+            val event = GestureEvent(
+                type = gestureType,
+                name = gestureType.name,
+                confidence = confidence,
+                timestamp = System.currentTimeMillis()
+            )
 
-        if (gestureType != GestureType.NONE && confidence >= getConfidenceThreshold()) {
-            
-            updateGestureStats(gestureType.name, confidence)
+            if (gestureType != GestureType.NONE && confidence >= getConfidenceThreshold()) {
+                updateGestureStats(gestureType.name, confidence)
+                dataSource.incrementGestureCount(gestureType.name, confidence)
 
-            
-            dataSource.incrementGestureCount(gestureType.name, confidence)
-
-            
-            val current = _detectedGestures.value.toMutableList()
-            current.add(event)
-            if (current.size > 100) {
-                current.removeAt(0)
+                val current = _detectedGestures.value.toMutableList()
+                current.add(event)
+                if (current.size > 100) {
+                    current.removeAt(0)
+                }
+                _detectedGestures.value = current
             }
-            _detectedGestures.value = current
-        }
 
-        return event
+            event
+        } catch (_: Exception) {
+            Timber.e("Gesture detection failed")
+            GestureEvent(type = GestureType.NONE)
+        }
     }
 
     override suspend fun detectGestureFromMotion(dx: Float, dy: Float): GestureType {
@@ -116,38 +139,28 @@ class GestureRepositoryImpl @Inject constructor(
         }
     }
 
-    
+    // ============================================================
+    // Custom Gesture CRUD
+    // ============================================================
 
     override suspend fun addCustomGesture(gesture: CustomGestureTemplate): String {
         val id = java.util.UUID.randomUUID().toString()
         val newGesture = gesture.copy(id = id)
         dataSource.saveGestureTemplate(newGesture)
-
-        
-        val current = _customGestures.value.toMutableList()
-        current.add(newGesture)
-        _customGestures.value = current
-
+        _customGestures.update { it + newGesture }
         return id
     }
 
     override suspend fun updateCustomGesture(gesture: CustomGestureTemplate) {
         dataSource.updateGestureTemplate(gesture)
-
-        val current = _customGestures.value.toMutableList()
-        val index = current.indexOfFirst { it.id == gesture.id }
-        if (index >= 0) {
-            current[index] = gesture.copy(updatedAt = System.currentTimeMillis())
-            _customGestures.value = current
+        _customGestures.update { list ->
+            list.map { if (it.id == gesture.id) gesture.copy(updatedAt = System.currentTimeMillis()) else it }
         }
     }
 
     override suspend fun deleteCustomGesture(id: String) {
         dataSource.deleteGestureTemplate(id)
-
-        val current = _customGestures.value.toMutableList()
-        current.removeAll { it.id == id }
-        _customGestures.value = current
+        _customGestures.update { it.filter { it.id != id } }
     }
 
     override suspend fun getCustomGesture(id: String): CustomGestureTemplate? {
@@ -158,30 +171,53 @@ class GestureRepositoryImpl @Inject constructor(
         return _customGestures.value
     }
 
-    
+    // ============================================================
+    // Gesture Training
+    // ============================================================
 
     override suspend fun trainGesture(gestureName: String, samples: List<FloatArray>): Boolean {
-        
-        dataSource.saveTrainingSamples(gestureName, samples)
-
-        
-        updateGestureStats(gestureName, 0.85f)
-
-        return true
+        return try {
+            dataSource.saveTrainingSamples(gestureName, samples)
+            updateGestureStats(gestureName, 0.85f)
+            true
+        } catch (_: Exception) {
+            Timber.e("Gesture training failed")
+            false
+        }
     }
 
     override suspend fun trainAllGestures(): Boolean {
-        
-        return true
+        return try {
+            val templates = _customGestures.value
+            templates.forEach { template ->
+                val samples = dataSource.getTrainingSamples(template.name)
+                if (samples.isNotEmpty()) {
+                    dataSource.saveTrainingSamples(template.name, samples)
+                }
+            }
+            true
+        } catch (_: Exception) {
+            Timber.e("Training all gestures failed")
+            false
+        }
     }
 
-    
+    // ============================================================
+    // Gesture Stats
+    // ============================================================
 
     override suspend fun getGestureStats(): GestureTrainingStats {
-        return dataSource.getGestureStats()
+        return try {
+            dataSource.getGestureStats()
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to get gesture stats")
+            GestureTrainingStats()
+        }
     }
 
-    
+    // ============================================================
+    // Gesture Templates
+    // ============================================================
 
     override suspend fun loadGestureTemplates(): List<CustomGestureTemplate> {
         return _customGestures.value
@@ -199,7 +235,9 @@ class GestureRepositoryImpl @Inject constructor(
         deleteCustomGesture(id)
     }
 
-    
+    // ============================================================
+    // Settings
+    // ============================================================
 
     override suspend fun setConfidenceThreshold(threshold: Float) {
         dataSource.setConfidenceThreshold(threshold)
@@ -221,7 +259,9 @@ class GestureRepositoryImpl @Inject constructor(
         return _gestureStats.value.totalGestures > 0
     }
 
-    
+    // ============================================================
+    // Favorites
+    // ============================================================
 
     override suspend fun toggleFavorite(id: String) {
         dataSource.toggleFavorite(id)
@@ -232,7 +272,9 @@ class GestureRepositoryImpl @Inject constructor(
         return dataSource.getFavoriteTemplates()
     }
 
-    
+    // ============================================================
+    // Statistics
+    // ============================================================
 
     override suspend fun getMostUsedGestures(limit: Int): List<CustomGestureTemplate> {
         return dataSource.getMostUsedGestures(limit)
@@ -251,7 +293,9 @@ class GestureRepositoryImpl @Inject constructor(
         _gestureStats.value = GestureTrainingStats()
     }
 
-    
+    // ============================================================
+    // Private Helpers
+    // ============================================================
 
     private fun mapToGestureType(gesture: EnhancedGestureDetector.Gesture): GestureType {
         return when (gesture) {
@@ -273,24 +317,15 @@ class GestureRepositoryImpl @Inject constructor(
         val byType = current.gesturesByType.toMutableMap()
         val type = try {
             GestureType.valueOf(gestureName.uppercase())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             GestureType.CUSTOM
         }
         byType[type] = (byType[type] ?: 0) + 1
 
-        val customUsage = current.customGestureUsage.toMutableMap()
-        if (type == GestureType.CUSTOM) {
-            customUsage[gestureName] = (customUsage[gestureName] ?: 0) + 1
-        }
-
-        val mostUsed = byType.maxByOrNull { it.value }?.key?.name ?: gestureName
-
         _gestureStats.value = GestureTrainingStats(
             totalGestures = current.totalGestures + 1,
             gesturesByType = byType,
-            mostUsedGesture = mostUsed,
             lastGestureTime = System.currentTimeMillis(),
-            customGestureUsage = customUsage,
             averageConfidence = (current.averageConfidence * current.totalGestures + confidence) / (current.totalGestures + 1)
         )
     }

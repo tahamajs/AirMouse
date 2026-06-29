@@ -41,11 +41,9 @@ object GestureRepositoryProvidersModule {
     @Provides
     @Singleton
     fun provideGestureRepositoryImpl(
-        context: Context,
-        prefs: PreferencesManager,
         gestureDetector: EnhancedGestureDetector,
         dataSource: IGestureDataSource
     ): GestureRepositoryImpl {
-        return GestureRepositoryImpl(context, prefs, gestureDetector, dataSource)
+        return GestureRepositoryImpl(gestureDetector, dataSource)
     }
 }

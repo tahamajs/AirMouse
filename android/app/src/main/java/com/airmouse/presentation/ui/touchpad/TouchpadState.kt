@@ -1,13 +1,12 @@
 
 package com.airmouse.presentation.ui.touchpad
 
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.airmouse.domain.model.AppPreferences
 import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.MouseStatistics
 import com.airmouse.domain.model.MovementProfile
 import com.airmouse.domain.model.UserPreferences
-import com.airmouse.presentation.navigation.Destinations
+import com.airmouse.domain.model.TestResult
 
 
 
@@ -16,6 +15,7 @@ import com.airmouse.presentation.navigation.Destinations
 data class TouchpadUiState(
     
     val isActive: Boolean = false,
+    val isConnected: Boolean = false,
 
     
     val sensitivity: Float = 1.0f,
@@ -57,7 +57,10 @@ data class TouchpadUiState(
     val mouseProfile: MovementProfile = MovementProfile(),
     val appPreferences: AppPreferences = AppPreferences(),
     val userPreferences: UserPreferences = UserPreferences(),
-    val mouseStatistics: MouseStatistics = MouseStatistics()
+    val mouseStatistics: MouseStatistics = MouseStatistics(),
+    val connectionTestResult: TestResult? = null,
+    val isTestingConnection: Boolean = false,
+    val connectionTestMessage: String = ""
 )
 
 data class TouchPoint(

@@ -4,7 +4,6 @@ import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Build
-import kotlin.math.sqrt
 
 class SensorManagerHelper(private val context: Context) {
 

@@ -2,6 +2,7 @@ package com.airmouse.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.TypeConverters
 import com.airmouse.data.datasource.local.AppDatabase
 import com.airmouse.data.datasource.local.dao.CalibrationDao
 import com.airmouse.data.datasource.local.dao.GestureDao

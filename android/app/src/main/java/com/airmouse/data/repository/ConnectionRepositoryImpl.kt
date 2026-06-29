@@ -1,9 +1,9 @@
-
 package com.airmouse.data.repository
 
 import com.airmouse.domain.model.*
 import com.airmouse.domain.repository.IConnectionRepository
 import com.airmouse.network.ConnectionManager
+import com.airmouse.network.ConnectionQuality as NetworkConnectionQuality
 import com.airmouse.network.UdpDiscovery
 import com.airmouse.utils.ConnectedDeviceStore
 import com.airmouse.utils.PreferencesManager
@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,17 +23,7 @@ class ConnectionRepositoryImpl @Inject constructor(
     private val udpDiscovery: UdpDiscovery,
     private val prefs: PreferencesManager
 ) : IConnectionRepository {
-    override suspend fun sendKeyPress(keyCode: Int): Boolean {
-        return connectionManager.sendKeyPress(keyCode)
-    }
 
-    override suspend fun sendWindowCommand(action: String): Boolean {
-        return connectionManager.sendWindowCommand(action)
-    }
-
-    override suspend fun sendCalibrate(): Boolean {
-        return connectionManager.sendControl("calibrate")
-    }
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _status = MutableStateFlow(ConnectionStatus.DISCONNECTED)
@@ -49,11 +40,45 @@ class ConnectionRepositoryImpl @Inject constructor(
         observeConnectionManagerStatus()
     }
 
+    // ============================================================
+    // System Commands
+    // ============================================================
+
+    override suspend fun sendKeyPress(keyCode: Int): Boolean {
+        return try {
+            connectionManager.sendKeyPress(keyCode)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to send key press")
+            false
+        }
+    }
+
+    override suspend fun sendWindowCommand(action: String): Boolean {
+        return try {
+            connectionManager.sendWindowCommand(action)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to send window command")
+            false
+        }
+    }
+
+    override suspend fun sendCalibrate(): Boolean {
+        return try {
+            connectionManager.sendControl("calibrate")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to send calibrate command")
+            false
+        }
+    }
+
+    // ============================================================
+    // Configuration
+    // ============================================================
+
     private fun loadConfig() {
         val ip = prefs.getString("last_ip", "")
         val port = prefs.getInt("last_port", 8080)
         val protocol = prefs.getString("last_protocol", prefs.getString("connection_protocol", "WEBSOCKET"))
-            ?: "WEBSOCKET"
         val protocolEnum = try {
             ConnectionProtocol.valueOf(protocol.uppercase())
         } catch (e: IllegalArgumentException) {
@@ -81,17 +106,17 @@ class ConnectionRepositoryImpl @Inject constructor(
                     rssi = quality.rssi,
                     jitter = quality.jitter,
                     signalStrength = when (quality.signalStrength) {
-                        ConnectionManager.ConnectionQuality.SignalStrength.EXCELLENT ->
+                        NetworkConnectionQuality.SignalStrength.EXCELLENT ->
                             ConnectionQuality.SignalStrength.EXCELLENT
-                        ConnectionManager.ConnectionQuality.SignalStrength.GOOD ->
+                        NetworkConnectionQuality.SignalStrength.GOOD ->
                             ConnectionQuality.SignalStrength.GOOD
-                        ConnectionManager.ConnectionQuality.SignalStrength.FAIR ->
+                        NetworkConnectionQuality.SignalStrength.FAIR ->
                             ConnectionQuality.SignalStrength.FAIR
-                        ConnectionManager.ConnectionQuality.SignalStrength.POOR ->
+                        NetworkConnectionQuality.SignalStrength.POOR ->
                             ConnectionQuality.SignalStrength.POOR
-                        ConnectionManager.ConnectionQuality.SignalStrength.VERY_POOR ->
+                        NetworkConnectionQuality.SignalStrength.VERY_POOR ->
                             ConnectionQuality.SignalStrength.VERY_POOR
-                        ConnectionManager.ConnectionQuality.SignalStrength.UNKNOWN ->
+                        NetworkConnectionQuality.SignalStrength.UNKNOWN ->
                             ConnectionQuality.SignalStrength.UNKNOWN
                     }
                 )
@@ -99,40 +124,68 @@ class ConnectionRepositoryImpl @Inject constructor(
         }
     }
 
+    // ============================================================
+    // Connection Management
+    // ============================================================
+
     override suspend fun connect(config: ConnectionConfig): Boolean {
-        val normalized = config.normalized()
-        _config.value = normalized
-        saveConnectionConfig(normalized)
-        val protocol = normalized.protocol
-        connectionManager.setProtocol(
-            when (protocol) {
-                ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
-                ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
-                ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
-            }
-        )
-        val success = connectionManager.connect(normalized.ip, normalized.port)
-        if (success) {
-            ConnectedDeviceStore.rememberConnection(
-                prefs = prefs,
-                serverName = connectionManager.serverName.value.ifBlank { normalized.ip },
-                ip = normalized.ip,
-                port = normalized.port,
-                protocol = protocol.name,
-                version = connectionManager.serverVersion.value.ifBlank { "3.0.0" }
-            )
+        if (!prefs.getBoolean("calibration_complete", false)) {
+            throw com.airmouse.domain.model.CalibrationRequiredException()
         }
-        return success
+        return try {
+            val normalized = config.normalized()
+            _config.value = normalized
+            saveConnectionConfig(normalized)
+            val protocol = normalized.protocol
+            connectionManager.setProtocol(
+                when (protocol) {
+                    ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
+                    ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
+                    ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+                }
+            )
+            val success = connectionManager.connect(normalized.ip, normalized.port)
+            if (success) {
+                ConnectedDeviceStore.rememberConnection(
+                    prefs = prefs,
+                    serverName = connectionManager.serverName.value.ifBlank { normalized.ip },
+                    ip = normalized.ip,
+                    port = normalized.port,
+                    protocol = protocol.name,
+                    version = connectionManager.serverVersion.value.ifBlank { "3.0.0" }
+                )
+            }
+            success
+        } catch (e: Exception) {
+            Timber.e(e, "Connection failed")
+            false
+        }
     }
 
     override suspend fun disconnect() {
-        connectionManager.disconnect()
+        try {
+            connectionManager.disconnect()
+        } catch (e: Exception) {
+            Timber.e(e, "Disconnect failed")
+        }
     }
 
     override suspend fun reconnect(): Boolean {
-        connectionManager.reconnect()
-        return true
+        if (!prefs.getBoolean("calibration_complete", false)) {
+            throw com.airmouse.domain.model.CalibrationRequiredException()
+        }
+        return try {
+            connectionManager.reconnect()
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Reconnect failed")
+            false
+        }
     }
+
+    // ============================================================
+    // Status & Config
+    // ============================================================
 
     override suspend fun getConnectionStatus(): ConnectionStatus = _status.value
 
@@ -152,6 +205,10 @@ class ConnectionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getConnectionQuality(): ConnectionQuality = _quality.value
+
+    // ============================================================
+    // Discovery
+    // ============================================================
 
     override suspend fun discoverServers(): List<DiscoveredServer> {
         return _discoveredServers.value
@@ -174,24 +231,43 @@ class ConnectionRepositoryImpl @Inject constructor(
         udpDiscovery.stopDiscovery()
     }
 
+    // ============================================================
+    // Messaging
+    // ============================================================
+
     override suspend fun sendMessage(message: String): Boolean {
-        return connectionManager.send(message)
+        return try {
+            connectionManager.send(message)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to send message")
+            false
+        }
     }
 
     override suspend fun sendMessage(message: ByteArray): Boolean {
-        return connectionManager.sendBinary(message)
+        return try {
+            connectionManager.sendBinary(message)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to send binary message")
+            false
+        }
     }
+
+    // ============================================================
+    // Testing
+    // ============================================================
 
     override suspend fun testConnection(ip: String, port: Int): TestResult {
         return try {
             val startTime = System.currentTimeMillis()
-            connectionManager.setProtocol(_config.value.protocol.let {
-                when (it) {
+            val protocol = _config.value.protocol
+            connectionManager.setProtocol(
+                when (protocol) {
                     ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
                     ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
                     ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
                 }
-            })
+            )
             val success = connectionManager.connect(ip, port)
             val latency = System.currentTimeMillis() - startTime
             connectionManager.disconnect()
@@ -205,17 +281,26 @@ class ConnectionRepositoryImpl @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            Timber.e(e, "Connection test failed")
             TestResult(success = false, message = e.message ?: "Connection failed")
         }
     }
 
     override suspend fun ping(): Long {
-        val startTime = System.currentTimeMillis()
-        connectionManager.sendPing()
-        
-        delay(1000)
-        return System.currentTimeMillis() - startTime
+        return try {
+            val startTime = System.currentTimeMillis()
+            connectionManager.sendPing()
+            delay(1000)
+            System.currentTimeMillis() - startTime
+        } catch (e: Exception) {
+            Timber.e(e, "Ping failed")
+            -1L
+        }
     }
+
+    // ============================================================
+    // Listeners
+    // ============================================================
 
     override fun setOnMessageListener(listener: (String) -> Unit) {
         connectionManager.onMessage = listener

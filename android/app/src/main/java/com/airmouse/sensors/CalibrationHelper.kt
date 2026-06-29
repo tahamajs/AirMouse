@@ -1,12 +1,12 @@
 package com.airmouse.sensors
-import android.util.Log   // <-- add this
+
+import android.util.Log
 
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import kotlinx.coroutines.suspendCancellableCoroutine
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.core.content.ContextCompat
@@ -88,7 +88,6 @@ class CalibrationHelper(
     private val accelSamples = mutableListOf<Triple<Float, Float, Float>>()
     
     private var sensorManager: SensorManager? = null
-    private var calibrationJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val mainScope = CoroutineScope(Dispatchers.Main)
 
@@ -705,7 +704,6 @@ class CalibrationHelper(
     }
 
     fun destroy() {
-        calibrationJob?.cancel()
         scope.cancel()
         mainScope.cancel()
     }

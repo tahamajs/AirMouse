@@ -13,13 +13,13 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object UseCaseModule {
 
-    // --- Existing ---
     @Provides
     @Singleton
     fun provideConnectToServerUseCase(
-        connectionRepo: IConnectionRepository
+        connectionRepo: IConnectionRepository,
+        calibrationRepo: ICalibrationRepository
     ): ConnectToServerUseCase {
-        return ConnectToServerUseCase(connectionRepo)
+        return ConnectToServerUseCase(connectionRepo, calibrationRepo)
     }
 
     @Provides

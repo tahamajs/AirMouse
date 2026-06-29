@@ -1,26 +1,16 @@
-
 package com.airmouse.domain.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import kotlin.math.abs
+import kotlin.math.sqrt
 
-@Parcelize
-data class SensorData(
-    val gyroX: Float = 0f,
-    val gyroY: Float = 0f,
-    val gyroZ: Float = 0f,
-    val accelX: Float = 0f,
-    val accelY: Float = 0f,
-    val accelZ: Float = 0f,
-    val magX: Float = 0f,
-    val magY: Float = 0f,
-    val magZ: Float = 0f,
-    val roll: Float = 0f,
-    val pitch: Float = 0f,
-    val yaw: Float = 0f,
-    val timestamp: Long = System.currentTimeMillis()
-) : Parcelable
-
+/**
+ * Raw sensor data from device sensors.
+ */
+/**
+ * Orientation data in both radians and degrees.
+ */
 @Parcelize
 data class OrientationData(
     val roll: Float,
@@ -30,6 +20,7 @@ data class OrientationData(
     val pitchDeg: Float = 0f,
     val yawDeg: Float = 0f
 ) : Parcelable {
+
     constructor(roll: Float, pitch: Float, yaw: Float) : this(
         roll = roll,
         pitch = pitch,
@@ -38,8 +29,62 @@ data class OrientationData(
         pitchDeg = Math.toDegrees(pitch.toDouble()).toFloat(),
         yawDeg = Math.toDegrees(yaw.toDouble()).toFloat()
     )
+
+    /**
+     * Check if the device is flat (pitch and roll near zero).
+     */
+    fun isFlat(thresholdDeg: Float = 10f): Boolean {
+        return abs(pitchDeg) < thresholdDeg && abs(rollDeg) < thresholdDeg
+    }
+
+    /**
+     * Check if the device is upright (pitch near 90 degrees).
+     */
+    fun isUpright(thresholdDeg: Float = 15f): Boolean {
+        return abs(pitchDeg - 90f) < thresholdDeg
+    }
+
+    /**
+     * Get the orientation as a FloatArray.
+     */
+    fun toFloatArray(): FloatArray {
+        return floatArrayOf(roll, pitch, yaw)
+    }
+
+    /**
+     * Get the orientation in degrees as a FloatArray.
+     */
+    fun toDegreesArray(): FloatArray {
+        return floatArrayOf(rollDeg, pitchDeg, yawDeg)
+    }
+
+    companion object {
+        /**
+         * Zero orientation.
+         */
+        fun zero(): OrientationData {
+            return OrientationData(0f, 0f, 0f)
+        }
+
+        /**
+         * Create orientation from degrees.
+         */
+        fun fromDegrees(rollDeg: Float, pitchDeg: Float, yawDeg: Float): OrientationData {
+            return OrientationData(
+                roll = Math.toRadians(rollDeg.toDouble()).toFloat(),
+                pitch = Math.toRadians(pitchDeg.toDouble()).toFloat(),
+                yaw = Math.toRadians(yawDeg.toDouble()).toFloat(),
+                rollDeg = rollDeg,
+                pitchDeg = pitchDeg,
+                yawDeg = yawDeg
+            )
+        }
+    }
 }
 
+/**
+ * Calibration status for sensors.
+ */
 enum class SensorCalibrationStatus {
     NOT_CALIBRATED,
     CALIBRATING,
@@ -47,6 +92,9 @@ enum class SensorCalibrationStatus {
     NEEDS_RECALIBRATION
 }
 
+/**
+ * Information about a sensor.
+ */
 data class SensorInfo(
     val name: String,
     val vendor: String,
@@ -55,8 +103,25 @@ data class SensorInfo(
     val resolution: Float,
     val power: Float,
     val isAvailable: Boolean
-)
+) {
+    /**
+     * Get a formatted string for display.
+     */
+    fun getFormattedInfo(): String {
+        return buildString {
+            appendLine("Sensor: $name")
+            appendLine("Vendor: $vendor")
+            appendLine("Version: $version")
+            appendLine("Max Range: $maxRange")
+            appendLine("Resolution: $resolution")
+            appendLine("Power: ${power}mA")
+        }
+    }
+}
 
+/**
+ * Raw sensor event data.
+ */
 data class SensorEventData(
     val type: String,
     val values: FloatArray,
@@ -83,5 +148,33 @@ data class SensorEventData(
         result = 31 * result + accuracy
         result = 31 * result + timestamp.hashCode()
         return result
+    }
+
+    /**
+     * Get the values as a List<Float>.
+     */
+    fun toList(): List<Float> {
+        return values.toList()
+    }
+
+    /**
+     * Get a specific value or default if index out of bounds.
+     */
+    fun getValue(index: Int, default: Float = 0f): Float {
+        return values.getOrElse(index) { default }
+    }
+
+    companion object {
+        /**
+         * Create an empty SensorEventData.
+         */
+        fun empty(): SensorEventData {
+            return SensorEventData(
+                type = "none",
+                values = floatArrayOf(),
+                accuracy = 0,
+                timestamp = System.currentTimeMillis()
+            )
+        }
     }
 }

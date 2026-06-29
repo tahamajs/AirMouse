@@ -30,7 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
 import com.airmouse.presentation.navigation.NavigationActionsImpl
-import com.airmouse.ui.components.NotificationBadge
+import com.airmouse.presentation.ui.components.NotificationBadge
 
 // ============================================================
 // MAIN SCREEN
@@ -69,35 +69,39 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text(
-                            "Access tuning, theme, and connection controls",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    if (uiState.isSaving) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                    } else {
-                        IconButton(onClick = { viewModel.handleEvent(SettingsEvent.SaveSettings) }) {
-                            Icon(Icons.Default.Save, contentDescription = "Save")
+            if (selectedSection == null) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Access tuning, theme, and connection controls",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        if (uiState.isSaving) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            IconButton(onClick = { viewModel.handleEvent(SettingsEvent.SaveSettings) }) {
+                                Icon(Icons.Default.Save, contentDescription = "Save")
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
-            )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
@@ -425,7 +429,11 @@ fun SectionDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { paddingValues ->
@@ -461,6 +469,9 @@ fun SectionDetailScreen(
                 SettingsSection.CONNECTION -> item { ConnectionSettings(uiState, viewModel) }
                 SettingsSection.PRIVACY -> item { PrivacySettings(uiState, viewModel) }
                 SettingsSection.PRESENTATION -> item { PresentationSettings(uiState, viewModel) }
+                SettingsSection.GAMING_MODE -> item { GamingModeSettings(uiState, viewModel) }
+                SettingsSection.FILE_TRANSFER -> item { FileTransferSettings(uiState, viewModel) }
+                SettingsSection.SCREEN_MIRRORING -> item { ScreenMirroringSettings(uiState, viewModel) }
                 SettingsSection.ABOUT -> item { AboutSection(viewModel) }
             }
             item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -898,13 +909,9 @@ fun DisplaySettings(
             checked = uiState.useDynamicColors,
             onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleDynamicColors) }
         )
-        SettingsSlider(
-            title = "Font Size",
-            value = uiState.fontSize,
-            onValueChange = { viewModel.handleEvent(SettingsEvent.UpdateFontSize(it)) },
-            valueRange = 12f..24f, steps = 6,
-            formatValue = { "${it.toInt()}sp" },
-            description = "Base font size for the app"
+        SettingsFontSizeCard(
+            currentSize = uiState.fontSize,
+            onSelected = { viewModel.handleEvent(SettingsEvent.UpdateFontSize(it)) }
         )
         SettingsSwitch(
             title = "Show Debug Info",
@@ -939,6 +946,42 @@ fun ThemesShortcutCard(navigationActions: NavigationActions? = null) {
             Text("Browse theme presets, previews, and accent colors in one place.", style = MaterialTheme.typography.bodySmall)
             if (navigationActions != null) {
                 Button(onClick = { navigationActions.navigateToThemes() }) { Text("Open Themes") }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsFontSizeCard(
+    currentSize: Float,
+    onSelected: (Float) -> Unit
+) {
+    val selectedPreset = FontSizePreset.entries.minBy { kotlin.math.abs(it.valueSp - currentSize) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Font Size", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Pick one of four app-wide text sizes.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                FontSizePreset.entries.forEach { preset ->
+                    FilterChip(
+                        selected = preset == selectedPreset,
+                        onClick = { onSelected(preset.valueSp) },
+                        label = { Text(preset.label) },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    )
+                }
             }
         }
     }
@@ -1323,7 +1366,7 @@ fun AboutSection(viewModel: SettingsViewModel) {
             Text("🎯", fontSize = 48.sp)
             Spacer(modifier = Modifier.height(16.dp))
             Text("Air Mouse Pro", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Version 3.0.0", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Version 4.9.9", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(8.dp))
             Text("Turn your phone into a wireless mouse", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(16.dp))
@@ -1348,5 +1391,82 @@ fun AboutSection(viewModel: SettingsViewModel) {
                 Text("Open Source Licenses")
             }
         }
+    }
+}
+// ============================================================
+// GAMING MODE SETTINGS
+// ============================================================
+
+@Composable
+fun GamingModeSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSwitch(
+            title = "Gaming Mode",
+            description = "Boost sensor polling rate to prioritize ultra-low latency.",
+            checked = false,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Gaming mode feature coming soon.")) }
+        )
+        SettingsSwitch(
+            title = "Hardware Acceleration",
+            description = "Force hardware rendering for the connection stack to minimize CPU overhead.",
+            checked = false,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Hardware acceleration feature coming soon.")) }
+        )
+        SettingsSlider(
+            title = "Polling Rate (Hz)",
+            value = 120f,
+            onValueChange = {},
+            valueRange = 60f..240f,
+            steps = 2,
+            formatValue = { "${it.toInt()} Hz" },
+            description = "Higher polling rate uses more battery but decreases input lag."
+        )
+    }
+}
+
+// ============================================================
+// FILE TRANSFER SETTINGS
+// ============================================================
+
+@Composable
+fun FileTransferSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSwitch(
+            title = "Allow File Transfer",
+            description = "Allow the desktop app to transfer files to your phone's storage.",
+            checked = true,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Toggle coming soon.")) }
+        )
+        SettingsSwitch(
+            title = "Auto-Accept Files",
+            description = "Automatically accept small files without a confirmation prompt.",
+            checked = false,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Toggle coming soon.")) }
+        )
+    }
+}
+
+// ============================================================
+// SCREEN MIRRORING SETTINGS
+// ============================================================
+
+@Composable
+fun ScreenMirroringSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSwitch(
+            title = "Enable Mirroring",
+            description = "Stream your phone's screen to the desktop client.",
+            checked = false,
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Screen mirroring feature coming soon.")) }
+        )
+        SettingsSlider(
+            title = "Mirror Quality",
+            value = 0.5f,
+            onValueChange = {},
+            valueRange = 0f..1f,
+            steps = 2,
+            formatValue = { if (it < 0.3f) "Low" else if (it < 0.7f) "Medium" else "High" },
+            description = "Higher quality requires more bandwidth."
+        )
     }
 }

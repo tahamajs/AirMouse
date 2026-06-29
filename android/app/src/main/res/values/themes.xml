@@ -12,7 +12,7 @@
     <!-- ==================== BASE THEMES ==================== -->
 
     <!-- Base App Theme (AppCompat) -->
-    <style name="Theme.AirMouse" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.AirMouse" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@color/background_dark</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/background_dark</item>
@@ -30,7 +30,7 @@
     </style>
 
     <!-- Light Theme -->
-    <style name="Theme.AirMouse.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="Theme.AirMouse.Light" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_700</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@color/background_primary</item>
@@ -46,7 +46,7 @@
     </style>
 
     <!-- Dark Theme -->
-    <style name="Theme.AirMouse.Dark" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.AirMouse.Dark" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@color/deep_orange_800</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/background_primary</item>
@@ -70,7 +70,7 @@
     </style>
 
     <!-- High Contrast Theme -->
-    <style name="Theme.AirMouse.HighContrast" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="Theme.AirMouse.HighContrast" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/deep_orange_800</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/amber_700</item>
@@ -85,7 +85,7 @@
     <!-- ==================== DIALOG & OVERLAY THEMES ==================== -->
 
     <!-- Dialog Theme -->
-    <style name="Theme.AirMouse.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
+    <style name="Theme.AirMouse.Dialog" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:windowMinWidthMajor">90%</item>
         <item name="android:windowMinWidthMinor">90%</item>
         <item name="android:windowBackground">@android:color/transparent</item>

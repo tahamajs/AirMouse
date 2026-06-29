@@ -1,9 +1,9 @@
 package com.airmouse.presentation.ui.statistics
 
 import com.airmouse.domain.model.AppPreferences
+import com.airmouse.domain.model.DailyStats
 import com.airmouse.domain.model.MouseStatistics
 import com.airmouse.domain.model.StatisticsSummary
-import java.util.Date
 
 /**
  * UI state for the Statistics screen.
@@ -92,6 +92,15 @@ enum class TimeRange {
     ALL_TIME
 }
 
+val TimeRange.displayName: String
+    get() = when (this) {
+        TimeRange.TODAY -> "Today"
+        TimeRange.WEEK -> "Week"
+        TimeRange.MONTH -> "Month"
+        TimeRange.YEAR -> "Year"
+        TimeRange.ALL_TIME -> "All Time"
+    }
+
 /**
  * Chart types for statistics display.
  */
@@ -111,20 +120,6 @@ enum class ExportFormat {
     CSV,
     PDF
 }
-
-/**
- * Daily statistics data point.
- */
-data class DailyStats(
-    val date: Date,
-    val clicks: Int = 0,
-    val doubleClicks: Int = 0,
-    val rightClicks: Int = 0,
-    val scrolls: Int = 0,
-    val gestures: Int = 0,
-    val movements: Int = 0,
-    val distance: Float = 0f
-)
 
 /**
  * Statistics summary for export.

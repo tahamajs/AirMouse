@@ -12,9 +12,9 @@ sealed class NetworkMessage {
         val button: String = "left"
     ) : NetworkMessage()
 
-    object DoubleClick : NetworkMessage()
-
-    object RightClick : NetworkMessage()
+    data object DoubleClick : NetworkMessage()
+    
+    data object RightClick : NetworkMessage()
 
     data class Scroll(
         val delta: Int
@@ -55,8 +55,8 @@ sealed class NetworkMessage {
         val value: Int? = null
     ) : NetworkMessage()
 
-    object Ping : NetworkMessage()
-    object Pong : NetworkMessage()
+    data object Ping : NetworkMessage()
+    data object Pong : NetworkMessage()
 
     companion object {
         fun fromJson(json: String): NetworkMessage? {

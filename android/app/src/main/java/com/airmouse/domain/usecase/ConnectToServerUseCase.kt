@@ -1,18 +1,25 @@
 
 package com.airmouse.domain.usecase
 
+import com.airmouse.domain.model.CalibrationRequiredException
+import com.airmouse.domain.model.CalibrationStatus
 import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.ConnectionProtocol
 import com.airmouse.domain.model.ConnectionStatus
+import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.repository.IConnectionRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class ConnectToServerUseCase @Inject constructor(
-    private val connectionRepository: IConnectionRepository
+    private val connectionRepository: IConnectionRepository,
+    private val calibrationRepository: ICalibrationRepository
 ) {
 
     suspend operator fun invoke(config: ConnectionConfig): Result<Boolean> {
+        if (calibrationRepository.getCalibrationStatus() != CalibrationStatus.COMPLETED) {
+            return Result.failure(CalibrationRequiredException())
+        }
         return try {
             val result = connectionRepository.connect(config)
             Result.success(result)
@@ -35,6 +42,9 @@ class ConnectToServerUseCase @Inject constructor(
     }
 
     suspend fun connectToLastServer(): Result<Boolean> {
+        if (calibrationRepository.getCalibrationStatus() != CalibrationStatus.COMPLETED) {
+            return Result.failure(CalibrationRequiredException())
+        }
         return try {
             val config = connectionRepository.getConnectionConfig()
             val result = connectionRepository.connect(config)
@@ -57,6 +67,9 @@ class ConnectToServerUseCase @Inject constructor(
     }
 
     suspend fun reconnect(): Result<Boolean> {
+        if (calibrationRepository.getCalibrationStatus() != CalibrationStatus.COMPLETED) {
+            return Result.failure(CalibrationRequiredException())
+        }
         return try {
             val result = connectionRepository.reconnect()
             Result.success(result)

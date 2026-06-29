@@ -79,11 +79,14 @@ object SensorFusion {
                 val ez = (axNorm * vy - ayNorm * vx)
 
                 
-                val step = beta * dt
-                qDot1 -= 2.0f * ex * step
-                qDot2 -= 2.0f * ey * step
-                qDot3 -= 2.0f * ez * step
-                
+                val wx = -2.0f * ex * beta
+                val wy = -2.0f * ey * beta
+                val wz = -2.0f * ez * beta
+
+                qDot1 += 0.5f * (-q1 * wx - q2 * wy - q3 * wz)
+                qDot2 += 0.5f * ( q0 * wx + q2 * wz - q3 * wy)
+                qDot3 += 0.5f * ( q0 * wy - q1 * wz + q3 * wx)
+                qDot4 += 0.5f * ( q0 * wz + q1 * wy - q2 * wx)
             }
         }
 
@@ -122,10 +125,14 @@ object SensorFusion {
                 val ez = (mxNorm * wy - myNorm * wx)
 
                 
-                val step = beta * dt
-                qDot1 -= ex * step
-                qDot2 -= ey * step
-                qDot3 -= ez * step
+                val cx = -ex * beta
+                val cy = -ey * beta
+                val cz = -ez * beta
+
+                qDot1 += 0.5f * (-q1 * cx - q2 * cy - q3 * cz)
+                qDot2 += 0.5f * ( q0 * cx + q2 * cz - q3 * cy)
+                qDot3 += 0.5f * ( q0 * cy - q1 * cz + q3 * cx)
+                qDot4 += 0.5f * ( q0 * cz + q1 * cy - q2 * cx)
             }
         }
 

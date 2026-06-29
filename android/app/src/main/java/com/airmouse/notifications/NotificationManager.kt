@@ -30,6 +30,8 @@ class NotificationManager @Inject constructor(
         const val CHANNEL_GESTURE = "gesture_channel"
         const val CHANNEL_PROXIMITY = "proximity_channel"
         const val CHANNEL_CALIBRATION = "calibration_channel"
+        const val CHANNEL_VOICE = "voice_channel"
+        const val CHANNEL_UPDATE = "update_channel"
 
         // Notification IDs
         const val NOTIFICATION_CONNECTED = 1001
@@ -106,6 +108,18 @@ class NotificationManager @Inject constructor(
                 name = "Calibration",
                 importance = NotificationManager.IMPORTANCE_DEFAULT,
                 description = "Calibration progress and status"
+            ),
+            createChannel(
+                id = CHANNEL_VOICE,
+                name = "Voice Commands",
+                importance = NotificationManager.IMPORTANCE_LOW,
+                description = "Shows voice command status"
+            ),
+            createChannel(
+                id = CHANNEL_UPDATE,
+                name = "App Updates",
+                importance = NotificationManager.IMPORTANCE_DEFAULT,
+                description = "Shows app update notifications"
             )
         )
 
@@ -240,7 +254,7 @@ class NotificationManager @Inject constructor(
         val message = reason ?: "Waiting for approval."
         val notification = createBaseNotification(
             channelId = CHANNEL_CONNECTION,
-            title = "Waiting for approval",
+            title = "Disconnected",
             message = message,
             icon = R.drawable.ic_disconnected,
             priority = PRIORITY_DEFAULT
@@ -268,7 +282,7 @@ class NotificationManager @Inject constructor(
 
         val notification = createBaseNotification(
             channelId = CHANNEL_CONNECTION,
-            title = "Waiting for approval",
+            title = "Connection Pending",
             message = message,
             icon = R.drawable.ic_reconnecting,
             priority = PRIORITY_LOW
@@ -306,7 +320,7 @@ class NotificationManager @Inject constructor(
         if (!canPostNotifications) return
         val notification = createBaseNotification(
             channelId = CHANNEL_ERROR,
-            title = "Waiting for approval",
+            title = "Connection Error",
             message = error,
             icon = R.drawable.ic_error,
             priority = PRIORITY_HIGH

@@ -39,4 +39,7 @@ interface DailyStatsDao {
 
     @Query("UPDATE daily_stats SET active_time = active_time + :duration WHERE date = :date")
     suspend fun incrementActiveTime(date: String, duration: Long)
+
+    @Query("DELETE FROM daily_stats")
+    suspend fun deleteAll()
 }

@@ -45,7 +45,7 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
     private var activeSensors = mutableSetOf<Int>()
     private var logStartTime = 0L
 
-    private var enabledSensors = SensorType.entries.toSet()
+    var enabledSensors = SensorType.entries.toSet()
 
     var onProgressUpdate: ((sampleCount: Int, fileSize: Long) -> Unit)? = null
     var onLogComplete: ((File) -> Unit)? = null
@@ -313,16 +313,14 @@ class SensorDataLogger(private val context: Context) : SensorEventListener {
     }
 
     private fun addEmptyPlaceholders(values: MutableList<String>, currentSensorType: Int) {
-        when {
-            activeSensors.contains(Sensor.TYPE_ACCELEROMETER) && currentSensorType != Sensor.TYPE_ACCELEROMETER -> {
-                values.add(""); values.add(""); values.add("")
-            }
-            activeSensors.contains(Sensor.TYPE_GYROSCOPE) && currentSensorType != Sensor.TYPE_GYROSCOPE -> {
-                values.add(""); values.add(""); values.add("")
-            }
-            activeSensors.contains(Sensor.TYPE_MAGNETIC_FIELD) && currentSensorType != Sensor.TYPE_MAGNETIC_FIELD -> {
-                values.add(""); values.add(""); values.add("")
-            }
+        if (activeSensors.contains(Sensor.TYPE_ACCELEROMETER) && currentSensorType != Sensor.TYPE_ACCELEROMETER) {
+            values.add(""); values.add(""); values.add("")
+        }
+        if (activeSensors.contains(Sensor.TYPE_GYROSCOPE) && currentSensorType != Sensor.TYPE_GYROSCOPE) {
+            values.add(""); values.add(""); values.add("")
+        }
+        if (activeSensors.contains(Sensor.TYPE_MAGNETIC_FIELD) && currentSensorType != Sensor.TYPE_MAGNETIC_FIELD) {
+            values.add(""); values.add(""); values.add("")
         }
     }
 
@@ -433,6 +431,8 @@ class SensorDataLoggerBuilder(private val context: Context) {
     }
 
     fun build(): SensorDataLogger {
-        return SensorDataLogger(context)
+        return SensorDataLogger(context).apply {
+            enabledSensors = this@SensorDataLoggerBuilder.sensors
+        }
     }
 }

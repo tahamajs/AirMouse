@@ -6,7 +6,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import androidx.compose.animation.*
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
@@ -26,19 +25,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.airmouse.ui.components.LineChart
+import com.airmouse.presentation.ui.components.LineChart
 import com.airmouse.presentation.navigation.NavigationActions
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.math.*
 import kotlin.math.sqrt
@@ -812,6 +808,30 @@ private fun SensorChartBlock(
 
 @Composable
 fun RawDataCard(uiState: SensorVisualizerUiState) {
+    var fRoll by remember { mutableFloatStateOf(0f) }
+    var fPitch by remember { mutableFloatStateOf(0f) }
+    var fYaw by remember { mutableFloatStateOf(0f) }
+    var fGyroX by remember { mutableFloatStateOf(0f) }
+    var fGyroY by remember { mutableFloatStateOf(0f) }
+    var fGyroZ by remember { mutableFloatStateOf(0f) }
+    var fAccelX by remember { mutableFloatStateOf(0f) }
+    var fAccelY by remember { mutableFloatStateOf(0f) }
+    var fAccelZ by remember { mutableFloatStateOf(0f) }
+
+    val alpha = 0.15f // EMA factor
+
+    LaunchedEffect(uiState.roll, uiState.pitch, uiState.yaw, uiState.gyroX, uiState.gyroY, uiState.accelX) {
+        fRoll = fRoll * (1 - alpha) + uiState.roll * alpha
+        fPitch = fPitch * (1 - alpha) + uiState.pitch * alpha
+        fYaw = fYaw * (1 - alpha) + uiState.yaw * alpha
+        fGyroX = fGyroX * (1 - alpha) + uiState.gyroX * alpha
+        fGyroY = fGyroY * (1 - alpha) + uiState.gyroY * alpha
+        fGyroZ = fGyroZ * (1 - alpha) + uiState.gyroZ * alpha
+        fAccelX = fAccelX * (1 - alpha) + uiState.accelX * alpha
+        fAccelY = fAccelY * (1 - alpha) + uiState.accelY * alpha
+        fAccelZ = fAccelZ * (1 - alpha) + uiState.accelZ * alpha
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -821,31 +841,58 @@ fun RawDataCard(uiState: SensorVisualizerUiState) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "📟 Raw Sensor Data",
+                text = "📟 Raw & Filtered Sensor Data",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(12.dp))
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = buildString {
-                        appendLine("Roll: ${String.format(Locale.US, "%.4f", uiState.roll)} rad")
-                        appendLine("Pitch: ${String.format(Locale.US, "%.4f", uiState.pitch)} rad")
-                        appendLine("Yaw: ${String.format(Locale.US, "%.4f", uiState.yaw)} rad")
-                        appendLine("Gyro: (${String.format(Locale.US, "%.2f", uiState.gyroX)}, ${String.format(Locale.US, "%.2f", uiState.gyroY)}, ${String.format(Locale.US, "%.2f", uiState.gyroZ)}) rad/s")
-                        appendLine("Accel: (${String.format(Locale.US, "%.2f", uiState.accelX)}, ${String.format(Locale.US, "%.2f", uiState.accelY)}, ${String.format(Locale.US, "%.2f", uiState.accelZ)}) m/s²")
-                        appendLine("Mag: (${String.format(Locale.US, "%.1f", uiState.magX)}, ${String.format(Locale.US, "%.1f", uiState.magY)}, ${String.format(Locale.US, "%.1f", uiState.magZ)}) μT")
-                    },
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = Color(0xFF00FF00).copy(alpha = 0.8f)
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // RAW COLUMN
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "RAW\n" + buildString {
+                            appendLine("Roll: ${String.format(Locale.US, "%+6.3f", uiState.roll)}")
+                            appendLine("Pitch: ${String.format(Locale.US, "%+6.3f", uiState.pitch)}")
+                            appendLine("Yaw: ${String.format(Locale.US, "%+6.3f", uiState.yaw)}")
+                            appendLine("GyroX: ${String.format(Locale.US, "%+6.2f", uiState.gyroX)}")
+                            appendLine("GyroY: ${String.format(Locale.US, "%+6.2f", uiState.gyroY)}")
+                            appendLine("AccX: ${String.format(Locale.US, "%+6.2f", uiState.accelX)}")
+                            appendLine("AccY: ${String.format(Locale.US, "%+6.2f", uiState.accelY)}")
+                        },
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFF00FF00).copy(alpha = 0.8f)
+                    )
+                }
+
+                // FILTERED COLUMN
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "FILTERED (EMA)\n" + buildString {
+                            appendLine("Roll: ${String.format(Locale.US, "%+6.3f", fRoll)}")
+                            appendLine("Pitch: ${String.format(Locale.US, "%+6.3f", fPitch)}")
+                            appendLine("Yaw: ${String.format(Locale.US, "%+6.3f", fYaw)}")
+                            appendLine("GyroX: ${String.format(Locale.US, "%+6.2f", fGyroX)}")
+                            appendLine("GyroY: ${String.format(Locale.US, "%+6.2f", fGyroY)}")
+                            appendLine("AccX: ${String.format(Locale.US, "%+6.2f", fAccelX)}")
+                            appendLine("AccY: ${String.format(Locale.US, "%+6.2f", fAccelY)}")
+                        },
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFF00BCD4).copy(alpha = 0.8f)
+                    )
+                }
             }
         }
     }

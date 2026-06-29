@@ -129,28 +129,12 @@ fun JSONObject.putError(code: Int, message: String): JSONObject = apply {
 
 
 
-fun ConnectionManager.sendMove(dx: Float, dy: Float, id: String? = null): Boolean {
+fun ConnectionManager.sendMove(dx: Float, dy: Float): Boolean {
     return send(JSONObject().putMove(dx, dy).toString())
 }
 
 fun ConnectionManager.sendClick(button: String = MessageTypes.BUTTON_LEFT, id: String? = null): Boolean {
     return send(JSONObject().putClick(button, id).toString())
-}
-
-fun ConnectionManager.sendDoubleClick(): Boolean {
-    return send(JSONObject().putDoubleClick().toString())
-}
-
-fun ConnectionManager.sendRightClick(): Boolean {
-    return send(JSONObject().putRightClick().toString())
-}
-
-fun ConnectionManager.sendScroll(delta: Int): Boolean {
-    return send(JSONObject().putScroll(delta).toString())
-}
-
-fun ConnectionManager.sendGesture(gesture: String, confidence: Float): Boolean {
-    return send(JSONObject().putGesture(gesture, confidence).toString())
 }
 
 fun ConnectionManager.sendProximity(isNear: Boolean, distance: Float, deviceId: String): Boolean {
@@ -161,39 +145,9 @@ fun ConnectionManager.sendControlCommand(command: String): Boolean {
     return send(JSONObject().putControl(command).toString())
 }
 
-fun ConnectionManager.sendPauseMovement(): Boolean = sendControlCommand(MessageTypes.COMMAND_PAUSE_MOVEMENT)
-
-fun ConnectionManager.sendResumeMovement(): Boolean = sendControlCommand(MessageTypes.COMMAND_RESUME_MOVEMENT)
-
-fun ConnectionManager.sendLockScreen(): Boolean = sendControlCommand(MessageTypes.COMMAND_LOCK_SCREEN)
-
-fun ConnectionManager.sendUnlockScreen(): Boolean = sendControlCommand(MessageTypes.COMMAND_UNLOCK_SCREEN)
-
-fun ConnectionManager.sendCalibrate(): Boolean = sendControlCommand(MessageTypes.COMMAND_CALIBRATE)
-
-fun ConnectionManager.sendReset(): Boolean = sendControlCommand(MessageTypes.COMMAND_RESET)
-
 fun ConnectionManager.sendShowDesktop(): Boolean = sendControlCommand(MessageTypes.COMMAND_SHOW_DESKTOP)
 
 fun ConnectionManager.sendTaskView(): Boolean = sendControlCommand(MessageTypes.COMMAND_TASK_VIEW)
-
-
-
-fun ConnectionManager.sendPlayPause(): Boolean = sendControlCommand(MessageTypes.COMMAND_PLAY_PAUSE)
-
-fun ConnectionManager.sendNextTrack(): Boolean = sendControlCommand(MessageTypes.COMMAND_NEXT_TRACK)
-
-fun ConnectionManager.sendPrevTrack(): Boolean = sendControlCommand(MessageTypes.COMMAND_PREV_TRACK)
-
-fun ConnectionManager.sendStop(): Boolean = sendControlCommand(MessageTypes.COMMAND_STOP)
-
-fun ConnectionManager.sendVolumeUp(): Boolean = sendControlCommand(MessageTypes.COMMAND_VOLUME_UP)
-
-fun ConnectionManager.sendVolumeDown(): Boolean = sendControlCommand(MessageTypes.COMMAND_VOLUME_DOWN)
-
-fun ConnectionManager.sendMute(): Boolean = sendControlCommand(MessageTypes.COMMAND_MUTE)
-
-
 
 fun ConnectionManager.sendWindowMaximize(): Boolean = sendControlCommand(MessageTypes.COMMAND_WINDOW_MAXIMIZE)
 
@@ -204,55 +158,6 @@ fun ConnectionManager.sendWindowClose(): Boolean = sendControlCommand(MessageTyp
 fun ConnectionManager.sendWindowFullscreen(): Boolean = sendControlCommand(MessageTypes.COMMAND_WINDOW_FULLSCREEN)
 
 
-
-fun ConnectionManager.sendBrowserBack(): Boolean = sendControlCommand(MessageTypes.COMMAND_BROWSER_BACK)
-
-fun ConnectionManager.sendBrowserForward(): Boolean = sendControlCommand(MessageTypes.COMMAND_BROWSER_FORWARD)
-
-fun ConnectionManager.sendBrowserRefresh(): Boolean = sendControlCommand(MessageTypes.COMMAND_BROWSER_REFRESH)
-
-fun ConnectionManager.sendBrowserHome(): Boolean = sendControlCommand(MessageTypes.COMMAND_BROWSER_HOME)
-
-
-
-fun ConnectionManager.sendPing(): Boolean {
-    return send(JSONObject().putPing().toString())
-}
-
-fun ConnectionManager.sendPong(): Boolean {
-    return send(JSONObject().putPong().toString())
-}
-
-
-
-fun ConnectionManager.sendKeyPress(keyCode: Int): Boolean {
-    val command = when (keyCode) {
-        KeyEvent.KEYCODE_HOME -> MessageTypes.COMMAND_SHOW_DESKTOP
-        KeyEvent.KEYCODE_BACK -> MessageTypes.COMMAND_BROWSER_BACK
-        KeyEvent.KEYCODE_VOLUME_UP -> MessageTypes.COMMAND_VOLUME_UP
-        KeyEvent.KEYCODE_VOLUME_DOWN -> MessageTypes.COMMAND_VOLUME_DOWN
-        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> MessageTypes.COMMAND_PLAY_PAUSE
-        KeyEvent.KEYCODE_MEDIA_NEXT -> MessageTypes.COMMAND_NEXT_TRACK
-        KeyEvent.KEYCODE_MEDIA_PREVIOUS -> MessageTypes.COMMAND_PREV_TRACK
-        KeyEvent.KEYCODE_MEDIA_STOP -> MessageTypes.COMMAND_STOP
-        KeyEvent.KEYCODE_MUTE -> MessageTypes.COMMAND_MUTE
-        else -> return false
-    }
-    return sendControlCommand(command)
-}
-
-
-
-fun ConnectionManager.sendBatch(commands: List<String>): Boolean {
-    var allSent = true
-    commands.forEach { command ->
-        if (!sendControlCommand(command)) {
-            allSent = false
-        }
-    }
-    return allSent
-}
-
 fun ConnectionManager.sendJson(jsonObject: JSONObject): Boolean {
     return send(jsonObject.toString())
 }
@@ -260,7 +165,7 @@ fun ConnectionManager.sendJson(jsonObject: JSONObject): Boolean {
 
 
 fun JSONObject.getMessageType(): String? {
-    return optString("type", null)
+    return if (has("type") && !isNull("type")) getString("type") else null
 }
 
 fun JSONObject.hasPayload(): Boolean {
@@ -328,7 +233,7 @@ fun JSONObject.isAck(): Boolean {
 }
 
 fun JSONObject.getAckId(): String? {
-    return optString("id", null)
+    return if (has("id") && !isNull("id")) getString("id") else null
 }
 
 fun JSONObject.getAckStatus(): String {

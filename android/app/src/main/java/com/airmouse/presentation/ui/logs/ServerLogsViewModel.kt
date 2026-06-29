@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -118,7 +117,7 @@ class ServerLogsViewModel @Inject constructor(
 
     private fun setupCustomLogCapture() {
         
-        addLogEntry(LogLevel.INFO, "System", "Log viewer initialized", "Version 3.0.0")
+        addLogEntry(LogLevel.INFO, "System", "Log viewer initialized", "Version 4.9.9")
         addLogEntry(LogLevel.DEBUG, "Storage", "Log retention: ${_uiState.value.logRetentionDays} days")
     }
 

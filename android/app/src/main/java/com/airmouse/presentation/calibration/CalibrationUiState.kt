@@ -1,4 +1,3 @@
-
 package com.airmouse.presentation.ui.calibration
 
 import com.airmouse.domain.model.CalibrationData
@@ -6,46 +5,38 @@ import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
 import com.airmouse.domain.model.SensorCalibrationData
 
-
-
-
-
+/**
+ * UI State for the Calibration screen.
+ */
 data class CalibrationUiState(
-    
     val currentStep: Int = 0,
     val totalSteps: Int = 3,
     val calibrationPhase: CalibrationPhase = CalibrationPhase.INTRO,
 
-    
     val isCalibrating: Boolean = false,
     val isCollecting: Boolean = false,
     val isComplete: Boolean = false,
     val isSkipped: Boolean = false,
     val isCalibrationApplied: Boolean = false,
 
-    
     val progress: Int = 0,
     val stepProgress: Float = 0f,
     val samplesCollected: Int = 0,
     val totalSamplesNeeded: Int = 0,
 
-    
     val statusMessage: String = "",
     val stepInstruction: String = "",
     val detailedInstruction: String = "",
     val errorMessage: String? = null,
 
-    
     val calibrationQuality: String = "",
     val quality: String = "",
     val showConfetti: Boolean = false,
 
-    
     val currentPosition: Int = 0,
     val totalPositions: Int = 6,
     val completedPositions: List<Int> = emptyList(),
 
-    
     val roll: Float = 0f,
     val pitch: Float = 0f,
     val yaw: Float = 0f,
@@ -53,10 +44,8 @@ data class CalibrationUiState(
     val accelData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
     val magData: Triple<Float, Float, Float> = Triple(0f, 0f, 0f),
 
-    
     val isServerConnected: Boolean = false,
 
-    
     val calibrationData: CalibrationData? = null
 ) {
     companion object {
@@ -73,10 +62,6 @@ enum class CalibrationPhase {
     SAMPLING
 }
 
-
-
-
-
 data class SensorData(
     val gyroX: Float = 0f,
     val gyroY: Float = 0f,
@@ -89,14 +74,12 @@ data class SensorData(
     val magZ: Float = 0f
 )
 
-
-
-
-
 data class CalibrationResult(
     val gyroOffsets: Triple<Float, Float, Float>,
     val accelOffsets: Triple<Float, Float, Float>,
     val magOffsets: Triple<Float, Float, Float>,
+    val accelScale: Triple<Float, Float, Float> = Triple(1f, 1f, 1f),
+    val magScale: Triple<Float, Float, Float> = Triple(1f, 1f, 1f),
     val quality: CalibrationQuality,
     val isComplete: Boolean,
     val timestamp: Long = System.currentTimeMillis()
@@ -137,86 +120,6 @@ data class CalibrationResult(
     }
 }
 
-
-
-
-
-data class CalibrationQualityConfig(
-    val color: androidx.compose.ui.graphics.Color,
-    val emoji: String,
-    val title: String,
-    val description: String,
-    val subtext: String,
-    val score: String,
-    val status: String
-) {
-    companion object {
-        fun fromQuality(quality: CalibrationQuality): CalibrationQualityConfig {
-            return when (quality) {
-                CalibrationQuality.EXCELLENT -> CalibrationQualityConfig(
-                    color = androidx.compose.ui.graphics.Color(0xFF10B981),
-                    emoji = "🌟",
-                    title = "Excellent",
-                    description = "Perfect calibration! Your device is performing at its best.",
-                    subtext = "All sensors are optimally calibrated.",
-                    score = "95%",
-                    status = "✅ Ready"
-                )
-                CalibrationQuality.GOOD -> CalibrationQualityConfig(
-                    color = androidx.compose.ui.graphics.Color(0xFF3B82F6),
-                    emoji = "👍",
-                    title = "Good",
-                    description = "Calibration successful with good accuracy.",
-                    subtext = "Device is ready for use.",
-                    score = "80%",
-                    status = "✅ Ready"
-                )
-                CalibrationQuality.FAIR -> CalibrationQualityConfig(
-                    color = androidx.compose.ui.graphics.Color(0xFFF59E0B),
-                    emoji = "⚠️",
-                    title = "Fair",
-                    description = "Calibration complete with fair accuracy.",
-                    subtext = "Consider recalibrating for best results.",
-                    score = "60%",
-                    status = "⚠️ Review"
-                )
-                CalibrationQuality.POOR -> CalibrationQualityConfig(
-                    color = androidx.compose.ui.graphics.Color(0xFFEF4444),
-                    emoji = "❌",
-                    title = "Poor",
-                    description = "Calibration quality is low.",
-                    subtext = "Please recalibrate for better results.",
-                    score = "30%",
-                    status = "❌ Recalibrate"
-                )
-                CalibrationQuality.UNKNOWN -> CalibrationQualityConfig(
-                    color = androidx.compose.ui.graphics.Color(0xFF64748B),
-                    emoji = "❓",
-                    title = "Unknown",
-                    description = "Calibration completed but quality could not be determined.",
-                    subtext = "Please recalibrate for best results.",
-                    score = "50%",
-                    status = "❓ Unknown"
-                )
-            }
-        }
-
-        fun fromQualityString(quality: String): CalibrationQualityConfig {
-            return when (quality.uppercase()) {
-                "EXCELLENT" -> fromQuality(CalibrationQuality.EXCELLENT)
-                "GOOD" -> fromQuality(CalibrationQuality.GOOD)
-                "FAIR" -> fromQuality(CalibrationQuality.FAIR)
-                "POOR" -> fromQuality(CalibrationQuality.POOR)
-                else -> fromQuality(CalibrationQuality.UNKNOWN)
-            }
-        }
-    }
-}
-
-
-
-
-
 data class CalibrationProgress(
     val step: CalibrationStep,
     val progress: Float,
@@ -230,42 +133,4 @@ enum class CalibrationStep(val displayName: String, val icon: String) {
     MAGNETOMETER("Magnetometer", "🔄"),
     ACCELEROMETER("Accelerometer", "📐"),
     COMPLETE("Complete", "✅")
-}
-
-
-
-
-
-sealed class CalibrationEvent {
-    
-    object StartCalibration : CalibrationEvent()
-    object ResetCalibration : CalibrationEvent()
-    object SkipCalibration : CalibrationEvent()
-    object RetryCalibration : CalibrationEvent()
-    object ApplyCalibration : CalibrationEvent()
-    object SyncToServer : CalibrationEvent()
-    object NextStep : CalibrationEvent()
-
-    
-    data class SelectPosition(val position: Int) : CalibrationEvent()
-    data class UpdateSensorData(val data: SensorData) : CalibrationEvent()
-    data class UpdateOrientation(val roll: Float, val pitch: Float, val yaw: Float) : CalibrationEvent()
-
-    
-    object NavigateBack : CalibrationEvent()
-    object NavigateToHome : CalibrationEvent()
-}
-
-
-
-
-
-sealed class CalibrationEffect {
-    data class ShowToast(val message: String) : CalibrationEffect()
-    data class ShowError(val message: String) : CalibrationEffect()
-    data class NavigateTo(val route: String) : CalibrationEffect()
-    object NavigateBack : CalibrationEffect()
-    object NavigateToHome : CalibrationEffect()
-    data class PlaySound(val soundId: Int) : CalibrationEffect()
-    data class Vibrate(val duration: Long) : CalibrationEffect()
 }

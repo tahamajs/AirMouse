@@ -34,37 +34,46 @@ object SensorDataProcessor {
         }
     }
 
-    class HighPassFilter(private val alpha: Float = 0.1f) {
-        private var previousX = 0f
-        private var previousY = 0f
-        private var previousZ = 0f
+    class HighPassFilter(private val alpha: Float = 0.8f) {
+        private var previousInputX = 0f
+        private var previousInputY = 0f
+        private var previousInputZ = 0f
+        private var previousOutputX = 0f
+        private var previousOutputY = 0f
+        private var previousOutputZ = 0f
         private var initialized = false
 
         fun filter(x: Float, y: Float, z: Float): Triple<Float, Float, Float> {
             if (!initialized) {
-                previousX = x
-                previousY = y
-                previousZ = z
+                previousInputX = x
+                previousInputY = y
+                previousInputZ = z
+                previousOutputX = 0f
+                previousOutputY = 0f
+                previousOutputZ = 0f
                 initialized = true
                 return Triple(0f, 0f, 0f)
             }
 
-            val filteredX = alpha * (previousX + x) - previousX
-            val filteredY = alpha * (previousY + y) - previousY
-            val filteredZ = alpha * (previousZ + z) - previousZ
+            previousOutputX = alpha * (previousOutputX + x - previousInputX)
+            previousOutputY = alpha * (previousOutputY + y - previousInputY)
+            previousOutputZ = alpha * (previousOutputZ + z - previousInputZ)
 
-            previousX = x
-            previousY = y
-            previousZ = z
+            previousInputX = x
+            previousInputY = y
+            previousInputZ = z
 
-            return Triple(filteredX, filteredY, filteredZ)
+            return Triple(previousOutputX, previousOutputY, previousOutputZ)
         }
 
         fun reset() {
             initialized = false
-            previousX = 0f
-            previousY = 0f
-            previousZ = 0f
+            previousInputX = 0f
+            previousInputY = 0f
+            previousInputZ = 0f
+            previousOutputX = 0f
+            previousOutputY = 0f
+            previousOutputZ = 0f
         }
     }
 

@@ -17,7 +17,34 @@ data class GestureTypeCount(
 @Dao
 interface GestureDao {
 
-    
+    // Add to GestureDao.kt
+
+    @Query("SELECT * FROM gesture_templates WHERE is_custom = 1")
+    suspend fun getAllCustomTemplates(): List<GestureTemplateEntity>
+
+    @Query("SELECT * FROM gesture_templates WHERE is_system = 1")
+    suspend fun getAllSystemTemplates(): List<GestureTemplateEntity>
+
+    @Query("SELECT * FROM gesture_templates WHERE is_favorite = 1")
+    suspend fun getAllFavoriteTemplates(): List<GestureTemplateEntity>
+
+    @Query("SELECT * FROM gesture_templates WHERE is_enabled = 1")
+    suspend fun getAllEnabledTemplates(): List<GestureTemplateEntity>
+
+    @Query("UPDATE gesture_templates SET is_enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: String, enabled: Boolean)
+
+    @Query("UPDATE gesture_templates SET is_favorite = :favorite WHERE id = :id")
+    suspend fun setFavorite(id: String, favorite: Boolean)
+
+    @Query("UPDATE gesture_templates SET detection_count = detection_count + 1 WHERE id = :id")
+    suspend fun incrementDetection(id: String)
+
+    @Query("UPDATE gesture_templates SET version = version + 1 WHERE id = :id")
+    suspend fun incrementVersion(id: String)
+
+    @Query("UPDATE gesture_templates SET updated_at = :timestamp WHERE id = :id")
+    suspend fun updateTimestamp(id: String, timestamp: Long)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemplate(template: GestureTemplateEntity)
 

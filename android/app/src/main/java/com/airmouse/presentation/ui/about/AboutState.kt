@@ -1,11 +1,10 @@
 
 package com.airmouse.presentation.ui.about
 
-import androidx.compose.ui.graphics.vector.ImageVector
 
 data class AboutUiState(
     val appName: String = "Air Mouse",
-    val versionName: String = "3.0.0",
+    val versionName: String = "4.9.9",
     val versionCode: Int = 30,
     val buildDate: String = "2025-06-20",
     val totalDownloads: Int = 12500,

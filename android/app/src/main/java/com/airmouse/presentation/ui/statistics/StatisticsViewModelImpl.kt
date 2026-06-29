@@ -2,9 +2,9 @@ package com.airmouse.presentation.ui.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.airmouse.domain.model.DailyStats as DomainDailyStats
-import com.airmouse.domain.model.MouseStatistics
 import com.airmouse.domain.model.AppPreferences
+import com.airmouse.domain.model.DailyStats
+import com.airmouse.domain.model.MouseStatistics
 import com.airmouse.domain.model.StatisticsSummary
 import com.airmouse.domain.usecase.GetStatisticsUseCase
 import com.airmouse.utils.PreferencesManager
@@ -12,7 +12,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -251,14 +250,17 @@ class StatisticsViewModel @Inject constructor(
 
         viewModelScope.launch {
             statisticsUseCase.observeGestureStats().collect { gestureStats ->
+                val totalCustom = gestureStats.sumOf { it.detectionCount }
+                val breakdown = gestureStats.associate { it.gestureName to it.detectionCount }
+                val mostUsed = gestureStats.maxByOrNull { it.detectionCount }
                 _uiState.update { current ->
                     current.copy(
-                        customGesturesUsed = gestureStats.sumOf { it.detectionCount },
-                        gestureBreakdown = gestureStats.associate { it.gestureName to it.detectionCount },
-                        mostUsedGesture = gestureStats.maxByOrNull { it.detectionCount }?.gestureName.orEmpty(),
-                        mostUsedGestureCount = gestureStats.maxOfOrNull { it.detectionCount } ?: 0,
+                        customGesturesUsed = totalCustom,
+                        gestureBreakdown = breakdown,
+                        mostUsedGesture = mostUsed?.gestureName.orEmpty(),
+                        mostUsedGestureCount = mostUsed?.detectionCount ?: 0,
                         gestureTypeCount = gestureStats.size,
-                        customGestureCount = gestureStats.sumOf { it.detectionCount }
+                        customGestureCount = totalCustom
                     )
                 }
             }
@@ -272,14 +274,14 @@ class StatisticsViewModel @Inject constructor(
             sessionStartTime = now,
             lastActivityTime = now,
             dailyStats = listOf(
-                DailyStats(
-                    date = Date(now),
+                DailyStats( // This expects date: String, but we're passing Date? – need to adjust
+                    date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(now)),
                     clicks = 0,
                     doubleClicks = 0,
                     rightClicks = 0,
                     scrolls = 0,
-                    gestures = 0,
-                    movements = 0
+                    movements = 0,
+                    distance = 0f
                 )
             ),
             gestureBreakdown = emptyMap(),
@@ -292,26 +294,12 @@ class StatisticsViewModel @Inject constructor(
 
     private suspend fun loadDailyStats(timeRange: TimeRange): List<DailyStats> {
         return when (timeRange) {
-            TimeRange.TODAY -> listOf(mapDailyStats(statisticsUseCase.getTodayStats()))
-            TimeRange.WEEK -> statisticsUseCase.getWeekStats().map { mapDailyStats(it) }
-            TimeRange.MONTH -> statisticsUseCase.getMonthStats().map { mapDailyStats(it) }
-            TimeRange.YEAR, TimeRange.ALL_TIME -> statisticsUseCase.getMonthStats().map { mapDailyStats(it) }
+            TimeRange.TODAY -> listOf(statisticsUseCase.getTodayStats())
+            TimeRange.WEEK -> statisticsUseCase.getWeekStats()
+            TimeRange.MONTH -> statisticsUseCase.getMonthStats()
+            TimeRange.YEAR, TimeRange.ALL_TIME -> statisticsUseCase.getMonthStats()
         }
     }
 
-    private fun mapDailyStats(stats: DomainDailyStats): DailyStats {
-        val date = runCatching {
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(stats.date) ?: Date()
-        }.getOrElse { Date() }
-        return DailyStats(
-            date = date,
-            clicks = stats.clicks,
-            doubleClicks = stats.doubleClicks,
-            rightClicks = stats.rightClicks,
-            scrolls = stats.scrolls,
-            gestures = stats.movements,
-            movements = stats.movements,
-            distance = stats.distance
-        )
-    }
+    // No need for mapDailyStats anymore because we're using the domain model directly.
 }

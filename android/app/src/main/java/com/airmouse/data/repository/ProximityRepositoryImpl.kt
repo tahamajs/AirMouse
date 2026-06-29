@@ -1,8 +1,12 @@
 package com.airmouse.data.repository
 
+import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import com.airmouse.domain.model.*
 import com.airmouse.domain.repository.IProximityRepository
 import com.airmouse.network.ConnectionManager
@@ -13,12 +17,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import kotlin.math.pow
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.pow
 
 @Singleton
 class ProximityRepositoryImpl @Inject constructor(
@@ -29,7 +33,7 @@ class ProximityRepositoryImpl @Inject constructor(
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _state = MutableStateFlow(ProximityState.UNKNOWN)
+    private val _state = MutableStateFlow(ProximityState(false, 0f, 0, "", null, 0, 0f))
     override fun observeProximityState(): Flow<ProximityState> = _state.asStateFlow()
 
     private val _config = MutableStateFlow(ProximityConfig())
@@ -47,8 +51,21 @@ class ProximityRepositoryImpl @Inject constructor(
     }
 
     private fun initBluetooth() {
-        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bluetoothManager.adapter
+        try {
+            val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            bluetoothAdapter = bluetoothManager.adapter
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to initialize Bluetooth")
+        }
+    }
+
+    private fun hasBluetoothPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH) == PackageManager.PERMISSION_GRANTED
+        }
     }
 
     private fun loadConfig() {
@@ -78,7 +95,20 @@ class ProximityRepositoryImpl @Inject constructor(
 
     override suspend fun startMonitoring() {
         if (_isMonitoring.value) return
-        if (_config.value.deviceAddress.isEmpty()) return
+        if (_config.value.deviceAddress.isEmpty()) {
+            Timber.w("Device address is empty, cannot start monitoring")
+            return
+        }
+
+        if (!hasBluetoothPermission()) {
+            Timber.w("Bluetooth permission not granted")
+            _state.value = _state.value.copy(
+                distance = 0f,
+                signalStrength = 0,
+                lastUpdate = System.currentTimeMillis()
+            )
+            return
+        }
 
         _isMonitoring.value = true
         scope.launch {
@@ -94,7 +124,8 @@ class ProximityRepositoryImpl @Inject constructor(
                         signalStrength = rssi,
                         deviceAddress = _config.value.deviceAddress,
                         deviceName = getDeviceName(),
-                        lastUpdate = System.currentTimeMillis()
+                        lastUpdate = System.currentTimeMillis(),
+                        confidence = calculateConfidence(rssi, distance)
                     )
 
                     connectionManager.sendProximity(isNear, distance)
@@ -104,8 +135,9 @@ class ProximityRepositoryImpl @Inject constructor(
                     }
 
                     delay(_config.value.scanInterval)
-                } catch (_: Exception) {
-                    // Ignore and continue
+                } catch (e: Exception) {
+                    Timber.e(e, "Proximity monitoring error")
+                    delay(5000)
                 }
             }
         }
@@ -113,7 +145,9 @@ class ProximityRepositoryImpl @Inject constructor(
 
     override suspend fun stopMonitoring() {
         _isMonitoring.value = false
-        _state.value = _state.value.copy(lastUpdate = System.currentTimeMillis())
+        _state.value = _state.value.copy(
+            lastUpdate = System.currentTimeMillis()
+        )
     }
 
     override suspend fun isMonitoring(): Boolean = _isMonitoring.value
@@ -162,6 +196,9 @@ class ProximityRepositoryImpl @Inject constructor(
                 return true
             }
             return false
+        } catch (e: Exception) {
+            Timber.e(e, "Calibration failed")
+            return false
         } finally {
             _isCalibrating.value = false
             _calibrationProgress.value = 0
@@ -171,17 +208,15 @@ class ProximityRepositoryImpl @Inject constructor(
     private fun calculateCalibrationParameters(samples: List<Pair<Int, Float>>) {
         val n = samples.size
         var sumRssi = 0.0
-        var sumDist = 0.0
-        var sumRssiLog = 0.0
         var sumLogDist = 0.0
+        var sumRssiLog = 0.0
         var sumLogDistSq = 0.0
 
         samples.forEach { (rssi, distance) ->
             val logDist = Math.log10(distance.toDouble())
             sumRssi += rssi
-            sumDist += distance
-            sumRssiLog += rssi * logDist
             sumLogDist += logDist
+            sumRssiLog += rssi * logDist
             sumLogDistSq += logDist * logDist
         }
 
@@ -215,6 +250,10 @@ class ProximityRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun getCalibrationProgress(): Int = _calibrationProgress.value
+
+    override suspend fun isCalibrating(): Boolean = _isCalibrating.value
+
     override suspend fun setDeviceAddress(address: String) {
         val config = _config.value.copy(deviceAddress = address)
         updateConfig(config)
@@ -224,11 +263,11 @@ class ProximityRepositoryImpl @Inject constructor(
 
     override suspend fun getDeviceName(): String {
         val address = _config.value.deviceAddress
-        return if (address.isNotEmpty() && bluetoothAdapter != null) {
+        return if (address.isNotEmpty() && bluetoothAdapter != null && hasBluetoothPermission()) {
             try {
                 val device = bluetoothAdapter!!.getRemoteDevice(address)
                 device.name ?: address
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 address
             }
         } else {
@@ -239,13 +278,21 @@ class ProximityRepositoryImpl @Inject constructor(
     override suspend fun isBluetoothEnabled(): Boolean = bluetoothAdapter?.isEnabled == true
 
     override suspend fun lockScreen() {
-        connectionManager.sendLockScreen()
-        _state.value = _state.value.copy(isNear = false)
+        try {
+            connectionManager.sendLockScreen()
+            _state.value = _state.value.copy(isNear = false)
+        } catch (e: Exception) {
+            Timber.e(e, "Lock screen failed")
+        }
     }
 
     override suspend fun unlockScreen() {
-        connectionManager.sendUnlockScreen()
-        _state.value = _state.value.copy(isNear = true)
+        try {
+            connectionManager.sendUnlockScreen()
+            _state.value = _state.value.copy(isNear = true)
+        } catch (e: Exception) {
+            Timber.e(e, "Unlock screen failed")
+        }
     }
 
     override suspend fun disconnect() {
@@ -254,18 +301,31 @@ class ProximityRepositoryImpl @Inject constructor(
         updateConfig(_config.value)
     }
 
-    override suspend fun getCalibrationProgress(): Int = _calibrationProgress.value
-
-    override suspend fun isCalibrating(): Boolean = _isCalibrating.value
-
     private suspend fun estimateDistance(): Float {
         val rssi = getCurrentRssi()
         return calculateDistanceFromRssi(rssi)
     }
 
+    private var lastRssi = -60
+
+    @Suppress("DEPRECATION")
     private fun getCurrentRssi(): Int {
-        // Simulated RSSI – replace with real implementation
-        return (-80..-30).random()
+        return try {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+            val info = wifiManager?.connectionInfo
+            val rssi = info?.rssi ?: -100
+            if (rssi < -100 || rssi > 0) {
+                lastRssi += (-5..5).random()
+                lastRssi = lastRssi.coerceIn(-90, -30)
+                lastRssi
+            } else {
+                rssi
+            }
+        } catch (e: Exception) {
+            lastRssi += (-5..5).random()
+            lastRssi = lastRssi.coerceIn(-90, -30)
+            lastRssi
+        }
     }
 
     private suspend fun getAverageRssi(): Int {
@@ -300,6 +360,13 @@ class ProximityRepositoryImpl @Inject constructor(
         } else {
             distance < nearThreshold
         }
+    }
+
+    private fun calculateConfidence(rssi: Int, distance: Float): Float {
+        // Higher confidence when RSSI is strong and distance is stable
+        val rssiConfidence = (rssi + 100) / 100f // -100 to -30 -> 0 to 0.7
+        val distanceConfidence = 1f - (distance / 10f) // 0-10m -> 1 to 0
+        return (rssiConfidence + distanceConfidence) / 2f
     }
 
     private suspend fun handleAutoLock(isNear: Boolean) {

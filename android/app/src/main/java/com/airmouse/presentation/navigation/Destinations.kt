@@ -114,6 +114,31 @@ sealed class Destinations(
         icon = Icons.Filled.TouchApp
     )
 
+    /** Gaming mode screen */
+    object GamingMode : Destinations(
+        route = ROUTE_GAMING_MODE,
+        title = "Gaming",
+        icon = Icons.Filled.SportsEsports
+    )
+
+    object ScreenMirroring : Destinations(
+        route = ROUTE_SCREEN_MIRRORING,
+        title = "Mirroring",
+        icon = Icons.AutoMirrored.Filled.ScreenShare
+    )
+
+    object SyncStatus : Destinations(
+        route = ROUTE_SYNC_STATUS,
+        title = "Sync",
+        icon = Icons.Filled.Sync
+    )
+
+    object NotificationsCenter : Destinations(
+        route = ROUTE_NOTIFICATIONS_CENTER,
+        title = "Notifications",
+        icon = Icons.Filled.Notifications
+    )
+
     /** Touchpad settings */
     object TouchpadSettings : Destinations(
         route = ROUTE_TOUCHPAD_SETTINGS,
@@ -207,6 +232,10 @@ sealed class Destinations(
         const val ROUTE_GESTURE_STUDIO = "gesture_studio"
         const val ROUTE_EDGE_GESTURES = "edge_gestures"
         const val ROUTE_TOUCHPAD = "touchpad"
+        const val ROUTE_GAMING_MODE = "gaming_mode"
+        const val ROUTE_SCREEN_MIRRORING = "screen_mirroring"
+        const val ROUTE_SYNC_STATUS = "sync_status"
+        const val ROUTE_NOTIFICATIONS_CENTER = "notifications_center"
         const val ROUTE_TOUCHPAD_SETTINGS = "touchpad_settings"
         const val ROUTE_NETWORK_DISCOVERY = "network_discovery"
         const val ROUTE_SERVER_LOGS = "server_logs"

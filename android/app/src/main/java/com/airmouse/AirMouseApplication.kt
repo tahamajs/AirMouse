@@ -44,7 +44,7 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
 
         fun getAppContext(): android.content.Context = instance.applicationContext
 
-        const val APP_VERSION = "3.0.0"
+        const val APP_VERSION = "4.9.9"
         const val APP_NAME = "Air Mouse Pro"
         const val BUILD_NUMBER = 30
         const val PREF_APP_START_TIME = "app_start_time"
@@ -219,11 +219,34 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
                 }
             )
 
+            // Error Channel
+            channels.add(
+                NotificationChannel(
+                    "error_channel",
+                    "Errors",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Error notifications"
+                    enableVibration(true)
+                }
+            )
+
+            // General Channel
+            channels.add(
+                NotificationChannel(
+                    "general_channel",
+                    "General",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = "General notifications"
+                }
+            )
+
             // Gesture Channel
             channels.add(
                 NotificationChannel(
                     "gesture_channel",
-                    "Gesture Detection",
+                    "Gestures",
                     NotificationManager.IMPORTANCE_DEFAULT
                 ).apply {
                     description = "Shows gesture detection notifications"
@@ -235,7 +258,7 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
             channels.add(
                 NotificationChannel(
                     "proximity_channel",
-                    "Proximity Lock",
+                    "Proximity",
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
                     description = "Shows proximity lock/unlock notifications"

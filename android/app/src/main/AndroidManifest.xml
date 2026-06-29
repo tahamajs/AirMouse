@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
 
-    <!-- Network & Internet -->
+    <!-- Network & Internet (single declaration) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -44,8 +44,12 @@
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Boot Completed (optional) -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Boot Completed (optional – if you don't have BootReceiver, omit) -->
+    <!-- <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> -->
+
+    <!-- External Storage (optional, if needed) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <!-- ==================== FEATURES ==================== -->
     <uses-feature
@@ -105,30 +109,11 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".presentation.ui.home.HomeActivity"
-            android:exported="false"
-            android:screenOrientation="fullSensor"
-            android:configChanges="orientation|screenSize|keyboardHidden|keyboard|locale|uiMode"
-            android:theme="@style/Theme.AirMouse.Splash"
-            android:windowSoftInputMode="adjustResize" />
 
-        <!-- ==================== ONBOARDING ACTIVITY ==================== -->
-        <activity
-            android:name=".ui.onboarding.OnboardingActivity"
-            android:exported="false"
-            android:screenOrientation="fullSensor"
-            android:theme="@style/Theme.AirMouse" />
 
-        <!-- ==================== FOREGROUND SERVICE ==================== -->
-        <!-- The sensor service that runs in the foreground to keep the app alive -->
-        <service
-            android:name=".sensors.SensorService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync|connectedDevice|microphone" />
-
-        <!-- ==================== BOOT COMPLETED RECEIVER (optional) ==================== -->
+        <!-- ==================== BOOT COMPLETED RECEIVER (REMOVED) ==================== -->
+        <!-- If you want to enable auto-start on boot, create BootReceiver class and uncomment below -->
+        <!--
         <receiver
             android:name=".utils.BootReceiver"
             android:exported="true"
@@ -138,6 +123,7 @@
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
+        -->
 
         <!-- ==================== PROVIDERS ==================== -->
         <provider

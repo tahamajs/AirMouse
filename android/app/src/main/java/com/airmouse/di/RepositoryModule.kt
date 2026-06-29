@@ -81,6 +81,12 @@ abstract class RepositoryModule {
     abstract fun bindUpdateRepository(
         impl: UpdateRepositoryImpl
     ): IUpdateRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCommunityRepository(
+        impl: CommunityRepositoryImpl
+    ): ICommunityRepository
 }
 
 @Module
@@ -168,5 +174,13 @@ object RepositoryProvidersModule {
         connectionManager: ConnectionManager
     ): UpdateRepositoryImpl {
         return UpdateRepositoryImpl(preferencesManager, connectionManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCommunityRepositoryImpl(
+        preferencesManager: PreferencesManager
+    ): CommunityRepositoryImpl {
+        return CommunityRepositoryImpl(preferencesManager)
     }
 }

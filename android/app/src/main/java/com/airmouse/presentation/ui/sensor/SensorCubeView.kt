@@ -1,4 +1,5 @@
 package com.airmouse.presentation.ui.sensor
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas

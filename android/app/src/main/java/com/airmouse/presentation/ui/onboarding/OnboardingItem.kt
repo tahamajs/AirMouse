@@ -17,12 +17,12 @@ data class OnboardingItem(
     companion object {
         fun getDefaultItems(): List<OnboardingItem> = listOf(
             OnboardingItem(
-                imageRes = R.drawable.ic_air_mouse,
+                imageRes = R.drawable.ic_mouse,
                 title = "Welcome to Air Mouse Pro",
                 description = "Turn your phone into a wireless mouse using advanced motion sensors and AI technology",
                 backgroundColor = Color(0xFF0F172A),
                 accentColor = Color(0xFF6366F1),
-                iconRes = R.drawable.ic_air_mouse
+                iconRes = R.drawable.ic_mouse
             ),
             OnboardingItem(
                 imageRes = R.drawable.ic_gesture,

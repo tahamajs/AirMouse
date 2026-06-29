@@ -1,24 +1,23 @@
-
 package com.airmouse.di
 
 import androidx.lifecycle.ViewModel
-import com.airmouse.presentation.ui.home.HomeViewModel
+import com.airmouse.presentation.ui.accessibility.AccessibilityViewModel
+import com.airmouse.presentation.ui.about.AboutViewModel
+import com.airmouse.presentation.ui.battery.BatteryViewModel
 import com.airmouse.presentation.ui.calibration.CalibrationViewModel
+import com.airmouse.presentation.ui.edge.EdgeGesturesViewModel
 import com.airmouse.presentation.ui.gesture.GestureStudioViewModel
+import com.airmouse.presentation.ui.help.HelpViewModel
+import com.airmouse.presentation.ui.home.HomeViewModel
+import com.airmouse.presentation.ui.logs.ServerLogsViewModel
+import com.airmouse.presentation.ui.network.NetworkDiscoveryViewModel
+import com.airmouse.presentation.ui.onboarding.OnboardingViewModel
+import com.airmouse.presentation.ui.profiles.ProfilesViewModel
+import com.airmouse.presentation.ui.proximity.ProximityViewModel
 import com.airmouse.presentation.ui.settings.SettingsViewModel
 import com.airmouse.presentation.ui.statistics.StatisticsViewModel
-import com.airmouse.presentation.ui.help.HelpViewModel
-import com.airmouse.presentation.ui.about.AboutViewModel
-import com.airmouse.presentation.ui.profiles.ProfilesViewModel
 import com.airmouse.presentation.ui.themes.ThemesViewModel
 import com.airmouse.presentation.ui.voice.VoiceCommandsViewModel
-import com.airmouse.presentation.ui.edge.EdgeGesturesViewModel
-import com.airmouse.presentation.ui.proximity.ProximityViewModel
-import com.airmouse.presentation.ui.accessibility.AccessibilityViewModel
-import com.airmouse.presentation.ui.battery.BatteryViewModel
-import com.airmouse.presentation.ui.network.NetworkDiscoveryViewModel
-import com.airmouse.presentation.ui.logs.ServerLogsViewModel
-import com.airmouse.presentation.ui.onboarding.OnboardingViewModel
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -114,5 +113,3 @@ abstract class ViewModelModule {
     @ViewModelKey(OnboardingViewModel::class)
     abstract fun bindOnboardingViewModel(viewModel: OnboardingViewModel): ViewModel
 }
-
-

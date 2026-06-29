@@ -1,4 +1,3 @@
-
 package com.airmouse.presentation.ui.calibration
 
 import androidx.compose.animation.*
@@ -30,7 +29,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.airmouse.domain.model.CalibrationStatus
 import kotlinx.coroutines.delay
 
 @Composable
@@ -44,7 +42,6 @@ fun CalibrationGuideDialog(
     val isCalibrating by viewModel.isCalibrating.collectAsStateWithLifecycle()
     val calibrationProgress by viewModel.calibrationProgress.collectAsStateWithLifecycle()
 
-    
     val step = when {
         uiState.isComplete -> 3
         uiState.currentStep > 0 -> (uiState.currentStep - 1).coerceIn(0, 2)
@@ -52,8 +49,7 @@ fun CalibrationGuideDialog(
     }
 
     var currentImageIndex by remember { mutableStateOf(0) }
-    
-    
+
     LaunchedEffect(step) {
         currentImageIndex = 0
         while (true) {
@@ -79,7 +75,6 @@ fun CalibrationGuideDialog(
             elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
             Box {
-                
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
@@ -91,7 +86,6 @@ fun CalibrationGuideDialog(
                     modifier = Modifier.fillMaxWidth().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    
                     Box(
                         modifier = Modifier
                             .size(180.dp)
@@ -106,8 +100,8 @@ fun CalibrationGuideDialog(
                             label = "IconTransition"
                         ) { targetStep ->
                             when (targetStep) {
-                                0 -> GyroscopeInstructionAnimation(currentImageIndex)
-                                1 -> MagnetometerInstructionAnimation(currentImageIndex)
+                                0 -> GyroscopeInstructionAnimation()
+                                1 -> MagnetometerInstructionAnimation()
                                 2 -> AccelerometerInstructionAnimation(
                                     if (uiState.isCollecting) currentImageIndex else uiState.currentPosition
                                 )
@@ -118,7 +112,6 @@ fun CalibrationGuideDialog(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    
                     Text(
                         text = when (step) {
                             0 -> "🧭 Gyroscope"
@@ -133,7 +126,6 @@ fun CalibrationGuideDialog(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    
                     Text(
                         text = if (uiState.statusMessage.isNotEmpty()) uiState.statusMessage else uiState.stepInstruction,
                         fontSize = 16.sp,
@@ -143,7 +135,6 @@ fun CalibrationGuideDialog(
                         modifier = Modifier.heightIn(min = 48.dp)
                     )
 
-                    
                     if ((isCalibrating || uiState.isCollecting) && !uiState.isComplete) {
                         Spacer(modifier = Modifier.height(16.dp))
                         LinearProgressIndicator(
@@ -162,7 +153,6 @@ fun CalibrationGuideDialog(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -180,11 +170,11 @@ fun CalibrationGuideDialog(
                             }
                         } else {
                             val isStepFinished = uiState.statusMessage.contains("✓") || uiState.statusMessage.contains("Captured")
-                            
+
                             Button(
                                 onClick = {
                                     when {
-                                        step == 2 && !uiState.isCollecting -> viewModel.startCurrentStep()
+                                        step == 2 && uiState.isCollecting.not() -> viewModel.startCurrentStep()
                                         isStepFinished -> {
                                             if (step == 2 && uiState.currentPosition >= 6) {
                                                 viewModel.completeCalibration()
@@ -197,7 +187,7 @@ fun CalibrationGuideDialog(
                                 },
                                 modifier = Modifier.weight(1.5f).height(56.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                enabled = !isCalibrating && !uiState.isCollecting || (step == 2 && !uiState.isCollecting) || isStepFinished,
+                                enabled = isCalibrating.not() && uiState.isCollecting.not() || (step == 2 && uiState.isCollecting.not()) || isStepFinished,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isStepFinished) Color(0xFF10B981) else Color(0xFF6366F1)
                                 )
@@ -238,12 +228,17 @@ fun CalibrationGuideDialog(
 }
 
 @Composable
-fun GyroscopeInstructionAnimation(frame: Int) {
-    val rotation = when (frame % 3) {
-        0 -> 0f
-        1 -> 3f
-        else -> -3f
-    }
+fun GyroscopeInstructionAnimation() {
+    val infiniteTransition = rememberInfiniteTransition(label = "gyro_rotation")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = -3f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "gyro_rotation"
+    )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("📱", fontSize = 64.sp, modifier = Modifier.rotate(rotation))
         Text("KEEP STILL", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
@@ -251,7 +246,7 @@ fun GyroscopeInstructionAnimation(frame: Int) {
 }
 
 @Composable
-fun MagnetometerInstructionAnimation(frame: Int) {
+fun MagnetometerInstructionAnimation() {
     val infiniteTransition = rememberInfiniteTransition(label = "mag")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 360f,
