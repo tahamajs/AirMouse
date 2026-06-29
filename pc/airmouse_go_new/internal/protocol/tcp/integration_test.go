@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -93,6 +94,8 @@ func startTestServer(t *testing.T) (*Server, *MockMouseController, int) {
 	t.Helper()
 	cfg := config.Get()
 	cfg.AuthEnabled = false
+	cfg.ConfigPath = filepath.Join(t.TempDir(), "config.json")
+	cfg.TrustedDevices = []string{}
 
 	mouse := &MockMouseController{}
 	deviceMgr := device.NewManager()
