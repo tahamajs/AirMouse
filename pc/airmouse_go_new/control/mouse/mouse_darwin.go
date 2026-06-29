@@ -10,6 +10,10 @@ package mouse
 
 CGPoint getMousePos() {
     CGEventRef probe = CGEventCreate(NULL);
+    if (!probe) {
+        CGPoint p = {0, 0};
+        return p;
+    }
     CGPoint point = CGEventGetLocation(probe);
     CFRelease(probe);
     return point;
@@ -18,6 +22,7 @@ CGPoint getMousePos() {
 void moveMouseTo(float x, float y, float dx, float dy) {
     CGPoint dest = CGPointMake(x, y);
     CGEventRef event = CGEventCreateMouseEvent(NULL, kCGEventMouseMoved, dest, kCGMouseButtonLeft);
+    if (!event) return;
     CGEventSetIntegerValueField(event, kCGMouseEventDeltaX, (int64_t)dx);
     CGEventSetIntegerValueField(event, kCGMouseEventDeltaY, (int64_t)dy);
     CGEventPost(kCGHIDEventTap, event);
@@ -38,9 +43,11 @@ void clickMouse(int button, int down) {
         btn = kCGMouseButtonCenter;
     }
     CGEventRef probe = CGEventCreate(NULL);
+    if (!probe) return;
     CGPoint point = CGEventGetLocation(probe);
     CFRelease(probe);
     CGEventRef event = CGEventCreateMouseEvent(NULL, type, point, btn);
+    if (!event) return;
     CGEventPost(kCGHIDEventTap, event);
     CFRelease(event);
 }
@@ -54,6 +61,7 @@ void doubleClick() {
 
 void scrollWheel(int delta) {
     CGEventRef event = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, 1, delta);
+    if (!event) return;
     CGEventPost(kCGHIDEventTap, event);
     CFRelease(event);
 }
@@ -122,6 +130,9 @@ func (m *mouseController) executeMove(dx, dy float64) {
 }
 
 func (m *mouseController) executeClick(button string) {
+	darwinMouseMu.Lock()
+	defer darwinMouseMu.Unlock()
+
 	if button == "left" {
 		C.clickMouse(0, 1)
 		time.Sleep(10 * time.Millisecond)
@@ -138,10 +149,14 @@ func (m *mouseController) executeClick(button string) {
 }
 
 func (m *mouseController) executeDoubleClick() {
+	darwinMouseMu.Lock()
+	defer darwinMouseMu.Unlock()
 	C.doubleClick()
 }
 
 func (m *mouseController) executeScroll(delta int) {
+	darwinMouseMu.Lock()
+	defer darwinMouseMu.Unlock()
 	C.scrollWheel(C.int(delta))
 }
 
