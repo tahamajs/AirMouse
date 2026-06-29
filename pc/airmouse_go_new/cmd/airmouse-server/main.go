@@ -32,10 +32,12 @@ func main() {
 		configPath  string
 		logLevel    string
 		showVersion bool
+		headless    bool
 	)
 	flag.StringVar(&configPath, "config", "", "Path to config file")
 	flag.StringVar(&logLevel, "log-level", "", "Log level (debug, info, warn, error)")
 	flag.BoolVar(&showVersion, "version", false, "Show version and exit")
+	flag.BoolVar(&headless, "headless", false, "Run server in headless mode without GUI")
 	flag.Parse()
 
 	if showVersion {
@@ -122,6 +124,30 @@ func main() {
 	logger.Info("TCP server will listen on port %d", cfg.Port)
 	logger.Info("UDP discovery will listen on port %d", cfg.UDPPort)
 	logger.Info("Active protocols: %v", protocolServer.GetActiveProtocols())
+	if headless {
+		logger.Info("Running in headless mode...")
+		if err := protocolServer.Start(); err != nil {
+			logger.Fatal("Failed to start protocol server: %v", err)
+		}
+		logger.Info("Headless servers started successfully")
+
+		// Wait for SIGINT/SIGTERM
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+
+		logger.Info("Shutting down headless server...")
+		protocolServer.Stop()
+		deviceMgr.Stop()
+		if proxMgr != nil && fusion != nil {
+			configDir := filepath.Dir(cfg.ConfigPath)
+			statePath := filepath.Join(configDir, "proximity_state.json")
+			_ = fusion.SaveState(statePath)
+		}
+		logger.Info("Shutdown complete")
+		os.Exit(0)
+	}
+
 	logger.Info("Launching desktop UI window...")
 
 	// Run the UI – this blocks until window closes
