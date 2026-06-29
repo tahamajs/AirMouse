@@ -309,7 +309,10 @@ func (s *Server) processLine(client *Client, line []byte) {
 		deviceIDValue, _ := payload["device_id"].(string)
 		protocolName, _ := payload["protocol"].(string)
 		transport, _ := payload["transport"].(string)
-		fingerprint := device.StableDeviceID(deviceIDValue, name, version, deviceName, model, manufacturer, brand, androidVersion, sdkInt, protocolName, transport)
+		fingerprint := deviceIDValue
+		if fingerprint == "" {
+			fingerprint = device.StableDeviceID(name, deviceName, model, manufacturer, brand)
+		}
 		token, _ := payload["token"].(string)
 
 		utils.LogInfo("Handshake received from Android (TCP): id=%s name=%s", client.ID, name)

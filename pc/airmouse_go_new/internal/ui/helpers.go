@@ -211,7 +211,10 @@ func ShowContextHelp(parent fyne.Window, context string) {
 		markdown = "## Help\n\nNo specific help available for this context."
 	}
 	content := widget.NewRichTextFromMarkdown(markdown)
-	dialog.ShowCustom("Help", "Close", content, parent)
+	content.Wrapping = fyne.TextWrapWord
+	scroll := container.NewScroll(content)
+	scroll.SetMinSize(fyne.NewSize(450, 300))
+	dialog.ShowCustom("Help", "Close", scroll, parent)
 }
 
 // ============================================================

@@ -398,7 +398,10 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		deviceIDValue, _ := payload["device_id"].(string)
 		protocolName, _ := payload["protocol"].(string)
 		transport, _ := payload["transport"].(string)
-		fingerprint := device.StableDeviceID(deviceIDValue, name, version, deviceName, model, manufacturer, brand, androidVersion, sdkInt, protocolName, transport)
+		fingerprint := deviceIDValue
+		if fingerprint == "" {
+			fingerprint = device.StableDeviceID(name, deviceName, model, manufacturer, brand)
+		}
 		if name == "" {
 			name = "Unknown"
 		}

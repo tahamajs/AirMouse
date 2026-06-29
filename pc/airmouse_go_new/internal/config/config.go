@@ -180,7 +180,7 @@ func loadOrDefault() *Config {
 		EnableTCP:       true,
 		EnableWebSocket: true,
 		EnableUDP:       true,
-		EnableBluetooth: false,
+		EnableBluetooth: true,
 		EnableSerial:    false,
 
 		Sensitivity:         1.0,

@@ -8,6 +8,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -17,6 +18,7 @@ import (
 
 type StatusBar struct {
 	container      *fyne.Container
+	card           *widget.Card
 	cpuLabel       *widget.Label
 	memLabel       *widget.Label
 	goroutineLabel *widget.Label
@@ -54,6 +56,7 @@ func NewStatusBar() *StatusBar {
 	}
 
 	sb.container = container.NewHBox(
+		layout.NewSpacer(),
 		sb.cpuLabel,
 		widget.NewSeparator(),
 		sb.memLabel,
@@ -63,7 +66,10 @@ func NewStatusBar() *StatusBar {
 		sb.uptimeLabel,
 		widget.NewSeparator(),
 		sb.networkLabel,
+		layout.NewSpacer(),
 	)
+
+	sb.card = widget.NewCard("", "", sb.container)
 
 	go sb.updater()
 	return sb
@@ -71,7 +77,7 @@ func NewStatusBar() *StatusBar {
 
 // Widget returns the container for the status bar.
 func (sb *StatusBar) Widget() fyne.CanvasObject {
-	return sb.container
+	return sb.card
 }
 
 func (sb *StatusBar) updater() {
