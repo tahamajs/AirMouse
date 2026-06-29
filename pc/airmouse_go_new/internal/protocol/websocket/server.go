@@ -190,6 +190,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		utils.LogError("WebSocket upgrade failed: %v", err)
 		return
 	}
+	if tcpConn, ok := conn.UnderlyingConn().(*net.TCPConn); ok {
+		_ = tcpConn.SetNoDelay(true)
+	}
 
 	id := utils.GenerateID()
 	client := &WSClient{

@@ -104,6 +104,11 @@ func (s *Server) acceptLoop() {
 }
 
 func (s *Server) handleClient(conn net.Conn) {
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		_ = tcpConn.SetNoDelay(true)
+		_ = tcpConn.SetKeepAlive(true)
+		_ = tcpConn.SetKeepAlivePeriod(3 * time.Second)
+	}
 	clientID := utils.GenerateID()
 	clientIP := conn.RemoteAddr().String()
 	client := &Client{
