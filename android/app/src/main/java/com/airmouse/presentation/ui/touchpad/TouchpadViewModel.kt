@@ -13,13 +13,13 @@ import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.MouseStatistics
 import com.airmouse.domain.model.MovementProfile
 import com.airmouse.domain.model.UserPreferences
+import com.airmouse.domain.usecase.TestConnectionUseCase
 import com.airmouse.network.ConnectionManager
 import com.airmouse.network.MessageTypes
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +32,8 @@ import kotlin.math.*
 class TouchpadViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: PreferencesManager,
-    private val connectionManager: ConnectionManager
+    private val connectionManager: ConnectionManager,
+    private val testConnectionUseCase: TestConnectionUseCase
 ) : ViewModel() {
 
     // ============================================================
@@ -84,6 +85,7 @@ class TouchpadViewModel @Inject constructor(
 
     init {
         loadSettings()
+        observeConnectionState()
     }
 
     // ============================================================
@@ -195,6 +197,24 @@ class TouchpadViewModel @Inject constructor(
         saveSetting("touchpad_active", state.isActive)
     }
 
+    private fun observeConnectionState() {
+        viewModelScope.launch {
+            connectionManager.connectionStatus.collect { status ->
+                val connected = status == ConnectionManager.ConnectionStatus.CONNECTED
+                _uiState.update {
+                    it.copy(
+                        isConnected = connected,
+                        isActive = if (connected) it.isActive else false
+                    )
+                }
+
+                if (!connected) {
+                    resetGestureState()
+                }
+            }
+        }
+    }
+
     // ============================================================
     // Event Handling
     // ============================================================
@@ -246,6 +266,11 @@ class TouchpadViewModel @Inject constructor(
     // ============================================================
 
     private fun toggleTouchpad() {
+        if (!connectionManager.isConnected()) {
+            _uiState.update { it.copy(isActive = false) }
+            triggerEffect(TouchpadEffect.ShowToast("Connect to the server first"))
+            return
+        }
         val newState = !_uiState.value.isActive
         saveSetting("touchpad_active", newState)
         _uiState.update { it.copy(isActive = newState) }
@@ -265,7 +290,6 @@ class TouchpadViewModel @Inject constructor(
     private fun resetToDefaults() {
         val defaultState = TouchpadUiState()
         _uiState.update { defaultState }
-        prefs.clear()
         saveAllSettings(defaultState)
         triggerEffect(TouchpadEffect.ShowToast("Reset to defaults"))
     }
@@ -394,11 +418,9 @@ class TouchpadViewModel @Inject constructor(
         }
 
         if (_uiState.value.twoFingerScroll && (lastScrollX != 0f || lastScrollY != 0f)) {
-            var dx = (centerX - lastScrollX) * _uiState.value.scrollSpeed
             var dy = (centerY - lastScrollY) * _uiState.value.scrollSpeed
 
             if (_uiState.value.naturalScrolling) {
-                dx = -dx
                 dy = -dy
             }
 
@@ -491,6 +513,7 @@ class TouchpadViewModel @Inject constructor(
     // Tap & Long‑Press
     // ------------------------------------------------------------
 
+    @Suppress("UNUSED_PARAMETER")
     fun processTap(x: Float, y: Float) {
         if (!_uiState.value.isActive || !_uiState.value.tapToClick) return
 
@@ -689,28 +712,37 @@ class TouchpadViewModel @Inject constructor(
     // ============================================================
 
     private fun sendMove(dx: Float, dy: Float) {
+        if (!canSend()) return
         triggerEffect(TouchpadEffect.SendMove(dx, dy))
         connectionManager.sendMove(dx, dy)
     }
 
     private fun sendScroll(delta: Int) {
+        if (!canSend()) return
         triggerEffect(TouchpadEffect.SendScroll(delta))
         connectionManager.sendScroll(delta)
     }
 
     private fun sendClick(button: String) {
+        if (!canSend()) return
         triggerEffect(TouchpadEffect.SendClick(button))
         connectionManager.sendClick(button)
     }
 
     private fun sendGesture(gesture: String) {
+        if (!canSend()) return
         triggerEffect(TouchpadEffect.SendGesture(gesture))
         connectionManager.sendGesture(gesture, 0.9f)
     }
 
     private fun sendCommand(command: String) {
+        if (!canSend()) return
         triggerEffect(TouchpadEffect.SendCommand(command))
         connectionManager.sendControl(command)
+    }
+
+    private fun canSend(): Boolean {
+        return _uiState.value.isConnected && connectionManager.isConnected() && _uiState.value.isActive
     }
 
     private fun pushGestureHistory(gesture: String) {
@@ -732,6 +764,30 @@ class TouchpadViewModel @Inject constructor(
 
     private fun navigateToSettings() {
         triggerEffect(TouchpadEffect.NavigateToSettings)
+    }
+
+    fun testConnection() {
+        viewModelScope.launch {
+            val current = _uiState.value.connectionConfig
+            _uiState.update { it.copy(isTestingConnection = true, connectionTestMessage = "Testing connection...") }
+            val targetIp = current.ip.ifBlank { prefs.getString("last_ip", "") }
+            val targetPort = current.port.takeIf { it > 0 } ?: prefs.getInt("last_port", 8080)
+            val result = testConnectionUseCase(targetIp, targetPort)
+            _uiState.update {
+                it.copy(
+                    isTestingConnection = false,
+                    connectionTestResult = result.getOrNull(),
+                    connectionTestMessage = result.fold(
+                        onSuccess = { test ->
+                            "${test.message} (${test.latency} ms)"
+                        },
+                        onFailure = { err ->
+                            err.message ?: "Connection test failed"
+                        }
+                    )
+                )
+            }
+        }
     }
 
     // ============================================================

@@ -26,10 +26,10 @@ class MotionDetector {
     private var scrollInProgress = false
     private var lastScrollTime = 0L
     private val scrollCooldownMs = 100L
+    private var lastUpdateTime = 0L
 
     
     private var isActive = true
-    private var lastUpdateTime = 0L
 
     
     var clickSpeedThreshold: Float = defaultClickSpeedThreshold
@@ -70,7 +70,7 @@ class MotionDetector {
         scrollDebounceThreshold = scrollDebounce
     }
 
-    fun detect(gyroY: Float, accelY: Float, dt: Float): Gesture {
+    fun detect(gyroY: Float, accelY: Float): Gesture {
         if (!isActive) return Gesture.NONE
 
         val now = System.currentTimeMillis()
@@ -127,12 +127,12 @@ class MotionDetector {
         return Gesture.NONE
     }
 
-    fun detectClick(gyroY: Float, dt: Float): Boolean {
-        return detect(gyroY, 0f, dt) == Gesture.CLICK
+    fun detectClick(gyroY: Float): Boolean {
+        return detect(gyroY, 0f) == Gesture.CLICK
     }
 
-    fun detectScroll(accelY: Float, dt: Float): Int {
-        return when (detect(0f, accelY, dt)) {
+    fun detectScroll(accelY: Float): Int {
+        return when (detect(0f, accelY)) {
             Gesture.SCROLL_UP -> 1
             Gesture.SCROLL_DOWN -> -1
             else -> 0

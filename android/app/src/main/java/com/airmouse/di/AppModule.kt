@@ -7,7 +7,6 @@ import android.content.Context
 import android.hardware.usb.UsbManager
 import android.os.Vibrator
 import com.airmouse.presentation.PresentationModeService
-import com.airmouse.network.WebSocketManager
 import com.airmouse.network.ConnectionManager
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.EnhancedGestureDetector
@@ -24,6 +23,24 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
+    @Provides
+    @Singleton
+    fun provideLogManager(@ApplicationContext context: Context): LogManager {
+        LogManager.init(context)
+        return LogManager
+    }
+
+    @Provides
+    @Singleton
+    fun provideConnectedDeviceStore(): ConnectedDeviceStore {
+        return ConnectedDeviceStore
+    }
+
+    @Provides
+    @Singleton
+    fun providePermissionManager(@ApplicationContext context: Context): PermissionManager {
+        return PermissionManager(context)
+    }
     @Provides
     @Singleton
     fun providePreferencesManager(@ApplicationContext context: Context): PreferencesManager {
@@ -123,11 +140,6 @@ object AppModule {
 
 
 
-    @Provides
-    @Singleton
-    fun provideWebSocketManager(): WebSocketManager {
-        return WebSocketManager
-    }
 
     @Provides
     @Singleton

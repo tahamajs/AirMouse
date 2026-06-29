@@ -1,4 +1,4 @@
-package com.airmouse.ui.components
+package com.airmouse.presentation.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.animation.*

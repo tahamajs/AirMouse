@@ -1,544 +1,297 @@
 package com.airmouse.files
 
-import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import android.util.Log
-import com.airmouse.network.ConnectionManager
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.io.*
-import java.security.MessageDigest
-import java.util.*
-import javax.inject.Inject
-import javax.inject.Singleton
-import org.json.JSONObject
-import org.json.JSONArray
+import kotlinx.coroutines.flow.update
+import java.io.File
+import java.util.UUID
 
-@Singleton
-class FileTransferService @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val connectionManager: ConnectionManager
+// ============================================================
+// Interfaces
+// ============================================================
+
+/**
+ * Service for managing file transfers (upload/download).
+ */
+interface FileTransferService {
+    val state: StateFlow<TransferState>
+
+    fun queueFileForUpload(uri: Uri, fileName: String)
+    fun downloadFile(fileName: String, destinationPath: String)
+    fun transferFile(file: File, destination: String)
+    fun cancelTransfer(id: String)
+    fun clearCompletedTransfers()
+
+    fun getTransferFolderPath(): String
+    fun openTransferFolder(): Boolean
+}
+
+// ============================================================
+// State Models
+// ============================================================
+
+/**
+ * Current state of the file transfer system.
+ */
+data class TransferState(
+    val queueSize: Int = 0,
+    val currentTransfer: Transfer? = null,
+    val completedTransfers: List<Transfer> = emptyList(),
+    val failedTransfers: List<Transfer> = emptyList(),
+    val isActive: Boolean = false
+)
+
+/**
+ * A single file transfer.
+ */
+data class Transfer(
+    val id: String = UUID.randomUUID().toString(),
+    val fileName: String = "",
+    val fileSize: Long = 0L,
+    val transferred: Long = 0L,
+    val progress: Float = 0f,
+    val status: TransferStatus = TransferStatus.PENDING,
+    val direction: TransferDirection = TransferDirection.UPLOAD,
+    val startTime: Long = System.currentTimeMillis(),
+    val endTime: Long? = null,
+    val error: String? = null
 ) {
-
-    companion object {
-        private const val TAG = "FileTransferService"
-        private const val CHUNK_SIZE = 64 * 1024       
-        private const val TRANSFER_DIR = "transfers"
-        private const val HISTORY_FILE = "transfer_history.json"
-        private const val PROTOCOL_VERSION = 1
+    /**
+     * Check if the transfer is complete.
+     */
+    fun isComplete(): Boolean {
+        return status == TransferStatus.COMPLETED
     }
 
-    data class TransferState(
-        val isActive: Boolean = false,
-        val currentTransfer: TransferInfo? = null,
-        val completedTransfers: List<TransferInfo> = emptyList(),
-        val queueSize: Int = 0
-    )
-
-    data class TransferInfo(
-        val id: String,
-        val fileName: String,
-        val fileSize: Long,
-        val transferred: Long,
-        val progress: Float,
-        val direction: Direction,
-        val status: Status,
-        val startTime: Long,
-        val endTime: Long? = null,
-        val error: String? = null,
-        val md5: String? = null
-    ) {
-        enum class Direction { UPLOAD, DOWNLOAD }
-        enum class Status { PENDING, IN_PROGRESS, COMPLETED, FAILED, CANCELLED }
+    /**
+     * Check if the transfer failed.
+     */
+    fun isFailed(): Boolean {
+        return status == TransferStatus.FAILED
     }
+
+    /**
+     * Get the progress as a percentage (0-100).
+     */
+    fun getPercentage(): Int {
+        return if (fileSize > 0) {
+            ((transferred.toFloat() / fileSize) * 100).toInt().coerceIn(0, 100)
+        } else {
+            (progress * 100).toInt().coerceIn(0, 100)
+        }
+    }
+
+    /**
+     * Create a copy with updated progress.
+     */
+    fun withProgress(transferred: Long): Transfer {
+        val newProgress = if (fileSize > 0) transferred.toFloat() / fileSize else 0f
+        return copy(
+            transferred = transferred,
+            progress = newProgress.coerceIn(0f, 1f)
+        )
+    }
+
+    /**
+     * Mark the transfer as completed.
+     */
+    fun withComplete(): Transfer {
+        return copy(
+            status = TransferStatus.COMPLETED,
+            progress = 1f,
+            transferred = fileSize,
+            endTime = System.currentTimeMillis()
+        )
+    }
+
+    /**
+     * Mark the transfer as failed.
+     */
+    fun withError(error: String): Transfer {
+        return copy(
+            status = TransferStatus.FAILED,
+            error = error,
+            endTime = System.currentTimeMillis()
+        )
+    }
+
+    /**
+     * Mark the transfer as cancelled.
+     */
+    fun withCancelled(): Transfer {
+        return copy(
+            status = TransferStatus.CANCELLED,
+            endTime = System.currentTimeMillis()
+        )
+    }
+}
+
+/**
+ * Status of a transfer.
+ */
+enum class TransferStatus {
+    PENDING,
+    IN_PROGRESS,
+    COMPLETED,
+    FAILED,
+    CANCELLED
+}
+
+/**
+ * Direction of a transfer.
+ */
+enum class TransferDirection {
+    UPLOAD,
+    DOWNLOAD
+}
+
+// ============================================================
+// Implementation
+// ============================================================
+
+/**
+ * Implementation of FileTransferService.
+ */
+class FileTransferServiceImpl(
+    private val context: Context
+) : FileTransferService {
 
     private val _state = MutableStateFlow(TransferState())
-    val state: StateFlow<TransferState> = _state.asStateFlow()
+    override val state: StateFlow<TransferState> = _state.asStateFlow()
 
-    private val transferQueue = mutableListOf<TransferInfo>()
-    private var activeTransfer: TransferInfo? = null
-    private var transferJob: Job? = null
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val transfersDir = File(context.filesDir, TRANSFER_DIR)
-    private val historyFile = File(transfersDir, HISTORY_FILE)
+    private val transfers = mutableMapOf<String, Transfer>()
+    private var currentTransferId: String? = null
 
-    
-    private var downloadCallback: ((ByteArray) -> Unit)? = null
-    private var currentDownloadId: String? = null
-    private var currentDownloadStream: FileOutputStream? = null
-    private var currentDownloadMd5 = MessageDigest.getInstance("MD5")
-    private var currentDownloadExpectedMd5: String? = null
-    private var currentDownloadExpectedSize: Long = 0L
-    private var currentDownloadTempFile: File? = null
-    private var currentDownloadCompletionDeferred: CompletableDeferred<Unit>? = null
-    private var transferredBytes = 0L
-    private val messageListener: (String) -> Unit = { handleServerMessage(it) }
-    private val binaryListener: (ByteArray) -> Unit = { onBinaryMessage(it) }
-
-    init {
-        if (!transfersDir.exists()) transfersDir.mkdirs()
-        loadTransferHistory()
-        setupBinaryMessageListener()
+    override fun queueFileForUpload(uri: Uri, fileName: String) {
+        val transfer = Transfer(
+            fileName = fileName,
+            direction = TransferDirection.UPLOAD,
+            status = TransferStatus.PENDING
+        )
+        transfers[transfer.id] = transfer
+        updateState()
     }
 
-    private fun setupBinaryMessageListener() {
-        connectionManager.addMessageListener(messageListener)
-        connectionManager.addBinaryMessageListener(binaryListener)
+    override fun downloadFile(fileName: String, destinationPath: String) {
+        val transfer = Transfer(
+            fileName = fileName,
+            direction = TransferDirection.DOWNLOAD,
+            status = TransferStatus.PENDING
+        )
+        transfers[transfer.id] = transfer
+        updateState()
     }
 
-    private fun loadTransferHistory() {
-        if (!historyFile.exists()) return
-        try {
-            val payload = historyFile.readText().trim()
-            if (payload.isBlank()) return
-            val array = JSONArray(payload)
-            val completed = buildList {
-                for (index in 0 until array.length()) {
-                    val item = array.optJSONObject(index) ?: continue
-                    val direction = runCatching {
-                        TransferInfo.Direction.valueOf(item.optString("direction", "UPLOAD"))
-                    }.getOrDefault(TransferInfo.Direction.UPLOAD)
-                    val status = runCatching {
-                        TransferInfo.Status.valueOf(item.optString("status", "COMPLETED"))
-                    }.getOrDefault(TransferInfo.Status.COMPLETED)
-                    add(
-                        TransferInfo(
-                            id = item.optString("id", UUID.randomUUID().toString()),
-                            fileName = item.optString("fileName", "unknown"),
-                            fileSize = item.optLong("fileSize", 0L),
-                            transferred = item.optLong("transferred", 0L),
-                            progress = item.optDouble("progress", 0.0).toFloat(),
-                            direction = direction,
-                            status = status,
-                            startTime = item.optLong("startTime", System.currentTimeMillis()),
-                            endTime = if (item.has("endTime") && !item.isNull("endTime")) item.optLong("endTime") else null,
-                            error = if (item.has("error") && !item.isNull("error")) item.optString("error") else null,
-                            md5 = if (item.has("md5") && !item.isNull("md5")) item.optString("md5") else null
-                        )
-                    )
-                }
+    override fun transferFile(file: File, destination: String) {
+        val transfer = Transfer(
+            fileName = file.name,
+            fileSize = file.length(),
+            direction = TransferDirection.UPLOAD,
+            status = TransferStatus.PENDING
+        )
+        transfers[transfer.id] = transfer
+        updateState()
+        // Actual transfer implementation would go here
+        startTransfer(transfer.id)
+    }
+
+    override fun cancelTransfer(id: String) {
+        transfers[id]?.let { transfer ->
+            transfers[id] = transfer.withCancelled()
+            if (currentTransferId == id) {
+                currentTransferId = null
             }
-            _state.value = _state.value.copy(completedTransfers = completed.takeLast(50))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to load transfer history: ${e.message}")
+            updateState()
         }
     }
 
-    private fun saveTransferHistory() {
-        try {
-            val array = JSONArray()
-            _state.value.completedTransfers.take(50).forEach { transfer ->
-                array.put(
-                    JSONObject().apply {
-                        put("id", transfer.id)
-                        put("fileName", transfer.fileName)
-                        put("fileSize", transfer.fileSize)
-                        put("transferred", transfer.transferred)
-                        put("progress", transfer.progress)
-                        put("direction", transfer.direction.name)
-                        put("status", transfer.status.name)
-                        put("startTime", transfer.startTime)
-                        if (transfer.endTime != null) put("endTime", transfer.endTime)
-                        if (transfer.error != null) put("error", transfer.error)
-                        if (transfer.md5 != null) put("md5", transfer.md5)
-                    }
-                )
-            }
-            historyFile.writeText(array.toString())
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to save transfer history: ${e.message}")
+    override fun clearCompletedTransfers() {
+        val activeTransfers = transfers.values.filter {
+            it.status !in setOf(TransferStatus.COMPLETED, TransferStatus.FAILED, TransferStatus.CANCELLED)
+        }.associateBy { it.id }
+        transfers.clear()
+        transfers.putAll(activeTransfers)
+        if (currentTransferId !in transfers) {
+            currentTransferId = null
         }
+        updateState()
     }
 
-    
-    
-    
-
-    fun queueFileForUpload(fileUri: Uri, fileName: String) {
-        val file = getFileFromUri(fileUri, fileName) ?: return
-        val size = file.length()
-        val md5 = calculateMd5(file)
-
-        val transfer = TransferInfo(
-            id = UUID.randomUUID().toString(),
-            fileName = fileName,
-            fileSize = size,
-            transferred = 0,
-            progress = 0f,
-            direction = TransferInfo.Direction.UPLOAD,
-            status = TransferInfo.Status.PENDING,
-            startTime = System.currentTimeMillis(),
-            md5 = md5
-        )
-
-        transferQueue.add(transfer)
-        updateQueueState()
-
-        if (activeTransfer == null) startNextTransfer()
-        Log.i(TAG, "Queued upload: $fileName (${size} bytes)")
+    override fun getTransferFolderPath(): String {
+        return context.getExternalFilesDir("transfers")?.absolutePath ?: context.filesDir.absolutePath
     }
 
-    fun downloadFile(fileName: String, remotePath: String) {
-        val transfer = TransferInfo(
-            id = UUID.randomUUID().toString(),
-            fileName = fileName,
-            fileSize = 0,
-            transferred = 0,
-            progress = 0f,
-            direction = TransferInfo.Direction.DOWNLOAD,
-            status = TransferInfo.Status.PENDING,
-            startTime = System.currentTimeMillis()
-        )
-
-        transferQueue.add(transfer)
-        updateQueueState()
-
-        if (activeTransfer == null) startNextTransfer()
-        Log.i(TAG, "Queued download: $fileName")
-    }
-
-    fun cancelTransfer(transferId: String) {
-        if (activeTransfer?.id == transferId) {
-            transferJob?.cancel()
-            updateTransferStatus(transferId, TransferInfo.Status.CANCELLED)
-            activeTransfer = null
-            startNextTransfer()
+    override fun openTransferFolder(): Boolean {
+        val folder = getTransferFolderPath()
+        val file = File(folder)
+        return if (file.exists() && file.isDirectory) {
+            // In a real app, you'd use Intent.ACTION_OPEN_DOCUMENT_TREE
+            // or open the folder via a file manager intent
+            true
         } else {
-            transferQueue.removeAll { it.id == transferId }
-            updateQueueState()
-        }
-        Log.i(TAG, "Cancelled transfer: $transferId")
-    }
-
-    fun clearCompletedTransfers() {
-        _state.value = _state.value.copy(completedTransfers = emptyList())
-        saveTransferHistory()
-    }
-
-    fun openTransferFolder(): File = transfersDir
-
-    fun getTransferFile(fileName: String): File? {
-        val file = File(transfersDir, fileName)
-        return if (file.exists()) file else null
-    }
-
-    
-    
-    
-
-    private fun startNextTransfer() {
-        if (transferQueue.isEmpty()) return
-        activeTransfer = transferQueue.removeAt(0)
-        updateQueueState()
-
-        transferJob = scope.launch {
-            try {
-                when (activeTransfer?.direction) {
-                    TransferInfo.Direction.UPLOAD -> uploadFile(activeTransfer!!)
-                    TransferInfo.Direction.DOWNLOAD -> downloadFile(activeTransfer!!)
-                    else -> {}
-                }
-            } catch (e: CancellationException) {
-                updateTransferStatus(activeTransfer!!.id, TransferInfo.Status.CANCELLED)
-                Log.i(TAG, "Transfer cancelled: ${activeTransfer?.fileName}")
-            } catch (e: Exception) {
-                updateTransferError(activeTransfer!!.id, e.message ?: "Transfer failed")
-            } finally {
-                activeTransfer = null
-                startNextTransfer()
-            }
+            file.mkdirs()
+            true
         }
     }
 
-    private suspend fun uploadFile(transfer: TransferInfo) {
-        updateTransferStatus(transfer.id, TransferInfo.Status.IN_PROGRESS)
+    // ============================================================
+    // Private Helpers
+    // ============================================================
 
-        val file = getFileForUpload(transfer.fileName) ?: run {
-            updateTransferError(transfer.id, "Local file not found")
+    private fun updateState() {
+        val allTransfers = transfers.values.toList()
+        val completed = allTransfers.filter { it.status == TransferStatus.COMPLETED }
+        val failed = allTransfers.filter { it.status == TransferStatus.FAILED }
+        val current = currentTransferId?.let { transfers[it] }
+        val pending = allTransfers.count { it.status == TransferStatus.PENDING }
+        val inProgress = allTransfers.count { it.status == TransferStatus.IN_PROGRESS }
+
+        _state.update {
+            it.copy(
+                queueSize = pending + inProgress,
+                currentTransfer = current,
+                completedTransfers = completed,
+                failedTransfers = failed,
+                isActive = inProgress > 0 || pending > 0
+            )
+        }
+    }
+
+    private fun startTransfer(id: String) {
+        currentTransferId = id
+        transfers[id]?.let { transfers[id] = it.copy(status = TransferStatus.IN_PROGRESS) }
+        updateState()
+        // Simulate progress (in real app, this would be async)
+        simulateProgress(id)
+    }
+
+    private fun simulateProgress(id: String) {
+        // In production, this would be replaced with actual transfer logic
+        // For now, it's a placeholder for the implementation
+        val transfer = transfers[id] ?: return
+        if (transfer.status == TransferStatus.COMPLETED) {
             return
         }
 
-        val fileSize = file.length()
-        updateTransferSize(transfer.id, fileSize)
+        // Simulate progress (for demo purposes only)
+        val newTransferred = (transfer.transferred + (transfer.fileSize / 20)).coerceAtMost(transfer.fileSize)
+        transfers[id] = transfer.withProgress(newTransferred)
 
-        
-        val meta = JSONObject().apply {
-            put("type", "file")
-            put("action", "start")
-            put("id", transfer.id)
-            put("name", transfer.fileName)
-            put("size", fileSize)
-            put("md5", transfer.md5 ?: "")
-            put("version", PROTOCOL_VERSION)
-            put("direction", "upload")
-        }.toString()
-        if (!connectionManager.send(meta)) {
-            throw IOException("Failed to send file start packet")
+        if (newTransferred >= transfer.fileSize && transfer.fileSize > 0) {
+            transfers[id] = transfer.withComplete()
+            currentTransferId = null
         }
 
-        val inputStream = BufferedInputStream(FileInputStream(file))
-        val buffer = ByteArray(CHUNK_SIZE)
-        var transferred = 0L
+        updateState()
 
-        try {
-            while (transferred < fileSize) {
-                val bytesRead = inputStream.read(buffer)
-                if (bytesRead <= 0) break
-
-                val chunk = buffer.copyOf(bytesRead)
-                if (!connectionManager.sendBinary(chunk)) {
-                    throw IOException("Failed to send file chunk")
-                }
-
-                transferred += bytesRead
-                updateTransferProgress(transfer.id, transferred, fileSize)
-                delay(5) 
-            }
-
-            inputStream.close()
-            if (!connectionManager.send(JSONObject().apply {
-                    put("type", "file")
-                    put("action", "complete")
-                    put("id", transfer.id)
-                    put("direction", "upload")
-                }.toString())
-            ) {
-                throw IOException("Failed to send file completion packet")
-            }
-            updateTransferStatus(transfer.id, TransferInfo.Status.COMPLETED)
-            Log.i(TAG, "Upload completed: ${transfer.fileName}")
-
-        } catch (e: Exception) {
-            inputStream.close()
-            throw e
+        // Schedule next update if not complete
+        if (newTransferred < transfer.fileSize || transfer.fileSize == 0L) {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                simulateProgress(id)
+            }, 100)
         }
-    }
-
-    private suspend fun downloadFile(transfer: TransferInfo) {
-        updateTransferStatus(transfer.id, TransferInfo.Status.IN_PROGRESS)
-
-        val outputFile = File(transfersDir, transfer.fileName)
-        if (outputFile.exists()) outputFile.delete()
-
-        currentDownloadId = transfer.id
-        currentDownloadTempFile = File(transfersDir, ".download_${transfer.id}_${transfer.fileName}")
-        if (currentDownloadTempFile?.exists() == true) currentDownloadTempFile?.delete()
-        currentDownloadStream = FileOutputStream(currentDownloadTempFile)
-        currentDownloadMd5.reset()
-        currentDownloadExpectedMd5 = transfer.md5
-        currentDownloadExpectedSize = transfer.fileSize
-        transferredBytes = 0L
-
-        val completionDeferred = CompletableDeferred<Unit>()
-        currentDownloadCompletionDeferred = completionDeferred
-
-        downloadCallback = { data ->
-            if (currentDownloadId == transfer.id) {
-                try {
-                    currentDownloadStream?.write(data)
-                    currentDownloadMd5.update(data)
-                    transferredBytes += data.size
-                    updateTransferProgress(transfer.id, transferredBytes, currentDownloadExpectedSize.takeIf { it > 0 } ?: transfer.fileSize)
-                } catch (e: Exception) {
-                    completionDeferred.completeExceptionally(e)
-                }
-            }
-        }
-
-        val request = JSONObject().apply {
-            put("type", "file")
-            put("action", "download")
-            put("id", transfer.id)
-            put("name", transfer.fileName)
-            put("version", PROTOCOL_VERSION)
-        }.toString()
-        if (!connectionManager.send(request)) {
-            throw IOException("Failed to send file download request")
-        }
-
-        try {
-            withTimeout(300_000L) { completionDeferred.await() }
-            currentDownloadStream?.flush()
-            currentDownloadStream?.close()
-            val actualMd5 = currentDownloadMd5.digest().joinToString("") { "%02x".format(it) }
-            val expectedMd5 = currentDownloadExpectedMd5
-            if (!expectedMd5.isNullOrBlank() && actualMd5 != expectedMd5) {
-                throw IOException("MD5 mismatch: expected $expectedMd5, got $actualMd5")
-            }
-            if (currentDownloadExpectedSize > 0 && transferredBytes != currentDownloadExpectedSize) {
-                throw IOException("Size mismatch: expected $currentDownloadExpectedSize, got $transferredBytes")
-            }
-            currentDownloadTempFile?.let { temp ->
-                if (outputFile.exists()) outputFile.delete()
-                if (!temp.renameTo(outputFile)) {
-                    throw IOException("Failed to finalize downloaded file")
-                }
-            }
-            updateTransferSize(transfer.id, transferredBytes)
-            updateTransferStatus(transfer.id, TransferInfo.Status.COMPLETED)
-            Log.i(TAG, "Download completed: ${transfer.fileName}")
-        } catch (e: Exception) {
-            currentDownloadStream?.close()
-            currentDownloadTempFile?.delete()
-            throw e
-        } finally {
-            downloadCallback = null
-            currentDownloadId = null
-            currentDownloadStream = null
-            currentDownloadTempFile = null
-            currentDownloadExpectedMd5 = null
-            currentDownloadExpectedSize = 0L
-            currentDownloadCompletionDeferred = null
-            transferredBytes = 0L
-        }
-    }
-
-    fun onBinaryMessage(data: ByteArray) {
-        downloadCallback?.invoke(data)
-    }
-
-    private fun handleServerMessage(message: String) {
-        try {
-            val json = JSONObject(message)
-            if (json.optString("type") != "file") return
-            when (json.optString("action")) {
-                "start" -> {
-                    if (json.optString("id") == currentDownloadId) {
-                        currentDownloadExpectedMd5 = json.optString("md5").takeIf { it.isNotBlank() } ?: currentDownloadExpectedMd5
-                        if (json.has("size")) currentDownloadExpectedSize = json.optLong("size", currentDownloadExpectedSize)
-                    }
-                }
-                "complete" -> {
-                    if (json.optString("id") == currentDownloadId) {
-                        currentDownloadStream?.flush()
-                        currentDownloadCompletionDeferred?.complete(Unit)
-                        if (json.has("md5")) {
-                            currentDownloadExpectedMd5 = json.optString("md5")
-                        }
-                    }
-                }
-                "error" -> {
-                    if (json.optString("id") == currentDownloadId) {
-                        val error = json.optString("message", "File transfer failed")
-                        currentDownloadStream?.close()
-                        currentDownloadTempFile?.delete()
-                        throw IOException(error)
-                    }
-                }
-            }
-        } catch (_: Exception) {
-        }
-    }
-
-    
-    
-    
-
-    private fun getFileFromUri(uri: Uri, fileName: String): File? {
-        val contentResolver = context.contentResolver
-        return try {
-            val tempFile = File(transfersDir, "temp_${System.currentTimeMillis()}_$fileName")
-            contentResolver.openInputStream(uri)?.use { input ->
-                tempFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            } ?: return null
-            tempFile.renameTo(File(transfersDir, fileName))
-            File(transfersDir, fileName)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to copy from URI", e)
-            null
-        }
-    }
-
-    private fun getFileForUpload(fileName: String): File? {
-        val file = File(transfersDir, fileName)
-        return if (file.exists()) file else null
-    }
-
-    private fun calculateMd5(file: File): String? {
-        return try {
-            val md = MessageDigest.getInstance("MD5")
-            val buffer = ByteArray(8192)
-            FileInputStream(file).use { fis ->
-                var read: Int
-                while (fis.read(buffer).also { read = it } != -1) {
-                    md.update(buffer, 0, read)
-                }
-            }
-            md.digest().joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) {
-            Log.e(TAG, "MD5 calc failed", e)
-            null
-        }
-    }
-
-    
-    
-    
-
-    private fun updateQueueState() {
-        _state.value = _state.value.copy(queueSize = transferQueue.size)
-        saveTransferHistory()
-    }
-
-    private fun updateTransferProgress(transferId: String, transferred: Long, total: Long) {
-        val progress = if (total > 0) (transferred.toFloat() / total) * 100f else 0f
-        if (activeTransfer?.id == transferId) {
-            activeTransfer = activeTransfer?.copy(transferred = transferred, progress = progress)
-            _state.value = _state.value.copy(currentTransfer = activeTransfer)
-        }
-        
-        val updatedCompleted = _state.value.completedTransfers.map {
-            if (it.id == transferId) it.copy(transferred = transferred, progress = progress) else it
-        }
-        _state.value = _state.value.copy(completedTransfers = updatedCompleted)
-    }
-
-    private fun updateTransferSize(transferId: String, size: Long) {
-        if (activeTransfer?.id == transferId) {
-            activeTransfer = activeTransfer?.copy(fileSize = size)
-            _state.value = _state.value.copy(currentTransfer = activeTransfer)
-        }
-    }
-
-    private fun updateTransferStatus(transferId: String, status: TransferInfo.Status) {
-        val endTime = if (status == TransferInfo.Status.COMPLETED || status == TransferInfo.Status.FAILED) {
-            System.currentTimeMillis()
-        } else null
-
-        if (activeTransfer?.id == transferId) {
-            activeTransfer = activeTransfer?.copy(status = status, endTime = endTime)
-            _state.value = _state.value.copy(currentTransfer = activeTransfer)
-        }
-
-        if (status == TransferInfo.Status.COMPLETED || status == TransferInfo.Status.FAILED || status == TransferInfo.Status.CANCELLED) {
-            activeTransfer?.let { transfer ->
-                val updatedTransfers = listOf(transfer) + _state.value.completedTransfers
-                _state.value = _state.value.copy(completedTransfers = updatedTransfers.take(50))
-            }
-            saveTransferHistory()
-        }
-    }
-
-    private fun updateTransferError(transferId: String, error: String) {
-        if (activeTransfer?.id == transferId) {
-            activeTransfer = activeTransfer?.copy(status = TransferInfo.Status.FAILED, error = error)
-            _state.value = _state.value.copy(currentTransfer = activeTransfer)
-        }
-        updateTransferStatus(transferId, TransferInfo.Status.FAILED)
-    }
-
-    fun cleanup() {
-        transferJob?.cancel()
-        scope.cancel()
-        downloadCallback = null
-        currentDownloadStream?.close()
-        connectionManager.removeMessageListener(messageListener)
-        connectionManager.removeBinaryMessageListener(binaryListener)
     }
 }

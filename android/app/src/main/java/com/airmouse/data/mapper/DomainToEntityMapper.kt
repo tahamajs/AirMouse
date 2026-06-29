@@ -1,32 +1,17 @@
-
 package com.airmouse.data.mapper
 
-import com.airmouse.data.datasource.local.entity.CalibrationEntity
-import com.airmouse.data.datasource.local.entity.DailyStatsEntity
-import com.airmouse.data.datasource.local.entity.GestureStatsEntity
-import com.airmouse.data.datasource.local.entity.GestureTemplateEntity
-import com.airmouse.data.datasource.local.entity.ProfileEntity
-import com.airmouse.data.datasource.local.entity.StatisticsEntity
-import com.airmouse.data.datasource.local.entity.TrainingSampleEntity
-import com.airmouse.domain.model.CalibrationData
-import com.airmouse.domain.model.CalibrationQuality
-import com.airmouse.domain.model.CalibrationStatus
-import com.airmouse.domain.model.CustomGestureTemplate
-import com.airmouse.domain.model.DailyStats
-import com.airmouse.domain.model.GestureStatistics
-import com.airmouse.domain.model.GestureType
-import com.airmouse.domain.model.GestureTrainingStats
-import com.airmouse.domain.model.ProfileSettings
-import com.airmouse.domain.model.SensorCalibrationData
-import com.airmouse.domain.model.StatisticsSummary
-import com.airmouse.domain.model.UserProfile
+import com.airmouse.data.datasource.local.entity.*
+import com.airmouse.domain.model.*
 import java.util.UUID
 
-
-
+/**
+ * Mapper for converting domain models to entity models (for database storage).
+ */
 object DomainToEntityMapper {
 
-    
+    // ============================================================
+    // Calibration
+    // ============================================================
 
     fun mapToEntity(data: CalibrationData): CalibrationEntity {
         return CalibrationEntity(
@@ -50,11 +35,14 @@ object DomainToEntityMapper {
             magScaleY = data.magOffset.scaleY,
             magScaleZ = data.magOffset.scaleZ,
             isCalibrated = data.isCalibrated,
-            calibrationQuality = data.quality.name
+            calibrationQuality = data.quality.name,
+            timestamp = data.timestamp
         )
     }
 
-    
+    // ============================================================
+    // Statistics
+    // ============================================================
 
     fun mapToEntity(stats: StatisticsSummary): StatisticsEntity {
         val sessionId = UUID.randomUUID().toString()
@@ -98,36 +86,20 @@ object DomainToEntityMapper {
         )
     }
 
-    fun mapToEntity(stat: GestureStatistics): GestureStatsEntity {
+    fun mapToEntity(stat: GestureStats): GestureStatsEntity {
         return GestureStatsEntity(
             gesture_name = stat.gestureName,
             count = stat.detectionCount,
             avgConfidence = stat.confidencePercentage,
             lastDetected = stat.lastDetected,
             detectionRate = if (stat.detectionCount > 0) stat.confidencePercentage else 0f,
-            gestureName = stat.gestureName,
-            detectionCount = stat.detectionCount,
-            confidencePercentage = stat.confidencePercentage,
             isCustom = false
         )
     }
 
-    fun mapToEntity(stats: GestureTrainingStats): GestureStatsEntity {
-        val mostUsed = stats.gesturesByType.maxByOrNull { it.value }
-        return GestureStatsEntity(
-            gesture_name = mostUsed?.key?.name ?: "none",
-            count = stats.totalGestures,
-            avgConfidence = stats.averageConfidence,
-            lastDetected = stats.lastGestureTime,
-            detectionRate = if (stats.totalGestures > 0) stats.averageConfidence else 0f,
-            gestureName = mostUsed?.key?.name ?: "none",
-            detectionCount = stats.totalGestures,
-            confidencePercentage = stats.averageConfidence,
-            isCustom = true
-        )
-    }
-
-    
+    // ============================================================
+    // Profile
+    // ============================================================
 
     fun mapToEntity(profile: UserProfile): ProfileEntity {
         return ProfileEntity(
@@ -159,7 +131,9 @@ object DomainToEntityMapper {
         )
     }
 
-    
+    // ============================================================
+    // Gesture Templates
+    // ============================================================
 
     fun mapToEntity(template: CustomGestureTemplate): GestureTemplateEntity {
         return GestureTemplateEntity(
@@ -175,16 +149,18 @@ object DomainToEntityMapper {
             createdAt = template.createdAt,
             updatedAt = template.updatedAt,
             metadata = null,
-            description = null,
+            description = template.description,
             iconRes = 0,
             version = 1,
             isSystem = template.type != GestureType.CUSTOM,
             trainingSamplesCount = 0,
-            isFavorite = false
+            isFavorite = template.isFavorite
         )
     }
 
-    
+    // ============================================================
+    // Training Samples
+    // ============================================================
 
     fun mapToEntity(gestureName: String, sample: FloatArray, confidence: Float): TrainingSampleEntity {
         return TrainingSampleEntity(
@@ -206,7 +182,9 @@ object DomainToEntityMapper {
         )
     }
 
-    
+    // ============================================================
+    // Batch Conversions
+    // ============================================================
 
     fun mapUserProfilesToEntityList(profiles: List<UserProfile>): List<ProfileEntity> {
         return profiles.map { mapToEntity(it) }
@@ -216,23 +194,26 @@ object DomainToEntityMapper {
         return templates.map { mapToEntity(it) }
     }
 
-    fun mapGestureStatisticsToEntityList(stats: List<GestureStatistics>): List<GestureStatsEntity> {
+    fun mapGestureStatsToEntityList(stats: List<GestureStats>): List<GestureStatsEntity> {
         return stats.map { mapToEntity(it) }
     }
 }
 
-
-
+/**
+ * Mapper for converting entity models to domain models (from database storage).
+ */
 object EntityToDomainMapper {
 
-    
+    // ============================================================
+    // Calibration
+    // ============================================================
 
     fun mapToDomain(entity: CalibrationEntity): CalibrationData {
         return CalibrationData(
             gyroBias = SensorCalibrationData(
                 offsetX = entity.gyroBiasX,
                 offsetY = entity.gyroBiasY,
-                offsetZ = entity.gyroBiasZ,
+                offsetZ = entity.gyroBiasZ
             ),
             accelOffset = SensorCalibrationData(
                 offsetX = entity.accelOffsetX,
@@ -252,12 +233,14 @@ object EntityToDomainMapper {
             ),
             isCalibrated = entity.isCalibrated,
             quality = try { CalibrationQuality.valueOf(entity.calibrationQuality) }
-            catch (e: Exception) { CalibrationQuality.UNKNOWN },
+            catch (_: Exception) { CalibrationQuality.UNKNOWN },
             timestamp = entity.timestamp
         )
     }
 
-    
+    // ============================================================
+    // Statistics
+    // ============================================================
 
     fun mapToDomain(entity: StatisticsEntity): StatisticsSummary {
         return StatisticsSummary(
@@ -285,15 +268,17 @@ object EntityToDomainMapper {
             rightClicks = entity.rightClicks,
             scrolls = entity.scrolls,
             movements = entity.movements,
-            distance = entity.distance
+            distance = entity.distance,
+            gestures = entity.gestures,
+            totalTime = entity.sessionTime
         )
     }
 
     fun mapToDomain(entity: GestureStatsEntity): GestureStatistics {
         return GestureStatistics(
-            gestureName = entity.gestureName,
-            detectionCount = entity.detectionCount,
-            confidencePercentage = entity.confidencePercentage,
+            gestureName = entity.gesture_name,
+            detectionCount = entity.count,
+            confidencePercentage = entity.avgConfidence,
             lastDetected = entity.lastDetected
         )
     }
@@ -302,7 +287,9 @@ object EntityToDomainMapper {
         return entities.map { mapToDomain(it) }
     }
 
-    
+    // ============================================================
+    // Profile
+    // ============================================================
 
     fun mapToDomain(entity: ProfileEntity): UserProfile {
         return UserProfile(
@@ -340,19 +327,22 @@ object EntityToDomainMapper {
         return entities.map { mapToDomain(it) }
     }
 
-    
+    // ============================================================
+    // Gesture Templates
+    // ============================================================
 
     fun mapToDomain(entity: GestureTemplateEntity): CustomGestureTemplate {
         return CustomGestureTemplate(
             id = entity.id,
             name = entity.name,
-            type = try { GestureType.valueOf(entity.type) } catch (e: Exception) { GestureType.CUSTOM },
+            type = try { GestureType.valueOf(entity.type) } catch (_: Exception) { GestureType.CUSTOM },
             action = entity.action,
             confidence = entity.confidenceThreshold,
             isEnabled = entity.isEnabled,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
-            usageCount = entity.detectionCount
+            usageCount = entity.detectionCount,
+            description = entity.description ?: ""
         )
     }
 
@@ -360,27 +350,35 @@ object EntityToDomainMapper {
         return entities.map { mapToDomain(it) }
     }
 
-    
+    // ============================================================
+    // Training Samples
+    // ============================================================
 
-    fun mapToDomain(entity: TrainingSampleEntity): FloatArray {
-        return floatArrayOf(
-            entity.gyroX,
-            entity.gyroY,
-            entity.gyroZ,
-            entity.accelX,
-            entity.accelY,
-            entity.accelZ,
-            entity.magX,
-            entity.magY,
-            entity.magZ
+    fun mapToDomain(entity: TrainingSampleEntity): TrainingSample {
+        return TrainingSample(
+            gyroX = entity.gyroX,
+            gyroY = entity.gyroY,
+            gyroZ = entity.gyroZ,
+            accelX = entity.accelX,
+            accelY = entity.accelY,
+            accelZ = entity.accelZ,
+            magX = entity.magX,
+            magY = entity.magY,
+            magZ = entity.magZ,
+            label = entity.label,
+            confidence = entity.confidence,
+            timestamp = entity.timestamp,
+            isValid = entity.isValid
         )
     }
 
-    fun mapTrainingSampleEntitiesToDomainList(entities: List<TrainingSampleEntity>): List<FloatArray> {
+    fun mapTrainingSampleEntitiesToDomainList(entities: List<TrainingSampleEntity>): List<TrainingSample> {
         return entities.map { mapToDomain(it) }
     }
 
-    
+    // ============================================================
+    // Combined Mappings
+    // ============================================================
 
     fun mapGestureDataToDomain(
         entities: List<GestureTemplateEntity>,
@@ -391,8 +389,6 @@ object EntityToDomainMapper {
             "statistics" to mapGestureStatsEntitiesToDomainList(stats)
         )
     }
-
-    
 
     fun mapToDomainWithSettings(profile: ProfileEntity, settings: ProfileSettings): UserProfile {
         return UserProfile(
@@ -409,8 +405,6 @@ object EntityToDomainMapper {
             updatedAt = profile.lastUsed
         )
     }
-
-    
 
     fun mapToFullDomain(
         calibration: CalibrationEntity,

@@ -2,7 +2,9 @@ package com.airmouse
 
 import com.airmouse.domain.model.ConnectionConfig
 import com.airmouse.domain.model.ConnectionProtocol
+import com.airmouse.domain.model.CalibrationStatus
 import com.airmouse.domain.repository.IConnectionRepository
+import com.airmouse.domain.repository.ICalibrationRepository
 import com.airmouse.domain.usecase.ConnectToServerUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -50,9 +52,34 @@ class ConnectionProtocolNormalizationTest {
     }
 
     @Test
+    fun websocketConfigReplacesUdpDiscoveryPortWithWebsocketPort() {
+        val config = ConnectionConfig(
+            ip = "192.168.1.106",
+            port = ConnectionConfig.DEFAULT_UDP_PORT,
+            protocol = ConnectionProtocol.WEBSOCKET
+        ).normalized()
+
+        assertEquals(ConnectionConfig.DEFAULT_WEBSOCKET_PORT, config.port)
+        assertEquals(ConnectionProtocol.WEBSOCKET, config.protocol)
+    }
+
+    @Test
+    fun tcpConfigReplacesUdpDiscoveryPortWithTcpPort() {
+        val config = ConnectionConfig(
+            ip = "192.168.1.106",
+            port = ConnectionConfig.DEFAULT_UDP_PORT,
+            protocol = ConnectionProtocol.TCP
+        ).normalized()
+
+        assertEquals(ConnectionConfig.DEFAULT_TCP_PORT, config.port)
+        assertEquals(ConnectionProtocol.TCP, config.protocol)
+    }
+
+    @Test
     fun connectUseCaseNormalizesWebsocketPortBeforeCallingRepository() = runTest {
         val repo = RecordingConnectionRepository()
-        val useCase = ConnectToServerUseCase(repo)
+        val calRepo = FakeCalibrationRepository(CalibrationStatus.COMPLETED)
+        val useCase = ConnectToServerUseCase(repo, calRepo)
 
         val result = useCase.connect("192.168.1.106", 0, ConnectionProtocol.WEBSOCKET)
 
@@ -60,6 +87,33 @@ class ConnectionProtocolNormalizationTest {
         assertEquals("192.168.1.106", repo.lastConfig?.ip)
         assertEquals(ConnectionConfig.DEFAULT_WEBSOCKET_PORT, repo.lastConfig?.port)
         assertEquals(ConnectionProtocol.WEBSOCKET, repo.lastConfig?.protocol)
+    }
+
+    private class FakeCalibrationRepository(
+        var status: CalibrationStatus = CalibrationStatus.COMPLETED
+    ) : ICalibrationRepository {
+        override suspend fun getCalibrationStatus(): CalibrationStatus = status
+        override fun observeCalibrationStatus(): Flow<CalibrationStatus> = flowOf(status)
+        override suspend fun getCalibrationProgress(): Int = 100
+        override fun observeCalibrationProgress(): Flow<Int> = flowOf(100)
+        override fun observeCalibrationQuality(): Flow<com.airmouse.domain.model.CalibrationQuality> = flowOf(com.airmouse.domain.model.CalibrationQuality.EXCELLENT)
+        override suspend fun calibrateGyroscope(onProgress: (Int) -> Unit): Boolean = true
+        override suspend fun getGyroBias(): com.airmouse.domain.model.GyroBias = com.airmouse.domain.model.GyroBias(0f, 0f, 0f)
+        override suspend fun saveGyroBias(bias: com.airmouse.domain.model.GyroBias) {}
+        override suspend fun calibrateMagnetometer(onProgress: (Int) -> Unit): Boolean = true
+        override suspend fun getMagOffset(): com.airmouse.domain.model.SensorCalibrationData = com.airmouse.domain.model.SensorCalibrationData(0f, 0f, 0f, 1f, 1f, 1f)
+        override suspend fun saveMagOffset(data: com.airmouse.domain.model.SensorCalibrationData) {}
+        override suspend fun calibrateAccelerometer(onInstruction: (String) -> Unit): Boolean = true
+        override suspend fun getAccelOffset(): com.airmouse.domain.model.SensorCalibrationData = com.airmouse.domain.model.SensorCalibrationData(0f, 0f, 0f, 1f, 1f, 1f)
+        override suspend fun saveAccelOffset(data: com.airmouse.domain.model.SensorCalibrationData) {}
+        override suspend fun getCalibrationData(): com.airmouse.domain.model.CalibrationData = com.airmouse.domain.model.CalibrationData()
+        override suspend fun saveCalibrationData(data: com.airmouse.domain.model.CalibrationData) {}
+        override suspend fun resetCalibration() {}
+        override suspend fun getCalibrationQuality(): com.airmouse.domain.model.CalibrationQuality = com.airmouse.domain.model.CalibrationQuality.EXCELLENT
+        override suspend fun resetAllCalibration() {}
+        override suspend fun updateCalibrationStatus(status: CalibrationStatus) {}
+        override suspend fun updateCalibrationQuality(quality: com.airmouse.domain.model.CalibrationQuality) {}
+        override suspend fun updateCalibrationProgress(progress: Int) {}
     }
 
     private class RecordingConnectionRepository : IConnectionRepository {

@@ -20,6 +20,7 @@ import com.airmouse.presentation.ui.calibration.CalibrationResultScreen
 import com.airmouse.presentation.ui.sensor.SensorVisualizerScreen
 import com.airmouse.presentation.ui.gesture.GestureStudioScreen
 import com.airmouse.presentation.ui.edge.EdgeGesturesScreen
+import com.airmouse.presentation.ui.gaming.GamingModeScreen
 import com.airmouse.presentation.ui.touchpad.TouchpadScreen
 import com.airmouse.presentation.ui.touchpad.TouchpadSettingsScreen
 import com.airmouse.presentation.ui.network.NetworkDiscoveryScreen
@@ -88,6 +89,9 @@ fun AirMouseNavHost(
         }
         composable(Destinations.Touchpad.route) {
             TouchpadScreen(navigationActions = NavigationActionsImpl(navController))
+        }
+        composable(Destinations.GamingMode.route) {
+            GamingModeScreen(navigationActions = NavigationActionsImpl(navController))
         }
         composable(Destinations.TouchpadSettings.route) {
             TouchpadSettingsScreen(navigationActions = NavigationActionsImpl(navController))

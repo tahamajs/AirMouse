@@ -90,31 +90,35 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
     private var gameStartTime: Long = 0L
 
     init {
-        loadProfiles()
-        startGameDetection()
+        scope.launch {
+            loadProfiles()
+            startGameDetection()
+        }
     }
 
-    private fun loadProfiles() {
-        val profilesDir = File(context.filesDir, PROFILES_DIR)
-        if (!profilesDir.exists()) {
-            profilesDir.mkdirs()
-            createDefaultProfiles()
-            return
-        }
-
-        val profileFiles = profilesDir.listFiles { file -> file.extension == "json" }
-        val loadedProfiles = mutableListOf<GameProfile>()
-
-        profileFiles?.forEach { file ->
-            try {
-                val json = JSONObject(file.readText())
-                loadedProfiles.add(parseProfile(json))
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "Failed to load profile: ${file.name}", e)
+    private suspend fun loadProfiles() {
+        withContext(Dispatchers.IO) {
+            val profilesDir = File(context.filesDir, PROFILES_DIR)
+            if (!profilesDir.exists()) {
+                profilesDir.mkdirs()
+                createDefaultProfiles()
+                return@withContext
             }
-        }
 
-        _profiles.value = loadedProfiles
+            val profileFiles = profilesDir.listFiles { file -> file.extension == "json" }
+            val loadedProfiles = mutableListOf<GameProfile>()
+
+            profileFiles?.forEach { file ->
+                try {
+                    val json = JSONObject(file.readText())
+                    loadedProfiles.add(parseProfile(json))
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Failed to load profile: ${file.name}", e)
+                }
+            }
+
+            _profiles.value = loadedProfiles
+        }
     }
 
     private fun createDefaultProfiles() {
@@ -196,7 +200,7 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
             gestureMappings = parseMappings(json.optJSONArray("gestureMappings")),
             lastPlayed = json.optLong("lastPlayed", System.currentTimeMillis()),
             playTime = json.optLong("playTime", 0),
-            icon = json.optString("icon", null)
+            icon = if (json.has("icon") && !json.isNull("icon")) json.getString("icon") else null
         )
     }
 
@@ -210,7 +214,7 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
                     gesture = json.getString("gesture"),
                     action = GameAction.valueOf(json.getString("action")),
                     keyCode = if (json.has("keyCode")) json.getInt("keyCode") else null,
-                    macroId = json.optString("macroId", null),
+                    macroId = if (json.has("macroId") && !json.isNull("macroId")) json.getString("macroId") else null,
                     confidence = json.optDouble("confidence", 0.7).toFloat(),
                     enabled = json.optBoolean("enabled", true)
                 )
@@ -275,6 +279,12 @@ class GameProfilesManager(private val context: Context, private val prefs: Prefe
         if (_currentGame.value?.id == profileId) {
             _currentGame.value = null
             resetToDefaultSettings()
+        }
+    }
+
+    fun refreshProfiles() {
+        scope.launch {
+            loadProfiles()
         }
     }
 

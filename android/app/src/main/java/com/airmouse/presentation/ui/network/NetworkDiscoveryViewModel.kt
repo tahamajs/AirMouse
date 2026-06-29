@@ -15,6 +15,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
@@ -325,13 +327,13 @@ class NetworkDiscoveryViewModel @Inject constructor(
                 return@launch
             }
 
-            _uiState.update { it.copy(status = "Broadcasting UDP discovery...") }
-            startUdpDiscovery()
+            _uiState.update { it.copy(status = "Scanning nearby servers...") }
 
-            _uiState.update { it.copy(status = "Scanning IP range...") }
-            scanIpRange(localIp)
-
-            delay(SCAN_DURATION_MS)
+            // Run UDP discovery and IP scanning concurrently
+            coroutineScope {
+                launch { startUdpDiscovery() }
+                launch { scanIpRange(localIp) }
+            }
 
             val servers = discoveredServersMap.values.toList()
             val sortedServers = sortServers(servers, _uiState.value.sortBy)
@@ -433,66 +435,81 @@ class NetworkDiscoveryViewModel @Inject constructor(
     /**
      * Scans the local IP range for open ports (TCP).
      */
-    private suspend fun scanIpRange(localIp: String) {
+    private suspend fun scanIpRange(localIp: String) = withContext(Dispatchers.IO) {
         val ipPrefix = getNetworkPrefix(localIp)
         val ports = listOf(8080, 8081, 8082)
-        val timeout = 2000
+        val timeout = 1000
 
         var scanned = 0
         val totalHosts = 254
+        val semaphore = Semaphore(50)
 
-        for (i in 1..254) {
-            if (!isScanning) break
-
-            val testIp = "$ipPrefix.$i"
-            if (testIp == localIp) continue
-
-            withContext(Dispatchers.IO) {
-                for (port in ports) {
-                    try {
-                        val socket = Socket()
-                        socket.connect(InetSocketAddress(testIp, port), timeout)
-                        socket.close()
-
-                        val key = "$testIp:$port"
-                        if (!discoveredServersMap.containsKey(key)) {
-                            val ping = calculatePing(testIp)
-                            val discovered = DiscoveredServer(
-                                id = UUID.randomUUID().toString(),
-                                ip = testIp,
-                                port = port,
-                                ping = ping,
-                                signalStrength = calculateSignalStrength(ping),
-                                isReachable = true,
-                                protocol = when (port) {
-                                    8081 -> Protocol.WEBSOCKET
-                                    8082 -> Protocol.UDP
-                                    else -> Protocol.TCP
-                                }
-                            )
-                            discoveredServersMap[key] = discovered
-                            _uiState.update {
-                                it.copy(
-                                    status = "Nearby server found: ${discovered.ip}:${discovered.port}"
-                                )
-                            }
-                            notificationManager.showDiscoveryNotification(
-                                serverName = discovered.name,
-                                ip = discovered.ip,
-                                port = discovered.port,
-                                protocol = discovered.protocol.displayName
-                            )
-                            updateDiscoveredServers()
+        val jobs = (1..254).map { i ->
+            launch {
+                semaphore.withPermit {
+                    if (!isScanning) return@launch
+                    val testIp = "$ipPrefix.$i"
+                    if (testIp == localIp) {
+                        synchronized(this@NetworkDiscoveryViewModel) {
+                            scanned++
+                            updateScanProgress(scanned, totalHosts)
                         }
-                    } catch (_: IOException) {
-                        // Ignore
+                        return@launch
+                    }
+
+                    for (port in ports) {
+                        if (!isScanning) break
+                        try {
+                            val socket = Socket()
+                            socket.connect(InetSocketAddress(testIp, port), timeout)
+                            socket.close()
+
+                            val key = "$testIp:$port"
+                            synchronized(discoveredServersMap) {
+                                if (!discoveredServersMap.containsKey(key)) {
+                                    val ping = calculatePing(testIp)
+                                    val discovered = DiscoveredServer(
+                                        id = UUID.randomUUID().toString(),
+                                        ip = testIp,
+                                        port = port,
+                                        name = "Air Mouse Server",
+                                        ping = ping,
+                                        signalStrength = calculateSignalStrength(ping),
+                                        isReachable = true,
+                                        protocol = when (port) {
+                                            8081 -> Protocol.WEBSOCKET
+                                            8082 -> Protocol.UDP
+                                            else -> Protocol.TCP
+                                        }
+                                    )
+                                    discoveredServersMap[key] = discovered
+                                    _uiState.update {
+                                        it.copy(
+                                            status = "Nearby server found: ${discovered.ip}:${discovered.port}"
+                                        )
+                                    }
+                                    notificationManager.showDiscoveryNotification(
+                                        serverName = discovered.name,
+                                        ip = discovered.ip,
+                                        port = discovered.port,
+                                        protocol = discovered.protocol.displayName
+                                    )
+                                    updateDiscoveredServers()
+                                }
+                            }
+                        } catch (_: IOException) {
+                            // Ignore
+                        }
+                    }
+
+                    synchronized(this@NetworkDiscoveryViewModel) {
+                        scanned++
+                        updateScanProgress(scanned, totalHosts)
                     }
                 }
             }
-
-            scanned++
-            updateScanProgress(scanned, totalHosts)
         }
+        jobs.joinAll()
     }
 
     // ============================================================
@@ -598,7 +615,7 @@ class NetworkDiscoveryViewModel @Inject constructor(
         } else {
             @Suppress("DEPRECATION")
             val info = cm.activeNetworkInfo
-            return info != null && info.type == ConnectivityManager.TYPE_WIFI
+            return info != null && info.typeName.equals("WIFI", ignoreCase = true)
         }
     }
 
@@ -630,6 +647,15 @@ class NetworkDiscoveryViewModel @Inject constructor(
     }
 
     suspend fun connectToServer(server: DiscoveredServer) {
+        if (!prefs.isCalibrated()) {
+            _uiState.update {
+                it.copy(
+                    isConnecting = false,
+                    errorMessage = "Calibration required before connecting. Please calibrate the device first."
+                )
+            }
+            return
+        }
         _uiState.update {
             it.copy(
                 isConnecting = true,
@@ -639,22 +665,29 @@ class NetworkDiscoveryViewModel @Inject constructor(
             )
         }
 
-        prefs.setLastIp(server.ip)
-        prefs.setLastPort(server.port)
-        prefs.setLastProtocol(server.protocol.name)
-        connectionManager.setProtocol(
-            when (server.protocol) {
-                Protocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
-                Protocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
-                else -> ConnectionManager.ConnectionProtocol.WEBSOCKET
-            }
-        )
+        val targetProtocol = when (server.protocol) {
+            Protocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
+            Protocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
+            else -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+        }
+        val targetPort = when {
+            targetProtocol == ConnectionManager.ConnectionProtocol.WEBSOCKET && (server.port <= 0 || server.port == 8080 || server.port == 8082) -> 8081
+            targetProtocol == ConnectionManager.ConnectionProtocol.TCP && (server.port <= 0 || server.port == 8081 || server.port == 8082) -> 8080
+            targetProtocol == ConnectionManager.ConnectionProtocol.UDP && (server.port <= 0 || server.port == 8080 || server.port == 8081) -> 8082
+            server.port > 0 -> server.port
+            else -> 8080
+        }
 
-        val success = connectionManager.connect(server.ip, server.port)
+        prefs.setLastIp(server.ip)
+        prefs.setLastPort(targetPort)
+        prefs.setLastProtocol(targetProtocol.name)
+        connectionManager.setProtocol(targetProtocol)
+
+        val success = connectionManager.connect(server.ip, targetPort)
 
         if (success) {
-            saveConnectionHistory(server.name, server.ip, server.port, "Connected")
-            addServerToSaved(server)
+            saveConnectionHistory(server.name, server.ip, targetPort, "Connected")
+            addServerToSaved(server.copy(port = targetPort))
             _uiState.update {
                 it.copy(
                     isConnecting = false,
@@ -664,11 +697,11 @@ class NetworkDiscoveryViewModel @Inject constructor(
             }
         } else {
             val lastError = connectionManager.lastError.value ?: "Failed to connect"
-            saveConnectionHistory(server.name, server.ip, server.port, "Failed")
+            saveConnectionHistory(server.name, server.ip, targetPort, "Failed")
             _uiState.update {
                 it.copy(
                     isConnecting = false,
-                    errorMessage = "Failed to connect to ${server.ip}:${server.port} – $lastError"
+                    errorMessage = "Failed to connect to ${server.ip}:$targetPort – $lastError"
                 )
             }
         }

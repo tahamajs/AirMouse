@@ -110,14 +110,13 @@ class EnhancedGestureDetector(
         val angularSpeedY = abs(calibratedGyroY)
         val angularSpeedX = abs(calibratedGyroX)
         val angularSpeedZ = abs(calibratedGyroZ)
-        val totalAngularSpeed = sqrt(calibratedGyroX * calibratedGyroX + calibratedGyroY * calibratedGyroY + calibratedGyroZ * calibratedGyroZ)
 
-        
+        // Single/Double Click Detection
         if (angularSpeedY > clickSpeedThreshold && now - lastClickTime > doubleClickMaxInterval) {
             lastClickTime = now
 
             if (potentialDoubleClick) {
-                
+                // Double click detected
                 potentialDoubleClick = false
                 pendingClickRunnable?.let { handler?.removeCallbacks(it) }
                 pendingClickRunnable = null
@@ -125,13 +124,12 @@ class EnhancedGestureDetector(
                 onGestureDetected?.invoke(Gesture.DOUBLE_CLICK)
                 return Gesture.DOUBLE_CLICK
             } else {
-                
+                // Potential first click
                 potentialDoubleClick = true
                 val runnable = Runnable {
                     if (potentialDoubleClick) {
                         potentialDoubleClick = false
                         vibrate(30)
-                        onGestureDetected?.invoke(Gesture.CLICK)
                     }
                 }
                 pendingClickRunnable = runnable

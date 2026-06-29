@@ -3,7 +3,13 @@ package com.airmouse.data.datasource.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.airmouse.domain.model.ProfileSettings
+import com.airmouse.domain.model.UserProfile
 
+/**
+ * Room entity for user profiles.
+ * Stores all profile settings and metadata.
+ */
 @Entity(tableName = "profiles")
 data class ProfileEntity(
     @PrimaryKey
@@ -69,7 +75,6 @@ data class ProfileEntity(
     @ColumnInfo(name = "is_favorite")
     val isFavorite: Boolean = false,
 
-    
     @ColumnInfo(name = "is_active")
     val isActive: Boolean = true,
 
@@ -84,4 +89,90 @@ data class ProfileEntity(
 
     @ColumnInfo(name = "last_used")
     val lastUsed: Long = System.currentTimeMillis()
-)
+) {
+
+    /**
+     * Convert this Room entity to a domain UserProfile.
+     */
+    fun toDomainModel(): UserProfile {
+        return UserProfile(
+            id = id,
+            name = name,
+            email = email,
+            avatarUri = avatarUri,
+            settings = ProfileSettings(
+                sensitivity = sensitivity,
+                clickThreshold = clickThreshold,
+                doubleClickInterval = doubleClickInterval,
+                scrollThreshold = scrollThreshold,
+                rightClickTilt = rightClickTilt,
+                hapticEnabled = hapticEnabled,
+                theme = theme,
+                aiSmoothing = aiSmoothing,
+                predictiveMovement = predictiveMovement,
+                invertX = invertX,
+                invertY = invertY,
+                accelerationEnabled = accelerationEnabled,
+                smoothingEnabled = smoothingEnabled,
+                edgeGesturesEnabled = edgeGesturesEnabled,
+                voiceCommandsEnabled = voiceCommandsEnabled
+            ),
+            isDefault = isDefault,
+            isFavorite = isFavorite,
+            tags = tags?.split(",")?.filter { it.isNotEmpty() } ?: emptyList(),
+            iconRes = iconRes,
+            createdAt = createdAt,
+            updatedAt = lastUsed,
+            usageCount = 0
+        )
+    }
+
+    companion object {
+        /**
+         * Convert a domain UserProfile to a Room ProfileEntity.
+         */
+        fun fromDomainModel(profile: UserProfile): ProfileEntity {
+            return ProfileEntity(
+                id = profile.id,
+                name = profile.name,
+                email = profile.email,
+                avatarUri = profile.avatarUri,
+                sensitivity = profile.settings.sensitivity,
+                clickThreshold = profile.settings.clickThreshold,
+                doubleClickInterval = profile.settings.doubleClickInterval,
+                scrollThreshold = profile.settings.scrollThreshold,
+                rightClickTilt = profile.settings.rightClickTilt,
+                hapticEnabled = profile.settings.hapticEnabled,
+                theme = profile.settings.theme,
+                aiSmoothing = profile.settings.aiSmoothing,
+                predictiveMovement = profile.settings.predictiveMovement,
+                invertX = profile.settings.invertX,
+                invertY = profile.settings.invertY,
+                accelerationEnabled = profile.settings.accelerationEnabled,
+                smoothingEnabled = profile.settings.smoothingEnabled,
+                edgeGesturesEnabled = profile.settings.edgeGesturesEnabled,
+                voiceCommandsEnabled = profile.settings.voiceCommandsEnabled,
+                isDefault = profile.isDefault,
+                isFavorite = profile.isFavorite,
+                isActive = true,
+                tags = profile.tags.joinToString(","),
+                iconRes = profile.iconRes,
+                createdAt = profile.createdAt,
+                lastUsed = profile.updatedAt
+            )
+        }
+
+        /**
+         * Create a default profile entity.
+         */
+        fun default(name: String = "Default User"): ProfileEntity {
+            return ProfileEntity(
+                id = java.util.UUID.randomUUID().toString(),
+                name = name,
+                isDefault = true,
+                createdAt = System.currentTimeMillis(),
+                lastUsed = System.currentTimeMillis()
+            )
+        }
+    }
+}

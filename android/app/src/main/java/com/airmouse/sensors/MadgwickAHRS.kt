@@ -78,14 +78,19 @@ class MadgwickAHRS(
 
         
         val step = dt.coerceAtLeast(0.001f)
-        val q0Dot = -beta * 2f * ex * step
-        val q1Dot = -beta * 2f * ey * step
-        val q2Dot = -beta * 2f * ez * step
+        val wx = -2f * beta * ex
+        val wy = -2f * beta * ey
+        val wz = -2f * beta * ez
 
-        quaternion[0] += q0Dot
-        quaternion[1] += q1Dot
-        quaternion[2] += q2Dot
-        
+        val q0Dot = 0.5f * (-q1 * wx - q2 * wy - q3 * wz)
+        val q1Dot = 0.5f * ( q0 * wx + q2 * wz - q3 * wy)
+        val q2Dot = 0.5f * ( q0 * wy - q1 * wz + q3 * wx)
+        val q3Dot = 0.5f * ( q0 * wz + q1 * wy - q2 * wx)
+
+        quaternion[0] += q0Dot * step
+        quaternion[1] += q1Dot * step
+        quaternion[2] += q2Dot * step
+        quaternion[3] += q3Dot * step
 
         normalizeQuaternion()
         needsRecalc = true
@@ -137,9 +142,19 @@ class MadgwickAHRS(
         val step = dt.coerceAtLeast(0.001f)
         val correctionFactor = if (zeta > 0) zeta else beta
 
-        quaternion[0] += -correctionFactor * ex * step
-        quaternion[1] += -correctionFactor * ey * step
-        quaternion[2] += -correctionFactor * ez * step
+        val cx = -correctionFactor * ex
+        val cy = -correctionFactor * ey
+        val cz = -correctionFactor * ez
+
+        val q0Dot = 0.5f * (-q1 * cx - q2 * cy - q3 * cz)
+        val q1Dot = 0.5f * ( q0 * cx + q2 * cz - q3 * cy)
+        val q2Dot = 0.5f * ( q0 * cy - q1 * cz + q3 * cx)
+        val q3Dot = 0.5f * ( q0 * cz + q1 * cy - q2 * cx)
+
+        quaternion[0] += q0Dot * step
+        quaternion[1] += q1Dot * step
+        quaternion[2] += q2Dot * step
+        quaternion[3] += q3Dot * step
 
         normalizeQuaternion()
         needsRecalc = true

@@ -29,12 +29,29 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.domain.model.CustomGestureTemplate
 import com.airmouse.domain.model.GestureTrainingStats
 import com.airmouse.domain.model.duration
-import com.airmouse.domain.model.isFavorite
+import com.airmouse.presentation.ui.components.GestureTrainingCenter
 import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.max
+@Composable
+fun GesturesScreen(
+    viewModel: GestureStudioViewModel = hiltViewModel()
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        GestureTrainingCenter(
+            onTrainGesture = { gesture ->
+                viewModel.trainGesture(gesture)
+            }
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

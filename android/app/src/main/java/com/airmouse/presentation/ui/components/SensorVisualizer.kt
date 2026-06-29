@@ -1,8 +1,9 @@
-package com.airmouse.ui.components
+package com.airmouse.presentation.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -27,7 +28,8 @@ fun SensorVisualizer(
     yaw: Float,
     modifier: Modifier = Modifier,
     showLabels: Boolean = true,
-    size: VisualizerSize = VisualizerSize.MEDIUM
+    size: VisualizerSize = VisualizerSize.MEDIUM,
+    isCalibrated: Boolean = true
 ) {
     val animatedRoll by animateFloatAsState(
         targetValue = roll,
@@ -129,23 +131,23 @@ fun SensorVisualizer(
                 val dotX = centerX + (animatedRoll / 45f) * (phoneWidth / 3)
                 val dotY = centerY + (animatedPitch / 45f) * (phoneHeight / 3)
                 
-                drawCircle(
+                drawRect(
                     color = Color(0xFF4CAF50),
-                    radius = 8f,
-                    center = Offset(
-                        dotX.coerceIn(centerX - phoneWidth/3, centerX + phoneWidth/3),
-                        dotY.coerceIn(centerY - phoneHeight/3, centerY + phoneHeight/3)
-                    )
+                    topLeft = Offset(
+                        dotX.coerceIn(centerX - phoneWidth/3, centerX + phoneWidth/3) - 8f,
+                        dotY.coerceIn(centerY - phoneHeight/3, centerY + phoneHeight/3) - 8f
+                    ),
+                    size = Size(16f, 16f)
                 )
                 
                 
-                drawCircle(
+                drawRect(
                     color = Color(0xFF4CAF50).copy(alpha = 0.3f),
-                    radius = 14f,
-                    center = Offset(
-                        dotX.coerceIn(centerX - phoneWidth/3, centerX + phoneWidth/3),
-                        dotY.coerceIn(centerY - phoneHeight/3, centerY + phoneHeight/3)
-                    )
+                    topLeft = Offset(
+                        dotX.coerceIn(centerX - phoneWidth/3, centerX + phoneWidth/3) - 14f,
+                        dotY.coerceIn(centerY - phoneHeight/3, centerY + phoneHeight/3) - 14f
+                    ),
+                    size = Size(28f, 28f)
                 )
             }
         }
@@ -166,6 +168,22 @@ fun SensorVisualizer(
                     SensorValueCard("Roll", animatedRoll, Color(0xFF00BCD4))
                     SensorValueCard("Pitch", animatedPitch, Color(0xFF4CAF50))
                     SensorValueCard("Yaw", animatedYaw, Color(0xFFFF9800))
+                }
+                if (!isCalibrated) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = Color(0xFFF59E0B).copy(alpha = 0.16f),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.28f))
+                    ) {
+                        Text(
+                            "Not calibrated yet",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            color = Color(0xFFFBBF24),
+                            fontSize = 10.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }

@@ -19,9 +19,8 @@ class BluetoothDataSourceImpl @Inject constructor(
     private val stateChannel = Channel<Boolean>(Channel.BUFFERED)
 
     override fun startScanning() {
-        
-        
-        stateChannel.trySend(false)
+        // Implementation
+        stateChannel.trySend(true)
     }
 
     override fun stopScanning() {
@@ -38,7 +37,7 @@ class BluetoothDataSourceImpl @Inject constructor(
     }
 
     override fun send(data: ByteArray) {
-        
+        // Implementation
     }
 
     override fun observeDevices(): Flow<BluetoothDevice> = deviceChannel.receiveAsFlow()

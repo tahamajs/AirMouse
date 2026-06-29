@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -42,7 +41,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.airmouse.domain.model.ProfileSettings as DomainProfileSettings
 import com.airmouse.domain.model.UserProfile as DomainUserProfile
 import com.airmouse.domain.repository.IProfileRepository
 import com.airmouse.presentation.navigation.NavigationActions
@@ -53,67 +51,54 @@ import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 
+typealias UserProfile = DomainUserProfile
 
+private val UserProfile.lastUsedAt: Long
+    get() = updatedAt
 
+private val UserProfile.color: String
+    get() = if (isDefault) "#4F46E5" else "#6366F1"
 
+private val UserProfile.formattedLastUsed: String
+    get() = when {
+        lastUsedAt == 0L -> "Never"
+        System.currentTimeMillis() - lastUsedAt < 3600000 -> "Just now"
+        System.currentTimeMillis() - lastUsedAt < 86400000 -> "Today"
+        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(lastUsedAt))
+    }
 
-data class UserProfile(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val color: String = "#6366F1",
-    val isDefault: Boolean = false,
-    val isFavorite: Boolean = false,
-    val usageCount: Int = 0,
-    val createdAt: Long = System.currentTimeMillis(),
-    val lastUsedAt: Long = System.currentTimeMillis(),
-    val tags: List<String> = emptyList()
-) {
-    val formattedLastUsed: String
-        get() = when {
-            lastUsedAt == 0L -> "Never"
-            System.currentTimeMillis() - lastUsedAt < 3600000 -> "Just now"
-            System.currentTimeMillis() - lastUsedAt < 86400000 -> "Today"
-            else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(lastUsedAt))
-        }
+private val UserProfile.daysSinceLastUsed: Long
+    get() = (System.currentTimeMillis() - lastUsedAt) / (1000 * 60 * 60 * 24)
 
-    val daysSinceLastUsed: Long
-        get() = (System.currentTimeMillis() - lastUsedAt) / (1000 * 60 * 60 * 24)
+private val UserProfile.isRecentlyUsed: Boolean
+    get() = daysSinceLastUsed < 7
 
-    val isRecentlyUsed: Boolean get() = daysSinceLastUsed < 7
-
-    val usageLabel: String get() = when {
+private val UserProfile.usageLabel: String
+    get() = when {
         usageCount == 0 -> "Never used"
         usageCount == 1 -> "Used once"
         usageCount < 10 -> "Used $usageCount times"
         else -> "Used $usageCount times"
     }
 
-    val initials: String get() {
-        return name.split(" ")
-            .filter { it.isNotEmpty() }
-            .map { it[0].uppercase() }
-            .take(2)
-            .joinToString("")
-    }
+private val UserProfile.initials: String
+    get() = name.split(" ")
+        .filter { it.isNotEmpty() }
+        .map { it[0].uppercase() }
+        .take(2)
+        .joinToString("")
 
-    fun incrementUsage(): UserProfile {
-        return this.copy(
-            usageCount = usageCount + 1,
-            lastUsedAt = System.currentTimeMillis()
-        )
-    }
+private fun UserProfile.incrementUsage(): UserProfile = copy(
+    usageCount = usageCount + 1,
+    updatedAt = System.currentTimeMillis()
+)
 
-    fun toggleFavorite(): UserProfile {
-        return this.copy(isFavorite = !isFavorite)
-    }
+private fun UserProfile.toggleFavorite(): UserProfile = copy(isFavorite = !isFavorite)
 
-    fun getColorInt(): Int {
-        return try {
-            android.graphics.Color.parseColor(color)
-        } catch (e: Exception) {
-            android.graphics.Color.parseColor("#6366F1")
-        }
-    }
+private fun UserProfile.getColorInt(): Int = try {
+    android.graphics.Color.parseColor(color)
+} catch (_: Exception) {
+    android.graphics.Color.parseColor("#6366F1")
 }
 
 enum class ProfileSort(val displayName: String) {
@@ -382,34 +367,11 @@ class ProfilesViewModel @Inject constructor(
     }
 
     private fun mapToUiProfile(domainProfile: DomainUserProfile): UserProfile {
-        return UserProfile(
-            id = domainProfile.id,
-            name = domainProfile.name,
-            color = "#6366F1",
-            isDefault = domainProfile.isDefault,
-            isFavorite = domainProfile.isFavorite,
-            usageCount = domainProfile.usageCount,  
-            createdAt = domainProfile.createdAt,
-            lastUsedAt = domainProfile.updatedAt,
-            tags = domainProfile.tags
-        )
+        return domainProfile
     }
 
     private fun mapToDomainProfile(profile: UserProfile): DomainUserProfile {
-        return DomainUserProfile(
-            id = profile.id,
-            name = profile.name,
-            email = "",
-            avatarUri = null,
-            settings = DomainProfileSettings(),
-            isDefault = profile.isDefault,
-            isFavorite = profile.isFavorite,
-            tags = profile.tags,
-            iconRes = 0,
-            createdAt = profile.createdAt,
-            updatedAt = profile.lastUsedAt,
-            usageCount = profile.usageCount
-        )
+        return profile
     }
 }
 
@@ -427,8 +389,6 @@ fun ProfilesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filteredProfiles by viewModel.filteredProfiles.collectAsState()
-    val stats by viewModel.stats.collectAsState()
-
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.errorMessage) {
@@ -1233,7 +1193,6 @@ fun EditProfileDialog(
                     profile?.let {
                         val updatedProfile = it.copy(
                             name = name,
-                            color = color,
                             tags = tags.split(",").map { tag -> tag.trim() }.filter { tag -> tag.isNotEmpty() }
                         )
                         onConfirm(updatedProfile)

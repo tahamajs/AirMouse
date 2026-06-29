@@ -91,7 +91,6 @@ class MotionAnalyzer {
     }
 
     fun detectActivity(features: MotionFeatures, timestamp: Long): Activity {
-        val now = System.currentTimeMillis()
         var newActivity = currentActivity
         var confidence = 0.5f
 

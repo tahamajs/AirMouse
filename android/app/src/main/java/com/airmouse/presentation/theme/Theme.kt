@@ -16,19 +16,47 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
 import androidx.core.view.WindowCompat
 import com.airmouse.presentation.ui.themes.AccentColor
 import com.airmouse.presentation.ui.themes.ThemeColorScheme
 import com.airmouse.presentation.ui.themes.getThemeColorScheme
+import android.R.attr.lineHeight
 
 
 
 private val InterFontFamily = FontFamily.SansSerif
 
-val AirMouseTypography = Typography(
-    displayLarge = Typography().displayLarge.copy(fontFamily = InterFontFamily),
-    displayMedium = Typography().displayMedium.copy(fontFamily = InterFontFamily),
-    displaySmall = Typography().displaySmall.copy(fontFamily = InterFontFamily),
+private fun Typography.sizedBy(scale: Float): Typography = Typography(
+    displayLarge = displayLarge.scaled(scale),
+    displayMedium = displayMedium.scaled(scale),
+    displaySmall = displaySmall.scaled(scale),
+    headlineLarge = headlineLarge.scaled(scale),
+    headlineMedium = headlineMedium.scaled(scale),
+    headlineSmall = headlineSmall.scaled(scale),
+    titleLarge = titleLarge.scaled(scale),
+    titleMedium = titleMedium.scaled(scale),
+    titleSmall = titleSmall.scaled(scale),
+    bodyLarge = bodyLarge.scaled(scale),
+    bodyMedium = bodyMedium.scaled(scale),
+    bodySmall = bodySmall.scaled(scale),
+    labelLarge = labelLarge.scaled(scale),
+    labelMedium = labelMedium.scaled(scale),
+    labelSmall = labelSmall.scaled(scale)
+)
+
+private fun TextStyle.scaled(scale: Float) = copy(
+    fontSize = fontSize * scale,
+    lineHeight = lineHeight * scale
+)
+
+val LocalAppFontScale = staticCompositionLocalOf { 1f }
+
+val AirMouseTypography = Typography().copy(
+    displayLarge = Typography().displayLarge.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
+    displayMedium = Typography().displayMedium.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
+    displaySmall = Typography().displaySmall.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
     headlineLarge = Typography().headlineLarge.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold),
     headlineMedium = Typography().headlineMedium.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
     headlineSmall = Typography().headlineSmall.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold),
@@ -41,7 +69,7 @@ val AirMouseTypography = Typography(
     labelLarge = Typography().labelLarge.copy(fontFamily = InterFontFamily),
     labelMedium = Typography().labelMedium.copy(fontFamily = InterFontFamily),
     labelSmall = Typography().labelSmall.copy(fontFamily = InterFontFamily)
-)
+).sizedBy(0.92f)
 
 
 
@@ -144,6 +172,7 @@ fun AirMouseTheme(
     themeColors: ThemeColorScheme? = null,
     themeId: String = "system",
     accentColor: AccentColor = AccentColor.ORANGE,
+    fontScale: Float = 1f,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -240,12 +269,14 @@ fun AirMouseTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AirMouseTypography,
-        shapes = AirMouseShapes,
-        content = content
-    )
+    CompositionLocalProvider(LocalAppFontScale provides fontScale) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AirMouseTypography.sizedBy(fontScale.coerceIn(0.85f, 1.20f)),
+            shapes = AirMouseShapes,
+            content = content
+        )
+    }
 }
 
 

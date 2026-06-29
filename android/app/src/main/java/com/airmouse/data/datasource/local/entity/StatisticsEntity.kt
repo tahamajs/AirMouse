@@ -3,6 +3,7 @@ package com.airmouse.data.datasource.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.airmouse.domain.model.StatisticsSummary
 
 @Entity(tableName = "statistics")
 data class StatisticsEntity(
@@ -83,4 +84,64 @@ data class StatisticsEntity(
 
     @ColumnInfo(name = "last_updated")
     val lastUpdated: Long = System.currentTimeMillis()
-)
+) {
+
+    /**
+     * Converts this entity to a domain model StatisticsSummary.
+     */
+    fun toDomainModel(): StatisticsSummary {
+        return StatisticsSummary(
+            totalClicks = clickCount.toInt(),
+            totalDoubleClicks = doubleClickCount.toInt(),
+            totalRightClicks = rightClickCount.toInt(),
+            totalScrolls = scrollCount.toInt(),
+            totalMovements = movementCount.toInt(),
+            totalDistance = totalMovement,
+            averageSpeed = averageSpeed,
+            maxSpeed = maxSpeed,
+            sessionDuration = if (isActive) {
+                System.currentTimeMillis() - startTime
+            } else {
+                endTime - startTime
+            },
+            lastUpdated = lastUpdated
+        )
+    }
+
+    companion object {
+        /**
+         * Creates a StatisticsEntity from a domain model StatisticsSummary.
+         */
+        fun fromDomainModel(stats: StatisticsSummary): StatisticsEntity {
+            val now = System.currentTimeMillis()
+            return StatisticsEntity(
+                id = "default",
+                sessionId = "default",
+                totalClicks = stats.totalClicks,
+                totalDoubleClicks = stats.totalDoubleClicks,
+                totalRightClicks = stats.totalRightClicks,
+                totalScrolls = stats.totalScrolls,
+                totalMovements = stats.totalMovements,
+                totalDistance = stats.totalDistance,
+                averageSpeed = stats.averageSpeed,
+                maxSpeed = stats.maxSpeed,
+                startTime = now - stats.sessionDuration,
+                endTime = 0L,
+                isActive = true,
+                totalMovement = stats.totalDistance,
+                movementCount = stats.totalMovements.toLong(),
+                clickCount = stats.totalClicks.toLong(),
+                doubleClickCount = stats.totalDoubleClicks.toLong(),
+                rightClickCount = stats.totalRightClicks.toLong(),
+                middleClickCount = 0,
+                scrollCount = stats.totalScrolls.toLong(),
+                totalScrollDelta = 0,
+                gestureCount = 0,
+                sessionCount = 1,
+                totalSessionTime = stats.sessionDuration,
+                lastReset = now,
+                lastUpdated = stats.lastUpdated
+            )
+        }
+    }
+}

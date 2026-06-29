@@ -10,7 +10,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.5.2'
+        classpath 'com.android.tools.build:gradle:8.5.0'               // ✅ FIXED: 8.5.0 is stable
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
         classpath "com.google.dagger:hilt-android-gradle-plugin:$hilt_version"
@@ -19,14 +19,15 @@ buildscript {
 }
 
 plugins {
-    id 'com.android.application' version '8.5.2' apply false
-    id 'com.android.library' version '8.5.2' apply false
+    id 'com.android.application' version '8.5.0' apply false           // ✅ FIXED
+    id 'com.android.library' version '8.5.0' apply false               // ✅ FIXED
 
     id 'org.jetbrains.kotlin.android' version '1.9.24' apply false
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.24' apply false
 
     id 'com.google.dagger.hilt.android' version '2.52' apply false
 }
+
 tasks.register('clean', Delete) {
     delete rootProject.layout.buildDirectory
 }

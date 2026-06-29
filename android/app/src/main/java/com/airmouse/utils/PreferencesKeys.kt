@@ -318,40 +318,39 @@ object PreferencesKeys {
     const val KEY_LOG_LEVEL = "log_level"
 
     // ==========================================
-    // HELPER FUNCTIONS (do not depend on instance)
+    // HELPER FUNCTIONS
     // ==========================================
 
     fun getAccelPositionKey(position: Int, axis: String): String {
-        return when (axis.lowercase()) {
-            "x" -> when (position) {
-                0 -> KEY_ACCEL_POS_0_X
-                1 -> KEY_ACCEL_POS_1_X
-                2 -> KEY_ACCEL_POS_2_X
-                3 -> KEY_ACCEL_POS_3_X
-                4 -> KEY_ACCEL_POS_4_X
-                5 -> KEY_ACCEL_POS_5_X
-                else -> "accel_pos_${position}_x"
-            }
-            "y" -> when (position) {
-                0 -> KEY_ACCEL_POS_0_Y
-                1 -> KEY_ACCEL_POS_1_Y
-                2 -> KEY_ACCEL_POS_2_Y
-                3 -> KEY_ACCEL_POS_3_Y
-                4 -> KEY_ACCEL_POS_4_Y
-                5 -> KEY_ACCEL_POS_5_Y
-                else -> "accel_pos_${position}_y"
-            }
-            "z" -> when (position) {
-                0 -> KEY_ACCEL_POS_0_Z
-                1 -> KEY_ACCEL_POS_1_Z
-                2 -> KEY_ACCEL_POS_2_Z
-                3 -> KEY_ACCEL_POS_3_Z
-                4 -> KEY_ACCEL_POS_4_Z
-                5 -> KEY_ACCEL_POS_5_Z
-                else -> "accel_pos_${position}_z"
-            }
-            else -> "accel_pos_${position}_${axis}"
+        val axisLower = axis.lowercase()
+        val posMap = when (axisLower) {
+            "x" -> mapOf(
+                0 to KEY_ACCEL_POS_0_X,
+                1 to KEY_ACCEL_POS_1_X,
+                2 to KEY_ACCEL_POS_2_X,
+                3 to KEY_ACCEL_POS_3_X,
+                4 to KEY_ACCEL_POS_4_X,
+                5 to KEY_ACCEL_POS_5_X
+            )
+            "y" -> mapOf(
+                0 to KEY_ACCEL_POS_0_Y,
+                1 to KEY_ACCEL_POS_1_Y,
+                2 to KEY_ACCEL_POS_2_Y,
+                3 to KEY_ACCEL_POS_3_Y,
+                4 to KEY_ACCEL_POS_4_Y,
+                5 to KEY_ACCEL_POS_5_Y
+            )
+            "z" -> mapOf(
+                0 to KEY_ACCEL_POS_0_Z,
+                1 to KEY_ACCEL_POS_1_Z,
+                2 to KEY_ACCEL_POS_2_Z,
+                3 to KEY_ACCEL_POS_3_Z,
+                4 to KEY_ACCEL_POS_4_Z,
+                5 to KEY_ACCEL_POS_5_Z
+            )
+            else -> emptyMap()
         }
+        return posMap[position] ?: "accel_pos_${position}_${axisLower}"
     }
 
     fun isCalibrationKey(key: String): Boolean {
@@ -403,7 +402,7 @@ object PreferencesKeys {
     }
 
     fun getGestureKeys(): List<String> {
-        // Return empty list; keys are dynamic (gesture_<name>)
+        // Keys are dynamic (gesture_<name>)
         return emptyList()
     }
 
@@ -470,6 +469,55 @@ object PreferencesKeys {
             KEY_EDGE_GESTURES_ENABLED, KEY_EDGE_GESTURES_VOLUME_UP,
             KEY_EDGE_GESTURES_VOLUME_DOWN, KEY_EDGE_GESTURES_LONG_PRESS,
             KEY_EDGE_GESTURES_SENSITIVITY
+        )
+    }
+
+    /** Get all keys that should be persisted across app sessions */
+    fun getPersistentKeys(): List<String> {
+        return listOf(
+            KEY_LAST_IP, KEY_LAST_PORT, KEY_CONNECTION_PROTOCOL,
+            KEY_USE_SSL, KEY_AUTH_TOKEN, KEY_AUTO_CONNECT,
+            KEY_AUTO_START_SERVER, KEY_RECONNECT_ATTEMPTS,
+            KEY_CONNECTION_TIMEOUT, KEY_USE_WEBSOCKET,
+            KEY_USE_UDP_DISCOVERY, KEY_SERVER_MAC, KEY_LAST_PROTOCOL,
+            KEY_CONNECTION_STATUS,
+            // All calibration keys
+            *getCalibrationKeys().toTypedArray(),
+            // Mouse settings
+            KEY_SENSITIVITY, KEY_SMOOTHING_ENABLED,
+            KEY_SMOOTHING_FACTOR, KEY_ACCELERATION_ENABLED,
+            KEY_ACCELERATION_FACTOR, KEY_INVERT_X, KEY_INVERT_Y,
+            KEY_CLICK_THRESHOLD, KEY_DOUBLE_CLICK_INTERVAL,
+            KEY_SCROLL_THRESHOLD, KEY_SCROLL_DEBOUNCE,
+            KEY_RIGHT_CLICK_TILT, KEY_RIGHT_CLICK_DURATION,
+            KEY_SWIPE_THRESHOLD, KEY_GESTURE_COOLDOWN,
+            KEY_CURSOR_SPEED, KEY_GESTURE_DEBOUNCE,
+            // AI
+            KEY_AI_SMOOTHING, KEY_AI_BLEND_FACTOR,
+            KEY_PREDICTIVE_MOVEMENT, KEY_PREDICTION_STRENGTH,
+            KEY_KALMAN_ENABLED,
+            // Feedback
+            KEY_HAPTIC_ENABLED, KEY_HAPTIC_STRENGTH,
+            KEY_SOUND_ENABLED, KEY_VISUAL_FEEDBACK,
+            KEY_NOTIFICATION_ON_GESTURE,
+            // UI
+            KEY_THEME, KEY_ACCENT_COLOR, KEY_LANGUAGE,
+            KEY_DYNAMIC_COLORS, KEY_FONT_SIZE,
+            KEY_SHOW_DEBUG_INFO, KEY_KEEP_SCREEN_ON,
+            KEY_SHOW_FPS,
+            // Touchpad
+            *getTouchpadKeys().toTypedArray(),
+            // Privacy
+            KEY_ANONYMOUS_STATS, KEY_CRASH_REPORTING,
+            KEY_CLEAR_DATA_ON_EXIT, KEY_USER_NAME,
+            KEY_FIRST_LAUNCH, KEY_APP_VERSION,
+            // Profiles
+            KEY_LAST_USED_PROFILE,
+            // Gestures
+            KEY_RECORDED_GESTURES,
+            // Developer
+            KEY_DEVELOPER_MODE, KEY_EXPERIMENTAL_FEATURES,
+            KEY_LOG_LEVEL
         )
     }
 }

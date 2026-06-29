@@ -2,11 +2,6 @@ package com.airmouse.domain.model
 
 import org.json.JSONObject
 
-enum class GestureType {
-    NONE, SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN,
-    CIRCLE_CW, CIRCLE_CCW, DOUBLE_TAP, LONG_PRESS, CUSTOM
-}
-
 data class GestureTemplate(
     val id: String = "",
     val name: String = "",

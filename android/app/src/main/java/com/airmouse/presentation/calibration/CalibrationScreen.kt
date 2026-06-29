@@ -22,11 +22,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -35,9 +34,13 @@ import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.presentation.calibration.ConfettiEffect
 import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.ui.components.DonutChart
+import com.airmouse.presentation.ui.components.DonutChart
 import kotlinx.coroutines.delay
 import java.util.Locale
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 // ============================================================
 // Main Calibration Screen
@@ -51,33 +54,18 @@ fun CalibrationScreen(
     onComplete: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isCalibrating by viewModel.isCalibrating.collectAsStateWithLifecycle()
     val calibrationData by viewModel.calibrationData.collectAsStateWithLifecycle()
+    val calibrationProgress by viewModel.calibrationProgress.collectAsStateWithLifecycle()
     val phase = uiState.calibrationPhase
 
-    var animationTriggered by remember { mutableStateOf(false) }
     var confettiActive by remember { mutableStateOf(false) }
 
     val currentStep = if (uiState.isComplete) 3 else (uiState.currentStep - 1).coerceAtLeast(0)
     val totalSteps = uiState.totalSteps
     val stepName = remember(uiState.currentStep) { calibrationStepName(uiState.currentStep) }
 
-    val scale by animateFloatAsState(
-        targetValue = if (animationTriggered) 1f else 0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "success_scale"
-    )
-
-    val fadeIn by animateFloatAsState(
-        targetValue = if (animationTriggered) 1f else 0f,
-        animationSpec = tween(durationMillis = 500, delayMillis = 300),
-        label = "fade_in"
-    )
-
     LaunchedEffect(uiState.isComplete) {
         if (uiState.isComplete) {
-            animationTriggered = true
-            delay(500)
             confettiActive = true
             delay(4000)
             confettiActive = false
@@ -96,7 +84,10 @@ fun CalibrationScreen(
                 TopAppBar(
                     title = {
                         Column {
-                            Text(if (uiState.isComplete) "Calibration complete" else "Assignment calibration", fontWeight = FontWeight.Bold)
+                            Text(
+                                if (uiState.isComplete) "Calibration complete" else "Assignment calibration",
+                                fontWeight = FontWeight.Bold
+                            )
                             Text(
                                 "Gyro, accelerometer, and magnetometer setup",
                                 fontSize = 11.sp,
@@ -109,7 +100,11 @@ fun CalibrationScreen(
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = Color.White, navigationIconContentColor = Color.White)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    )
                 )
             },
             containerColor = Color.Transparent
@@ -142,8 +137,9 @@ fun CalibrationScreen(
                             onStartStep = {
                                 if (uiState.currentStep == 0) {
                                     viewModel.startCalibration()
+                                } else {
+                                    viewModel.beginCurrentStep()
                                 }
-                                viewModel.beginCurrentStep()
                             },
                             onCancel = { viewModel.resetCalibration() }
                         )
@@ -155,6 +151,7 @@ fun CalibrationScreen(
                             totalSteps = totalSteps,
                             stepName = stepName,
                             uiState = uiState,
+                            calibrationProgress = calibrationProgress,
                             onCancel = { viewModel.resetCalibration() }
                         )
                     }
@@ -202,22 +199,6 @@ private fun CalibrationStepIntroScreen(
         1 -> "Keep the phone still and clear of large metal objects while the preview runs."
         else -> "Follow the on‑screen pose for each orientation; sampling starts only after the animation finishes."
     }
-    val introPulse = rememberInfiniteTransition(label = "intro_pulse")
-    val pulsingScale by introPulse.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "calibration_intro_scale"
-    )
-    val ringRotation by rememberInfiniteTransition(label = "intro_ring").animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(7000, easing = LinearEasing)),
-        label = "intro_ring_rotation"
-    )
 
     Box(
         modifier = Modifier
@@ -251,7 +232,8 @@ private fun CalibrationStepIntroScreen(
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = Color.White.copy(alpha = 0.08f),
                             labelColor = Color.White
-                        )
+                        ),
+                        elevation = AssistChipDefaults.assistChipElevation(elevation = 0.dp)
                     )
                     AssistChip(
                         onClick = { },
@@ -259,7 +241,8 @@ private fun CalibrationStepIntroScreen(
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = accent.copy(alpha = 0.20f),
                             labelColor = Color.White
-                        )
+                        ),
+                        elevation = AssistChipDefaults.assistChipElevation(elevation = 0.dp)
                     )
                 }
 
@@ -315,48 +298,22 @@ private fun CalibrationStepIntroScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(190.dp)
-                        .graphicsLayer {
-                            scaleX = if (phase == CalibrationPhase.COUNTDOWN) pulsingScale else 1f
-                            scaleY = if (phase == CalibrationPhase.COUNTDOWN) pulsingScale else 1f
-                            rotationZ = ringRotation
-                        }
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    accent.copy(alpha = 0.95f),
-                                    Color.White.copy(alpha = 0.18f),
-                                    Color.Transparent
-                                )
-                            ),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = when (stepIndex) {
-                                0 -> "GYRO"
-                                1 -> "MAG"
-                                else -> "ACCEL"
-                            },
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 28.sp
-                        )
-                        Text(
-                            text = when (stepIndex) {
-                                0 -> "Keep still"
-                                1 -> "Avoid metal"
-                                else -> "Rotate slowly"
-                            },
-                            color = Color.White.copy(alpha = 0.80f),
-                            fontSize = 12.sp
-                        )
-                    }
-                }
+                Phone3DAnimation(
+                    stepIndex = stepIndex,
+                    currentPosition = uiState.currentPosition,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+
+                Text(
+                    text = when (stepIndex) {
+                        0 -> "GYROSCOPE WARMUP"
+                        1 -> "MAGNETOMETER SWEEP"
+                        else -> "ACCELEROMETER CHECK"
+                    },
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
 
                 CalibrationStepTracker(currentStep = currentStep, totalSteps = totalSteps)
 
@@ -429,6 +386,7 @@ private fun CalibrationSamplingScreen(
     totalSteps: Int,
     stepName: String,
     uiState: CalibrationUiState,
+    calibrationProgress: Int,
     onCancel: () -> Unit
 ) {
     val stepIndex = currentStep.coerceIn(0, 2)
@@ -437,22 +395,6 @@ private fun CalibrationSamplingScreen(
         1 -> Color(0xFFF59E0B)
         else -> Color(0xFF22C55E)
     }
-    val pulseTransition = rememberInfiniteTransition(label = "sampling_pulse")
-    val outerScale by pulseTransition.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "sampling_outer_scale"
-    )
-    val ringRotation by pulseTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(6000, easing = LinearEasing)),
-        label = "sampling_ring_rotation"
-    )
     val instruction = when (stepIndex) {
         0 -> "Hold the phone flat and still while we collect gyro bias samples."
         1 -> "Keep the phone still and avoid magnets while magnetometer samples are captured."
@@ -503,7 +445,8 @@ private fun CalibrationSamplingScreen(
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = Color.White.copy(alpha = 0.08f),
                             labelColor = Color.White
-                        )
+                        ),
+                        elevation = AssistChipDefaults.assistChipElevation(elevation = 0.dp)
                     )
                     AssistChip(
                         onClick = { },
@@ -511,7 +454,8 @@ private fun CalibrationSamplingScreen(
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = accent.copy(alpha = 0.20f),
                             labelColor = Color.White
-                        )
+                        ),
+                        elevation = AssistChipDefaults.assistChipElevation(elevation = 0.dp)
                     )
                 }
 
@@ -534,42 +478,19 @@ private fun CalibrationSamplingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(220.dp)
-                        .graphicsLayer {
-                            scaleX = outerScale
-                            scaleY = outerScale
-                            rotationZ = ringRotation
-                        }
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    accent.copy(alpha = 0.95f),
-                                    Color.White.copy(alpha = 0.12f),
-                                    Color.Transparent
-                                )
-                            ),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = label,
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = sampleText,
-                            color = Color.White.copy(alpha = 0.78f),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                Phone3DAnimation(
+                    stepIndex = stepIndex,
+                    currentPosition = uiState.currentPosition,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+
+                Text(
+                    text = "$label: $sampleText",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -579,7 +500,7 @@ private fun CalibrationSamplingScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Live progress", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         LinearProgressIndicator(
-                            progress = { uiState.progress / 100f },
+                            progress = { calibrationProgress / 100f },
                             modifier = Modifier.fillMaxWidth().height(10.dp),
                             color = accent,
                             trackColor = Color.White.copy(alpha = 0.12f)
@@ -721,73 +642,7 @@ private fun CompletionScreen(
 }
 
 // ============================================================
-// Guide Screen (Single, with `key` parameters)
-// ============================================================
-
-@Composable
-fun CalibrationGuideScreen(
-    paddingValues: PaddingValues,
-    currentStep: Int,
-    totalSteps: Int,
-    stepName: String,
-    uiState: CalibrationUiState,
-    viewModel: CalibrationViewModel,
-    onStartCalibration: () -> Unit,
-    navigationActions: NavigationActions?,
-    calibrationData: CalibrationData?
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        item(key = "hero") {
-            HeroCalibrationCard(uiState = uiState, currentStep = currentStep, stepName = stepName)
-        }
-        item(key = "tracker") {
-            CalibrationStepTracker(currentStep = currentStep, totalSteps = totalSteps)
-        }
-        item(key = "fitness") {
-            FitnessStepCard(step = currentStep, totalSteps = totalSteps, stepName = stepName, uiState = uiState)
-        }
-        item(key = "status") {
-            CalibrationStatusCard(
-                isCalibrating = uiState.isCalibrating,
-                progress = uiState.progress,
-                statusMessage = uiState.statusMessage,
-                samplesCollected = uiState.samplesCollected,
-                totalSamplesNeeded = uiState.totalSamplesNeeded,
-                calibrationData = calibrationData
-            )
-        }
-        item(key = "guidance") {
-            CalibrationGuidanceCard(isCalibrating = uiState.isCalibrating)
-        }
-        item(key = "sensors") {
-            CalibrationSensorCards(activeStep = currentStep)
-        }
-        item(key = "formula") {
-            CalibrationFormulaSection()
-        }
-        item(key = "livedata") {
-            LiveSensorDataCard(uiState = uiState)
-        }
-        item(key = "actions") {
-            PrimaryCalibrationActions(
-                isCalibrating = uiState.isCalibrating,
-                stepName = stepName,
-                onStartCalibration = onStartCalibration,
-                onCancel = { viewModel.resetCalibration() }
-            )
-        }
-        item(key = "sensorstatus") {
-            SensorStatusDisplay(uiState = uiState, calibrationData = calibrationData)
-        }
-    }
-}
-
-// ============================================================
-// Helper Components (Tags, Cards, etc.)
+// Helper Components
 // ============================================================
 
 @Composable
@@ -841,37 +696,6 @@ private fun CalibrationStepTracker(currentStep: Int, totalSteps: Int) {
 }
 
 @Composable
-private fun FitnessStepCard(step: Int, totalSteps: Int, stepName: String, uiState: CalibrationUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(Color(0xFF6366F1).copy(alpha = 0.22f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("${step + 1}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Current workout", color = Color.White.copy(alpha = 0.68f), fontSize = 12.sp)
-                    Text(stepName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                }
-                Text("Step ${step + 1}/$totalSteps", color = Color(0xFF93C5FD), fontWeight = FontWeight.SemiBold)
-            }
-            Text(
-                uiState.stepInstruction.ifBlank { uiState.statusMessage },
-                color = Color.White.copy(alpha = 0.82f),
-                lineHeight = 20.sp
-            )
-        }
-    }
-}
-
-@Composable
 private fun CalibrationStatusCard(
     isCalibrating: Boolean,
     progress: Int,
@@ -897,368 +721,619 @@ private fun CalibrationStatusCard(
     }
 }
 
-@Composable
-private fun SensorStatusDisplay(uiState: CalibrationUiState, calibrationData: CalibrationData?) {
-    val message = when {
-        uiState.isComplete -> "Calibration saved"
-        uiState.isCalibrating -> "Collecting sensor data"
-        calibrationData != null -> "Existing calibration loaded"
-        else -> "Awaiting start"
-    }
-    Text(message, color = Color.White.copy(alpha = 0.7f), modifier = Modifier.fillMaxWidth())
-}
+// ============================================================
+// Animated 3D Phone Composable with Rich Visual Guides
+// ============================================================
 
 @Composable
-private fun CalibrationGuidanceCard(isCalibrating: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f))
+fun Phone3DAnimation(
+    stepIndex: Int, // 0: Gyro, 1: Mag, 2: Accel
+    currentPosition: Int, // 0 to 5 for Accel positions
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "phone_3d")
+
+    // -- Position label for each step/position --
+    val positionLabel = when (stepIndex) {
+        0 -> "Place phone flat on table"
+        1 -> "Move phone in a figure‑8"
+        2 -> when (currentPosition) {
+            0 -> "Screen facing UP (flat on table)"
+            1 -> "Screen facing DOWN (flip over)"
+            2 -> "Left edge DOWN (landscape left)"
+            3 -> "Right edge DOWN (landscape right)"
+            4 -> "Top edge DOWN (upside-down portrait)"
+            5 -> "Bottom edge DOWN (normal portrait, stand upright)"
+            else -> "Hold phone as shown"
+        }
+        else -> "Hold phone as shown"
+    }
+
+    // -- Position emoji / icon text --
+    val positionEmoji = when (stepIndex) {
+        0 -> "📱 ➡ 🪑"
+        1 -> "📱 ∞ 🔄"
+        2 -> when (currentPosition) {
+            0 -> "📱⬆"
+            1 -> "📱⬇"
+            2 -> "📱⬅"
+            3 -> "📱➡"
+            4 -> "📱🔃"
+            5 -> "📱🔝"
+            else -> "📱"
+        }
+        else -> "📱"
+    }
+
+    val targetRotationX by animateFloatAsState(
+        targetValue = when (stepIndex) {
+            0 -> 60f // Laying flat on table
+            1 -> 45f // Tilted for sweep
+            2 -> when (currentPosition) {
+                0 -> 60f   // Flat Screen Up
+                1 -> -60f  // Flat Screen Down
+                2 -> 0f    // Left Side Down
+                3 -> 0f    // Right Side Down
+                4 -> 45f   // Top Edge Down
+                5 -> 45f   // Bottom Edge Down
+                else -> 0f
+            }
+            else -> 0f
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "rx"
+    )
+
+    // Magnetometer sweep animation
+    val magSweepY by infiniteTransition.animateFloat(
+        initialValue = -25f,
+        targetValue = 25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "mag_sweep_y"
+    )
+    val magSweepZ by infiniteTransition.animateFloat(
+        initialValue = -15f,
+        targetValue = 15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "mag_sweep_z"
+    )
+
+    val targetRotationY by animateFloatAsState(
+        targetValue = when (stepIndex) {
+            2 -> when (currentPosition) {
+                1 -> 180f // Face down
+                else -> 0f
+            }
+            else -> 0f
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "ry"
+    )
+
+    val targetRotationZ by animateFloatAsState(
+        targetValue = when (stepIndex) {
+            2 -> when (currentPosition) {
+                2 -> -90f  // Landscape Left
+                3 -> 90f   // Landscape Right
+                4 -> 180f  // Top Edge Down
+                5 -> 0f    // Bottom Edge Down (portrait)
+                else -> 0f
+            }
+            else -> 0f
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "rz"
+    )
+
+    // Gyro ripple effect (flat on table)
+    val rippleScale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = EaseOutExpo),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "gyro_ripple"
+    )
+    val rippleAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = EaseOutExpo),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "gyro_alpha"
+    )
+
+    // Pulsing guide arrow
+    val arrowPulse by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "arrow_pulse"
+    )
+    val arrowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "arrow_alpha"
+    )
+
+    // Figure-8 path animation for magnetometer
+    val figure8Progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "figure8"
+    )
+
+    val accent = when (stepIndex) {
+        0 -> Color(0xFF38BDF8)
+        1 -> Color(0xFFF59E0B)
+        else -> Color(0xFF22C55E)
+    }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        // ---- Position Label Banner ----
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = accent.copy(alpha = 0.18f),
+            border = BorderStroke(1.dp, accent.copy(alpha = 0.35f))
         ) {
-            Text("How to calibrate", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            if (isCalibrating) {
-                WarningBanner(
-                    text = "Don't move the phone while the app is sampling gyro bias. Keep it flat and still until the step finishes."
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = positionEmoji,
+                    fontSize = 20.sp
+                )
+                Text(
+                    text = positionLabel,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
                 )
             }
-            Text(
-                "Follow the assignment sequence and keep the phone steady whenever the step asks for a still sample.\n\n" +
-                        "• Gyroscope: collect stationary samples, compute the bias, and subtract it so the idle reading trends to zero.\n" +
-                        "• Accelerometer: repeat the six‑position routine and fit each axis against gravity (9.81 m/s²).\n" +
-                        "• Magnetometer: rotate the phone through many orientations, save the minimum and maximum of each axis, and derive offset/scale from them.\n" +
-                        "• Fusion: combine the calibrated sensors with a filter such as Madgwick AHRS or another suitable fusion approach to reduce drift.\n" +
-                        "• Output: use the filtered signal for cursor motion, click, and scroll so the pointer stays smooth and stable.",
-                color = Color.White.copy(alpha = 0.82f),
-                lineHeight = 20.sp
-            )
-            Text(
-                "The live values below are a demo aid. They help verify the calibration results before you save or continue.",
-                color = Color(0xFF93C5FD),
-                fontSize = 13.sp
-            )
         }
-    }
-}
 
-@Composable
-private fun WarningBanner(text: String) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = Color(0xFFF59E0B).copy(alpha = 0.16f),
-        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f))
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        // ---- 3D Phone + Guides ----
+        Box(
+            modifier = Modifier
+                .size(260.dp)
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFBBF24))
-            Text(text, color = Color.White, fontSize = 13.sp, lineHeight = 18.sp)
-        }
-    }
-}
-
-@Composable
-private fun CalibrationSensorCards(activeStep: Int) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        SensorStepCard(
-            stepNumber = 1,
-            title = "Gyroscope bias",
-            subtitle = "Keep the phone still and sample the angular velocity noise.",
-            accent = Color(0xFF38BDF8),
-            formula = "bias = average(raw samples)\ncorrected = raw - bias",
-            isActive = activeStep == 0,
-            details = listOf(
-                "Goal: make the stationary output close to zero.",
-                "Use the averaged bias to reduce drift before motion tracking."
-            )
-        )
-        SensorStepCard(
-            stepNumber = 2,
-            title = "Accelerometer six‑position calibration",
-            subtitle = "Place the phone in each required orientation and compare against gravity.",
-            accent = Color(0xFF22C55E),
-            formula = "offset = (min + max) / 2\nscale = (max - min) / 2\ncorrected = (raw - offset) / scale",
-            isActive = activeStep == 2,
-            details = listOf(
-                "Goal: estimate offset and scale for all axes.",
-                "Gravity reference is approximately 9.81 m/s²."
-            )
-        )
-        SensorStepCard(
-            stepNumber = 3,
-            title = "Magnetometer min/max calibration",
-            subtitle = "Rotate the phone through all directions to sample the field envelope.",
-            accent = Color(0xFFF59E0B),
-            formula = "offset = (min + max) / 2\nscale = (max - min) / 2\ncorrected = (raw - offset) / scale",
-            isActive = activeStep == 1,
-            details = listOf(
-                "Goal: compensate hard‑iron bias and axis scaling.",
-                "Rotate through as much of the sphere as possible."
-            )
-        )
-    }
-}
-
-@Composable
-private fun SensorStepCard(
-    stepNumber: Int,
-    title: String,
-    subtitle: String,
-    accent: Color,
-    formula: String,
-    isActive: Boolean,
-    details: List<String>
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.06f)
-        ),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Table surface shadow (for flat positions)
+            if (stepIndex == 0 || (stepIndex == 2 && currentPosition in listOf(0, 1))) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .background(accent.copy(alpha = 0.18f), CircleShape),
-                    contentAlignment = Alignment.Center
+                        .width(180.dp)
+                        .height(80.dp)
+                        .graphicsLayer {
+                            rotationX = 75f
+                            translationY = 55f
+                        }
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent)
+                            )
+                        )
+                )
+            }
+
+
+            // Gyro ripple rings
+            if (stepIndex == 0) {
+                Box(
+                    modifier = Modifier
+                        .size(160.dp)
+                        .graphicsLayer {
+                            scaleX = rippleScale
+                            scaleY = rippleScale
+                            rotationX = 75f
+                            translationY = 20f
+                        }
+                        .border(2.dp, accent.copy(alpha = rippleAlpha), CircleShape)
+                )
+                // Second ripple ring offset
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .graphicsLayer {
+                            scaleX = rippleScale * 0.8f
+                            scaleY = rippleScale * 0.8f
+                            rotationX = 75f
+                            translationY = 20f
+                        }
+                        .border(1.5.dp, accent.copy(alpha = rippleAlpha * 0.6f), CircleShape)
+                )
+            }
+
+            // Figure-8 trace for magnetometer
+            if (stepIndex == 1) {
+                Canvas(
+                    modifier = Modifier
+                        .size(200.dp)
+                        .graphicsLayer { rotationX = 30f }
                 ) {
-                    Text("$stepNumber", color = accent, fontWeight = FontWeight.Bold)
+                    val cx = size.width / 2f
+                    val cy = size.height / 2f
+                    val rx = size.width * 0.35f
+                    val ry = size.height * 0.2f
+                    val steps = 100
+                    // Draw the figure-8 path
+                    for (i in 0 until steps) {
+                        val t = i.toFloat() / steps * 2 * Math.PI.toFloat()
+                        val x = cx + rx * kotlin.math.sin(t)
+                        val y = cy + ry * kotlin.math.sin(2 * t)
+                        val t2 = (i + 1).toFloat() / steps * 2 * Math.PI.toFloat()
+                        val x2 = cx + rx * kotlin.math.sin(t2)
+                        val y2 = cy + ry * kotlin.math.sin(2 * t2)
+                        drawLine(
+                            color = Color(0xFFF59E0B).copy(alpha = 0.3f),
+                            start = Offset(x, y),
+                            end = Offset(x2, y2),
+                            strokeWidth = 2f
+                        )
+                    }
+                    // Draw a moving dot on the path
+                    val t = figure8Progress * 2 * Math.PI.toFloat()
+                    val dotX = cx + rx * kotlin.math.sin(t)
+                    val dotY = cy + ry * kotlin.math.sin(2 * t)
+                    drawCircle(
+                        color = Color(0xFFF59E0B),
+                        radius = 8f,
+                        center = Offset(dotX, dotY)
+                    )
+                    drawCircle(
+                        color = Color(0xFFF59E0B).copy(alpha = 0.4f),
+                        radius = 16f,
+                        center = Offset(dotX, dotY)
+                    )
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                    Text(subtitle, color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp)
-                }
-                if (isActive) {
-                    Surface(
-                        shape = RoundedCornerShape(999.dp),
-                        color = accent.copy(alpha = 0.18f)
-                    ) {
+            }
+
+            // Animated guide arrows for accelerometer positions
+            if (stepIndex == 2) {
+                when (currentPosition) {
+                    0 -> { // Screen Up: arrow pointing down onto table
                         Text(
-                            "Active",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            color = accent,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            "⬇",
+                            fontSize = 28.sp,
+                            color = Color.White.copy(alpha = arrowAlpha),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .graphicsLayer { translationY = arrowPulse }
+                        )
+                        Text(
+                            "🪑 Table",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 4.dp)
+                        )
+                    }
+                    1 -> { // Screen Down: arrow pointing down + flip indicator
+                        Text(
+                            "🔄",
+                            fontSize = 28.sp,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .graphicsLayer {
+                                    translationY = arrowPulse
+                                    rotationZ = arrowPulse * 3
+                                }
+                        )
+                        Text(
+                            "Flip face‑down",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 4.dp)
+                        )
+                    }
+                    2 -> { // Left edge down: arrow pointing left
+                        Text(
+                            "⬅",
+                            fontSize = 28.sp,
+                            color = Color.White.copy(alpha = arrowAlpha),
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .graphicsLayer { translationX = -arrowPulse }
+                        )
+                        Text(
+                            "Left edge down",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 4.dp)
+                        )
+                    }
+                    3 -> { // Right edge down: arrow pointing right
+                        Text(
+                            "➡",
+                            fontSize = 28.sp,
+                            color = Color.White.copy(alpha = arrowAlpha),
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .graphicsLayer { translationX = arrowPulse }
+                        )
+                        Text(
+                            "Right edge down",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 4.dp)
+                        )
+                    }
+                    4 -> { // Top edge down: arrow pointing up (phone rotated 180)
+                        Text(
+                            "⬆",
+                            fontSize = 28.sp,
+                            color = Color.White.copy(alpha = arrowAlpha),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .graphicsLayer { translationY = -arrowPulse }
+                        )
+                        Text(
+                            "Top edge down",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 4.dp)
+                        )
+                    }
+                    5 -> { // Bottom edge down: arrow pointing down (normal portrait standing)
+                        Text(
+                            "⬇",
+                            fontSize = 28.sp,
+                            color = Color.White.copy(alpha = arrowAlpha),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .graphicsLayer { translationY = arrowPulse }
+                        )
+                        Text(
+                            "Stand upright",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 4.dp)
                         )
                     }
                 }
             }
 
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color(0xFF020617).copy(alpha = 0.55f),
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.25f))
-            ) {
+            // Gyroscope: "STAY STILL" indicator
+            if (stepIndex == 0) {
                 Text(
-                    text = formula,
-                    modifier = Modifier.padding(14.dp),
-                    color = Color.White,
-                    fontFamily = FontFamily.Monospace,
+                    "✋ STAY STILL",
                     fontSize = 13.sp,
-                    lineHeight = 18.sp
+                    fontWeight = FontWeight.Bold,
+                    color = accent.copy(alpha = arrowAlpha),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp)
                 )
             }
 
-            details.forEach { detail ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-                    Text("•", color = accent, fontWeight = FontWeight.Bold)
-                    Text(detail, color = Color.White.copy(alpha = 0.84f), fontSize = 13.sp)
+            // ---- The 3D Phone Card ----
+            Card(
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(180.dp)
+                    .graphicsLayer {
+                        rotationX = targetRotationX
+                        rotationY = targetRotationY + if (stepIndex == 1) magSweepY else 0f
+                        rotationZ = targetRotationZ + if (stepIndex == 1) magSweepZ else 0f
+                        cameraDistance = 12 * density
+                    },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (stepIndex == 2 && currentPosition == 1) Color(0xFF1E293B) else Color(0xFF0F172A)
+                ),
+                border = BorderStroke(2.5.dp, Color.White.copy(alpha = 0.85f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Notch
+                    Box(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
+                            .background(Color.White.copy(alpha = 0.6f))
+                            .align(Alignment.TopCenter)
+                    )
+
+                    // Screen content
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 6.dp, vertical = 12.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .then(
+                                if (stepIndex == 2 && currentPosition == 1) {
+                                    Modifier.background(Color.Black)
+                                } else {
+                                    Modifier.background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color(0xFF4F46E5).copy(alpha = 0.15f),
+                                                Color(0xFF06B6D4).copy(alpha = 0.25f)
+                                            )
+                                        )
+                                    )
+                                }
+                            )
+                    ) {
+                        if (stepIndex == 2 && currentPosition != 1) {
+                            // Accelerometer position icons inside the screen
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = when (currentPosition) {
+                                        0 -> Icons.Default.VerticalAlignTop
+                                        2 -> Icons.Default.ArrowBack
+                                        3 -> Icons.Default.ArrowForward
+                                        4 -> Icons.Default.ArrowUpward
+                                        5 -> Icons.Default.ArrowDownward
+                                        else -> Icons.Default.ScreenRotation
+                                    },
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = when (currentPosition) {
+                                        0 -> "SCREEN\nUP"
+                                        2 -> "LEFT\nDOWN"
+                                        3 -> "RIGHT\nDOWN"
+                                        4 -> "UPSIDE\nDOWN"
+                                        5 -> "UPRIGHT"
+                                        else -> "ALIGN"
+                                    },
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 11.sp
+                                )
+                            }
+                        } else if (stepIndex == 0) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CenterFocusStrong,
+                                    contentDescription = null,
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        } else if (stepIndex == 1) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Explore,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF59E0B),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Face down camera indicator
+                    if (stepIndex == 2 && currentPosition == 1) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Top
+                        ) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.2f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "FACE\nDOWN",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 12.sp
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun PrimaryCalibrationActions(
-    isCalibrating: Boolean,
-    stepName: String,
-    onStartCalibration: () -> Unit,
-    onCancel: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-        if (!isCalibrating) {
-            Button(
-                onClick = onStartCalibration,
-                modifier = Modifier.fillMaxWidth().height(58.dp),
-                shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
+        // ---- Accel Position Progress Dots ----
+        if (stepIndex == 2) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(top = 4.dp)
             ) {
-                Icon(Icons.Default.PlayArrow, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Start $stepName", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-        } else {
-            OutlinedButton(
-                onClick = onCancel,
-                modifier = Modifier.fillMaxWidth().height(58.dp),
-                shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF87171))
-            ) {
-                Icon(Icons.Default.Close, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Cancel current step")
-            }
-        }
-        Text(
-            "The app will guide the rest automatically once this step is finished.",
-            color = Color.White.copy(alpha = 0.66f),
-            fontSize = 12.sp
-        )
-    }
-}
-
-@Composable
-private fun CalibrationFormulaSection() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f)),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Visible calibration formulas", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            FormulaBlock(
-                title = "Gyro",
-                formula = "bias = average(raw)\ncorrected = raw - bias",
-                accent = Color(0xFF38BDF8)
-            )
-            FormulaBlock(
-                title = "Accel",
-                formula = "offset = (min + max) / 2\nscale = (max - min) / 2\ncorrected = (raw - offset) / scale",
-                accent = Color(0xFF22C55E)
-            )
-            FormulaBlock(
-                title = "Magnetometer",
-                formula = "offset = (min + max) / 2\nscale = (max - min) / 2\ncorrected = (raw - offset) / scale",
-                accent = Color(0xFFF59E0B)
-            )
-        }
-    }
-}
-
-@Composable
-private fun FormulaBlock(
-    title: String,
-    formula: String,
-    accent: Color
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(title, color = accent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color.Black.copy(alpha = 0.26f),
-            border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
-        ) {
-            Text(
-                text = formula,
-                modifier = Modifier.padding(12.dp),
-                color = Color.White,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                lineHeight = 18.sp
-            )
-        }
-    }
-}
-
-@Composable
-private fun LiveSensorDataCard(uiState: CalibrationUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f))
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text("Live sensor values", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            SensorValueRow("Gyro", uiState.gyroData)
-            SensorValueRow("Accel", uiState.accelData)
-            SensorValueRow("Mag", uiState.magData)
-            SensorValueRow("Orientation", Triple(uiState.roll, uiState.pitch, uiState.yaw))
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = { uiState.progress / 100f },
-                modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFF60A5FA),
-                trackColor = Color.White.copy(alpha = 0.12f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SensorValueRow(label: String, values: Triple<Float, Float, Float>) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = Color.White.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold)
-        Text(
-            text = "${formatSensorValue(values.first)}, ${formatSensorValue(values.second)}, ${formatSensorValue(values.third)}",
-            color = Color.White,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp
-        )
-    }
-}
-
-private fun formatSensorValue(value: Float): String = String.format(Locale.US, "%.3f", value)
-
-// ============================================================
-// Hero Card
-// ============================================================
-
-@Composable
-private fun HeroCalibrationCard(uiState: CalibrationUiState, currentStep: Int, stepName: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
-        shape = RoundedCornerShape(28.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(Color(0xFF22C55E), Color(0xFF16A34A))))
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Air Mouse calibration", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Step ${currentStep + 1}: $stepName. Do one stage at a time, like a guided fitness routine.",
-                        color = Color.White.copy(alpha = 0.78f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                repeat(6) { i ->
+                    val dotColor = when {
+                        i < currentPosition -> Color(0xFF22C55E)  // completed: green
+                        i == currentPosition -> accent            // current: accent
+                        else -> Color.White.copy(alpha = 0.2f)    // upcoming: dim
+                    }
+                    val dotSize = if (i == currentPosition) 12.dp else 8.dp
+                    Box(
+                        modifier = Modifier
+                            .size(dotSize)
+                            .clip(CircleShape)
+                            .background(dotColor)
+                            .then(
+                                if (i == currentPosition) {
+                                    Modifier.border(2.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                                } else {
+                                    Modifier
+                                }
+                            )
                     )
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CalibrationTag("Gyro bias")
-                CalibrationTag("Accel 6-pos")
-                CalibrationTag("Mag min/max")
-            }
-            if (uiState.isCalibrating) {
-                LinearProgressIndicator(
-                    progress = { uiState.progress / 100f },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF22C55E),
-                    trackColor = Color.White.copy(alpha = 0.12f)
-                )
-            } else {
-                Text(
-                    "Tap start to begin the current stage. Each step unlocks the next one automatically.",
-                    color = Color.White.copy(alpha = 0.72f),
-                    fontSize = 12.sp
-                )
-            }
+            Text(
+                text = "Position ${(currentPosition + 1).coerceAtMost(6)} of 6",
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = 2.dp)
+            )
         }
     }
 }

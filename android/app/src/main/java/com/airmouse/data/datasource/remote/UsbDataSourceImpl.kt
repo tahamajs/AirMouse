@@ -1,4 +1,3 @@
-
 package com.airmouse.data.datasource.remote
 
 import android.content.Context
@@ -20,7 +19,6 @@ class UsbDataSourceImpl @Inject constructor(
     private val stateChannel = Channel<Boolean>(Channel.BUFFERED)
 
     override fun connect() {
-        
         stateChannel.trySend(true)
     }
 
@@ -29,10 +27,9 @@ class UsbDataSourceImpl @Inject constructor(
     }
 
     override fun send(data: ByteArray) {
-        
+        // Implementation
     }
 
     override fun observeMessages(): Flow<ByteArray> = messageChannel.receiveAsFlow()
-
     override fun connectionStatus(): Flow<Boolean> = stateChannel.receiveAsFlow()
 }

@@ -1,27 +1,32 @@
-
 package com.airmouse.utils
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.airmouse.PreferencesManager as PreferencesManagerContract
-import com.airmouse.domain.model.CalibrationData
-import com.airmouse.domain.model.CalibrationQuality
-import com.airmouse.domain.model.CalibrationStatus
-import com.airmouse.domain.model.SensorCalibrationData
-import com.airmouse.domain.model.StatisticsSummary
+import com.airmouse.domain.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Central preferences manager for the Air Mouse application.
+ * Handles all SharedPreferences operations with type-safe methods.
+ */
 @Singleton
 class PreferencesManager @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) : PreferencesManagerContract {
+
     private val prefs: SharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
     companion object {
         private const val PREF_NAME = "airmouse_prefs"
+
+        // ============================================================
+        // DEFAULT VALUES
+        // ============================================================
+
         private const val DEFAULT_SENSITIVITY = 0.5f
         private const val DEFAULT_CLICK_THRESHOLD = 8f
         private const val DEFAULT_DOUBLE_CLICK_INTERVAL = 400L
@@ -60,7 +65,10 @@ class PreferencesManager @Inject constructor(
         private const val DEFAULT_LOG_LEVEL = "INFO"
     }
 
-    
+    // ============================================================
+    // BASIC OPERATIONS
+    // ============================================================
+
     override fun putString(key: String, value: String) = prefs.edit { putString(key, value) }
     override fun getString(key: String, defaultValue: String): String = prefs.getString(key, defaultValue) ?: defaultValue
 
@@ -79,8 +87,12 @@ class PreferencesManager @Inject constructor(
     fun contains(key: String): Boolean = prefs.contains(key)
     fun remove(key: String) = prefs.edit { remove(key) }
     fun clear() = prefs.edit { clear() }
+    fun getAllKeys(): Set<String> = prefs.all.keys
 
-    
+    // ============================================================
+    // SENSITIVITY & CURSOR
+    // ============================================================
+
     fun getSensitivity(): Float = getFloat("sensitivity", DEFAULT_SENSITIVITY)
     fun setSensitivity(value: Float) = putFloat("sensitivity", value.coerceIn(0.2f, 2.0f))
 
@@ -132,23 +144,18 @@ class PreferencesManager @Inject constructor(
     fun getCursorSpeed(): Float = getFloat("cursor_speed", DEFAULT_CURSOR_SPEED)
     fun setCursorSpeed(value: Float) = putFloat("cursor_speed", value.coerceIn(0.5f, 3.0f))
 
-    
-    fun getLastServerIp(): String = getString("last_server_ip", "")
-    fun setLastServerIp(ip: String) = putString("last_server_ip", ip)
+    // ============================================================
+    // CONNECTION
+    // ============================================================
 
-    fun getLastIp(): String = getString("last_ip", getLastServerIp())
+    fun getLastIp(): String = getString("last_ip", "")
     fun setLastIp(ip: String) = putString("last_ip", ip)
 
-    fun getLastServerPort(): Int = getInt("last_server_port", DEFAULT_LAST_PORT)
-    fun setLastServerPort(port: Int) = putInt("last_server_port", port)
-
-    fun getLastPort(): Int = getInt("last_port", getLastServerPort())
+    fun getLastPort(): Int = getInt("last_port", DEFAULT_LAST_PORT)
     fun setLastPort(port: Int) = putInt("last_port", port)
 
-    fun getLastProtocol(): Int = getInt("last_protocol", DEFAULT_LAST_PROTOCOL)
-    fun setLastProtocol(protocol: Int) = putInt("last_protocol", protocol)
-
-    fun setLastProtocol(protocol: String) = putString("last_protocol", protocol)
+    fun getLastProtocol(): String = getString("last_protocol", "WEBSOCKET")
+    fun setLastProtocol(protocol: String) = putString("last_protocol", protocol.uppercase())
 
     fun getServerMac(): String = getString("server_mac", "")
     fun setServerMac(mac: String) = putString("server_mac", mac)
@@ -165,19 +172,22 @@ class PreferencesManager @Inject constructor(
     fun getConnectionTimeout(): Int = getInt("connection_timeout", DEFAULT_CONNECTION_TIMEOUT)
     fun setConnectionTimeout(timeout: Int) = putInt("connection_timeout", timeout.coerceIn(1000, 30000))
 
-    fun isOnboardingCompleted(): Boolean = getBoolean("onboarding_completed", false)
-    fun setOnboardingCompleted(completed: Boolean) = putBoolean("onboarding_completed", completed)
-
-    fun getOnboardingVersion(): Int = getInt("onboarding_version", 0)
-    fun setOnboardingVersion(version: Int) = putInt("onboarding_version", version)
-
     fun isWebSocketEnabled(): Boolean = getBoolean("use_websocket", DEFAULT_USE_WEBSOCKET)
     fun setWebSocketEnabled(enabled: Boolean) = putBoolean("use_websocket", enabled)
 
     fun isUdpDiscoveryEnabled(): Boolean = getBoolean("use_udp_discovery", DEFAULT_USE_UDP_DISCOVERY)
     fun setUdpDiscoveryEnabled(enabled: Boolean) = putBoolean("use_udp_discovery", enabled)
 
-    
+    fun isOnboardingCompleted(): Boolean = getBoolean("onboarding_completed", false)
+    fun setOnboardingCompleted(completed: Boolean) = putBoolean("onboarding_completed", completed)
+
+    fun getOnboardingVersion(): Int = getInt("onboarding_version", 0)
+    fun setOnboardingVersion(version: Int) = putInt("onboarding_version", version)
+
+    // ============================================================
+    // THEME
+    // ============================================================
+
     fun getTheme(): String = getString("theme", DEFAULT_THEME)
     fun setTheme(theme: String) = putString("theme", theme)
 
@@ -208,9 +218,248 @@ class PreferencesManager @Inject constructor(
     fun getControlMode(): String = getString("control_mode", "motion")
     fun setControlMode(mode: String) = putString("control_mode", mode)
 
-    
+    // ============================================================
+    // AI
+    // ============================================================
 
-    
+    fun isAiSmoothingEnabled(): Boolean = getBoolean("ai_smoothing", false)
+    fun setAiSmoothingEnabled(enabled: Boolean) = putBoolean("ai_smoothing", enabled)
+
+    fun getAiBlendFactor(): Float = getFloat("ai_blend_factor", DEFAULT_AI_BLEND_FACTOR)
+    fun setAiBlendFactor(value: Float) = putFloat("ai_blend_factor", value.coerceIn(0.3f, 0.95f))
+
+    fun isPredictiveEnabled(): Boolean = getBoolean("predictive_movement", true)
+    fun setPredictiveEnabled(enabled: Boolean) = putBoolean("predictive_movement", enabled)
+
+    fun getPredictionStrength(): Float = getFloat("prediction_strength", DEFAULT_PREDICTION_STRENGTH)
+    fun setPredictionStrength(value: Float) = putFloat("prediction_strength", value.coerceIn(0.1f, 0.9f))
+
+    fun isKalmanEnabled(): Boolean = getBoolean("kalman_enabled", true)
+    fun setKalmanEnabled(enabled: Boolean) = putBoolean("kalman_enabled", enabled)
+
+    // ============================================================
+    // HAPTIC
+    // ============================================================
+
+    fun getHapticStrength(): String = getString("haptic_strength", DEFAULT_HAPTIC_STRENGTH)
+    fun setHapticStrength(strength: String) = putString("haptic_strength", strength)
+
+    fun isSoundEnabled(): Boolean = getBoolean("sound_enabled", true)
+    fun setSoundEnabled(enabled: Boolean) = putBoolean("sound_enabled", enabled)
+
+    fun isVisualFeedbackEnabled(): Boolean = getBoolean("visual_feedback", true)
+    fun setVisualFeedbackEnabled(enabled: Boolean) = putBoolean("visual_feedback", enabled)
+
+    fun isNotificationOnGesture(): Boolean = getBoolean("notification_on_gesture", false)
+    fun setNotificationOnGesture(enabled: Boolean) = putBoolean("notification_on_gesture", enabled)
+
+    // ============================================================
+    // VOICE
+    // ============================================================
+
+    fun isVoiceEnabled(): Boolean = getBoolean("voice_enabled", false)
+    fun setVoiceEnabled(enabled: Boolean) = putBoolean("voice_enabled", enabled)
+
+    fun isWakeWordEnabled(): Boolean = getBoolean("wake_word_enabled", true)
+    fun setWakeWordEnabled(enabled: Boolean) = putBoolean("wake_word_enabled", enabled)
+
+    fun getWakeWord(): String = getString("wake_word", DEFAULT_WAKE_WORD)
+    fun setWakeWord(word: String) = putString("wake_word", word.lowercase())
+
+    fun getVoiceWakeWordConfidence(): Float = getFloat("voice_wake_word_confidence", DEFAULT_VOICE_WAKE_WORD_CONFIDENCE)
+    fun setVoiceWakeWordConfidence(confidence: Float) = putFloat("voice_wake_word_confidence", confidence.coerceIn(0.5f, 0.95f))
+
+    fun isVoiceContinuousListening(): Boolean = getBoolean("voice_continuous", false)
+    fun setVoiceContinuousListening(enabled: Boolean) = putBoolean("voice_continuous", enabled)
+
+    fun isVoiceFeedbackEnabled(): Boolean = getBoolean("voice_feedback", true)
+    fun setVoiceFeedbackEnabled(enabled: Boolean) = putBoolean("voice_feedback", enabled)
+
+    fun isVoiceSoundEffectsEnabled(): Boolean = getBoolean("voice_sound_effects", true)
+    fun setVoiceSoundEffectsEnabled(enabled: Boolean) = putBoolean("voice_sound_effects", enabled)
+
+    fun getVoiceLanguage(): String = getString("voice_language", DEFAULT_VOICE_LANGUAGE)
+    fun setVoiceLanguage(language: String) = putString("voice_language", language)
+
+    fun getVoiceSensitivity(): Float = getFloat("voice_sensitivity", DEFAULT_VOICE_SENSITIVITY)
+    fun setVoiceSensitivity(sensitivity: Float) = putFloat("voice_sensitivity", sensitivity.coerceIn(0.2f, 0.9f))
+
+    fun getVoiceCommandHistory(): String = getString("voice_command_history", "")
+    fun setVoiceCommandHistory(history: String) = putString("voice_command_history", history)
+
+    // ============================================================
+    // PROXIMITY
+    // ============================================================
+
+    fun isProximityEnabled(): Boolean = getBoolean("proximity_enabled", false)
+    fun setProximityEnabled(enabled: Boolean) = putBoolean("proximity_enabled", enabled)
+
+    fun getProximityNearThreshold(): Float = getFloat("proximity_near", DEFAULT_PROXIMITY_NEAR)
+    fun setProximityNearThreshold(value: Float) = putFloat("proximity_near", value.coerceIn(0.5f, 5f))
+
+    fun getProximityFarThreshold(): Float = getFloat("proximity_far", DEFAULT_PROXIMITY_FAR)
+    fun setProximityFarThreshold(value: Float) = putFloat("proximity_far", value.coerceIn(1f, 10f))
+
+    fun isProximityVibrationEnabled(): Boolean = getBoolean("proximity_vibration", true)
+    fun setProximityVibrationEnabled(enabled: Boolean) = putBoolean("proximity_vibration", enabled)
+
+    fun isProximityNotificationEnabled(): Boolean = getBoolean("proximity_notification", true)
+    fun setProximityNotificationEnabled(enabled: Boolean) = putBoolean("proximity_notification", enabled)
+
+    fun getProximityDeviceMac(): String = getString("proximity_device_mac", "")
+    fun setProximityDeviceMac(mac: String) = putString("proximity_device_mac", mac)
+
+    // ============================================================
+    // EDGE GESTURES
+    // ============================================================
+
+    fun isEdgeGesturesEnabled(): Boolean = getBoolean("edge_gestures_enabled", false)
+    fun setEdgeGesturesEnabled(enabled: Boolean) = putBoolean("edge_gestures_enabled", enabled)
+
+    fun getEdgeVolumeUpAction(): String = getString("edge_gestures_volume_up", "Left Click")
+    fun setEdgeVolumeUpAction(action: String) = putString("edge_gestures_volume_up", action)
+
+    fun getEdgeVolumeDownAction(): String = getString("edge_gestures_volume_down", "Right Click")
+    fun setEdgeVolumeDownAction(action: String) = putString("edge_gestures_volume_down", action)
+
+    fun getEdgeLongPressAction(): String = getString("edge_gestures_long_press", "Scroll")
+    fun setEdgeLongPressAction(action: String) = putString("edge_gestures_long_press", action)
+
+    fun getEdgeSensitivity(): Float = getFloat("edge_gestures_sensitivity", DEFAULT_EDGE_SENSITIVITY)
+    fun setEdgeSensitivity(sensitivity: Float) = putFloat("edge_gestures_sensitivity", sensitivity.coerceIn(0.1f, 0.5f))
+
+    // ============================================================
+    // BATTERY SAVER
+    // ============================================================
+
+    fun isBatterySaverEnabled(): Boolean = getBoolean("battery_saver_enabled", true)
+    fun setBatterySaverEnabled(enabled: Boolean) = putBoolean("battery_saver_enabled", enabled)
+
+    fun getBatterySaverIdleTime(): Long = getLong("battery_saver_idle_time", DEFAULT_BATTERY_SAVER_IDLE_TIME)
+    fun setBatterySaverIdleTime(time: Long) = putLong("battery_saver_idle_time", time.coerceIn(5000L, 30000L))
+
+    // ============================================================
+    // ACCESSIBILITY
+    // ============================================================
+
+    fun isAnnounceMovementEnabled(): Boolean = getBoolean("announce_movement", false)
+    fun setAnnounceMovementEnabled(enabled: Boolean) = putBoolean("announce_movement", enabled)
+
+    fun isAnnounceClicksEnabled(): Boolean = getBoolean("announce_clicks", false)
+    fun setAnnounceClicksEnabled(enabled: Boolean) = putBoolean("announce_clicks", enabled)
+
+    fun isHighContrastMode(): Boolean = getBoolean("high_contrast", false)
+    fun setHighContrastMode(enabled: Boolean) = putBoolean("high_contrast", enabled)
+
+    fun isLargeTextEnabled(): Boolean = getBoolean("large_text", false)
+    fun setLargeTextEnabled(enabled: Boolean) = putBoolean("large_text", enabled)
+
+    fun isReduceMotionEnabled(): Boolean = getBoolean("reduce_motion", false)
+    fun setReduceMotionEnabled(enabled: Boolean) = putBoolean("reduce_motion", enabled)
+
+    fun getColorBlindMode(): String = getString("color_blind_mode", DEFAULT_COLOR_BLIND_MODE)
+    fun setColorBlindMode(mode: String) = putString("color_blind_mode", mode.uppercase())
+
+    // ============================================================
+    // PRIVACY
+    // ============================================================
+
+    fun isAnonymousStatsEnabled(): Boolean = getBoolean("anonymous_stats", true)
+    fun setAnonymousStatsEnabled(enabled: Boolean) = putBoolean("anonymous_stats", enabled)
+
+    fun isCrashReportingEnabled(): Boolean = getBoolean("crash_reporting", true)
+    fun setCrashReportingEnabled(enabled: Boolean) = putBoolean("crash_reporting", enabled)
+
+    fun isClearDataOnExit(): Boolean = getBoolean("clear_data_on_exit", false)
+    fun setClearDataOnExit(enabled: Boolean) = putBoolean("clear_data_on_exit", enabled)
+
+    fun getUserName(): String = getString("user_name", "")
+    fun setUserName(name: String) = putString("user_name", name)
+
+    fun isFirstLaunch(): Boolean = getBoolean("first_launch", true)
+    fun setFirstLaunchComplete() = putBoolean("first_launch", false)
+
+    fun getAppVersion(): Int = getInt("app_version", DEFAULT_APP_VERSION)
+    fun setAppVersion(version: Int) = putInt("app_version", version)
+
+    // ============================================================
+    // TOUCHPAD
+    // ============================================================
+
+    fun isTouchpadActive(): Boolean = getBoolean("touchpad_active", false)
+    fun setTouchpadActive(active: Boolean) = putBoolean("touchpad_active", active)
+
+    fun getTouchpadSensitivity(): Float = getFloat("touchpad_sensitivity", 1.0f)
+    fun setTouchpadSensitivity(value: Float) = putFloat("touchpad_sensitivity", value.coerceIn(0.5f, 2.0f))
+
+    fun getTouchpadScrollSpeed(): Float = getFloat("touchpad_scroll_speed", 1.0f)
+    fun setTouchpadScrollSpeed(value: Float) = putFloat("touchpad_scroll_speed", value.coerceIn(0.5f, 2.0f))
+
+    fun isTouchpadNaturalScrolling(): Boolean = getBoolean("touchpad_natural_scrolling", true)
+    fun setTouchpadNaturalScrolling(enabled: Boolean) = putBoolean("touchpad_natural_scrolling", enabled)
+
+    fun isTouchpadTapToClick(): Boolean = getBoolean("touchpad_tap_to_click", true)
+    fun setTouchpadTapToClick(enabled: Boolean) = putBoolean("touchpad_tap_to_click", enabled)
+
+    fun isTouchpadTwoFingerScroll(): Boolean = getBoolean("touchpad_two_finger_scroll", true)
+    fun setTouchpadTwoFingerScroll(enabled: Boolean) = putBoolean("touchpad_two_finger_scroll", enabled)
+
+    fun isTouchpadThreeFingerSwipe(): Boolean = getBoolean("touchpad_three_finger_swipe", true)
+    fun setTouchpadThreeFingerSwipe(enabled: Boolean) = putBoolean("touchpad_three_finger_swipe", enabled)
+
+    fun isTouchpadHapticFeedback(): Boolean = getBoolean("touchpad_haptic_feedback", true)
+    fun setTouchpadHapticFeedback(enabled: Boolean) = putBoolean("touchpad_haptic_feedback", enabled)
+
+    fun isTouchpadShowTouchPoints(): Boolean = getBoolean("touchpad_show_touch_points", false)
+    fun setTouchpadShowTouchPoints(enabled: Boolean) = putBoolean("touchpad_show_touch_points", enabled)
+
+    fun getTouchpadCursorSpeed(): Float = getFloat("touchpad_cursor_speed", 1.0f)
+    fun setTouchpadCursorSpeed(value: Float) = putFloat("touchpad_cursor_speed", value.coerceIn(0.5f, 2.0f))
+
+    fun isTouchpadAcceleration(): Boolean = getBoolean("touchpad_acceleration", true)
+    fun setTouchpadAcceleration(enabled: Boolean) = putBoolean("touchpad_acceleration", enabled)
+
+    fun isTouchpadInvertVertical(): Boolean = getBoolean("touchpad_invert_vertical", false)
+    fun setTouchpadInvertVertical(enabled: Boolean) = putBoolean("touchpad_invert_vertical", enabled)
+
+    fun isTouchpadInvertHorizontal(): Boolean = getBoolean("touchpad_invert_horizontal", false)
+    fun setTouchpadInvertHorizontal(enabled: Boolean) = putBoolean("touchpad_invert_horizontal", enabled)
+
+    fun getTouchpadPointerSpeed(): Int = getInt("touchpad_pointer_speed", 50)
+    fun setTouchpadPointerSpeed(value: Int) = putInt("touchpad_pointer_speed", value.coerceIn(20, 100))
+
+    fun getTouchpadDoubleTapDelay(): Int = getInt("touchpad_double_tap_delay", 300)
+    fun setTouchpadDoubleTapDelay(value: Int) = putInt("touchpad_double_tap_delay", value.coerceIn(100, 600))
+
+    fun isTouchpadEdgeScrolling(): Boolean = getBoolean("touchpad_edge_scrolling", false)
+    fun setTouchpadEdgeScrolling(enabled: Boolean) = putBoolean("touchpad_edge_scrolling", enabled)
+
+    fun isTouchpadScrollInertia(): Boolean = getBoolean("touchpad_scroll_inertia", true)
+    fun setTouchpadScrollInertia(enabled: Boolean) = putBoolean("touchpad_scroll_inertia", enabled)
+
+    fun isTouchpadPinchToZoom(): Boolean = getBoolean("touchpad_pinch_to_zoom", true)
+    fun setTouchpadPinchToZoom(enabled: Boolean) = putBoolean("touchpad_pinch_to_zoom", enabled)
+
+    fun isTouchpadRotateToRotate(): Boolean = getBoolean("touchpad_rotate_to_rotate", false)
+    fun setTouchpadRotateToRotate(enabled: Boolean) = putBoolean("touchpad_rotate_to_rotate", enabled)
+
+    // ============================================================
+    // DEVELOPER
+    // ============================================================
+
+    fun isDeveloperModeEnabled(): Boolean = getBoolean("developer_mode", false)
+    fun setDeveloperModeEnabled(enabled: Boolean) = putBoolean("developer_mode", enabled)
+
+    fun isExperimentalFeaturesEnabled(): Boolean = getBoolean("experimental_features", false)
+    fun setExperimentalFeaturesEnabled(enabled: Boolean) = putBoolean("experimental_features", enabled)
+
+    fun getLogLevel(): String = getString("log_level", DEFAULT_LOG_LEVEL)
+    fun setLogLevel(level: String) = putString("log_level", level.uppercase())
+
+    // ============================================================
+    // CALIBRATION
+    // ============================================================
+
     fun saveCalibrationData(data: CalibrationData) {
         putFloat("gyro_bias_x", data.gyroBias.offsetX)
         putFloat("gyro_bias_y", data.gyroBias.offsetY)
@@ -280,7 +529,6 @@ class PreferencesManager @Inject constructor(
     fun decrementCalibrationAttempts() { setCalibrationAttempts(getCalibrationAttempts() - 1) }
     fun resetCalibrationAttempts() { setCalibrationAttempts(5) }
 
-    
     fun saveGyroBias(x: Float, y: Float, z: Float) {
         putFloat("gyro_bias_x", x)
         putFloat("gyro_bias_y", y)
@@ -314,7 +562,6 @@ class PreferencesManager @Inject constructor(
     fun isGyroCalibrated(): Boolean = getBoolean("gyro_calibrated", false)
     fun setGyroCalibrated(calibrated: Boolean) = putBoolean("gyro_calibrated", calibrated)
 
-    
     fun saveAccelOffset(x: Float, y: Float, z: Float) {
         putFloat("accel_offset_x", x)
         putFloat("accel_offset_y", y)
@@ -366,7 +613,6 @@ class PreferencesManager @Inject constructor(
     fun isAccelCalibrated(): Boolean = getBoolean("accel_calibrated", false)
     fun setAccelCalibrated(calibrated: Boolean) = putBoolean("accel_calibrated", calibrated)
 
-    
     fun saveMagOffset(x: Float, y: Float, z: Float) {
         putFloat("mag_offset_x", x)
         putFloat("mag_offset_y", y)
@@ -397,7 +643,6 @@ class PreferencesManager @Inject constructor(
     fun isMagCalibrated(): Boolean = getBoolean("mag_calibrated", false)
     fun setMagCalibrated(calibrated: Boolean) = putBoolean("mag_calibrated", calibrated)
 
-    
     fun getCalibrationStatus(): CalibrationStatus {
         val status = getString("calibration_status", "NOT_STARTED")
         return try {
@@ -414,147 +659,10 @@ class PreferencesManager @Inject constructor(
     fun getCurrentCalibrationStep(): Int = getInt("calibration_current_step", 0)
     fun setCurrentCalibrationStep(step: Int) = putInt("calibration_current_step", step.coerceIn(0, 3))
 
-    
-    fun isAiSmoothingEnabled(): Boolean = getBoolean("ai_smoothing", false)
-    fun setAiSmoothingEnabled(enabled: Boolean) = putBoolean("ai_smoothing", enabled)
+    // ============================================================
+    // STATISTICS
+    // ============================================================
 
-    fun getAiBlendFactor(): Float = getFloat("ai_blend_factor", DEFAULT_AI_BLEND_FACTOR)
-    fun setAiBlendFactor(value: Float) = putFloat("ai_blend_factor", value.coerceIn(0.3f, 0.95f))
-
-    fun isPredictiveEnabled(): Boolean = getBoolean("predictive_movement", true)
-    fun setPredictiveEnabled(enabled: Boolean) = putBoolean("predictive_movement", enabled)
-
-    fun getPredictionStrength(): Float = getFloat("prediction_strength", DEFAULT_PREDICTION_STRENGTH)
-    fun setPredictionStrength(value: Float) = putFloat("prediction_strength", value.coerceIn(0.1f, 0.9f))
-
-    fun isKalmanEnabled(): Boolean = getBoolean("kalman_enabled", true)
-    fun setKalmanEnabled(enabled: Boolean) = putBoolean("kalman_enabled", enabled)
-
-    
-    fun isSoundEnabled(): Boolean = getBoolean("sound_enabled", true)
-    fun setSoundEnabled(enabled: Boolean) = putBoolean("sound_enabled", enabled)
-
-    fun isVisualFeedbackEnabled(): Boolean = getBoolean("visual_feedback", true)
-    fun setVisualFeedbackEnabled(enabled: Boolean) = putBoolean("visual_feedback", enabled)
-
-    fun isNotificationOnGesture(): Boolean = getBoolean("notification_on_gesture", false)
-    fun setNotificationOnGesture(enabled: Boolean) = putBoolean("notification_on_gesture", enabled)
-
-    fun getHapticStrength(): String = getString("haptic_strength", DEFAULT_HAPTIC_STRENGTH)
-    fun setHapticStrength(strength: String) = putString("haptic_strength", strength)
-
-    
-    fun isProximityEnabled(): Boolean = getBoolean("proximity_enabled", false)
-    fun setProximityEnabled(enabled: Boolean) = putBoolean("proximity_enabled", enabled)
-
-    fun getProximityNearThreshold(): Float = getFloat("proximity_near", DEFAULT_PROXIMITY_NEAR)
-    fun setProximityNearThreshold(value: Float) = putFloat("proximity_near", value.coerceIn(0.5f, 5f))
-
-    fun getProximityFarThreshold(): Float = getFloat("proximity_far", DEFAULT_PROXIMITY_FAR)
-    fun setProximityFarThreshold(value: Float) = putFloat("proximity_far", value.coerceIn(1f, 10f))
-
-    fun isProximityVibrationEnabled(): Boolean = getBoolean("proximity_vibration", true)
-    fun setProximityVibrationEnabled(enabled: Boolean) = putBoolean("proximity_vibration", enabled)
-
-    fun isProximityNotificationEnabled(): Boolean = getBoolean("proximity_notification", true)
-    fun setProximityNotificationEnabled(enabled: Boolean) = putBoolean("proximity_notification", enabled)
-
-    fun getProximityDeviceMac(): String = getString("proximity_device_mac", "")
-    fun setProximityDeviceMac(mac: String) = putString("proximity_device_mac", mac)
-
-    
-    fun isVoiceEnabled(): Boolean = getBoolean("voice_enabled", false)
-    fun setVoiceEnabled(enabled: Boolean) = putBoolean("voice_enabled", enabled)
-
-    fun isWakeWordEnabled(): Boolean = getBoolean("wake_word_enabled", true)
-    fun setWakeWordEnabled(enabled: Boolean) = putBoolean("wake_word_enabled", enabled)
-
-    fun getWakeWord(): String = getString("wake_word", DEFAULT_WAKE_WORD)
-    fun setWakeWord(word: String) = putString("wake_word", word.lowercase())
-
-    fun getVoiceWakeWordConfidence(): Float = getFloat("voice_wake_word_confidence", DEFAULT_VOICE_WAKE_WORD_CONFIDENCE)
-    fun setVoiceWakeWordConfidence(confidence: Float) = putFloat("voice_wake_word_confidence", confidence.coerceIn(0.5f, 0.95f))
-
-    fun isVoiceContinuousListening(): Boolean = getBoolean("voice_continuous", false)
-    fun setVoiceContinuousListening(enabled: Boolean) = putBoolean("voice_continuous", enabled)
-
-    fun isVoiceFeedbackEnabled(): Boolean = getBoolean("voice_feedback", true)
-    fun setVoiceFeedbackEnabled(enabled: Boolean) = putBoolean("voice_feedback", enabled)
-
-    fun isVoiceSoundEffectsEnabled(): Boolean = getBoolean("voice_sound_effects", true)
-    fun setVoiceSoundEffectsEnabled(enabled: Boolean) = putBoolean("voice_sound_effects", enabled)
-
-    fun getVoiceLanguage(): String = getString("voice_language", DEFAULT_VOICE_LANGUAGE)
-    fun setVoiceLanguage(language: String) = putString("voice_language", language)
-
-    fun getVoiceSensitivity(): Float = getFloat("voice_sensitivity", DEFAULT_VOICE_SENSITIVITY)
-    fun setVoiceSensitivity(sensitivity: Float) = putFloat("voice_sensitivity", sensitivity.coerceIn(0.2f, 0.9f))
-
-    fun getVoiceCommandHistory(): String = getString("voice_command_history", "")
-    fun setVoiceCommandHistory(history: String) = putString("voice_command_history", history)
-
-    
-    fun isEdgeGesturesEnabled(): Boolean = getBoolean("edge_gestures_enabled", false)
-    fun setEdgeGesturesEnabled(enabled: Boolean) = putBoolean("edge_gestures_enabled", enabled)
-
-    fun getEdgeVolumeUpAction(): String = getString("edge_gestures_volume_up", "Left Click")
-    fun setEdgeVolumeUpAction(action: String) = putString("edge_gestures_volume_up", action)
-
-    fun getEdgeVolumeDownAction(): String = getString("edge_gestures_volume_down", "Right Click")
-    fun setEdgeVolumeDownAction(action: String) = putString("edge_gestures_volume_down", action)
-
-    fun getEdgeLongPressAction(): String = getString("edge_gestures_long_press", "Scroll")
-    fun setEdgeLongPressAction(action: String) = putString("edge_gestures_long_press", action)
-
-    fun getEdgeSensitivity(): Float = getFloat("edge_gestures_sensitivity", DEFAULT_EDGE_SENSITIVITY)
-    fun setEdgeSensitivity(sensitivity: Float) = putFloat("edge_gestures_sensitivity", sensitivity.coerceIn(0.1f, 0.5f))
-
-    
-    fun isBatterySaverEnabled(): Boolean = getBoolean("battery_saver_enabled", true)
-    fun setBatterySaverEnabled(enabled: Boolean) = putBoolean("battery_saver_enabled", enabled)
-
-    fun getBatterySaverIdleTime(): Long = getLong("battery_saver_idle_time", DEFAULT_BATTERY_SAVER_IDLE_TIME)
-    fun setBatterySaverIdleTime(time: Long) = putLong("battery_saver_idle_time", time.coerceIn(5000L, 30000L))
-
-    
-    fun isAnnounceMovementEnabled(): Boolean = getBoolean("announce_movement", false)
-    fun setAnnounceMovementEnabled(enabled: Boolean) = putBoolean("announce_movement", enabled)
-
-    fun isAnnounceClicksEnabled(): Boolean = getBoolean("announce_clicks", false)
-    fun setAnnounceClicksEnabled(enabled: Boolean) = putBoolean("announce_clicks", enabled)
-
-    fun isHighContrastMode(): Boolean = getBoolean("high_contrast", false)
-    fun setHighContrastMode(enabled: Boolean) = putBoolean("high_contrast", enabled)
-
-    fun isLargeTextEnabled(): Boolean = getBoolean("large_text", false)
-    fun setLargeTextEnabled(enabled: Boolean) = putBoolean("large_text", enabled)
-
-    fun isReduceMotionEnabled(): Boolean = getBoolean("reduce_motion", false)
-    fun setReduceMotionEnabled(enabled: Boolean) = putBoolean("reduce_motion", enabled)
-
-    fun getColorBlindMode(): String = getString("color_blind_mode", DEFAULT_COLOR_BLIND_MODE)
-    fun setColorBlindMode(mode: String) = putString("color_blind_mode", mode.uppercase())
-
-    
-    fun isAnonymousStatsEnabled(): Boolean = getBoolean("anonymous_stats", true)
-    fun setAnonymousStatsEnabled(enabled: Boolean) = putBoolean("anonymous_stats", enabled)
-
-    fun isCrashReportingEnabled(): Boolean = getBoolean("crash_reporting", true)
-    fun setCrashReportingEnabled(enabled: Boolean) = putBoolean("crash_reporting", enabled)
-
-    fun isClearDataOnExit(): Boolean = getBoolean("clear_data_on_exit", false)
-    fun setClearDataOnExit(enabled: Boolean) = putBoolean("clear_data_on_exit", enabled)
-
-    fun getUserName(): String = getString("user_name", "")
-    fun setUserName(name: String) = putString("user_name", name)
-
-    fun isFirstLaunch(): Boolean = getBoolean("first_launch", true)
-    fun setFirstLaunchComplete() = putBoolean("first_launch", false)
-
-    fun getAppVersion(): Int = getInt("app_version", DEFAULT_APP_VERSION)
-    fun setAppVersion(version: Int) = putInt("app_version", version)
-
-    
     fun getSessionStats(): StatisticsSummary {
         return StatisticsSummary(
             totalClicks = getInt("session_clicks", 0),
@@ -586,8 +694,6 @@ class PreferencesManager @Inject constructor(
         remove("connection_failed")
         remove("connection_total_latency")
     }
-
-    fun getAllKeys(): Set<String> = prefs.all.keys
 
     fun incrementStat(key: String) {
         val current = getInt("stat_$key", 0)
@@ -629,7 +735,10 @@ class PreferencesManager @Inject constructor(
     fun getTotalGestures(): Int = getInt("stat_gestures", 0)
     fun incrementTotalGestures() = putInt("stat_gestures", getTotalGestures() + 1)
 
-    
+    // ============================================================
+    // PROFILES
+    // ============================================================
+
     fun getLastUsedProfile(): String = getString("last_used_profile", "Default")
     fun setLastUsedProfile(profile: String) = putString("last_used_profile", profile)
 
@@ -669,7 +778,10 @@ class PreferencesManager @Inject constructor(
         deleteProfile(oldName)
     }
 
-    
+    // ============================================================
+    // CUSTOM GESTURES
+    // ============================================================
+
     fun saveCustomGesture(name: String, data: String) = putString("gesture_$name", data)
     fun getCustomGesture(name: String): String = getString("gesture_$name", "")
     fun deleteCustomGesture(name: String) = remove("gesture_$name")
@@ -679,7 +791,10 @@ class PreferencesManager @Inject constructor(
             .associate { it.removePrefix("gesture_") to getString(it, "") }
     }
 
-    
+    // ============================================================
+    // RECORDED GESTURES
+    // ============================================================
+
     fun getRecordedGestures(): List<String> = getString("recorded_gestures", "").split(",").filter { it.isNotEmpty() }
     fun addRecordedGesture(fileName: String) {
         val current = getRecordedGestures()
@@ -690,75 +805,10 @@ class PreferencesManager @Inject constructor(
     }
     fun clearRecordedGestures() = putString("recorded_gestures", "")
 
-    
-    fun isDeveloperModeEnabled(): Boolean = getBoolean("developer_mode", false)
-    fun setDeveloperModeEnabled(enabled: Boolean) = putBoolean("developer_mode", enabled)
+    // ============================================================
+    // EXPORT / IMPORT
+    // ============================================================
 
-    fun isExperimentalFeaturesEnabled(): Boolean = getBoolean("experimental_features", false)
-    fun setExperimentalFeaturesEnabled(enabled: Boolean) = putBoolean("experimental_features", enabled)
-
-    fun getLogLevel(): String = getString("log_level", DEFAULT_LOG_LEVEL)
-    fun setLogLevel(level: String) = putString("log_level", level.uppercase())
-
-    
-    fun isTouchpadActive(): Boolean = getBoolean("touchpad_active", false)
-    fun setTouchpadActive(active: Boolean) = putBoolean("touchpad_active", active)
-
-    fun getTouchpadSensitivity(): Float = getFloat("touchpad_sensitivity", 1.0f)
-    fun setTouchpadSensitivity(value: Float) = putFloat("touchpad_sensitivity", value.coerceIn(0.5f, 2.0f))
-
-    fun getTouchpadScrollSpeed(): Float = getFloat("touchpad_scroll_speed", 1.0f)
-    fun setTouchpadScrollSpeed(value: Float) = putFloat("touchpad_scroll_speed", value.coerceIn(0.5f, 2.0f))
-
-    fun isTouchpadNaturalScrolling(): Boolean = getBoolean("touchpad_natural_scrolling", true)
-    fun setTouchpadNaturalScrolling(enabled: Boolean) = putBoolean("touchpad_natural_scrolling", enabled)
-
-    fun isTouchpadTapToClick(): Boolean = getBoolean("touchpad_tap_to_click", true)
-    fun setTouchpadTapToClick(enabled: Boolean) = putBoolean("touchpad_tap_to_click", enabled)
-
-    fun isTouchpadTwoFingerScroll(): Boolean = getBoolean("touchpad_two_finger_scroll", true)
-    fun setTouchpadTwoFingerScroll(enabled: Boolean) = putBoolean("touchpad_two_finger_scroll", enabled)
-
-    fun isTouchpadThreeFingerSwipe(): Boolean = getBoolean("touchpad_three_finger_swipe", true)
-    fun setTouchpadThreeFingerSwipe(enabled: Boolean) = putBoolean("touchpad_three_finger_swipe", enabled)
-
-    fun isTouchpadHapticFeedback(): Boolean = getBoolean("touchpad_haptic_feedback", true)
-    fun setTouchpadHapticFeedback(enabled: Boolean) = putBoolean("touchpad_haptic_feedback", enabled)
-
-    fun isTouchpadShowTouchPoints(): Boolean = getBoolean("touchpad_show_touch_points", false)
-    fun setTouchpadShowTouchPoints(enabled: Boolean) = putBoolean("touchpad_show_touch_points", enabled)
-
-    fun getTouchpadCursorSpeed(): Float = getFloat("touchpad_cursor_speed", 1.0f)
-    fun setTouchpadCursorSpeed(value: Float) = putFloat("touchpad_cursor_speed", value.coerceIn(0.5f, 2.0f))
-
-    fun isTouchpadAcceleration(): Boolean = getBoolean("touchpad_acceleration", true)
-    fun setTouchpadAcceleration(enabled: Boolean) = putBoolean("touchpad_acceleration", enabled)
-
-    fun isTouchpadInvertVertical(): Boolean = getBoolean("touchpad_invert_vertical", false)
-    fun setTouchpadInvertVertical(enabled: Boolean) = putBoolean("touchpad_invert_vertical", enabled)
-
-    fun isTouchpadInvertHorizontal(): Boolean = getBoolean("touchpad_invert_horizontal", false)
-    fun setTouchpadInvertHorizontal(enabled: Boolean) = putBoolean("touchpad_invert_horizontal", enabled)
-
-    fun getTouchpadPointerSpeed(): Int = getInt("touchpad_pointer_speed", 50)
-    fun setTouchpadPointerSpeed(value: Int) = putInt("touchpad_pointer_speed", value.coerceIn(20, 100))
-
-    fun getTouchpadDoubleTapDelay(): Int = getInt("touchpad_double_tap_delay", 300)
-    fun setTouchpadDoubleTapDelay(value: Int) = putInt("touchpad_double_tap_delay", value.coerceIn(100, 600))
-
-    fun isTouchpadEdgeScrolling(): Boolean = getBoolean("touchpad_edge_scrolling", false)
-    fun setTouchpadEdgeScrolling(enabled: Boolean) = putBoolean("touchpad_edge_scrolling", enabled)
-
-    fun isTouchpadScrollInertia(): Boolean = getBoolean("touchpad_scroll_inertia", true)
-    fun setTouchpadScrollInertia(enabled: Boolean) = putBoolean("touchpad_scroll_inertia", enabled)
-
-    fun isTouchpadPinchToZoom(): Boolean = getBoolean("touchpad_pinch_to_zoom", true)
-    fun setTouchpadPinchToZoom(enabled: Boolean) = putBoolean("touchpad_pinch_to_zoom", enabled)
-
-    fun isTouchpadRotateToRotate(): Boolean = getBoolean("touchpad_rotate_to_rotate", false)
-    fun setTouchpadRotateToRotate(enabled: Boolean) = putBoolean("touchpad_rotate_to_rotate", enabled)
-
-    
     fun exportSettings(): String {
         return buildString {
             appendLine("AIRMOUSE_SETTINGS_EXPORT")
@@ -857,6 +907,10 @@ class PreferencesManager @Inject constructor(
         }
     }
 
+    // ============================================================
+    // OVERRIDE METHODS (PreferencesManagerContract)
+    // ============================================================
+
     override fun getGyroBias(): FloatArray {
         return floatArrayOf(
             getFloat("gyro_bias_x", 0f),
@@ -864,7 +918,6 @@ class PreferencesManager @Inject constructor(
             getFloat("gyro_bias_z", 0f)
         )
     }
-
     override fun saveGyroBias(values: FloatArray) {
         if (values.size >= 3) {
             putFloat("gyro_bias_x", values[0])
@@ -872,4 +925,10 @@ class PreferencesManager @Inject constructor(
             putFloat("gyro_bias_z", values[2])
         }
     }
+
+    // ============================================================
+    // RESET
+    // ============================================================
+
+    fun resetAll() = clear()
 }

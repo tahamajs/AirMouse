@@ -2,7 +2,6 @@
 package com.airmouse.presentation.ui.settings
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.airmouse.domain.model.AppPreferences
@@ -29,6 +28,9 @@ enum class SettingsSection(
     CONNECTION("Connection", "Network settings", Icons.Default.Wifi),
     PRIVACY("Privacy & Data", "Your data preferences", Icons.Default.PrivacyTip),
     PRESENTATION("Presentation", "Slide control settings", Icons.Default.Slideshow),
+    GAMING_MODE("Gaming Mode", "Optimize responsiveness for games", Icons.Default.VideogameAsset),
+    FILE_TRANSFER("File Transfer", "Transfer files to your PC", Icons.Default.Folder),
+    SCREEN_MIRRORING("Screen Mirroring", "Mirror your PC screen", Icons.Default.Cast),
     ABOUT("About", "App information", Icons.Default.Info)
 }
 
@@ -36,6 +38,13 @@ enum class HapticStrength(val displayName: String, val duration: Long) {
     LIGHT("Light", 20),
     MEDIUM("Medium", 50),
     STRONG("Strong", 80)
+}
+
+enum class FontSizePreset(val label: String, val valueSp: Float) {
+    VERY_SMALL("Very Small", 13f),
+    SMALL("Small", 15f),
+    NORMAL("Normal", 16f),
+    BIG("Big", 18f)
 }
 
 

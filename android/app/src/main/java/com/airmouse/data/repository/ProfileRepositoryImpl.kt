@@ -1,4 +1,3 @@
-
 package com.airmouse.data.repository
 
 import com.airmouse.data.datasource.local.dao.ProfileDao
@@ -21,7 +20,9 @@ class ProfileRepositoryImpl @Inject constructor(
     private val prefs: PreferencesManager
 ) : IProfileRepository {
 
-    
+    // ============================================================
+    // CRUD Operations
+    // ============================================================
 
     override suspend fun createProfile(profile: UserProfile): String {
         val id = profile.id.ifEmpty { UUID.randomUUID().toString() }
@@ -43,10 +44,9 @@ class ProfileRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteProfile(id: String) {
-        
         val default = getDefaultProfile()
         if (default?.id == id) {
-            return
+            return // Don't delete the default profile
         }
         profileDao.deleteProfile(id)
     }
@@ -61,7 +61,9 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    
+    // ============================================================
+    // Default Profile
+    // ============================================================
 
     override suspend fun getDefaultProfile(): UserProfile? {
         val entity = profileDao.getDefaultProfile()
@@ -74,7 +76,9 @@ class ProfileRepositoryImpl @Inject constructor(
         prefs.putString("default_profile_id", id)
     }
 
-    
+    // ============================================================
+    // Favorites
+    // ============================================================
 
     override suspend fun toggleFavorite(id: String) {
         val profile = profileDao.getProfileById(id)
@@ -93,7 +97,9 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    
+    // ============================================================
+    // Settings
+    // ============================================================
 
     override suspend fun getSettings(profileId: String): ProfileSettings? {
         val profile = getProfile(profileId)
@@ -108,85 +114,27 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    
+    // ============================================================
+    // Search
+    // ============================================================
 
     override suspend fun searchProfiles(query: String): List<UserProfile> {
         return profileDao.searchProfiles(query).map { mapToDomain(it) }
     }
 
-    
+    // ============================================================
+    // Export/Import
+    // ============================================================
 
     override suspend fun exportProfile(id: String): String {
         val profile = getProfile(id) ?: return ""
-        val obj = JSONObject()
-        obj.put("id", profile.id)
-        obj.put("name", profile.name)
-        obj.put("email", profile.email)
-        obj.put("avatarUri", profile.avatarUri ?: "")
-
-        val settingsObj = JSONObject()
-        settingsObj.put("sensitivity", profile.settings.sensitivity)
-        settingsObj.put("clickThreshold", profile.settings.clickThreshold)
-        settingsObj.put("doubleClickInterval", profile.settings.doubleClickInterval)
-        settingsObj.put("scrollThreshold", profile.settings.scrollThreshold)
-        settingsObj.put("rightClickTilt", profile.settings.rightClickTilt)
-        settingsObj.put("hapticEnabled", profile.settings.hapticEnabled)
-        settingsObj.put("theme", profile.settings.theme)
-        settingsObj.put("aiSmoothing", profile.settings.aiSmoothing)
-        settingsObj.put("predictiveMovement", profile.settings.predictiveMovement)
-        settingsObj.put("invertX", profile.settings.invertX)
-        settingsObj.put("invertY", profile.settings.invertY)
-        settingsObj.put("accelerationEnabled", profile.settings.accelerationEnabled)
-        settingsObj.put("smoothingEnabled", profile.settings.smoothingEnabled)
-        settingsObj.put("edgeGesturesEnabled", profile.settings.edgeGesturesEnabled)
-        settingsObj.put("voiceCommandsEnabled", profile.settings.voiceCommandsEnabled)
-        obj.put("settings", settingsObj)
-
-        obj.put("tags", JSONArray(profile.tags))
-        obj.put("iconRes", profile.iconRes)
-        obj.put("createdAt", profile.createdAt)
-        obj.put("updatedAt", profile.updatedAt)
-        obj.put("isDefault", profile.isDefault)
-        obj.put("isFavorite", profile.isFavorite)
-
-        return obj.toString()
+        return mapToExportJson(profile).toString()
     }
 
     override suspend fun importProfile(json: String): Boolean {
         return try {
             val obj = JSONObject(json)
-            val settings = ProfileSettings(
-                sensitivity = obj.getJSONObject("settings").optDouble("sensitivity", 1.0).toFloat(),
-                clickThreshold = obj.getJSONObject("settings").optDouble("clickThreshold", 5.0).toFloat(),
-                doubleClickInterval = obj.getJSONObject("settings").optLong("doubleClickInterval", 400),
-                scrollThreshold = obj.getJSONObject("settings").optDouble("scrollThreshold", 8.0).toFloat(),
-                rightClickTilt = obj.getJSONObject("settings").optDouble("rightClickTilt", 45.0).toFloat(),
-                hapticEnabled = obj.getJSONObject("settings").optBoolean("hapticEnabled", true),
-                theme = obj.getJSONObject("settings").optString("theme", "dark"),
-                aiSmoothing = obj.getJSONObject("settings").optBoolean("aiSmoothing", false),
-                predictiveMovement = obj.getJSONObject("settings").optBoolean("predictiveMovement", true),
-                invertX = obj.getJSONObject("settings").optBoolean("invertX", false),
-                invertY = obj.getJSONObject("settings").optBoolean("invertY", false),
-                accelerationEnabled = obj.getJSONObject("settings").optBoolean("accelerationEnabled", true),
-                smoothingEnabled = obj.getJSONObject("settings").optBoolean("smoothingEnabled", true),
-                edgeGesturesEnabled = obj.getJSONObject("settings").optBoolean("edgeGesturesEnabled", false),
-                voiceCommandsEnabled = obj.getJSONObject("settings").optBoolean("voiceCommandsEnabled", false)
-            )
-
-            val profile = UserProfile(
-                id = obj.optString("id", UUID.randomUUID().toString()),
-                name = obj.getString("name"),
-                email = obj.optString("email", ""),
-                avatarUri = obj.optString("avatarUri", ""),
-                settings = settings,
-                tags = obj.optJSONArray("tags")?.let { arr ->
-                    (0 until arr.length()).map { arr.getString(it) }
-                } ?: emptyList(),
-                iconRes = obj.optInt("iconRes", 0),
-                isDefault = false,
-                isFavorite = false
-            )
-
+            val profile = mapFromExportJson(obj) ?: return false
             createProfile(profile)
             true
         } catch (e: Exception) {
@@ -194,7 +142,9 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    
+    // ============================================================
+    // Statistics
+    // ============================================================
 
     override suspend fun getProfileCount(): Int {
         return profileDao.getProfileCount()
@@ -205,7 +155,9 @@ class ProfileRepositoryImpl @Inject constructor(
         return profiles.associate { it.name to it.usageCount }
     }
 
-    
+    // ============================================================
+    // Mapping Functions
+    // ============================================================
 
     private fun mapToEntity(domain: UserProfile): ProfileEntity {
         return ProfileEntity(
@@ -268,5 +220,83 @@ class ProfileRepositoryImpl @Inject constructor(
             updatedAt = entity.lastUsed,
             usageCount = 0
         )
+    }
+
+    private fun mapToExportJson(profile: UserProfile): JSONObject {
+        return JSONObject().apply {
+            put("id", profile.id)
+            put("name", profile.name)
+            put("email", profile.email)
+            put("avatarUri", profile.avatarUri ?: "")
+
+            val settingsObj = JSONObject().apply {
+                put("sensitivity", profile.settings.sensitivity)
+                put("clickThreshold", profile.settings.clickThreshold)
+                put("doubleClickInterval", profile.settings.doubleClickInterval)
+                put("scrollThreshold", profile.settings.scrollThreshold)
+                put("rightClickTilt", profile.settings.rightClickTilt)
+                put("hapticEnabled", profile.settings.hapticEnabled)
+                put("theme", profile.settings.theme)
+                put("aiSmoothing", profile.settings.aiSmoothing)
+                put("predictiveMovement", profile.settings.predictiveMovement)
+                put("invertX", profile.settings.invertX)
+                put("invertY", profile.settings.invertY)
+                put("accelerationEnabled", profile.settings.accelerationEnabled)
+                put("smoothingEnabled", profile.settings.smoothingEnabled)
+                put("edgeGesturesEnabled", profile.settings.edgeGesturesEnabled)
+                put("voiceCommandsEnabled", profile.settings.voiceCommandsEnabled)
+            }
+            put("settings", settingsObj)
+
+            put("isDefault", profile.isDefault)
+            put("isFavorite", profile.isFavorite)
+            put("createdAt", profile.createdAt)
+            put("updatedAt", profile.updatedAt)
+
+            val tagsArray = JSONArray()
+            profile.tags.forEach { tagsArray.put(it) }
+            put("tags", tagsArray)
+            put("iconRes", profile.iconRes)
+        }
+    }
+
+    private fun mapFromExportJson(obj: JSONObject): UserProfile? {
+        return try {
+            val settings = ProfileSettings(
+                sensitivity = obj.getJSONObject("settings").optDouble("sensitivity", 1.0).toFloat(),
+                clickThreshold = obj.getJSONObject("settings").optDouble("clickThreshold", 5.0).toFloat(),
+                doubleClickInterval = obj.getJSONObject("settings").optLong("doubleClickInterval", 400),
+                scrollThreshold = obj.getJSONObject("settings").optDouble("scrollThreshold", 8.0).toFloat(),
+                rightClickTilt = obj.getJSONObject("settings").optDouble("rightClickTilt", 45.0).toFloat(),
+                hapticEnabled = obj.getJSONObject("settings").optBoolean("hapticEnabled", true),
+                theme = obj.getJSONObject("settings").optString("theme", "dark"),
+                aiSmoothing = obj.getJSONObject("settings").optBoolean("aiSmoothing", false),
+                predictiveMovement = obj.getJSONObject("settings").optBoolean("predictiveMovement", true),
+                invertX = obj.getJSONObject("settings").optBoolean("invertX", false),
+                invertY = obj.getJSONObject("settings").optBoolean("invertY", false),
+                accelerationEnabled = obj.getJSONObject("settings").optBoolean("accelerationEnabled", true),
+                smoothingEnabled = obj.getJSONObject("settings").optBoolean("smoothingEnabled", true),
+                edgeGesturesEnabled = obj.getJSONObject("settings").optBoolean("edgeGesturesEnabled", false),
+                voiceCommandsEnabled = obj.getJSONObject("settings").optBoolean("voiceCommandsEnabled", false)
+            )
+
+            UserProfile(
+                id = obj.optString("id", UUID.randomUUID().toString()),
+                name = obj.getString("name"),
+                email = obj.optString("email", ""),
+                avatarUri = obj.optString("avatarUri", ""),
+                settings = settings,
+                tags = obj.optJSONArray("tags")?.let { tagsArray ->
+                    (0 until tagsArray.length()).map { tagsArray.getString(it) }
+                } ?: emptyList(),
+                iconRes = obj.optInt("iconRes", 0),
+                isDefault = false,
+                isFavorite = false,
+                createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
+                updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
+            )
+        } catch (e: Exception) {
+            null
+        }
     }
 }

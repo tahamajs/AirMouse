@@ -1,4 +1,3 @@
-
 package com.airmouse.domain.model
 
 import android.os.Parcelable
@@ -67,9 +66,14 @@ data class CustomGestureTemplate(
     val action: String = "",
     val confidence: Float = 0.7f,
     val isEnabled: Boolean = true,
+    val isFavorite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val usageCount: Int = 0
+    val usageCount: Int = 0,
+    val description: String = "",
+    val lastUsed: Long = updatedAt,
+    val isSystemGesture: Boolean = false,
+    val version: Int = 1
 ) : Parcelable {
     fun isValid(): Boolean = name.isNotEmpty() && action.isNotEmpty()
     fun toGestureEvent(): GestureEvent = GestureEvent(
@@ -78,10 +82,7 @@ data class CustomGestureTemplate(
         confidence = confidence,
         isCustom = true
     )
-}
-
-val CustomGestureTemplate.isFavorite: Boolean
-    get() = false
+} 
 
 val CustomGestureTemplate.duration: Float
     get() = ((updatedAt - createdAt).coerceAtLeast(0L) / 1000f)
@@ -89,13 +90,22 @@ val CustomGestureTemplate.duration: Float
 data class GestureTrainingStats(
     val totalGestures: Int = 0,
     val gesturesByType: Map<GestureType, Int> = emptyMap(),
-    val mostUsedGesture: String = "",
+    val mostUsedGesture: String = "NONE",
     val lastGestureTime: Long = 0,
     val customGestureUsage: Map<String, Int> = emptyMap(),
     val averageConfidence: Float = 0f
 ) {
-    fun getTotalCustomGestures(): Int = customGestureUsage.values.sum()
-    fun getMostUsedCustomGesture(): String = customGestureUsage.maxByOrNull { it.value }?.key ?: ""
+    fun getTotalCustomGestures(): Int = gesturesByType[GestureType.CUSTOM] ?: 0
+    fun resolveMostUsedGesture(): String {
+        return if (mostUsedGesture != "NONE") {
+            mostUsedGesture
+        } else {
+            gesturesByType.maxByOrNull { it.value }?.key?.name ?: "NONE"
+        }
+    }
+    fun resolveCustomGestureUsage(): Map<String, Int> {
+        return customGestureUsage
+    }
 }
 
 data class GestureDetectionResult(

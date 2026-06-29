@@ -3,6 +3,7 @@ package com.airmouse.presentation.ui.touchpad
 
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -113,6 +114,7 @@ fun TouchpadScreen(
             }
 
             item { StatusCard(uiState, viewModel) }
+            item { TouchpadTestCard(uiState, viewModel) }
             item { PresetsCard(viewModel) }
 
             item {
@@ -332,8 +334,30 @@ fun TouchpadSurface(
     onGestureEnd: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val surfaceFill = if (uiState.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f) else MaterialTheme.colorScheme.surfaceVariant
-    val gridAccent = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+    
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+    
+    val surfaceFill by animateColorAsState(
+        targetValue = if (uiState.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = pulseAlpha) else MaterialTheme.colorScheme.surfaceVariant,
+        animationSpec = tween(500),
+        label = "surfaceFill"
+    )
+    
+    val gridAccent by animateColorAsState(
+        targetValue = if (uiState.isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+        animationSpec = tween(500),
+        label = "gridAccent"
+    )
+    
     val gridLine = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -549,6 +573,41 @@ fun StatusCard(uiState: TouchpadUiState, viewModel: TouchpadViewModel) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(if (uiState.isActive) "Stop" else "Start")
+            }
+        }
+    }
+}
+
+@Composable
+fun TouchpadTestCard(uiState: TouchpadUiState, viewModel: TouchpadViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Connection Testing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                if (uiState.connectionTestMessage.isNotBlank()) uiState.connectionTestMessage
+                else "Run a quick server test before using the touchpad.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Button(
+                onClick = { viewModel.testConnection() },
+                enabled = !uiState.isTestingConnection,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (uiState.isTestingConnection) "Testing..." else "Test Server")
+            }
+            uiState.connectionTestResult?.let {
+                Text(
+                    "Last result: ${it.message}",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

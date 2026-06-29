@@ -174,7 +174,7 @@ class MacroRecorder @Inject constructor(
             loopCount = json.optInt("loopCount", 1),
             delayBetweenLoops = json.optLong("delayBetweenLoops", 0),
             enabled = json.optBoolean("enabled", true),
-            hotkey = json.optString("hotkey", null)
+            hotkey = if (json.has("hotkey") && !json.isNull("hotkey")) json.getString("hotkey") else null
         )
     }
 
@@ -531,7 +531,6 @@ class MacroRecorder @Inject constructor(
                     is MacroAction.KeyPress -> {
                         
                         val modifiersStr = action.modifiers.joinToString("+")
-                        val cmd = if (modifiersStr.isNotEmpty()) "$modifiersStr+${action.keyCode}" else action.keyCode.toString()
                         connectionManager.send("""{"type":"keypress","keycode":${action.keyCode},"modifiers":${JSONArray(action.modifiers)}}""")
                         onActionExecuted?.invoke(action)
                     }
@@ -591,23 +590,14 @@ class MacroRecorder @Inject constructor(
     
     private suspend fun waitForClick(timeout: Long) {
         suspendCoroutine<Unit> { continuation ->
-            val timeoutRunnable = Runnable {
-                continuation.resume(Unit)
-            }
-            val clickListener = object {
-                fun onClick() {
-                    handler.removeCallbacks(timeoutRunnable)
-                    continuation.resume(Unit)
-                }
-            }
-            handler.postDelayed(timeoutRunnable, timeout)
+            handler.postDelayed({ continuation.resume(Unit) }, timeout)
             
             
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private suspend fun checkPixelColor(x: Int, y: Int, color: Int): Boolean {
-        
         return false
     }
 

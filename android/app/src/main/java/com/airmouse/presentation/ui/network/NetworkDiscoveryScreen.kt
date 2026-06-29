@@ -3,7 +3,6 @@ package com.airmouse.presentation.ui.network
 import android.util.Patterns
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,8 +19,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +46,7 @@ fun NetworkDiscoveryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     var showSortMenu by remember { mutableStateOf(false) }
     var showManualConnectDialog by remember { mutableStateOf(false) }
 
@@ -72,26 +72,29 @@ fun NetworkDiscoveryScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Sort,
                             contentDescription = "Sort",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(onClick = { viewModel.refreshScan() }) {
                         Icon(
                             imageVector = if (uiState.isScanning) Icons.Default.Close else Icons.Default.Refresh,
                             contentDescription = if (uiState.isScanning) "Stop Scan" else "Refresh",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(onClick = { showManualConnectDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.AddLink,
                             contentDescription = "Manual Connect",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -158,85 +161,159 @@ fun NetworkDiscoveryScreen(
             }
 
             // Search / filter field
-            OutlinedTextField(
-                value = uiState.filterText,
-                onValueChange = viewModel::setFilterText,
-                label = { Text("Filter servers...") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search"
-                    )
-                },
-                trailingIcon = {
-                    if (uiState.filterText.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.setFilterText("") }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear"
-                            )
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                tonalElevation = 2.dp
+            ) {
+                OutlinedTextField(
+                    value = uiState.filterText,
+                    onValueChange = viewModel::setFilterText,
+                    placeholder = { Text("Search by name or IP...") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingIcon = {
+                        if (uiState.filterText.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.setFilterText("") }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onSearch = {
+                            focusManager.clearFocus()
+                        }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        disabledBorderColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent
+                    )
                 )
-            )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Local IP address card
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("Local IP Address", style = MaterialTheme.typography.labelSmall)
-                        Text(
-                            viewModel.getLocalIpAddress() ?: "Not connected",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.tertiaryContainer
+                                )
+                            )
                         )
-                        if (uiState.lastScanTime != null) {
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
                             Text(
-                                "Last scan: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(uiState.lastScanTime)}",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                "Local IP Address",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                viewModel.getLocalIpAddress() ?: "Not connected",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            if (uiState.lastScanTime != null) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    "Last scan: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(uiState.lastScanTime)}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                                )
+                            }
                         }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (viewModel.isWifiConnected()) {
-                            Icon(
-                                imageVector = Icons.Default.Wifi,
-                                contentDescription = "WiFi Connected",
-                                tint = Color(0xFF4CAF50)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Connected", fontSize = 12.sp, color = Color(0xFF4CAF50))
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.WifiOff,
-                                contentDescription = "No WiFi",
-                                tint = Color(0xFFF44336)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("No WiFi", fontSize = 12.sp, color = Color(0xFFF44336))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (viewModel.isWifiConnected()) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFF4CAF50).copy(alpha = 0.15f)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Wifi,
+                                            contentDescription = "WiFi Connected",
+                                            tint = Color(0xFF2E7D32),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            "Online",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF2E7D32)
+                                        )
+                                    }
+                                }
+                            } else {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.errorContainer
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.WifiOff,
+                                            contentDescription = "No WiFi",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            "Offline",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -342,12 +419,6 @@ fun NetworkDiscoveryScreen(
                         }
                     }
                 }
-            } else {
-                Text(
-                    text = uiState.status,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -513,17 +584,20 @@ fun NetworkDiscoveryScreen(
                 }
 
                 DiscoveryTab.SAVED -> {
-                    val filteredSavedServers = uiState.savedServers.filter { server ->
-                        uiState.filterText.isEmpty() ||
-                                server.name.contains(uiState.filterText, ignoreCase = true) ||
-                                server.ip.contains(uiState.filterText, ignoreCase = true)
-                    }
-                    if (filteredSavedServers.isNotEmpty()) {
+                    val sortedSavedServers = viewModel.sortServers(
+                        uiState.savedServers.filter { server ->
+                            uiState.filterText.isEmpty() ||
+                                    server.name.contains(uiState.filterText, ignoreCase = true) ||
+                                    server.ip.contains(uiState.filterText, ignoreCase = true)
+                        },
+                        uiState.sortBy
+                    ).sortedByDescending { it.isFavorite }
+                    if (sortedSavedServers.isNotEmpty()) {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(filteredSavedServers, key = { it.id }) { server ->
+                            items(sortedSavedServers, key = { it.id }) { server ->
                                 SavedServerItem(
                                     server = server,
                                     isConnecting = uiState.isConnecting && uiState.selectedServerId == server.id,
@@ -543,6 +617,7 @@ fun NetworkDiscoveryScreen(
                             title = "No Saved Servers",
                             message = "Discover servers and tap the save icon to add them here",
                             icon = Icons.Default.BookmarkAdd,
+                            actionLabel = "Discover Servers",
                             onRetry = { viewModel.setActiveTab(DiscoveryTab.DISCOVERED) }
                         )
                     }
@@ -578,8 +653,7 @@ fun NetworkDiscoveryScreen(
                         EmptyStateCard(
                             title = "No Connection History",
                             message = "Your connection history will appear here",
-                            icon = Icons.Default.History,
-                            onRetry = {}
+                            icon = Icons.Default.History
                         )
                     }
                 }
@@ -599,15 +673,17 @@ fun DiscoveredServerItem(
     onConnect: () -> Unit,
     onSave: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isConnecting)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(16.dp)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = if (isConnecting)
+            MaterialTheme.colorScheme.primaryContainer
+        else
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        shadowElevation = if (isConnecting) 8.dp else 2.dp,
+        tonalElevation = 2.dp
     ) {
         Column(
             modifier = Modifier
@@ -619,13 +695,12 @@ fun DiscoveredServerItem(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    Icon(
-                        imageVector = when (server.protocol) {
-                            Protocol.WEBSOCKET -> Icons.Default.Wifi
-                            Protocol.UDP -> Icons.Default.SettingsEthernet
-                            Protocol.TCP -> Icons.Default.Computer
-                            else -> Icons.Default.DeviceHub
-                        },
+                        Icon(
+                            imageVector = when (server.protocol) {
+                                Protocol.WEBSOCKET -> Icons.Default.Wifi
+                                Protocol.UDP -> Icons.Default.SettingsEthernet
+                                Protocol.TCP -> Icons.Default.Computer
+                            },
                         contentDescription = "Protocol",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(10.dp)
@@ -713,15 +788,17 @@ fun SavedServerItem(
     onDelete: () -> Unit,
     onFavorite: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isConnecting)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(12.dp)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = if (isConnecting)
+            MaterialTheme.colorScheme.primaryContainer
+        else
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        shadowElevation = if (isConnecting) 8.dp else 2.dp,
+        tonalElevation = 2.dp
     ) {
         Column {
             Row(
@@ -810,12 +887,13 @@ fun SavedServerItem(
 fun StatusChip(isReachable: Boolean, ping: Long) {
     val color = if (isReachable) Color(0xFF4CAF50) else Color(0xFFF44336)
     val text = if (isReachable) "Online" else "Offline"
+    val pingText = if (ping > 0) " • ${ping}ms" else ""
     Surface(
         shape = RoundedCornerShape(4.dp),
         color = color.copy(alpha = 0.2f)
     ) {
         Text(
-            text = text,
+            text = text + pingText,
             fontSize = 10.sp,
             color = color,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -851,7 +929,8 @@ fun EmptyStateCard(
     title: String,
     message: String,
     icon: ImageVector,
-    onRetry: () -> Unit
+    actionLabel: String = "Retry",
+    onRetry: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -880,9 +959,11 @@ fun EmptyStateCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry) {
-                Text("Retry")
+            if (onRetry != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onRetry) {
+                    Text(actionLabel)
+                }
             }
         }
     }
@@ -950,6 +1031,9 @@ fun ManualConnectDialog(
     var port by remember { mutableStateOf(initialPort.toString()) }
     var isValidIp by remember { mutableStateOf(true) }
 
+    val portInt = port.toIntOrNull()
+    val isValidPort = portInt != null && portInt in 1..65535
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -963,7 +1047,7 @@ fun ManualConnectDialog(
                     value = ip,
                     onValueChange = {
                         ip = it
-                        isValidIp = Patterns.IP_ADDRESS.matcher(it).matches()
+                        isValidIp = it.matches("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$".toRegex())
                     },
                     label = { Text("IP Address") },
                     isError = !isValidIp && ip.isNotEmpty(),
@@ -982,20 +1066,27 @@ fun ManualConnectDialog(
                     value = port,
                     onValueChange = { port = it.filter { c -> c.isDigit() } },
                     label = { Text("Port") },
+                    isError = !isValidPort && port.isNotEmpty(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (!isValidPort && port.isNotEmpty()) {
+                    Text(
+                        "Port must be between 1 and 65535",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val portInt = port.toIntOrNull()
-                    if (ip.isNotEmpty() && isValidIp && portInt != null && portInt in 1..65535) {
+                    if (ip.isNotEmpty() && isValidIp && isValidPort && portInt != null) {
                         onConnect(ip, portInt)
                     }
                 },
-                enabled = isValidIp && ip.isNotEmpty() && port.toIntOrNull() in 1..65535
+                enabled = isValidIp && ip.isNotEmpty() && isValidPort
             ) {
                 Text("Connect")
             }

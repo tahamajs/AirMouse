@@ -1,6 +1,6 @@
 pluginManagement {
     repositories {
-        google()               // Required for Android Gradle Plugin
+        google()
         mavenCentral()
         gradlePluginPortal()
         maven { url 'https://jitpack.io' }

@@ -1,4 +1,4 @@
-package com.airmouse.ui.components
+package com.airmouse.presentation.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
@@ -6,7 +6,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 @Composable

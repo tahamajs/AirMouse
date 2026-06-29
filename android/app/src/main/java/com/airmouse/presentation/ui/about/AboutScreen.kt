@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
-import com.airmouse.presentation.navigation.NavigationActionsImpl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,7 +108,7 @@ fun AboutScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("About", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+                title = { Text("About Air Mouse", fontWeight = FontWeight.SemiBold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.onEvent(AboutEvent.NavigateBack) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -124,20 +123,26 @@ fun AboutScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
         floatingActionButton = {
-            if (uiState.isUpdateAvailable) {
-                FloatingActionButton(
+            AnimatedVisibility(
+                visible = uiState.isUpdateAvailable,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                ExtendedFloatingActionButton(
                     onClick = { viewModel.onEvent(AboutEvent.CheckForUpdates) },
-                    containerColor = Color(0xFF4CAF50),
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(Icons.Default.SystemUpdate, contentDescription = "Update")
-                }
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    icon = { Icon(Icons.Default.SystemUpdate, contentDescription = "Update") },
+                    text = { Text("Update Available", fontWeight = FontWeight.Bold) }
+                )
             }
         }
     ) { paddingValues ->
@@ -147,8 +152,9 @@ fun AboutScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                            Color.Transparent
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background
                         )
                     )
                 )
@@ -158,284 +164,77 @@ fun AboutScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Logo
-                Surface(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .scale(logoScale),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    shadowElevation = 8.dp
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Computer,
-                            contentDescription = "Logo",
-                            modifier = Modifier.size(60.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = uiState.appName,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary
+                // Hero Section
+                Spacer(modifier = Modifier.height(16.dp))
+                HeroSection(
+                    appName = uiState.appName,
+                    versionName = uiState.versionName,
+                    versionCode = uiState.versionCode,
+                    buildDate = uiState.buildDate,
+                    logoScale = logoScale
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Text(
-                        text = "Version ${uiState.versionName} (${uiState.versionCode})",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                if (uiState.buildDate.isNotEmpty()) {
-                    Text(
-                        text = "Built: ${uiState.buildDate}",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Text(
-                    text = "Turn your Android phone into a wireless mouse using motion sensors, gestures, and voice commands.",
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Stats
-                GlassCard {
-                    Column(
-                        modifier = Modifier.padding(4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("📊 Quick Stats", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            StatItem(value = uiState.totalDownloads.toString(), label = "Downloads", icon = Icons.Default.Download)
-                            StatItem(value = uiState.totalUsers.toString(), label = "Active Users", icon = Icons.Default.People)
-                            StatItem(value = uiState.totalGestures.toString(), label = "Gestures", icon = Icons.Default.Gesture)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Features
-                GlassCard {
-                    Column(modifier = Modifier.padding(4.dp)) {
-                        Text("✨ Features", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        FeatureItem("🎯", "Motion Control", "Move cursor by rotating your phone")
-                        FeatureItem("👆", "Click Detection", "Quick flick for left click")
-                        FeatureItem("✌️", "Double Click", "Two quick flicks")
-                        FeatureItem("👉", "Right Click", "Hold tilt for right click")
-                        FeatureItem("📜", "Scrolling", "Fast vertical movement")
-                        FeatureItem("🎙️", "Voice Commands", "Say 'click', 'scroll', and more")
-                        FeatureItem("🎨", "Custom Gestures", "Train your own gestures")
-                        FeatureItem("🔒", "Proximity Lock", "Auto-lock when walking away")
-                        FeatureItem("🌐", "Multi-Protocol", "WebSocket, TCP, UDP support")
-                        FeatureItem("📱", "Edge Gestures", "Quick actions from screen edge")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Tech Stack
-                GlassCard {
-                    Column(modifier = Modifier.padding(4.dp)) {
-                        Text("🛠️ Tech Stack", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        TechStackItem("Android", "Kotlin, Jetpack Compose", Color(0xFF3DDC84))
-                        TechStackItem("Networking", "OkHttp, WebSocket", Color(0xFF00BCD4))
-                        TechStackItem("AI/ML", "TensorFlow Lite", Color(0xFFFF6D00))
-                        TechStackItem("DI", "Hilt/Dagger", Color(0xFF2196F3))
-                        TechStackItem("Storage", "DataStore, Room", Color(0xFF4CAF50))
-                        TechStackItem("Server", "Go, WebSocket, TCP", Color(0xFF00ADD8))
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Team
-                GlassCard {
-                    Column(modifier = Modifier.padding(4.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("👥 Team", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        TextButton(onClick = { showContributors = !showContributors }) {
-                            Text(if (showContributors) "Show Less" else "Show More")
-                        }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        TeamMember("Arian Firoozi", "Lead Developer", "Full-stack & AI/ML")
-                        TeamMember("Arsalan Talaee", "Core Developer", "Android & Networking")
-
-                        AnimatedVisibility(visible = showContributors) {
-                            Column {
-                                TeamMember("Dr. Mohsen Shokri", "Instructor", "Embedded Systems")
-                                TeamMember("Dr. Mehdi Kargahi", "Instructor", "Real-time Systems")
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("University of Tehran", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("Faculty of Electrical and Computer Engineering", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Licenses
-                GlassCard {
-                    Column(modifier = Modifier.padding(4.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("📚 Open Source Libraries", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            TextButton(onClick = { showLicenses = !showLicenses }) {
-                                Text(if (showLicenses) "Hide Licenses" else "View Licenses")
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        LibraryItem("Jetpack Compose", "UI Toolkit", "Apache 2.0")
-                        LibraryItem("OkHttp", "Networking", "Apache 2.0")
-                        LibraryItem("Coroutines", "Async Programming", "Apache 2.0")
-                        LibraryItem("Hilt", "Dependency Injection", "Apache 2.0")
-                        LibraryItem("TensorFlow Lite", "ML Inference", "Apache 2.0")
-                        LibraryItem("Room", "Database", "Apache 2.0")
-                        LibraryItem("DataStore", "Preferences", "Apache 2.0")
-
-                        AnimatedVisibility(visible = showLicenses) {
-                            Column {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                HorizontalDivider()
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "Full license information available in the app's LICENSE file.",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Links
-                GlassCard {
-                    Column(modifier = Modifier.padding(4.dp)) {
-                        Text("🔗 Links", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        LinkItem("GitHub Repository", Icons.Default.Code, "github.com/airmouse") {
-                            openUrl("https://github.com/airmouse")
-                        }
-                        LinkItem("Website", Icons.Default.Language, "www.airmouse.io") {
-                            openUrl("https://www.airmouse.io")
-                        }
-                        LinkItem("Documentation", Icons.Default.Description, "docs.airmouse.io") {
-                            openUrl("https://docs.airmouse.io")
-                        }
-                        LinkItem("Support", Icons.Default.SupportAgent, "support@airmouse.io") {
-                            openUrl("mailto:support@airmouse.io")
-                        }
-                        LinkItem("Discord Community", Icons.AutoMirrored.Filled.Chat, "discord.gg/airmouse") {
-                            openUrl("https://discord.gg/airmouse")
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // License
-                GlassCard {
-                    Column(modifier = Modifier.padding(4.dp)) {
-                        Text("📄 License", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("MIT License", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        Text("Copyright (c) 2024-2025 Air Mouse Team", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Permission is hereby granted, free of charge, to any person obtaining a copy of this software...",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                // Stats Row
+                StatsSection(uiState)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { viewModel.onEvent(AboutEvent.CheckForUpdates) },
-                        modifier = Modifier.weight(1f),
-                        enabled = !uiState.isLoading
-                    ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.SystemUpdate, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Check Updates")
-                        }
-                    }
+                // Premium Expandable Sections
+                var expandedSection by remember { mutableStateOf<String?>("Features") }
 
-                    Button(
-                        onClick = { viewModel.onEvent(AboutEvent.NavigateBack) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Back")
-                    }
+                PremiumExpandableCard(
+                    title = "✨ Core Features",
+                    isExpanded = expandedSection == "Features",
+                    onClick = { expandedSection = if (expandedSection == "Features") null else "Features" }
+                ) {
+                    FeatureGrid()
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Text("© 2024-2025 Air Mouse Team", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                Text("All rights reserved. Made with ❤️ at University of Tehran", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+                PremiumExpandableCard(
+                    title = "🛠️ Technology Stack",
+                    isExpanded = expandedSection == "Tech",
+                    onClick = { expandedSection = if (expandedSection == "Tech") null else "Tech" }
+                ) {
+                    TechStackList()
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                PremiumExpandableCard(
+                    title = "👥 Meet the Team",
+                    isExpanded = expandedSection == "Team",
+                    onClick = { expandedSection = if (expandedSection == "Team") null else "Team" }
+                ) {
+                    TeamList(showContributors = showContributors, onToggleContributors = { showContributors = !showContributors })
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                PremiumExpandableCard(
+                    title = "📚 Open Source Libraries",
+                    isExpanded = expandedSection == "Libraries",
+                    onClick = { expandedSection = if (expandedSection == "Libraries") null else "Libraries" }
+                ) {
+                    LibrariesList(showLicenses = showLicenses, onToggleLicenses = { showLicenses = !showLicenses })
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Quick Links
+                QuickLinksCard(onOpenUrl = ::openUrl)
+
                 Spacer(modifier = Modifier.height(32.dp))
+
+                // Footer
+                FooterSection()
+                Spacer(modifier = Modifier.height(48.dp))
             }
         }
     }
@@ -446,128 +245,391 @@ fun AboutScreen(
 // ==========================================
 
 @Composable
-fun GlassCard(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
-                    )
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-        ),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            content()
-        }
-    }
-}
-
-@Composable
-fun StatItem(value: String, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+fun HeroSection(appName: String, versionName: String, versionCode: Int, buildDate: String, logoScale: Float) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Surface(
+            modifier = Modifier
+                .size(140.dp)
+                .scale(logoScale),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shadowElevation = 12.dp
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                Color.Transparent
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Computer,
+                    contentDescription = "Logo",
+                    modifier = Modifier.size(72.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Text(
+            text = appName,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onBackground,
+            letterSpacing = (-0.5).sp
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(
+                    text = "Version $versionName ($versionCode)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+
+        if (buildDate.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Built on $buildDate",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Transform your Android device into a powerful, precise wireless mouse using advanced motion sensors and AI.",
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            lineHeight = 22.sp,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
     }
 }
 
 @Composable
-fun FeatureItem(emoji: String, title: String, description: String) {
+fun StatsSection(uiState: AboutUiState) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(text = emoji, fontSize = 22.sp, modifier = Modifier.width(36.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(text = description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        StatCard(modifier = Modifier.weight(1f), value = uiState.totalDownloads.toString(), label = "Downloads", icon = Icons.Default.Download)
+        StatCard(modifier = Modifier.weight(1f), value = uiState.totalUsers.toString(), label = "Users", icon = Icons.Default.People)
+        StatCard(modifier = Modifier.weight(1f), value = uiState.totalGestures.toString(), label = "Gestures", icon = Icons.Default.Gesture)
+    }
+}
+
+@Composable
+fun StatCard(modifier: Modifier = Modifier, value: String, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Surface(
+        modifier = modifier.aspectRatio(1f),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-fun TechStackItem(tech: String, description: String, color: Color) {
+fun PremiumExpandableCard(
+    title: String,
+    isExpanded: Boolean,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        shadowElevation = if (isExpanded) 8.dp else 2.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Toggle",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
+                exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeOut()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    Spacer(modifier = Modifier.height(20.dp))
+                    content()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FeatureGrid() {
+    val features = listOf(
+        "🎯" to "Motion Control" to "Move cursor by rotating phone",
+        "👆" to "Click Detection" to "Quick flick for left click",
+        "✌️" to "Double Click" to "Two quick flicks",
+        "👉" to "Right Click" to "Hold tilt for right click",
+        "📜" to "Scrolling" to "Fast vertical movement",
+        "🎙️" to "Voice Cmds" to "Say 'click', 'scroll'",
+        "🎨" to "Custom Gestures" to "Train your own gestures",
+        "🔒" to "Proximity Lock" to "Auto-lock when away"
+    )
+    
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        features.chunked(2).forEach { row ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                row.forEach { (header, desc) ->
+                    val (emoji, title) = header
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(emoji, fontSize = 18.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(desc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 16.sp)
+                    }
+                }
+                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+fun TechStackList() {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        TechItem("Android & UI", "Kotlin, Jetpack Compose, Material 3", Color(0xFF3DDC84))
+        TechItem("Architecture", "Clean Architecture, MVI, Hilt", Color(0xFF2196F3))
+        TechItem("Networking", "WebSockets, TCP, UDP, OkHttp", Color(0xFF00BCD4))
+        TechItem("AI & Sensors", "TensorFlow Lite, SensorFusion", Color(0xFFFF6D00))
+        TechItem("Backend Server", "Go (Golang), Cross-platform", Color(0xFF00ADD8))
+    }
+}
+
+@Composable
+fun TechItem(title: String, subtitle: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+fun TeamList(showContributors: Boolean, onToggleContributors: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        TeamProfile("Arian Firoozi", "Lead Developer", "Full-stack & AI/ML", true)
+        TeamProfile("Arsalan Talaee", "Core Developer", "Android & Networking", true)
+        
+        TextButton(onClick = onToggleContributors, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            Text(if (showContributors) "Hide Advisors" else "Show Advisors")
+        }
+        
+        AnimatedVisibility(visible = showContributors) {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                TeamProfile("Dr. Mohsen Shokri", "Instructor", "Embedded Systems", false)
+                TeamProfile("Dr. Mehdi Kargahi", "Instructor", "Real-time Systems", false)
+                
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("University of Tehran", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text("Faculty of Electrical & Computer Engineering", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TeamProfile(name: String, role: String, focus: String, isPrimary: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            modifier = Modifier.size(48.dp),
+            shape = CircleShape,
+            color = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = name.take(1), 
+                    fontSize = 20.sp, 
+                    fontWeight = FontWeight.Bold, 
+                    color = if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(role, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
+            Text(focus, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+fun LibrariesList(showLicenses: Boolean, onToggleLicenses: () -> Unit) {
+    val libs = listOf(
+        "Jetpack Compose" to "UI Toolkit",
+        "Kotlin Coroutines" to "Async",
+        "Dagger Hilt" to "DI",
+        "OkHttp" to "Network",
+        "TensorFlow Lite" to "ML"
+    )
+    
+    Column {
+        libs.forEach { (name, desc) ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(name, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                Text(desc, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        TextButton(onClick = onToggleLicenses, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            Text(if (showLicenses) "Hide Details" else "View License Details")
+        }
+        
+        AnimatedVisibility(visible = showLicenses) {
+            Text(
+                "All libraries are licensed under Apache 2.0. Full details in the app's LICENSE file.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun QuickLinksCard(onOpenUrl: (String) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text("🔗 Connect", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            QuickLinkItem(Icons.Default.Code, "GitHub", "View Source", { onOpenUrl("https://github.com/airmouse") })
+            QuickLinkItem(Icons.Default.Language, "Website", "airmouse.io", { onOpenUrl("https://www.airmouse.io") })
+            QuickLinkItem(Icons.AutoMirrored.Filled.Chat, "Discord", "Join Community", { onOpenUrl("https://discord.gg/airmouse") })
+        }
+    }
+}
+
+@Composable
+fun QuickLinkItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = tech, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(text = description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-fun TeamMember(name: String, role: String, expertise: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top
     ) {
         Surface(
             modifier = Modifier.size(40.dp),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.surface
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(text = name.take(1).uppercase(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            }
+            Icon(icon, contentDescription = null, modifier = Modifier.padding(8.dp), tint = MaterialTheme.colorScheme.primary)
         }
+        Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = name, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(text = role, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-            Text(text = expertise, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-fun LibraryItem(name: String, description: String, license: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = "•", fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text(text = "$description • $license", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-fun LinkItem(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, url: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = title, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(text = url, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+fun FooterSection() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Text("MIT License", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "© 2024-2025 Air Mouse Team\nMade with ❤️ at University of Tehran",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp
+        )
     }
 }
 
@@ -592,6 +654,10 @@ fun AboutScreenPreviewLight() {
                 override fun navigateToAbout() = Unit
                 override fun navigateToProfiles() = Unit
                 override fun navigateToTouchpad() = Unit
+                override fun navigateToGamingMode() = Unit
+                override fun navigateToScreenMirroring() = Unit
+                override fun navigateToSyncStatus() = Unit
+                override fun navigateToNotificationsCenter() = Unit
                 override fun navigateToGestureStudio() = Unit
                 override fun navigateToNetworkDiscovery() = Unit
                 override fun navigateToProximity() = Unit
@@ -626,6 +692,10 @@ fun AboutScreenPreviewDark() {
                 override fun navigateToAbout() = Unit
                 override fun navigateToProfiles() = Unit
                 override fun navigateToTouchpad() = Unit
+                override fun navigateToGamingMode() = Unit
+                override fun navigateToScreenMirroring() = Unit
+                override fun navigateToSyncStatus() = Unit
+                override fun navigateToNotificationsCenter() = Unit
                 override fun navigateToGestureStudio() = Unit
                 override fun navigateToNetworkDiscovery() = Unit
                 override fun navigateToProximity() = Unit

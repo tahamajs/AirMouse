@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,11 +23,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -172,7 +171,7 @@ fun TopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -197,7 +196,7 @@ fun TopBar(
         Spacer(modifier = Modifier.width(16.dp))
 
         TextButton(onClick = onSkip) {
-            Text("Skip", color = Color.White.copy(alpha = 0.7f))
+            Text("Skip", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
         }
     }
 }
@@ -237,7 +236,7 @@ fun BottomNavigation(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (currentPage > 0) {
                 OutlinedButton(
@@ -251,7 +250,7 @@ fun BottomNavigation(
                 ) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Back")
+                    Text("Back", fontSize = 14.sp)
                 }
             }
 
@@ -259,7 +258,7 @@ fun BottomNavigation(
                 onClick = onNext,
                 modifier = Modifier
                     .weight(1f)
-                    .height(52.dp),
+                    .height(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = accentColor
@@ -268,7 +267,7 @@ fun BottomNavigation(
                 Text(
                     if (currentPage == totalPages - 1) "Get Started"
                     else "Next",
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 if (currentPage != totalPages - 1) {
@@ -319,48 +318,83 @@ fun WelcomePage(item: OnboardingItem, animationProgress: Float) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Surface(
-            modifier = Modifier
-                .size(140.dp)
-                .scale(0.8f + animationProgress * 0.2f),
-            shape = CircleShape,
-            color = item.accentColor.copy(alpha = 0.2f),
-            shadowElevation = 16.dp
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painterResource(id = item.imageRes),
-                    contentDescription = item.title,
-                    modifier = Modifier.size(80.dp),
-                    tint = item.accentColor
-                )
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                modifier = Modifier
+                    .size(88.dp)
+                    .scale(0.86f + animationProgress * 0.14f),
+                shape = CircleShape,
+                color = item.accentColor.copy(alpha = 0.2f),
+                shadowElevation = 12.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(id = item.imageRes),
+                        contentDescription = item.title,
+                        modifier = Modifier.size(52.dp),
+                        tint = item.accentColor
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AnimatedText(
+                text = item.title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                delay = 250
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            AnimatedText(
+                text = item.description,
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.82f),
+                textAlign = TextAlign.Center,
+                delay = 500
+            )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        AnimatedText(
-            text = item.title,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            textAlign = TextAlign.Center,
-            delay = 300
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        AnimatedText(
-            text = item.description,
-            fontSize = 16.sp,
-            color = Color.White.copy(alpha = 0.8f),
-            textAlign = TextAlign.Center,
-            delay = 600
-        )
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White.copy(alpha = 0.08f),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f))
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Swipe through the next pages for features, connection, voice, and proximity controls.",
+                    fontSize = 11.sp,
+                    color = Color.White.copy(alpha = 0.75f),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    repeat(4) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.55f))
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -370,22 +404,22 @@ fun FeaturesPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
         Triple(R.drawable.ic_mouse, "Motion Control", "Move cursor by rotating your phone"),
         Triple(R.drawable.ic_gesture, "Gesture Recognition", "Quick flips for clicks and scrolls"),
         Triple(R.drawable.ic_voice, "Voice Commands", "Hands-free control"),
-        Triple(R.drawable.ic_proximity, "Proximity Lock", "Auto-locks when you walk away")
+        Triple(R.drawable.ic_sensor, "Proximity Lock", "Auto-locks when you walk away")
     )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = item.title,
-            fontSize = 28.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 20.dp)
         )
 
         features.forEachIndexed { index, (icon, title, description) ->
@@ -470,10 +504,10 @@ fun ConnectPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
     ) {
         Text(
             text = item.title,
-            fontSize = 28.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 24.dp)
         )
 
         Surface(
@@ -494,25 +528,25 @@ fun ConnectPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Same WiFi Network Required",
-            fontSize = 20.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
             text = "Make sure your phone and computer are connected to the same WiFi network for seamless control",
-            fontSize = 14.sp,
+            fontSize = 11.sp,
             textAlign = TextAlign.Center,
             color = Color.White.copy(alpha = 0.7f)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -562,13 +596,13 @@ fun VoicePage(item: OnboardingItem, viewModel: OnboardingViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = item.title,
-            fontSize = 28.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             modifier = Modifier.padding(bottom = 32.dp)
@@ -576,16 +610,16 @@ fun VoicePage(item: OnboardingItem, viewModel: OnboardingViewModel) {
 
         VoiceWaveAnimation(accentColor = item.accentColor)
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Supported Voice Commands",
-            fontSize = 18.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         val commands = listOf("click", "double click", "right click", "scroll up", "scroll down", "next slide", "previous slide", "lock screen")
 
@@ -603,7 +637,7 @@ fun VoicePage(item: OnboardingItem, viewModel: OnboardingViewModel) {
                         Text(
                             text = command,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            fontSize = 12.sp,
+                            fontSize = 10.sp,
                             textAlign = TextAlign.Center,
                             color = Color.White
                         )
@@ -663,13 +697,13 @@ fun ProximityPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = item.title,
-            fontSize = 28.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             modifier = Modifier.padding(bottom = 32.dp)
@@ -693,18 +727,18 @@ fun ProximityPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
                 )
             }
             Icon(
-                painter = painterResource(id = R.drawable.ic_proximity),
+                painter = painterResource(id = R.drawable.ic_sensor),
                 contentDescription = "Proximity",
                 modifier = Modifier.size(60.dp),
                 tint = Color.White
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = if (distance > 0.6f) "Device is FAR" else "Device is NEAR",
-            fontSize = 20.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = if (distance > 0.6f) Color(0xFFEF4444) else Color(0xFF10B981)
         )
@@ -713,7 +747,7 @@ fun ProximityPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
 
         Text(
             text = if (distance > 0.6f) "Screen will lock when you walk away" else "Screen will unlock when you return",
-            fontSize = 14.sp,
+            fontSize = 11.sp,
             textAlign = TextAlign.Center,
             color = Color.White.copy(alpha = 0.7f)
         )
@@ -727,12 +761,12 @@ fun FinalPage(item: OnboardingItem, viewModel: OnboardingViewModel, navigationAc
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Surface(
-            modifier = Modifier.size(120.dp),
+            modifier = Modifier.size(96.dp),
             shape = CircleShape,
             color = item.accentColor.copy(alpha = 0.2f)
         ) {
@@ -740,32 +774,32 @@ fun FinalPage(item: OnboardingItem, viewModel: OnboardingViewModel, navigationAc
                 Icon(
                     painter = painterResource(id = R.drawable.ic_check),
                     contentDescription = "Complete",
-                    modifier = Modifier.size(60.dp),
+                    modifier = Modifier.size(48.dp),
                     tint = item.accentColor
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = item.title,
-            fontSize = 28.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = item.description,
-            fontSize = 16.sp,
+            fontSize = 12.sp,
             textAlign = TextAlign.Center,
             color = Color.White.copy(alpha = 0.7f)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -773,7 +807,7 @@ fun FinalPage(item: OnboardingItem, viewModel: OnboardingViewModel, navigationAc
             colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Your Preferences", fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Your Preferences", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 PreferenceRow("Theme", uiState.selectedTheme, item.accentColor)
                 PreferenceRow("Haptic Feedback", if (uiState.hapticEnabled) "Enabled" else "Disabled", item.accentColor)
@@ -792,8 +826,8 @@ fun PreferenceRow(label: String, value: String, accentColor: Color) {
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, fontSize = 14.sp, color = Color.White.copy(alpha = 0.7f))
-        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = accentColor)
+        Text(label, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+        Text(value, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = accentColor)
     }
 }
 

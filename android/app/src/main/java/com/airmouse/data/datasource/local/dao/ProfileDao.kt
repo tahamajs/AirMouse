@@ -10,6 +10,31 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProfileDao {
+    // Add to ProfileDao.kt
+
+    @Query("SELECT * FROM profiles WHERE is_default = 1")
+    suspend fun getDefaultProfileEntity(): ProfileEntity?
+
+    @Query("UPDATE profiles SET is_active = 1 WHERE id = :id")
+    suspend fun setActive(id: String)
+
+    @Query("UPDATE profiles SET is_active = 0 WHERE id = :id")
+    suspend fun setInactive(id: String)
+
+    @Query("SELECT * FROM profiles WHERE is_active = 1")
+    suspend fun getActiveProfileEntity(): ProfileEntity?
+
+    @Query("SELECT * FROM profiles WHERE is_favorite = 1")
+    suspend fun getFavoriteProfilesEntities(): List<ProfileEntity>
+
+    @Query("SELECT COUNT(*) FROM profiles WHERE is_favorite = 1")
+    suspend fun getFavoriteProfileCount(): Int
+
+    @Query("SELECT * FROM profiles ORDER BY last_used DESC LIMIT :limit")
+    suspend fun getRecentlyUsedProfiles(limit: Int): List<ProfileEntity>
+
+    @Query("DELETE FROM profiles WHERE last_used < :timestamp")
+    suspend fun deleteOldProfiles(timestamp: Long)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProfile(profile: ProfileEntity)
 

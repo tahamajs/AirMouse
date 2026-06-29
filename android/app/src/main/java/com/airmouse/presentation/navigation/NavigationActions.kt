@@ -19,6 +19,10 @@ interface NavigationActions {
     fun navigateToAbout()
     fun navigateToProfiles()
     fun navigateToTouchpad()
+    fun navigateToGamingMode()
+    fun navigateToScreenMirroring()
+    fun navigateToSyncStatus()
+    fun navigateToNotificationsCenter()
     fun navigateToGestureStudio()
     fun navigateToNetworkDiscovery()
     fun navigateToProximity()
@@ -87,6 +91,22 @@ class NavigationActionsImpl(
 
     override fun navigateToTouchpad() {
         navController.navigate(Destinations.Touchpad.route)
+    }
+
+    override fun navigateToGamingMode() {
+        navController.navigate(Destinations.GamingMode.route)
+    }
+
+    override fun navigateToScreenMirroring() {
+        navController.navigate(Destinations.ScreenMirroring.route)
+    }
+
+    override fun navigateToSyncStatus() {
+        navController.navigate(Destinations.SyncStatus.route)
+    }
+
+    override fun navigateToNotificationsCenter() {
+        navController.navigate(Destinations.NotificationsCenter.route)
     }
 
     override fun navigateToGestureStudio() {

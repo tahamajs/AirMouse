@@ -115,8 +115,11 @@ fun HelpScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -679,9 +682,14 @@ fun getCategoryColor(category: HelpCategory): Color {
     return when (category) {
         HelpCategory.GETTING_STARTED -> Color(0xFF00BCD4)
         HelpCategory.CONNECTION -> Color(0xFF4CAF50)
+        HelpCategory.MOUSE_CONTROL -> Color(0xFF3F51B5)
         HelpCategory.GESTURES -> Color(0xFFFF9800)
         HelpCategory.CALIBRATION -> Color(0xFF9C27B0)
         HelpCategory.TROUBLESHOOTING -> Color(0xFFF44336)
+        HelpCategory.SERVER_SHORTCUTS -> Color(0xFF795548)
+        HelpCategory.BLUETOOTH -> Color(0xFF0288D1)
+        HelpCategory.BACKGROUND_MODE -> Color(0xFF00897B)
+        HelpCategory.SETTINGS -> Color(0xFF546E7A)
         HelpCategory.ADVANCED -> Color(0xFF2196F3)
         HelpCategory.ACCESSIBILITY -> Color(0xFFE91E63)
         HelpCategory.FAQ -> Color(0xFF607D8B)
