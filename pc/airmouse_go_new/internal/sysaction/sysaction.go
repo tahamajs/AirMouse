@@ -335,6 +335,20 @@ func GetActionDescription(a Action) string {
 	return string(a)
 }
 
+// KeyTap simulates pressing a keyboard key.
+func KeyTap(key string) {
+	if keyTap != nil {
+		keyTap(key)
+	}
+}
+
+// TypeText simulates typing a string of text.
+func TypeText(txt string) {
+	if typeText != nil {
+		typeText(txt)
+	}
+}
+
 // The following functions are platform-specific and defined in the respective
 // *_linux.go, *_darwin.go, *_windows.go files.
 var (
@@ -351,6 +365,7 @@ var (
 	switchWindow     func()
 	keyCombination   func(key, modifier string)
 	keyTap           func(key string)
+	typeText         func(txt string)
 	zoomIn           func()
 	zoomOut          func()
 	zoomReset        func()
