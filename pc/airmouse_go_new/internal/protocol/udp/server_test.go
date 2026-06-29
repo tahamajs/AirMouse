@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"airmouse-go/control/common"
+	"airmouse-go/control/predict"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 	websocketpkg "airmouse-go/internal/protocol/websocket"
@@ -45,22 +46,21 @@ func (m *MockMouseController) Scroll(delta int) {
 	m.scrolls = append(m.scrolls, delta)
 }
 
-func (m *MockMouseController) Stats() (clicks, dbl, right, scroll int64) { return 0, 0, 0, 0 }
-func (m *MockMouseController) SetSensitivity(s float64) {}
-func (m *MockMouseController) GetSensitivity() float64 { return 1.0 }
-func (m *MockMouseController) SetSmoothing(enabled bool) {}
+func (m *MockMouseController) Stats() (clicks, dbl, right, scroll int64)    { return 0, 0, 0, 0 }
+func (m *MockMouseController) SetSensitivity(s float64)                     {}
+func (m *MockMouseController) GetSensitivity() float64                      { return 1.0 }
+func (m *MockMouseController) SetSmoothing(enabled bool)                    {}
 func (m *MockMouseController) SetAcceleration(enabled bool, factor float64) {}
-func (m *MockMouseController) EnablePredictive(enabled bool) {}
-func (m *MockMouseController) SetPredictiveBlendFactor(factor float64) {}
-func (m *MockMouseController) EnableAISmoothing(enabled bool) {}
-func (m *MockMouseController) SetAISmoother(s *predict.AISmoother) {}
-func (m *MockMouseController) EnableMLPrediction(enabled bool) {}
-func (m *MockMouseController) SetMLBlendFactor(factor float64) {}
-func (m *MockMouseController) ResetStats() {}
-func (m *MockMouseController) GetPosition() (x, y float64) { return 0, 0 }
+func (m *MockMouseController) EnablePredictive(enabled bool)                {}
+func (m *MockMouseController) SetPredictiveBlendFactor(factor float64)      {}
+func (m *MockMouseController) EnableAISmoothing(enabled bool)               {}
+func (m *MockMouseController) SetAISmoother(s *predict.AISmoother)          {}
+func (m *MockMouseController) EnableMLPrediction(enabled bool)              {}
+func (m *MockMouseController) SetMLBlendFactor(factor float64)              {}
+func (m *MockMouseController) ResetStats()                                  {}
+func (m *MockMouseController) GetPosition() (x, y float64)                  { return 0, 0 }
 
 func TestUDPServerHandshakeAndDiscovery(t *testing.T) {
-	config.Init()
 	cfg := config.Get()
 	cfg.AuthEnabled = false
 
