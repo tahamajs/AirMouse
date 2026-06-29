@@ -195,6 +195,25 @@ func (a *App) Run() error {
 		}()
 	}
 
+	if desk, ok := a.fyneApp.(desktop.App); ok {
+		m := fyne.NewMenu("Air Mouse Pro",
+			fyne.NewMenuItem("Show", func() {
+				a.window.Show()
+			}),
+			fyne.NewMenuItemSeparator(),
+			fyne.NewMenuItem("Start Server", func() {
+				a.startServerAsync("tray")
+			}),
+			fyne.NewMenuItem("Stop Server", func() {
+				a.stopServerAsync("tray")
+			}),
+			fyne.NewMenuItemSeparator(),
+			fyne.NewMenuItem("Exit", func() {
+				a.shutdown(true)
+			}))
+		desk.SetSystemTrayMenu(m)
+	}
+
 	fmt.Println("Entering ShowAndRun...")
 	a.window.ShowAndRun()
 	fmt.Println("Window closed")
@@ -559,8 +578,14 @@ func (a *App) refreshConnectionSummary() {
 // ============================================================
 
 func (a *App) onWindowClose() {
-	utils.LogInfo("Window close requested; shutting down immediately")
-	go a.shutdown(true)
+	if a.cfg.ShowTrayIcon {
+		utils.LogInfo("Window close intercepted; hiding to system tray. Right-click tray icon to exit completely.")
+		a.fyneApp.SendNotification(fyne.NewNotification("Air Mouse Server", "Running in background. Right-click tray icon to exit."))
+		a.window.Hide()
+	} else {
+		utils.LogInfo("Window close requested; shutting down immediately")
+		go a.shutdown(true)
+	}
 }
 
 func (a *App) Stop() {
