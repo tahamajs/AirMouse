@@ -157,7 +157,12 @@ func init() {
 	keyTap = func(key string) {
 		if keyCode, ok := linuxKeyMap[key]; ok {
 			_ = exec.Command("xdotool", "key", keyCode).Run()
+		} else {
+			_ = exec.Command("xdotool", "key", key).Run()
 		}
+	}
+	typeText = func(txt string) {
+		_ = exec.Command("xdotool", "type", txt).Run()
 	}
 	zoomIn = func() {
 		_ = exec.Command("xdotool", "key", "ctrl+plus").Run()

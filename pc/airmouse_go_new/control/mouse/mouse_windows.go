@@ -32,6 +32,9 @@ func (m *mouseController) executeClick(button string) {
 	} else if button == "right" {
 		mouseEvent.Call(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
 		mouseEvent.Call(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
+	} else if button == "middle" {
+		mouseEvent.Call(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0)
+		mouseEvent.Call(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0)
 	}
 }
 

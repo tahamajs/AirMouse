@@ -3,6 +3,8 @@
 package sysaction
 
 import (
+	"fmt"
+	"os/exec"
 	"syscall"
 	"time"
 )
@@ -170,7 +172,14 @@ func init() {
 			keybdEvent(vk, KEYEVENTF_KEYDOWN)
 			time.Sleep(10 * time.Millisecond)
 			keybdEvent(vk, KEYEVENTF_KEYUP)
+		} else {
+			cmd := fmt.Sprintf("[System.Windows.Forms.SendKeys]::SendWait('%s')", key)
+			_ = exec.Command("powershell", "-Command", cmd).Run()
 		}
+	}
+	typeText = func(txt string) {
+		cmd := fmt.Sprintf("[System.Windows.Forms.SendKeys]::SendWait('%s')", txt)
+		_ = exec.Command("powershell", "-Command", cmd).Run()
 	}
 	zoomIn = func() {
 		keyCombination("plus", "ctrl")

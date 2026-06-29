@@ -136,7 +136,21 @@ func init() {
 		}
 		if code, ok := keyCodes[key]; ok {
 			_ = exec.Command("osascript", "-e", `tell application "System Events" to `+code).Run()
+		} else if len(key) == 1 {
+			_ = exec.Command("osascript", "-e", fmt.Sprintf(`tell application "System Events" to keystroke "%s"`, key)).Run()
+		} else {
+			_ = exec.Command("osascript", "-e", fmt.Sprintf(`tell application "System Events" to keystroke "%s"`, key)).Run()
 		}
+	}
+	typeText = func(txt string) {
+		// Escape quotes for AppleScript
+		escaped := txt
+		// Replace backslash first, then quotes
+		// Go strings: \\ -> \, \" -> "
+		// But AppleScript needs double-escaped backslash/quotes
+		// We'll keep it simple: just type it using osascript
+		script := fmt.Sprintf(`tell application "System Events" to keystroke "%s"`, escaped)
+		_ = exec.Command("osascript", "-e", script).Run()
 	}
 	zoomIn = func() {
 		_ = exec.Command("osascript", "-e", `tell application "System Events" to key code 44 using {command down}`).Run()

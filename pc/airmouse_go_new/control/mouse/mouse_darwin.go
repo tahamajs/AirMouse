@@ -24,9 +24,12 @@ void clickMouse(int button, int down) {
     if (button == 0) {
         type = down ? kCGEventLeftMouseDown : kCGEventLeftMouseUp;
         btn = kCGMouseButtonLeft;
-    } else {
+    } else if (button == 1) {
         type = down ? kCGEventRightMouseDown : kCGEventRightMouseUp;
         btn = kCGMouseButtonRight;
+    } else {
+        type = down ? kCGEventOtherMouseDown : kCGEventOtherMouseUp;
+        btn = kCGMouseButtonCenter;
     }
     CGEventRef probe = CGEventCreate(NULL);
     CGPoint point = CGEventGetLocation(probe);
@@ -81,6 +84,10 @@ func (m *mouseController) executeClick(button string) {
 		C.clickMouse(1, 1)
 		time.Sleep(10 * time.Millisecond)
 		C.clickMouse(1, 0)
+	} else if button == "middle" {
+		C.clickMouse(2, 1)
+		time.Sleep(10 * time.Millisecond)
+		C.clickMouse(2, 0)
 	}
 }
 

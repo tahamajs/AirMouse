@@ -32,8 +32,9 @@ const (
 	REL_X     = 0x00
 	REL_Y     = 0x01
 	REL_WHEEL = 0x08
-	BTN_LEFT  = 0x110
-	BTN_RIGHT = 0x111
+	BTN_LEFT   = 0x110
+	BTN_RIGHT  = 0x111
+	BTN_MIDDLE = 0x112
 )
 
 func (m *mouseController) executeMove(dx, dy float64) {
@@ -57,6 +58,8 @@ func (m *mouseController) executeClick(button string) {
 	btn := BTN_LEFT
 	if button == "right" {
 		btn = BTN_RIGHT
+	} else if button == "middle" {
+		btn = BTN_MIDDLE
 	}
 	events := []inputEvent{
 		{Type: EV_KEY, Code: uint16(btn), Value: 1},
