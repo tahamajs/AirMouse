@@ -134,6 +134,8 @@ func (s *ProtocolServer) Start() error {
 	if cfg.EnableWebSocket {
 		utils.LogInfo("Protocol start: initializing WebSocket server port=%d", cfg.WebSocketPort)
 		s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr, s.proxMgr)
+		s.wsServer.GlobalApproveDevice = s.ApproveDevice
+		s.wsServer.GlobalRejectDevice = s.RejectDevice
 		if err := s.wsServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("WebSocket: %w", err))
 			utils.LogError("WebSocket server start failed: %v", err)

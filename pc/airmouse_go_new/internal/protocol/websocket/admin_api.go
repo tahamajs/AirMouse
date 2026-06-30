@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/tahamajs/airmouse_go_new/internal/config"
+	"github.com/tahamajs/airmouse_go_new/internal/device"
 )
 
 // handleAPIStats returns system statistics
@@ -23,17 +26,24 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		clicks = c
 		scrolls = scr
 	}
-	
-	var devicesCount int
+
+	var active, pending int
 	if s.deviceMgr != nil {
-		devicesCount = len(s.deviceMgr.GetActiveDevices())
+		for _, d := range s.deviceMgr.GetAllDevices() {
+			if d.Status == device.StatusConnected || d.Status == device.StatusActive {
+				active++
+			} else if d.Status == device.StatusPendingApproval {
+				pending++
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"clicks":  clicks,
 		"scrolls": scrolls,
-		"devices": devicesCount,
+		"devices": active,
+		"pending": pending,
 		"uptime":  uptime,
 		"quality": map[string]interface{}{
 			"level":   "excellent",
@@ -44,7 +54,7 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleAPIDevices returns the list of connected devices
+// handleAPIDevices returns the list of all devices
 func (s *Server) handleAPIDevices(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -53,17 +63,107 @@ func (s *Server) handleAPIDevices(w http.ResponseWriter, r *http.Request) {
 
 	var devicesList []map[string]interface{}
 	if s.deviceMgr != nil {
-		for _, d := range s.deviceMgr.GetActiveDevices() {
+		for _, d := range s.deviceMgr.GetAllDevices() {
 			devicesList = append(devicesList, map[string]interface{}{
 				"id":        d.ID,
 				"name":      d.Name,
 				"type":      d.Type,
-				"connected": true,
-				"ip":        "Network",
+				"status":    string(d.Status),
+				"ip":        d.IP,
+				"connected": d.Status == device.StatusConnected || d.Status == device.StatusActive,
 			})
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(devicesList)
+}
+
+type deviceRequest struct {
+	ID string `json:"id"`
+}
+
+// handleDeviceApprove approves a pending device
+func (s *Server) handleDeviceApprove(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req deviceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if s.GlobalApproveDevice != nil {
+		err := s.GlobalApproveDevice(req.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+}
+
+// handleDeviceReject rejects a pending device
+func (s *Server) handleDeviceReject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req deviceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if s.GlobalRejectDevice != nil {
+		err := s.GlobalRejectDevice(req.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+}
+
+// handleAPIConfig returns or updates config
+func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		cfg := config.Get()
+		json.NewEncoder(w).Encode(cfg)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var newCfg config.Config
+		if err := json.NewDecoder(r.Body).Decode(&newCfg); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		currentCfg := config.Get()
+		
+		// Update configurable fields
+		currentCfg.Sensitivity = newCfg.Sensitivity
+		currentCfg.EnableAISmoothing = newCfg.EnableAISmoothing
+		currentCfg.EnableHumanizer = newCfg.EnableHumanizer
+		currentCfg.ServerName = newCfg.ServerName
+		currentCfg.AuthEnabled = newCfg.AuthEnabled
+		
+		config.Save(currentCfg)
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
