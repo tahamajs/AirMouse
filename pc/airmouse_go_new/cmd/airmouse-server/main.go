@@ -18,7 +18,7 @@ import (
 	"airmouse-go/internal/logger"
 	"airmouse-go/internal/protocol"
 	"airmouse-go/internal/proximity"
-	"airmouse-go/internal/ui"
+	"os/exec"
 )
 
 var (
@@ -110,67 +110,39 @@ func main() {
 
 	wireLifecycleLogging(protocolServer, deviceMgr)
 
-	// Create UI
-	appUI := ui.NewApp(cfg, protocolServer, mouseCtrl, deviceMgr)
-
 	// Context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go handleSignals(ctx, appUI, protocolServer, deviceMgr, proxMgr, fusion, cfg)
+	go handleSignals(ctx, protocolServer, deviceMgr, proxMgr, fusion, cfg)
 
 	logger.Info("Application started successfully")
 	logger.Info("WebSocket server will listen on port %d", cfg.WebSocketPort)
 	logger.Info("TCP server will listen on port %d", cfg.Port)
 	logger.Info("UDP discovery will listen on port %d", cfg.UDPPort)
 	logger.Info("Active protocols: %v", protocolServer.GetActiveProtocols())
-	// Auto-detect non-GUI environments (e.g. Linux display server absent or SSH connection)
-	if !headless && runtime.GOOS != "windows" {
-		if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
-			if runtime.GOOS == "linux" || runtime.GOOS == "freebsd" || runtime.GOOS == "openbsd" {
-				logger.Info("No display server detected. Auto-falling back to headless mode.")
-				headless = true
-			}
-		}
-		if (os.Getenv("SSH_CLIENT") != "" || os.Getenv("SSH_TTY") != "") && os.Getenv("DISPLAY") == "" {
-			logger.Info("SSH session detected without X11 forwarding. Auto-falling back to headless mode.")
-			headless = true
-		}
+
+	logger.Info("Starting server protocols...")
+	if err := protocolServer.Start(); err != nil {
+		logger.Fatal("Failed to start protocol server: %v", err)
+	}
+	logger.Info("Server started successfully")
+
+	// Automatically open the Web Dashboard in the default browser (unless headless is forced)
+	if !headless {
+		dashboardURL := fmt.Sprintf("http://localhost:%d", cfg.WebSocketPort)
+		logger.Info("Opening Web Dashboard at %s", dashboardURL)
+		openBrowser(dashboardURL)
 	}
 
-	if headless {
-		logger.Info("Running in headless mode...")
-		if err := protocolServer.Start(); err != nil {
-			logger.Fatal("Failed to start protocol server: %v", err)
-		}
-		logger.Info("Headless servers started successfully")
+	logger.Info("Air Mouse Pro Server is running. Press Ctrl+C to stop.")
 
-		// Wait for SIGINT/SIGTERM
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		<-sigChan
+	// Wait for SIGINT/SIGTERM
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
 
-		logger.Info("Shutting down headless server...")
-		protocolServer.Stop()
-		deviceMgr.Stop()
-		if proxMgr != nil && fusion != nil {
-			configDir := filepath.Dir(cfg.ConfigPath)
-			statePath := filepath.Join(configDir, "proximity_state.json")
-			_ = fusion.SaveState(statePath)
-		}
-		logger.Info("Shutdown complete")
-		os.Exit(0)
-	}
-
-	logger.Info("Launching desktop UI window...")
-
-	// Run the UI – this blocks until window closes
-	if err := appUI.Run(); err != nil {
-		logger.Error("Application error: %v", err)
-		os.Exit(1)
-	}
-
-	logger.Info("Shutting down...")
+	logger.Info("Shutting down server...")
 	protocolServer.Stop()
 	deviceMgr.Stop()
 	if proxMgr != nil && fusion != nil {
@@ -179,6 +151,23 @@ func main() {
 		_ = fusion.SaveState(statePath)
 	}
 	logger.Info("Shutdown complete")
+}
+
+func openBrowser(url string) {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		logger.Warn("Failed to open browser automatically: %v", err)
+	}
 }
 
 func printBanner() {
@@ -245,7 +234,7 @@ func wireLifecycleLogging(server *protocol.ProtocolServer, deviceMgr *device.Dev
 	}
 }
 
-func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.ProtocolServer,
+func handleSignals(ctx context.Context, server *protocol.ProtocolServer,
 	deviceMgr *device.DeviceManager, proxMgr *proximity.Manager,
 	fusion *proximity.RSSIFusion, cfg *config.Config) {
 
@@ -288,10 +277,6 @@ func handleSignals(ctx context.Context, appUI *ui.App, server *protocol.Protocol
 					configDir := filepath.Dir(cfg.ConfigPath)
 					statePath := filepath.Join(configDir, "proximity_state.json")
 					_ = fusion.SaveState(statePath)
-				}
-				if appUI != nil {
-					logger.Info("Closing UI...")
-					appUI.Stop()
 				}
 				logger.Info("Shutdown complete")
 				logger.Close()
