@@ -78,6 +78,9 @@ type Server struct {
 	fileSessions map[string]*fileSession
 	latestAndroidScreenFrame     []byte
 	latestAndroidScreenFrameTime time.Time
+	
+	GlobalApproveDevice func(deviceID string) error
+	GlobalRejectDevice  func(deviceID string) error
 }
 
 type fileSession struct {
