@@ -199,7 +199,7 @@ func (s *ProtocolServer) Start() error {
 // RejectDevice rejects a pending device and removes it.
 func (s *ProtocolServer) RejectDevice(deviceID string) error {
 	if s.deviceMgr != nil {
-		s.deviceMgr.RemoveDevice(deviceID)
+		s.deviceMgr.UnregisterDevice(deviceID)
 	}
 	return nil
 }
