@@ -118,7 +118,9 @@ func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", s.handleWebSocket)
 	mux.HandleFunc("/health", s.handleHealth)
-	mux.HandleFunc("/stats", s.handleStats)
+	mux.HandleFunc("/stats", s.handleStats) // legacy
+	mux.HandleFunc("/api/stats", s.handleAPIStats)
+	mux.HandleFunc("/api/devices", s.handleAPIDevices)
 	mux.HandleFunc("/upload", s.handleHTTPUpload)
 	mux.HandleFunc("/download/", s.handleHTTPDownload)
 	mux.HandleFunc("/mirror", s.handleScreenMirror)
