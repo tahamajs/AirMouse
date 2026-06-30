@@ -29,6 +29,7 @@ type Manager struct {
 	lockInProgress    bool
 	unlockInProgress  bool
 	callbacks         []func(event ProximityEvent)
+	fusion            *RSSIFusion
 }
 
 type ProximityUpdate struct {
@@ -143,7 +144,7 @@ func (m *Manager) ProcessUpdate(update ProximityUpdate) {
 		log.Printf("Proximity: device %s changed to near=%v (distance=%.2fm, confidence=%.2f)",
 			update.DeviceID, dev.IsNear, update.Distance, dev.Confidence)
 
-		m.triggerEvent(ProximityEvent{
+		m.triggerEventLocked(ProximityEvent{
 			Type:      eventType,
 			DeviceID:  update.DeviceID,
 			Distance:  update.Distance,
@@ -351,6 +352,15 @@ func (m *Manager) triggerEvent(event ProximityEvent) {
 	callbacks := make([]func(ProximityEvent), len(m.callbacks))
 	copy(callbacks, m.callbacks)
 	m.mu.RUnlock()
+
+	for _, cb := range callbacks {
+		go cb(event)
+	}
+}
+
+func (m *Manager) triggerEventLocked(event ProximityEvent) {
+	callbacks := make([]func(ProximityEvent), len(m.callbacks))
+	copy(callbacks, m.callbacks)
 
 	for _, cb := range callbacks {
 		go cb(event)

@@ -203,7 +203,11 @@ func emit(level Level, format string, args ...interface{}) {
 	}
 
 	if level == LevelFatal {
-		_ = defaultLogger.out.(io.Closer).Close()
+		if closer, ok := defaultLogger.out.(io.Closer); ok {
+			_ = closer.Close()
+		} else if defaultLogger.file != nil {
+			_ = defaultLogger.file.Close()
+		}
 		os.Exit(1)
 	}
 }

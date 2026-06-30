@@ -1,7 +1,9 @@
 package proximity
 
 import (
+	"encoding/json"
 	"math"
+	"os"
 )
 
 type RSSIFusion struct {
@@ -15,8 +17,7 @@ type RSSIFusion struct {
 func (m *Manager) SetRSSIFusion(fusion *RSSIFusion) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	// store it if you have a field, e.g., m.fusion = fusion
-	// For now, just a no-op.
+	m.fusion = fusion
 }
 
 func NewRSSIFusion(txPower int32, envFactor float64) *RSSIFusion {
@@ -126,12 +127,37 @@ func (kf *KalmanFilter) Reset() {
 	kf.X = -60
 }
 
-// LoadState is a stub – implement actual state loading if needed.
+// LoadState loads the RSSI fusion state from the specified path.
 func (rf *RSSIFusion) LoadState(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var state struct {
+		TxPower   int32   `json:"tx_power"`
+		EnvFactor float64 `json:"env_factor"`
+	}
+	if err := json.Unmarshal(data, &state); err != nil {
+		return err
+	}
+	rf.txPower = state.TxPower
+	rf.envFactor = state.EnvFactor
 	return nil
 }
 
-// SaveState is a stub – implement actual state saving if needed.
+// SaveState saves the RSSI fusion state to the specified path.
 func (rf *RSSIFusion) SaveState(path string) error {
-	return nil
+	state := struct {
+		TxPower   int32   `json:"tx_power"`
+		EnvFactor float64 `json:"env_factor"`
+	}{
+		TxPower:   rf.txPower,
+		EnvFactor: rf.envFactor,
+	}
+	data, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
 }
+
