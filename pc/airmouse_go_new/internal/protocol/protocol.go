@@ -133,14 +133,15 @@ func (s *ProtocolServer) Start() error {
 	// Start WebSocket server (pass proximity manager if available)
 	if cfg.EnableWebSocket {
 		utils.LogInfo("Protocol start: initializing WebSocket server port=%d", cfg.WebSocketPort)
-		s.wsServer = websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr, s.proxMgr)
-		s.wsServer.GlobalApproveDevice = s.ApproveDevice
-		s.wsServer.GlobalRejectDevice = s.RejectDevice
+		ws := websocketpkg.NewServer(cfg.WebSocketPort, s.mouseCtrl, s.deviceMgr, s.authMgr, s.proxMgr)
+		ws.GlobalApproveDevice = s.ApproveDevice
+		ws.GlobalRejectDevice = s.RejectDevice
+		s.wsServer = ws
 		if err := s.wsServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("WebSocket: %w", err))
 			utils.LogError("WebSocket server start failed: %v", err)
 		} else {
-			utils.LogInfo("WebSocket server started on port %d", cfg.WebSocketPort)
+			utils.LogInfo("Protocol start: WebSocket server started")
 		}
 	}
 
@@ -191,6 +192,14 @@ func (s *ProtocolServer) Start() error {
 
 	if len(errors) > 0 {
 		return fmt.Errorf("partial start with errors: %v", errors)
+	}
+	return nil
+}
+
+// RejectDevice rejects a pending device and removes it.
+func (s *ProtocolServer) RejectDevice(deviceID string) error {
+	if s.deviceMgr != nil {
+		s.deviceMgr.RemoveDevice(deviceID)
 	}
 	return nil
 }
