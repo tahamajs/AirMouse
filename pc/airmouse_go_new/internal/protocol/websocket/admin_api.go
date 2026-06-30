@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tahamajs/airmouse_go_new/internal/config"
-	"github.com/tahamajs/airmouse_go_new/internal/device"
+	"airmouse-go/internal/config"
+	"airmouse-go/internal/device"
 )
 
 // handleAPIStats returns system statistics
@@ -30,7 +30,7 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 	var active, pending int
 	if s.deviceMgr != nil {
 		for _, d := range s.deviceMgr.GetAllDevices() {
-			if d.Status == device.StatusConnected || d.Status == device.StatusActive {
+			if d.Status == device.StatusConnected {
 				active++
 			} else if d.Status == device.StatusPendingApproval {
 				pending++
@@ -69,8 +69,8 @@ func (s *Server) handleAPIDevices(w http.ResponseWriter, r *http.Request) {
 				"name":      d.Name,
 				"type":      d.Type,
 				"status":    string(d.Status),
-				"ip":        d.IP,
-				"connected": d.Status == device.StatusConnected || d.Status == device.StatusActive,
+				"ip":        d.IPAddress,
+				"connected": d.Status == device.StatusConnected,
 			})
 		}
 	}
@@ -158,7 +158,7 @@ func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
 		currentCfg.ServerName = newCfg.ServerName
 		currentCfg.AuthEnabled = newCfg.AuthEnabled
 		
-		config.Save(currentCfg)
+		currentCfg.Save()
 		
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
