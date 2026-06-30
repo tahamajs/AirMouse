@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Air Mouse Pro Dashboard</title>
+    <title>Air Mouse Pro Server</title>
     <link rel="stylesheet" href="/static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -13,10 +13,11 @@
         <div class="glow-orb orb-1"></div>
         <div class="glow-orb orb-2"></div>
         <div class="glow-orb orb-3"></div>
+        <div class="grid-overlay"></div>
     </div>
     
     <div class="app-container">
-        <!-- Sidebar Navigation -->
+        <!-- Sidebar -->
         <aside class="sidebar glass-panel">
             <div class="logo">
                 <div class="logo-icon"><span class="material-icons-round">mouse</span></div>
@@ -34,6 +35,7 @@
                 <a href="#" class="nav-item" data-page="devices">
                     <span class="material-icons-round">important_devices</span>
                     <span class="nav-text">Devices</span>
+                    <span class="nav-badge hidden" id="pendingNavBadge">0</span>
                 </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <span class="material-icons-round">tune</span>
@@ -91,25 +93,16 @@
 
                     <div class="main-panels">
                         <div class="panel glass-panel chart-panel">
-                            <h3>Performance Quality</h3>
+                            <h3>Live Connection Quality</h3>
                             <div class="quality-display">
                                 <div class="quality-indicator" id="qualityIndicator">Excellent</div>
                                 <div class="quality-metrics">
-                                    <span id="qualityLatency">Latency: 5ms</span>
-                                    <span id="qualitySignal">Signal: Strong</span>
+                                    <span id="qualityLatency"><span class="material-icons-round small">speed</span> Latency: 5ms</span>
+                                    <span id="qualitySignal"><span class="material-icons-round small">wifi</span> Signal: Strong</span>
                                 </div>
                             </div>
-                            <div class="aesthetic-chart">
-                                <div class="bar" style="height: 40%"></div>
-                                <div class="bar" style="height: 60%"></div>
-                                <div class="bar" style="height: 50%"></div>
-                                <div class="bar" style="height: 80%"></div>
-                                <div class="bar" style="height: 70%"></div>
-                                <div class="bar" style="height: 90%"></div>
-                                <div class="bar" style="height: 60%"></div>
-                                <div class="bar" style="height: 75%"></div>
-                                <div class="bar" style="height: 85%"></div>
-                                <div class="bar" style="height: 95%"></div>
+                            <div class="live-activity-monitor">
+                                <!-- JS injected bars -->
                             </div>
                         </div>
                         <div class="panel glass-panel instructions-panel">
@@ -117,28 +110,40 @@
                             <div class="instruction-steps">
                                 <div class="step">
                                     <div class="step-num">1</div>
-                                    <p>Open the Air Mouse Pro app on your Android device.</p>
+                                    <p>Open Air Mouse Pro on your Android device.</p>
                                 </div>
                                 <div class="step">
                                     <div class="step-num">2</div>
-                                    <p>Ensure both your Mac and Android are on the same Wi-Fi network.</p>
+                                    <p>Connect to the same Wi-Fi network.</p>
                                 </div>
                                 <div class="step">
                                     <div class="step-num">3</div>
-                                    <p>The Android app will auto-discover this server. Tap to connect.</p>
+                                    <p>Approve the device in the <b>Devices</b> tab.</p>
                                 </div>
                             </div>
-                            <div class="status-badge pulse">Listening for connections...</div>
+                            <div class="status-badge pulse">Waiting for connections...</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Devices Page -->
                 <div id="devicesPage" class="page">
-                    <div class="panel glass-panel devices-panel">
+                    <!-- Pending Approvals -->
+                    <div class="panel glass-panel devices-panel hidden" id="pendingDevicesPanel">
+                        <div class="panel-header alert-header">
+                            <h3>Pending Approvals</h3>
+                            <span class="badge yellow-badge" id="pendingCount">0 Pending</span>
+                        </div>
+                        <div class="devices-grid" id="pendingDevicesGrid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Active Devices -->
+                    <div class="panel glass-panel devices-panel" style="margin-top: 24px;">
                         <div class="panel-header">
                             <h3>Connected Devices</h3>
-                            <button class="btn-primary" id="refreshDevicesBtn">
+                            <button class="btn-icon" id="refreshDevicesBtn" title="Refresh">
                                 <span class="material-icons-round">refresh</span>
                             </button>
                         </div>
@@ -154,28 +159,17 @@
                 <!-- Settings Page -->
                 <div id="settingsPage" class="page">
                     <div class="panel glass-panel settings-panel">
-                        <h3>Server Settings</h3>
-                        <p class="settings-desc">Configuration is managed via the config file on the server. Restart the server to apply changes.</p>
-                        <div class="setting-row">
-                            <div class="setting-title">
-                                <span class="material-icons-round">palette</span>
-                                <span>Web UI Theme</span>
-                            </div>
-                            <span class="badge purple-badge">Dark Glassmorphism</span>
+                        <div class="panel-header">
+                            <h3>Server Settings</h3>
+                            <button class="btn-primary" id="saveSettingsBtn">Save Config</button>
                         </div>
-                        <div class="setting-row">
-                            <div class="setting-title">
-                                <span class="material-icons-round">router</span>
-                                <span>Protocol Ports</span>
+                        
+                        <div class="settings-form" id="settingsForm">
+                            <div class="loading-state">
+                                <div class="spinner"></div>
+                                <span>Loading settings...</span>
                             </div>
-                            <span class="badge blue-badge">WS: 8081 | TCP: 8080 | UDP: 8082</span>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-title">
-                                <span class="material-icons-round">security</span>
-                                <span>Authentication</span>
-                            </div>
-                            <span class="badge green-badge">Enabled</span>
+                            <!-- Injected by JS -->
                         </div>
                     </div>
                 </div>
