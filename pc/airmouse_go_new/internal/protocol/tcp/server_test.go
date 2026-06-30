@@ -61,6 +61,9 @@ func (m *MockMouseController) EnableMLPrediction(enabled bool)              {}
 func (m *MockMouseController) SetMLBlendFactor(factor float64)              {}
 func (m *MockMouseController) ResetStats()                                  {}
 func (m *MockMouseController) GetPosition() (x, y float64)                  { return 0, 0 }
+func (m *MockMouseController) MouseDown(button string)                       {}
+func (m *MockMouseController) MouseUp(button string)                         {}
+
 
 func TestTCPServerHandshakeAndControl(t *testing.T) {
 	// Initialize configuration

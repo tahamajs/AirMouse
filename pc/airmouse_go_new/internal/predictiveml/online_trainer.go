@@ -9,6 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -218,9 +221,51 @@ func (t *OnlineTrainer) writeTrainingCSV(samples []TrainingSample, path string) 
 
 // parseLossFromOutput extracts loss from the Python script output.
 func (t *OnlineTrainer) parseLossFromOutput(output string) float64 {
-	// Simple stub – in production, parse JSON output from the script.
-	var loss float64 = 0.01
-	return loss
+	// Try parsing line by line to find loss values.
+	lines := strings.Split(output, "\n")
+	re := regexp.MustCompile(`(?i)"loss"\s*[:=]\s*([0-9.]+)`)
+	reText := regexp.MustCompile(`(?i)\bloss\b\s*[:=]\s*([0-9.]+)`)
+	for _, line := range lines {
+		// First try json check
+		var data map[string]any
+		if err := json.Unmarshal([]byte(line), &data); err == nil {
+			if lossVal, ok := data["loss"]; ok {
+				if lf, err := toFloat64Helper(lossVal); err == nil {
+					return lf
+				}
+			}
+		}
+		// Try regex match
+		if match := re.FindStringSubmatch(line); len(match) > 1 {
+			if lf, err := strconv.ParseFloat(match[1], 64); err == nil {
+				return lf
+			}
+		}
+		if match := reText.FindStringSubmatch(line); len(match) > 1 {
+			if lf, err := strconv.ParseFloat(match[1], 64); err == nil {
+				return lf
+			}
+		}
+	}
+	return 0.01
+}
+
+func toFloat64Helper(v any) (float64, error) {
+	switch val := v.(type) {
+	case float64:
+		return val, nil
+	case float32:
+		return float64(val), nil
+	case int:
+		return float64(val), nil
+	case int64:
+		return float64(val), nil
+	case string:
+		return strconv.ParseFloat(val, 64)
+	default:
+		return 0, fmt.Errorf("unknown type")
+	}
+}
 }
 
 // ForceTraining triggers immediate training with the current buffer.
