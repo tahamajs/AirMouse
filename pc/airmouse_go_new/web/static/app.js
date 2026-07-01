@@ -86,6 +86,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     pendingNavBadge.classList.add('hidden');
                 }
 
+                // Render Server Connection Info
+                const serverIPsEl = document.getElementById('serverIPs');
+                const serverWSPortEl = document.getElementById('serverWSPort');
+                const serverOtherPortsEl = document.getElementById('serverOtherPorts');
+                if (serverIPsEl && data.ips) {
+                    serverIPsEl.textContent = data.ips.join(' | ');
+                }
+                if (serverWSPortEl && data.ports) {
+                    serverWSPortEl.textContent = data.ports.websocket || '-';
+                }
+                if (serverOtherPortsEl && data.ports) {
+                    serverOtherPortsEl.textContent = `${data.ports.tcp || '-'} TCP / ${data.ports.udp || '-'} UDP`;
+                }
+
                 // Update activity chart based on clicks+scrolls delta to make it feel alive
                 const bars = document.querySelectorAll('.activity-bar');
                 const activityLevel = data.devices > 0 ? (Math.random() * 60 + 20) : (Math.random() * 10 + 5);

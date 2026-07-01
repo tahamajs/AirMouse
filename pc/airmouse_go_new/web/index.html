@@ -122,6 +122,26 @@
                                 </div>
                             </div>
                             <div class="status-badge pulse">Waiting for connections...</div>
+                            
+                            <div class="server-details" style="margin-top: 24px; border-top: 1px solid var(--glass-border); padding-top: 20px; display: flex; flex-direction: column; gap: 12px;">
+                                <h4 style="font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin: 0;">
+                                    <span class="material-icons-round" style="font-size: 18px; color: var(--accent-blue);">dns</span> Server Connection Info
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px;">
+                                        <span style="color: var(--text-secondary);">IP Address(es)</span>
+                                        <span style="color: var(--accent-blue); font-weight: 600; font-family: monospace;" id="serverIPs">Loading...</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px;">
+                                        <span style="color: var(--text-secondary);">WebSocket Port</span>
+                                        <span style="color: var(--text-primary); font-weight: 600; font-family: monospace;" id="serverWSPort">-</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px;">
+                                        <span style="color: var(--text-secondary);">TCP / UDP Ports</span>
+                                        <span style="color: var(--text-primary); font-weight: 600; font-family: monospace;" id="serverOtherPorts">-</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

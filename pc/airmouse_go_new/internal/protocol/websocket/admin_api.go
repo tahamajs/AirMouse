@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"time"
 
@@ -38,6 +39,7 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	cfg := config.Get()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"clicks":  clicks,
@@ -45,6 +47,12 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		"devices": active,
 		"pending": pending,
 		"uptime":  uptime,
+		"ips":     getLocalIPs(),
+		"ports": map[string]int{
+			"websocket": cfg.WebSocketPort,
+			"tcp":       cfg.Port,
+			"udp":       cfg.UDPPort,
+		},
 		"quality": map[string]interface{}{
 			"level":   "excellent",
 			"text":    "Excellent",
@@ -52,6 +60,27 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 			"signal":  "Strong",
 		},
 	})
+}
+
+// getLocalIPs returns non-loopback IPv4 addresses
+func getLocalIPs() []string {
+	var ips []string
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ips
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				ips = append(ips, ipnet.IP.String())
+			}
+		}
+	}
+	// Fallback to localhost if no active network IPs found
+	if len(ips) == 0 {
+		ips = append(ips, "127.0.0.1")
+	}
+	return ips
 }
 
 // handleAPIDevices returns the list of all devices
