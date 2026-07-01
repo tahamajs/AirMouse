@@ -58,6 +58,7 @@ type WSClient struct {
 	IP          string
 	Approved    atomic.Bool
 	Mode        string
+	Theme       string
 }
 
 // ------------------------------------------------------------
@@ -583,6 +584,10 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			mode, _ := payload["mode"].(string)
 			client.Mode = mode
 			utils.LogInfo("WebSocket mode changed: device=%s mode=%s", client.ID, mode)
+		case "theme_change":
+			theme, _ := payload["theme"].(string)
+			client.Theme = theme
+			utils.LogInfo("WebSocket theme changed: device=%s theme=%s", client.ID, theme)
 		case "start", "touchpad_start", "resume", "resume_movement":
 			common.SetMovementPaused(false)
 			utils.LogInfo("Movement resumed by device: %s command=%s", client.ID, command)
