@@ -122,6 +122,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     activeModeEl.textContent = data.active_mode;
                 }
 
+                // Theme synchronization from connected Android device
+                if (data.active_theme) {
+                    const themeMap = { 'light': 'theme-light', 'pure_black': 'theme-pure-black', 'high_contrast': 'theme-high-contrast' };
+                    const themeClass = themeMap[data.active_theme] || '';
+                    const currentThemeClasses = Array.from(document.body.classList).filter(c => c.startsWith('theme-'));
+                    const newClass = themeClass;
+                    if (currentThemeClasses.join(' ') !== newClass) {
+                        currentThemeClasses.forEach(c => document.body.classList.remove(c));
+                        if (newClass) document.body.classList.add(newClass);
+                    }
+                }
+
                 // Live Logging comparisons
                 if (lastClicks !== null && data.clicks > lastClicks) {
                     addConsoleLog(`Mouse clicks updated (+${data.clicks - lastClicks}) - Total: ${data.clicks}`);

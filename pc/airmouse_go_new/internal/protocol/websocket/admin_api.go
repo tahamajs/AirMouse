@@ -54,11 +54,14 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var activeMode string = "None"
+	var activeTheme string = "dark"
 	s.mu.RLock()
 	for _, client := range s.clients {
 		if client.Approved.Load() && client.Mode != "" {
 			activeMode = client.Mode
-			break
+		}
+		if client.Approved.Load() && client.Theme != "" {
+			activeTheme = client.Theme
 		}
 	}
 	s.mu.RUnlock()
@@ -76,6 +79,7 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		"last_device":      lastDeviceName,
 		"last_device_time": lastDeviceTime,
 		"active_mode":      activeMode,
+		"active_theme":     activeTheme,
 		"ports": map[string]int{
 			"websocket": cfg.WebSocketPort,
 			"tcp":       cfg.Port,
