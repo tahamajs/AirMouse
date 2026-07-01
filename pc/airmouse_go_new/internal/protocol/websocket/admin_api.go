@@ -94,12 +94,23 @@ func (s *Server) handleAPIDevices(w http.ResponseWriter, r *http.Request) {
 	if s.deviceMgr != nil {
 		for _, d := range s.deviceMgr.GetAllDevices() {
 			devicesList = append(devicesList, map[string]interface{}{
-				"id":        d.ID,
-				"name":      d.Name,
-				"type":      d.Type,
-				"status":    string(d.Status),
-				"ip":        d.IPAddress,
-				"connected": d.Status == device.StatusConnected,
+				"id":              d.ID,
+				"name":            d.Name,
+				"type":            d.Type,
+				"status":          string(d.Status),
+				"ip":              d.IPAddress,
+				"mac":             d.MACAddress,
+				"connected":       d.Status == device.StatusConnected,
+				"bytes_sent":      d.BytesSent,
+				"bytes_recv":      d.BytesRecv,
+				"msg_sent":        d.MessagesSent,
+				"msg_recv":        d.MessagesRecv,
+				"rssi":            d.RSSI,
+				"model":           d.DeviceModel,
+				"android_version": d.AndroidVersion,
+				"manufacturer":    d.Manufacturer,
+				"brand":           d.Brand,
+				"sdk":             d.SDKInt,
 			})
 		}
 	}
@@ -181,10 +192,29 @@ func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
 		currentCfg := config.Get()
 		
 		// Update configurable fields
-		currentCfg.Sensitivity = newCfg.Sensitivity
-		currentCfg.EnableAISmoothing = newCfg.EnableAISmoothing
-		currentCfg.EnableHumanizer = newCfg.EnableHumanizer
 		currentCfg.ServerName = newCfg.ServerName
+		currentCfg.Sensitivity = newCfg.Sensitivity
+		currentCfg.SmoothingEnabled = newCfg.SmoothingEnabled
+		currentCfg.AccelerationEnabled = newCfg.AccelerationEnabled
+		currentCfg.AccelerationFactor = newCfg.AccelerationFactor
+		currentCfg.MaxAcceleration = newCfg.MaxAcceleration
+		currentCfg.HapticEnabled = newCfg.HapticEnabled
+
+		currentCfg.EnableAISmoothing = newCfg.EnableAISmoothing
+		currentCfg.EnablePredictive = newCfg.EnablePredictive
+		currentCfg.PredictiveBlendFactor = newCfg.PredictiveBlendFactor
+		currentCfg.EnableJitterCompensation = newCfg.EnableJitterCompensation
+		currentCfg.JitterBlendFactor = newCfg.JitterBlendFactor
+
+		currentCfg.ClickThreshold = newCfg.ClickThreshold
+		currentCfg.ScrollThreshold = newCfg.ScrollThreshold
+		currentCfg.DoubleClickInterval = newCfg.DoubleClickInterval
+		currentCfg.RightClickTilt = newCfg.RightClickTilt
+
+		currentCfg.ProximityEnabled = newCfg.ProximityEnabled
+		currentCfg.BLEEnabled = newCfg.BLEEnabled
+		currentCfg.HIDProxyEnabled = newCfg.HIDProxyEnabled
+
 		currentCfg.AuthEnabled = newCfg.AuthEnabled
 		
 		currentCfg.Save()
