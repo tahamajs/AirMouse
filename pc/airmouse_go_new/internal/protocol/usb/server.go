@@ -11,6 +11,7 @@ import (
 
 	"airmouse-go/control/common"
 	"airmouse-go/control/mouse"
+	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/utils"
@@ -29,6 +30,8 @@ type SerialDevice struct {
 	VendorID    uint16
 	ProductID   uint16
 	BaudRate    int
+	Approved    bool
+	Fingerprint string
 }
 
 type Server struct {
@@ -257,6 +260,15 @@ func (s *Server) handleDevice(dev *SerialDevice) {
 			})
 			continue
 		}
+		s.mu.RLock()
+		approved := dev.Approved
+		s.mu.RUnlock()
+
+		if !approved && msg.Type != "hello" && msg.Type != "ping" {
+			utils.LogDebug("Ignoring USB %s while waiting for approval: path=%s", msg.Type, dev.Path)
+			continue
+		}
+
 		s.processMessage(dev, &msg)
 		s.triggerEvent(USBEvent{
 			Type:      "data",
@@ -318,6 +330,56 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 				s.mouse.Scroll(p.Delta)
 			}
 		}
+	case "control":
+		var payload map[string]interface{}
+		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+			command, _ := payload["command"].(string)
+			switch command {
+			case "mode_change":
+				mode, _ := payload["mode"].(string)
+				common.SetActiveMode(mode)
+				utils.LogInfo("USB mode changed: path=%s mode=%s", dev.Path, mode)
+			case "theme_change":
+				theme, _ := payload["theme"].(string)
+				common.SetActiveTheme(theme)
+				utils.LogInfo("USB theme changed: path=%s theme=%s", dev.Path, theme)
+			case "start", "touchpad_start", "resume", "resume_movement":
+				common.SetMovementPaused(false)
+				utils.LogInfo("Movement resumed by USB device: %s command=%s", dev.Path, command)
+			case "touchpad_stop", "pause", "pause_movement":
+				common.SetMovementPaused(true)
+				utils.LogInfo("Movement paused by USB device: %s command=%s", dev.Path, command)
+			case "show_desktop", "task_view", "switch_window", "lock_screen", "window_close", "zoom_in", "zoom_out", "zoom_reset",
+				"volume_up", "volume_down", "mute", "play_pause", "next_track", "prev_track", "stop",
+				"window_maximize", "window_minimize", "window_fullscreen",
+				"browser_back", "browser_forward", "browser_refresh", "browser_home":
+				go func(cmd string) {
+					if err := syscmd.ExecuteSystemCommand(cmd); err != nil {
+						utils.LogError("USB system command failed: path=%s command=%s err=%v", dev.Path, cmd, err)
+					} else {
+						utils.LogInfo("USB system command executed: path=%s command=%s", dev.Path, cmd)
+					}
+				}(command)
+			}
+		}
+	case "presentation":
+		var payload map[string]interface{}
+		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+			action, _ := payload["action"].(string)
+			utils.LogInfo("USB presentation action received: path=%s action=%s", dev.Path, action)
+			if s.mouse != nil {
+				switch action {
+				case "next":
+					s.mouse.KeyPress("page_down")
+				case "prev":
+					s.mouse.KeyPress("page_up")
+				case "fullscreen":
+					s.mouse.KeyPress("f5")
+				case "blank":
+					s.mouse.KeyPress("b")
+				}
+			}
+		}
 	case "hello":
 		utils.LogInfo("USB device identified: path=%s", dev.Path)
 		// Extract device info for fingerprint
@@ -347,13 +409,30 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 			fingerprint = dev.Path
 		}
 
-		// Check for auto‑approval
-		if s.deviceMgr != nil && config.Get().IsTrustedDevice(fingerprint) {
-			// Auto‑approve this trusted device
-			_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeUSB, hello["name"], map[string]string{
+		// Upsert the device first so it is registered in DeviceManager
+		if s.deviceMgr != nil {
+			name := "USB Device"
+			if len(msg.Payload) > 0 {
+				if err := json.Unmarshal(msg.Payload, &hello); err == nil && hello["name"] != "" {
+					name = hello["name"]
+				}
+			}
+			_ = s.deviceMgr.UpsertDevice(fingerprint, device.TypeUSB, name, map[string]string{
 				"fingerprint": fingerprint,
 				"path":        dev.Path,
 			})
+		}
+
+		s.mu.Lock()
+		dev.Fingerprint = fingerprint
+		s.mu.Unlock()
+
+		// Check for auto‑approval
+		if s.deviceMgr != nil && config.Get().IsTrustedDevice(fingerprint) {
+			s.mu.Lock()
+			dev.Approved = true
+			s.mu.Unlock()
+
 			_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusConnected)
 			cfg := config.Get()
 			response := fmt.Sprintf(`{"type":"welcome","payload":{"server":"%s","version":"%s"}}`+"\n",
@@ -372,6 +451,10 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 		}
 
 		// If not auto‑approved, send welcome as pending
+		s.mu.Lock()
+		dev.Approved = false
+		s.mu.Unlock()
+
 		cfg := config.Get()
 		response := fmt.Sprintf(`{"type":"welcome","payload":{"server":"%s","version":"%s"}}`+"\n",
 			cfg.ServerName, cfg.Version)
@@ -382,7 +465,7 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 			}
 		}
 		if s.deviceMgr != nil {
-			_ = s.deviceMgr.UpdateDeviceStatus(dev.Path, device.StatusPendingApproval)
+			_ = s.deviceMgr.UpdateDeviceStatus(fingerprint, device.StatusPendingApproval)
 		}
 	case "ping":
 		pong := []byte(`{"type":"pong"}` + "\n")
@@ -424,6 +507,56 @@ func (s *Server) SendMessage(devicePath string, msg interface{}) error {
 			_ = s.deviceMgr.UpdateDeviceActivity(devicePath, int64(len(data)+1), 0)
 		}
 	}
+	return err
+}
+
+func (s *Server) ApproveDevice(deviceID string) error {
+	s.mu.Lock()
+	var dev *SerialDevice
+	for _, d := range s.devices {
+		if d.Path == deviceID || d.Fingerprint == deviceID {
+			dev = d
+			break
+		}
+	}
+	s.mu.Unlock()
+
+	if dev == nil {
+		return fmt.Errorf("usb device not found: %s", deviceID)
+	}
+
+	s.mu.Lock()
+	if dev.Approved {
+		s.mu.Unlock()
+		return nil
+	}
+	dev.Approved = true
+	s.mu.Unlock()
+
+	cfg := config.Get()
+	response := fmt.Sprintf(`{"type":"welcome","payload":{"server":"%s","version":"%s"}}`+"\n",
+		cfg.ServerName, cfg.Version)
+	
+	s.mu.Lock()
+	var err error
+	if dev.File != nil {
+		_, err = dev.File.Write([]byte(response))
+		if err == nil {
+			dev.BytesSent += int64(len(response))
+			if s.deviceMgr != nil {
+				_ = s.deviceMgr.UpdateDeviceActivity(dev.Path, int64(len(response)), 0)
+			}
+		}
+	}
+	s.mu.Unlock()
+
+	if s.deviceMgr != nil {
+		_ = s.deviceMgr.UpdateDeviceStatus(dev.Fingerprint, device.StatusConnected)
+	}
+	common.SetMovementPaused(false)
+	common.ClearPause()
+	
+	utils.LogInfo("USB device approved: %s (fingerprint: %s)", dev.Path, dev.Fingerprint)
 	return err
 }
 

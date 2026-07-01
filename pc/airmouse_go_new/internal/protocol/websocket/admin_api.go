@@ -53,18 +53,8 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var activeMode string = "None"
-	var activeTheme string = "dark"
-	s.mu.RLock()
-	for _, client := range s.clients {
-		if client.Approved.Load() && client.Mode != "" {
-			activeMode = client.Mode
-		}
-		if client.Approved.Load() && client.Theme != "" {
-			activeTheme = client.Theme
-		}
-	}
-	s.mu.RUnlock()
+	activeMode := common.GetActiveMode()
+	activeTheme := common.GetActiveTheme()
 
 	cfg := config.Get()
 	w.Header().Set("Content-Type", "application/json")

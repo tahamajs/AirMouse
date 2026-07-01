@@ -396,6 +396,11 @@ func (s *ProtocolServer) ApproveDevice(deviceID string) error {
 			servers = append(servers, srv)
 		}
 	}
+	if s.usbServer != nil {
+		if srv, ok := s.usbServer.(approvableServer); ok {
+			servers = append(servers, srv)
+		}
+	}
 
 	var lastErr error
 	for _, srv := range servers {

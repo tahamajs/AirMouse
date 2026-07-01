@@ -583,10 +583,12 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		case "mode_change":
 			mode, _ := payload["mode"].(string)
 			client.Mode = mode
+			common.SetActiveMode(mode)
 			utils.LogInfo("WebSocket mode changed: device=%s mode=%s", client.ID, mode)
 		case "theme_change":
 			theme, _ := payload["theme"].(string)
 			client.Theme = theme
+			common.SetActiveTheme(theme)
 			utils.LogInfo("WebSocket theme changed: device=%s theme=%s", client.ID, theme)
 		case "start", "touchpad_start", "resume", "resume_movement":
 			common.SetMovementPaused(false)
