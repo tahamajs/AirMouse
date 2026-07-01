@@ -80,7 +80,7 @@ func (t *OnlineTrainer) AddSample(x, y float32) {
 	var dt float32 = 0.016 // assume 60 Hz
 
 	if t.lastSample != nil {
-		dt = float32(time.Since(t.lastSample.Timestamp).Seconds())
+		dt = float32(time.Since(time.Unix(0, t.lastSample.Timestamp)).Seconds())
 		if dt > 0 {
 			velocityX = (x - t.lastSample.X) / dt
 			velocityY = (y - t.lastSample.Y) / dt
@@ -265,7 +265,6 @@ func toFloat64Helper(v any) (float64, error) {
 	default:
 		return 0, fmt.Errorf("unknown type")
 	}
-}
 }
 
 // ForceTraining triggers immediate training with the current buffer.

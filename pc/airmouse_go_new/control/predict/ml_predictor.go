@@ -4,7 +4,6 @@ package predict
 
 import (
 	"fmt"
-	"math"
 	"sync"
 	"time"
 
