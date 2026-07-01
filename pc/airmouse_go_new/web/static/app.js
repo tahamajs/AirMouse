@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'devices': 'Device Management',
         'mirror': 'Screen Mirroring',
         'presentation': 'Presenter & Media Controller',
+        'files': 'File Transfer Manager',
         'settings': 'Server Configuration'
     };
 
@@ -64,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pageTitle.textContent = titles[pageId];
             if(pageId === 'devices') fetchDevices();
             if(pageId === 'settings') loadSettings();
+            if(pageId === 'files') fetchFilesList();
         });
     });
 
@@ -1053,5 +1055,240 @@ document.addEventListener('DOMContentLoaded', () => {
             el.className = 'badge yellow-badge';
             el.textContent = 'Disabled';
         }
+    }
+
+    // ---- File Transfer Feature ----
+    const uploadZone = document.getElementById('uploadZone');
+    const fileUploadInput = document.getElementById('fileUploadInput');
+    const uploadProgressContainer = document.getElementById('uploadProgressContainer');
+    const transferredFilesList = document.getElementById('transferredFilesList');
+    const refreshFilesBtn = document.getElementById('refreshFilesBtn');
+
+    if (uploadZone && fileUploadInput) {
+        uploadZone.addEventListener('click', () => fileUploadInput.click());
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = 'var(--accent-blue)';
+            uploadZone.style.background = 'rgba(37, 99, 235, 0.05)';
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.style.borderColor = 'rgba(255,255,255,0.15)';
+            uploadZone.style.background = 'rgba(255,255,255,0.02)';
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = 'rgba(255,255,255,0.15)';
+            uploadZone.style.background = 'rgba(255,255,255,0.02)';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                Array.from(files).forEach(uploadFile);
+            }
+        });
+
+        fileUploadInput.addEventListener('change', () => {
+            const files = fileUploadInput.files;
+            if (files.length > 0) {
+                Array.from(files).forEach(uploadFile);
+            }
+        });
+    }
+
+    if (refreshFilesBtn) {
+        refreshFilesBtn.addEventListener('click', fetchFilesList);
+    }
+
+    async function fetchFilesList() {
+        if (!transferredFilesList) return;
+        
+        try {
+            const res = await fetch('/api/files');
+            if (res.ok) {
+                const files = await res.json();
+                renderFilesList(files);
+            } else {
+                transferredFilesList.innerHTML = `<div style="text-align: center; color: var(--accent-red); padding: 20px;">Failed to fetch file directory.</div>`;
+            }
+        } catch (e) {
+            transferredFilesList.innerHTML = `<div style="text-align: center; color: var(--accent-red); padding: 20px;">Error connecting to file service.</div>`;
+        }
+    }
+
+    function renderFilesList(files) {
+        if (!transferredFilesList) return;
+        
+        if (files.length === 0) {
+            transferredFilesList.innerHTML = `
+                <div style="text-align: center; color: var(--text-secondary); padding: 32px; background: rgba(255,255,255,0.01); border: 1px solid var(--glass-border); border-radius: 12px;">
+                    <span class="material-icons-round" style="font-size: 36px; color: var(--text-secondary); margin-bottom: 8px; display: block;">folder_open</span>
+                    <span>No files uploaded yet.</span>
+                </div>`;
+            return;
+        }
+
+        transferredFilesList.innerHTML = '';
+        files.forEach(file => {
+            const card = document.createElement('div');
+            card.style.display = 'flex';
+            card.style.alignItems = 'center';
+            card.style.justifyContent = 'space-between';
+            card.style.background = 'rgba(255,255,255,0.02)';
+            card.style.border = '1px solid var(--glass-border)';
+            card.style.padding = '12px 16px';
+            card.style.borderRadius = '12px';
+            
+            const fileInfo = document.createElement('div');
+            fileInfo.style.display = 'flex';
+            fileInfo.style.flexDirection = 'column';
+            fileInfo.style.gap = '4px';
+            
+            const fileName = document.createElement('span');
+            fileName.textContent = file.name;
+            fileName.style.fontWeight = '500';
+            fileName.style.color = 'var(--text-primary)';
+            
+            const fileSize = document.createElement('span');
+            fileSize.textContent = formatBytes(file.size);
+            fileSize.style.fontSize = '12px';
+            fileSize.style.color = 'var(--text-secondary)';
+            
+            fileInfo.appendChild(fileName);
+            fileInfo.appendChild(fileSize);
+            
+            const actions = document.createElement('div');
+            actions.style.display = 'flex';
+            actions.style.gap = '8px';
+            
+            const dlBtn = document.createElement('button');
+            dlBtn.className = 'btn-icon';
+            dlBtn.style.padding = '6px';
+            dlBtn.style.borderRadius = '8px';
+            dlBtn.title = 'Download';
+            dlBtn.innerHTML = `<span class="material-icons-round" style="font-size: 18px; color: var(--accent-blue);">download</span>`;
+            dlBtn.addEventListener('click', () => window.open(file.url, '_blank'));
+            
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-icon';
+            delBtn.style.padding = '6px';
+            delBtn.style.borderRadius = '8px';
+            delBtn.title = 'Delete';
+            delBtn.innerHTML = `<span class="material-icons-round" style="font-size: 18px; color: var(--accent-red);">delete</span>`;
+            delBtn.addEventListener('click', () => deleteFile(file.name));
+            
+            actions.appendChild(dlBtn);
+            actions.appendChild(delBtn);
+            
+            card.appendChild(fileInfo);
+            card.appendChild(actions);
+            transferredFilesList.appendChild(card);
+        });
+    }
+
+    async function uploadFile(file) {
+        if (!uploadProgressContainer) return;
+        
+        // Progress UI item
+        const progressItem = document.createElement('div');
+        progressItem.style.background = 'rgba(255,255,255,0.02)';
+        progressItem.style.border = '1px solid var(--glass-border)';
+        progressItem.style.padding = '12px 16px';
+        progressItem.style.borderRadius = '12px';
+        progressItem.style.display = 'flex';
+        progressItem.style.flexDirection = 'column';
+        progressItem.style.gap = '8px';
+        
+        const labelRow = document.createElement('div');
+        labelRow.style.display = 'flex';
+        labelRow.style.justifyContent = 'space-between';
+        labelRow.style.fontSize = '13px';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = file.name;
+        nameSpan.style.fontWeight = '500';
+        
+        const pctSpan = document.createElement('span');
+        pctSpan.textContent = '0%';
+        pctSpan.style.color = 'var(--accent-blue)';
+        
+        labelRow.appendChild(nameSpan);
+        labelRow.appendChild(pctSpan);
+        
+        const progressTrack = document.createElement('div');
+        progressTrack.style.height = '6px';
+        progressTrack.style.background = 'rgba(255,255,255,0.05)';
+        progressTrack.style.borderRadius = '3px';
+        progressTrack.style.overflow = 'hidden';
+        
+        const progressBar = document.createElement('div');
+        progressBar.style.width = '0%';
+        progressBar.style.height = '100%';
+        progressBar.style.background = 'linear-gradient(90deg, var(--accent-blue), #3b82f6)';
+        progressBar.style.transition = 'width 0.1s ease';
+        
+        progressTrack.appendChild(progressBar);
+        progressItem.appendChild(labelRow);
+        progressItem.appendChild(progressTrack);
+        uploadProgressContainer.appendChild(progressItem);
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/upload', true);
+        
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                pctSpan.textContent = `${pct}%`;
+                progressBar.style.width = `${pct}%`;
+            }
+        };
+        
+        xhr.onload = () => {
+            progressItem.remove();
+            if (xhr.status === 200) {
+                showToast(`Uploaded ${file.name} successfully`);
+                addConsoleLog(`Uploaded file: ${file.name}`);
+                fetchFilesList();
+            } else {
+                showToast(`Failed to upload ${file.name}`, 'error');
+                addConsoleLog(`Failed to upload file: ${file.name}`, 'ERROR');
+            }
+        };
+        
+        xhr.onerror = () => {
+            progressItem.remove();
+            showToast(`Connection error during upload of ${file.name}`, 'error');
+            addConsoleLog(`Upload connection error: ${file.name}`, 'ERROR');
+        };
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        xhr.send(formData);
+    }
+
+    async function deleteFile(name) {
+        try {
+            const res = await fetch(`/api/files/delete?name=${encodeURIComponent(name)}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                showToast(`Deleted ${name}`);
+                addConsoleLog(`Deleted file: ${name}`);
+                fetchFilesList();
+            } else {
+                showToast(`Failed to delete file`, 'error');
+            }
+        } catch (e) {
+            showToast('Error deleting file', 'error');
+        }
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 });

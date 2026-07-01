@@ -130,6 +130,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/config", s.handleAPIConfig)
 	mux.HandleFunc("/api/status/toggle", s.handleAPIStatusToggle)
 	mux.HandleFunc("/api/command", s.handleAPICommand)
+	mux.HandleFunc("/api/files", s.handleAPIFiles)
+	mux.HandleFunc("/api/files/delete", s.handleAPIFilesDelete)
 	mux.HandleFunc("/upload", s.handleHTTPUpload)
 	mux.HandleFunc("/download/", s.handleHTTPDownload)
 	mux.HandleFunc("/mirror", s.handleScreenMirror)

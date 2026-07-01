@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"airmouse-go/control/common"
@@ -373,6 +375,95 @@ func (s *Server) handleAPICommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := syscmd.ExecuteSystemCommand(req.Command)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+	})
+}
+
+// handleAPIFiles lists all uploaded files in the transfer directory
+func (s *Server) handleAPIFiles(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	dir := s.fileTransferDir()
+	_ = os.MkdirAll(dir, 0755)
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	type FileInfo struct {
+		Name string `json:"name"`
+		Size int64  `json:"size"`
+		URL  string `json:"url"`
+	}
+
+	files := []FileInfo{}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			info, err := entry.Info()
+			if err == nil {
+				files = append(files, FileInfo{
+					Name: entry.Name(),
+					Size: info.Size(),
+					URL:  fmt.Sprintf("/download/%s", entry.Name()),
+				})
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(files)
+}
+
+// handleAPIFilesDelete deletes a file from the transfer directory
+func (s *Server) handleAPIFilesDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	filename := r.URL.Query().Get("name")
+	if filename == "" {
+		// fallback to body if JSON
+		var req struct {
+			Name string `json:"name"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+			filename = req.Name
+		}
+	}
+
+	filename = sanitizeFileName(filename)
+	if filename == "" {
+		http.Error(w, `{"error":"missing filename"}`, http.StatusBadRequest)
+		return
+	}
+
+	dir := s.fileTransferDir()
+	filePath := filepath.Join(dir, filename)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		http.Error(w, `{"error":"file not found"}`, http.StatusNotFound)
+		return
+	}
+
+	err := os.Remove(filePath)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
