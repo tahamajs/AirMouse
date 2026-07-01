@@ -148,7 +148,13 @@ func (s *ProtocolServer) Start() error {
 	// Start UDP discovery server
 	if cfg.EnableUDP {
 		utils.LogInfo("Protocol start: initializing UDP discovery port=%d", cfg.UDPPort)
-		s.udpServer = udp.NewServer(cfg.UDPPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
+		udpSrv := udp.NewServer(cfg.UDPPort, s.mouseCtrl, s.deviceMgr, s.authMgr)
+		udpSrv.OnScreenFrame = func(data []byte) {
+			if ws, ok := s.wsServer.(*websocketpkg.Server); ok && ws != nil {
+				ws.UpdateScreenFrame(data)
+			}
+		}
+		s.udpServer = udpSrv
 		if err := s.udpServer.Start(); err != nil {
 			errors = append(errors, fmt.Errorf("UDP: %w", err))
 			utils.LogError("UDP server start failed: %v", err)

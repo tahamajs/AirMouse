@@ -694,7 +694,13 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			utils.LogDebug("Ignoring WebSocket calibration_data while waiting for approval: %s", client.ID)
 			return
 		}
-		utils.LogInfo("WebSocket calibration_data received: device=%s", client.ID)
+		cp, err := DecodeCalibrationPayload(payload)
+		if err != nil {
+			utils.LogError("Failed to decode WebSocket calibration_data: %v", err)
+			return
+		}
+		utils.LogInfo("WebSocket calibration_data received: device=%s, quality=%s, gyro_bias=(%.4f,%.4f,%.4f), accel_bias=(%.4f,%.4f,%.4f)",
+			client.ID, cp.Quality, cp.Gyro.X, cp.Gyro.Y, cp.Gyro.Z, cp.Accel.X, cp.Accel.Y, cp.Accel.Z)
 
 	case "ping":
 		select {
@@ -780,6 +786,14 @@ func (s *Server) autoApproveWSClient(client *WSClient, fingerprint string) bool 
 		utils.LogWarn("WebSocket auto-approve welcome send blocked: %s", client.ID)
 		return false
 	}
+}
+
+// UpdateScreenFrame updates the latest screen frame from external sources (e.g. UDP client mirroring).
+func (s *Server) UpdateScreenFrame(data []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.latestAndroidScreenFrame = data
+	s.latestAndroidScreenFrameTime = time.Now()
 }
 
 // ApproveDevice approves a pending WebSocket client and sends the welcome message.

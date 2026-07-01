@@ -375,6 +375,110 @@ func DecodeProximityPayload(payload map[string]any) (deviceID string, isNear boo
 	return deviceID, isNear, distance, nil
 }
 
+// Vector3D represents a 3D vector.
+type Vector3D struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+	Z float64 `json:"z"`
+}
+
+// CalibrationPayload represents calibration data payload.
+type CalibrationPayload struct {
+	Gyro      Vector3D `json:"gyro"`
+	Accel     Vector3D `json:"accel"`
+	Mag       Vector3D `json:"mag"`
+	Quality   string   `json:"quality"`
+	Timestamp int64    `json:"timestamp"`
+}
+
+// DecodeCalibrationPayload decodes calibration data from the payload.
+func DecodeCalibrationPayload(payload map[string]any) (CalibrationPayload, error) {
+	var cp CalibrationPayload
+
+	toFloat64 := func(v any) float64 {
+		switch t := v.(type) {
+		case float64:
+			return t
+		case float32:
+			return float64(t)
+		case int:
+			return float64(t)
+		case int64:
+			return float64(t)
+		case json.Number:
+			f, _ := t.Float64()
+			return f
+		default:
+			return 0
+		}
+	}
+
+	parseVector := func(v map[string]any) Vector3D {
+		var vec Vector3D
+		if x, ok := v["bias_x"]; ok {
+			vec.X = toFloat64(x)
+		} else if x, ok := v["offset_x"]; ok {
+			vec.X = toFloat64(x)
+		} else if x, ok := v["x"]; ok {
+			vec.X = toFloat64(x)
+		}
+		if y, ok := v["bias_y"]; ok {
+			vec.Y = toFloat64(y)
+		} else if y, ok := v["offset_y"]; ok {
+			vec.Y = toFloat64(y)
+		} else if y, ok := v["y"]; ok {
+			vec.Y = toFloat64(y)
+		}
+		if z, ok := v["bias_z"]; ok {
+			vec.Z = toFloat64(z)
+		} else if z, ok := v["offset_z"]; ok {
+			vec.Z = toFloat64(z)
+		} else if z, ok := v["z"]; ok {
+			vec.Z = toFloat64(z)
+		}
+		return vec
+	}
+
+	if gyroVal, ok := payload["gyro"]; ok {
+		if gyroMap, ok := gyroVal.(map[string]any); ok {
+			cp.Gyro = parseVector(gyroMap)
+		}
+	} else if gyroVal, ok := payload["gyro_bias"]; ok {
+		if gyroMap, ok := gyroVal.(map[string]any); ok {
+			cp.Gyro = parseVector(gyroMap)
+		}
+	}
+
+	if accelVal, ok := payload["accel"]; ok {
+		if accelMap, ok := accelVal.(map[string]any); ok {
+			cp.Accel = parseVector(accelMap)
+		}
+	} else if accelVal, ok := payload["accel_bias"]; ok {
+		if accelMap, ok := accelVal.(map[string]any); ok {
+			cp.Accel = parseVector(accelMap)
+		}
+	}
+
+	if magVal, ok := payload["mag"]; ok {
+		if magMap, ok := magVal.(map[string]any); ok {
+			cp.Mag = parseVector(magMap)
+		}
+	} else if magVal, ok := payload["mag_bias"]; ok {
+		if magMap, ok := magVal.(map[string]any); ok {
+			cp.Mag = parseVector(magMap)
+		}
+	}
+
+	if q, ok := payload["quality"].(string); ok {
+		cp.Quality = q
+	}
+	if t, ok := payload["timestamp"]; ok {
+		cp.Timestamp = int64(toFloat64(t))
+	}
+
+	return cp, nil
+}
+
 // IsValidType checks if a message type is valid
 func IsValidType(msgType string) bool {
 	validTypes := map[string]bool{

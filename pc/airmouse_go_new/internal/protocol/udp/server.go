@@ -15,6 +15,7 @@ import (
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 	websocketpkg "airmouse-go/internal/protocol/websocket"
+	"airmouse-go/internal/sysaction"
 	"airmouse-go/internal/utils"
 )
 
@@ -28,6 +29,7 @@ type Server struct {
 	mu        sync.RWMutex
 	clients   map[string]*UDPClient
 	callbacks []func(event UDPEvent)
+	OnScreenFrame func(data []byte)
 }
 
 type UDPClient struct {
@@ -75,7 +77,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) listenLoop() {
-	buf := make([]byte, 4096)
+	buf := make([]byte, 65536)
 	for {
 		n, clientAddr, err := s.conn.ReadFromUDP(buf)
 		if err != nil {
@@ -88,6 +90,18 @@ func (s *Server) listenLoop() {
 			utils.LogDebug("UDP read error: %v", err)
 			continue
 		}
+
+		// Check for JPEG binary screen mirroring frame (SOI: 0xFF, 0xD8)
+		if n >= 2 && buf[0] == 0xFF && buf[1] == 0xD8 {
+			if s.OnScreenFrame != nil {
+				// Copy the slice so we don't hold the read buffer
+				dataCopy := make([]byte, n)
+				copy(dataCopy, buf[:n])
+				s.OnScreenFrame(dataCopy)
+			}
+			continue
+		}
+
 		msg := strings.TrimSpace(string(buf[:n]))
 		go s.handleMessage(msg, clientAddr)
 	}
@@ -267,17 +281,62 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 	case "laser", "draw", "annotation":
 		utils.LogInfo("Received %s data from client %s over UDP", msgType, clientIP)
 
-	case "keypress", "keydown", "keyup", "type":
-		utils.LogInfo("Received keyboard event %s from client %s over UDP", msgType, clientIP)
+	case "steering":
+		angle := firstNumber(payload, "angle")
+		utils.LogInfo("Gaming Mode Steering received over UDP: client=%s, angle=%.2f", clientIP, angle)
+		if angle > 15 {
+			go sysaction.KeyTap("d") // Steer Right
+		} else if angle < -15 {
+			go sysaction.KeyTap("a") // Steer Left
+		}
+
+	case "shooter":
+		action, _ := payload["action"].(string)
+		utils.LogInfo("Gaming Mode Shooter received over UDP: client=%s, action=%s", clientIP, action)
+		if action == "shoot" {
+			go sysaction.KeyTap("space")
+		} else if action == "reload" {
+			go sysaction.KeyTap("r")
+		}
+
+	case "keypress", "keydown", "keyup", "key":
+		keyVal, _ := payload["key"].(string)
+		if keyVal == "" {
+			keyVal, _ = payload["code"].(string)
+		}
+		if keyVal == "" {
+			keyVal, _ = payload["value"].(string)
+		}
+		if keyVal != "" {
+			utils.LogInfo("UDP key event %s: key=%s client=%s", msgType, keyVal, clientIP)
+			go sysaction.KeyTap(keyVal)
+		}
+
+	case "type", "text":
+		textVal, _ := payload["text"].(string)
+		if textVal == "" {
+			textVal, _ = payload["value"].(string)
+		}
+		if textVal != "" {
+			utils.LogInfo("UDP type event %s: client=%s", msgType, clientIP)
+			go sysaction.TypeText(textVal)
+		}
 
 	case "smarthome":
 		utils.LogInfo("Received smarthome command from client %s over UDP", clientIP)
+
 	case "calibration_data":
 		if !approved {
 			utils.LogDebug("Ignoring UDP calibration_data while waiting for approval: %s", clientIP)
 			return
 		}
-		utils.LogInfo("UDP calibration_data received: %s", clientIP)
+		cp, err := websocketpkg.DecodeCalibrationPayload(payload)
+		if err != nil {
+			utils.LogError("Failed to decode UDP calibration_data: %v", err)
+			return
+		}
+		utils.LogInfo("UDP calibration_data received: client=%s, quality=%s, gyro_bias=(%.4f,%.4f,%.4f), accel_bias=(%.4f,%.4f,%.4f)",
+			clientIP, cp.Quality, cp.Gyro.X, cp.Gyro.Y, cp.Gyro.Z, cp.Accel.X, cp.Accel.Y, cp.Accel.Z)
 	case "ping":
 		s.writeToClient(clientKey, clientAddr, websocketpkg.PongMessage())
 	case "pong":

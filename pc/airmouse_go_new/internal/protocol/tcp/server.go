@@ -15,6 +15,7 @@ import (
 	"airmouse-go/internal/auth"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
+	websocketpkg "airmouse-go/internal/protocol/websocket"
 	"airmouse-go/internal/sysaction"
 	"airmouse-go/internal/utils"
 )
@@ -496,8 +497,32 @@ func (s *Server) processLine(client *Client, line []byte) {
 	case "smarthome":
 		utils.LogInfo("Received smarthome command from client %s over TCP", client.ID)
 
+	case "steering":
+		angle := firstNumber(payload, "angle")
+		utils.LogInfo("Gaming Mode Steering received over TCP: client=%s, angle=%.2f", client.ID, angle)
+		if angle > 15 {
+			go sysaction.KeyTap("d") // Steer Right
+		} else if angle < -15 {
+			go sysaction.KeyTap("a") // Steer Left
+		}
+
+	case "shooter":
+		action, _ := payload["action"].(string)
+		utils.LogInfo("Gaming Mode Shooter received over TCP: client=%s, action=%s", client.ID, action)
+		if action == "shoot" {
+			go sysaction.KeyTap("space")
+		} else if action == "reload" {
+			go sysaction.KeyTap("r")
+		}
+
 	case "calibration_data":
-		utils.LogInfo("TCP calibration_data received: client=%s", client.ID)
+		cp, err := websocketpkg.DecodeCalibrationPayload(payload)
+		if err != nil {
+			utils.LogError("Failed to decode TCP calibration_data: %v", err)
+			return
+		}
+		utils.LogInfo("TCP calibration_data received: client=%s, quality=%s, gyro_bias=(%.4f,%.4f,%.4f), accel_bias=(%.4f,%.4f,%.4f)",
+			client.ID, cp.Quality, cp.Gyro.X, cp.Gyro.Y, cp.Gyro.Z, cp.Accel.X, cp.Accel.Y, cp.Accel.Z)
 
 	case "voice_command":
 		command, _ := payload["command"].(string)
