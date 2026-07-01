@@ -367,17 +367,13 @@ func (s *Server) processMessage(dev *SerialDevice, msg *USBMessage) {
 		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
 			action, _ := payload["action"].(string)
 			utils.LogInfo("USB presentation action received: path=%s action=%s", dev.Path, action)
-			if s.mouse != nil {
-				switch action {
-				case "next":
-					s.mouse.KeyPress("page_down")
-				case "prev":
-					s.mouse.KeyPress("page_up")
-				case "fullscreen":
-					s.mouse.KeyPress("f5")
-				case "blank":
-					s.mouse.KeyPress("b")
-				}
+			switch action {
+			case "prev":
+				_ = syscmd.ExecuteSystemCommand("prev_track")
+			case "next":
+				_ = syscmd.ExecuteSystemCommand("next_track")
+			case "fullscreen":
+				_ = syscmd.ExecuteSystemCommand("window_fullscreen")
 			}
 		}
 	case "hello":

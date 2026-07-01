@@ -218,9 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(e) {
             consecutiveFailures++;
-            if (consecutiveFailures >= 2) {
-                if (offlineOverlay) offlineOverlay.classList.remove('hidden');
-            }
+            if (offlineOverlay) offlineOverlay.classList.remove('hidden');
         }
     }
     }
