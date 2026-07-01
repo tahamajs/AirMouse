@@ -211,4 +211,9 @@ func init() {
 	logoutSystem = func() {
 		_ = exec.Command("osascript", "-e", `tell app "System Events" to log out`).Run()
 	}
+	setSystemMouseSpeed = func(speed float64) {
+		// macOS defaults command (speed is typically 0 to 3.0 or 5.0)
+		// Let's execute: defaults write -g com.apple.mouse.scaling <speed>
+		_ = exec.Command("defaults", "write", "-g", "com.apple.mouse.scaling", fmt.Sprintf("%.2f", speed)).Run()
+	}
 }

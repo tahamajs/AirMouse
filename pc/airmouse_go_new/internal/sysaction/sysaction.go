@@ -349,32 +349,40 @@ func TypeText(txt string) {
 	}
 }
 
+// SetSystemMouseSpeed updates the host operating system's system-wide mouse tracking speed.
+func SetSystemMouseSpeed(speed float64) {
+	if setSystemMouseSpeed != nil {
+		setSystemMouseSpeed(speed)
+	}
+}
+
 // The following functions are platform-specific and defined in the respective
 // *_linux.go, *_darwin.go, *_windows.go files.
 var (
-	mediaKey         func(key string)
-	volumeUp         func()
-	volumeDown       func()
-	volumeMute       func()
-	mouseClick       func(btn string)
-	mouseDoubleClick func()
-	mouseScroll      func(delta int)
-	lockScreen       func()
-	showDesktop      func()
-	taskView         func()
-	switchWindow     func()
-	keyCombination   func(key, modifier string)
-	keyTap           func(key string)
-	typeText         func(txt string)
-	zoomIn           func()
-	zoomOut          func()
-	zoomReset        func()
-	minimizeWindow   func()
-	maximizeWindow   func()
-	closeWindow      func()
-	altTab           func()
-	sleepSystem      func()
-	shutdownSystem   func()
-	restartSystem    func()
-	logoutSystem     func()
+	mediaKey            func(key string)
+	volumeUp            func()
+	volumeDown          func()
+	volumeMute          func()
+	mouseClick          func(btn string)
+	mouseDoubleClick    func()
+	mouseScroll         func(delta int)
+	lockScreen          func()
+	showDesktop         func()
+	taskView            func()
+	switchWindow        func()
+	keyCombination      func(key, modifier string)
+	keyTap              func(key string)
+	typeText            func(txt string)
+	zoomIn              func()
+	zoomOut             func()
+	zoomReset           func()
+	minimizeWindow      func()
+	maximizeWindow      func()
+	closeWindow         func()
+	altTab              func()
+	sleepSystem         func()
+	shutdownSystem      func()
+	restartSystem       func()
+	logoutSystem        func()
+	setSystemMouseSpeed func(speed float64)
 )
