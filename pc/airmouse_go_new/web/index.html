@@ -44,9 +44,14 @@
             </nav>
             
             <div class="sidebar-footer">
-                <div class="server-status">
-                    <div class="status-indicator online"></div>
-                    <span>Server Online</span>
+                <div class="server-status" style="justify-content: space-between; width: 100%; display: flex; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="status-indicator online" id="serverStatusIndicator"></div>
+                        <span id="serverStatusText" style="font-size: 13px;">Server Active</span>
+                    </div>
+                    <button class="btn-icon" id="toggleServerBtn" title="Toggle Motion Capture" style="padding: 6px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
+                        <span class="material-icons-round" id="toggleServerIcon" style="font-size: 18px; color: white;">pause</span>
+                    </button>
                 </div>
             </div>
         </aside>

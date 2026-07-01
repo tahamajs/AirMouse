@@ -127,6 +127,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/devices/approve", s.handleDeviceApprove)
 	mux.HandleFunc("/api/devices/reject", s.handleDeviceReject)
 	mux.HandleFunc("/api/config", s.handleAPIConfig)
+	mux.HandleFunc("/api/status/toggle", s.handleAPIStatusToggle)
 	mux.HandleFunc("/upload", s.handleHTTPUpload)
 	mux.HandleFunc("/download/", s.handleHTTPDownload)
 	mux.HandleFunc("/mirror", s.handleScreenMirror)

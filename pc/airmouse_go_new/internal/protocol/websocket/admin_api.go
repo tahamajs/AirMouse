@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"airmouse-go/control/common"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 )
@@ -47,6 +48,7 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		"devices": active,
 		"pending": pending,
 		"uptime":  uptime,
+		"paused":  common.IsMovementPaused(),
 		"ips":     getLocalIPs(),
 		"ports": map[string]int{
 			"websocket": cfg.WebSocketPort,
@@ -192,7 +194,20 @@ func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
 		currentCfg := config.Get()
 		
 		// Update configurable fields
+		currentCfg.Port = newCfg.Port
+		currentCfg.WebSocketPort = newCfg.WebSocketPort
+		currentCfg.UDPPort = newCfg.UDPPort
 		currentCfg.ServerName = newCfg.ServerName
+		currentCfg.Theme = newCfg.Theme
+
+		// Protocol settings
+		currentCfg.EnableTCP = newCfg.EnableTCP
+		currentCfg.EnableWebSocket = newCfg.EnableWebSocket
+		currentCfg.EnableUDP = newCfg.EnableUDP
+		currentCfg.EnableBluetooth = newCfg.EnableBluetooth
+		currentCfg.EnableSerial = newCfg.EnableSerial
+
+		// Mouse settings
 		currentCfg.Sensitivity = newCfg.Sensitivity
 		currentCfg.SmoothingEnabled = newCfg.SmoothingEnabled
 		currentCfg.AccelerationEnabled = newCfg.AccelerationEnabled
@@ -200,22 +215,66 @@ func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
 		currentCfg.MaxAcceleration = newCfg.MaxAcceleration
 		currentCfg.HapticEnabled = newCfg.HapticEnabled
 
+		// AI settings
 		currentCfg.EnableAISmoothing = newCfg.EnableAISmoothing
 		currentCfg.EnablePredictive = newCfg.EnablePredictive
 		currentCfg.PredictiveBlendFactor = newCfg.PredictiveBlendFactor
 		currentCfg.EnableJitterCompensation = newCfg.EnableJitterCompensation
 		currentCfg.JitterBlendFactor = newCfg.JitterBlendFactor
 
+		// ML settings
+		currentCfg.EnableMLPrediction = newCfg.EnableMLPrediction
+		currentCfg.MLModelPath = newCfg.MLModelPath
+		currentCfg.MLSequenceLength = newCfg.MLSequenceLength
+		currentCfg.MLBlendFactor = newCfg.MLBlendFactor
+		currentCfg.MLInferenceInterval = newCfg.MLInferenceInterval
+
+		// Humanizer
+		currentCfg.EnableHumanizer = newCfg.EnableHumanizer
+		currentCfg.HumanizerTremorAmplitude = newCfg.HumanizerTremorAmplitude
+		currentCfg.HumanizerBSplineSegments = newCfg.HumanizerBSplineSegments
+		currentCfg.HumanizerNoiseAmplitude = newCfg.HumanizerNoiseAmplitude
+		currentCfg.HumanizerVelocityPeakRatio = newCfg.HumanizerVelocityPeakRatio
+
+		// Particle Filter
+		currentCfg.EnableParticleFilter = newCfg.EnableParticleFilter
+		currentCfg.ParticleFilterNumParticles = newCfg.ParticleFilterNumParticles
+
+		// Gesture settings
+		currentCfg.GestureConfidenceThreshold = newCfg.GestureConfidenceThreshold
+		currentCfg.GestureCooldown = newCfg.GestureCooldown
 		currentCfg.ClickThreshold = newCfg.ClickThreshold
 		currentCfg.ScrollThreshold = newCfg.ScrollThreshold
 		currentCfg.DoubleClickInterval = newCfg.DoubleClickInterval
 		currentCfg.RightClickTilt = newCfg.RightClickTilt
 
+		// Proximity settings
 		currentCfg.ProximityEnabled = newCfg.ProximityEnabled
+		currentCfg.ProximityNearThreshold = newCfg.ProximityNearThreshold
+		currentCfg.ProximityFarThreshold = newCfg.ProximityFarThreshold
+		currentCfg.ProximityScanInterval = newCfg.ProximityScanInterval
 		currentCfg.BLEEnabled = newCfg.BLEEnabled
 		currentCfg.HIDProxyEnabled = newCfg.HIDProxyEnabled
 
+		// USB Gadget
+		currentCfg.USBGadgetEnabled = newCfg.USBGadgetEnabled
+		currentCfg.USBVendorID = newCfg.USBVendorID
+		currentCfg.USBProductID = newCfg.USBProductID
+		currentCfg.USBManufacturer = newCfg.USBManufacturer
+		currentCfg.USBProduct = newCfg.USBProduct
+
+		// Security & Performance
 		currentCfg.AuthEnabled = newCfg.AuthEnabled
+		currentCfg.TokenTTL = newCfg.TokenTTL
+		currentCfg.MaxClients = newCfg.MaxClients
+		currentCfg.HeartbeatInterval = newCfg.HeartbeatInterval
+		currentCfg.ConnectionTimeout = newCfg.ConnectionTimeout
+
+		// Logging
+		currentCfg.LogLevel = newCfg.LogLevel
+		currentCfg.LogColor = newCfg.LogColor
+		currentCfg.DebugMode = newCfg.DebugMode
+		currentCfg.MetricsEnabled = newCfg.MetricsEnabled
 		
 		currentCfg.Save()
 		
@@ -225,4 +284,28 @@ func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// handleAPIStatusToggle handles pausing/resuming the mouse movement
+func (s *Server) handleAPIStatusToggle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Paused bool `json:"paused"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	common.SetMovementPaused(req.Paused)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"paused":  common.IsMovementPaused(),
+	})
 }

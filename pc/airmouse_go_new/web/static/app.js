@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const toastContainer = document.createElement('div');
     toastContainer.className = 'toast-container';
     document.body.appendChild(toastContainer);
+    let serverIsPaused = false;
 
     function showToast(message, type = 'success') {
         const toast = document.createElement('div');
@@ -98,6 +99,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (serverOtherPortsEl && data.ports) {
                     serverOtherPortsEl.textContent = `${data.ports.tcp || '-'} TCP / ${data.ports.udp || '-'} UDP`;
+                }
+
+                // Update server paused/active status
+                const indicator = document.getElementById('serverStatusIndicator');
+                const text = document.getElementById('serverStatusText');
+                const icon = document.getElementById('toggleServerIcon');
+                if (indicator && text && icon) {
+                    if (data.paused) {
+                        indicator.className = 'status-indicator';
+                        indicator.style.backgroundColor = '#ef4444';
+                        indicator.style.boxShadow = '0 0 12px #ef4444';
+                        text.textContent = 'Server Paused';
+                        icon.textContent = 'play_arrow';
+                        serverIsPaused = true;
+                    } else {
+                        indicator.className = 'status-indicator online';
+                        indicator.style.backgroundColor = '';
+                        indicator.style.boxShadow = '';
+                        text.textContent = 'Server Active';
+                        icon.textContent = 'pause';
+                        serverIsPaused = false;
+                    }
                 }
 
                 // Update activity chart based on clicks+scrolls delta to make it feel alive
@@ -256,32 +279,88 @@ document.addEventListener('DOMContentLoaded', () => {
             
             settingsForm.innerHTML = `
                 <div class="settings-section">
-                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-blue);">settings</span> General Settings</h4>
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-blue);">settings</span> General & Server Info</h4>
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Server Name</label>
                             <input type="text" id="cfgServerName" class="form-control" value="${currentConfig.server_name}">
                         </div>
                         <div class="form-group">
-                            <label>Mouse Sensitivity</label>
-                            <input type="number" step="0.1" id="cfgSensitivity" class="form-control" value="${currentConfig.sensitivity}">
+                            <label>Accent Theme</label>
+                            <select id="cfgTheme" class="form-control" style="background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white;">
+                                <option value="dark" ${currentConfig.theme === 'dark' ? 'selected' : ''}>Dark</option>
+                                <option value="light" ${currentConfig.theme === 'light' ? 'selected' : ''}>Light</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>TCP Listen Port</label>
+                            <input type="number" id="cfgPort" class="form-control" value="${currentConfig.port}">
+                        </div>
+                        <div class="form-group">
+                            <label>WebSocket Port</label>
+                            <input type="number" id="cfgWSPort" class="form-control" value="${currentConfig.websocket_port}">
+                        </div>
+                        <div class="form-group">
+                            <label>UDP Port</label>
+                            <input type="number" id="cfgUDPPort" class="form-control" value="${currentConfig.udp_port}">
                         </div>
                     </div>
-                    <div class="toggle-wrapper">
-                        <div class="toggle-info">
-                            <h4>Strict Authentication</h4>
-                            <p>Require devices to pair before connecting.</p>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-green);">settings_ethernet</span> Connection Protocols</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <div class="toggle-wrapper">
+                            <div class="toggle-info">
+                                <h4>TCP Server</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="cfgEnableTCP" ${currentConfig.enable_tcp ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
                         </div>
-                        <label class="switch">
-                            <input type="checkbox" id="cfgAuth" ${currentConfig.auth_enabled ? 'checked' : ''}>
-                            <span class="slider"></span>
-                        </label>
+                        <div class="toggle-wrapper">
+                            <div class="toggle-info">
+                                <h4>WebSocket</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="cfgEnableWS" ${currentConfig.enable_websocket ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-wrapper">
+                            <div class="toggle-info">
+                                <h4>UDP Server</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="cfgEnableUDP" ${currentConfig.enable_udp ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-wrapper">
+                            <div class="toggle-info">
+                                <h4>Bluetooth</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="cfgEnableBT" ${currentConfig.enable_bluetooth ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-wrapper">
+                            <div class="toggle-info">
+                                <h4>Serial Port</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="cfgEnableSerial" ${currentConfig.enable_serial ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
                 <div class="settings-section">
                     <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-purple);">mouse</span> Mouse & Physics</h4>
-                    <div class="toggle-wrapper" style="margin-bottom: 16px;">
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
                         <div class="toggle-info">
                             <h4>Smoothing Enabled</h4>
                             <p>Smooth out hand tremors with exponential moving average.</p>
@@ -291,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <div class="toggle-wrapper" style="margin-bottom: 16px;">
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
                         <div class="toggle-info">
                             <h4>Acceleration Enabled</h4>
                             <p>Increase speed dynamically based on swipe velocity.</p>
@@ -303,6 +382,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="form-grid">
                         <div class="form-group">
+                            <label>Sensitivity Factor</label>
+                            <input type="number" step="0.1" id="cfgSensitivity" class="form-control" value="${currentConfig.sensitivity}">
+                        </div>
+                        <div class="form-group">
                             <label>Acceleration Factor</label>
                             <input type="number" step="0.1" id="cfgAccelFactor" class="form-control" value="${currentConfig.acceleration_factor}">
                         </div>
@@ -311,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <input type="number" step="0.1" id="cfgMaxAccel" class="form-control" value="${currentConfig.max_acceleration}">
                         </div>
                     </div>
-                    <div class="toggle-wrapper" style="margin-top: 16px;">
+                    <div class="toggle-wrapper" style="margin-top: 12px;">
                         <div class="toggle-info">
                             <h4>Haptic Feedback</h4>
                             <p>Vibrate phone slightly when mouse events occur.</p>
@@ -325,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <div class="settings-section">
                     <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-green);">psychology</span> AI & Predictive Tracking</h4>
-                    <div class="toggle-wrapper" style="margin-bottom: 16px;">
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
                         <div class="toggle-info">
                             <h4>AI Cursor Smoothing</h4>
                             <p>Use Machine Learning (ONNX) to predict and smooth movements.</p>
@@ -335,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <div class="toggle-wrapper" style="margin-bottom: 16px;">
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
                         <div class="toggle-info">
                             <h4>Predictive Tracking</h4>
                             <p>Extrapolate motion vectors for ultra-low latency tracking.</p>
@@ -347,19 +430,118 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Prediction Blend Factor (0.0 to 1.0)</label>
+                            <label>Prediction Blend Factor</label>
                             <input type="number" step="0.05" id="cfgPredictiveBlend" class="form-control" value="${currentConfig.predictive_blend_factor}">
                         </div>
                         <div class="form-group">
-                            <label>Jitter Blend Factor (0.0 to 1.0)</label>
+                            <label>Jitter Compensation</label>
+                            <select id="cfgJitterComp" class="form-control" style="background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white;">
+                                <option value="true" ${currentConfig.enable_jitter_compensation ? 'selected' : ''}>Enabled</option>
+                                <option value="false" ${!currentConfig.enable_jitter_compensation ? 'selected' : ''}>Disabled</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Jitter Blend Factor</label>
                             <input type="number" step="0.05" id="cfgJitterBlend" class="form-control" value="${currentConfig.jitter_blend_factor}">
                         </div>
                     </div>
                 </div>
 
                 <div class="settings-section">
-                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-orange);">gesture</span> Click & Gesture Thresholds</h4>
-                    <div class="form-grid" style="margin-bottom: 16px;">
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-purple);">model_training</span> ML Predictor (LSTM)</h4>
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
+                        <div class="toggle-info">
+                            <h4>Enable LSTM Prediction</h4>
+                            <p>Run local sequence prediction to model human hand latency.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="cfgMLPredict" ${currentConfig.enable_ml_prediction ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Model Path (.onnx)</label>
+                            <input type="text" id="cfgMLModelPath" class="form-control" value="${currentConfig.ml_model_path || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Sequence Length</label>
+                            <input type="number" id="cfgMLSeqLength" class="form-control" value="${currentConfig.ml_sequence_length}">
+                        </div>
+                        <div class="form-group">
+                            <label>ML Blend Factor</label>
+                            <input type="number" step="0.05" id="cfgMLBlend" class="form-control" value="${currentConfig.ml_blend_factor}">
+                        </div>
+                        <div class="form-group">
+                            <label>Inference Interval (ms)</label>
+                            <input type="number" id="cfgMLInterval" class="form-control" value="${currentConfig.ml_inference_interval_ms}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-orange);">waves</span> Humanizer Physics Engine</h4>
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
+                        <div class="toggle-info">
+                            <h4>Enable Humanizer</h4>
+                            <p>Inject micro-tremors and B-Splines to humanize cursor movement.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="cfgHumanizer" ${currentConfig.enable_humanizer ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Tremor Amplitude</label>
+                            <input type="number" step="0.1" id="cfgHumanTremor" class="form-control" value="${currentConfig.humanizer_tremor_amplitude}">
+                        </div>
+                        <div class="form-group">
+                            <label>B-Spline Segments</label>
+                            <input type="number" id="cfgHumanSegments" class="form-control" value="${currentConfig.humanizer_bspline_segments}">
+                        </div>
+                        <div class="form-group">
+                            <label>Noise Amplitude</label>
+                            <input type="number" step="0.1" id="cfgHumanNoise" class="form-control" value="${currentConfig.humanizer_noise_amplitude}">
+                        </div>
+                        <div class="form-group">
+                            <label>Velocity Peak Ratio</label>
+                            <input type="number" step="0.05" id="cfgHumanPeak" class="form-control" value="${currentConfig.humanizer_velocity_peak_ratio}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-blue);">filter_alt</span> Particle Filter</h4>
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
+                        <div class="toggle-info">
+                            <h4>Enable Particle Filter</h4>
+                            <p>Estimates absolute hand positioning using particle models.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="cfgParticle" ${currentConfig.enable_particle_filter ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Number of Particles</label>
+                            <input type="number" id="cfgParticleCount" class="form-control" value="${currentConfig.particle_filter_num_particles}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-orange);">gesture</span> Gesture & Click Thresholds</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Gesture Confidence (0.0 to 1.0)</label>
+                            <input type="number" step="0.05" id="cfgGestureConfidence" class="form-control" value="${currentConfig.gesture_confidence_threshold}">
+                        </div>
+                        <div class="form-group">
+                            <label>Gesture Cooldown (ms)</label>
+                            <input type="number" id="cfgGestureCooldown" class="form-control" value="${currentConfig.gesture_cooldown_ms}">
+                        </div>
                         <div class="form-group">
                             <label>Click Force Threshold</label>
                             <input type="number" step="0.1" id="cfgClickThreshold" class="form-control" value="${currentConfig.click_threshold}">
@@ -368,8 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label>Scroll Velocity Threshold</label>
                             <input type="number" step="0.1" id="cfgScrollThreshold" class="form-control" value="${currentConfig.scroll_threshold}">
                         </div>
-                    </div>
-                    <div class="form-grid">
                         <div class="form-group">
                             <label>Double Click Interval (ms)</label>
                             <input type="number" id="cfgDoubleClickInterval" class="form-control" value="${currentConfig.double_click_interval}">
@@ -381,9 +561,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
-                <div class="settings-section" style="border-bottom: none; padding-bottom: 0;">
+                <div class="settings-section">
                     <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-red);">settings_remote</span> Proximity & BLE</h4>
-                    <div class="toggle-wrapper" style="margin-bottom: 16px;">
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
                         <div class="toggle-info">
                             <h4>Proximity Autoclose</h4>
                             <p>Automatically lock pointer when phone is far from screen.</p>
@@ -393,7 +573,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <div class="toggle-wrapper" style="margin-bottom: 16px;">
+                    <div class="form-grid" style="margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label>Near Threshold (m)</label>
+                            <input type="number" step="0.1" id="cfgProxNear" class="form-control" value="${currentConfig.proximity_near_threshold}">
+                        </div>
+                        <div class="form-group">
+                            <label>Far Threshold (m)</label>
+                            <input type="number" step="0.1" id="cfgProxFar" class="form-control" value="${currentConfig.proximity_far_threshold}">
+                        </div>
+                        <div class="form-group">
+                            <label>Scan Interval (ms)</label>
+                            <input type="number" id="cfgProxInterval" class="form-control" value="${currentConfig.proximity_scan_interval_ms}">
+                        </div>
+                    </div>
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
                         <div class="toggle-info">
                             <h4>BLE Discovery</h4>
                             <p>Broadcast server identity using BLE advertising.</p>
@@ -414,6 +608,114 @@ document.addEventListener('DOMContentLoaded', () => {
                         </label>
                     </div>
                 </div>
+
+                <div class="settings-section">
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-blue);">usb</span> USB Gadget Emulation</h4>
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
+                        <div class="toggle-info">
+                            <h4>USB Gadget Mode</h4>
+                            <p>Emulate hardware mouse over OTG USB connection.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="cfgUSBEnabled" ${currentConfig.usb_gadget_enabled ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Vendor ID</label>
+                            <input type="text" id="cfgUSBVendor" class="form-control" value="${currentConfig.usb_vendor_id || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Product ID</label>
+                            <input type="text" id="cfgUSBProduct" class="form-control" value="${currentConfig.usb_product_id || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Manufacturer</label>
+                            <input type="text" id="cfgUSBManufacturer" class="form-control" value="${currentConfig.usb_manufacturer || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Product Name</label>
+                            <input type="text" id="cfgUSBProductName" class="form-control" value="${currentConfig.usb_product || ''}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-red);">security</span> Security & Performance</h4>
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
+                        <div class="toggle-info">
+                            <h4>Strict Authentication</h4>
+                            <p>Require devices to pair before connecting.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="cfgAuth" ${currentConfig.auth_enabled ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Token Time To Live (hours)</label>
+                            <input type="number" id="cfgTokenTTL" class="form-control" value="${currentConfig.token_ttl_hours}">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Client Limit</label>
+                            <input type="number" id="cfgMaxClients" class="form-control" value="${currentConfig.max_clients}">
+                        </div>
+                        <div class="form-group">
+                            <label>Heartbeat Interval (s)</label>
+                            <input type="number" id="cfgHeartbeat" class="form-control" value="${currentConfig.heartbeat_interval}">
+                        </div>
+                        <div class="form-group">
+                            <label>Connection Timeout (s)</label>
+                            <input type="number" id="cfgTimeout" class="form-control" value="${currentConfig.connection_timeout}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section" style="border-bottom: none; padding-bottom: 0;">
+                    <h4 class="section-title"><span class="material-icons-round" style="color: var(--accent-blue);">terminal</span> Logs & Diagnostics</h4>
+                    <div class="form-grid" style="margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label>Log Level</label>
+                            <select id="cfgLogLevel" class="form-control" style="background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white;">
+                                <option value="debug" ${currentConfig.log_level === 'debug' ? 'selected' : ''}>Debug</option>
+                                <option value="info" ${currentConfig.log_level === 'info' ? 'selected' : ''}>Info</option>
+                                <option value="warn" ${currentConfig.log_level === 'warn' ? 'selected' : ''}>Warning</option>
+                                <option value="error" ${currentConfig.log_level === 'error' ? 'selected' : ''}>Error</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <div class="toggle-wrapper">
+                            <div class="toggle-info">
+                                <h4>Colored Logs</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="cfgLogColor" ${currentConfig.log_color ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-wrapper">
+                            <div class="toggle-info">
+                                <h4>Debug Mode</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="cfgDebugMode" ${currentConfig.debug_mode ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-wrapper">
+                            <div class="toggle-info">
+                                <h4>Metrics Collection</h4>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="cfgMetricsEnabled" ${currentConfig.metrics_enabled ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             `;
         } catch(e) {
             settingsForm.innerHTML = `<div class="loading-state"><span>Error loading configuration</span></div>`;
@@ -426,9 +728,18 @@ document.addEventListener('DOMContentLoaded', () => {
         saveSettingsBtn.textContent = 'Saving...';
         
         currentConfig.server_name = document.getElementById('cfgServerName').value;
-        currentConfig.sensitivity = parseFloat(document.getElementById('cfgSensitivity').value);
-        currentConfig.auth_enabled = document.getElementById('cfgAuth').checked;
+        currentConfig.theme = document.getElementById('cfgTheme').value;
+        currentConfig.port = parseInt(document.getElementById('cfgPort').value);
+        currentConfig.websocket_port = parseInt(document.getElementById('cfgWSPort').value);
+        currentConfig.udp_port = parseInt(document.getElementById('cfgUDPPort').value);
 
+        currentConfig.enable_tcp = document.getElementById('cfgEnableTCP').checked;
+        currentConfig.enable_websocket = document.getElementById('cfgEnableWS').checked;
+        currentConfig.enable_udp = document.getElementById('cfgEnableUDP').checked;
+        currentConfig.enable_bluetooth = document.getElementById('cfgEnableBT').checked;
+        currentConfig.enable_serial = document.getElementById('cfgEnableSerial').checked;
+
+        currentConfig.sensitivity = parseFloat(document.getElementById('cfgSensitivity').value);
         currentConfig.smoothing_enabled = document.getElementById('cfgSmoothing').checked;
         currentConfig.acceleration_enabled = document.getElementById('cfgAccelEnabled').checked;
         currentConfig.acceleration_factor = parseFloat(document.getElementById('cfgAccelFactor').value);
@@ -438,16 +749,54 @@ document.addEventListener('DOMContentLoaded', () => {
         currentConfig.enable_ai_smoothing = document.getElementById('cfgAISmooth').checked;
         currentConfig.enable_predictive = document.getElementById('cfgPredictive').checked;
         currentConfig.predictive_blend_factor = parseFloat(document.getElementById('cfgPredictiveBlend').value);
+        currentConfig.enable_jitter_compensation = (document.getElementById('cfgJitterComp').value === 'true');
         currentConfig.jitter_blend_factor = parseFloat(document.getElementById('cfgJitterBlend').value);
 
+        currentConfig.enable_ml_prediction = document.getElementById('cfgMLPredict').checked;
+        currentConfig.ml_model_path = document.getElementById('cfgMLModelPath').value;
+        currentConfig.ml_sequence_length = parseInt(document.getElementById('cfgMLSeqLength').value);
+        currentConfig.ml_blend_factor = parseFloat(document.getElementById('cfgMLBlend').value);
+        currentConfig.ml_inference_interval_ms = parseInt(document.getElementById('cfgMLInterval').value);
+
+        currentConfig.enable_humanizer = document.getElementById('cfgHumanizer').checked;
+        currentConfig.humanizer_tremor_amplitude = parseFloat(document.getElementById('cfgHumanTremor').value);
+        currentConfig.humanizer_bspline_segments = parseInt(document.getElementById('cfgHumanSegments').value);
+        currentConfig.humanizer_noise_amplitude = parseFloat(document.getElementById('cfgHumanNoise').value);
+        currentConfig.humanizer_velocity_peak_ratio = parseFloat(document.getElementById('cfgHumanPeak').value);
+
+        currentConfig.enable_particle_filter = document.getElementById('cfgParticle').checked;
+        currentConfig.particle_filter_num_particles = parseInt(document.getElementById('cfgParticleCount').value);
+
+        currentConfig.gesture_confidence_threshold = parseFloat(document.getElementById('cfgGestureConfidence').value);
+        currentConfig.gesture_cooldown_ms = parseInt(document.getElementById('cfgGestureCooldown').value);
         currentConfig.click_threshold = parseFloat(document.getElementById('cfgClickThreshold').value);
         currentConfig.scroll_threshold = parseFloat(document.getElementById('cfgScrollThreshold').value);
         currentConfig.double_click_interval = parseInt(document.getElementById('cfgDoubleClickInterval').value);
         currentConfig.right_click_tilt = parseFloat(document.getElementById('cfgRightClickTilt').value);
 
         currentConfig.proximity_enabled = document.getElementById('cfgProximity').checked;
+        currentConfig.proximity_near_threshold = parseFloat(document.getElementById('cfgProxNear').value);
+        currentConfig.proximity_far_threshold = parseFloat(document.getElementById('cfgProxFar').value);
+        currentConfig.proximity_scan_interval_ms = parseInt(document.getElementById('cfgProxInterval').value);
         currentConfig.ble_enabled = document.getElementById('cfgBLE').checked;
         currentConfig.hid_proxy_enabled = document.getElementById('cfgHIDProxy').checked;
+
+        currentConfig.usb_gadget_enabled = document.getElementById('cfgUSBEnabled').checked;
+        currentConfig.usb_vendor_id = document.getElementById('cfgUSBVendor').value;
+        currentConfig.usb_product_id = document.getElementById('cfgUSBProduct').value;
+        currentConfig.usb_manufacturer = document.getElementById('cfgUSBManufacturer').value;
+        currentConfig.usb_product = document.getElementById('cfgUSBProductName').value;
+
+        currentConfig.auth_enabled = document.getElementById('cfgAuth').checked;
+        currentConfig.token_ttl_hours = parseInt(document.getElementById('cfgTokenTTL').value);
+        currentConfig.max_clients = parseInt(document.getElementById('cfgMaxClients').value);
+        currentConfig.heartbeat_interval = parseInt(document.getElementById('cfgHeartbeat').value);
+        currentConfig.connection_timeout = parseInt(document.getElementById('cfgTimeout').value);
+
+        currentConfig.log_level = document.getElementById('cfgLogLevel').value;
+        currentConfig.log_color = document.getElementById('cfgLogColor').checked;
+        currentConfig.debug_mode = document.getElementById('cfgDebugMode').checked;
+        currentConfig.metrics_enabled = document.getElementById('cfgMetricsEnabled').checked;
 
         try {
             const res = await fetch('/api/config', {
@@ -485,4 +834,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start Polling Stats every 2s
     fetchStats();
     setInterval(fetchStats, 2000);
+
+    // Toggle server movement status
+    const toggleServerBtn = document.getElementById('toggleServerBtn');
+    if (toggleServerBtn) {
+        toggleServerBtn.addEventListener('click', async () => {
+            try {
+                const targetState = !serverIsPaused;
+                const res = await fetch('/api/status/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paused: targetState })
+                });
+                if(res.ok) {
+                    const result = await res.json();
+                    showToast(result.paused ? 'Motion Capture Paused' : 'Motion Capture Resumed');
+                    fetchStats();
+                } else {
+                    showToast('Failed to toggle server state', 'error');
+                }
+            } catch(e) {
+                showToast('Error toggling server state', 'error');
+            }
+        });
+    }
 });
