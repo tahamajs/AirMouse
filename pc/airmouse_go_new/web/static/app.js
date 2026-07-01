@@ -1306,4 +1306,76 @@ document.addEventListener('DOMContentLoaded', () => {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
+
+    // ============ Onboarding Tour ============
+    const tourSteps = [
+        { icon: '👋', title: 'Welcome to Air Mouse Pro', desc: 'Transform your smartphone into a wireless mouse, presenter remote, and file transfer hub. This quick tour will show you everything you need to know.' },
+        { icon: '📊', title: 'Live Dashboard', desc: 'Your command center shows real-time statistics: total clicks, scroll events, connected devices, and server uptime. Activity charts visualize traffic patterns.' },
+        { icon: '📱', title: 'Device Management', desc: 'View and manage all connected Android devices. Approve pending connections, inspect device hardware specs, connection protocols, and data transfer metrics.' },
+        { icon: '🖥️', title: 'Screen Mirroring', desc: 'Stream your connected device screen in real-time via low-latency WebSocket. Perfect for presentations and demonstrations.' },
+        { icon: '🎤', title: 'Presenter Mode', desc: 'Control presentations remotely with slide navigation, volume controls, fullscreen toggle, and desktop shortcuts — all from this dashboard.' },
+        { icon: '📁', title: 'File Transfer', desc: 'Drag & drop files to upload directly between your phone and PC. Download or delete transferred files with one click.' },
+        { icon: '⚙️', title: 'Server Configuration', desc: 'Fine-tune every aspect: sensitivity, AI smoothing, LSTM predictions, protocol toggles, gesture thresholds, security settings, and more.' },
+        { icon: '🎨', title: 'Theme Synchronization', desc: 'Your Android app theme automatically syncs to this dashboard. Change your phone theme and watch the UI transform in real-time.' },
+        { icon: '🗣️', title: 'Voice Commands', desc: 'Use natural voice commands from your phone: "click", "scroll up", "right click", "home", and more. Real speech recognition powered by Android APIs.' },
+        { icon: '🚀', title: 'You\'re All Set!', desc: 'Open the Air Mouse Pro app on your Android device, enter this server\'s IP address, and connect. You can re-launch this tour anytime from the Help button.' }
+    ];
+
+    let currentTourStep = 0;
+    const tourOverlay = document.getElementById('tourOverlay');
+    const tourIcon = document.getElementById('tourIcon');
+    const tourTitle = document.getElementById('tourTitle');
+    const tourDesc = document.getElementById('tourDesc');
+    const tourProgress = document.getElementById('tourProgress');
+    const tourNext = document.getElementById('tourNext');
+    const tourSkip = document.getElementById('tourSkip');
+
+    function startTour() {
+        currentTourStep = 0;
+        tourOverlay.classList.remove('hidden');
+        renderTourStep();
+    }
+    window.startTour = startTour;
+
+    function renderTourStep() {
+        const step = tourSteps[currentTourStep];
+        tourIcon.textContent = step.icon;
+        tourTitle.textContent = step.title;
+        tourDesc.textContent = step.desc;
+        // Re-trigger animation
+        const card = document.getElementById('tourCard');
+        card.style.animation = 'none';
+        card.offsetHeight; // force reflow
+        card.style.animation = 'tourCardIn 0.4s ease forwards';
+        // Progress dots
+        tourProgress.innerHTML = '';
+        tourSteps.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'tour-dot' + (i === currentTourStep ? ' active' : '');
+            tourProgress.appendChild(dot);
+        });
+        // Button text
+        tourNext.textContent = currentTourStep === tourSteps.length - 1 ? 'Get Started 🚀' : 'Next →';
+    }
+
+    function endTour() {
+        tourOverlay.classList.add('hidden');
+        localStorage.setItem('airmouse_tour_completed', 'true');
+    }
+
+    if (tourNext) tourNext.addEventListener('click', () => {
+        if (currentTourStep < tourSteps.length - 1) {
+            currentTourStep++;
+            renderTourStep();
+        } else {
+            endTour();
+        }
+    });
+
+    if (tourSkip) tourSkip.addEventListener('click', endTour);
+
+    // Auto-show on first visit
+    if (!localStorage.getItem('airmouse_tour_completed')) {
+        setTimeout(startTour, 800);
+    }
 });

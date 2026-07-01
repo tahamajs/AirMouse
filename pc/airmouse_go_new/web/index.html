@@ -74,8 +74,11 @@
         
         <!-- Main Content -->
         <main class="main-content">
-            <header class="header">
+            <header class="header" style="display: flex; align-items: center; justify-content: space-between;">
                 <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                <button class="tour-relaunch-btn" onclick="startTour()" title="Relaunch Welcome Tour">
+                    <span class="material-icons-round" style="font-size: 20px;">help_outline</span>
+                </button>
             </header>
             
             <div class="content-scroll">
@@ -503,7 +506,21 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Onboarding Tour Overlay -->
+    <div id="tourOverlay" class="tour-overlay hidden">
+        <div class="tour-card" id="tourCard">
+            <div class="tour-card-icon" id="tourIcon">👋</div>
+            <h3 class="tour-card-title" id="tourTitle">Welcome</h3>
+            <p class="tour-card-desc" id="tourDesc">Description</p>
+            <div class="tour-progress" id="tourProgress"></div>
+            <div class="tour-actions">
+                <button class="tour-btn tour-btn-skip" id="tourSkip">Skip Tour</button>
+                <button class="tour-btn tour-btn-next" id="tourNext">Next →</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/app.js"></script>
 </body>
 </html>
