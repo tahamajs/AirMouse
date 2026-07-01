@@ -20,6 +20,7 @@ import (
 
 	gorilla "github.com/gorilla/websocket"
 
+	"airmouse-go/web"
 	"airmouse-go/control/common"
 	"airmouse-go/control/mouse"
 	"airmouse-go/control/syscmd"
@@ -136,18 +137,19 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/download/", s.handleHTTPDownload)
 	mux.HandleFunc("/mirror", s.handleScreenMirror)
 	mux.HandleFunc("/screen", s.handleScreenMirror)
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+	mux.Handle("/static/", http.FileServer(http.FS(web.WebFS)))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
-			path := filepath.Join("web", filepath.Clean(r.URL.Path))
-			if _, err := os.Stat(path); err == nil {
-				http.ServeFile(w, r, path)
+			path := strings.TrimPrefix(r.URL.Path, "/")
+			if _, err := web.WebFS.Open(path); err == nil {
+				http.FileServer(http.FS(web.WebFS)).ServeHTTP(w, r)
 				return
 			}
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeFile(w, r, "web/index.html")
+		r.URL.Path = "/index.html"
+		http.FileServer(http.FS(web.WebFS)).ServeHTTP(w, r)
 	})
 
 	s.server = &http.Server{
