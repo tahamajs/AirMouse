@@ -18,6 +18,7 @@ import (
 	"airmouse-go/internal/logger"
 	"airmouse-go/internal/protocol"
 	"airmouse-go/internal/proximity"
+	"airmouse-go/internal/sysaction"
 	"os/exec"
 )
 
@@ -81,6 +82,7 @@ func main() {
 	logSystemInfo()
 
 	mouseCtrl := mouse.NewController(cfg.Sensitivity)
+	sysaction.SetSystemMouseSpeed(cfg.Sensitivity)
 	deviceMgr := device.NewManager()
 	authMgr := initAuth(cfg)
 

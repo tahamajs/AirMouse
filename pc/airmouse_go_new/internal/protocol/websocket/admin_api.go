@@ -13,6 +13,7 @@ import (
 	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
+	"airmouse-go/internal/sysaction"
 )
 
 // handleAPIStats returns system statistics
@@ -305,6 +306,20 @@ func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
 		currentCfg.MetricsEnabled = newCfg.MetricsEnabled
 		
 		currentCfg.Save()
+
+		// Apply the configuration updates to the running mouse controller
+		if s.mouse != nil {
+			s.mouse.SetSensitivity(currentCfg.Sensitivity)
+			s.mouse.SetSmoothing(currentCfg.SmoothingEnabled)
+			s.mouse.SetAcceleration(currentCfg.AccelerationEnabled, currentCfg.AccelerationFactor)
+			s.mouse.EnablePredictive(currentCfg.EnablePredictive)
+			s.mouse.SetPredictiveBlendFactor(currentCfg.PredictiveBlendFactor)
+			s.mouse.EnableAISmoothing(currentCfg.EnableAISmoothing)
+			s.mouse.EnableMLPrediction(currentCfg.EnableMLPrediction)
+		}
+
+		// Update OS system-wide mouse scaling/speed as well
+		sysaction.SetSystemMouseSpeed(currentCfg.Sensitivity)
 		
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": true})

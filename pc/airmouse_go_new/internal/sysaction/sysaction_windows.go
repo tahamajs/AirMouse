@@ -218,6 +218,19 @@ func init() {
 	logoutSystem = func() {
 		procExitWindowsEx.Call(EWX_LOGOFF, 0)
 	}
+	setSystemMouseSpeed = func(speed float64) {
+		// Map sensitivity range 0.1..3.0 to Windows mouse speed range 1..20 (default is 10)
+		winSpeed := int(speed * 10)
+		if winSpeed < 1 {
+			winSpeed = 1
+		}
+		if winSpeed > 20 {
+			winSpeed = 20
+		}
+		procSystemParametersInfo := user32.NewProc("SystemParametersInfoW")
+		// SPI_SETMOUSESPEED is 0x0071, SPIF_SENDCHANGE is 0x02
+		procSystemParametersInfo.Call(0x0071, 0, uintptr(winSpeed), 0x02)
+	}
 }
 
 func keybdEvent(vk byte, flags uint32) {

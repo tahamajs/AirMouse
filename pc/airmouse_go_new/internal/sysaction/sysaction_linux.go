@@ -197,4 +197,9 @@ func init() {
 	logoutSystem = func() {
 		_ = exec.Command("gnome-session-quit", "--no-prompt").Run()
 	}
+	setSystemMouseSpeed = func(speed float64) {
+		// xset m acceleration threshold
+		accel := fmt.Sprintf("%d", int(speed*2))
+		_ = exec.Command("xset", "m", accel, "10").Run()
+	}
 }
