@@ -128,6 +128,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/devices/reject", s.handleDeviceReject)
 	mux.HandleFunc("/api/config", s.handleAPIConfig)
 	mux.HandleFunc("/api/status/toggle", s.handleAPIStatusToggle)
+	mux.HandleFunc("/api/command", s.handleAPICommand)
 	mux.HandleFunc("/upload", s.handleHTTPUpload)
 	mux.HandleFunc("/download/", s.handleHTTPDownload)
 	mux.HandleFunc("/mirror", s.handleScreenMirror)
@@ -795,16 +796,24 @@ func (s *Server) safeSendBinary(client *WSClient, data []byte) bool {
 	defer func() {
 		_ = recover()
 	}()
-	client.BinarySend <- data
-	return true
+	select {
+	case client.BinarySend <- data:
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Server) safeSendText(client *WSClient, data []byte) bool {
 	defer func() {
 		_ = recover()
 	}()
-	client.Send <- data
-	return true
+	select {
+	case client.Send <- data:
+		return true
+	default:
+		return false
+	}
 }
 
 func fileMD5(path string) (string, error) {

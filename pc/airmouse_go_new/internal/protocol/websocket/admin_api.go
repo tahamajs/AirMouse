@@ -2,11 +2,13 @@ package websocket
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
 
 	"airmouse-go/control/common"
+	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 )
@@ -303,9 +305,56 @@ func (s *Server) handleAPIStatusToggle(w http.ResponseWriter, r *http.Request) {
 
 	common.SetMovementPaused(req.Paused)
 
+	// Broadcast pause/resume state to all active client devices
+	var action string
+	if req.Paused {
+		action = "pause_movement"
+	} else {
+		action = "resume_movement"
+	}
+	msg := fmt.Sprintf(`{"type":"control","action":"%s"}`+"\n", action)
+
+	s.mu.RLock()
+	for _, client := range s.clients {
+		s.safeSendText(client, []byte(msg))
+	}
+	s.mu.RUnlock()
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"paused":  common.IsMovementPaused(),
+	})
+}
+
+// handleAPICommand handles triggering system commands via HTTP POST
+func (s *Server) handleAPICommand(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Command string `json:"command"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err := syscmd.ExecuteSystemCommand(req.Command)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
 	})
 }

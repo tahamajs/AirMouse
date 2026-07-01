@@ -5,6 +5,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(toastContainer);
     let serverIsPaused = false;
 
+    let lastClicks = null;
+    let lastScrolls = null;
+    let lastDevices = null;
+    let lastPaused = null;
+
+    function addConsoleLog(message, level = 'INFO') {
+        const consoleLogs = document.getElementById('consoleLogs');
+        if (!consoleLogs) return;
+        const time = new Date().toLocaleTimeString();
+        const log = document.createElement('div');
+        let color = '#34d399'; // green for info
+        if (level === 'DEBUG') color = '#9ca3af'; // gray
+        if (level === 'WARN') color = '#fbbf24'; // orange
+        if (level === 'ERROR') color = '#f87171'; // red
+        log.innerHTML = `<span style="color: var(--text-secondary); margin-right: 8px;">[${time}]</span><span style="color: ${color}; font-weight: 600; margin-right: 8px;">[${level}]</span><span style="color: var(--text-primary);">${message}</span>`;
+        consoleLogs.appendChild(log);
+        consoleLogs.scrollTop = consoleLogs.scrollHeight;
+    }
+
     function showToast(message, type = 'success') {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
@@ -26,6 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const titles = {
         'dashboard': 'Dashboard',
         'devices': 'Device Management',
+        'mirror': 'Screen Mirroring',
+        'presentation': 'Presenter & Media Controller',
         'settings': 'Server Configuration'
     };
 
@@ -79,6 +100,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 statElements.scrolls.textContent = data.scrolls || 0;
                 statElements.devices.textContent = data.devices || 0;
                 statElements.uptime.textContent = formatUptime(data.uptime || 0);
+
+                // Live Logging comparisons
+                if (lastClicks !== null && data.clicks > lastClicks) {
+                    addConsoleLog(`Mouse clicks updated (+${data.clicks - lastClicks}) - Total: ${data.clicks}`);
+                }
+                if (lastScrolls !== null && data.scrolls > lastScrolls) {
+                    addConsoleLog(`Mouse scrolls updated (+${data.scrolls - lastScrolls}) - Total: ${data.scrolls}`);
+                }
+                if (lastDevices !== null && data.devices !== lastDevices) {
+                    addConsoleLog(`Active client count changed from ${lastDevices} to ${data.devices}`, data.devices > lastDevices ? 'INFO' : 'WARN');
+                }
+                if (lastPaused !== null && data.paused !== lastPaused) {
+                    addConsoleLog(data.paused ? 'Global motion capture paused' : 'Global motion capture resumed', 'WARN');
+                }
+
+                lastClicks = data.clicks || 0;
+                lastScrolls = data.scrolls || 0;
+                lastDevices = data.devices || 0;
+                lastPaused = data.paused || false;
 
                 if (data.pending > 0) {
                     pendingNavBadge.textContent = data.pending;
@@ -167,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                                 <div class="device-info-inner" style="text-align: left;">
                                     <h4 style="margin: 0; font-size: 16px;">${d.name || 'Unknown Device'}</h4>
-                                    <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">${d.id.substring(0, 8)}... • ${d.ip || 'Network'}</p>
+                                    <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">${d.id.substring(0, 8)}... • ${d.ip_address || d.ip || 'Network'}</p>
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 12px;">
@@ -179,20 +219,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
                                 <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-secondary);">
                                     <h5 style="color: var(--text-primary); font-size: 14px; margin-bottom: 4px; font-weight: 600;">Hardware Specs</h5>
-                                    <span><strong>Model:</strong> ${d.brand || ''} ${d.model || '-'}</span>
+                                    <span><strong>Model:</strong> ${d.brand || ''} ${d.device_model || d.model || '-'}</span>
                                     <span><strong>Manufacturer:</strong> ${d.manufacturer || '-'}</span>
-                                    <span><strong>Android Version:</strong> Android ${d.android_version || '-'} (SDK ${d.sdk || '-'})</span>
+                                    <span><strong>Android Version:</strong> Android ${d.android_version || '-'} (SDK ${d.sdk_int || d.sdk || '-'})</span>
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-secondary);">
                                     <h5 style="color: var(--text-primary); font-size: 14px; margin-bottom: 4px; font-weight: 600;">Connection Details</h5>
-                                    <span><strong>IP Address:</strong> ${d.ip || '-'}</span>
-                                    <span><strong>MAC Address:</strong> ${d.mac || '-'}</span>
+                                    <span><strong>IP Address:</strong> ${d.ip_address || '-'}</span>
+                                    <span><strong>MAC Address:</strong> ${d.mac_address || '-'}</span>
+                                    <span><strong>Protocol:</strong> ${d.protocol || '-'} (${d.transport || 'WS'})</span>
                                     <span><strong>Signal Strength (RSSI):</strong> ${d.rssi ? d.rssi + ' dBm' : 'Strong'}</span>
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-secondary);">
                                     <h5 style="color: var(--text-primary); font-size: 14px; margin-bottom: 4px; font-weight: 600;">Data Statistics</h5>
                                     <span><strong>Traffic Flow:</strong> Sent: ${formatBytes(d.bytes_sent)} | Recv: ${formatBytes(d.bytes_recv)}</span>
-                                    <span><strong>Messages Count:</strong> Sent: ${d.msg_sent} | Recv: ${d.msg_recv}</span>
+                                    <span><strong>Messages Count:</strong> Sent: ${d.messages_sent || d.msg_sent || 0} | Recv: ${d.messages_recv || d.msg_recv || 0}</span>
                                 </div>
                             </div>
                         </div>
@@ -831,6 +872,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
+    // Clear logs button listener
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    if (clearLogsBtn) {
+        clearLogsBtn.addEventListener('click', () => {
+            const consoleLogs = document.getElementById('consoleLogs');
+            if (consoleLogs) {
+                consoleLogs.innerHTML = `<div style="color: var(--text-secondary);">[INFO] Console cleared. Listening...</div>`;
+                showToast('Console logs cleared');
+            }
+        });
+    }
+
     // Start Polling Stats every 2s
     fetchStats();
     setInterval(fetchStats, 2000);
@@ -857,5 +910,106 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('Error toggling server state', 'error');
             }
         });
+    }
+
+    // Presentation commands listener
+    const cmdButtons = document.querySelectorAll('.cmd-btn');
+    cmdButtons.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const cmd = btn.dataset.command;
+            if (!cmd) return;
+            try {
+                const res = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+                if (res.ok) {
+                    showToast(`Command triggered: ${cmd}`);
+                    addConsoleLog(`Triggered system command: ${cmd}`);
+                } else {
+                    const errData = await res.json();
+                    showToast(`Command failed: ${errData.error || 'Unknown error'}`, 'error');
+                    addConsoleLog(`Failed to trigger system command: ${cmd} (${errData.error || 'Unknown'})`, 'ERROR');
+                }
+            } catch(e) {
+                showToast('Error sending command', 'error');
+            }
+        });
+    });
+
+    // Screen Mirroring WebSocket Client
+    let mirrorSocket = null;
+    const toggleMirrorBtn = document.getElementById('toggleMirrorBtn');
+    const mirrorImage = document.getElementById('mirrorImage');
+    const mirrorPlaceholder = document.getElementById('mirrorPlaceholder');
+    const mirrorBtnIcon = document.getElementById('mirrorBtnIcon');
+    const mirrorBtnText = document.getElementById('mirrorBtnText');
+
+    if (toggleMirrorBtn) {
+        toggleMirrorBtn.addEventListener('click', () => {
+            if (mirrorSocket) {
+                stopScreenMirror();
+            } else {
+                startScreenMirror();
+            }
+        });
+    }
+
+    function startScreenMirror() {
+        if (mirrorSocket) return;
+        
+        const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const mirrorUrl = `${wsProto}//${window.location.host}/mirror`;
+        
+        mirrorSocket = new WebSocket(mirrorUrl);
+        mirrorSocket.binaryType = 'blob';
+        
+        mirrorBtnIcon.textContent = 'stop';
+        mirrorBtnText.textContent = 'Stop Stream';
+        toggleMirrorBtn.style.background = 'linear-gradient(135deg, var(--accent-red), #dc2626)';
+        
+        mirrorPlaceholder.style.display = 'none';
+        mirrorImage.style.display = 'block';
+        
+        addConsoleLog('Screen mirroring stream started');
+        
+        mirrorSocket.onmessage = (event) => {
+            if (event.data instanceof Blob) {
+                const url = URL.createObjectURL(event.data);
+                const oldUrl = mirrorImage.src;
+                mirrorImage.src = url;
+                if (oldUrl && oldUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(oldUrl);
+                }
+            }
+        };
+        
+        mirrorSocket.onclose = () => {
+            cleanupMirrorUI();
+            addConsoleLog('Screen mirroring stream stopped', 'WARN');
+        };
+        
+        mirrorSocket.onerror = (err) => {
+            cleanupMirrorUI();
+            addConsoleLog('Screen mirroring encountered an error', 'ERROR');
+            showToast('Mirroring stream error', 'error');
+        };
+    }
+
+    function stopScreenMirror() {
+        if (mirrorSocket) {
+            mirrorSocket.close();
+            mirrorSocket = null;
+        }
+    }
+
+    function cleanupMirrorUI() {
+        mirrorSocket = null;
+        mirrorBtnIcon.textContent = 'play_arrow';
+        mirrorBtnText.textContent = 'Start Stream';
+        toggleMirrorBtn.style.background = 'linear-gradient(135deg, var(--accent-blue), #2563eb)';
+        mirrorImage.style.display = 'none';
+        mirrorPlaceholder.style.display = 'flex';
     }
 });

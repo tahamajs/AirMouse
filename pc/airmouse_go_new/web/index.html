@@ -37,9 +37,21 @@
                     <span class="nav-text">Devices</span>
                     <span class="nav-badge hidden" id="pendingNavBadge">0</span>
                 </a>
+                <a href="#" class="nav-item" data-page="mirror">
+                    <span class="material-icons-round">screen_share</span>
+                    <span class="nav-text">Screen Mirror</span>
+                </a>
+                <a href="#" class="nav-item" data-page="presentation">
+                    <span class="material-icons-round">present_to_all</span>
+                    <span class="nav-text">Presentation</span>
+                </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <span class="material-icons-round">tune</span>
                     <span class="nav-text">Settings</span>
+                </a>
+                <a href="#" class="nav-item" data-page="help">
+                    <span class="material-icons-round">help_outline</span>
+                    <span class="nav-text">Help & About</span>
                 </a>
             </nav>
             
@@ -149,6 +161,18 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="panel glass-panel console-panel" style="margin-top: 24px; min-height: 200px;">
+                        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;"><span class="material-icons-round" style="font-size: 20px; color: var(--accent-orange);">terminal</span> Live System Logs</h3>
+                            <button class="btn-icon" id="clearLogsBtn" title="Clear Console" style="padding: 6px; cursor: pointer;">
+                                <span class="material-icons-round" style="color: var(--text-secondary);">delete_sweep</span>
+                            </button>
+                        </div>
+                        <div class="console-body" id="consoleLogs" style="background: rgba(0,0,0,0.5); font-family: monospace; font-size: 13px; color: #34d399; padding: 16px; border-radius: 12px; height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--glass-border); text-align: left;">
+                            <div style="color: var(--text-secondary);">[INFO] Web interface initialized. Listening for server stats...</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Devices Page -->
@@ -181,6 +205,84 @@
                     </div>
                 </div>
 
+                <!-- Screen Mirror Page -->
+                <div id="mirrorPage" class="page">
+                    <div class="panel glass-panel">
+                        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3>Screen Mirroring</h3>
+                            <button class="btn" id="toggleMirrorBtn" style="padding: 8px 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; background: linear-gradient(135deg, var(--accent-blue), #2563eb); border: none; color: white;">
+                                <span class="material-icons-round" id="mirrorBtnIcon">play_arrow</span> <span id="mirrorBtnText">Start Stream</span>
+                             </button>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.4); border-radius: 16px; display: flex; align-items: center; justify-content: center; min-height: 400px; border: 1px solid var(--glass-border); overflow: hidden; position: relative;">
+                            <img id="mirrorImage" src="" alt="Mirroring feed will appear here..." style="max-width: 100%; max-height: 500px; display: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                            <div id="mirrorPlaceholder" style="display: flex; flex-direction: column; align-items: center; gap: 16px; color: var(--text-secondary);">
+                                <span class="material-icons-round" style="font-size: 64px; color: var(--accent-blue);">screen_share</span>
+                                <p style="margin: 0; font-size: 15px;">Click "Start Stream" to monitor the screen mirror feed</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Presentation Page -->
+                <div id="presentationPage" class="page">
+                    <div class="panel glass-panel">
+                        <div class="panel-header" style="margin-bottom: 16px;">
+                            <h3>Presentation & Media Controller</h3>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+                            <!-- Slide Controls -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 12px; align-self: flex-start;">
+                                    <span class="material-icons-round" style="color: var(--accent-orange); font-size: 28px;">slideshow</span>
+                                    <h4 style="margin: 0; font-size: 16px; font-weight: 600;">Presenter Mode</h4>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; margin-top: 12px;">
+                                    <button class="btn cmd-btn" data-command="prev_track" style="padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                        <span class="material-icons-round" style="font-size: 24px; color: var(--accent-orange);">arrow_back</span>
+                                        <span style="font-size: 13px;">Previous Slide</span>
+                                    </button>
+                                    <button class="btn cmd-btn" data-command="next_track" style="padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                        <span class="material-icons-round" style="font-size: 24px; color: var(--accent-orange);">arrow_forward</span>
+                                        <span style="font-size: 13px;">Next Slide</span>
+                                    </button>
+                                </div>
+                                <button class="btn cmd-btn" data-command="window_fullscreen" style="width: 100%; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <span class="material-icons-round" style="color: var(--accent-blue);">fullscreen</span>
+                                    <span style="font-size: 13px;">Toggle Fullscreen (F5 / Esc)</span>
+                                </button>
+                            </div>
+
+                            <!-- Media Controls -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 12px; align-self: flex-start;">
+                                    <span class="material-icons-round" style="color: var(--accent-blue); font-size: 28px;">play_circle</span>
+                                    <h4 style="margin: 0; font-size: 16px; font-weight: 600;">Media Player</h4>
+                                </div>
+                                <div style="display: flex; justify-content: center; align-items: center; gap: 20px; width: 100%; margin-top: 12px;">
+                                    <button class="btn cmd-btn" data-command="volume_down" title="Volume Down" style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
+                                        <span class="material-icons-round" style="font-size: 22px;">volume_down</span>
+                                    </button>
+                                    <button class="btn cmd-btn" data-command="play_pause" style="padding: 16px 24px; border-radius: 30px; background: linear-gradient(135deg, var(--accent-blue), #2563eb); border: none; color: white; display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(37,99,235,0.3);">
+                                        <span class="material-icons-round">play_pause</span> Play / Pause
+                                    </button>
+                                    <button class="btn cmd-btn" data-command="volume_up" title="Volume Up" style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
+                                        <span class="material-icons-round" style="font-size: 22px;">volume_up</span>
+                                    </button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%;">
+                                    <button class="btn cmd-btn" data-command="mute" style="padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px;">
+                                        <span class="material-icons-round" style="color: var(--accent-red); font-size: 18px;">volume_off</span> Mute
+                                    </button>
+                                    <button class="btn cmd-btn" data-command="show_desktop" style="padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px;">
+                                        <span class="material-icons-round" style="color: var(--accent-green); font-size: 18px;">desktop_windows</span> Desktop
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Settings Page -->
                 <div id="settingsPage" class="page">
                     <div class="panel glass-panel settings-panel">
@@ -195,6 +297,81 @@
                                 <span>Loading settings...</span>
                             </div>
                             <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help & About Page -->
+                <div id="helpPage" class="page">
+                    <div class="panel glass-panel help-panel">
+                        <div class="panel-header" style="margin-bottom: 20px;">
+                            <h3>Help & System Documentation</h3>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 24px; text-align: left;">
+                            <!-- System Overview -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px;">
+                                <h4 style="margin: 0 0 12px 0; color: var(--accent-blue); display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round">info</span> About Air Mouse Pro
+                                </h4>
+                                <p style="margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
+                                    Air Mouse Pro is a state-of-the-art smartphone-based remote control platform. 
+                                    By reading gyroscope and accelerometer sensor values from your Android device, it streams movement coordinates 
+                                    directly to this host application via high-frequency protocols (UDP, TCP, WebSockets). 
+                                    The server then utilizes local hardware APIs to control the cursor position, click state, and mouse scroll speed.
+                                </p>
+                            </div>
+
+                            <!-- How to Connect -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px;">
+                                <h4 style="margin: 0 0 12px 0; color: var(--accent-orange); display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round">sensors</span> How to Connect
+                                </h4>
+                                <ol style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
+                                    <li>Open the <strong>Air Mouse Pro</strong> app on your Android device.</li>
+                                    <li>Note the Server local IP addresses shown on this Dashboard (e.g. <code>192.168.1.X</code>).</li>
+                                    <li>Enter the target IP and choice of port (Default: <code>8081</code> for WebSockets / <code>8082</code> for TCP/UDP) on the phone.</li>
+                                    <li>Tap <strong>Connect</strong> on your Android app.</li>
+                                    <li>If <em>Strict Authentication</em> is enabled in Settings, approve the phone's connection request in the <strong>Devices</strong> section of this panel.</li>
+                                </ol>
+                            </div>
+
+                            <!-- Feature Reference -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px;">
+                                <h4 style="margin: 0 0 12px 0; color: var(--accent-green); display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round">tune</span> Feature Glossary
+                                </h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; font-size: 13px; line-height: 1.5; color: var(--text-secondary);">
+                                    <div>
+                                        <strong style="color: var(--text-primary);">EMA Smoothing:</strong>
+                                        Exponential Moving Average smoothing to filter sensor micro-jitters without introducing latency.
+                                    </div>
+                                    <div>
+                                        <strong style="color: var(--text-primary);">LSTM Sequence Predictor:</strong>
+                                        Uses an ONNX neural model to perform deep-learning motion vector sequence predictions for smoother curves.
+                                    </div>
+                                    <div>
+                                        <strong style="color: var(--text-primary);">Humanizer B-Splines:</strong>
+                                        Simulates physical muscle dynamics by injecting natural tremor frequency curves into linear transitions.
+                                    </div>
+                                    <div>
+                                        <strong style="color: var(--text-primary);">Particle Filter:</strong>
+                                        Runs absolute spatial position calculations using a configurable number of particle estimation weights.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Troubleshooting -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px;">
+                                <h4 style="margin: 0 0 12px 0; color: var(--accent-red); display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round">report_problem</span> Troubleshooting
+                                </h4>
+                                <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
+                                    <li><strong>Unstable cursor movement:</strong> Try disabling LSTM Predictors or lowering BSpline Tremor levels in Settings.</li>
+                                    <li><strong>High latency / Lag:</strong> Swap from TCP to UDP/WebSockets to bypass TCP congestion control mechanisms.</li>
+                                    <li><strong>Connection rejected:</strong> Ensure your phone and PC are on the exact same Wi-Fi subnet. Check if firewalls block ports 8081/8082.</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
