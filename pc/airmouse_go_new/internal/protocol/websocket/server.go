@@ -644,6 +644,25 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	case "laser", "draw", "annotation":
 		utils.LogInfo("Received %s data from client %s", msgType, client.ID)
 
+	case "steering":
+		angle := toFloat64(payload["angle"])
+		utils.LogInfo("Gaming Mode Steering received: device=%s, angle=%.2f", client.ID, angle)
+		// Emulate keypress based on steering angle
+		if angle > 15 {
+			go sysaction.KeyTap("d") // Steer Right
+		} else if angle < -15 {
+			go sysaction.KeyTap("a") // Steer Left
+		}
+
+	case "shooter":
+		action, _ := payload["action"].(string)
+		utils.LogInfo("Gaming Mode Shooter received: device=%s, action=%s", client.ID, action)
+		if action == "shoot" {
+			go sysaction.KeyTap("space")
+		} else if action == "reload" {
+			go sysaction.KeyTap("r")
+		}
+
 	case "keypress", "keydown", "keyup", "key":
 		keyVal, _ := payload["key"].(string)
 		if keyVal == "" {
