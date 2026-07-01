@@ -159,6 +159,34 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <div class="server-details" style="margin-top: 16px; border-top: 1px solid var(--glass-border); padding-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+                                <h4 style="font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin: 0;">
+                                    <span class="material-icons-round" style="font-size: 18px; color: var(--accent-green);">settings_ethernet</span> Active Listeners
+                                </h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 8px;">
+                                        <span style="color: var(--text-secondary);">WS</span>
+                                        <span id="listenerWS" class="badge yellow-badge" style="font-size: 10px; padding: 2px 6px;">Idle</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 8px;">
+                                        <span style="color: var(--text-secondary);">TCP</span>
+                                        <span id="listenerTCP" class="badge yellow-badge" style="font-size: 10px; padding: 2px 6px;">Idle</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 8px;">
+                                        <span style="color: var(--text-secondary);">UDP</span>
+                                        <span id="listenerUDP" class="badge yellow-badge" style="font-size: 10px; padding: 2px 6px;">Idle</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 8px;">
+                                        <span style="color: var(--text-secondary);">BT</span>
+                                        <span id="listenerBT" class="badge yellow-badge" style="font-size: 10px; padding: 2px 6px;">Idle</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 8px;">
+                                        <span style="color: var(--text-secondary);">Serial</span>
+                                        <span id="listenerSerial" class="badge yellow-badge" style="font-size: 10px; padding: 2px 6px;">Idle</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     

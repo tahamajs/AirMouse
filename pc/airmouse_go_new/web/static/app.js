@@ -141,6 +141,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     serverOtherPortsEl.textContent = `${data.ports.tcp || '-'} TCP / ${data.ports.udp || '-'} UDP`;
                 }
 
+                // Update active listeners indicators
+                if (data.protocols) {
+                    updateListenerBadge('listenerWS', data.protocols.websocket);
+                    updateListenerBadge('listenerTCP', data.protocols.tcp);
+                    updateListenerBadge('listenerUDP', data.protocols.udp);
+                    updateListenerBadge('listenerBT', data.protocols.bluetooth);
+                    updateListenerBadge('listenerSerial', data.protocols.serial);
+                }
+
                 // Update server paused/active status
                 const indicator = document.getElementById('serverStatusIndicator');
                 const text = document.getElementById('serverStatusText');
@@ -1011,5 +1020,17 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleMirrorBtn.style.background = 'linear-gradient(135deg, var(--accent-blue), #2563eb)';
         mirrorImage.style.display = 'none';
         mirrorPlaceholder.style.display = 'flex';
+    }
+
+    function updateListenerBadge(elementId, enabled) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (enabled) {
+            el.className = 'badge green-badge';
+            el.textContent = 'Active';
+        } else {
+            el.className = 'badge yellow-badge';
+            el.textContent = 'Disabled';
+        }
     }
 });

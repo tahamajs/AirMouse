@@ -57,6 +57,13 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 			"tcp":       cfg.Port,
 			"udp":       cfg.UDPPort,
 		},
+		"protocols": map[string]bool{
+			"websocket": cfg.EnableWebSocket,
+			"tcp":       cfg.EnableTCP,
+			"udp":       cfg.EnableUDP,
+			"bluetooth": cfg.EnableBluetooth,
+			"serial":    cfg.EnableSerial,
+		},
 		"quality": map[string]interface{}{
 			"level":   "excellent",
 			"text":    "Excellent",
