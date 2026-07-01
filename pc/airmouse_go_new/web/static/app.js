@@ -48,7 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'mirror': 'Screen Mirroring',
         'presentation': 'Presenter & Media Controller',
         'files': 'File Transfer Manager',
-        'settings': 'Server Configuration'
+        'settings': 'Server Configuration',
+        'help': 'System Documentation'
     };
 
     navItems.forEach(item => {
