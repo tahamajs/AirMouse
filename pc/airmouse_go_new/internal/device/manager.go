@@ -7,7 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -129,6 +132,7 @@ func NewManager() *DeviceManager {
 	}
 	m.loadPersistedDevices()
 	go m.backgroundCleanup()
+	go m.bluetoothPollingLoop()
 	return m
 }
 
@@ -804,4 +808,106 @@ func (m *DeviceManager) Stop() {
 // IsInitialized returns true if the manager is initialized.
 func (m *DeviceManager) IsInitialized() bool {
 	return m.initialized
+}
+
+func isBluetoothDeviceConnected(name string) bool {
+	if runtime.GOOS != "darwin" {
+		return false
+	}
+	cmd := exec.Command("system_profiler", "SPBluetoothDataType")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	str := string(output)
+	
+	connectedIdx := strings.Index(str, "Connected:")
+	if connectedIdx == -1 {
+		return false
+	}
+	notConnectedIdx := strings.Index(str, "Not Connected:")
+	
+	var connectedSection string
+	if notConnectedIdx == -1 {
+		connectedSection = str[connectedIdx:]
+	} else {
+		if notConnectedIdx > connectedIdx {
+			connectedSection = str[connectedIdx:notConnectedIdx]
+		} else {
+			connectedSection = str[connectedIdx:]
+		}
+	}
+	
+	return strings.Contains(strings.ToLower(connectedSection), strings.ToLower(name))
+}
+
+func (m *DeviceManager) bluetoothPollingLoop() {
+	// Poll every 5 seconds to check if a native Bluetooth mouse named "Air Mouse" is connected
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if m.stopped {
+				return
+			}
+			if isBluetoothDeviceConnected("Air Mouse") || isBluetoothDeviceConnected("AirMouse") {
+				m.mu.Lock()
+				id := "bt-air-mouse"
+				now := time.Now()
+				if _, exists := m.devices[id]; !exists {
+					m.devices[id] = &DeviceInfo{
+						ID:          id,
+						Name:        "Air Mouse",
+						Type:        TypeBluetooth,
+						Status:      StatusConnected,
+						ConnectedAt: now,
+						LastActive:  now,
+					}
+					m.persistLocked()
+					m.mu.Unlock()
+					m.triggerEvent(DeviceEvent{
+						Type:       "registered",
+						DeviceID:   id,
+						DeviceName: "Air Mouse",
+						Timestamp:  now,
+					})
+					logInfo("Native Bluetooth Air Mouse detected and registered")
+				} else {
+					d := m.devices[id]
+					statusChanged := d.Status != StatusConnected
+					d.Status = StatusConnected
+					d.LastActive = now
+					m.mu.Unlock()
+					if statusChanged {
+						m.triggerEvent(DeviceEvent{
+							Type:       "status_changed",
+							DeviceID:   id,
+							DeviceName: "Air Mouse",
+							Timestamp:  now,
+						})
+						logInfo("Native Bluetooth Air Mouse re-connected")
+					}
+				}
+			} else {
+				m.mu.Lock()
+				id := "bt-air-mouse"
+				if d, exists := m.devices[id]; exists && d.Status == StatusConnected {
+					d.Status = StatusDisconnected
+					m.mu.Unlock()
+					m.triggerEvent(DeviceEvent{
+						Type:       "status_changed",
+						DeviceID:   id,
+						DeviceName: "Air Mouse",
+						Timestamp:  time.Now(),
+					})
+					logInfo("Native Bluetooth Air Mouse disconnected")
+				} else {
+					m.mu.Unlock()
+				}
+			}
+		case <-m.stopChan:
+			return
+		}
+	}
 }
