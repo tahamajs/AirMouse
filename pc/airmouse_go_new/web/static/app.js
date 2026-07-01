@@ -86,18 +86,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Activity Monitor Fake Chart for Aesthetics (Since real packet frequency isn't tracked in API yet)
     const monitor = document.querySelector('.live-activity-monitor');
-    for (let i = 0; i < 20; i++) {
-        const bar = document.createElement('div');
-        bar.className = 'activity-bar';
-        bar.style.height = '10%';
-        monitor.appendChild(bar);
+    if (monitor) {
+        for (let i = 0; i < 20; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'activity-bar';
+            bar.style.height = '10%';
+            monitor.appendChild(bar);
+        }
     }
+    
+    let consecutiveFailures = 0;
+    const offlineOverlay = document.getElementById('offlineOverlay');
 
     async function fetchStats() {
         try {
             const res = await fetch('/api/stats');
+            if (!res.ok) throw new Error("Offline");
             const data = await res.json();
             if(data) {
+                consecutiveFailures = 0;
+                if (offlineOverlay) offlineOverlay.classList.add('hidden');
+
                 statElements.clicks.textContent = data.clicks || 0;
                 statElements.scrolls.textContent = data.scrolls || 0;
                 statElements.devices.textContent = data.devices || 0;
@@ -195,7 +204,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             }
-        } catch(e) {}
+        } catch(e) {
+            consecutiveFailures++;
+            if (consecutiveFailures >= 2) {
+                if (offlineOverlay) offlineOverlay.classList.remove('hidden');
+            }
+        }
+    }
     }
 
     // ---- Device Management ----
