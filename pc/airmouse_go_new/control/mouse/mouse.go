@@ -179,15 +179,6 @@ func (m *mouseController) Move(dx, dy float64) {
 
 	dx *= m.sensitivity
 	dy *= m.sensitivity
-	if math.Abs(dx) < 0.5 {
-		dx = 0
-	}
-	if math.Abs(dy) < 0.5 {
-		dy = 0
-	}
-	if dx == 0 && dy == 0 {
-		return
-	}
 
 	if m.predEnabled && m.predictor != nil {
 		dx, dy = m.predictor.AddMovement(dx, dy)
