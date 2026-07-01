@@ -486,6 +486,23 @@
             </div>
         </main>
     </div>
+
+    <!-- Connection Lost Overlay -->
+    <div id="offlineOverlay" class="hidden" style="position: fixed; inset: 0; background: rgba(10, 10, 12, 0.9); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; gap: 20px; transition: opacity 0.3s ease;">
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 40px; border-radius: 24px; text-align: center; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); display: flex; align-items: center; justify-content: center;">
+                <span class="material-icons-round" style="font-size: 36px; color: #ef4444; animation: pulse 2s infinite;">wifi_off</span>
+            </div>
+            <h2 style="font-size: 22px; font-weight: 700; color: white; margin: 0;">Server Offline</h2>
+            <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                Cannot connect to the Air Mouse Pro host service. Please ensure the server is running on the target PC.
+            </p>
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--accent-blue); font-weight: 500; margin-top: 8px;">
+                <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+                <span>Attempting to reconnect...</span>
+            </div>
+        </div>
+    </div>
     
     <script src="/static/app.js"></script>
 </body>
