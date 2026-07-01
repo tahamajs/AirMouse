@@ -56,6 +56,7 @@ type WSClient struct {
 	UserAgent   string
 	IP          string
 	Approved    atomic.Bool
+	Mode        string
 }
 
 // ------------------------------------------------------------
@@ -574,6 +575,10 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	case "control":
 		command, _ := payload["command"].(string)
 		switch command {
+		case "mode_change":
+			mode, _ := payload["mode"].(string)
+			client.Mode = mode
+			utils.LogInfo("WebSocket mode changed: device=%s mode=%s", client.ID, mode)
 		case "start", "touchpad_start", "resume", "resume_movement":
 			common.SetMovementPaused(false)
 			utils.LogInfo("Movement resumed by device: %s command=%s", client.ID, command)

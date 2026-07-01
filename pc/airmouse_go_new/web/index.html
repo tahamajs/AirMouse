@@ -77,7 +77,7 @@
             <div class="content-scroll">
                 <!-- Dashboard Page -->
                 <div id="dashboardPage" class="page active">
-                    <div class="stats-grid">
+                    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
                         <div class="stat-card glass-panel">
                             <div class="stat-icon-wrapper blue"><span class="material-icons-round">touch_app</span></div>
                             <div class="stat-info">
@@ -104,6 +104,20 @@
                             <div class="stat-info">
                                 <span class="stat-value" id="statUptime">00:00:00</span>
                                 <span class="stat-label">Server Uptime</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon-wrapper blue"><span class="material-icons-round">history</span></div>
+                            <div class="stat-info" style="text-align: left;">
+                                <span class="stat-value" id="statLastDevice" style="font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; display: block;">None</span>
+                                <span class="stat-label">Last Device</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon-wrapper green"><span class="material-icons-round">settings_input_hdmi</span></div>
+                            <div class="stat-info" style="text-align: left;">
+                                <span class="stat-value" id="statActiveMode" style="font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; display: block;">None</span>
+                                <span class="stat-label">Active Mode</span>
                             </div>
                         </div>
                     </div>

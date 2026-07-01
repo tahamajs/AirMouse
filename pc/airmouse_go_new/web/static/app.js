@@ -101,6 +101,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 statElements.devices.textContent = data.devices || 0;
                 statElements.uptime.textContent = formatUptime(data.uptime || 0);
 
+                // Update Last Connected Device & Android Mode
+                const lastDeviceEl = document.getElementById('statLastDevice');
+                if (lastDeviceEl && data.last_device) {
+                    lastDeviceEl.textContent = data.last_device_time !== '-' ? `${data.last_device} (${data.last_device_time})` : data.last_device;
+                }
+                const activeModeEl = document.getElementById('statActiveMode');
+                if (activeModeEl && data.active_mode) {
+                    activeModeEl.textContent = data.active_mode;
+                }
+
                 // Live Logging comparisons
                 if (lastClicks !== null && data.clicks > lastClicks) {
                     addConsoleLog(`Mouse clicks updated (+${data.clicks - lastClicks}) - Total: ${data.clicks}`);
@@ -703,6 +713,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="slider"></span>
                         </label>
                     </div>
+                    <div class="toggle-wrapper" style="margin-bottom: 12px;">
+                        <div class="toggle-info">
+                            <h4>Desktop Pairing Notifications</h4>
+                            <p>Display connection approval popup notifications on the desktop.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="cfgPairingUI" ${currentConfig.enable_pairing_ui ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Token Time To Live (hours)</label>
@@ -838,6 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentConfig.usb_product = document.getElementById('cfgUSBProductName').value;
 
         currentConfig.auth_enabled = document.getElementById('cfgAuth').checked;
+        currentConfig.enable_pairing_ui = document.getElementById('cfgPairingUI').checked;
         currentConfig.token_ttl_hours = parseInt(document.getElementById('cfgTokenTTL').value);
         currentConfig.max_clients = parseInt(document.getElementById('cfgMaxClients').value);
         currentConfig.heartbeat_interval = parseInt(document.getElementById('cfgHeartbeat').value);

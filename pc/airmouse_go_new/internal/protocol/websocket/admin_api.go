@@ -32,6 +32,10 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var active, pending int
+	var lastDeviceName string = "None"
+	var lastDeviceTime string = "-"
+	var maxConnectTime time.Time
+
 	if s.deviceMgr != nil {
 		for _, d := range s.deviceMgr.GetAllDevices() {
 			if d.Status == device.StatusConnected {
@@ -39,19 +43,37 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 			} else if d.Status == device.StatusPendingApproval {
 				pending++
 			}
+			if d.ConnectedAt.After(maxConnectTime) {
+				maxConnectTime = d.ConnectedAt
+				lastDeviceName = d.Name
+				lastDeviceTime = d.ConnectedAt.Format("15:04:05")
+			}
 		}
 	}
+
+	var activeMode string = "None"
+	s.mu.RLock()
+	for _, client := range s.clients {
+		if client.Approved.Load() && client.Mode != "" {
+			activeMode = client.Mode
+			break
+		}
+	}
+	s.mu.RUnlock()
 
 	cfg := config.Get()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"clicks":  clicks,
-		"scrolls": scrolls,
-		"devices": active,
-		"pending": pending,
-		"uptime":  uptime,
-		"paused":  common.IsMovementPaused(),
-		"ips":     getLocalIPs(),
+		"clicks":           clicks,
+		"scrolls":          scrolls,
+		"devices":          active,
+		"pending":          pending,
+		"uptime":           uptime,
+		"paused":           common.IsMovementPaused(),
+		"ips":              getLocalIPs(),
+		"last_device":      lastDeviceName,
+		"last_device_time": lastDeviceTime,
+		"active_mode":      activeMode,
 		"ports": map[string]int{
 			"websocket": cfg.WebSocketPort,
 			"tcp":       cfg.Port,
@@ -274,6 +296,7 @@ func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
 
 		// Security & Performance
 		currentCfg.AuthEnabled = newCfg.AuthEnabled
+		currentCfg.EnablePairingUI = newCfg.EnablePairingUI
 		currentCfg.TokenTTL = newCfg.TokenTTL
 		currentCfg.MaxClients = newCfg.MaxClients
 		currentCfg.HeartbeatInterval = newCfg.HeartbeatInterval
