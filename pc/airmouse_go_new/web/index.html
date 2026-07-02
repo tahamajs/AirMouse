@@ -803,7 +803,7 @@
                                 <ol style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
                                     <li>Open the <strong>Air Mouse Pro</strong> app on your Android device.</li>
                                     <li>Note the Server local IP addresses shown on this Dashboard (e.g. <code>192.168.1.X</code>).</li>
-                                    <li>Enter the target IP and choice of port (Default: <code>8081</code> for WebSockets / <code>8082</code> for TCP/UDP) on the phone.</li>
+                                    <li>Enter the target IP and choice of port (Default: <code>9091</code> for WebSockets / <code>9090</code> for TCP or <code>9092</code> for UDP) on the phone.</li>
                                     <li>Tap <strong>Connect</strong> on your Android app.</li>
                                     <li>If <em>Strict Authentication</em> is enabled in Settings, approve the phone's connection request in the <strong>Devices</strong> section of this panel.</li>
                                 </ol>
@@ -842,7 +842,7 @@
                                 <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
                                     <li><strong>Unstable cursor movement:</strong> Try disabling LSTM Predictors or lowering BSpline Tremor levels in Settings.</li>
                                     <li><strong>High latency / Lag:</strong> Swap from TCP to UDP/WebSockets to bypass TCP congestion control mechanisms.</li>
-                                    <li><strong>Connection rejected:</strong> Ensure your phone and PC are on the exact same Wi-Fi subnet. Check if firewalls block ports 8081/8082.</li>
+                                    <li><strong>Connection rejected:</strong> Ensure your phone and PC are on the exact same Wi-Fi subnet. Check if firewalls block ports 9090/9091/9092.</li>
                                 </ul>
                             </div>
                         </div>
