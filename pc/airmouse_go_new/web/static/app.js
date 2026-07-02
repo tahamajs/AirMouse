@@ -418,7 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (offlineOverlay) offlineOverlay.classList.remove('hidden');
         }
     }
-    }
 
     // ---- Device Management ----
     const devicesGrid = document.getElementById('devicesGrid');
