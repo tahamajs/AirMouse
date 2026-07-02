@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'devices': 'Device Management',
         'mirror': 'Screen Mirroring',
         'presentation': 'Presenter & Media Controller',
+        'gaming': 'Gaming Controls & Simulator',
         'files': 'File Transfer Manager',
         'settings': 'Server Configuration',
         'help': 'System Documentation'
@@ -1389,4 +1390,57 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!localStorage.getItem('airmouse_tour_completed')) {
         setTimeout(startTour, 800);
     }
+
+    // ---- Gaming Simulation Enhancements ----
+    const wheelIcon = document.getElementById('wheelIcon');
+    let currentRotation = 0;
+    
+    function animateWheel(deg) {
+        if (!wheelIcon) return;
+        currentRotation = deg;
+        wheelIcon.style.transform = `rotate(${currentRotation}deg)`;
+        setTimeout(() => {
+            if (currentRotation === deg) {
+                currentRotation = 0;
+                wheelIcon.style.transform = 'rotate(0deg)';
+            }
+        }, 300);
+    }
+
+    const steerLeftBtn = document.querySelector('[data-command="steer_left"]');
+    const steerRightBtn = document.querySelector('[data-command="steer_right"]');
+    if (steerLeftBtn) {
+        steerLeftBtn.addEventListener('click', () => animateWheel(-35));
+    }
+    if (steerRightBtn) {
+        steerRightBtn.addEventListener('click', () => animateWheel(35));
+    }
+
+    window.addEventListener('keydown', (e) => {
+        const gamingPage = document.getElementById('gamingPage');
+        if (!gamingPage || !gamingPage.classList.contains('active')) return;
+        
+        let cmd = '';
+        if (e.key === 'a' || e.key === 'A') {
+            cmd = 'steer_left';
+            animateWheel(-35);
+        } else if (e.key === 'd' || e.key === 'D') {
+            cmd = 'steer_right';
+            animateWheel(35);
+        } else if (e.key === ' ') {
+            cmd = 'shoot';
+            e.preventDefault();
+        } else if (e.key === 'r' || e.key === 'R') {
+            cmd = 'reload';
+        }
+        
+        if (cmd) {
+            const btn = document.querySelector(`[data-command="${cmd}"]`);
+            if (btn) {
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => btn.style.transform = 'scale(1)', 100);
+                btn.click();
+            }
+        }
+    });
 });

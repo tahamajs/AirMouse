@@ -71,6 +71,14 @@ func appleScriptForCommand(command string) (string, error) {
 		return `tell application "System Events" to keystroke "r" using command down`, nil
 	case "browser_home":
 		return `tell application "System Events" to keystroke "h" using {command down, shift down}`, nil
+	case "steer_left":
+		return `tell application "System Events" to keystroke "a"`, nil
+	case "steer_right":
+		return `tell application "System Events" to keystroke "d"`, nil
+	case "shoot":
+		return `tell application "System Events" to keystroke " "`, nil
+	case "reload":
+		return `tell application "System Events" to keystroke "r"`, nil
 	default:
 		return "", nil
 	}
