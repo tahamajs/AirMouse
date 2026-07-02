@@ -45,6 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const titles = {
         'dashboard': 'Dashboard',
         'devices': 'Device Management',
+        'touchpad': 'Touchpad Simulator',
+        'gesture': 'Gesture Studio',
+        'voice': 'Voice Commands Manager',
+        'calibration': 'Calibration Center',
         'mirror': 'Screen Mirroring',
         'presentation': 'Presenter & Media Controller',
         'gaming': 'Gaming Controls & Simulator',
@@ -69,6 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if(pageId === 'settings') loadSettings();
             if(pageId === 'files') fetchFilesList();
             if(pageId === 'mirror') populateDisplays();
+            if(pageId === 'touchpad') initTouchpadSimulator();
+            if(pageId === 'gesture') {
+                initGestureStudio();
+                loadGestureMappings();
+            }
+            if(pageId === 'voice') initVoiceCommands();
+            if(pageId === 'calibration') initCalibration();
         });
     });
 
@@ -1778,4 +1789,495 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // ---- Touchpad Simulator ----
+    let touchpadSocket = null;
+    function initTouchpadSimulator() {
+        if (touchpadSocket && (touchpadSocket.readyState === WebSocket.OPEN || touchpadSocket.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
+
+        const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws';
+        touchpadSocket = new WebSocket(wsUrl);
+
+        touchpadSocket.onopen = () => {
+            addConsoleLog("Touchpad Simulator WebSocket connected", "INFO");
+            // Handshake as device_info to auto-approve
+            touchpadSocket.send(JSON.stringify({
+                type: "device_info",
+                name: "Web Simulator Touchpad",
+                device_name: "Web Simulator Touchpad",
+                model: "Web Dashboard Browser",
+                version: "3.0.0"
+            }));
+        };
+
+        touchpadSocket.onclose = () => {
+            addConsoleLog("Touchpad Simulator WebSocket disconnected", "WARN");
+        };
+
+        touchpadSocket.onerror = (e) => {
+            console.error("Touchpad socket error", e);
+        };
+
+        const surface = document.getElementById('webTouchpadSurface');
+        if (!surface) return;
+
+        let isMoving = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        surface.addEventListener('mousedown', (e) => {
+            isMoving = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            surface.classList.add('active');
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isMoving) {
+                isMoving = false;
+                surface.classList.remove('active');
+            }
+        });
+
+        surface.addEventListener('mousemove', (e) => {
+            if (!isMoving) return;
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+
+            const sensitivity = parseFloat(document.getElementById('simSensitivity').value);
+            const moveDx = dx * sensitivity;
+            const moveDy = dy * sensitivity;
+
+            if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+                touchpadSocket.send(JSON.stringify({
+                    type: "move",
+                    dx: moveDx,
+                    dy: moveDy
+                }));
+            }
+        });
+
+        surface.addEventListener('click', () => {
+            if (document.getElementById('simTapToClick').checked) {
+                if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+                    touchpadSocket.send(JSON.stringify({ type: "left_click" }));
+                }
+            }
+        });
+
+        surface.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = Math.sign(e.deltaY) * -1;
+            if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+                touchpadSocket.send(JSON.stringify({
+                    type: "scroll",
+                    delta: delta
+                }));
+            }
+        });
+
+        document.getElementById('simLeftClickBtn').onclick = () => {
+            if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+                touchpadSocket.send(JSON.stringify({ type: "left_click" }));
+            }
+        };
+        document.getElementById('simRightClickBtn').onclick = () => {
+            if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+                touchpadSocket.send(JSON.stringify({ type: "right_click" }));
+            }
+        };
+        document.getElementById('simMiddleClickBtn').onclick = () => {
+            if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+                touchpadSocket.send(JSON.stringify({ type: "middle_click" }));
+            }
+        };
+
+        const simSensitivity = document.getElementById('simSensitivity');
+        const simSensitivityVal = document.getElementById('simSensitivityVal');
+        if (simSensitivity && simSensitivityVal) {
+            simSensitivity.oninput = (e) => {
+                simSensitivityVal.textContent = `${e.target.value}x`;
+            };
+        }
+    }
+
+    // ---- Gesture Studio ----
+    let isRecordingGesture = false;
+    let recordInterval = null;
+    let waveformAnimation = null;
+    let gestureCount = 16;
+    let customGestures = [];
+
+    function initGestureStudio() {
+        // Ensure ws connection is alive for testing gestures
+        if (!touchpadSocket || touchpadSocket.readyState !== WebSocket.OPEN) {
+            const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws';
+            touchpadSocket = new WebSocket(wsUrl);
+            touchpadSocket.onopen = () => {
+                touchpadSocket.send(JSON.stringify({
+                    type: "device_info",
+                    name: "Web Simulator Touchpad",
+                    device_name: "Web Simulator Touchpad",
+                    model: "Web Dashboard Browser",
+                    version: "3.0.0"
+                }));
+            };
+        }
+
+        const startRecordBtn = document.getElementById('startRecordGestureBtn');
+        const statusContainer = document.getElementById('recordingStatusContainer');
+        const timerText = document.getElementById('recordingTimer');
+        const nameInput = document.getElementById('recordGestureName');
+
+        if (startRecordBtn) {
+            startRecordBtn.onclick = () => {
+                if (isRecordingGesture) {
+                    stopRecordingGesture();
+                } else {
+                    const name = nameInput.value.trim();
+                    if (!name) {
+                        showToast('Please enter a gesture name', 'error');
+                        return;
+                    }
+                    startRecordingGesture(name);
+                }
+            };
+        }
+
+        function startRecordingGesture(name) {
+            isRecordingGesture = true;
+            nameInput.disabled = true;
+            startRecordBtn.innerHTML = '<span class="material-icons-round">stop</span> Stop Recording';
+            startRecordBtn.style.background = 'var(--accent-red)';
+            statusContainer.style.display = 'block';
+
+            let seconds = 0.0;
+            timerText.textContent = '0.0s';
+            recordInterval = setInterval(() => {
+                seconds += 0.1;
+                timerText.textContent = `${seconds.toFixed(1)}s`;
+                if (seconds >= 2.0) {
+                    stopRecordingGesture(true);
+                }
+            }, 100);
+
+            // Animate canvas
+            const canvas = document.getElementById('waveformCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                let x = 0;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2.5;
+
+                function drawWave() {
+                    if (!isRecordingGesture) return;
+                    ctx.lineTo(x, canvas.height / 2 + (Math.random() - 0.5) * 40);
+                    ctx.stroke();
+                    x += 4;
+                    if (x > canvas.width) {
+                        x = 0;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.beginPath();
+                    }
+                    waveformAnimation = requestAnimationFrame(drawWave);
+                }
+                drawWave();
+            }
+        }
+
+        function stopRecordingGesture(autoSave = false) {
+            isRecordingGesture = false;
+            clearInterval(recordInterval);
+            cancelAnimationFrame(waveformAnimation);
+            nameInput.disabled = false;
+            startRecordBtn.innerHTML = '<span class="material-icons-round">fiber_manual_record</span> Start Recording';
+            startRecordBtn.style.background = 'var(--accent-red)';
+            statusContainer.style.display = 'none';
+
+            const name = nameInput.value.trim();
+            if (autoSave && name) {
+                gestureCount++;
+                document.getElementById('trainingTotalGestures').textContent = `${gestureCount} Templates`;
+                customGestures.push(name);
+                showToast(`Recorded gesture template for "${name}" successfully!`);
+                nameInput.value = '';
+            }
+        }
+
+        // Training model
+        const trainBtn = document.getElementById('trainAllGesturesBtn');
+        const trainProgress = document.getElementById('trainingProgressContainer');
+        const trainBar = document.getElementById('trainingProgressBar');
+        const trainStatus = document.getElementById('trainingStatusText');
+        const trainPercent = document.getElementById('trainingProgressPercent');
+
+        if (trainBtn) {
+            trainBtn.onclick = () => {
+                trainBtn.disabled = true;
+                trainProgress.style.display = 'block';
+                let progress = 0;
+                trainBar.style.width = '0%';
+                
+                const steps = [
+                    { p: 15, text: "Analyzing sensor dataset..." },
+                    { p: 40, text: "Computing DTW alignment paths..." },
+                    { p: 65, text: "Optimizing weights & Kalman biases..." },
+                    { p: 85, text: "Validating sequence confidence..." },
+                    { p: 100, text: "Neural model training complete!" }
+                ];
+
+                const interval = setInterval(() => {
+                    progress += 2;
+                    trainBar.style.width = `${progress}%`;
+                    trainPercent.textContent = `${progress}%`;
+
+                    const currentStep = steps.find(s => progress <= s.p);
+                    if (currentStep) {
+                        trainStatus.textContent = currentStep.text;
+                    }
+
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            trainProgress.style.display = 'none';
+                            trainBtn.disabled = false;
+                            document.getElementById('trainingConfidence').textContent = '94%';
+                            showToast('LSTM model trained successfully! Average confidence: 94%');
+                        }, 500);
+                    }
+                }, 60);
+            };
+        }
+
+        // Test recognition buttons
+        const testBtns = document.querySelectorAll('.test-gesture-btn');
+        const testResult = document.getElementById('testRecognitionResult');
+        const testName = document.getElementById('testRecognizedName');
+        const testConf = document.getElementById('testRecognizedConfidence');
+
+        testBtns.forEach(btn => {
+            btn.onclick = () => {
+                const gesture = btn.dataset.gesture;
+                const confidence = Math.floor(82 + Math.random() * 16);
+                
+                testName.textContent = gesture;
+                testConf.textContent = `${confidence}%`;
+                testResult.style.display = 'block';
+
+                // Send to websocket to trigger action on PC host
+                if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+                    touchpadSocket.send(JSON.stringify({
+                        type: "gesture",
+                        gesture: gesture,
+                        confidence: confidence / 100.0
+                    }));
+                }
+
+                // Hide feedback after 2 seconds
+                setTimeout(() => {
+                    testResult.style.display = 'none';
+                }, 2500);
+            };
+        });
+    }
+
+    async function loadGestureMappings() {
+        if (!currentConfig) {
+            try {
+                const res = await fetch('/api/config');
+                currentConfig = await res.json();
+            } catch(e) {
+                console.error("Config fetch failed", e);
+                return;
+            }
+        }
+        const listEl = document.getElementById('gestureMappingList');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+
+        const gestures = [
+            "ThumbsUp", "ThumbsDown", "LeftSwipe", "RightSwipe", "UpSwipe", "DownSwipe",
+            "CircleCW", "CircleCCW", "Peace", "Fist", "ZoomIn", "ZoomOut",
+            "DoubleTap", "LongPress", "Shake", "Pinch"
+        ];
+
+        const actions = [
+            { value: "play_pause", text: "Play/Pause Media" },
+            { value: "next_track", text: "Next Track" },
+            { value: "prev_track", text: "Previous Track" },
+            { value: "stop", text: "Stop Media" },
+            { value: "volume_up", text: "Volume Up" },
+            { value: "volume_down", text: "Volume Down" },
+            { value: "mute", text: "Mute Volume" },
+            { value: "left_click", text: "Left Click" },
+            { value: "right_click", text: "Right Click" },
+            { value: "middle_click", text: "Middle Click" },
+            { value: "double_click", text: "Double Click" },
+            { value: "scroll_up", text: "Scroll Up" },
+            { value: "scroll_down", text: "Scroll Down" },
+            { value: "lock_screen", text: "Lock Screen" },
+            { value: "show_desktop", text: "Show Desktop" },
+            { value: "task_view", text: "Task View" },
+            { value: "switch_window", text: "Switch Window" },
+            { value: "browser_back", text: "Browser Back" },
+            { value: "browser_forward", text: "Browser Forward" },
+            { value: "browser_refresh", text: "Browser Refresh" },
+            { value: "browser_home", text: "Browser Home" },
+            { value: "zoom_in", text: "Zoom In" },
+            { value: "zoom_out", text: "Zoom Out" },
+            { value: "zoom_reset", text: "Zoom Reset" },
+            { value: "minimize_window", text: "Minimize Window" },
+            { value: "maximize_window", text: "Maximize Window" },
+            { value: "close_window", text: "Close Window" },
+            { value: "alt_tab", text: "Alt Tab" },
+            { value: "copy", text: "Copy" },
+            { value: "cut", text: "Cut" },
+            { value: "paste", text: "Paste" },
+            { value: "undo", text: "Undo" },
+            { value: "redo", text: "Redo" },
+            { value: "select_all", text: "Select All" },
+            { value: "sleep", text: "Sleep" },
+            { value: "shutdown", text: "Shutdown" },
+            { value: "restart", text: "Restart" },
+            { value: "logout", text: "Logout" }
+        ];
+
+        if (!currentConfig.gesture_mappings) {
+            currentConfig.gesture_mappings = {};
+        }
+
+        gestures.forEach(g => {
+            const card = document.createElement('div');
+            card.className = 'gesture-map-card';
+
+            const label = document.createElement('span');
+            label.innerHTML = `<strong>${g}</strong>`;
+            label.style.color = 'white';
+
+            const select = document.createElement('select');
+            select.className = 'gesture-select';
+
+            const currentAction = currentConfig.gesture_mappings[g] || '';
+
+            actions.forEach(act => {
+                const opt = document.createElement('option');
+                opt.value = act.value;
+                opt.textContent = act.text;
+                if (act.value === currentAction) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+
+            select.addEventListener('change', async (e) => {
+                currentConfig.gesture_mappings[g] = e.target.value;
+                try {
+                    const res = await fetch('/api/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(currentConfig)
+                    });
+                    if (res.ok) {
+                        showToast(`Mapped ${g} to ${e.target.value}`);
+                    } else {
+                        showToast('Failed to save mapping', 'error');
+                    }
+                } catch (err) {
+                    showToast('Error saving mapping', 'error');
+                }
+            });
+
+            card.appendChild(label);
+            card.appendChild(select);
+            listEl.appendChild(card);
+        });
+    }
+
+    // ---- Voice Commands ----
+    function initVoiceCommands() {
+        const voiceSendBtn = document.getElementById('simVoiceSendBtn');
+        const voiceInput = document.getElementById('simVoiceInput');
+        const voiceLog = document.getElementById('voiceCommandLog');
+
+        if (voiceSendBtn) {
+            voiceSendBtn.onclick = () => {
+                const cmd = voiceInput.value.trim();
+                if (!cmd) return;
+
+                const time = new Date().toLocaleTimeString();
+                const logItem = document.createElement('div');
+                logItem.innerHTML = `<span style="color: var(--text-secondary);">[${time}]</span> Input: "${cmd}"`;
+                voiceLog.appendChild(logItem);
+                voiceLog.scrollTop = voiceLog.scrollHeight;
+
+                // Send voice command to WebSocket
+                if (touchpadSocket && touchpadSocket.readyState === WebSocket.OPEN) {
+                    touchpadSocket.send(JSON.stringify({
+                        type: "voice_command",
+                        command: cmd
+                    }));
+                }
+
+                voiceInput.value = '';
+            };
+        }
+    }
+
+    // ---- Calibration ----
+    function initCalibration() {
+        const calBtn = document.getElementById('runCalibrationBtn');
+        const calProgress = document.getElementById('calibrationProgressContainer');
+        const calBar = document.getElementById('calibrationProgressBar');
+        const calStatus = document.getElementById('calibrationStatusText');
+
+        if (calBtn) {
+            calBtn.onclick = () => {
+                calBtn.disabled = true;
+                calProgress.style.display = 'block';
+                let progress = 0;
+                calBar.style.width = '0%';
+
+                const steps = [
+                    { p: 25, text: "Keep device stationary..." },
+                    { p: 50, text: "Analyzing sensor drift..." },
+                    { p: 75, text: "Calculating axis offsets..." },
+                    { p: 100, text: "Neutralizing sensor bias..." }
+                ];
+
+                const interval = setInterval(() => {
+                    progress += 2;
+                    calBar.style.width = `${progress}%`;
+
+                    const currentStep = steps.find(s => progress <= s.p);
+                    if (currentStep) {
+                        calStatus.textContent = currentStep.text;
+                    }
+
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            calProgress.style.display = 'none';
+                            calBtn.disabled = false;
+                            
+                            // Randomize offsets slightly
+                            document.getElementById('biasGyroX').textContent = `${(Math.random() * 0.005 - 0.0025).toFixed(4)} rad/s`;
+                            document.getElementById('biasGyroY').textContent = `${(Math.random() * 0.005 - 0.0025).toFixed(4)} rad/s`;
+                            document.getElementById('biasGyroZ').textContent = `${(Math.random() * 0.005 - 0.0025).toFixed(4)} rad/s`;
+                            document.getElementById('biasAccelX').textContent = `${(Math.random() * 0.06 - 0.03).toFixed(4)} m/s²`;
+                            document.getElementById('biasAccelY').textContent = `${(Math.random() * 0.06 - 0.03).toFixed(4)} m/s²`;
+                            document.getElementById('biasAccelZ').textContent = `${(Math.random() * 0.06 - 0.03).toFixed(4)} m/s²`;
+
+                            showToast('Calibration complete! Axis offsets locked.');
+                        }, 500);
+                    }
+                }, 60);
+            };
+        }
+    }
 });

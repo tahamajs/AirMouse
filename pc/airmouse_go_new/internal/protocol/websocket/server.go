@@ -156,8 +156,20 @@ func (s *Server) Start() error {
 			http.NotFound(w, r)
 			return
 		}
-		r.URL.Path = "/index.html"
-		http.FileServer(http.FS(web.WebFS)).ServeHTTP(w, r)
+		// Serve index.html directly to avoid http.FileServer's redirect-to-dir loop
+		file, err := web.WebFS.Open("index.html")
+		if err != nil {
+			http.Error(w, "Failed to load index.html", http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+		content, err := io.ReadAll(file)
+		if err != nil {
+			http.Error(w, "Failed to read index.html", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(content)
 	})
 
 	s.server = &http.Server{
