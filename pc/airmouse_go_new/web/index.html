@@ -37,6 +37,22 @@
                     <span class="nav-text">Devices</span>
                     <span class="nav-badge hidden" id="pendingNavBadge">0</span>
                 </a>
+                <a href="#" class="nav-item" data-page="touchpad">
+                    <span class="material-icons-round">touch_app</span>
+                    <span class="nav-text">Touchpad Simulator</span>
+                </a>
+                <a href="#" class="nav-item" data-page="gesture">
+                    <span class="material-icons-round">gesture</span>
+                    <span class="nav-text">Gesture Studio</span>
+                </a>
+                <a href="#" class="nav-item" data-page="voice">
+                    <span class="material-icons-round">record_voice_over</span>
+                    <span class="nav-text">Voice Commands</span>
+                </a>
+                <a href="#" class="nav-item" data-page="calibration">
+                    <span class="material-icons-round">track_changes</span>
+                    <span class="nav-text">Calibration</span>
+                </a>
                 <a href="#" class="nav-item" data-page="mirror">
                     <span class="material-icons-round">screen_share</span>
                     <span class="nav-text">Screen Mirror</span>
@@ -320,6 +336,285 @@
                                         <span id="mirrorScaleVal" style="font-size: 12px; color: var(--accent-blue); font-weight: 600;">0.50x</span>
                                     </div>
                                     <input type="range" id="mirrorScale" min="0.10" max="1.0" step="0.05" value="0.50" style="width: 100%; accent-color: var(--accent-blue); cursor: pointer; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; outline: none;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Touchpad Simulator Page -->
+                <div id="touchpadPage" class="page">
+                    <div class="panel glass-panel">
+                        <div class="panel-header" style="margin-bottom: 20px;">
+                            <h3>Touchpad Simulator Remote</h3>
+                            <span style="font-size: 13px; color: var(--text-secondary);">Simulate a high-precision remote touchpad over WebSocket.</span>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 24px;">
+                            <!-- Interactive Touchpad Surface -->
+                            <div style="flex: 2; min-width: 320px; background: rgba(255,255,255,0.02); border-radius: 20px; border: 2px dashed rgba(255,255,255,0.1); min-height: 400px; display: flex; align-items: center; justify-content: center; position: relative; cursor: crosshair; user-select: none;" id="webTouchpadSurface">
+                                <div style="text-align: center; color: var(--text-secondary); pointer-events: none;">
+                                    <span class="material-icons-round" style="font-size: 56px; color: var(--accent-blue); margin-bottom: 12px; display: block;">touch_app</span>
+                                    <span style="font-size: 15px; font-weight: 500; display: block; margin-bottom: 6px;">Web Touchpad Active</span>
+                                    <span style="font-size: 12px; display: block; opacity: 0.7;">Drag mouse/touch here to move host cursor</span>
+                                    <span style="font-size: 12px; display: block; opacity: 0.7; margin-top: 4px;">Tap = Left Click | Right Click Button below</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Controls and Settings Panel -->
+                            <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 20px;">
+                                <!-- Mouse Clicks simulation buttons -->
+                                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+                                    <h4 style="margin: 0; font-size: 14px; color: white;">Click Commands</h4>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                        <button class="btn" id="simLeftClickBtn" style="padding: 12px; background: rgba(59,130,246,0.2); border: 1px solid var(--accent-blue); color: white; border-radius: 10px; cursor: pointer; font-weight: 600;">Left Click</button>
+                                        <button class="btn" id="simRightClickBtn" style="padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; border-radius: 10px; cursor: pointer; font-weight: 600;">Right Click</button>
+                                    </div>
+                                    <button class="btn" id="simMiddleClickBtn" style="padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">Middle Click</button>
+                                </div>
+
+                                <!-- Settings / Tuning -->
+                                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                                    <h4 style="margin: 0; font-size: 14px; color: white; display: flex; align-items: center; gap: 8px;">
+                                        <span class="material-icons-round" style="color: var(--accent-blue); font-size: 18px;">tune</span> Touch Settings
+                                    </h4>
+                                    
+                                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                                        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                                            <span style="color: var(--text-secondary);">Simulator Sensitivity</span>
+                                            <span id="simSensitivityVal" style="color: var(--accent-blue); font-weight: 600;">1.0x</span>
+                                        </div>
+                                        <input type="range" id="simSensitivity" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 100%; accent-color: var(--accent-blue); cursor: pointer;">
+                                    </div>
+
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="font-size: 13px; color: var(--text-secondary);">Tap to Click</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="simTapToClick" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gesture Studio Page -->
+                <div id="gesturePage" class="page">
+                    <div class="panel glass-panel">
+                        <div class="panel-header" style="margin-bottom: 20px;">
+                            <h3>🎯 Gesture Studio</h3>
+                            <span style="font-size: 13px; color: var(--text-secondary);">Create custom gesture templates, train prediction models, and map gestures.</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 24px;">
+                            <!-- Gesture Recording Simulator -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                                <h4 style="margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round" style="color: var(--accent-red);">fiber_manual_record</span> Record Custom Gesture
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 12px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 12px;">Gesture Name</label>
+                                        <input type="text" id="recordGestureName" class="form-control" placeholder="e.g., CircleCW, SwipeLeft" style="width: 100%;">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 12px;">Primary Sensor</label>
+                                        <select id="recordSensorType" class="form-control" style="background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white; width: 100%;">
+                                            <option value="gyro">Gyroscope</option>
+                                            <option value="accel">Accelerometer</option>
+                                            <option value="mag">Magnetometer</option>
+                                            <option value="all">All Sensors Combined</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn" id="startRecordGestureBtn" style="padding: 12px; background: var(--accent-red); border: none; color: white; border-radius: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <span class="material-icons-round">fiber_manual_record</span> Start Recording
+                                    </button>
+                                </div>
+                                
+                                <!-- Recording status and waveform visualizer -->
+                                <div id="recordingStatusContainer" style="display: none; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--accent-red); font-weight: bold; margin-bottom: 8px;">
+                                        <div class="spinner" style="width: 12px; height: 12px; border-color: var(--accent-red) transparent; border-width: 2px;"></div>
+                                        <span id="recordingTimer">0.0s</span>
+                                    </div>
+                                    <canvas id="waveformCanvas" width="300" height="80" style="width: 100%; height: 80px; background: rgba(0,0,0,0.2); border-radius: 8px;"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Model Training Card -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                                <h4 style="margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round" style="color: var(--accent-purple);">psychology</span> Model Training Center
+                                </h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;">
+                                        <span style="color: var(--text-secondary); display: block; font-size: 11px;">Total Templates</span>
+                                        <strong id="trainingTotalGestures">16 Templates</strong>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;">
+                                        <span style="color: var(--text-secondary); display: block; font-size: 11px;">Model Confidence</span>
+                                        <strong id="trainingConfidence">89%</strong>
+                                    </div>
+                                </div>
+                                <button class="btn" id="trainAllGesturesBtn" style="padding: 12px; background: linear-gradient(135deg, var(--accent-purple), #7c3aed); border: none; color: white; border-radius: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <span class="material-icons-round">auto_awesome</span> Train All Templates
+                                </button>
+                                
+                                <!-- Training Progress Indicator -->
+                                <div id="trainingProgressContainer" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                                        <span style="color: var(--text-secondary);" id="trainingStatusText">Running Epochs...</span>
+                                        <span id="trainingProgressPercent" style="color: var(--accent-purple); font-weight: bold;">0%</span>
+                                    </div>
+                                    <div style="width: 100%; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                                        <div id="trainingProgressBar" style="width: 0%; height: 100%; background: var(--accent-purple); transition: width 0.1s linear;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recognition Tester -->
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; margin-bottom: 24px; text-align: center;">
+                            <h4 style="margin: 0 0 12px 0; color: white; display: flex; align-items: center; gap: 8px; justify-content: center;">
+                                <span class="material-icons-round" style="color: var(--accent-green);">track_changes</span> Interactive Recognition Test
+                            </h4>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Trigger a test gesture to verify correct detection matching.</p>
+                            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                                <button class="btn test-gesture-btn" data-gesture="ThumbsUp" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer;">👍 Thumbs Up</button>
+                                <button class="btn test-gesture-btn" data-gesture="ThumbsDown" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer;">👎 Thumbs Down</button>
+                                <button class="btn test-gesture-btn" data-gesture="LeftSwipe" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer;">👈 Left Swipe</button>
+                                <button class="btn test-gesture-btn" data-gesture="RightSwipe" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer;">👉 Right Swipe</button>
+                                <button class="btn test-gesture-btn" data-gesture="CircleCW" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer;">🔄 Circle CW</button>
+                                <button class="btn test-gesture-btn" data-gesture="Peace" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer;">✌️ Peace Sign</button>
+                            </div>
+                            <div id="testRecognitionResult" style="display: none; margin-top: 16px; padding: 12px; border-radius: 10px; background: rgba(16,185,129,0.1); border: 1px solid var(--accent-green); font-weight: bold; color: var(--accent-green);">
+                                Recognized Gesture: <span id="testRecognizedName">-</span> (Confidence: <span id="testRecognizedConfidence">0%</span>)
+                            </div>
+                        </div>
+
+                        <!-- Gesture Action Map Editor -->
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px;">
+                            <h4 style="margin: 0 0 16px 0; color: white; display: flex; align-items: center; gap: 8px;">
+                                <span class="material-icons-round" style="color: var(--accent-orange);">settings</span> Gesture-to-Action Mappings
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;" id="gestureMappingList">
+                                <!-- Generated dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voice Commands Page -->
+                <div id="voicePage" class="page">
+                    <div class="panel glass-panel">
+                        <div class="panel-header" style="margin-bottom: 20px;">
+                            <h3>🎙️ Voice Command Manager</h3>
+                            <span style="font-size: 13px; color: var(--text-secondary);">Parse spoken commands and execute mapped actions.</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+                            <!-- Voice Input card -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                                <h4 style="margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round" style="color: var(--accent-blue);">record_voice_over</span> Test Voice Command
+                                </h4>
+                                <div class="form-group" style="margin: 0;">
+                                    <label style="font-size: 12px;">Type speech command</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="simVoiceInput" class="form-control" placeholder="e.g., volume up, play music, lock system" style="flex: 1;">
+                                        <button class="btn" id="simVoiceSendBtn" style="padding: 10px 20px; background: linear-gradient(135deg, var(--accent-blue), #2563eb); border: none; color: white; font-weight: 600; border-radius: 8px; cursor: pointer;">Send</button>
+                                    </div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                                    <span style="font-size: 11px; color: var(--text-secondary);">Voice command log:</span>
+                                    <div id="voiceCommandLog" style="height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; display: flex; flex-direction: column; gap: 6px; text-align: left;">
+                                        <div style="color: var(--text-secondary);">Waiting for voice command input...</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Built-in patterns -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; text-align: left;">
+                                <h4 style="margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round" style="color: var(--accent-green);">menu_book</span> Recognised Voice Commands
+                                </h4>
+                                <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
+                                    <li><strong>"play / pause / resume":</strong> Play/Pause Media</li>
+                                    <li><strong>"volume up / louder":</strong> Increase System Volume</li>
+                                    <li><strong>"volume down / quieter":</strong> Decrease System Volume</li>
+                                    <li><strong>"mute":</strong> Mute Volume</li>
+                                    <li><strong>"next":</strong> Next Track</li>
+                                    <li><strong>"previous / prev":</strong> Previous Track</li>
+                                    <li><strong>"lock / lock screen":</strong> Lock screen session</li>
+                                    <li><strong>"close":</strong> Close top window</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calibration Page -->
+                <div id="calibrationPage" class="page">
+                    <div class="panel glass-panel">
+                        <div class="panel-header" style="margin-bottom: 20px;">
+                            <h3>⚙️ Sensor Calibration Center</h3>
+                            <span style="font-size: 13px; color: var(--text-secondary);">Calculate and neutralize device sensor biases for high accuracy tracking.</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+                            <!-- Active Status -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                                <h4 style="margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round" style="color: var(--accent-blue);">info</span> Calibration Biases
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                                        <span style="color: var(--text-secondary);">Gyroscope X Bias</span>
+                                        <strong style="font-family: monospace;" id="biasGyroX">-0.0014 rad/s</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                                        <span style="color: var(--text-secondary);">Gyroscope Y Bias</span>
+                                        <strong style="font-family: monospace;" id="biasGyroY">+0.0028 rad/s</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                                        <span style="color: var(--text-secondary);">Gyroscope Z Bias</span>
+                                        <strong style="font-family: monospace;" id="biasGyroZ">-0.0007 rad/s</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                                        <span style="color: var(--text-secondary);">Accelerometer X Bias</span>
+                                        <strong style="font-family: monospace;" id="biasAccelX">+0.0345 m/s²</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                                        <span style="color: var(--text-secondary);">Accelerometer Y Bias</span>
+                                        <strong style="font-family: monospace;" id="biasAccelY">-0.0122 m/s²</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding-bottom: 4px;">
+                                        <span style="color: var(--text-secondary);">Accelerometer Z Bias</span>
+                                        <strong style="font-family: monospace;" id="biasAccelZ">+0.0051 m/s²</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Run Calibration -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                                <h4 style="margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons-round" style="color: var(--accent-orange);">tune</span> Calibration Process
+                                </h4>
+                                <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Perform a calibration sequence. Ensure your simulated remote remains stationary.</p>
+                                <button class="btn" id="runCalibrationBtn" style="padding: 12px; background: linear-gradient(135deg, var(--accent-orange), #ea580c); border: none; color: white; border-radius: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <span class="material-icons-round">play_arrow</span> Run Calibration
+                                </button>
+
+                                <div id="calibrationProgressContainer" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; text-align: center;">
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--accent-orange); font-weight: bold; margin-bottom: 12px;">
+                                        <div class="spinner" style="width: 14px; height: 14px; border-color: var(--accent-orange) transparent; border-width: 2px;"></div>
+                                        <span id="calibrationStatusText">Initializing...</span>
+                                    </div>
+                                    <div style="width: 100%; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                                        <div id="calibrationProgressBar" style="width: 0%; height: 100%; background: var(--accent-orange); transition: width 0.1s linear;"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

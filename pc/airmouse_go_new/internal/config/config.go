@@ -54,7 +54,8 @@ type Config struct {
 	ClickThreshold             float64 `json:"click_threshold"`
 	ScrollThreshold            float64 `json:"scroll_threshold"`
 	DoubleClickInterval        int64   `json:"double_click_interval"`
-	RightClickTilt             float64 `json:"right_click_tilt"`
+	RightClickTilt             float64           `json:"right_click_tilt"`
+	GestureMappings            map[string]string `json:"gesture_mappings"`
 
 	// Proximity settings
 	ProximityEnabled       bool    `json:"proximity_enabled"`
@@ -207,6 +208,24 @@ func loadOrDefault() *Config {
 		ScrollThreshold:            3.0,
 		DoubleClickInterval:        300,
 		RightClickTilt:             45.0,
+		GestureMappings: map[string]string{
+			"ThumbsUp":   "play_pause",
+			"ThumbsDown": "stop",
+			"LeftSwipe":  "prev_track",
+			"RightSwipe": "next_track",
+			"UpSwipe":    "volume_up",
+			"DownSwipe":  "volume_down",
+			"CircleCW":   "volume_up",
+			"CircleCCW":  "volume_down",
+			"Peace":      "lock_screen",
+			"Fist":       "mute",
+			"ZoomIn":     "zoom_in",
+			"ZoomOut":    "zoom_out",
+			"DoubleTap":  "double_click",
+			"LongPress":  "right_click",
+			"Shake":      "show_desktop",
+			"Pinch":      "zoom_reset",
+		},
 
 		ProximityEnabled:       false,
 		ProximityNearThreshold: 1.5,
@@ -318,11 +337,19 @@ func (c *Config) Save() error {
 
 // Reload reloads config from file.
 func (c *Config) Reload() error {
-	newConfig := loadOrDefault()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	newConfig.mu = c.mu
-	*c = *newConfig
+	
+	// Open file using path set on config
+	data, err := os.ReadFile(c.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config: %w", err)
+	}
+	
+	// Copy current struct to map JSON values onto it
+	if err := json.Unmarshal(data, c); err != nil {
+		return fmt.Errorf("failed to unmarshal config: %w", err)
+	}
 	return nil
 }
 

@@ -282,6 +282,7 @@ func (s *Server) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
 		currentCfg.ScrollThreshold = newCfg.ScrollThreshold
 		currentCfg.DoubleClickInterval = newCfg.DoubleClickInterval
 		currentCfg.RightClickTilt = newCfg.RightClickTilt
+		currentCfg.GestureMappings = newCfg.GestureMappings
 
 		// Proximity settings
 		currentCfg.ProximityEnabled = newCfg.ProximityEnabled

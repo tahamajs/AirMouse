@@ -422,3 +422,46 @@ input:checked + .slider:before { transform: translateX(24px); }
     color: var(--accent-blue);
     transform: scale(1.08);
 }
+
+/* Touchpad & Gesture Simulator Styles */
+#webTouchpadSurface {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 2px dashed rgba(255, 255, 255, 0.1) !important;
+    border-radius: 20px;
+    position: relative;
+    cursor: crosshair;
+    transition: all 0.3s ease;
+}
+#webTouchpadSurface.active {
+    background: rgba(59, 130, 246, 0.05) !important;
+    border-color: var(--accent-blue) !important;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.gesture-map-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.25s ease;
+}
+.gesture-map-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.gesture-select {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    max-width: 160px;
+}

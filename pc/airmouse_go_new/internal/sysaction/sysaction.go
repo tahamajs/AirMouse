@@ -3,6 +3,8 @@ package sysaction
 
 import (
 	"log"
+
+	"airmouse-go/internal/config"
 )
 
 // Action represents a system action.
@@ -262,16 +264,34 @@ func Execute(a Action) {
 
 // ExecuteGesture executes an action based on a gesture name and confidence.
 func ExecuteGesture(gesture string, confidence float64) {
-	if confidence < 0.7 {
-		log.Printf("Gesture confidence too low: %.2f", confidence)
+	cfg := config.Get()
+	minConfidence := cfg.GestureConfidenceThreshold
+	if minConfidence <= 0 {
+		minConfidence = 0.7
+	}
+	if confidence < minConfidence {
+		log.Printf("Gesture confidence too low: %.2f (threshold: %.2f)", confidence, minConfidence)
 		return
 	}
-	if action, exists := ActionMap[gesture]; exists {
-		Execute(action)
-		log.Printf("Gesture %s -> Action %s (confidence: %.2f)", gesture, action, confidence)
-	} else {
-		log.Printf("No mapping for gesture: %s", gesture)
+
+	var action Action
+	if cfg.GestureMappings != nil {
+		if actStr, ok := cfg.GestureMappings[gesture]; ok && actStr != "" {
+			action = Action(actStr)
+		}
 	}
+
+	if action == "" {
+		if fallbackAction, exists := ActionMap[gesture]; exists {
+			action = fallbackAction
+		} else {
+			log.Printf("No mapping for gesture: %s", gesture)
+			return
+		}
+	}
+
+	Execute(action)
+	log.Printf("Gesture %s -> Action %s (confidence: %.2f)", gesture, action, confidence)
 }
 
 // GetAvailableActions returns all defined actions.
