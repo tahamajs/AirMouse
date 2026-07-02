@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kbinani/screenshot"
+
 	"airmouse-go/control/common"
 	"airmouse-go/control/syscmd"
 	"airmouse-go/internal/config"
@@ -38,11 +40,14 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 	var lastDeviceName string = "None"
 	var lastDeviceTime string = "-"
 	var maxConnectTime time.Time
+	var totalPackets, totalBytes int64
 
 	if s.deviceMgr != nil {
 		for _, d := range s.deviceMgr.GetAllDevices() {
 			if d.Status == device.StatusConnected {
 				active++
+				totalPackets += d.MessagesRecv
+				totalBytes += d.BytesRecv
 			} else if d.Status == device.StatusPendingApproval {
 				pending++
 			}
@@ -71,6 +76,8 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		"last_device_time": lastDeviceTime,
 		"active_mode":      activeMode,
 		"active_theme":     activeTheme,
+		"total_packets":    totalPackets,
+		"total_bytes":      totalBytes,
 		"ports": map[string]int{
 			"websocket": cfg.WebSocketPort,
 			"tcp":       cfg.Port,
@@ -487,4 +494,48 @@ func (s *Server) handleAPIFilesDelete(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 	})
+}
+
+// handleAPIDisplays returns information about all connected displays/monitors
+func (s *Server) handleAPIDisplays(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	n := screenshot.NumActiveDisplays()
+	type DisplayInfo struct {
+		ID        int    `json:"id"`
+		Width     int    `json:"width"`
+		Height    int    `json:"height"`
+		IsPrimary bool   `json:"is_primary"`
+		Name      string `json:"name"`
+	}
+
+	displays := make([]DisplayInfo, 0, n)
+	for i := 0; i < n; i++ {
+		bounds := screenshot.GetDisplayBounds(i)
+		isPrimary := i == 0 // screenshot package considers display 0 to be primary
+		displays = append(displays, DisplayInfo{
+			ID:        i,
+			Width:     bounds.Dx(),
+			Height:    bounds.Dy(),
+			IsPrimary: isPrimary,
+			Name:      fmt.Sprintf("Display %d (%dx%d)", i, bounds.Dx(), bounds.Dy()),
+		})
+	}
+
+	// Fallback if no displays detected
+	if len(displays) == 0 {
+		displays = append(displays, DisplayInfo{
+			ID:        0,
+			Width:     1920,
+			Height:    1080,
+			IsPrimary: true,
+			Name:      "Default Primary Display (1920x1080)",
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(displays)
 }

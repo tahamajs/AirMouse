@@ -78,6 +78,28 @@ func execWindows(command string) error {
 		sendKey(0x30) // 0
 		time.Sleep(10 * time.Millisecond)
 		keybdEvent(0x11, KEYEVENTF_KEYUP)
+	case "volume_up":
+		sendKey(0xAF) // VK_VOLUME_UP
+	case "volume_down":
+		sendKey(0xAE) // VK_VOLUME_DOWN
+	case "mute":
+		sendKey(0xAD) // VK_VOLUME_MUTE
+	case "play_pause":
+		sendKey(0xB3) // VK_MEDIA_PLAY_PAUSE
+	case "next_track":
+		sendKey(0xB0) // VK_MEDIA_NEXT_TRACK
+	case "prev_track":
+		sendKey(0xB1) // VK_MEDIA_PREV_TRACK
+	case "window_fullscreen":
+		sendKey(0x7A) // VK_F11
+	case "steer_left":
+		sendKey(0x41) // A
+	case "steer_right":
+		sendKey(0x44) // D
+	case "shoot":
+		sendKey(0x20) // Space
+	case "reload":
+		sendKey(0x52) // R
 	default:
 		return nil
 	}

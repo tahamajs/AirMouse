@@ -13,12 +13,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+	"bytes"
+	"image"
+	"image/jpeg"
 
 	gorilla "github.com/gorilla/websocket"
+	"github.com/kbinani/screenshot"
+	"github.com/nfnt/resize"
 
 	"airmouse-go/web"
 	"airmouse-go/control/common"
@@ -134,6 +140,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/command", s.handleAPICommand)
 	mux.HandleFunc("/api/files", s.handleAPIFiles)
 	mux.HandleFunc("/api/files/delete", s.handleAPIFilesDelete)
+	mux.HandleFunc("/api/displays", s.handleAPIDisplays)
 	mux.HandleFunc("/upload", s.handleHTTPUpload)
 	mux.HandleFunc("/download/", s.handleHTTPDownload)
 	mux.HandleFunc("/mirror", s.handleScreenMirror)
@@ -1255,7 +1262,108 @@ func (s *Server) handleScreenMirror(w http.ResponseWriter, r *http.Request) {
 
 	utils.LogInfo("Screen mirror client connected: %s", r.RemoteAddr)
 
-	ticker := time.NewTicker(200 * time.Millisecond) // ~5 FPS
+	// Default parameters
+	fps := 20
+	scale := 0.5
+	quality := 60
+	displayIdx := 0
+
+	// Parse initial query params
+	if qFPS := r.URL.Query().Get("fps"); qFPS != "" {
+		if val, err := strconv.Atoi(qFPS); err == nil && val >= 5 && val <= 60 {
+			fps = val
+		}
+	}
+	if qScale := r.URL.Query().Get("scale"); qScale != "" {
+		if val, err := strconv.ParseFloat(qScale, 64); err == nil && val >= 0.1 && val <= 1.0 {
+			scale = val
+		}
+	}
+	if qQuality := r.URL.Query().Get("quality"); qQuality != "" {
+		if qQuality == "low" {
+			quality = 30
+			scale = 0.3
+		} else if qQuality == "medium" {
+			quality = 60
+			scale = 0.6
+		} else if qQuality == "high" {
+			quality = 90
+			scale = 1.0
+		} else if val, err := strconv.Atoi(qQuality); err == nil && val >= 10 && val <= 100 {
+			quality = val
+		}
+	}
+	if qDisplay := r.URL.Query().Get("display"); qDisplay != "" {
+		if val, err := strconv.Atoi(qDisplay); err == nil && val >= 0 {
+			displayIdx = val
+		}
+	}
+
+	var settings struct {
+		sync.Mutex
+		fps        int
+		scale      float64
+		quality    int
+		displayIdx int
+		updated    chan struct{}
+	}
+	settings.fps = fps
+	settings.scale = scale
+	settings.quality = quality
+	settings.displayIdx = displayIdx
+	settings.updated = make(chan struct{}, 1)
+
+	// Goroutine to read control messages from the client
+	go func() {
+		for {
+			_, msg, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			var update struct {
+				FPS     *int     `json:"fps"`
+				Scale   *float64 `json:"scale"`
+				Quality *string  `json:"quality"`
+				Display *int     `json:"display"`
+			}
+			if err := json.Unmarshal(msg, &update); err == nil {
+				settings.Lock()
+				if update.FPS != nil && *update.FPS >= 5 && *update.FPS <= 60 {
+					settings.fps = *update.FPS
+				}
+				if update.Scale != nil && *update.Scale >= 0.1 && *update.Scale <= 1.0 {
+					settings.scale = *update.Scale
+				}
+				if update.Display != nil && *update.Display >= 0 {
+					settings.displayIdx = *update.Display
+				}
+				if update.Quality != nil {
+					q := *update.Quality
+					if q == "low" {
+						settings.quality = 30
+						settings.scale = 0.3
+					} else if q == "medium" {
+						settings.quality = 60
+						settings.scale = 0.6
+					} else if q == "high" {
+						settings.quality = 90
+						settings.scale = 1.0
+					} else {
+						if val, err := strconv.Atoi(q); err == nil && val >= 10 && val <= 100 {
+							settings.quality = val
+						}
+					}
+				}
+				settings.Unlock()
+				select {
+				case settings.updated <- struct{}{}:
+				default:
+				}
+			}
+		}
+	}()
+
+	ticker := time.NewTicker(time.Duration(1000/fps) * time.Millisecond)
 	defer ticker.Stop()
 
 	tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("airmouse_mirror_%s.jpg", utils.GenerateID()))
@@ -1263,23 +1371,42 @@ func (s *Server) handleScreenMirror(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		select {
+		case <-settings.updated:
+			settings.Lock()
+			currentFPS := settings.fps
+			settings.Unlock()
+			if currentFPS > 0 {
+				ticker.Reset(time.Duration(1000/currentFPS) * time.Millisecond)
+			}
+
 		case <-ticker.C:
-			s.mu.RLock()
-			imgData := s.latestAndroidScreenFrame
-			stale := time.Since(s.latestAndroidScreenFrameTime) > 2*time.Second
-			s.mu.RUnlock()
+			settings.Lock()
+			currDisplay := settings.displayIdx
+			currScale := settings.scale
+			currQuality := settings.quality
+			settings.Unlock()
 
-			if stale || len(imgData) == 0 {
-				if err := captureScreenshot(tmpFile); err != nil {
-					utils.LogDebug("Screen capture failed: %v", err)
-					continue
-				}
+			// Capture screenshot natively
+			imgData, err := captureDisplayScreenshot(currDisplay, currScale, currQuality)
+			if err != nil {
+				// Fallback to latestAndroidScreenFrame
+				s.mu.RLock()
+				imgData = s.latestAndroidScreenFrame
+				stale := time.Since(s.latestAndroidScreenFrameTime) > 2*time.Second
+				s.mu.RUnlock()
 
-				var err error
-				imgData, err = os.ReadFile(tmpFile)
-				if err != nil {
-					continue
+				if stale || len(imgData) == 0 {
+					// Fallback to legacy command capture
+					if err := captureScreenshot(tmpFile); err == nil {
+						if data, readErr := os.ReadFile(tmpFile); readErr == nil {
+							imgData = data
+						}
+					}
 				}
+			}
+
+			if len(imgData) == 0 {
+				continue
 			}
 
 			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
@@ -1289,6 +1416,39 @@ func (s *Server) handleScreenMirror(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+// captureDisplayScreenshot grabs a screenshot using the kbinani library, resizes it and encodes it.
+func captureDisplayScreenshot(displayIdx int, scale float64, jpegQuality int) ([]byte, error) {
+	numDisplays := screenshot.NumActiveDisplays()
+	if numDisplays == 0 {
+		return nil, fmt.Errorf("no active displays")
+	}
+	if displayIdx < 0 || displayIdx >= numDisplays {
+		displayIdx = 0
+	}
+
+	img, err := screenshot.CaptureDisplay(displayIdx)
+	if err != nil {
+		return nil, err
+	}
+
+	var finalImg image.Image = img
+	if scale > 0.0 && scale < 1.0 {
+		w := uint(float64(img.Bounds().Dx()) * scale)
+		h := uint(float64(img.Bounds().Dy()) * scale)
+		if w > 0 && h > 0 {
+			finalImg = resize.Resize(w, h, img, resize.NearestNeighbor)
+		}
+	}
+
+	var buf bytes.Buffer
+	err = jpeg.Encode(&buf, finalImg, &jpeg.Options{Quality: jpegQuality})
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 // captureScreenshot grabs a JPEG screenshot on Darwin, Windows, or Linux.

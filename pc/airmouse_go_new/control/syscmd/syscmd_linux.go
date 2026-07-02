@@ -42,6 +42,28 @@ func execLinux(command string) error {
 		cmd = exec.Command("xdotool", "key", "ctrl+minus")
 	case "zoom_reset":
 		cmd = exec.Command("xdotool", "key", "ctrl+0")
+	case "volume_up":
+		cmd = exec.Command("xdotool", "key", "XF86AudioRaiseVolume")
+	case "volume_down":
+		cmd = exec.Command("xdotool", "key", "XF86AudioLowerVolume")
+	case "mute":
+		cmd = exec.Command("xdotool", "key", "XF86AudioMute")
+	case "play_pause":
+		cmd = exec.Command("xdotool", "key", "XF86AudioPlay")
+	case "next_track":
+		cmd = exec.Command("xdotool", "key", "XF86AudioNext")
+	case "prev_track":
+		cmd = exec.Command("xdotool", "key", "XF86AudioPrev")
+	case "window_fullscreen":
+		cmd = exec.Command("xdotool", "key", "F11")
+	case "steer_left":
+		cmd = exec.Command("xdotool", "key", "a")
+	case "steer_right":
+		cmd = exec.Command("xdotool", "key", "d")
+	case "shoot":
+		cmd = exec.Command("xdotool", "key", "space")
+	case "reload":
+		cmd = exec.Command("xdotool", "key", "r")
 	default:
 		return nil
 	}

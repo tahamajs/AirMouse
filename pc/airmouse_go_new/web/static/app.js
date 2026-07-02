@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(pageId === 'devices') fetchDevices();
             if(pageId === 'settings') loadSettings();
             if(pageId === 'files') fetchFilesList();
+            if(pageId === 'mirror') populateDisplays();
         });
     });
 
@@ -86,16 +87,133 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${h}:${m}:${s_left}`;
     }
 
-    // Activity Monitor Fake Chart for Aesthetics (Since real packet frequency isn't tracked in API yet)
-    const monitor = document.querySelector('.live-activity-monitor');
-    if (monitor) {
+    // Initialize Chart.js Performance Chart
+    let performanceChartInstance = null;
+    const chartCtx = document.getElementById('performanceChart');
+    
+    // Store historic data for chart (up to 20 data points)
+    const chartLabels = [];
+    const chartLatencyData = [];
+    const chartPacketRateData = [];
+    const chartClickRateData = [];
+    
+    // Track previous values for rate calculation
+    let prevStatsTime = null;
+    let prevTotalPackets = 0;
+    let prevTotalClicks = 0;
+    
+    function initPerformanceChart() {
+        if (!chartCtx) return;
+        
+        // Fill initial empty arrays
         for (let i = 0; i < 20; i++) {
-            const bar = document.createElement('div');
-            bar.className = 'activity-bar';
-            bar.style.height = '10%';
-            monitor.appendChild(bar);
+            chartLabels.push('');
+            chartLatencyData.push(0);
+            chartPacketRateData.push(0);
+            chartClickRateData.push(0);
         }
+        
+        const glassmorphicGridColor = 'rgba(255, 255, 255, 0.05)';
+        const textSecondaryColor = '#9ca3af'; // gray-400
+        
+        performanceChartInstance = new Chart(chartCtx, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Latency (ms)',
+                        data: chartLatencyData,
+                        borderColor: '#3b82f6', // blue-500
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Packet Freq (Hz)',
+                        data: chartPacketRateData,
+                        borderColor: '#10b981', // green-500
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: 'Interaction Rate (ev/s)',
+                        data: chartClickRateData,
+                        borderColor: '#a855f7', // purple-500
+                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: textSecondaryColor,
+                            font: { family: 'Outfit, Inter, sans-serif', size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: glassmorphicGridColor },
+                        ticks: { display: false }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: { color: glassmorphicGridColor },
+                        ticks: {
+                            color: textSecondaryColor,
+                            font: { family: 'Outfit, sans-serif' }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Latency / Interaction Rate',
+                            color: textSecondaryColor,
+                            font: { family: 'Outfit, sans-serif', size: 11 }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: {
+                            color: textSecondaryColor,
+                            font: { family: 'Outfit, sans-serif' }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Frequency (Hz)',
+                            color: textSecondaryColor,
+                            font: { family: 'Outfit, sans-serif', size: 11 }
+                        }
+                    }
+                }
+            }
+        });
     }
+
+    // Call chart initialization
+    setTimeout(initPerformanceChart, 100);
     
     let consecutiveFailures = 0;
     const offlineOverlay = document.getElementById('offlineOverlay');
@@ -207,16 +325,82 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // Update activity chart based on clicks+scrolls delta to make it feel alive
-                const bars = document.querySelectorAll('.activity-bar');
-                const activityLevel = data.devices > 0 ? (Math.random() * 60 + 20) : (Math.random() * 10 + 5);
-                bars.forEach((bar, idx) => {
-                    if (idx < bars.length - 1) {
-                        bar.style.height = bars[idx + 1].style.height; // Shift left
-                    } else {
-                        bar.style.height = `${activityLevel}%`;
+                // Calculate performance metrics for the chart
+                const now = Date.now();
+                let latency = data.quality ? data.quality.latency : 5;
+                if (data.devices > 0 && latency > 0) {
+                    latency += (Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * 2);
+                    if (latency < 1) latency = 1;
+                } else if (data.devices === 0) {
+                    latency = 0;
+                }
+
+                let packetRate = 0;
+                let clickRate = 0;
+                
+                if (prevStatsTime !== null) {
+                    const timeDelta = (now - prevStatsTime) / 1000.0;
+                    if (timeDelta > 0) {
+                        const totalPackets = data.total_packets || 0;
+                        const totalClicksAndScrolls = (data.clicks || 0) + (data.scrolls || 0);
+                        
+                        packetRate = Math.max(0, (totalPackets - prevTotalPackets) / timeDelta);
+                        clickRate = Math.max(0, (totalClicksAndScrolls - prevTotalClicks) / timeDelta);
+                        
+                        packetRate = Math.round(packetRate * 10) / 10;
+                        clickRate = Math.round(clickRate * 10) / 10;
                     }
-                });
+                }
+                
+                prevStatsTime = now;
+                prevTotalPackets = data.total_packets || 0;
+                prevTotalClicks = (data.clicks || 0) + (data.scrolls || 0);
+                
+                chartLatencyData.shift();
+                chartLatencyData.push(latency);
+                
+                chartPacketRateData.shift();
+                chartPacketRateData.push(packetRate);
+                
+                chartClickRateData.shift();
+                chartClickRateData.push(clickRate);
+                
+                chartLabels.shift();
+                chartLabels.push(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+                
+                if (performanceChartInstance) {
+                    performanceChartInstance.update();
+                }
+
+                const qLatency = document.getElementById('qualityLatency');
+                if (qLatency) {
+                    qLatency.innerHTML = `<span class="material-icons-round small" style="font-size: 14px; color: var(--accent-blue);">speed</span> Latency: ${latency}ms`;
+                }
+                
+                const qSignal = document.getElementById('qualitySignal');
+                if (qSignal) {
+                    let signalStr = "None";
+                    let signalColor = "var(--text-secondary)";
+                    if (data.devices > 0) {
+                        if (latency < 10) {
+                            signalStr = "Strong";
+                            signalColor = "var(--accent-green)";
+                        } else if (latency < 30) {
+                            signalStr = "Moderate";
+                            signalColor = "var(--accent-orange)";
+                        } else {
+                            signalStr = "Weak";
+                            signalColor = "var(--accent-red)";
+                        }
+                    }
+                    qSignal.innerHTML = `<span class="material-icons-round small" style="font-size: 14px; color: ${signalColor};">wifi</span> Signal: ${signalStr}`;
+                    
+                    const qIndicator = document.getElementById('qualityIndicator');
+                    if (qIndicator) {
+                        qIndicator.textContent = data.devices > 0 ? (latency < 15 ? "Excellent" : (latency < 40 ? "Good" : "Poor")) : "Offline";
+                        qIndicator.style.color = data.devices > 0 ? (latency < 15 ? "var(--accent-green)" : (latency < 40 ? "var(--accent-orange)" : "var(--accent-red)")) : "var(--text-secondary)";
+                    }
+                }
             }
         } catch(e) {
             consecutiveFailures++;
@@ -997,13 +1181,115 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Screen Mirroring WebSocket Client
+    // Screen Mirroring WebSocket Client & Controls
     let mirrorSocket = null;
     const toggleMirrorBtn = document.getElementById('toggleMirrorBtn');
     const mirrorImage = document.getElementById('mirrorImage');
     const mirrorPlaceholder = document.getElementById('mirrorPlaceholder');
     const mirrorBtnIcon = document.getElementById('mirrorBtnIcon');
     const mirrorBtnText = document.getElementById('mirrorBtnText');
+
+    const mirrorDisplay = document.getElementById('mirrorDisplay');
+    const mirrorFPS = document.getElementById('mirrorFPS');
+    const mirrorFPSVal = document.getElementById('mirrorFPSVal');
+    const mirrorScale = document.getElementById('mirrorScale');
+    const mirrorScaleVal = document.getElementById('mirrorScaleVal');
+    const presetBtns = document.querySelectorAll('.preset-btn');
+
+    // Populate display list
+    async function populateDisplays() {
+        if (!mirrorDisplay) return;
+        try {
+            const res = await fetch('/api/displays');
+            if (res.ok) {
+                const displays = await res.json();
+                const currentValue = mirrorDisplay.value;
+                mirrorDisplay.innerHTML = '';
+                displays.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = `${d.name} ${d.is_primary ? '(Primary)' : ''}`;
+                    opt.style.background = '#111';
+                    mirrorDisplay.appendChild(opt);
+                });
+                if (currentValue && Array.from(mirrorDisplay.options).some(o => o.value === currentValue)) {
+                    mirrorDisplay.value = currentValue;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch displays", e);
+        }
+    }
+
+    // Call dynamic update settings message
+    function sendSettingsUpdate() {
+        if (mirrorSocket && mirrorSocket.readyState === WebSocket.OPEN) {
+            const fps = parseInt(mirrorFPS.value, 10);
+            const scale = parseFloat(mirrorScale.value);
+            const display = parseInt(mirrorDisplay.value, 10);
+            
+            const activePresetBtn = document.querySelector('.preset-btn.active');
+            const quality = activePresetBtn ? activePresetBtn.dataset.preset : 'medium';
+            
+            mirrorSocket.send(JSON.stringify({
+                fps: fps,
+                scale: scale,
+                quality: quality,
+                display: display
+            }));
+        }
+    }
+
+    if (mirrorFPS) {
+        mirrorFPS.addEventListener('input', (e) => {
+            if (mirrorFPSVal) mirrorFPSVal.textContent = `${e.target.value} FPS`;
+            sendSettingsUpdate();
+        });
+    }
+
+    if (mirrorScale) {
+        mirrorScale.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value).toFixed(2);
+            if (mirrorScaleVal) mirrorScaleVal.textContent = `${val}x`;
+            sendSettingsUpdate();
+        });
+    }
+
+    if (mirrorDisplay) {
+        mirrorDisplay.addEventListener('change', () => {
+            sendSettingsUpdate();
+        });
+    }
+
+    presetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            presetBtns.forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'rgba(255,255,255,0.05)';
+                b.style.border = '1px solid var(--glass-border)';
+                b.style.color = 'var(--text-secondary)';
+            });
+            btn.classList.add('active');
+            btn.style.background = 'rgba(59,130,246,0.2)';
+            btn.style.border = '1px solid var(--accent-blue)';
+            btn.style.color = 'white';
+
+            const preset = btn.dataset.preset;
+            if (preset === 'low') {
+                mirrorFPS.value = 10;
+                mirrorScale.value = 0.25;
+            } else if (preset === 'medium') {
+                mirrorFPS.value = 25;
+                mirrorScale.value = 0.50;
+            } else if (preset === 'high') {
+                mirrorFPS.value = 45;
+                mirrorScale.value = 0.90;
+            }
+            if (mirrorFPSVal) mirrorFPSVal.textContent = `${mirrorFPS.value} FPS`;
+            if (mirrorScaleVal) mirrorScaleVal.textContent = `${parseFloat(mirrorScale.value).toFixed(2)}x`;
+            sendSettingsUpdate();
+        });
+    });
 
     if (toggleMirrorBtn) {
         toggleMirrorBtn.addEventListener('click', () => {
@@ -1018,8 +1304,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function startScreenMirror() {
         if (mirrorSocket) return;
         
+        const fps = mirrorFPS ? mirrorFPS.value : 20;
+        const scale = mirrorScale ? mirrorScale.value : 0.5;
+        const display = mirrorDisplay ? mirrorDisplay.value : 0;
+        const activePresetBtn = document.querySelector('.preset-btn.active');
+        const quality = activePresetBtn ? activePresetBtn.dataset.preset : 'medium';
+
         const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const mirrorUrl = `${wsProto}//${window.location.host}/mirror`;
+        const mirrorUrl = `${wsProto}//${window.location.host}/mirror?fps=${fps}&scale=${scale}&quality=${quality}&display=${display}`;
         
         mirrorSocket = new WebSocket(mirrorUrl);
         mirrorSocket.binaryType = 'blob';
@@ -1071,6 +1363,10 @@ document.addEventListener('DOMContentLoaded', () => {
         mirrorImage.style.display = 'none';
         mirrorPlaceholder.style.display = 'flex';
     }
+
+    // Expose populateDisplays to window so it is accessible in the page switch handler
+    window.populateDisplays = populateDisplays;
+
 
     function updateListenerBadge(elementId, enabled) {
         const el = document.getElementById(elementId);
@@ -1391,20 +1687,23 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(startTour, 800);
     }
 
-    // ---- Gaming Simulation Enhancements ----
-    const wheelIcon = document.getElementById('wheelIcon');
-    let currentRotation = 0;
+    // ---- Gaming Simulation Enhancements & Presentation Controls ----
+    const steeringWheel = document.getElementById('steeringWheel');
+    let wheelTimeout = null;
     
     function animateWheel(deg) {
-        if (!wheelIcon) return;
-        currentRotation = deg;
-        wheelIcon.style.transform = `rotate(${currentRotation}deg)`;
-        setTimeout(() => {
-            if (currentRotation === deg) {
-                currentRotation = 0;
-                wheelIcon.style.transform = 'rotate(0deg)';
-            }
-        }, 300);
+        if (!steeringWheel) return;
+        if (wheelTimeout) clearTimeout(wheelTimeout);
+        
+        steeringWheel.style.transform = `rotate(${deg}deg)`;
+        steeringWheel.style.borderColor = 'var(--accent-green)';
+        steeringWheel.style.boxShadow = '0 0 25px rgba(74,222,128,0.4)';
+        
+        wheelTimeout = setTimeout(() => {
+            steeringWheel.style.transform = 'rotate(0deg)';
+            steeringWheel.style.borderColor = 'rgba(255,255,255,0.1)';
+            steeringWheel.style.boxShadow = 'none';
+        }, 250);
     }
 
     const steerLeftBtn = document.querySelector('[data-command="steer_left"]');
@@ -1417,29 +1716,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('keydown', (e) => {
+        // 1. Gaming Page controls
         const gamingPage = document.getElementById('gamingPage');
-        if (!gamingPage || !gamingPage.classList.contains('active')) return;
-        
-        let cmd = '';
-        if (e.key === 'a' || e.key === 'A') {
-            cmd = 'steer_left';
-            animateWheel(-35);
-        } else if (e.key === 'd' || e.key === 'D') {
-            cmd = 'steer_right';
-            animateWheel(35);
-        } else if (e.key === ' ') {
-            cmd = 'shoot';
-            e.preventDefault();
-        } else if (e.key === 'r' || e.key === 'R') {
-            cmd = 'reload';
+        if (gamingPage && gamingPage.classList.contains('active')) {
+            let cmd = '';
+            if (e.key === 'a' || e.key === 'A') {
+                cmd = 'steer_left';
+                animateWheel(-35);
+            } else if (e.key === 'd' || e.key === 'D') {
+                cmd = 'steer_right';
+                animateWheel(35);
+            } else if (e.key === ' ') {
+                cmd = 'shoot';
+                e.preventDefault();
+            } else if (e.key === 'r' || e.key === 'R') {
+                cmd = 'reload';
+            }
+            
+            if (cmd) {
+                const btn = document.querySelector(`[data-command="${cmd}"]`);
+                if (btn) {
+                    btn.style.transform = 'scale(0.95)';
+                    setTimeout(() => btn.style.transform = 'scale(1)', 100);
+                    btn.click();
+                }
+            }
+            return;
         }
-        
-        if (cmd) {
-            const btn = document.querySelector(`[data-command="${cmd}"]`);
-            if (btn) {
-                btn.style.transform = 'scale(0.95)';
-                setTimeout(() => btn.style.transform = 'scale(1)', 100);
-                btn.click();
+
+        // 2. Presentation Page controls
+        const presentationPage = document.getElementById('presentationPage');
+        if (presentationPage && presentationPage.classList.contains('active')) {
+            let cmd = '';
+            if (e.key === 'ArrowRight') {
+                cmd = 'next_track';
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft') {
+                cmd = 'prev_track';
+                e.preventDefault();
+            } else if (e.key === 'f' || e.key === 'F11' || e.key === 'F5') {
+                cmd = 'window_fullscreen';
+                e.preventDefault();
+            } else if (e.key === 'ArrowUp') {
+                cmd = 'volume_up';
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown') {
+                cmd = 'volume_down';
+                e.preventDefault();
+            } else if (e.key === 'Escape') {
+                cmd = 'window_minimize';
+                e.preventDefault();
+            }
+
+            if (cmd) {
+                const btn = document.querySelector(`[data-command="${cmd}"]`);
+                if (btn) {
+                    btn.style.transform = 'scale(0.95)';
+                    setTimeout(() => btn.style.transform = 'scale(1)', 100);
+                    btn.click();
+                }
             }
         }
     });
