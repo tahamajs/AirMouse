@@ -121,6 +121,13 @@ sealed class Destinations(
         icon = Icons.Filled.SportsEsports
     )
 
+    /** Game profiles list screen */
+    object GameProfiles : Destinations(
+        route = ROUTE_GAME_PROFILES,
+        title = "Game Profiles",
+        icon = Icons.Filled.SportsEsports
+    )
+
     object ScreenMirroring : Destinations(
         route = ROUTE_SCREEN_MIRRORING,
         title = "Mirroring",
@@ -209,6 +216,20 @@ sealed class Destinations(
         icon = Icons.Filled.Apps
     )
 
+    /** Bluetooth Mouse Mode screen */
+    object BluetoothMouse : Destinations(
+        route = ROUTE_BLUETOOTH_MOUSE,
+        title = "Bluetooth Mouse",
+        icon = Icons.Filled.Bluetooth
+    )
+
+    /** Search screen */
+    object Search : Destinations(
+        route = ROUTE_SEARCH,
+        title = "Search",
+        icon = Icons.Filled.Search
+    )
+
     // ==========================================
     // COMPANION OBJECT - Constants & Helpers
     // ==========================================
@@ -233,6 +254,7 @@ sealed class Destinations(
         const val ROUTE_EDGE_GESTURES = "edge_gestures"
         const val ROUTE_TOUCHPAD = "touchpad"
         const val ROUTE_GAMING_MODE = "gaming_mode"
+        const val ROUTE_GAME_PROFILES = "game_profiles"
         const val ROUTE_SCREEN_MIRRORING = "screen_mirroring"
         const val ROUTE_SYNC_STATUS = "sync_status"
         const val ROUTE_NOTIFICATIONS_CENTER = "notifications_center"
@@ -246,6 +268,8 @@ sealed class Destinations(
         const val ROUTE_BATTERY = "battery"
         const val ROUTE_ACCESSIBILITY = "accessibility"
         const val ROUTE_ONBOARDING = "onboarding"
+        const val ROUTE_BLUETOOTH_MOUSE = "bluetooth_mouse"
+        const val ROUTE_SEARCH = "search"
 
         // ------------------------------------------
         // BOTTOM NAVIGATION
@@ -318,6 +342,13 @@ sealed class Destinations(
                 ROUTE_BATTERY -> Battery
                 ROUTE_ACCESSIBILITY -> Accessibility
                 ROUTE_ONBOARDING -> Onboarding
+                ROUTE_BLUETOOTH_MOUSE -> BluetoothMouse
+                ROUTE_GAMING_MODE -> GamingMode
+                ROUTE_GAME_PROFILES -> GameProfiles
+                ROUTE_SCREEN_MIRRORING -> ScreenMirroring
+                ROUTE_SYNC_STATUS -> SyncStatus
+                ROUTE_NOTIFICATIONS_CENTER -> NotificationsCenter
+                ROUTE_SEARCH -> Search
                 else -> null
             }
 
@@ -373,7 +404,11 @@ sealed class Destinations(
                 ROUTE_BATTERY,
                 ROUTE_ACCESSIBILITY,
                 ROUTE_TOUCHPAD,
-                ROUTE_ONBOARDING
+                ROUTE_ONBOARDING,
+                ROUTE_BLUETOOTH_MOUSE,
+                ROUTE_GAMING_MODE,
+                ROUTE_GAME_PROFILES,
+                ROUTE_SEARCH
             )
 
         /**

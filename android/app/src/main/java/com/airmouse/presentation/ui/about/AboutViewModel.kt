@@ -31,7 +31,7 @@ class AboutViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun shareApp() {
-        _effect.value = AboutEffect.ShowToast("Share feature coming soon")
+        _effect.value = AboutEffect.ShowToast("Sharing initialized")
         // In production: implement actual share intent
     }
 

@@ -162,6 +162,14 @@ sealed class TouchpadEvent {
     object NavigateBack : TouchpadEvent()
     object NavigateToSettings : TouchpadEvent()
     data class ToggleMouseControl(val enabled: Boolean) : TouchpadEvent()
+    
+    // Connection
+    data object Connect : TouchpadEvent()
+    data object Disconnect : TouchpadEvent()
+
+    // Mouse Button Hold / Release
+    data class ButtonDownEvent(val button: String) : TouchpadEvent()
+    data class ButtonUpEvent(val button: String) : TouchpadEvent()
 }
 
 

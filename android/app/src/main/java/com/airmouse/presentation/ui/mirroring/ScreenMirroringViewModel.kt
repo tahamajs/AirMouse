@@ -2,6 +2,7 @@ package com.airmouse.presentation.ui.mirroring
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.airmouse.mirroring.ScreenMirroringService
 import com.airmouse.network.ConnectionManager
 import com.airmouse.network.ConnectionQuality
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +28,8 @@ class ScreenMirroringViewModel @Inject constructor(
             SharingStarted.WhileSubscribed(5_000),
             ConnectionQuality()
         )
+
+    val isStreaming: StateFlow<Boolean> = ScreenMirroringService.isStreamingFlow
 
     fun buildServerUrl(): String {
         val ip = connectionManager.currentIp.value

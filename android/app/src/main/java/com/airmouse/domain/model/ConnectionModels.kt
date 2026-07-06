@@ -7,6 +7,7 @@ import kotlinx.parcelize.Parcelize
 enum class ConnectionStatus {
     DISCONNECTED,
     CONNECTING,
+    PENDING_APPROVAL,
     CONNECTED,
     RECONNECTING,
     ERROR,
@@ -16,13 +17,15 @@ enum class ConnectionStatus {
 enum class ConnectionProtocol {
     TCP,
     WEBSOCKET,
-    UDP
+    UDP,
+    USB_SERIAL,
+    BLUETOOTH
 }
 
 data class ConnectionConfig(
     val ip: String = "",
-    val port: Int = 8080,
-    val protocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET,
+    val port: Int = 8082,
+    val protocol: ConnectionProtocol = ConnectionProtocol.UDP,
     val useSSL: Boolean = false,
     val authToken: String? = null,
     val autoReconnect: Boolean = true,

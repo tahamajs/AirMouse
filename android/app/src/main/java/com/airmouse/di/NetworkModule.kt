@@ -16,11 +16,4 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideUdpDiscovery(): UdpDiscovery = UdpDiscovery()
-
-    @Provides
-    @Singleton
-    fun provideConnectionManager(
-        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
-        prefs: com.airmouse.utils.PreferencesManager
-    ): ConnectionManager = ConnectionManager(context, prefs)
 }

@@ -436,6 +436,7 @@ class CalibrationViewModel @Inject constructor(
                     return@launch
                 }
 
+                gyroSamples.addAll(samples)
                 saveGyroData()
                 _isCalibrating.value = false
 
@@ -506,6 +507,7 @@ class CalibrationViewModel @Inject constructor(
                     failCurrentStep("Magnetometer data did not arrive. This device may not have a compass sensor.")
                     return@launch
                 }
+                magSamples.addAll(samples)
                 saveMagData()
                 _isCalibrating.value = false
                 _uiState.update {

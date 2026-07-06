@@ -98,7 +98,7 @@ class ConnectionProtocolNormalizationTest {
         override fun observeCalibrationProgress(): Flow<Int> = flowOf(100)
         override fun observeCalibrationQuality(): Flow<com.airmouse.domain.model.CalibrationQuality> = flowOf(com.airmouse.domain.model.CalibrationQuality.EXCELLENT)
         override suspend fun calibrateGyroscope(onProgress: (Int) -> Unit): Boolean = true
-        override suspend fun getGyroBias(): com.airmouse.domain.model.GyroBias = com.airmouse.domain.model.GyroBias(0f, 0f, 0f)
+        override suspend fun getGyroBias(): com.airmouse.domain.model.GyroBias = com.airmouse.domain.model.GyroBias(1, 0f, 0f, 0f)
         override suspend fun saveGyroBias(bias: com.airmouse.domain.model.GyroBias) {}
         override suspend fun calibrateMagnetometer(onProgress: (Int) -> Unit): Boolean = true
         override suspend fun getMagOffset(): com.airmouse.domain.model.SensorCalibrationData = com.airmouse.domain.model.SensorCalibrationData(0f, 0f, 0f, 1f, 1f, 1f)

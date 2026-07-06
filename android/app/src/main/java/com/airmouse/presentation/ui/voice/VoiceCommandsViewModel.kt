@@ -5,8 +5,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
+import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -65,7 +69,8 @@ data class VoiceCommandsUiState(
     val lastConfidence: Float = 0.0f,
     val availableCommands: List<VoiceCommand> = emptyList(),
     val customCommands: List<CustomVoiceCommand> = emptyList(),
-    val commandHistory: List<VoiceCommandHistory> = emptyList()
+    val commandHistory: List<VoiceCommandHistory> = emptyList(),
+    val isConnected: Boolean = false
 )
 
 @HiltViewModel
@@ -80,6 +85,7 @@ class VoiceCommandsViewModel @Inject constructor(
 
     private var textToSpeech: TextToSpeech? = null
     private var ttsReady = false
+    private var speechRecognizer: SpeechRecognizer? = null
 
     private val availableCommandsList = listOf(
         VoiceCommand("click", "CLICK", "Perform left click", "👆"),
@@ -104,6 +110,24 @@ class VoiceCommandsViewModel @Inject constructor(
         checkMicrophonePermission()
         _uiState.update { it.copy(availableCommands = availableCommandsList) }
         textToSpeech = TextToSpeech(context, this)
+        
+        viewModelScope.launch {
+            connectionManager.connectionStatus.collect { status ->
+                _uiState.update { it.copy(isConnected = status == ConnectionManager.ConnectionStatus.CONNECTED) }
+            }
+        }
+    }
+
+    fun connect() {
+        viewModelScope.launch {
+            connectionManager.reconnect()
+        }
+    }
+
+    fun disconnect() {
+        viewModelScope.launch {
+            connectionManager.disconnect()
+        }
     }
 
     override fun onInit(status: Int) {
@@ -210,13 +234,75 @@ class VoiceCommandsViewModel @Inject constructor(
             playBeepSound()
         }
 
-        viewModelScope.launch {
-            delay(5000) 
-            if (_uiState.value.isListening) {
-                processVoiceInput("click", 0.9f)
-                if (!_uiState.value.continuousListening) {
-                    stopListening()
-                }
+        try {
+            speechRecognizer?.destroy()
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+                setRecognitionListener(object : RecognitionListener {
+                    override fun onReadyForSpeech(params: Bundle?) {}
+                    override fun onBeginningOfSpeech() {}
+                    override fun onRmsChanged(rmsdB: Float) {}
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onEndOfSpeech() {
+                        _uiState.update { it.copy(isProcessing = true, status = "Processing...") }
+                    }
+                    override fun onError(error: Int) {
+                        val message = when (error) {
+                            SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
+                            SpeechRecognizer.ERROR_CLIENT -> "Client side error"
+                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
+                            SpeechRecognizer.ERROR_NETWORK -> "Network error"
+                            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
+                            SpeechRecognizer.ERROR_NO_MATCH -> "No speech match found"
+                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Speech recognizer is busy"
+                            SpeechRecognizer.ERROR_SERVER -> "Server error"
+                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech detected"
+                            else -> "Recognizer error"
+                        }
+                        _uiState.update {
+                            it.copy(
+                                isListening = false,
+                                isProcessing = false,
+                                status = message,
+                                statusColor = 0xFFFF9800.toInt()
+                            )
+                        }
+                        if (_uiState.value.voiceFeedback) speakResponse("Error")
+                    }
+                    override fun onResults(results: Bundle?) {
+                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        val confidence = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)?.firstOrNull() ?: 0.9f
+                        val spokenText = matches?.firstOrNull()
+                        if (!spokenText.isNullOrBlank()) {
+                            processVoiceInput(spokenText, confidence)
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    isListening = false,
+                                    isProcessing = false,
+                                    status = "No speech detected",
+                                    statusColor = 0xFFFF9800.toInt()
+                                )
+                            }
+                        }
+                    }
+                    override fun onPartialResults(partialResults: Bundle?) {}
+                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                })
+            }
+
+            val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            }
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(
+                    isListening = false,
+                    status = "Failed to initialize: ${e.message}",
+                    statusColor = 0xFFF44336.toInt()
+                )
             }
         }
     }
@@ -230,6 +316,12 @@ class VoiceCommandsViewModel @Inject constructor(
                 statusColor = 0xFF9E9E9E.toInt()
             )
         }
+
+        try {
+            speechRecognizer?.stopListening()
+            speechRecognizer?.destroy()
+            speechRecognizer = null
+        } catch (_: Exception) {}
 
         if (_uiState.value.soundEffects) {
             playStopSound()
@@ -487,6 +579,10 @@ class VoiceCommandsViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        try {
+            speechRecognizer?.destroy()
+            speechRecognizer = null
+        } catch (_: Exception) {}
         if (_uiState.value.isListening) {
             stopListening()
         }

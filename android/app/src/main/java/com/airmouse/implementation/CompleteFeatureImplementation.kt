@@ -96,12 +96,8 @@ class CompleteFeatureImplementation @Inject constructor(
             val gyro = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) ?: return
             gyroListener = object : SensorEventListener {
                 override fun onSensorChanged(event: SensorEvent) {
-                    val magnitude = kotlin.math.sqrt(
-                        event.values[0] * event.values[0] +
-                                event.values[1] * event.values[1] +
-                                event.values[2] * event.values[2]
-                    )
-                    if (magnitude > 8f && magnitude - lastGyroMagnitude > 6f) {
+                    val magnitude = abs(event.values[1])
+                    if (magnitude > 6f && magnitude - lastGyroMagnitude > 4f) {
                         // Quick flick detected
                         connectionManager.sendClick("left")
                         vibrate(30)
@@ -290,7 +286,7 @@ class CompleteFeatureImplementation @Inject constructor(
     inner class OrientationToCursorMapper {
         private var config = MappingConfig(
             xAxisSource = AxisSource.YAW,
-            yAxisSource = AxisSource.ROLL,
+            yAxisSource = AxisSource.PITCH,
             xInverted = false,
             yInverted = false,
             deadzone = 2f,
@@ -305,7 +301,7 @@ class CompleteFeatureImplementation @Inject constructor(
         fun loadFromPrefs() {
             config = MappingConfig(
                 xAxisSource = AxisSource.valueOf(prefs.getString("cursor_x_axis", "YAW")),
-                yAxisSource = AxisSource.valueOf(prefs.getString("cursor_y_axis", "ROLL")),
+                yAxisSource = AxisSource.valueOf(prefs.getString("cursor_y_axis", "PITCH")),
                 xInverted = prefs.getBoolean("cursor_x_inverted", false),
                 yInverted = prefs.getBoolean("cursor_y_inverted", false),
                 deadzone = prefs.getFloat("cursor_deadzone", 2f),

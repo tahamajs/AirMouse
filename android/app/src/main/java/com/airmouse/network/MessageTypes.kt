@@ -33,6 +33,12 @@ object MessageTypes {
     /** Mouse click (left, right, middle) */
     const val TYPE_CLICK = "click"
 
+    /** Mouse button down (hold) */
+    const val TYPE_MOUSE_DOWN = "mouse_down"
+
+    /** Mouse button up (release) */
+    const val TYPE_MOUSE_UP = "mouse_up"
+
     /** Double click (left button) */
     const val TYPE_DOUBLE_CLICK = "doubleclick"
 

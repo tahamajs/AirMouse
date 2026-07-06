@@ -152,4 +152,10 @@ object AppModule {
     fun provideApplicationContext(@ApplicationContext context: Context): Context {
         return context
     }
+
+    @Provides
+    @Singleton
+    fun provideUsbDataSource(@ApplicationContext context: Context): com.airmouse.data.datasource.remote.IUsbDataSource {
+        return com.airmouse.data.datasource.remote.UsbDataSourceImpl(context)
+    }
 }

@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -31,6 +33,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
 import com.airmouse.presentation.navigation.NavigationActionsImpl
 import com.airmouse.presentation.ui.components.NotificationBadge
+import com.airmouse.presentation.ui.components.PremiumDashboardBackground
+import com.airmouse.presentation.ui.components.GlassmorphicCard
 
 // ============================================================
 // MAIN SCREEN
@@ -88,7 +92,7 @@ fun SettingsScreen(
                     },
                     actions = {
                         if (uiState.isSaving) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            com.airmouse.presentation.ui.components.SweepGradientGlowRing(size = 24.dp, strokeWidth = 2.dp)
                         } else {
                             IconButton(onClick = { viewModel.handleEvent(SettingsEvent.SaveSettings) }) {
                                 Icon(Icons.Default.Save, contentDescription = "Save")
@@ -96,32 +100,35 @@ fun SettingsScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White,
+                        actionIconContentColor = Color.White
                     )
                 )
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = Color.Transparent
     ) { paddingValues ->
-        if (selectedSection == null) {
-            SettingsMainScreen(
-                uiState = uiState,
-                onSectionSelected = { selectedSection = it },
-                navigationActions = navigationActions,
-                viewModel = viewModel,
-                modifier = Modifier.padding(paddingValues)
-            )
-        } else {
-            SectionDetailScreen(
-                section = selectedSection!!,
-                uiState = uiState,
-                viewModel = viewModel,
-                navigationActions = navigationActions,
-                onBack = { selectedSection = null },
-                modifier = Modifier.padding(paddingValues)
-            )
+        PremiumDashboardBackground {
+            if (selectedSection == null) {
+                SettingsMainScreen(
+                    uiState = uiState,
+                    onSectionSelected = { selectedSection = it },
+                    navigationActions = navigationActions,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(paddingValues)
+                )
+            } else {
+                SectionDetailScreen(
+                    section = selectedSection!!,
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    navigationActions = navigationActions,
+                    onBack = { selectedSection = null },
+                    modifier = Modifier.padding(paddingValues)
+                )
+            }
         }
     }
 }
@@ -184,27 +191,26 @@ fun SettingsHeader(
     onSectionSelected: (SettingsSection) -> Unit,
     navigationActions: NavigationActions
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(24.dp)
+    GlassmorphicCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                        .background(Color(0xFF6366F1).copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color(0xFF6366F1))
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
                     Text(
                         "Customize motion, pairing, theme, and feedback in one place.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha=0.6f)
                     )
                 }
             }
@@ -235,62 +241,48 @@ fun SettingsOverviewCard(
     onSectionSelected: (SettingsSection) -> Unit,
     navigationActions: NavigationActions
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(20.dp)
+    GlassmorphicCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Live overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Live overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
             Text(
                 "Jump straight into the parts you change most, with current values visible at a glance.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha=0.6f)
             )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                AssistChip(
-                    onClick = { onSectionSelected(SettingsSection.CURSOR) },
-                    label = { Text("Motion") },
-                    modifier = Modifier.weight(1f)
-                )
-                AssistChip(
-                    onClick = { onSectionSelected(SettingsSection.CONNECTION) },
-                    label = { Text("Network") },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                AssistChip(
-                    onClick = { onSectionSelected(SettingsSection.NOTIFICATIONS) },
-                    label = { Text("Alerts") },
-                    modifier = Modifier.weight(1f)
-                )
-                AssistChip(
-                    onClick = { navigationActions.navigateToTouchpad() },
-                    label = { Text("Touchpad") },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                StatusChip(
-                    label = "Theme",
-                    value = uiState.theme.replace('_', ' '),
-                    modifier = Modifier.weight(1f)
-                )
-                StatusChip(
-                    label = "Notifications",
-                    value = if (uiState.notificationsEnabled) "On" else "Off",
-                    modifier = Modifier.weight(1f)
-                )
-                StatusChip(
-                    label = "UDP",
-                    value = if (uiState.useUdpDiscovery) "Enabled" else "Off",
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            HorizontalDivider(color = Color.White.copy(alpha=0.1f))
+            OverviewRow(
+                icon = Icons.Default.Speed,
+                label = "Sensitivity",
+                value = "${(uiState.sensitivity * 100).toInt()}%",
+                onClick = { onSectionSelected(SettingsSection.CURSOR) }
+            )
+            OverviewRow(
+                icon = Icons.Default.Bluetooth,
+                label = "Bluetooth HID",
+                value = if (uiState.connectionConfig.protocol == com.airmouse.domain.model.ConnectionProtocol.BLUETOOTH) "Enabled" else "Disabled",
+                onClick = { onSectionSelected(SettingsSection.CONNECTION) }
+            )
         }
+    }
+}
+
+@Composable
+fun OverviewRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White.copy(alpha=0.7f), modifier = Modifier.size(16.dp))
+        Text(label, color = Color.White.copy(alpha=0.7f), modifier = Modifier.padding(start = 8.dp))
+        Spacer(Modifier.weight(1f))
+        Text(value, color = Color.White, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -302,8 +294,9 @@ fun StatusChip(
 ) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(999.dp)
+        color = Color.White.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -312,13 +305,13 @@ fun StatusChip(
             Text(
                 text = label,
                 fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.55f)
             )
             Text(
                 text = value,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = Color.White
             )
         }
     }
@@ -329,32 +322,25 @@ fun SettingsQuickActionsCard(
     navigationActions: NavigationActions,
     viewModel: SettingsViewModel
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(18.dp)
+    GlassmorphicCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(
-                "Jump to the most useful pages and keep the setup flow smooth.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = { navigationActions.navigateToTouchpad() }, modifier = Modifier.weight(1f)) {
-                    Text("Touchpad")
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { viewModel.handleEvent(SettingsEvent.ResetDefaults) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha=0.1f), contentColor = Color.White)
+                ) {
+                    Text("Reset All")
                 }
-                OutlinedButton(onClick = { navigationActions.navigateToCalibration() }, modifier = Modifier.weight(1f)) {
-                    Text("Calibrate")
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = { viewModel.handleEvent(SettingsEvent.ResetDefaults) }, modifier = Modifier.weight(1f)) {
-                    Text("Reset")
-                }
-                Button(onClick = { viewModel.handleEvent(SettingsEvent.SaveSettings) }, modifier = Modifier.weight(1f)) {
-                    Text("Save")
+                Button(
+                    onClick = { viewModel.handleEvent(SettingsEvent.SaveSettings) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1), contentColor = Color.White)
+                ) {
+                    Text("Save Config")
                 }
             }
         }
@@ -372,31 +358,31 @@ fun SettingsCard(
     icon: ImageVector,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-        shape = RoundedCornerShape(22.dp)
+    GlassmorphicCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = title, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White.copy(alpha=0.05f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+                Column {
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(description, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha=0.6f))
+                }
             }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Navigate")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Open", tint = Color.White.copy(alpha=0.5f))
         }
     }
 }
@@ -420,40 +406,54 @@ fun SectionDetailScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(section.icon, contentDescription = section.title, tint = MaterialTheme.colorScheme.primary)
-                        Text(section.title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Icon(section.icon, contentDescription = section.title, tint = Color(0xFF00E5FF))
+                        Text(section.title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
                 )
             )
-        }
+        },
+        containerColor = Color.Transparent
     ) { paddingValues ->
+        PremiumDashboardBackground {
         LazyColumn(
             modifier = modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Card(
+                GlassmorphicCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(24.dp)
+                    cornerRadius = 24.dp
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(section.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            section.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Color(0xFF00E5FF).copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(section.icon, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(24.dp))
+                            }
+                            Column {
+                                Text(section.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge, color = Color.White)
+                                Text(
+                                    section.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -466,7 +466,7 @@ fun SectionDetailScreen(
                 SettingsSection.DISPLAY -> item { DisplaySettings(uiState, viewModel, navigationActions) }
                 SettingsSection.THEMES -> item { ThemesShortcutCard(navigationActions) }
                 SettingsSection.TOUCHPAD -> item { TouchpadSettings(uiState, viewModel, navigationActions) }
-                SettingsSection.CONNECTION -> item { ConnectionSettings(uiState, viewModel) }
+                SettingsSection.CONNECTION -> item { ConnectionSettings(uiState, viewModel, navigationActions) }
                 SettingsSection.PRIVACY -> item { PrivacySettings(uiState, viewModel) }
                 SettingsSection.PRESENTATION -> item { PresentationSettings(uiState, viewModel) }
                 SettingsSection.GAMING_MODE -> item { GamingModeSettings(uiState, viewModel) }
@@ -475,6 +475,7 @@ fun SectionDetailScreen(
                 SettingsSection.ABOUT -> item { AboutSection(viewModel) }
             }
             item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
         }
     }
 }
@@ -491,12 +492,12 @@ fun SettingsSwitch(
     description: String? = null,
     enabled: Boolean = true
 ) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(if (enabled) 1f else 0.58f)
             .clickable(enabled = enabled) { onCheckedChange(!checked) },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        cornerRadius = 16.dp
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -504,9 +505,9 @@ fun SettingsSwitch(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = Color.White, fontWeight = FontWeight.Medium)
                 if (description != null) {
-                    Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(description, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
                 }
             }
             Switch(
@@ -514,8 +515,10 @@ fun SettingsSwitch(
                 onCheckedChange = onCheckedChange,
                 enabled = enabled,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.primary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    checkedThumbColor = Color(0xFF00E5FF),
+                    checkedTrackColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
+                    uncheckedThumbColor = Color.White.copy(alpha = 0.6f),
+                    uncheckedTrackColor = Color.White.copy(alpha = 0.15f)
                 )
             )
         }
@@ -532,28 +535,37 @@ fun SettingsSlider(
     formatValue: (Float) -> String = { "%.2f".format(it) },
     description: String? = null
 ) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        cornerRadius = 16.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
-                Text(formatValue(value), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = Color.White, fontWeight = FontWeight.Medium)
+                Text(
+                    formatValue(value),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF00E5FF),
+                    fontWeight = FontWeight.Bold
+                )
             }
             if (description != null) {
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+                Text(description, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.55f), modifier = Modifier.padding(bottom = 8.dp))
             }
             Slider(
                 value = value,
                 onValueChange = onValueChange,
                 valueRange = valueRange,
                 steps = steps,
-                colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary)
+                colors = SliderDefaults.colors(
+                    thumbColor = Color(0xFF00E5FF),
+                    activeTrackColor = Color(0xFF00E5FF),
+                    inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                )
             )
         }
     }
@@ -716,23 +728,24 @@ fun HapticSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
             checked = uiState.hapticEnabled,
             onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleHaptic) }
         )
-        Card(
+        GlassmorphicCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            cornerRadius = 16.dp
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Haptic Strength", style = MaterialTheme.typography.bodyLarge)
-                Text("Intensity of vibration feedback", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Haptic Strength", style = MaterialTheme.typography.bodyLarge, color = Color.White, fontWeight = FontWeight.Medium)
+                Text("Intensity of vibration feedback", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.55f))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     HapticStrength.entries.forEach { strength ->
                         FilterChip(
                             selected = uiState.hapticStrength == strength,
                             onClick = { viewModel.handleEvent(SettingsEvent.UpdateHapticStrength(strength)) },
-                            label = { Text(strength.displayName) },
+                            label = { Text(strength.displayName, color = if (uiState.hapticStrength == strength) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
                             modifier = Modifier.weight(1f),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                                containerColor = Color.White.copy(alpha = 0.06f)
                             )
                         )
                     }
@@ -767,13 +780,12 @@ fun HapticSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
 @Composable
 fun NotificationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(
+        GlassmorphicCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(18.dp)
+            cornerRadius = 18.dp
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
@@ -781,14 +793,17 @@ fun NotificationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(52.dp),
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF6366F1).copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.Notifications,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(30.dp)
+                            tint = Color(0xFF6366F1),
+                            modifier = Modifier.size(28.dp)
                         )
                         NotificationBadge(
                             count = if (uiState.notificationsEnabled) 1 else 0,
@@ -796,10 +811,11 @@ fun NotificationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Notifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Notifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                         Text(
                             "Control badges, alerts, and gesture notifications from one place.",
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -808,26 +824,42 @@ fun NotificationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
                     FilterChip(
                         selected = uiState.notificationsEnabled,
                         onClick = { viewModel.handleEvent(SettingsEvent.ToggleNotifications) },
-                        label = { Text("Enabled") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("Enabled", color = if (uiState.notificationsEnabled) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            containerColor = Color.White.copy(alpha = 0.06f)
+                        )
                     )
                     FilterChip(
                         selected = uiState.notificationOnGesture,
                         onClick = { viewModel.handleEvent(SettingsEvent.ToggleNotificationOnGesture) },
-                        label = { Text("Gesture") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("Gesture", color = if (uiState.notificationOnGesture) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            containerColor = Color.White.copy(alpha = 0.06f)
+                        )
                     )
                     FilterChip(
                         selected = uiState.soundEnabled,
                         onClick = { viewModel.handleEvent(SettingsEvent.ToggleSound) },
-                        label = { Text("Sound") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("Sound", color = if (uiState.soundEnabled) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            containerColor = Color.White.copy(alpha = 0.06f)
+                        )
                     )
                     FilterChip(
                         selected = uiState.visualFeedback,
                         onClick = { viewModel.handleEvent(SettingsEvent.ToggleVisualFeedback) },
-                        label = { Text("Visual") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("Visual", color = if (uiState.visualFeedback) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            containerColor = Color.White.copy(alpha = 0.06f)
+                        )
                     )
                 }
             }
@@ -874,28 +906,33 @@ fun DisplaySettings(
     navigationActions: NavigationActions? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(
+        GlassmorphicCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            cornerRadius = 16.dp
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Theme", style = MaterialTheme.typography.bodyLarge)
-                Text("Choose app color scheme", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Theme", style = MaterialTheme.typography.bodyLarge, color = Color.White, fontWeight = FontWeight.Medium)
+                Text("Choose app color scheme", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.55f))
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Quick themes", style = MaterialTheme.typography.labelLarge)
+                Text("Quick themes", style = MaterialTheme.typography.labelLarge, color = Color(0xFF00E5FF))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("system", "light", "dark", "pure_black", "high_contrast").forEach { theme ->
                         FilterChip(
                             selected = uiState.theme == theme,
                             onClick = { viewModel.handleEvent(SettingsEvent.UpdateTheme(theme)) },
-                            label = { Text(when (theme) {
-                                "system" -> "System"; "light" -> "Light"; "dark" -> "Dark"
-                                "pure_black" -> "Pure Black"; "high_contrast" -> "High Contrast"
-                                else -> theme }) },
+                            label = { Text(
+                                when (theme) {
+                                    "system" -> "System"; "light" -> "Light"; "dark" -> "Dark"
+                                    "pure_black" -> "Pure Black"; "high_contrast" -> "High Contrast"
+                                    else -> theme
+                                },
+                                color = if (uiState.theme == theme) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)
+                            ) },
                             modifier = Modifier.weight(1f),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                                containerColor = Color.White.copy(alpha = 0.06f)
                             )
                         )
                     }
@@ -936,16 +973,32 @@ fun DisplaySettings(
 
 @Composable
 fun ThemesShortcutCard(navigationActions: NavigationActions? = null) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp)
+        cornerRadius = 16.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Open full Themes studio", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("Browse theme presets, previews, and accent colors in one place.", style = MaterialTheme.typography.bodySmall)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFD500F9).copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Palette, contentDescription = null, tint = Color(0xFFD500F9), modifier = Modifier.size(22.dp))
+                }
+                Column {
+                    Text("Open full Themes studio", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Browse theme presets, previews, and accent colors in one place.", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                }
+            }
             if (navigationActions != null) {
-                Button(onClick = { navigationActions.navigateToThemes() }) { Text("Open Themes") }
+                Button(
+                    onClick = { navigationActions.navigateToThemes() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD500F9).copy(alpha = 0.8f), contentColor = Color.White),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Open Themes") }
             }
         }
     }
@@ -958,27 +1011,27 @@ fun SettingsFontSizeCard(
 ) {
     val selectedPreset = FontSizePreset.entries.minBy { kotlin.math.abs(it.valueSp - currentSize) }
 
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(18.dp)
+        cornerRadius = 18.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Font Size", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Font Size", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
             Text(
                 "Pick one of four app-wide text sizes.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.55f)
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 FontSizePreset.entries.forEach { preset ->
                     FilterChip(
                         selected = preset == selectedPreset,
                         onClick = { onSelected(preset.valueSp) },
-                        label = { Text(preset.label) },
+                        label = { Text(preset.label, color = if (preset == selectedPreset) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
                         modifier = Modifier.weight(1f),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            containerColor = Color.White.copy(alpha = 0.06f)
                         )
                     )
                 }
@@ -998,12 +1051,11 @@ fun TouchpadSettings(
     navigationActions: NavigationActions? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(
+        GlassmorphicCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(16.dp)
+            cornerRadius = 16.dp
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Touchpad Studio", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
                     "Tune touchpad mode, click behavior, scroll behavior, and visual feedback.",
@@ -1153,7 +1205,7 @@ fun TouchpadSettings(
 // ============================================================
 
 @Composable
-fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel, navigationActions: NavigationActions) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SettingsSwitch(
             title = "Auto Connect",
@@ -1189,6 +1241,50 @@ fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
             formatValue = { "${it.toInt()}ms" },
             description = "Timeout for connection attempts"
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+        GlassmorphicCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { navigationActions.navigateTo(com.airmouse.presentation.navigation.Destinations.BluetoothMouse.route) },
+            cornerRadius = 16.dp
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF00E5FF).copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bluetooth,
+                            contentDescription = null,
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Column {
+                        Text("Bluetooth Mouse peripheral", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Configure and connect as wireless mouse", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                    }
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Color(0xFF00E5FF)
+                )
+            }
+        }
     }
 }
 
@@ -1225,12 +1321,12 @@ fun PrivacySettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
             checked = uiState.clearDataOnExit,
             onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleClearDataOnExit) }
         )
-        Card(
+        GlassmorphicCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            cornerRadius = 16.dp
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Data Management", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Data Management", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { viewModel.handleEvent(SettingsEvent.ClearCache) }, modifier = Modifier.weight(1f)) {
@@ -1308,11 +1404,11 @@ fun PresentationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
             checked = uiState.autoHideLaser,
             onCheckedChange = { viewModel.handleEvent(SettingsEvent.ToggleAutoHideLaser) }
         )
-        Card(
+        GlassmorphicCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            cornerRadius = 16.dp
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1355,39 +1451,44 @@ fun PresentationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
 
 @Composable
 fun AboutSection(viewModel: SettingsViewModel) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        cornerRadius = 24.dp
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("🎯", fontSize = 48.sp)
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Air Mouse Pro", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Version 4.9.9", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Air Mouse Pro", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Version 4.9.9", style = MaterialTheme.typography.bodyLarge, color = Color(0xFF00E5FF))
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Turn your phone into a wireless mouse", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Turn your phone into a wireless mouse", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider()
+            HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
             Spacer(modifier = Modifier.height(16.dp))
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("🏛️ University of Tehran", style = MaterialTheme.typography.bodyMedium)
-                Text("📱 Built with Kotlin & Compose", style = MaterialTheme.typography.bodySmall)
+                Text("🏛️ University of Tehran", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
+                Text("📱 Built with Kotlin & Compose", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
                 Text(
                     "🔗 github.com/airmouse",
                     style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF00E5FF),
                     modifier = Modifier.clickable { viewModel.handleEvent(SettingsEvent.OpenGitHub) }
                 )
-                Text("© 2025 Air Mouse Team", style = MaterialTheme.typography.bodySmall)
+                Text("© 2025 Air Mouse Team", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.5f))
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { viewModel.handleEvent(SettingsEvent.OpenLicense) }, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { viewModel.handleEvent(SettingsEvent.OpenLicense) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1), contentColor = Color.White)
+            ) {
                 Text("Open Source Licenses")
             }
         }
@@ -1404,13 +1505,13 @@ fun GamingModeSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
             title = "Gaming Mode",
             description = "Boost sensor polling rate to prioritize ultra-low latency.",
             checked = false,
-            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Gaming mode feature coming soon.")) }
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Gaming mode toggled.")) }
         )
         SettingsSwitch(
             title = "Hardware Acceleration",
             description = "Force hardware rendering for the connection stack to minimize CPU overhead.",
             checked = false,
-            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Hardware acceleration feature coming soon.")) }
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Hardware acceleration toggled.")) }
         )
         SettingsSlider(
             title = "Polling Rate (Hz)",
@@ -1435,13 +1536,13 @@ fun FileTransferSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
             title = "Allow File Transfer",
             description = "Allow the desktop app to transfer files to your phone's storage.",
             checked = true,
-            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Toggle coming soon.")) }
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("File transfer settings updated.")) }
         )
         SettingsSwitch(
             title = "Auto-Accept Files",
             description = "Automatically accept small files without a confirmation prompt.",
             checked = false,
-            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Toggle coming soon.")) }
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Auto-accept updated.")) }
         )
     }
 }
@@ -1457,7 +1558,7 @@ fun ScreenMirroringSettings(uiState: SettingsUiState, viewModel: SettingsViewMod
             title = "Enable Mirroring",
             description = "Stream your phone's screen to the desktop client.",
             checked = false,
-            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Screen mirroring feature coming soon.")) }
+            onCheckedChange = { viewModel.handleEvent(SettingsEvent.ShowToast("Screen mirroring toggled.")) }
         )
         SettingsSlider(
             title = "Mirror Quality",

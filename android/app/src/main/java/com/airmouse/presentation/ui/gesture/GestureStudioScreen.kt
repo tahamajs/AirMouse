@@ -1,6 +1,9 @@
 
 package com.airmouse.presentation.ui.gesture
 
+import com.airmouse.presentation.ui.components.PremiumDashboardBackground
+import com.airmouse.presentation.ui.components.GlassmorphicCard
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -12,11 +15,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
@@ -35,23 +41,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.max
-@Composable
-fun GesturesScreen(
-    viewModel: GestureStudioViewModel = hiltViewModel()
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        GestureTrainingCenter(
-            onTrainGesture = { gesture ->
-                viewModel.trainGesture(gesture)
-            }
-        )
-    }
-}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +63,7 @@ fun GestureStudioScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -91,10 +81,14 @@ fun GestureStudioScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White,
+                    navigationIconContentColor = Color.White
                 )
             )
         },
+        containerColor = Color.Transparent,
         floatingActionButton = {
             if (uiState.savedGestures.isNotEmpty()) {
                 ExtendedFloatingActionButton(
@@ -105,13 +99,12 @@ fun GestureStudioScreen(
             }
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+        PremiumDashboardBackground {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 
@@ -153,6 +146,18 @@ fun GestureStudioScreen(
                     item {
                         StatisticsHeader(stats = uiState.trainingStats ?: GestureTrainingStats())
                     }
+                    item {
+                        SearchFilterCard(
+                            searchQuery = uiState.searchQuery,
+                            onSearchQueryChange = { viewModel.updateSearchQuery(it) },
+                            selectedFilterType = uiState.filterType,
+                            onFilterTypeChange = { viewModel.updateFilterType(it) },
+                            sortBy = uiState.sortBy,
+                            onSortChange = { viewModel.updateSort(it) },
+                            showFavoritesOnly = uiState.showFavoritesOnly,
+                            onToggleFavoritesOnly = { viewModel.toggleFavoritesOnly() }
+                        )
+                    }
                 }
 
                 
@@ -165,30 +170,50 @@ fun GestureStudioScreen(
                         Text(
                             text = "📋 Your Gestures (${uiState.savedGestures.size})",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                         if (uiState.savedGestures.isNotEmpty()) {
                             TextButton(onClick = { viewModel.showTrainDialog() }) {
-                                Text("Train All")
+                                Text("Train All", color = Color(0xFF6366F1), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
 
                 
+                val gesturesToDisplay = uiState.filteredGestures
                 if (uiState.savedGestures.isEmpty()) {
                     item {
                         EmptyGesturesCard(
                             onAddClick = { viewModel.showAddDialog() }
                         )
                     }
+                } else if (gesturesToDisplay.isEmpty()) {
+                    item {
+                        GlassmorphicCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            cornerRadius = 20.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(48.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("No matching gestures found", fontWeight = FontWeight.Bold)
+                                Text("Try adjusting your search query or filters", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 } else {
-                    items(uiState.savedGestures) { gesture ->
+                    items(gesturesToDisplay, key = { it.id }) { gesture ->
                         GestureCard(
                             gesture = gesture,
                             dateFormat = dateFormat,
                             onTrain = { viewModel.trainGesture(gesture.id) },
                             onDelete = { viewModel.showDeleteDialog(gesture.id) },
+                            onEdit = { viewModel.showEditDialog(gesture) },
                             onDetails = { viewModel.showDetailsDialog(gesture) },
                             onPlayback = { viewModel.showPlaybackDialog(gesture) },
                             onToggleFavorite = { viewModel.toggleFavorite(gesture.id) },
@@ -263,9 +288,9 @@ fun GestureStudioScreen(
             
             if (uiState.showExportDialog) {
                 ExportDialog(
-                    onConfirm = {
-                        viewModel.exportGestures(uiState.exportFormat)
-                        viewModel.closeAllDialogs()
+                    initialFormat = uiState.exportFormat,
+                    onConfirm = { format ->
+                        viewModel.exportGestures(format)
                     },
                     onDismiss = { viewModel.closeAllDialogs() }
                 )
@@ -276,7 +301,6 @@ fun GestureStudioScreen(
                 ImportDialog(
                     onConfirm = { path ->
                         viewModel.importGestures(path)
-                        viewModel.closeAllDialogs()
                     },
                     onDismiss = { viewModel.closeAllDialogs() },
                     isImporting = uiState.isImporting,
@@ -348,36 +372,88 @@ fun RecordingCard(
     onToggleWaveform: () -> Unit,
     onSensorSelected: (SensorType) -> Unit
 ) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (uiState.isRecording)
-                MaterialTheme.colorScheme.errorContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(24.dp)
+        cornerRadius = 24.dp,
+        backgroundAlpha = if (uiState.isRecording) 0.6f else 0.45f
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = if (uiState.isRecording) "🔴 Recording Mode" else "🎯 Create Gesture",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                    Text(
+                        text = if (uiState.isRecording) "Step 1 → Recording  Step 2 → Preview  Step 3 → Save"
+                               else "Name your gesture, then hit Record",
+                        fontSize = 10.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+                IconButton(onClick = onToggleWaveform) {
+                    Icon(
+                        if (uiState.showWaveform) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = "Toggle Waveform",
+                        tint = Color(0xFF6366F1)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
             if (uiState.isRecording) {
                 AnimatedRecordingIndicator()
                 Spacer(modifier = Modifier.height(12.dp))
 
                 
-                Text(
-                    text = formatTime(uiState.recordingTime),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Red
+                // Pulsing neon ring around timer when recording
+                val neonPulse by rememberInfiniteTransition(label = "NeonRing").animateFloat(
+                    initialValue = 0.6f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(700, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "NeonBorderAlpha"
                 )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(100.dp)
+                        .drawBehind {
+                            drawCircle(
+                                color = Color(0xFFEF4444).copy(alpha = neonPulse * 0.7f),
+                                radius = size.minDimension / 2f,
+                                style = Stroke(width = 4.dp.toPx())
+                            )
+                            drawCircle(
+                                color = Color(0xFFEF4444).copy(alpha = neonPulse * 0.25f),
+                                radius = size.minDimension / 2f + 8.dp.toPx(),
+                                style = Stroke(width = 2.dp.toPx())
+                            )
+                        }
+                ) {
+                    Text(
+                        text = formatTime(uiState.recordingTime),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFF6B6B)
+                    )
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${uiState.samplesCollected} samples collected",
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.6f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -432,12 +508,12 @@ fun RecordingCard(
                     Text(
                         "Peak: ${String.format(Locale.US, "%.2f", uiState.waveformData.maxValue)}",
                         fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF10B981)
                     )
                     Text(
                         "Rate: ${uiState.waveformData.samplingRate}Hz",
                         fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF6366F1)
                     )
                 }
             }
@@ -522,16 +598,13 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
         val stepX = width / data.samples.size
         val maxAbs = max(abs(data.maxValue), abs(data.minValue)).coerceAtLeast(0.1f)
 
-        val colors = listOf(
-            Color(0xFFFF5722),
-            Color(0xFF4CAF50),
-            Color(0xFF2196F3),
-            Color(0xFFFFC107),
-            Color(0xFF9C27B0),
-            Color(0xFF00BCD4)
-        )
+        val color = when (sensorType) {
+            SensorType.GYROSCOPE -> Color(0xFF2196F3)     // Blue
+            SensorType.ACCELEROMETER -> Color(0xFF4CAF50) // Green
+            SensorType.MAGNETOMETER -> Color(0xFFFFC107)  // Amber
+            SensorType.ALL -> Color(0xFF9C27B0)          // Purple
+        }
 
-        
         for (i in 1..3) {
             val y = (height / 4) * i
             drawLine(
@@ -542,7 +615,6 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
             )
         }
 
-        
         val path = Path()
         var isFirst = true
 
@@ -561,15 +633,14 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
 
         drawPath(
             path = path,
-            color = colors[0].copy(alpha = animatedAlpha),
+            color = color.copy(alpha = animatedAlpha),
             style = Stroke(width = 2.5f, cap = StrokeCap.Round)
         )
 
-        
         val fillPath = Path().apply {
             val firstX = 0f
             val lastX = width
-            moveTo(firstX, centerY)
+            moveTo(firstX, height)
 
             for (i in data.samples.indices) {
                 val x = i * stepX
@@ -578,14 +649,19 @@ fun WaveformVisualizer(data: GestureWaveformData, sensorType: SensorType, modifi
                 lineTo(x, y)
             }
 
-            lineTo(lastX, centerY)
+            lineTo(lastX, height)
             close()
         }
 
+        val brush = Brush.verticalGradient(
+            colors = listOf(color.copy(alpha = 0.25f), Color.Transparent),
+            startY = 0f,
+            endY = height
+        )
+
         drawPath(
             path = fillPath,
-            color = colors[0].copy(alpha = 0.15f),
-            style = Stroke(width = 1f)
+            brush = brush
         )
 
         drawLine(
@@ -638,12 +714,9 @@ fun AnimatedRecordingIndicator() {
 
 @Composable
 fun StatisticsHeader(stats: GestureTrainingStats) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ),
-        shape = RoundedCornerShape(16.dp)
+        cornerRadius = 16.dp
     ) {
         Row(
             modifier = Modifier
@@ -662,9 +735,18 @@ fun StatisticsHeader(stats: GestureTrainingStats) {
 @Composable
 fun StatItem(label: String, value: String, icon: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(icon, fontSize = 20.sp)
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(icon, fontSize = 22.sp)
+        Text(
+            value,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            color = Color.White
+        )
+        Text(
+            label,
+            fontSize = 10.sp,
+            color = Color.White.copy(alpha = 0.55f)
+        )
     }
 }
 
@@ -672,22 +754,22 @@ fun StatItem(label: String, value: String, icon: String) {
 
 @Composable
 fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: Int) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ),
-        shape = RoundedCornerShape(16.dp)
+        cornerRadius = 16.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                com.airmouse.presentation.ui.components.SweepGradientGlowRing(
+                    size = 24.dp,
+                    strokeWidth = 2.dp
+                )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("🧠 Training Model...", fontWeight = FontWeight.Bold)
+                    Text("🧠 Training Model...", fontWeight = FontWeight.Bold, color = Color.White)
                     if (currentGesture.isNotEmpty()) {
-                        Text("Current: $currentGesture", fontSize = 12.sp)
-                        Text("${totalGestures} gestures total", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Current: $currentGesture", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                        Text("${totalGestures} gestures total", fontSize = 11.sp, color = Color.White.copy(alpha = 0.55f))
                     }
                 }
             }
@@ -695,14 +777,15 @@ fun TrainingProgressCard(progress: Int, currentGesture: String, totalGestures: I
             LinearProgressIndicator(
                 progress = { progress / 100f },
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary
+                color = Color(0xFF6366F1),
+                trackColor = Color.White.copy(alpha = 0.1f)
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("$progress%", fontSize = 12.sp)
-                Text("${progress / 10}/10 epochs", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("$progress%", fontSize = 12.sp, color = Color.White)
+                Text("${progress / 10}/10 epochs", fontSize = 12.sp, color = Color.White.copy(alpha = 0.55f))
             }
         }
     }
@@ -721,14 +804,11 @@ fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> U
         label = "EntranceScale"
     )
 
-    Card(
+    GlassmorphicCard(
         modifier = Modifier
             .fillMaxWidth()
             .scale(scale),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f)
-        ),
-        shape = RoundedCornerShape(16.dp)
+        cornerRadius = 16.dp
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -747,9 +827,18 @@ fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> U
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("🎯 Gesture Recognized!", fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
-                    Text(gesture.replace("_", " "), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("Confidence: ${(confidence * 100).toInt()}%", fontSize = 12.sp)
+                    Text("🎯 Gesture Recognized!", fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                    Text(
+                        gesture.replace("_", " "),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        "Confidence: ${(confidence * 100).toInt()}%",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
                 }
             }
             IconButton(onClick = onDismiss) {
@@ -763,12 +852,9 @@ fun RecognitionResultCard(gesture: String, confidence: Float, onDismiss: () -> U
 
 @Composable
 fun EmptyGesturesCard(onAddClick: () -> Unit) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(20.dp)
+        cornerRadius = 20.dp
     ) {
         Column(
             modifier = Modifier.padding(32.dp),
@@ -777,26 +863,36 @@ fun EmptyGesturesCard(onAddClick: () -> Unit) {
             Icon(
                 Icons.Default.Gesture,
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.size(72.dp),
+                tint = Color(0xFF6366F1)
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Text("No Custom Gestures", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-            Text("Record your first gesture above", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "No Custom Gestures Yet",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Text(
+                "Record your first gesture above",
+                fontSize = 13.sp,
+                color = Color.White.copy(alpha = 0.6f)
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 "Try gestures like: ThumbsUp, CircleCW, SwipeLeft",
                 fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.45f)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onAddClick,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Create First Gesture")
+                Text("Create First Gesture", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -813,17 +909,13 @@ fun GestureCard(
     onDetails: () -> Unit,
     onPlayback: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onToggleEnabled: () -> Unit
+    onToggleEnabled: () -> Unit,
+    onEdit: () -> Unit
 ) {
-    Card(
+    GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (gesture.isEnabled)
-                MaterialTheme.colorScheme.surfaceVariant
-            else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        shape = RoundedCornerShape(20.dp)
+        cornerRadius = 20.dp,
+        backgroundAlpha = if (gesture.isEnabled) 0.45f else 0.25f
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -839,48 +931,49 @@ fun GestureCard(
                         gesture.name.replace("_", " "),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (gesture.isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (gesture.isEnabled) Color.White else Color.White.copy(alpha = 0.45f)
                     )
                     if (gesture.usageCount > 0) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer
+                            color = Color(0xFF6366F1).copy(alpha = 0.2f)
                         ) {
                             Text(
                                 "Used ${gesture.usageCount}x",
                                 fontSize = 10.sp,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                color = Color(0xFF818CF8)
                             )
                         }
                     }
                     if (!gesture.isEnabled) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.errorContainer
+                            color = Color(0xFFEF4444).copy(alpha = 0.15f)
                         ) {
                             Text(
                                 "Disabled",
                                 fontSize = 10.sp,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                color = MaterialTheme.colorScheme.error
+                                color = Color(0xFFEF4444)
                             )
                         }
                     }
                 }
                 Text(
-                    "Action: ${gesture.action}",
+                    "⚡ Action: ${gesture.action}",
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color(0xFF10B981)
                 )
                 Text(
-                    "Created: ${dateFormat.format(Date(gesture.createdAt))}",
+                    "🗓 Created: ${dateFormat.format(Date(gesture.createdAt))}",
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.5f)
                 )
                 Text(
-                    "Confidence: ${(gesture.confidence * 100).toInt()}% • ${gesture.type.name}",
+                    "🎯 Confidence: ${(gesture.confidence * 100).toInt()}% • ${gesture.type.name}",
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.5f)
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -893,7 +986,7 @@ fun GestureCard(
                             if (gesture.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite",
                             modifier = Modifier.size(18.dp),
-                            tint = if (gesture.isFavorite) Color(0xFFFF5722) else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (gesture.isFavorite) Color(0xFFFF6B6B) else Color.White.copy(alpha = 0.4f)
                         )
                     }
                     IconButton(
@@ -903,22 +996,26 @@ fun GestureCard(
                         Icon(
                             if (gesture.isEnabled) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                             contentDescription = "Toggle",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
+                            tint = if (gesture.isEnabled) Color(0xFF10B981) else Color.White.copy(alpha = 0.35f)
                         )
                     }
                 }
                 Row {
                     IconButton(onClick = onPlayback, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Playback", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Playback", modifier = Modifier.size(18.dp), tint = Color(0xFF38BDF8))
                     }
                     IconButton(onClick = onTrain, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = "Train", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.AutoAwesome, contentDescription = "Train", modifier = Modifier.size(18.dp), tint = Color(0xFFF59E0B))
+                    }
+                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp), tint = Color(0xFF818CF8))
                     }
                     IconButton(onClick = onDetails, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Info, contentDescription = "Details", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Info, contentDescription = "Details", modifier = Modifier.size(18.dp), tint = Color.White.copy(alpha = 0.5f))
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp), tint = Color(0xFFEF4444))
                     }
                 }
             }
@@ -966,7 +1063,7 @@ fun AddGestureDialog(
                 )
                 if (isAdding) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    com.airmouse.presentation.ui.components.SweepGradientGlowRing(size = 24.dp, strokeWidth = 2.dp)
                 }
             }
         },
@@ -997,7 +1094,7 @@ fun EditGestureDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("✏️ Edit Gesture") },
+        title = { Text("✏️ Edit Gesture: ${gesture.name.replace('_', ' ')}") },
         text = {
             Column {
                 Text("Update the name and action for this gesture.")
@@ -1021,7 +1118,7 @@ fun EditGestureDialog(
                 )
                 if (isUpdating) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    com.airmouse.presentation.ui.components.SweepGradientGlowRing(size = 24.dp, strokeWidth = 2.dp)
                 }
             }
         },
@@ -1085,23 +1182,43 @@ fun TrainAllDialog(gestureCount: Int, onConfirm: () -> Unit, onDismiss: () -> Un
 }
 
 @Composable
-fun ExportDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun ExportDialog(
+    initialFormat: ExportFormat,
+    onConfirm: (ExportFormat) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedFormat by remember { mutableStateOf(initialFormat) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("📤 Export Dataset") },
         text = {
             Column {
-                Text("Export all gesture data to a CSV file.")
-                Spacer(modifier = Modifier.height(8.dp))
+                Text("Export all gesture data to a file.")
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Select Format:", style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ExportFormat.entries.forEach { format ->
+                        FilterChip(
+                            selected = selectedFormat == format,
+                            onClick = { selectedFormat = format },
+                            label = { Text(format.displayName) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    "The file will be saved to your Downloads folder.",
-                    fontSize = 13.sp,
+                    "The file will be saved to the application's external storage folder.",
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Export") }
+            TextButton(onClick = { onConfirm(selectedFormat) }) { Text("Export") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -1188,8 +1305,8 @@ fun DetailsRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-        Text(value, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+        Text(label, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp)
+        Text(value, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color.White)
     }
 }
 
@@ -1254,4 +1371,107 @@ private fun formatTime(millis: Int): String {
     val minutes = seconds / 60
     val remainingSeconds = seconds % 60
     return String.format(Locale.US, "%02d:%02d", minutes, remainingSeconds)
+}
+
+@Composable
+fun SearchFilterCard(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    selectedFilterType: com.airmouse.domain.model.GestureType?,
+    onFilterTypeChange: (com.airmouse.domain.model.GestureType?) -> Unit,
+    sortBy: GestureSort,
+    onSortChange: (GestureSort) -> Unit,
+    showFavoritesOnly: Boolean,
+    onToggleFavoritesOnly: () -> Unit
+) {
+    GlassmorphicCard(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 20.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                label = { Text("Search gestures...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear")
+                        }
+                    }
+                }
+            )
+
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                
+                FilterChip(
+                    selected = showFavoritesOnly,
+                    onClick = onToggleFavoritesOnly,
+                    label = { Text("⭐ Favorites Only", fontSize = 11.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+
+                
+                var showSortMenu by remember { mutableStateOf(false) }
+                Box {
+                    AssistChip(
+                        onClick = { showSortMenu = true },
+                        label = { Text("Sort: ${sortBy.displayName}", fontSize = 11.sp) },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    )
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false }
+                    ) {
+                        GestureSort.entries.forEach { sortOption ->
+                            DropdownMenuItem(
+                                text = { Text(sortOption.displayName) },
+                                onClick = {
+                                    onSortChange(sortOption)
+                                    showSortMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            
+            Text("Filter by Type:", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold)
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedFilterType == null,
+                        onClick = { onFilterTypeChange(null) },
+                        label = { Text("All", fontSize = 11.sp) }
+                    )
+                }
+                items(com.airmouse.domain.model.GestureType.entries.filter { it != com.airmouse.domain.model.GestureType.NONE }) { type ->
+                    FilterChip(
+                        selected = selectedFilterType == type,
+                        onClick = { onFilterTypeChange(type) },
+                        label = { Text(type.name.replace("_", " "), fontSize = 11.sp) }
+                    )
+                }
+            }
+        }
+    }
 }

@@ -56,6 +56,7 @@ data class StatisticsUiState(
     val useUdpDiscovery: Boolean = true,
     val theme: String = "system",
     val language: String = "en",
+    val activeProtocol: String = "WEBSOCKET",
     val batteryUsage: Int = 0,
     val cpuUsage: Float = 0f,
     val memoryUsage: Float = 0f,

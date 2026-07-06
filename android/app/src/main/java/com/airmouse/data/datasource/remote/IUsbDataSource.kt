@@ -9,4 +9,5 @@ interface IUsbDataSource {
     fun send(data: ByteArray)
     fun observeMessages(): Flow<ByteArray>
     fun connectionStatus(): Flow<Boolean>
+    fun isConnected(): Boolean
 }

@@ -56,6 +56,15 @@ fun VoiceCommandsScreen(
                     }
                 },
                 actions = {
+                    if (uiState.isConnected) {
+                        IconButton(onClick = { viewModel.disconnect() }) {
+                            Icon(Icons.Default.PowerSettingsNew, contentDescription = "Disconnect", tint = MaterialTheme.colorScheme.error)
+                        }
+                    } else {
+                        IconButton(onClick = { viewModel.connect() }) {
+                            Icon(Icons.Default.PowerSettingsNew, contentDescription = "Connect", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                     IconButton(onClick = { viewModel.clearHistory() }) {
                         Icon(Icons.Default.Delete, contentDescription = "Clear History")
                     }

@@ -9,9 +9,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -59,244 +61,259 @@ fun TouchpadScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.TouchApp, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Touchpad Mode", fontWeight = FontWeight.Bold)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { viewModel.handleEvent(TouchpadEvent.NavigateBack) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.handleEvent(TouchpadEvent.ResetToDefaults) }) {
-                        Icon(Icons.Default.Restore, contentDescription = "Reset")
-                    }
-                    IconButton(onClick = { viewModel.handleEvent(TouchpadEvent.NavigateToSettings) }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                TouchpadHeroCard(
-                    uiState = uiState,
-                    onToggleMouseControl = { viewModel.handleEvent(TouchpadEvent.ToggleMouseControl(it)) }
-                )
-            }
-            item {
-                TouchpadDomainSummaryCard(uiState)
-            }
-            item {
-                TouchpadSurface(
-                    uiState = uiState,
-                    onTouchEvent = { x, y, count, pointers, p ->
-                        viewModel.handleEvent(TouchpadEvent.TouchEvent(x, y, count, pointers, p))
-                    },
-                    onTap = { viewModel.handleEvent(TouchpadEvent.TapEvent(it.x, it.y)) },
-                    onLongPress = { viewModel.handleEvent(TouchpadEvent.LongPressEvent) },
-                    onGestureEnd = { viewModel.handleEvent(TouchpadEvent.GestureEnd) }
-                )
-            }
-
-            item { StatusCard(uiState, viewModel) }
-            item { TouchpadTestCard(uiState, viewModel) }
-            item { PresetsCard(viewModel) }
-
-            item {
-                ExpandableSettingsCard(
-                    title = "Touch Scrolling",
-                    icon = Icons.Default.SwapVert
-                ) {
-                    SwitchSetting(
-                        label = "Two‑Finger Scroll",
-                        description = "Use two fingers to scroll",
-                        checked = uiState.twoFingerScroll,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleTwoFingerScroll) }
-                    )
-                    SwitchSetting(
-                        label = "Natural Scrolling",
-                        description = "Content follows finger direction",
-                        checked = uiState.naturalScrolling,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleNaturalScrolling) }
-                    )
-                    SliderSetting(
-                        label = "Scroll Speed",
-                        value = uiState.scrollSpeed,
-                        onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdateScrollSpeed(it)) },
-                        valueRange = 0.5f..2.0f,
-                        formatValue = { "${"%.1f".format(it)}x" }
-                    )
-                    SwitchSetting(
-                        label = "Edge Scrolling",
-                        description = "Scroll by touching screen edges",
-                        checked = uiState.edgeScrolling,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleEdgeScrolling) }
-                    )
-                    SwitchSetting(
-                        label = "Scroll Inertia",
-                        description = "Smooth scrolling after fingers lift",
-                        checked = uiState.scrollInertia,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleScrollInertia) }
-                    )
-                }
-            }
-
-            item {
-                ExpandableSettingsCard(
-                    title = "Cursor Control",
-                    icon = Icons.Default.Mouse
-                ) {
-                    SliderSetting(
-                        label = "Cursor Sensitivity",
-                        value = uiState.sensitivity,
-                        onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdateSensitivity(it)) },
-                        valueRange = 0.5f..2.0f,
-                        formatValue = { "${"%.1f".format(it)}x" }
-                    )
-                    SliderSetting(
-                        label = "Cursor Speed",
-                        value = uiState.cursorSpeed,
-                        onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdateCursorSpeed(it)) },
-                        valueRange = 0.5f..2.0f,
-                        formatValue = { "${"%.1f".format(it)}x" }
-                    )
-                    SliderSetting(
-                        label = "Pointer Precision",
-                        value = uiState.pointerSpeed.toFloat(),
-                        onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdatePointerSpeed(it.toInt())) },
-                        valueRange = 20f..100f,
-                        formatValue = { "${it.toInt()}%" }
-                    )
-                    SwitchSetting(
-                        label = "Mouse Acceleration",
-                        description = "Speed‑dependent cursor movement",
-                        checked = uiState.accelerationEnabled,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleAcceleration) }
-                    )
-                    SwitchSetting(
-                        label = "Invert Vertical",
-                        description = "",
-                        checked = uiState.invertVertical,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleInvertVertical) }
-                    )
-                    SwitchSetting(
-                        label = "Invert Horizontal",
-                        description = "",
-                        checked = uiState.invertHorizontal,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleInvertHorizontal) }
-                    )
-                }
-            }
-
-            item {
-                ExpandableSettingsCard(
-                    title = "Gestures & Feedback",
-                    icon = Icons.Default.TouchApp
-                ) {
-                    SwitchSetting(
-                        label = "Tap to Click",
-                        description = "Single tap = left click",
-                        checked = uiState.tapToClick,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleTapToClick) }
-                    )
-                    SliderSetting(
-                        label = "Double‑Tap Delay",
-                        value = uiState.doubleTapDelay.toFloat(),
-                        onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdateDoubleTapDelay(it.toInt())) },
-                        valueRange = 100f..600f,
-                        formatValue = { "${it.toInt()}ms" }
-                    )
-                    SwitchSetting(
-                        label = "Three‑Finger Swipe",
-                        description = "Navigate back/forward, volume",
-                        checked = uiState.threeFingerSwipe,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleThreeFingerSwipe) }
-                    )
-                    SwitchSetting(
-                        label = "Pinch to Zoom",
-                        description = "",
-                        checked = uiState.pinchToZoom,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.TogglePinchToZoom) }
-                    )
-                    SwitchSetting(
-                        label = "Rotate to Rotate",
-                        description = "",
-                        checked = uiState.rotateToRotate,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleRotateToRotate) }
-                    )
-                    SwitchSetting(
-                        label = "Haptic Feedback",
-                        description = "Vibrate on touch",
-                        checked = uiState.hapticFeedback,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleHapticFeedback) }
-                    )
-                    SwitchSetting(
-                        label = "Show Touch Points",
-                        description = "Visual feedback on touchpad",
-                        checked = uiState.showTouchPoints,
-                        onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleShowTouchPoints) }
-                    )
-                }
-            }
-
-            if (uiState.lastGesture.isNotEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Last Gesture:", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                uiState.lastGesture,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.TouchApp, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Touchpad Mode", fontWeight = FontWeight.Bold)
                         }
-                    }
-                }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.handleEvent(TouchpadEvent.NavigateBack) }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        if (uiState.isConnected) {
+                            IconButton(onClick = { viewModel.handleEvent(TouchpadEvent.Disconnect) }) {
+                                Icon(Icons.Default.PowerSettingsNew, contentDescription = "Disconnect", tint = MaterialTheme.colorScheme.error)
+                            }
+                        } else {
+                            IconButton(onClick = { viewModel.handleEvent(TouchpadEvent.Connect) }) {
+                                Icon(Icons.Default.PowerSettingsNew, contentDescription = "Connect", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        IconButton(onClick = { viewModel.handleEvent(TouchpadEvent.ResetToDefaults) }) {
+                            Icon(Icons.Default.Restore, contentDescription = "Reset")
+                        }
+                        IconButton(onClick = { viewModel.handleEvent(TouchpadEvent.NavigateToSettings) }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
             }
+        ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    TouchpadHeroCard(
+                        uiState = uiState,
+                        onToggleMouseControl = { viewModel.handleEvent(TouchpadEvent.ToggleMouseControl(it)) }
+                    )
+                }
+                item {
+                    TouchpadDomainSummaryCard(uiState)
+                }
+                item {
+                    TouchpadSurface(
+                        uiState = uiState,
+                        onTouchEvent = { x, y, count, pointers, p ->
+                            viewModel.handleEvent(TouchpadEvent.TouchEvent(x, y, count, pointers, p))
+                        },
+                        onTap = { viewModel.handleEvent(TouchpadEvent.TapEvent(it.x, it.y)) },
+                        onLongPress = { viewModel.handleEvent(TouchpadEvent.LongPressEvent) },
+                        onGestureEnd = { viewModel.handleEvent(TouchpadEvent.GestureEnd) }
+                    )
+                }
 
-            if (uiState.gestureHistory.isNotEmpty()) {
+                item {
+                    TouchpadClickButtons(viewModel)
+                }
+
+                item { StatusCard(uiState, viewModel) }
+                item { TouchpadTestCard(uiState, viewModel) }
+                item { PresetsCard(viewModel) }
+
                 item {
                     ExpandableSettingsCard(
-                        title = "Gesture History",
-                        icon = Icons.Default.History
+                        title = "Touch Scrolling",
+                        icon = Icons.Default.SwapVert
                     ) {
-                        uiState.gestureHistory.takeLast(10).forEach { gesture ->
-                            Text(
-                                "• $gesture",
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
+                        SwitchSetting(
+                            label = "Two‑Finger Scroll",
+                            description = "Use two fingers to scroll",
+                            checked = uiState.twoFingerScroll,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleTwoFingerScroll) }
+                        )
+                        SwitchSetting(
+                            label = "Natural Scrolling",
+                            description = "Content follows finger direction",
+                            checked = uiState.naturalScrolling,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleNaturalScrolling) }
+                        )
+                        SliderSetting(
+                            label = "Scroll Speed",
+                            value = uiState.scrollSpeed,
+                            onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdateScrollSpeed(it)) },
+                            valueRange = 0.5f..2.0f,
+                            formatValue = { "${"%.1f".format(it)}x" }
+                        )
+                        SwitchSetting(
+                            label = "Edge Scrolling",
+                            description = "Scroll by touching screen edges",
+                            checked = uiState.edgeScrolling,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleEdgeScrolling) }
+                        )
+                        SwitchSetting(
+                            label = "Scroll Inertia",
+                            description = "Smooth scrolling after fingers lift",
+                            checked = uiState.scrollInertia,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleScrollInertia) }
+                        )
+                    }
+                }
+
+                item {
+                    ExpandableSettingsCard(
+                        title = "Cursor Control",
+                        icon = Icons.Default.Mouse
+                    ) {
+                        SliderSetting(
+                            label = "Cursor Sensitivity",
+                            value = uiState.sensitivity,
+                            onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdateSensitivity(it)) },
+                            valueRange = 0.5f..2.0f,
+                            formatValue = { "${"%.1f".format(it)}x" }
+                        )
+                        SliderSetting(
+                            label = "Cursor Speed",
+                            value = uiState.cursorSpeed,
+                            onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdateCursorSpeed(it)) },
+                            valueRange = 0.5f..2.0f,
+                            formatValue = { "${"%.1f".format(it)}x" }
+                        )
+                        SliderSetting(
+                            label = "Pointer Precision",
+                            value = uiState.pointerSpeed.toFloat(),
+                            onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdatePointerSpeed(it.toInt())) },
+                            valueRange = 20f..100f,
+                            formatValue = { "${it.toInt()}%" }
+                        )
+                        SwitchSetting(
+                            label = "Mouse Acceleration",
+                            description = "Speed‑dependent cursor movement",
+                            checked = uiState.accelerationEnabled,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleAcceleration) }
+                        )
+                        SwitchSetting(
+                            label = "Invert Vertical",
+                            description = "",
+                            checked = uiState.invertVertical,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleInvertVertical) }
+                        )
+                        SwitchSetting(
+                            label = "Invert Horizontal",
+                            description = "",
+                            checked = uiState.invertHorizontal,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleInvertHorizontal) }
+                        )
+                    }
+                }
+
+                item {
+                    ExpandableSettingsCard(
+                        title = "Gestures & Feedback",
+                        icon = Icons.Default.TouchApp
+                    ) {
+                        SwitchSetting(
+                            label = "Tap to Click",
+                            description = "Single tap = left click",
+                            checked = uiState.tapToClick,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleTapToClick) }
+                        )
+                        SliderSetting(
+                            label = "Double‑Tap Delay",
+                            value = uiState.doubleTapDelay.toFloat(),
+                            onValueChange = { viewModel.handleEvent(TouchpadEvent.UpdateDoubleTapDelay(it.toInt())) },
+                            valueRange = 100f..600f,
+                            formatValue = { "${it.toInt()}ms" }
+                        )
+                        SwitchSetting(
+                            label = "Three‑Finger Swipe",
+                            description = "Navigate back/forward, volume",
+                            checked = uiState.threeFingerSwipe,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleThreeFingerSwipe) }
+                        )
+                        SwitchSetting(
+                            label = "Pinch to Zoom",
+                            description = "",
+                            checked = uiState.pinchToZoom,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.TogglePinchToZoom) }
+                        )
+                        SwitchSetting(
+                            label = "Rotate to Rotate",
+                            description = "",
+                            checked = uiState.rotateToRotate,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleRotateToRotate) }
+                        )
+                        SwitchSetting(
+                            label = "Haptic Feedback",
+                            description = "Vibrate on touch",
+                            checked = uiState.hapticFeedback,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleHapticFeedback) }
+                        )
+                        SwitchSetting(
+                            label = "Show Touch Points",
+                            description = "Visual feedback on touchpad",
+                            checked = uiState.showTouchPoints,
+                            onCheckedChange = { viewModel.handleEvent(TouchpadEvent.ToggleShowTouchPoints) }
+                        )
+                    }
+                }
+
+                if (uiState.lastGesture.isNotEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Last Gesture:", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    uiState.lastGesture,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+                if (uiState.gestureHistory.isNotEmpty()) {
+                    item {
+                        ExpandableSettingsCard(
+                            title = "Gesture History",
+                            icon = Icons.Default.History
+                        ) {
+                            uiState.gestureHistory.takeLast(10).forEach { gesture ->
+                                Text(
+                                    "• $gesture",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
         }
     }
 }
@@ -373,12 +390,11 @@ fun TouchpadSurface(
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     var isLongPress = false
-                    var longPressJob: Job? = null
+                    var hasMoved = false
 
-                    // ✅ FIXED: Use the coroutine scope from rememberCoroutineScope
-                    longPressJob = scope.launch {
+                    val longPressJob = scope.launch {
                         delay(500)
-                        if (!isLongPress) {
+                        if (!isLongPress && !hasMoved) {
                             isLongPress = true
                             onLongPress()
                         }
@@ -387,9 +403,16 @@ fun TouchpadSurface(
                     while (true) {
                         val event = awaitPointerEvent()
                         val pressed = event.changes.filter { it.pressed }
+                        
+                        event.changes.forEach {
+                            if ((it.position - down.position).getDistance() > 15f) {
+                                hasMoved = true
+                            }
+                        }
+
                         if (pressed.isEmpty()) {
-                            longPressJob?.cancel()
-                            if (!isLongPress && event.changes.size == 1) {
+                            longPressJob.cancel()
+                            if (!isLongPress && !hasMoved) {
                                 onTap(down.position)
                             }
                             onGestureEnd()
@@ -460,20 +483,20 @@ fun TouchpadSurface(
                 }
             }
 
-            // Placeholder text when inactive
-            if (!uiState.isActive) {
+            // Placeholder text when inactive or paused
+            if (!uiState.isActive || !uiState.isMouseControlEnabled) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        Icons.Default.TouchApp,
+                        if (!uiState.isActive) Icons.Default.TouchApp else Icons.Default.SensorsOff,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
                         tint = labelColor
                     )
                     Text(
-                        "Touchpad Inactive\nPress Start to enable",
+                        if (!uiState.isActive) "Touchpad Inactive\nPress Start to enable" else "Transmission Paused\nEnable Mouse Control to use",
                         textAlign = TextAlign.Center,
                         color = labelColor
                     )
@@ -807,5 +830,114 @@ fun SliderSetting(
                 activeTrackColor = MaterialTheme.colorScheme.primary
             )
         )
+    }
+}
+
+@Composable
+fun TouchpadClickButtons(
+    viewModel: TouchpadViewModel,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ClickButton(
+            label = "Left Click",
+            icon = "🖱️",
+            onClickDown = { viewModel.handleEvent(TouchpadEvent.ButtonDownEvent("left")) },
+            onClickUp = { viewModel.handleEvent(TouchpadEvent.ButtonUpEvent("left")) },
+            modifier = Modifier.weight(1f)
+        )
+
+        ClickButton(
+            label = "Middle Click",
+            icon = "🖱️",
+            onClickDown = { viewModel.handleEvent(TouchpadEvent.ButtonDownEvent("middle")) },
+            onClickUp = { viewModel.handleEvent(TouchpadEvent.ButtonUpEvent("middle")) },
+            modifier = Modifier.weight(1f)
+        )
+
+        ClickButton(
+            label = "Right Click",
+            icon = "🖱️",
+            onClickDown = { viewModel.handleEvent(TouchpadEvent.ButtonDownEvent("right")) },
+            onClickUp = { viewModel.handleEvent(TouchpadEvent.ButtonUpEvent("right")) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+fun ClickButton(
+    label: String,
+    icon: String,
+    onClickDown: () -> Unit,
+    onClickUp: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val buttonColor by animateColorAsState(
+        targetValue = if (isPressed) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+        },
+        animationSpec = tween(150),
+        label = "clickBtnColor"
+    )
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1.0f,
+        animationSpec = tween(150),
+        label = "clickBtnScale"
+    )
+
+    Card(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown()
+                    isPressed = true
+                    onClickDown()
+
+                    waitForUpOrCancellation()
+                    isPressed = false
+                    onClickUp()
+                }
+            },
+        colors = CardDefaults.cardColors(containerColor = buttonColor),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isPressed) 2.dp else 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = icon,
+                    fontSize = 18.sp
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isPressed) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }

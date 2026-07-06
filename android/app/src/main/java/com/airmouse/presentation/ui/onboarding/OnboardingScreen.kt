@@ -19,11 +19,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
@@ -33,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.R
 import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.presentation.ui.components.SweepGradientGlowRing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -315,81 +320,191 @@ fun AnimatedBackground(currentPage: Int) {
 
 @Composable
 fun WelcomePage(item: OnboardingItem, animationProgress: Float) {
+    val statusTexts = remember {
+        listOf(
+            "Initializing Gyroscope & Accelerometer (120Hz)...",
+            "Loading Neural Mouse Smoothing Engine...",
+            "Readying Low-Latency WebSockets & UDP...",
+            "Checking Native Bluetooth HID profile...",
+            "Air Mouse system fully operational!"
+        )
+    }
+    var currentStatusIndex by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        for (i in statusTexts.indices) {
+            delay(600)
+            currentStatusIndex = i
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "logo_glow")
+    val rotationAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+    val glowPulse by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.weight(1f)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Surface(
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Rotating neon border wrapper
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(88.dp)
-                    .scale(0.86f + animationProgress * 0.14f),
-                shape = CircleShape,
-                color = item.accentColor.copy(alpha = 0.2f),
-                shadowElevation = 12.dp
+                    .size(110.dp)
+                    .graphicsLayer {
+                        rotationZ = rotationAngle
+                    }
+                    .drawBehind {
+                        drawCircle(
+                            brush = Brush.sweepGradient(
+                                colors = listOf(
+                                    item.accentColor.copy(alpha = 0.1f),
+                                    item.accentColor,
+                                    Color(0xFF00E5FF),
+                                    item.accentColor.copy(alpha = 0.1f)
+                                )
+                            ),
+                            style = Stroke(width = 3.dp.toPx())
+                        )
+                    }
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(id = item.imageRes),
-                        contentDescription = item.title,
-                        modifier = Modifier.size(52.dp),
-                        tint = item.accentColor
-                    )
+                Surface(
+                    modifier = Modifier
+                        .size(88.dp)
+                        .graphicsLayer {
+                            rotationZ = -rotationAngle // Keep logo upright
+                        }
+                        .scale(0.86f + animationProgress * 0.14f),
+                    shape = CircleShape,
+                    color = Color(0xFF0A0C10),
+                    shadowElevation = 16.dp,
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(id = item.imageRes),
+                            contentDescription = item.title,
+                            modifier = Modifier.size(48.dp),
+                            tint = item.accentColor
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             AnimatedText(
                 text = item.title,
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
-                delay = 250
+                delay = 200
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             AnimatedText(
                 text = item.description,
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.82f),
+                fontSize = 14.sp,
+                color = Color.White.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center,
-                delay = 500
+                delay = 400
             )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // Dynamic loading telemetry text box
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Black.copy(alpha = 0.3f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (currentStatusIndex < statusTexts.size - 1) {
+                        SweepGradientGlowRing(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            glowRadius = 2.dp,
+                            colors = listOf(
+                                item.accentColor,
+                                Color.White.copy(alpha = 0.8f),
+                                item.accentColor
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Success",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = statusTexts[currentStatusIndex],
+                        fontSize = 12.sp,
+                        color = if (currentStatusIndex == statusTexts.size - 1) Color(0xFF10B981) else Color.White.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
 
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color.White.copy(alpha = 0.08f),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f))
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White.copy(alpha = 0.05f),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Swipe through the next pages for features, connection, voice, and proximity controls.",
+                    text = "Swipe to view full features, connection setups, voice control, and proximity locks.",
                     fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.75f),
+                    color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    repeat(4) {
+                    repeat(6) { idx ->
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.55f))
+                                .background(Color.White.copy(alpha = if (idx == 0) 1.0f else 0.3f))
                         )
                     }
                 }
@@ -713,19 +828,23 @@ fun ProximityPage(item: OnboardingItem, viewModel: OnboardingViewModel) {
             modifier = Modifier.size(200.dp),
             contentAlignment = Alignment.Center
         ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val radius = (size.width / 2f) * (0.5f + distance * 0.3f)
-                drawCircle(
-                    color = item.accentColor.copy(alpha = 0.3f),
-                    radius = radius,
-                    center = Offset(size.width / 2f, size.height / 2f)
-                )
-                drawCircle(
-                    color = item.accentColor,
-                    radius = 40f,
-                    center = Offset(size.width / 2f, size.height / 2f)
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawBehind {
+                        val radius = (size.width / 2f) * (0.5f + distance * 0.3f)
+                        drawCircle(
+                            color = item.accentColor.copy(alpha = 0.3f),
+                            radius = radius,
+                            center = Offset(size.width / 2f, size.height / 2f)
+                        )
+                        drawCircle(
+                            color = item.accentColor,
+                            radius = 40f,
+                            center = Offset(size.width / 2f, size.height / 2f)
+                        )
+                    }
+            )
             Icon(
                 painter = painterResource(id = R.drawable.ic_sensor),
                 contentDescription = "Proximity",

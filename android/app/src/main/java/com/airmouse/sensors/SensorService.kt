@@ -68,7 +68,6 @@ class SensorService @Inject constructor(
     private var pitch = 0f
     private var roll = 0f
 
-    private var lastRoll = 0f
     private var lastYaw = 0f
 
     private val sensorThread = HandlerThread("SensorThread").apply { start() }
@@ -80,12 +79,12 @@ class SensorService @Inject constructor(
     // Callbacks
     // ============================================================
 
-    var onOrientationChanged: ((roll: Float, yaw: Float) -> Unit)? = null
+    var onOrientationChanged: ((pitch: Float, yaw: Float) -> Unit)? = null
     var onGestureDetected: ((EnhancedGestureDetector.Gesture) -> Unit)? = null
     var onStabilityChanged: ((isStable: Boolean) -> Unit)? = null
     var onSensorData: ((gyroX: Float, gyroY: Float, gyroZ: Float, accelX: Float, accelY: Float, accelZ: Float) -> Unit)? = null
 
-    private var filteredRoll = 0f
+    private var filteredPitch = 0f
     private var filteredYaw = 0f
     private val smoothingAlpha = 0.6f
 
@@ -126,10 +125,10 @@ class SensorService @Inject constructor(
         if (isRunning) return
         val sm = sensorManager ?: return
 
-        val sensorDelay = if (preferences.getBoolean("battery_saver", false)) {
-            SensorManager.SENSOR_DELAY_NORMAL
-        } else {
-            SensorManager.SENSOR_DELAY_GAME
+        val sensorDelay = when {
+            preferences.getBoolean("gaming_mode", false) -> SensorManager.SENSOR_DELAY_FASTEST
+            preferences.getBoolean("battery_saver", false) -> SensorManager.SENSOR_DELAY_NORMAL
+            else -> SensorManager.SENSOR_DELAY_GAME
         }
 
         gyroscope?.let {
@@ -212,13 +211,26 @@ class SensorService @Inject constructor(
             )
 
             roll = madgwick.getRoll()
+            pitch = madgwick.getPitch()
             yaw = madgwick.getYaw()
 
-            filteredRoll = smoothingAlpha * roll + (1 - smoothingAlpha) * filteredRoll
-            filteredYaw = smoothingAlpha * yaw + (1 - smoothingAlpha) * filteredYaw
+            var dpitch = (pitch - filteredPitch) % 360f
+            if (dpitch > 180f) dpitch -= 360f
+            if (dpitch < -180f) dpitch += 360f
+
+            var dyaw = (yaw - filteredYaw) % 360f
+            if (dyaw > 180f) dyaw -= 360f
+            if (dyaw < -180f) dyaw += 360f
+
+            filteredPitch += smoothingAlpha * dpitch
+            filteredYaw += smoothingAlpha * dyaw
+
+            filteredPitch = (filteredPitch % 360f).let { if (it > 180f) it - 360f else if (it < -180f) it + 360f else it }
+            filteredYaw = (filteredYaw % 360f).let { if (it > 180f) it - 360f else if (it < -180f) it + 360f else it }
+
 
             checkStability()
-            onOrientationChanged?.invoke(filteredRoll, filteredYaw)
+            onOrientationChanged?.invoke(filteredPitch, filteredYaw)
             detectGestures()
 
             onSensorData?.invoke(
@@ -270,16 +282,29 @@ class SensorService @Inject constructor(
             roll = directRoll
             pitch = directPitch
             yaw = directYaw
-            filteredRoll = smoothingAlpha * roll + (1 - smoothingAlpha) * filteredRoll
-            filteredYaw = smoothingAlpha * yaw + (1 - smoothingAlpha) * filteredYaw
-            onOrientationChanged?.invoke(filteredRoll, filteredYaw)
+            var dpitch = (pitch - filteredPitch) % 360f
+            if (dpitch > 180f) dpitch -= 360f
+            if (dpitch < -180f) dpitch += 360f
+
+            var dyaw = (yaw - filteredYaw) % 360f
+            if (dyaw > 180f) dyaw -= 360f
+            if (dyaw < -180f) dyaw += 360f
+
+            filteredPitch += smoothingAlpha * dpitch
+            filteredYaw += smoothingAlpha * dyaw
+
+            filteredPitch = (filteredPitch % 360f).let { if (it > 180f) it - 360f else if (it < -180f) it + 360f else it }
+            filteredYaw = (filteredYaw % 360f).let { if (it > 180f) it - 360f else if (it < -180f) it + 360f else it }
+            onOrientationChanged?.invoke(filteredPitch, filteredYaw)
         }
     }
 
+    private var lastPitch = 0f
+
     private fun checkStability() {
-        val rollDelta = abs(roll - lastRoll)
+        val pitchDelta = abs(pitch - lastPitch)
         val yawDelta = abs(yaw - lastYaw)
-        val isCurrentlyStable = rollDelta < STABILITY_THRESHOLD && yawDelta < STABILITY_THRESHOLD
+        val isCurrentlyStable = pitchDelta < STABILITY_THRESHOLD && yawDelta < STABILITY_THRESHOLD
 
         if (isCurrentlyStable) {
             stabilityCounter++
@@ -297,7 +322,7 @@ class SensorService @Inject constructor(
             }
         }
 
-        lastRoll = roll
+        lastPitch = pitch
         lastYaw = yaw
     }
 
@@ -317,7 +342,7 @@ class SensorService @Inject constructor(
     // Public Methods
     // ============================================================
 
-    fun getCurrentOrientation(): Pair<Float, Float> = Pair(filteredRoll, filteredYaw)
+    fun getCurrentOrientation(): Pair<Float, Float> = Pair(filteredPitch, filteredYaw)
 
     fun getRawGyro(): Triple<Float, Float, Float> = Triple(calibratedGyroX, calibratedGyroY, calibratedGyroZ)
     fun getRawAccel(): Triple<Float, Float, Float> = Triple(calibratedAccelX, calibratedAccelY, calibratedAccelZ)

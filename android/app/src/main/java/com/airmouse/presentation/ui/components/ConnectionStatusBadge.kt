@@ -25,7 +25,8 @@ fun ConnectionStatusBadge(
 ) {
     val label = when (status) {
         ConnectionManager.ConnectionStatus.CONNECTED -> "Connected"
-        ConnectionManager.ConnectionStatus.CONNECTING -> "Approving"
+        ConnectionManager.ConnectionStatus.CONNECTING -> "Connecting"
+        ConnectionManager.ConnectionStatus.PENDING_APPROVAL -> "Pending Approval"
         ConnectionManager.ConnectionStatus.DISCONNECTED -> "Disconnected"
         ConnectionManager.ConnectionStatus.RECONNECTING -> "Reconnecting"
         ConnectionManager.ConnectionStatus.ERROR -> "Error"

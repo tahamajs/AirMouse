@@ -23,6 +23,9 @@ import com.airmouse.R
 import com.airmouse.network.ConnectionManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.ByteArrayOutputStream
 import java.net.URI
 import javax.inject.Inject
@@ -39,6 +42,10 @@ class ScreenMirroringService : Service() {
     private var imageReader: ImageReader? = null
     private var projectionManager: MediaProjectionManager? = null
     private var isStreaming = false
+        set(value) {
+            field = value
+            _isStreamingFlow.value = value
+        }
     private var displayMetrics: DisplayMetrics? = null
     private var frameRate = 15          // default
     private var quality = 50            // JPEG quality (1-100)
@@ -54,6 +61,9 @@ class ScreenMirroringService : Service() {
         private const val NOTIFICATION_ID = 5001
         private const val CHANNEL_ID = "screen_mirroring_channel"
         private const val VIRTUAL_DISPLAY_NAME = "ScreenMirroringDisplay"
+
+        private val _isStreamingFlow = MutableStateFlow(false)
+        val isStreamingFlow: StateFlow<Boolean> = _isStreamingFlow.asStateFlow()
 
         /**
          * Start the screen mirroring service.

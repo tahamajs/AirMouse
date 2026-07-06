@@ -6,21 +6,19 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ComponentCallbacks2
+import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.StrictMode
+import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration as WorkConfiguration
-import com.airmouse.BuildConfig // ✅ IMPORT ADDED
+import com.airmouse.BuildConfig
 import com.airmouse.utils.PreferencesManager
 import com.airmouse.utils.LogManager
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -30,19 +28,15 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var prefsManager: PreferencesManager
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override val workManagerConfiguration: WorkConfiguration
         get() = WorkConfiguration.Builder()
             .setWorkerFactory(workerFactory)
-            .setMinimumLoggingLevel(android.util.Log.INFO)
+            .setMinimumLoggingLevel(Log.INFO)
             .build()
 
     companion object {
         lateinit var instance: AirMouseApplication
             private set
-
-        fun getAppContext(): android.content.Context = instance.applicationContext
 
         const val APP_VERSION = "4.9.9"
         const val APP_NAME = "Air Mouse Pro"
@@ -402,30 +396,18 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
         } catch (_: Exception) { /* ignore */ }
     }
 
-    fun isAppInForegroundState(): Boolean = isAppInForeground
 
-    fun getAppExecutionUptime(): Long = System.currentTimeMillis() - appStartTime
-
-    fun getTotalUptime(): Long = prefsManager.getLong(PREF_TOTAL_UPTIME, 0L)
-
-    fun getAppLaunchCount(): Int = prefsManager.getInt(PREF_APP_LAUNCH_COUNT, 0)
-
-    fun isFirstLaunch(): Boolean = prefsManager.getBoolean(PREF_FIRST_LAUNCH, true)
-
-    fun getBuildInfo(): String = "$APP_NAME v$APP_VERSION (Build $BUILD_NUMBER)"
-
-    fun getDeviceInfo(): String = "${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE})"
 }
 
 class CrashReportingTree : Timber.Tree() {
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-        if (priority == android.util.Log.ERROR) {
+        if (priority == Log.ERROR) {
             if (t != null) {
                 Timber.e(t, "[$tag] $message")
             } else {
                 Timber.e("[$tag] $message")
             }
-        } else if (priority == android.util.Log.WARN) {
+        } else if (priority == Log.WARN) {
             Timber.w("[$tag] $message")
         }
         // Other priorities are ignored for this tree; you can add more if needed.

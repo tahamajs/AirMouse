@@ -77,12 +77,12 @@ class ConnectionRepositoryImpl @Inject constructor(
 
     private fun loadConfig() {
         val ip = prefs.getString("last_ip", "")
-        val port = prefs.getInt("last_port", 8080)
-        val protocol = prefs.getString("last_protocol", prefs.getString("connection_protocol", "WEBSOCKET"))
+        val port = prefs.getInt("last_port", 8082)
+        val protocol = prefs.getString("last_protocol", prefs.getString("connection_protocol", "UDP"))
         val protocolEnum = try {
             ConnectionProtocol.valueOf(protocol.uppercase())
         } catch (e: IllegalArgumentException) {
-            ConnectionProtocol.WEBSOCKET
+            ConnectionProtocol.UDP
         }
         _config.value = ConnectionConfig(ip = ip, port = port, protocol = protocolEnum).normalized()
     }
@@ -93,6 +93,7 @@ class ConnectionRepositoryImpl @Inject constructor(
                 _status.value = when (status) {
                     ConnectionManager.ConnectionStatus.CONNECTED -> ConnectionStatus.CONNECTED
                     ConnectionManager.ConnectionStatus.CONNECTING -> ConnectionStatus.CONNECTING
+                    ConnectionManager.ConnectionStatus.PENDING_APPROVAL -> ConnectionStatus.PENDING_APPROVAL
                     ConnectionManager.ConnectionStatus.DISCONNECTED -> ConnectionStatus.DISCONNECTED
                     ConnectionManager.ConnectionStatus.RECONNECTING -> ConnectionStatus.RECONNECTING
                     ConnectionManager.ConnectionStatus.ERROR -> ConnectionStatus.ERROR
@@ -142,6 +143,8 @@ class ConnectionRepositoryImpl @Inject constructor(
                     ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
                     ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
                     ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+                    ConnectionProtocol.USB_SERIAL -> ConnectionManager.ConnectionProtocol.USB_SERIAL
+                    ConnectionProtocol.BLUETOOTH -> ConnectionManager.ConnectionProtocol.BLUETOOTH
                 }
             )
             val success = connectionManager.connect(normalized.ip, normalized.port)
@@ -266,6 +269,8 @@ class ConnectionRepositoryImpl @Inject constructor(
                     ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
                     ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
                     ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+                    ConnectionProtocol.USB_SERIAL -> ConnectionManager.ConnectionProtocol.USB_SERIAL
+                    ConnectionProtocol.BLUETOOTH -> ConnectionManager.ConnectionProtocol.BLUETOOTH
                 }
             )
             val success = connectionManager.connect(ip, port)

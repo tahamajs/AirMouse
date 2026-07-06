@@ -1,26 +1,30 @@
 package com.airmouse.presentation.ui.gaming
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.presentation.ui.components.PremiumDashboardBackground
+import com.airmouse.presentation.ui.components.GlassmorphicCard
 import com.airmouse.presentation.ui.touchpad.TouchpadEvent
 import com.airmouse.presentation.ui.touchpad.TouchpadMode
 import com.airmouse.presentation.ui.touchpad.TouchpadViewModel
@@ -29,183 +33,322 @@ import com.airmouse.presentation.ui.touchpad.TouchpadViewModel
 @Composable
 fun GamingModeScreen(
     navigationActions: NavigationActions,
-    viewModel: TouchpadViewModel = hiltViewModel()
+    touchpadViewModel: TouchpadViewModel = hiltViewModel(),
+    gameProfilesViewModel: GameProfilesViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by touchpadViewModel.uiState.collectAsState()
+    val profilesUiState by gameProfilesViewModel.uiState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Gaming Mode", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navigationActions.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+    val isConnected = uiState.isConnected
+    val isGamingModeApplied = uiState.sensitivity == 1.5f && !uiState.tapToClick && !uiState.twoFingerScroll
+
+    PremiumDashboardBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                "Gaming Mode",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                if (isConnected) "Connected" else "Disconnected",
+                                fontSize = 11.sp,
+                                color = if (isConnected) Color(0xFF38BDF8) else Color(0xFFF59E0B)
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navigationActions.navigateBack() }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                if (isConnected) {
+                                    touchpadViewModel.handleEvent(TouchpadEvent.Disconnect)
+                                } else {
+                                    touchpadViewModel.handleEvent(TouchpadEvent.Connect)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PowerSettingsNew,
+                                contentDescription = "Connection Toggle",
+                                tint = if (isConnected) Color(0xFFEF4444) else Color(0xFF10B981)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Premium Gradient Header Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // ─── Gaming Mode Status Hero Card ───────────────────
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(28.dp))
                         .background(
                             Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.tertiary
-                                )
+                                colors = if (isGamingModeApplied)
+                                    listOf(Color(0xFF1A2F4B), Color(0xFF0F1D2D))
+                                else
+                                    listOf(Color(0xFF232838), Color(0xFF161A26))
                             )
+                        )
+                        .border(
+                            1.dp,
+                            if (isGamingModeApplied) Color(0xFF38BDF8).copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f),
+                            RoundedCornerShape(28.dp)
                         )
                         .padding(24.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .background(
+                                        if (isGamingModeApplied) Color(0xFF38BDF8).copy(alpha = 0.2f) else Color.White.copy(alpha = 0.08f),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.SportsEsports,
+                                    contentDescription = null,
+                                    tint = if (isGamingModeApplied) Color(0xFF38BDF8) else Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+
+                            // Active Profile Badge
+                            val gameBadgeColor = if (profilesUiState.currentGame != "None") Color(0xFF10B981) else Color(0xFF9CA3AF)
+                            Surface(
+                                color = gameBadgeColor.copy(alpha = 0.18f),
+                                shape = RoundedCornerShape(50.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .background(gameBadgeColor, CircleShape)
+                                    )
+                                    Text(
+                                        text = profilesUiState.currentGame.uppercase(),
+                                        color = gameBadgeColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Ultra Low Latency Preset",
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Configures UDP protocol, boosts sensor polling rate to maximum, disables default gestures, and optimizes response variables for zero-lag gaming control inputs.",
+                                color = Color.White.copy(alpha = 0.75f),
+                                fontSize = 13.sp,
+                                lineHeight = 20.sp
+                            )
+                        }
+
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                        Button(
+                            onClick = {
+                                touchpadViewModel.handleEvent(TouchpadEvent.ApplyPreset(TouchpadMode.GAMING))
+                                gameProfilesViewModel.refreshProfiles()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isGamingModeApplied) Color(0xFF38BDF8) else Color.White,
+                                contentColor = if (isGamingModeApplied) Color.White else Color(0xFF0F172A)
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (isGamingModeApplied) Icons.Filled.CheckCircle else Icons.Filled.PlayArrow,
+                                contentDescription = null
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (isGamingModeApplied) "Preset Applied" else "Apply Gaming Preset",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+                        
+                        Button(
+                            onClick = { navigationActions.navigateToGameController() },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White.copy(alpha=0.1f),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(Icons.Filled.SportsEsports, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Open Controller Layout",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+                    }
+                }
+
+                // ─── Real-time Engine Settings Card ────────────────
+                GlassmorphicCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.SportsEsports,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                            Text(
-                                text = "Ultra Low Latency Preset",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
+                            Icon(Icons.Filled.Tune, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(20.dp))
+                            Text("Engine Configuration", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
 
-                        Text(
-                            text = "Optimize the touchpad response, sensitivity, and calibration variables for gaming control inputs.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.85f)
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                        GamingConfigRow(
+                            icon = Icons.Filled.Speed,
+                            label = "Transmission Protocol",
+                            value = if (isGamingModeApplied) "UDP (Low Latency)" else "WebSocket",
+                            iconTint = Color(0xFF8B5CF6),
+                            valueColor = if (isGamingModeApplied) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f)
                         )
 
-                        Spacer(Modifier.height(8.dp))
+                        GamingConfigRow(
+                            icon = Icons.Filled.Bolt,
+                            label = "Polling Rate / Latency Boost",
+                            value = if (isGamingModeApplied) "Fastest (100+ Hz)" else "Standard (60 Hz)",
+                            iconTint = Color(0xFFF59E0B),
+                            valueColor = if (isGamingModeApplied) Color(0xFF10B981) else Color.White.copy(alpha = 0.7f)
+                        )
 
-                        Button(
-                            onClick = { viewModel.handleEvent(TouchpadEvent.ApplyPreset(TouchpadMode.GAMING)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Filled.TouchApp, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Apply Preset Now", fontWeight = FontWeight.Bold)
-                        }
+                        GamingConfigRow(
+                            icon = Icons.Filled.TouchApp,
+                            label = "Default Gestures",
+                            value = if (isGamingModeApplied) "Disabled" else "Enabled",
+                            iconTint = Color(0xFF38BDF8),
+                            valueColor = if (isGamingModeApplied) Color(0xFFEF4444) else Color(0xFF10B981)
+                        )
+
+                        GamingConfigRow(
+                            icon = Icons.Filled.CompareArrows,
+                            label = "Cursor Sensitivity",
+                            value = "${"%.1f".format(uiState.sensitivity)}x",
+                            iconTint = Color(0xFFEC4899),
+                            valueColor = Color.White
+                        )
                     }
                 }
-            }
 
-            // Real-time Status Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                // ─── Game Profiles Summary Card ────────────────
+                GlassmorphicCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp
                 ) {
-                    Text(
-                        text = "Touchpad Engine Configuration",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Text("Connection Status", style = MaterialTheme.typography.bodyMedium)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Filled.List, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(20.dp))
+                            Text("Game Profiles Summary", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
-                        Text(
-                            text = if (uiState.isConnected) "Active" else "Offline",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (uiState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                        )
-                    }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Filled.Speed, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                            Text("Sensitivity", style = MaterialTheme.typography.bodyMedium)
-                        }
-                        Text(
-                            text = "%.1f".format(uiState.sensitivity) + "x",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Filled.Speed, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                            Text("Cursor Speed", style = MaterialTheme.typography.bodyMedium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Total Profiles Detected", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                                Text("${profilesUiState.profileCount} Game Profiles", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { gameProfilesViewModel.refreshProfiles() }) {
+                                    Icon(Icons.Filled.Refresh, contentDescription = "Refresh Profiles", tint = Color(0xFF38BDF8))
+                                }
+                                TextButton(onClick = { navigationActions.navigateToGameProfiles() }) {
+                                    Text("Manage", color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
-                        Text(
-                            text = "%.1f".format(uiState.cursorSpeed) + "x",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Filled.Speed, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                            Text("Scroll Speed", style = MaterialTheme.typography.bodyMedium)
+                        if (profilesUiState.summary.isNotBlank()) {
+                            Text(
+                                text = "Available configurations for: ${profilesUiState.summary}",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp,
+                                lineHeight = 18.sp
+                            )
                         }
-                        Text(
-                            text = "%.1f".format(uiState.scrollSpeed) + "x",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun GamingConfigRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    iconTint: Color,
+    valueColor: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(18.dp))
+            Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp)
+        }
+        Text(value, color = valueColor, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
     }
 }

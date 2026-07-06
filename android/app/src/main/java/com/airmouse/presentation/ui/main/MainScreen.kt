@@ -12,6 +12,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import android.app.Activity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.List
@@ -61,12 +64,14 @@ import com.airmouse.presentation.ui.home.HomeScreen
 import com.airmouse.presentation.ui.logs.ServerLogsScreen
 import com.airmouse.presentation.ui.network.NetworkDiscoveryScreen
 import com.airmouse.presentation.ui.onboarding.OnboardingScreen
+import com.airmouse.presentation.ui.search.SearchScreen
 import com.airmouse.presentation.ui.profiles.ProfilesScreen
 import com.airmouse.presentation.ui.proximity.ProximityScreen
 import com.airmouse.presentation.ui.notifications.NotificationsCenterScreen
 import com.airmouse.presentation.ui.sensor.SensorVisualizerScreen
 import com.airmouse.presentation.ui.sync.SyncStatusScreen
 import com.airmouse.presentation.ui.settings.SettingsScreen
+import com.airmouse.presentation.ui.components.GlassmorphicCard
 import com.airmouse.presentation.ui.statistics.StatisticsScreen
 import com.airmouse.presentation.ui.themes.ThemesScreen
 import com.airmouse.presentation.ui.touchpad.TouchpadScreen
@@ -77,6 +82,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 
 // ============================================================
 // MainViewModel
@@ -85,11 +93,17 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val prefs: PreferencesManager,
-    private val connectionManager: ConnectionManager
+    val connectionManager: ConnectionManager
 ) : ViewModel() {
 
     val currentIp: StateFlow<String> = connectionManager.currentIp
     val connectionQuality: StateFlow<com.airmouse.network.ConnectionQuality> = connectionManager.connectionQuality
+    val isMouseControlEnabled: StateFlow<Boolean> = connectionManager.isMouseControlEnabledFlow
+    val currentProtocol: StateFlow<ConnectionManager.ConnectionProtocol> = connectionManager.currentProtocolFlow
+
+    fun setMouseControlEnabled(enabled: Boolean) {
+        connectionManager.isMouseControlEnabled = enabled
+    }
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -135,7 +149,7 @@ class MainViewModel @Inject constructor(
 
         _uiState.update {
             it.copy(
-                controlMode = prefs.getString("control_mode", "motion"),
+                controlMode = prefs.getActiveMode().id,
                 isRegistered = !prefs.isFirstLaunch() && prefs.getUserName().isNotBlank(),
                 isCalibrated = prefs.getBoolean("calibration_complete", false) ||
                         prefs.getBoolean("is_calibrated", false),
@@ -147,7 +161,13 @@ class MainViewModel @Inject constructor(
     }
 
     fun updateControlMode(mode: String) {
-        prefs.putString("control_mode", mode)
+        prefs.setActiveModeId(mode)
+        val legacyMode = when (mode) {
+            "motion_translation" -> "accel"
+            "touchpad_mode" -> "touchpad"
+            else -> "motion"
+        }
+        prefs.setControlMode(legacyMode)
         _uiState.update { it.copy(controlMode = mode) }
     }
 
@@ -187,8 +207,8 @@ class MainViewModel @Inject constructor(
         prefs.setAutoConnect(true)
         prefs.setWebSocketEnabled(true)
         prefs.setUdpDiscoveryEnabled(true)
-        prefs.setLastProtocol("WEBSOCKET")
-        prefs.setLastPort(8080)
+        prefs.setLastProtocol("UDP")
+        prefs.setLastPort(8082)
         
         disconnect()
     }
@@ -263,9 +283,11 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val isConnected by viewModel.isConnected.collectAsState()
+    val isMouseControlEnabled by viewModel.isMouseControlEnabled.collectAsStateWithLifecycle(true)
     val serverInfo by viewModel.serverInfo.collectAsState()
     val currentIp by viewModel.currentIp.collectAsStateWithLifecycle("")
     val connectionQuality by viewModel.connectionQuality.collectAsStateWithLifecycle(com.airmouse.network.ConnectionQuality())
+    val currentProtocol by viewModel.currentProtocol.collectAsStateWithLifecycle()
 
     LaunchedEffect(pendingRoute) {
         if (pendingRoute != null) {
@@ -278,7 +300,10 @@ fun MainScreen(
         }
     }
 
-    BackHandler(enabled = drawerState.isOpen || currentRoute != Destinations.Home.route) {
+    val context = LocalContext.current
+    var backPressedTime by remember { mutableLongStateOf(0L) }
+
+    BackHandler(enabled = drawerState.isOpen || currentRoute != Destinations.Home.route || currentRoute == Destinations.Home.route) {
         if (drawerState.isOpen) {
             scope.launch { drawerState.close() }
         } else if (currentRoute != Destinations.Home.route) {
@@ -287,10 +312,19 @@ fun MainScreen(
                 launchSingleTop = true
                 restoreState = true
             }
+        } else {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - backPressedTime < 2000) {
+                (context as? Activity)?.finish()
+            } else {
+                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                backPressedTime = currentTime
+            }
         }
     }
 
-    ModalNavigationDrawer(
+    Box(modifier = Modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModernDrawerContent(
@@ -317,6 +351,7 @@ fun MainScreen(
                 serverVersion = serverInfo.second,
                 serverIp = currentIp,
                 connectionQuality = connectionQuality,
+                protocol = currentProtocol,
                 onDisconnect = { viewModel.disconnect() }
             )
         },
@@ -390,9 +425,57 @@ fun MainScreen(
                     modifier = Modifier.fillMaxSize(),
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
+
+                if (isConnected && currentRoute != Destinations.Touchpad.route && currentRoute != Destinations.Onboarding.route) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Surface(
+                            onClick = { viewModel.setMouseControlEnabled(!isMouseControlEnabled) },
+                            shape = RoundedCornerShape(99.dp),
+                            color = if (isMouseControlEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                            border = BorderStroke(1.dp, if (isMouseControlEnabled) Color.White.copy(alpha = 0.2f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                            shadowElevation = 8.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(if (isMouseControlEnabled) Color(0xFF10B981) else Color.Gray, CircleShape)
+                                )
+                                Text(
+                                    text = if (isMouseControlEnabled) "Disable Mouse" else "Enable Mouse",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isMouseControlEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Icon(
+                                    imageVector = if (isMouseControlEnabled) Icons.Default.Sensors else Icons.Default.SensorsOff,
+                                    contentDescription = null,
+                                    tint = if (isMouseControlEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
+
+        if (isConnected && isMouseControlEnabled && uiState.controlMode != "touchpad_mode" && uiState.controlMode != "touchpad" && currentRoute != Destinations.Touchpad.route) {
+            BlackoutTouchpadOverlay(
+                onDisableMouse = { viewModel.setMouseControlEnabled(false) },
+                connectionManager = viewModel.connectionManager
+            )
+        }
     }
+}
 }
 
 // ============================================================
@@ -539,519 +622,583 @@ fun ModernDrawerContent(
     serverVersion: String,
     serverIp: String,
     connectionQuality: com.airmouse.network.ConnectionQuality,
+    protocol: ConnectionManager.ConnectionProtocol,
     onDisconnect: () -> Unit
 ) {
     val RedesignTheme = rememberRedesignThemeColors()
     var showDisconnectDialog by remember { mutableStateOf(false) }
 
     ModalDrawerSheet(
-        drawerContainerColor = RedesignTheme.Background,
+        drawerContainerColor = Color.Transparent,
         drawerContentColor = RedesignTheme.TextPrimary,
+        drawerTonalElevation = 0.dp,
+        drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp),
         modifier = Modifier
             .fillMaxWidth(0.88f)
             .widthIn(max = 360.dp)
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF0F1322).copy(alpha = 0.88f),
+                            Color(0xFF07090E).copy(alpha = 0.95f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.15f),
+                            Color.White.copy(alpha = 0.02f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
+                )
         ) {
-            // Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = RedesignTheme.Primary.copy(alpha = 0.15f),
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Computer,
-                            contentDescription = null,
-                            tint = RedesignTheme.Primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-                Column {
-                    Text(
-                        text = "Air Mouse Pro",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = RedesignTheme.TextPrimary
-                    )
-                    Text(
-                        text = "v4.9.9",
-                        fontSize = 12.sp,
-                        color = RedesignTheme.TextTertiary
-                    )
-                }
-            }
-
-            // Divider
-            HorizontalDivider(color = RedesignTheme.SurfaceHighlight)
-
-            // User Profile Section
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            // Glowing Ambient Blobs inside the drawer
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = RedesignTheme.Primary,
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = if (userName.isNotBlank()) userName.take(1).uppercase(Locale.ROOT) else "U",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                    .size(250.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 100.dp, y = (-50).dp)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFF00E5FF).copy(alpha = 0.08f),
+                                Color.Transparent
+                            )
                         )
-                    }
-                }
-                Column {
-                    Text(
-                        text = userName.ifBlank { "User" },
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = RedesignTheme.TextPrimary
                     )
-                    Text(
-                        text = if (userName.isNotBlank()) "${userName.lowercase().replace(" ", "")}@airmouse.pro" else "user@airmouse.pro",
-                        fontSize = 12.sp,
-                        color = RedesignTheme.TextSecondary
+            )
+            Box(
+                modifier = Modifier
+                    .size(250.dp)
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-80).dp, y = 100.dp)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFFD500F9).copy(alpha = 0.06f),
+                                Color.Transparent
+                            )
+                        )
                     )
-                }
-            }
-
-            val statusColor by animateColorAsState(
-                targetValue = if (isConnected) RedesignTheme.StatusSuccess else if (isConnecting) RedesignTheme.StatusWarning else RedesignTheme.StatusError,
-                animationSpec = tween(500),
-                label = "statusColor"
             )
 
-            // Connection Status Card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = RedesignTheme.SurfaceHighlight),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                // Header
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = RedesignTheme.Primary.copy(alpha = 0.15f),
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = statusColor.copy(alpha = 0.2f),
-                            modifier = Modifier.size(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(statusColor, CircleShape)
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Computer,
+                                contentDescription = null,
+                                tint = RedesignTheme.Primary,
+                                modifier = Modifier.size(28.dp)
                             )
                         }
+                    }
+                    Column {
                         Text(
-                            text = if (isConnected) "Connected to server" else if (isConnecting) "Connecting..." else "Disconnected",
-                            fontSize = 14.sp,
+                            text = "Air Mouse Pro",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RedesignTheme.TextPrimary
+                        )
+                        Text(
+                            text = "v4.9.9",
+                            fontSize = 12.sp,
+                            color = RedesignTheme.TextTertiary
+                        )
+                    }
+                }
+
+                // Divider
+                HorizontalDivider(color = RedesignTheme.SurfaceHighlight)
+
+                // User Profile Section
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = RedesignTheme.Primary,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = if (userName.isNotBlank()) userName.take(1).uppercase(Locale.ROOT) else "U",
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = userName.ifBlank { "User" },
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = RedesignTheme.TextPrimary
                         )
-                    }
-                    if (isConnected && serverName.isNotBlank()) {
                         Text(
-                            text = "Server: $serverName",
-                            fontSize = 12.sp,
-                            color = RedesignTheme.TextSecondary
-                        )
-                    }
-                    if (serverIp.isNotBlank()) {
-                        Text(
-                            text = "IP Address: $serverIp",
-                            fontSize = 12.sp,
-                            color = RedesignTheme.TextSecondary
-                        )
-                    }
-                    if (isConnected) {
-                        val signalText = when (connectionQuality.signalStrength) {
-                            com.airmouse.network.ConnectionQuality.SignalStrength.EXCELLENT -> "📶 Signal: Excellent (${connectionQuality.ping} ms)"
-                            com.airmouse.network.ConnectionQuality.SignalStrength.GOOD -> "📶 Signal: Good (${connectionQuality.ping} ms)"
-                            com.airmouse.network.ConnectionQuality.SignalStrength.FAIR -> "📶 Signal: Fair (${connectionQuality.ping} ms)"
-                            com.airmouse.network.ConnectionQuality.SignalStrength.POOR -> "📶 Signal: Poor (${connectionQuality.ping} ms)"
-                            com.airmouse.network.ConnectionQuality.SignalStrength.VERY_POOR -> "📶 Signal: Very Poor (${connectionQuality.ping} ms)"
-                            else -> "📶 Signal: Unknown"
-                        }
-                        Text(
-                            text = signalText,
+                            text = if (userName.isNotBlank()) "${userName.lowercase().replace(" ", "")}@airmouse.pro" else "user@airmouse.pro",
                             fontSize = 12.sp,
                             color = RedesignTheme.TextSecondary
                         )
                     }
                 }
-            }
 
-            // Calibration Status Card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = RedesignTheme.SurfaceVariant),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                val statusColor by animateColorAsState(
+                    targetValue = if (isConnected) RedesignTheme.StatusSuccess else if (isConnecting) RedesignTheme.StatusWarning else RedesignTheme.StatusError,
+                    animationSpec = tween(500),
+                    label = "statusColor"
+                )
+
+                // Connection Status Card
+                GlassmorphicCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 16.dp
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = statusColor.copy(alpha = 0.2f),
+                                modifier = Modifier.size(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(statusColor, CircleShape)
+                                )
+                            }
+                            Text(
+                                text = if (protocol == ConnectionManager.ConnectionProtocol.BLUETOOTH) {
+                                    if (isConnected) "Connected via Bluetooth" else if (isConnecting) "Advertising..." else "Disconnected"
+                                } else {
+                                    if (isConnected) "Connected to server" else if (isConnecting) "Connecting..." else "Disconnected"
+                                },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = RedesignTheme.TextPrimary
+                            )
+                        }
+                        if (protocol != ConnectionManager.ConnectionProtocol.BLUETOOTH && isConnected && serverName.isNotBlank()) {
+                            Text(
+                                text = "Server: $serverName",
+                                fontSize = 12.sp,
+                                color = RedesignTheme.TextSecondary
+                            )
+                        }
+                        if (protocol != ConnectionManager.ConnectionProtocol.BLUETOOTH && serverIp.isNotBlank()) {
+                            Text(
+                                text = "IP Address: $serverIp",
+                                fontSize = 12.sp,
+                                color = RedesignTheme.TextSecondary
+                            )
+                        }
+                        if (protocol != ConnectionManager.ConnectionProtocol.BLUETOOTH && isConnected) {
+                            val signalText = when (connectionQuality.signalStrength) {
+                                com.airmouse.network.ConnectionQuality.SignalStrength.EXCELLENT -> "📶 Signal: Excellent (${connectionQuality.ping} ms)"
+                                com.airmouse.network.ConnectionQuality.SignalStrength.GOOD -> "📶 Signal: Good (${connectionQuality.ping} ms)"
+                                com.airmouse.network.ConnectionQuality.SignalStrength.FAIR -> "📶 Signal: Fair (${connectionQuality.ping} ms)"
+                                com.airmouse.network.ConnectionQuality.SignalStrength.POOR -> "📶 Signal: Poor (${connectionQuality.ping} ms)"
+                                com.airmouse.network.ConnectionQuality.SignalStrength.VERY_POOR -> "📶 Signal: Very Poor (${connectionQuality.ping} ms)"
+                                else -> "📶 Signal: Unknown"
+                            }
+                            Text(
+                                text = signalText,
+                                fontSize = 12.sp,
+                                color = RedesignTheme.TextSecondary
+                            )
+                        }
+                    }
+                }
+
+                // Calibration Status Card
+                GlassmorphicCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 12.dp
                 ) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = null,
-                            tint = if (isCalibrated) RedesignTheme.StatusSuccess else RedesignTheme.StatusWarning,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Calibration",
-                            fontSize = 14.sp,
-                            color = RedesignTheme.TextPrimary
-                        )
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = (if (isCalibrated) RedesignTheme.StatusSuccess else RedesignTheme.StatusWarning).copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            text = if (isCalibrated) "✅ Complete" else "⏳ Pending",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isCalibrated) RedesignTheme.StatusSuccess else RedesignTheme.StatusWarning
-                        )
-                    }
-                }
-            }
-
-            var showDeviceDetails by remember { mutableStateOf(false) }
-
-            // Session & System Info Card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = RedesignTheme.SurfaceVariant),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Icon(
-                                imageVector = Icons.Default.Info,
+                                imageVector = Icons.Default.Tune,
                                 contentDescription = null,
-                                tint = RedesignTheme.Primary,
+                                tint = if (isCalibrated) RedesignTheme.StatusSuccess else RedesignTheme.StatusWarning,
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "System & Details",
+                                text = "Calibration",
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
                                 color = RedesignTheme.TextPrimary
                             )
                         }
-                        IconButton(
-                            onClick = { showDeviceDetails = !showDeviceDetails },
-                            modifier = Modifier.size(24.dp)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = (if (isCalibrated) RedesignTheme.StatusSuccess else RedesignTheme.StatusWarning).copy(alpha = 0.15f)
                         ) {
-                            Icon(
-                                imageVector = if (showDeviceDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = "Toggle System details",
-                                tint = RedesignTheme.TextSecondary
+                            Text(
+                                text = if (isCalibrated) "✅ Complete" else "⏳ Pending",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isCalibrated) RedesignTheme.StatusSuccess else RedesignTheme.StatusWarning
                             )
                         }
                     }
+                }
 
-                    if (showDeviceDetails) {
-                        HorizontalDivider(color = RedesignTheme.SurfaceHighlight, modifier = Modifier.padding(vertical = 4.dp))
-                        val context = androidx.compose.ui.platform.LocalContext.current
-                        val batteryManager = context.getSystemService(android.content.Context.BATTERY_SERVICE) as? android.os.BatteryManager
-                        val batteryLevel = batteryManager?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
-                        
-                        val sensorManager = context.getSystemService(android.content.Context.SENSOR_SERVICE) as? android.hardware.SensorManager
-                        val hasGyro = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_GYROSCOPE) != null
-                        val hasAccel = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER) != null
-                        val hasMag = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_MAGNETIC_FIELD) != null
+                var showDeviceDetails by remember { mutableStateOf(false) }
 
-                        val sharedPrefs = remember(context) { context.getSharedPreferences("airmouse_prefs", android.content.Context.MODE_PRIVATE) }
-                        val protocolVal = sharedPrefs.getString("last_protocol", "WEBSOCKET") ?: "WEBSOCKET"
-                        val sensitivity = sharedPrefs.getFloat("sensitivity", 0.5f)
-
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            InfoRow(label = "Device", value = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
-                            InfoRow(label = "Android Version", value = "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
-                            if (batteryLevel >= 0) {
-                                InfoRow(label = "Battery", value = "$batteryLevel%")
+                // Session & System Info Card
+                GlassmorphicCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 12.dp
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = RedesignTheme.Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "System & Details",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RedesignTheme.TextPrimary
+                                )
                             }
-                            InfoRow(label = "Protocol", value = protocolVal)
-                            InfoRow(label = "Sensitivity", value = "%.1f×".format(sensitivity))
+                            IconButton(
+                                onClick = { showDeviceDetails = !showDeviceDetails },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (showDeviceDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Toggle System details",
+                                    tint = RedesignTheme.TextSecondary
+                                )
+                            }
+                        }
+
+                        if (showDeviceDetails) {
+                            HorizontalDivider(color = RedesignTheme.SurfaceHighlight, modifier = Modifier.padding(vertical = 4.dp))
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            val batteryManager = context.getSystemService(android.content.Context.BATTERY_SERVICE) as? android.os.BatteryManager
+                            val batteryLevel = batteryManager?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
                             
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                SensorBadge(name = "GYR", active = hasGyro)
-                                SensorBadge(name = "ACC", active = hasAccel)
-                                SensorBadge(name = "MAG", active = hasMag)
-                            }
-                        }
-                    }
-                }
-            }
+                            val sensorManager = context.getSystemService(android.content.Context.SENSOR_SERVICE) as? android.hardware.SensorManager
+                            val hasGyro = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_GYROSCOPE) != null
+                            val hasAccel = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER) != null
+                            val hasMag = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_MAGNETIC_FIELD) != null
 
-            var showQuickActions by remember { mutableStateOf(false) }
+                            val sharedPrefs = remember(context) { context.getSharedPreferences("airmouse_prefs", android.content.Context.MODE_PRIVATE) }
+                            val protocolVal = sharedPrefs.getString("last_protocol", "UDP") ?: "UDP"
+                            val sensitivity = sharedPrefs.getFloat("sensitivity", 0.5f)
 
-            // Quick Settings Actions Card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = RedesignTheme.SurfaceVariant),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.SettingsSuggest,
-                                contentDescription = null,
-                                tint = RedesignTheme.Secondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "Quick Actions",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = RedesignTheme.TextPrimary
-                            )
-                        }
-                        IconButton(
-                            onClick = { showQuickActions = !showQuickActions },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (showQuickActions) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = "Toggle Quick Actions",
-                                tint = RedesignTheme.TextSecondary
-                            )
-                        }
-                    }
-
-                    if (showQuickActions) {
-                        HorizontalDivider(color = RedesignTheme.SurfaceHighlight, modifier = Modifier.padding(vertical = 4.dp))
-                        val context = androidx.compose.ui.platform.LocalContext.current
-                        val sharedPrefs = remember(context) { context.getSharedPreferences("airmouse_prefs", android.content.Context.MODE_PRIVATE) }
-                        
-                        var hapticEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("haptic_enabled", true)) }
-                        var lastProfile by remember { mutableStateOf(sharedPrefs.getString("last_used_profile", "Default") ?: "Default") }
-
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            // Profile switcher
-                            Text("Active Profile", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RedesignTheme.TextSecondary)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                listOf("Default", "Gaming", "Presentation").forEach { profile ->
-                                    val isSelected = lastProfile.equals(profile, ignoreCase = true)
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (isSelected) RedesignTheme.Primary.copy(alpha = 0.2f) else RedesignTheme.SurfaceHighlight.copy(alpha = 0.5f),
-                                        border = BorderStroke(1.dp, if (isSelected) RedesignTheme.Primary else Color.Transparent),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clickable {
-                                                lastProfile = profile
-                                                sharedPrefs.edit().putString("last_used_profile", profile).apply()
-                                            }
-                                    ) {
-                                        Text(
-                                            text = profile,
-                                            modifier = Modifier.padding(vertical = 6.dp),
-                                            fontSize = 11.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isSelected) RedesignTheme.Primary else RedesignTheme.TextPrimary,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                InfoRow(label = "Device", value = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
+                                InfoRow(label = "Android Version", value = "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
+                                if (batteryLevel >= 0) {
+                                    InfoRow(label = "Battery", value = "$batteryLevel%")
+                                }
+                                InfoRow(label = "Protocol", value = protocol.name)
+                                InfoRow(label = "Sensitivity", value = "%.1f×".format(sensitivity))
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    SensorBadge(name = "GYR", active = hasGyro)
+                                    SensorBadge(name = "ACC", active = hasAccel)
+                                    SensorBadge(name = "MAG", active = hasMag)
                                 }
                             }
+                        }
+                    }
+                }
 
-                            // Haptic Switch
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Haptic Feedback", fontSize = 12.sp, color = RedesignTheme.TextSecondary)
-                                Switch(
-                                    checked = hapticEnabled,
-                                    onCheckedChange = { enabled ->
-                                        hapticEnabled = enabled
-                                        sharedPrefs.edit().putBoolean("haptic_enabled", enabled).apply()
-                                    },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = RedesignTheme.Secondary,
-                                        checkedTrackColor = RedesignTheme.Secondary.copy(alpha = 0.5f)
-                                    )
+                var showQuickActions by remember { mutableStateOf(false) }
+
+                // Quick Settings Actions Card
+                GlassmorphicCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 12.dp
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.SettingsSuggest,
+                                    contentDescription = null,
+                                    tint = RedesignTheme.Secondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Quick Actions",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RedesignTheme.TextPrimary
                                 )
                             }
-
-                            // Reset Defaults button
-                            OutlinedButton(
-                                onClick = {
-                                    sharedPrefs.edit().apply {
-                                        remove("server_ip")
-                                        remove("server_port")
-                                        remove("last_protocol")
-                                        apply()
-                                    }
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, RedesignTheme.AccentRed.copy(alpha = 0.6f)),
-                                modifier = Modifier.fillMaxWidth().height(36.dp)
+                            IconButton(
+                                onClick = { showQuickActions = !showQuickActions },
+                                modifier = Modifier.size(24.dp)
                             ) {
-                                Text("Reset Connection Cache", color = RedesignTheme.AccentRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Icon(
+                                    imageVector = if (showQuickActions) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Toggle Quick Actions",
+                                    tint = RedesignTheme.TextSecondary
+                                )
+                            }
+                        }
+
+                        if (showQuickActions) {
+                            HorizontalDivider(color = RedesignTheme.SurfaceHighlight, modifier = Modifier.padding(vertical = 4.dp))
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            val sharedPrefs = remember(context) { context.getSharedPreferences("airmouse_prefs", android.content.Context.MODE_PRIVATE) }
+                            
+                            var hapticEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("haptic_enabled", true)) }
+                            var lastProfile by remember { mutableStateOf(sharedPrefs.getString("last_used_profile", "Default") ?: "Default") }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                // Profile switcher
+                                Text("Active Profile", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RedesignTheme.TextSecondary)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf("Default", "Gaming", "Presentation").forEach { profile ->
+                                        val isSelected = lastProfile.equals(profile, ignoreCase = true)
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isSelected) RedesignTheme.Primary.copy(alpha = 0.2f) else RedesignTheme.SurfaceHighlight.copy(alpha = 0.5f),
+                                            border = BorderStroke(1.dp, if (isSelected) RedesignTheme.Primary else Color.Transparent),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable {
+                                                    lastProfile = profile
+                                                    sharedPrefs.edit().putString("last_used_profile", profile).apply()
+                                                }
+                                        ) {
+                                            Text(
+                                                text = profile,
+                                                modifier = Modifier.padding(vertical = 6.dp),
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) RedesignTheme.Primary else RedesignTheme.TextPrimary,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Haptic Switch
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Haptic Feedback", fontSize = 12.sp, color = RedesignTheme.TextSecondary)
+                                    Switch(
+                                        checked = hapticEnabled,
+                                        onCheckedChange = { enabled ->
+                                            hapticEnabled = enabled
+                                            sharedPrefs.edit().putBoolean("haptic_enabled", enabled).apply()
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = RedesignTheme.Secondary,
+                                            checkedTrackColor = RedesignTheme.Secondary.copy(alpha = 0.5f)
+                                        )
+                                    )
+                                }
+
+                                // Reset Defaults button
+                                OutlinedButton(
+                                    onClick = {
+                                        sharedPrefs.edit().apply {
+                                            remove("server_ip")
+                                            remove("server_port")
+                                            remove("last_protocol")
+                                            apply()
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, RedesignTheme.AccentRed.copy(alpha = 0.6f)),
+                                    modifier = Modifier.fillMaxWidth().height(36.dp)
+                                ) {
+                                    Text("Reset Connection Cache", color = RedesignTheme.AccentRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Divider
-            HorizontalDivider(color = RedesignTheme.SurfaceHighlight)
-
-            // Navigation Section Header
-            Text(
-                text = "Navigation",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = RedesignTheme.TextTertiary,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-
-            val navItems = listOf(
-                Triple(Destinations.Home.route, "Dashboard", Destinations.Home.icon),
-                Triple(Destinations.Calibration.route, "Calibration", Destinations.Calibration.icon),
-                Triple(Destinations.Touchpad.route, "Touchpad", Destinations.Touchpad.icon),
-                Triple(Destinations.SensorVisualizer.route, "Sensors", Destinations.SensorVisualizer.icon),
-                Triple(Destinations.NetworkDiscovery.route, "Network", Destinations.NetworkDiscovery.icon),
-                Triple(Destinations.EdgeGestures.route, "Shortcut Settings", Destinations.EdgeGestures.icon),
-                Triple(Destinations.ScreenMirroring.route, "Screen Mirroring", Destinations.ScreenMirroring.icon),
-                Triple(Destinations.FileTransfer.route, "File Transfer", Destinations.FileTransfer.icon),
-                Triple(Destinations.GamingMode.route, "Gaming Mode", Destinations.GamingMode.icon),
-                Triple(Destinations.VoiceCommands.route, "Voice Commands", Destinations.VoiceCommands.icon),
-                Triple(Destinations.Settings.route, "Settings", Destinations.Settings.icon),
-                Triple(Destinations.Help.route, "Help", Destinations.Help.icon),
-                Triple(Destinations.About.route, "About", Destinations.About.icon)
-            )
-
-            navItems.forEach { (route, title, icon) ->
-                val isSelected = currentRoute == route
-                NavigationDrawerItem(
-                    label = {
-                        Text(
-                            text = title,
-                            fontSize = 14.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    selected = isSelected,
-                    onClick = { onItemClick(route) },
-                    icon = {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = title,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    },
-                    badge = {
-                        // Badge chips
-                        if (route == Destinations.Touchpad.route && isCalibrated) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = RedesignTheme.Primary.copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    text = "Active",
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RedesignTheme.Primary
-                                )
-                            }
-                        } else if (route == Destinations.NetworkDiscovery.route && isConnecting) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = RedesignTheme.StatusWarning.copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    text = "New",
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RedesignTheme.StatusWarning
-                                )
-                            }
-                        }
-                    },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = RedesignTheme.Primary.copy(alpha = 0.15f),
-                        selectedIconColor = RedesignTheme.Primary,
-                        selectedTextColor = RedesignTheme.Primary,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = RedesignTheme.TextSecondary,
-                        unselectedTextColor = RedesignTheme.TextSecondary
-                    ),
-                    modifier = Modifier.padding(vertical = 2.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Disconnect Button
-            if (isConnected) {
+                // Divider
                 HorizontalDivider(color = RedesignTheme.SurfaceHighlight)
-                Button(
-                    onClick = { showDisconnectDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = RedesignTheme.StatusError),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PowerSettingsNew,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+
+                // Navigation Section Header
+                Text(
+                    text = "Navigation",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RedesignTheme.TextTertiary,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                val navItems = listOf(
+                    Triple(Destinations.Home.route, "Dashboard", Destinations.Home.icon),
+                    Triple(Destinations.Calibration.route, "Calibration", Destinations.Calibration.icon),
+                    Triple(Destinations.Touchpad.route, "Touchpad", Destinations.Touchpad.icon),
+                    Triple(Destinations.BluetoothMouse.route, "Bluetooth Mouse", Destinations.BluetoothMouse.icon),
+                    Triple(Destinations.SensorVisualizer.route, "Sensors", Destinations.SensorVisualizer.icon),
+                    Triple(Destinations.NetworkDiscovery.route, "Network", Destinations.NetworkDiscovery.icon),
+                    Triple(Destinations.EdgeGestures.route, "Shortcut Settings", Destinations.EdgeGestures.icon),
+                    Triple(Destinations.ScreenMirroring.route, "Screen Mirroring", Destinations.ScreenMirroring.icon),
+                    Triple(Destinations.FileTransfer.route, "File Transfer", Destinations.FileTransfer.icon),
+                    Triple(Destinations.GamingMode.route, "Gaming Mode", Destinations.GamingMode.icon),
+                    Triple(Destinations.VoiceCommands.route, "Voice Commands", Destinations.VoiceCommands.icon),
+                    Triple(Destinations.Settings.route, "Settings", Destinations.Settings.icon),
+                    Triple(Destinations.Help.route, "Help", Destinations.Help.icon),
+                    Triple(Destinations.About.route, "About", Destinations.About.icon)
+                )
+
+                navItems.forEach { (route, title, icon) ->
+                    val isSelected = currentRoute == route
+                    NavigationDrawerItem(
+                        label = {
+                            Text(
+                                text = title,
+                                fontSize = 14.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        selected = isSelected,
+                        onClick = { onItemClick(route) },
+                        icon = {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = title,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        badge = {
+                            // Badge chips
+                            if (route == Destinations.Touchpad.route && isCalibrated) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = RedesignTheme.Primary.copy(alpha = 0.15f),
+                                    border = BorderStroke(1.dp, RedesignTheme.Primary.copy(alpha = 0.3f))
+                                ) {
+                                    Text(
+                                        text = "Active",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = RedesignTheme.Primary
+                                    )
+                                }
+                            } else if (route == Destinations.NetworkDiscovery.route && isConnecting) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = RedesignTheme.StatusWarning.copy(alpha = 0.15f),
+                                    border = BorderStroke(1.dp, RedesignTheme.StatusWarning.copy(alpha = 0.3f))
+                                ) {
+                                    Text(
+                                        text = "New",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = RedesignTheme.StatusWarning
+                                    )
+                                }
+                            }
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = RedesignTheme.Primary.copy(alpha = 0.15f),
+                            selectedIconColor = RedesignTheme.Primary,
+                            selectedTextColor = RedesignTheme.Primary,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = RedesignTheme.TextSecondary,
+                            unselectedTextColor = RedesignTheme.TextSecondary
+                        ),
+                        modifier = Modifier.padding(vertical = 2.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Disconnect", fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Disconnect Button
+                if (isConnected) {
+                    HorizontalDivider(color = RedesignTheme.SurfaceHighlight)
+                    Button(
+                        onClick = { showDisconnectDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = RedesignTheme.StatusError),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PowerSettingsNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Disconnect", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -1258,6 +1405,10 @@ fun MainNavHost(
             GamingModeScreen(navigationActions = navigationActions)
         }
 
+        composable("game_controller") {
+            com.airmouse.presentation.ui.gaming.GameControllerScreen(navigationActions = navigationActions)
+        }
+
         composable(Destinations.ScreenMirroring.route) {
             ScreenMirroringScreen(navigationActions = navigationActions)
         }
@@ -1273,6 +1424,10 @@ fun MainNavHost(
         // Network and logs
         composable(Destinations.NetworkDiscovery.route) {
             NetworkDiscoveryScreen(navigationActions = navigationActions)
+        }
+
+        composable(Destinations.Search.route) {
+            SearchScreen(navigationActions = navigationActions)
         }
 
         composable(Destinations.ServerLogs.route) {
@@ -1317,6 +1472,11 @@ fun MainNavHost(
         // Onboarding
         composable(Destinations.Onboarding.route) {
             OnboardingScreen(navigationActions = navigationActions)
+        }
+
+        // Bluetooth Mouse
+        composable(Destinations.BluetoothMouse.route) {
+            com.airmouse.presentation.ui.bluetooth.BluetoothMouseScreen(navigationActions = navigationActions)
         }
     }
 }
@@ -1363,5 +1523,91 @@ private fun SensorBadge(name: String, active: Boolean) {
             fontWeight = FontWeight.Bold,
             color = if (active) RedesignTheme.StatusSuccess else RedesignTheme.StatusError
         )
+    }
+}
+
+@Composable
+fun BlackoutTouchpadOverlay(
+    onDisableMouse: () -> Unit,
+    connectionManager: ConnectionManager,
+    modifier: Modifier = Modifier
+) {
+    var lastX by remember { mutableStateOf(0f) }
+    var lastY by remember { mutableStateOf(0f) }
+    val sensitivity = 1.4f
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    lastX = down.position.x
+                    lastY = down.position.y
+                    var hasMoved = false
+                    val startTime = System.currentTimeMillis()
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val pressed = event.changes.filter { it.pressed }
+
+                        event.changes.forEach {
+                            if ((it.position - down.position).getDistance() > 15f) {
+                                hasMoved = true
+                            }
+                        }
+
+                        if (pressed.isEmpty()) {
+                            val duration = System.currentTimeMillis() - startTime
+                            if (!hasMoved && duration < 300) {
+                                connectionManager.sendClick("left")
+                            }
+                            break
+                        } else {
+                            val first = pressed.first()
+                            val dx = (first.position.x - lastX) * sensitivity
+                            val dy = (first.position.y - lastY) * sensitivity
+
+                            if (hasMoved && (dx != 0f || dy != 0f)) {
+                                connectionManager.sendMove(dx, dy)
+                            }
+
+                            lastX = first.position.x
+                            lastY = first.position.y
+                            pressed.forEach { it.consume() }
+                        }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Text(
+                text = "Saver Mode Active",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Slide to use trackpad\nTap for Left Click\nPress Volume Down or Tap below to exit",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.DarkGray.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onDisableMouse,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Exit Saver Mode", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }

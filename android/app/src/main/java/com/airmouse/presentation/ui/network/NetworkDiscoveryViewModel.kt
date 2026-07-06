@@ -656,8 +656,14 @@ class NetworkDiscoveryViewModel @Inject constructor(
             }
             return
         }
+        
+        // Stop any ongoing scanning before connecting
+        isScanning = false
+        scanJob?.cancel()
+        
         _uiState.update {
             it.copy(
+                isScanning = false,
                 isConnecting = true,
                 selectedServerId = server.id,
                 connectionProgress = 0,

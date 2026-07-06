@@ -9,11 +9,12 @@ import java.io.File
 import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.CopyOnWriteArrayList
 
 object LogManager {
     private val _logEntries = MutableLiveData<List<LogEntry>>()
     val logEntries: LiveData<List<LogEntry>> = _logEntries
-    private val entries = LinkedList<LogEntry>()
+    private val entries = ArrayList<LogEntry>()
     private const val MAX_ENTRIES = 500
     private lateinit var appContext: Context
     private var isEnabled = true
@@ -31,6 +32,8 @@ object LogManager {
         logFile = File(logDir, "airmouse_${dateFormat.format(Date())}.log")
     }
 
+    private val fileWriteExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
     fun add(message: String, level: String = "INFO", tag: String = "AirMouse", throwable: Throwable? = null) {
         if (!isEnabled) return
 
@@ -45,11 +48,14 @@ object LogManager {
             tag = tag
         )
 
-        synchronized(entries) {
-            entries.addFirst(entry)
-            if (entries.size > MAX_ENTRIES) entries.removeLast()
+        val currentEntries = synchronized(entries) {
+            entries.add(0, entry)
+            if (entries.size > MAX_ENTRIES) {
+                entries.removeAt(entries.size - 1)
+            }
+            ArrayList(entries)
         }
-        _logEntries.postValue(entries.toList())
+        _logEntries.postValue(currentEntries)
 
         
         when (level.uppercase()) {
@@ -60,7 +66,9 @@ object LogManager {
         }
 
         
-        writeToFile(entry)
+        fileWriteExecutor.execute {
+            writeToFile(entry)
+        }
     }
 
     private fun writeToFile(entry: LogEntry) {
@@ -82,11 +90,13 @@ object LogManager {
     fun error(message: String, throwable: Throwable?, tag: String = "AirMouse") = add(message, "ERROR", tag, throwable)
 
     fun clear() {
-        entries.clear()
-        _logPostsValue(emptyList())
+        synchronized(entries) {
+            entries.clear()
+            _logPostsValue(emptyList())
+        }
     }
 
-    fun getEntries(): List<LogEntry> = entries.toList()
+    fun getEntries(): List<LogEntry> = synchronized(entries) { ArrayList(entries) }
 
     fun setEnabled(enabled: Boolean) { isEnabled = enabled }
 

@@ -75,6 +75,8 @@ class BluetoothHidMouseHelper @Inject constructor(
         }
     }
 
+    var onConnectionStateChanged: ((Boolean, BluetoothDevice?) -> Unit)? = null
+
     private val callback = object : BluetoothHidDevice.Callback() {
         override fun onAppStatusChanged(pluggedDevice: BluetoothDevice?, registered: Boolean) {
             super.onAppStatusChanged(pluggedDevice, registered)
@@ -85,11 +87,13 @@ class BluetoothHidMouseHelper @Inject constructor(
         override fun onConnectionStateChanged(device: BluetoothDevice, state: Int) {
             super.onConnectionStateChanged(device, state)
             Log.d(TAG, "HID device connection state changed: $state")
-            connectedDevice = if (state == BluetoothProfile.STATE_CONNECTED) {
+            val isConnected = state == BluetoothProfile.STATE_CONNECTED
+            connectedDevice = if (isConnected) {
                 device
             } else {
                 null
             }
+            onConnectionStateChanged?.invoke(isConnected, connectedDevice)
         }
     }
 
@@ -114,8 +118,15 @@ class BluetoothHidMouseHelper @Inject constructor(
         val service = hidDeviceService ?: return
         if (isAppRegistered) return
 
+        try {
+            // Attempt to rename adapter so it shows as "Air Mouse" to other devices
+            bluetoothAdapter?.name = "Air Mouse"
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Cannot set Bluetooth name, missing permission")
+        }
+
         val sdpSettings = BluetoothHidDeviceAppSdpSettings(
-            "AirMouse",
+            "Air Mouse",
             "Air Mouse Bluetooth HID",
             "Google DeepMind CA2",
             BluetoothHidDevice.SUBCLASS1_MOUSE,
@@ -135,6 +146,21 @@ class BluetoothHidMouseHelper @Inject constructor(
             Log.e(TAG, "SecurityException registering HID App", e)
         } catch (e: Exception) {
             Log.e(TAG, "Exception registering HID App", e)
+        }
+    }
+
+    @SuppressLint("NewApi")
+    fun unregisterApp() {
+        val service = hidDeviceService ?: return
+        if (!isAppRegistered) return
+        try {
+            service.unregisterApp()
+            isAppRegistered = false
+            LogManager.info("HID App unregistered", TAG)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException unregistering HID App", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception unregistering HID App", e)
         }
     }
 
@@ -166,12 +192,17 @@ class BluetoothHidMouseHelper @Inject constructor(
     @SuppressLint("NewApi")
     fun disconnect(): Boolean {
         val service = hidDeviceService ?: return false
-        val device = connectedDevice ?: return false
-        return try {
-            service.disconnect(device)
+        val device = connectedDevice
+        var result = false
+        try {
+            if (device != null) {
+                result = service.disconnect(device)
+            }
+            unregisterApp()
         } catch (e: SecurityException) {
-            false
+            result = false
         }
+        return result
     }
 
     fun isConnected(): Boolean = connectedDevice != null

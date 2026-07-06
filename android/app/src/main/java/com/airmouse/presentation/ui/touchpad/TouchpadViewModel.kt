@@ -77,6 +77,7 @@ class TouchpadViewModel @Inject constructor(
     // Inertia / timeout jobs
     private var inertiaJob: Job? = null
     private var gestureTimeoutJob: Job? = null
+    private var tapJob: Job? = null
     private var isGestureActive = false
 
     // ============================================================
@@ -138,7 +139,7 @@ class TouchpadViewModel @Inject constructor(
 
         _uiState.update {
             it.copy(
-                isActive = prefs.getBoolean("touchpad_active", false),
+                isActive = if (connectionManager.isConnected()) true else prefs.getBoolean("touchpad_active", false),
                 sensitivity = mouseProfile.sensitivity,
                 cursorSpeed = prefs.getFloat("touchpad_cursor_speed", 1.0f),
                 pointerSpeed = prefs.getInt("touchpad_pointer_speed", 50),
@@ -204,7 +205,7 @@ class TouchpadViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isConnected = connected,
-                        isActive = if (connected) it.isActive else false
+                        isActive = if (connected) true else false
                     )
                 }
 
@@ -268,6 +269,34 @@ class TouchpadViewModel @Inject constructor(
             is TouchpadEvent.ToggleMouseControl -> {
                 connectionManager.isMouseControlEnabled = event.enabled
             }
+            TouchpadEvent.Connect -> connect()
+            TouchpadEvent.Disconnect -> disconnect()
+            is TouchpadEvent.ButtonDownEvent -> {
+                if (_uiState.value.isConnected) {
+                    connectionManager.sendMouseDown(event.button)
+                    vibrate(15)
+                }
+            }
+            is TouchpadEvent.ButtonUpEvent -> {
+                if (_uiState.value.isConnected) {
+                    connectionManager.sendMouseUp(event.button)
+                    vibrate(15)
+                }
+            }
+        }
+    }
+
+    private fun connect() {
+        viewModelScope.launch {
+            connectionManager.reconnect()
+            triggerEffect(TouchpadEffect.ShowToast("Connecting..."))
+        }
+    }
+
+    private fun disconnect() {
+        viewModelScope.launch {
+            connectionManager.disconnect()
+            triggerEffect(TouchpadEffect.ShowToast("Disconnected"))
         }
     }
 
@@ -289,11 +318,13 @@ class TouchpadViewModel @Inject constructor(
         triggerEffect(TouchpadEffect.SendCommand(if (newState) "touchpad_start" else "touchpad_stop"))
 
         if (newState) {
+            connectionManager.isMouseControlEnabled = false
             vibrate(50)
-            triggerEffect(TouchpadEffect.ShowToast("Touchpad activated"))
+            triggerEffect(TouchpadEffect.ShowToast("Touchpad activated. Air Mouse paused."))
         } else {
             resetGestureState()
-            triggerEffect(TouchpadEffect.ShowToast("Touchpad deactivated"))
+            connectionManager.isMouseControlEnabled = true
+            triggerEffect(TouchpadEffect.ShowToast("Touchpad deactivated. Air Mouse resumed."))
         }
     }
 
@@ -316,8 +347,22 @@ class TouchpadViewModel @Inject constructor(
         updateThreeFingerSwipe(preset.threeFingerSwipe)
         updateNaturalScrolling(preset.naturalScrolling)
 
+        if (mode == TouchpadMode.GAMING) {
+            connectionManager.setProtocol(ConnectionManager.ConnectionProtocol.UDP)
+            prefs.putBoolean("gaming_mode", true)
+            prefs.putBoolean("use_websocket", false)
+            if (_uiState.value.isConnected) {
+                viewModelScope.launch {
+                    connectionManager.reconnect()
+                }
+            }
+        } else {
+            prefs.putBoolean("gaming_mode", false)
+        }
+
         triggerEffect(TouchpadEffect.ShowToast("Applied: ${mode.displayName}"))
     }
+
 
     // ============================================================
     // Touch Event Processing
@@ -330,7 +375,7 @@ class TouchpadViewModel @Inject constructor(
         pointers: List<Pair<Float, Float>>,
         pressure: Float
     ) {
-        if (!_uiState.value.isActive) return
+        if (!_uiState.value.isActive || !_uiState.value.isMouseControlEnabled) return
 
         // Update UI state with touch points
         _uiState.update {
@@ -525,32 +570,27 @@ class TouchpadViewModel @Inject constructor(
 
     @Suppress("UNUSED_PARAMETER")
     fun processTap(x: Float, y: Float) {
-        if (!_uiState.value.isActive || !_uiState.value.tapToClick) return
+        if (!_uiState.value.isActive || !_uiState.value.tapToClick || !_uiState.value.isMouseControlEnabled) return
 
-        val now = System.currentTimeMillis()
         val tapDelay = _uiState.value.doubleTapDelay.toLong()
 
-        if (now - lastTapTime < tapDelay) {
-            tapCount++
-            if (tapCount >= 2) {
-                // Double tap
-                sendClick("left")
-                tapCount = 0
-                pushGestureHistory(TouchpadGesture.DOUBLE_TAP.displayName)
-                vibrate(40)
-            }
+        if (tapJob?.isActive == true) {
+            tapJob?.cancel()
+            sendDoubleClick()
+            pushGestureHistory(TouchpadGesture.DOUBLE_TAP.displayName)
+            vibrate(40)
         } else {
-            tapCount = 1
-            // Single tap
-            sendClick("left")
-            pushGestureHistory(TouchpadGesture.TAP.displayName)
-            vibrate(20)
+            tapJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(tapDelay)
+                sendClick("left")
+                pushGestureHistory(TouchpadGesture.TAP.displayName)
+                vibrate(20)
+            }
         }
-        lastTapTime = now
     }
 
     fun processLongPress() {
-        if (!_uiState.value.isActive) return
+        if (!_uiState.value.isActive || !_uiState.value.isMouseControlEnabled) return
 
         sendClick("right")
         pushGestureHistory(TouchpadGesture.LONG_PRESS.displayName)
@@ -739,6 +779,12 @@ class TouchpadViewModel @Inject constructor(
         connectionManager.sendClick(button)
     }
 
+    private fun sendDoubleClick() {
+        if (!canSend()) return
+        triggerEffect(TouchpadEffect.SendGesture("double_click"))
+        connectionManager.sendDoubleClick()
+    }
+
     private fun sendGesture(gesture: String) {
         if (!canSend()) return
         triggerEffect(TouchpadEffect.SendGesture(gesture))
@@ -752,7 +798,7 @@ class TouchpadViewModel @Inject constructor(
     }
 
     private fun canSend(): Boolean {
-        return _uiState.value.isConnected && connectionManager.isConnected() && _uiState.value.isActive
+        return _uiState.value.isConnected && connectionManager.isConnected() && _uiState.value.isActive && connectionManager.isMouseControlEnabled
     }
 
     private fun pushGestureHistory(gesture: String) {

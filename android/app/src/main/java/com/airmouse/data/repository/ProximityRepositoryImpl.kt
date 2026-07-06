@@ -261,6 +261,7 @@ class ProximityRepositoryImpl @Inject constructor(
 
     override suspend fun getDeviceAddress(): String = _config.value.deviceAddress
 
+    @android.annotation.SuppressLint("MissingPermission")
     override suspend fun getDeviceName(): String {
         val address = _config.value.deviceAddress
         return if (address.isNotEmpty() && bluetoothAdapter != null && hasBluetoothPermission()) {

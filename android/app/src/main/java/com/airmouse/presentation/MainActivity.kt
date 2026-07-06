@@ -123,33 +123,63 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
+        // Eagerly initialize the ViewModel on the Main thread to avoid thread assertion crash when accessed on SensorThread
+        viewModel.uiState
+
         getRouteFromIntent(intent)?.let { route ->
             pendingRoute = route
         }
 
-        var lastRoll = 0f
+        // Setup sensor callback – sends movement data to the server via MouseRepository
+        var lastPitch = 0f
         var lastYaw = 0f
         var isFirstOrientation = true
+        
+        // Cache isActive locally to avoid accessing viewModel on background thread
+        val isAirMouseActive = java.util.concurrent.atomic.AtomicBoolean(false)
+        lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                isAirMouseActive.set(state.isActive)
+            }
+        }
 
-        // Setup sensor callback – sends movement data to the server via MouseRepository
-        sensorService.onOrientationChanged = { roll, yaw ->
-            if (isFirstOrientation) {
-                lastRoll = roll
-                lastYaw = yaw
-                isFirstOrientation = false
-            } else {
-                val dYaw = yaw - lastYaw
-                val dRoll = roll - lastRoll
-                lastRoll = roll
-                lastYaw = yaw
+        // Use a conflated channel to queue high-frequency sensor updates and process on IO thread
+        val orientationChannel = kotlinx.coroutines.channels.Channel<Pair<Float, Float>>(
+            kotlinx.coroutines.channels.Channel.CONFLATED
+        )
 
-                // Clamp/ignore extreme sudden jumps (e.g. sensor resets or huge anomalies)
-                if (kotlin.math.abs(dYaw) < 50f && kotlin.math.abs(dRoll) < 50f) {
-                    if (connectionManager.isConnected()) {
-                        Log.d("MainActivity", "Orientation callback -> move dYaw=$dYaw dRoll=$dRoll")
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            mouseRepository.move(dYaw, dRoll)
-                        }
+        lifecycleScope.launch(Dispatchers.IO) {
+            for (delta in orientationChannel) {
+                try {
+                    mouseRepository.move(delta.first, delta.second)
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error sending mouse movement: ${e.message}")
+                }
+            }
+        }
+
+        sensorService.onOrientationChanged = { pitch, yaw ->
+            val activeMode = prefs.getActiveMode()
+            if (isAirMouseActive.get() && activeMode.moveSource == "gyro" && connectionManager.isMouseControlEnabled && connectionManager.isConnected()) {
+                if (isFirstOrientation) {
+                    lastPitch = pitch
+                    lastYaw = yaw
+                    isFirstOrientation = false
+                } else {
+                    var dYaw = (yaw - lastYaw) % 360f
+                    if (dYaw > 180f) dYaw -= 360f
+                    if (dYaw < -180f) dYaw += 360f
+
+                    var dPitch = (pitch - lastPitch) % 360f
+                    if (dPitch > 180f) dPitch -= 360f
+                    if (dPitch < -180f) dPitch += 360f
+
+                    lastPitch = pitch
+                    lastYaw = yaw
+
+                    // Filter out genuine massive noise jumps, but allow legitimate rapid movement
+                    if (kotlin.math.abs(dYaw) < 90f && kotlin.math.abs(dPitch) < 90f) {
+                        orientationChannel.trySend(Pair(dYaw, dPitch))
                     }
                 }
             }
@@ -171,7 +201,9 @@ class MainActivity : ComponentActivity() {
         val missingPerms = getMissingPermissions()
         if (missingPerms.isEmpty()) {
             permissionGranted = true
-            proceedToMain()
+            Handler(Looper.getMainLooper()).post {
+                proceedToMain()
+            }
         } else {
             requestPermissions()
         }
@@ -219,6 +251,7 @@ class MainActivity : ComponentActivity() {
         return when {
             intent.getBooleanExtra("open_status_center", false) -> Destinations.NotificationsCenter.route
             intent.getBooleanExtra("open_network_discovery", false) -> Destinations.NetworkDiscovery.route
+            intent.getBooleanExtra("open_touchpad", false) -> Destinations.Touchpad.route
             else -> null
         }
     }
@@ -229,7 +262,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        sensorService.stop()
+        if (::sensorService.isInitialized) {
+            sensorService.stop()
+        }
         super.onDestroy()
     }
  
@@ -249,11 +284,22 @@ class MainActivity : ComponentActivity() {
         }
 
         if (prefs.isVolumeKeyToggleEnabled()) {
+            val activeMode = prefs.getActiveMode()
             if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                viewModel.startAirMouse()
+                if (activeMode.moveSource == "touchpad") {
+                    connectionManager.isMouseControlEnabled = true
+                } else {
+                    viewModel.startAirMouse()
+                    connectionManager.isMouseControlEnabled = true
+                }
                 return true // Consume the key event
             } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-                viewModel.stopAirMouse()
+                if (activeMode.moveSource == "touchpad") {
+                    connectionManager.isMouseControlEnabled = false
+                } else {
+                    viewModel.stopAirMouse()
+                    connectionManager.isMouseControlEnabled = false
+                }
                 return true // Consume the key event
             }
         }
@@ -372,6 +418,14 @@ class MainActivity : ComponentActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS)
                 != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.BODY_SENSORS)
+            }
+        }
+
+        // Activity recognition (Android 10+ / Q for pedometer/step sensors)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
+                != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.ACTIVITY_RECOGNITION)
             }
         }
 

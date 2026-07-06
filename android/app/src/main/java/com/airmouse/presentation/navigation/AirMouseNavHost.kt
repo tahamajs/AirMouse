@@ -21,6 +21,7 @@ import com.airmouse.presentation.ui.sensor.SensorVisualizerScreen
 import com.airmouse.presentation.ui.gesture.GestureStudioScreen
 import com.airmouse.presentation.ui.edge.EdgeGesturesScreen
 import com.airmouse.presentation.ui.gaming.GamingModeScreen
+import com.airmouse.presentation.ui.gaming.GameProfilesScreen
 import com.airmouse.presentation.ui.touchpad.TouchpadScreen
 import com.airmouse.presentation.ui.touchpad.TouchpadSettingsScreen
 import com.airmouse.presentation.ui.network.NetworkDiscoveryScreen
@@ -32,6 +33,7 @@ import com.airmouse.presentation.ui.themes.ThemesScreen
 import com.airmouse.presentation.ui.battery.BatteryScreen
 import com.airmouse.presentation.ui.accessibility.AccessibilityScreen
 import com.airmouse.presentation.ui.onboarding.OnboardingScreen
+import com.airmouse.presentation.ui.search.SearchScreen
 
 /**
  * Main navigation host for the Air Mouse app.
@@ -93,6 +95,9 @@ fun AirMouseNavHost(
         composable(Destinations.GamingMode.route) {
             GamingModeScreen(navigationActions = NavigationActionsImpl(navController))
         }
+        composable(Destinations.GameProfiles.route) {
+            GameProfilesScreen(navigationActions = NavigationActionsImpl(navController))
+        }
         composable(Destinations.TouchpadSettings.route) {
             TouchpadSettingsScreen(navigationActions = NavigationActionsImpl(navController))
         }
@@ -122,6 +127,12 @@ fun AirMouseNavHost(
         }
         composable(Destinations.Onboarding.route) {
             OnboardingScreen(navigationActions = NavigationActionsImpl(navController))
+        }
+        composable(Destinations.BluetoothMouse.route) {
+            com.airmouse.presentation.ui.bluetooth.BluetoothMouseScreen(navigationActions = NavigationActionsImpl(navController))
+        }
+        composable(Destinations.Search.route) {
+            SearchScreen(navigationActions = NavigationActionsImpl(navController))
         }
     }
 }

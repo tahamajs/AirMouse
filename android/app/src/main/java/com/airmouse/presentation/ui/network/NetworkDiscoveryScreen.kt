@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.presentation.navigation.NavigationActions
+import com.airmouse.presentation.ui.components.SweepGradientGlowRing
+import com.airmouse.presentation.ui.components.PulsingNeonOrbit
+import com.airmouse.presentation.ui.components.GlassmorphicNeonProgressBar
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -362,10 +365,11 @@ fun NetworkDiscoveryScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (uiState.isScanning) {
-                    CircularProgressIndicator(
-                        progress = { uiState.scanProgress / 100f },
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
+                    SweepGradientGlowRing(
+                        progress = uiState.scanProgress / 100f,
+                        size = 20.dp,
+                        strokeWidth = 2.dp,
+                        glowRadius = 3.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Scanning... ${uiState.scanProgress}%")
@@ -381,11 +385,10 @@ fun NetworkDiscoveryScreen(
 
             if (uiState.isScanning) {
                 Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { uiState.scanProgress / 100f },
+                GlassmorphicNeonProgressBar(
+                    progress = uiState.scanProgress / 100f,
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    height = 8.dp
                 )
             }
 
@@ -568,8 +571,8 @@ fun NetworkDiscoveryScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator()
-                                Spacer(modifier = Modifier.height(16.dp))
+                                PulsingNeonOrbit(size = 80.dp)
+                                Spacer(modifier = Modifier.height(24.dp))
                                 Text("Searching for servers...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -758,10 +761,11 @@ fun DiscoveredServerItem(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilledTonalButton(onClick = onConnect, enabled = !isConnecting) {
                     if (isConnecting) {
-                        CircularProgressIndicator(
-                            progress = { connectionProgress / 100f },
+                        SweepGradientGlowRing(
+                            progress = connectionProgress / 100f,
                             modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = 2.dp,
+                            glowRadius = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Requesting...")
@@ -779,10 +783,10 @@ fun DiscoveredServerItem(
             }
             if (isConnecting) {
                 Spacer(modifier = Modifier.height(12.dp))
-                LinearProgressIndicator(
-                    progress = { connectionProgress / 100f },
+                GlassmorphicNeonProgressBar(
+                    progress = connectionProgress / 100f,
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary
+                    height = 6.dp
                 )
             }
         }
@@ -886,10 +890,11 @@ fun SavedServerItem(
                         )
                     }
                     if (isConnecting) {
-                        CircularProgressIndicator(
-                            progress = { connectionProgress / 100f },
-                            modifier = Modifier.size(32.dp),
-                            strokeWidth = 2.dp
+                        SweepGradientGlowRing(
+                            progress = connectionProgress / 100f,
+                            size = 32.dp,
+                            strokeWidth = 3.dp,
+                            glowRadius = 4.dp
                         )
                     } else {
                         IconButton(onClick = onConnect) {
@@ -1060,67 +1065,134 @@ fun ManualConnectDialog(
     val portInt = port.toIntOrNull()
     val isValidPort = portInt != null && portInt in 1..65535
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text("Manual Connect", fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column {
-                Text("Enter the IP address and port of the Air Mouse server:")
-                Spacer(modifier = Modifier.height(12.dp))
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            shadowElevation = 24.dp,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.AddLink, 
+                            contentDescription = null, 
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            "Manual Connect", 
+                            style = MaterialTheme.typography.titleLarge, 
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Direct server IP entry",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = ip,
                     onValueChange = {
                         ip = it
-                        isValidIp = it.matches("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$".toRegex())
+                        isValidIp = it.matches("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$".toRegex()) || it.isEmpty()
                     },
                     label = { Text("IP Address") },
+                    placeholder = { Text("192.168.1.100") },
+                    leadingIcon = { Icon(Icons.Default.Wifi, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     isError = !isValidIp && ip.isNotEmpty(),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
                 )
                 if (!isValidIp && ip.isNotEmpty()) {
                     Text(
-                        "Invalid IP address",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.error
+                        "Please enter a valid IPv4 address",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 16.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = port,
                     onValueChange = { port = it.filter { c -> c.isDigit() } },
                     label = { Text("Port") },
+                    leadingIcon = { Icon(Icons.Default.SettingsEthernet, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     isError = !isValidPort && port.isNotEmpty(),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    ),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    )
                 )
                 if (!isValidPort && port.isNotEmpty()) {
                     Text(
                         "Port must be between 1 and 65535",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.error
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 16.dp)
                     )
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (ip.isNotEmpty() && isValidIp && isValidPort && portInt != null) {
-                        onConnect(ip, portInt)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.SemiBold)
                     }
-                },
-                enabled = isValidIp && ip.isNotEmpty() && isValidPort
-            ) {
-                Text("Connect")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                    Button(
+                        onClick = {
+                            if (ip.isNotEmpty() && isValidIp && isValidPort && portInt != null) {
+                                onConnect(ip, portInt)
+                            }
+                        },
+                        enabled = isValidIp && ip.isNotEmpty() && isValidPort,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Icon(Icons.Default.RocketLaunch, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Connect", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
-    )
+    }
 }

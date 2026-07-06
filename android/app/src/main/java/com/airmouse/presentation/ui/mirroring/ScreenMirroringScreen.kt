@@ -50,9 +50,9 @@ fun ScreenMirroringScreen(
     val quality by viewModel.quality.collectAsState()
     val isConnected = connectionState == ConnectionManager.ConnectionStatus.CONNECTED
 
-    var isStreaming by remember { mutableStateOf(false) }
-    var selectedFps by remember { mutableIntStateOf(15) }
-    var selectedQuality by remember { mutableIntStateOf(50) }
+    val isStreaming by viewModel.isStreaming.collectAsState()
+    var selectedFps by remember { mutableStateOf(15) }
+    var selectedQuality by remember { mutableStateOf(50) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -68,7 +68,6 @@ fun ScreenMirroringScreen(
                 quality = selectedQuality,
                 frameRate = selectedFps
             )
-            isStreaming = true
         }
     }
 
@@ -315,7 +314,6 @@ fun ScreenMirroringScreen(
                     Button(
                         onClick = {
                             ScreenMirroringService.stop(context)
-                            isStreaming = false
                         },
                         modifier = Modifier.fillMaxWidth().height(58.dp),
                         shape = RoundedCornerShape(18.dp),

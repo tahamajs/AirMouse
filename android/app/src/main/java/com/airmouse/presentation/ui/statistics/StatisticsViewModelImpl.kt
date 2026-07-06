@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.airmouse.network.ConnectionManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -22,7 +23,8 @@ import javax.inject.Inject
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
     private val statisticsUseCase: GetStatisticsUseCase,
-    private val prefs: PreferencesManager
+    private val prefs: PreferencesManager,
+    private val connectionManager: ConnectionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(createInitialState())
@@ -142,6 +144,7 @@ class StatisticsViewModel @Inject constructor(
                         cpuUsage = prefs.getFloat("cpu_usage", 0f),
                         memoryUsage = prefs.getFloat("memory_usage", 0f),
                         temperature = prefs.getFloat("temperature", 0f),
+                        activeProtocol = connectionManager.getCurrentProtocol().name,
                         mostUsedGesture = mostUsed,
                         mostUsedGestureCount = mostUsedCount,
                         gestureTypeCount = gestureTypeCount,
@@ -262,6 +265,13 @@ class StatisticsViewModel @Inject constructor(
                         gestureTypeCount = gestureStats.size,
                         customGestureCount = totalCustom
                     )
+                }
+            }
+        }
+        viewModelScope.launch {
+            connectionManager.currentProtocolFlow.collect { protocol ->
+                _uiState.update { current ->
+                    current.copy(activeProtocol = protocol.name)
                 }
             }
         }

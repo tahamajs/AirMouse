@@ -59,7 +59,7 @@ class PreferencesManager @Inject constructor(
         private const val DEFAULT_AI_BLEND_FACTOR = 0.7f
         private const val DEFAULT_PREDICTION_STRENGTH = 0.5f
         private const val DEFAULT_APP_VERSION = 0
-        private const val DEFAULT_LAST_PORT = 8080
+        private const val DEFAULT_LAST_PORT = 8082
         private const val DEFAULT_LAST_PROTOCOL = 0
         private const val DEFAULT_COLOR_BLIND_MODE = "NONE"
         private const val DEFAULT_LOG_LEVEL = "INFO"
@@ -154,7 +154,7 @@ class PreferencesManager @Inject constructor(
     fun getLastPort(): Int = getInt("last_port", DEFAULT_LAST_PORT)
     fun setLastPort(port: Int) = putInt("last_port", port)
 
-    fun getLastProtocol(): String = getString("last_protocol", "WEBSOCKET")
+    fun getLastProtocol(): String = getString("last_protocol", "UDP")
     fun setLastProtocol(protocol: String) = putString("last_protocol", protocol.uppercase())
 
     fun getServerMac(): String = getString("server_mac", "")
@@ -924,6 +924,43 @@ class PreferencesManager @Inject constructor(
             putFloat("gyro_bias_y", values[1])
             putFloat("gyro_bias_z", values[2])
         }
+    }
+
+    // ============================================================
+    // CUSTOM CONTROL MODES
+    // ============================================================
+
+    fun getCustomModes(): List<CustomControlMode> {
+        val json = getString("custom_control_modes", "")
+        if (json.isBlank()) {
+            return emptyList()
+        }
+        return try {
+            val type = object : com.google.gson.reflect.TypeToken<List<CustomControlMode>>() {}.type
+            com.google.gson.Gson().fromJson(json, type)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun saveCustomModes(modes: List<CustomControlMode>) {
+        try {
+            val json = com.google.gson.Gson().toJson(modes)
+            putString("custom_control_modes", json)
+        } catch (e: Exception) {
+            // Ignored
+        }
+    }
+
+    fun getActiveMode(): CustomControlMode {
+        val activeModeId = getString("active_mode_id", "motion_gyro")
+        val customModes = getCustomModes()
+        val found = customModes.firstOrNull { it.id == activeModeId } ?: CustomControlMode.getPredefinedModes().firstOrNull { it.id == activeModeId }
+        return found ?: CustomControlMode.getPredefinedModes().first()
+    }
+
+    fun setActiveModeId(id: String) {
+        putString("active_mode_id", id)
     }
 
     // ============================================================

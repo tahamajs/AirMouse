@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -39,50 +40,8 @@ import com.airmouse.presentation.navigation.NavigationActions
 import java.text.SimpleDateFormat
 import java.util.*
 
-private object StatsTheme {
-    val Primary = Color(0xFF6366F1)
-    val PrimaryLight = Color(0xFF818CF8)
-    val PrimaryDark = Color(0xFF4F46E5)
-    val Secondary = Color(0xFF10B981)
-    val SecondaryLight = Color(0xFF34D399)
-    val SecondaryDark = Color(0xFF059669)
-    val AccentOrange = Color(0xFFF59E0B)
-    val AccentRed = Color(0xFFEF4444)
-    val AccentBlue = Color(0xFF3B82F6)
-    val AccentPurple = Color(0xFF8B5CF6)
-    val StatusSuccess = Color(0xFF10B981)
-    val StatusWarning = Color(0xFFF59E0B)
-    val StatusError = Color(0xFFEF4444)
-    val StatusInfo = Color(0xFF3B82F6)
-    val Surface = Color(0xFF1E1E2E)
-    val SurfaceVariant = Color(0xFF2A2A3A)
-    val SurfaceHighlight = Color(0xFF3A3A4A)
-    val Background = Color(0xFF0F0F1A)
-    val TextPrimary = Color(0xFFF8FAFC)
-    val TextSecondary = Color(0xFF94A3B8)
-    val TextTertiary = Color(0xFF64748B)
-
-    // Typography sp
-    val DisplaySmall = 24.sp
-    val HeadingLarge = 20.sp
-    val HeadingMedium = 18.sp
-    val HeadingSmall = 16.sp
-    val BodyLarge = 16.sp
-    val BodyMedium = 14.sp
-    val BodySmall = 12.sp
-    val LabelMedium = 12.sp
-
-    // Spacing
-    val Space0 = 0.dp
-    val Space1 = 4.dp
-    val Space2 = 8.dp
-    val Space3 = 12.dp
-    val Space4 = 16.dp
-    val Space5 = 20.dp
-    val Space6 = 24.dp
-    val Space8 = 32.dp
-    val Space10 = 40.dp
-}
+import com.airmouse.presentation.ui.components.PremiumDashboardBackground
+import com.airmouse.presentation.ui.components.GlassmorphicCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +51,7 @@ fun StatisticsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    PremiumDashboardBackground {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -101,12 +61,12 @@ fun StatisticsScreen(
                             text = "Analytics Dashboard",
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
-                            color = StatsTheme.TextPrimary
+                            color = Color.White
                         )
                         Text(
                             text = "Session, connection, and action analysis",
                             fontSize = 12.sp,
-                            color = StatsTheme.TextSecondary
+                            color = Color.White.copy(alpha = 0.7f)
                         )
                     }
                 },
@@ -115,7 +75,7 @@ fun StatisticsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = StatsTheme.TextPrimary
+                            tint = Color.White
                         )
                     }
                 },
@@ -124,44 +84,34 @@ fun StatisticsScreen(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh",
-                            tint = StatsTheme.TextPrimary
+                            tint = Color.White
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = StatsTheme.Background,
-                    titleContentColor = StatsTheme.TextPrimary,
-                    navigationIconContentColor = StatsTheme.TextPrimary
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
                 )
             )
         },
-        containerColor = StatsTheme.Background
+        containerColor = Color.Transparent
     ) { paddingValues ->
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(StatsTheme.Background)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = StatsTheme.Space4),
-                verticalArrangement = Arrangement.spacedBy(StatsTheme.Space4)
-            ) {
                 // Time Range Selector
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = StatsTheme.SurfaceVariant),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, StatsTheme.SurfaceHighlight)
+                    GlassmorphicCard(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(StatsTheme.Space3),
-                            horizontalArrangement = Arrangement.spacedBy(StatsTheme.Space2)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             TimeRange.entries.forEach { range ->
                                 val isSelected = uiState.timeRange == range
@@ -169,16 +119,16 @@ fun StatisticsScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isSelected) StatsTheme.Primary else Color.Transparent)
+                                        .background(if (isSelected) Color(0xFF6366F1) else Color.Transparent)
                                         .clickable { viewModel.updateTimeRange(range) }
-                                        .padding(vertical = StatsTheme.Space2),
+                                        .padding(vertical = 8.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = range.displayName,
                                         fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) Color.White else StatsTheme.TextSecondary
+                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f)
                                     )
                                 }
                             }
@@ -189,19 +139,18 @@ fun StatisticsScreen(
                 // Error or Success messages
                 uiState.error?.let { err ->
                     item {
-                        Card(
+                        GlassmorphicCard(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = StatsTheme.StatusError.copy(alpha = 0.15f)),
-                            border = BorderStroke(1.dp, StatsTheme.StatusError)
+                            backgroundAlpha = 0.15f,
+                            borderAlpha = 0.3f
                         ) {
                             Row(
-                                modifier = Modifier.padding(StatsTheme.Space4),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = err, color = StatsTheme.StatusError, modifier = Modifier.weight(1f))
+                                Text(text = err, color = Color(0xFFEF4444), modifier = Modifier.weight(1f))
                                 IconButton(onClick = { viewModel.clearError() }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = StatsTheme.StatusError)
+                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFFEF4444))
                                 }
                             }
                         }
@@ -210,19 +159,18 @@ fun StatisticsScreen(
 
                 uiState.success?.let { msg ->
                     item {
-                        Card(
+                        GlassmorphicCard(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = StatsTheme.StatusSuccess.copy(alpha = 0.15f)),
-                            border = BorderStroke(1.dp, StatsTheme.StatusSuccess)
+                            backgroundAlpha = 0.15f,
+                            borderAlpha = 0.3f
                         ) {
                             Row(
-                                modifier = Modifier.padding(StatsTheme.Space4),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = msg, color = StatsTheme.StatusSuccess, modifier = Modifier.weight(1f))
+                                Text(text = msg, color = Color(0xFF10B981), modifier = Modifier.weight(1f))
                                 IconButton(onClick = { viewModel.clearError() }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = StatsTheme.StatusSuccess)
+                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF10B981))
                                 }
                             }
                         }
@@ -231,43 +179,58 @@ fun StatisticsScreen(
 
                 // 1. Session Overview Card
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = StatsTheme.SurfaceVariant),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, StatsTheme.SurfaceHighlight)
+                    GlassmorphicCard(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                            modifier = Modifier.padding(StatsTheme.Space4),
-                            verticalArrangement = Arrangement.spacedBy(StatsTheme.Space3)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
                                 text = "Session Overview",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StatsTheme.TextPrimary
+                                color = Color.White
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(StatsTheme.Space3)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = "Duration", fontSize = 12.sp, color = StatsTheme.TextTertiary)
-                                    Text(
-                                        text = formatDuration(uiState.sessionTime),
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StatsTheme.TextPrimary
-                                    )
+                                    AnimatedContent(
+                                        targetState = formatDuration(uiState.sessionTime),
+                                        transitionSpec = {
+                                            (slideInVertically { -it } + fadeIn()) togetherWith
+                                            (slideOutVertically { it } + fadeOut())
+                                        },
+                                        label = "DurationCounter"
+                                    ) { durationStr ->
+                                        Text(
+                                            text = durationStr,
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF6366F1)
+                                        )
+                                    }
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = "Total Actions", fontSize = 12.sp, color = StatsTheme.TextTertiary)
-                                    Text(
-                                        text = (uiState.clicks + uiState.doubleClicks + uiState.rightClicks + uiState.scrolls).toString(),
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StatsTheme.TextPrimary
-                                    )
+                                    val totalActions = uiState.clicks + uiState.doubleClicks + uiState.rightClicks + uiState.scrolls
+                                    AnimatedContent(
+                                        targetState = totalActions,
+                                        transitionSpec = {
+                                            (slideInVertically { -it } + fadeIn()) togetherWith
+                                            (slideOutVertically { it } + fadeOut())
+                                        },
+                                        label = "TotalActionsCounter"
+                                    ) { count ->
+                                        Text(
+                                            text = count.toString(),
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF10B981)
+                                        )
+                                    }
                                 }
                             }
                             HorizontalDivider(color = StatsTheme.SurfaceHighlight)
@@ -276,7 +239,7 @@ fun StatisticsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                val isConnected = uiState.isTracking || uiState.averagePing > 0
+                                val isConnected = uiState.isTracking || uiState.averagePing > 0 || uiState.activeProtocol == "BLUETOOTH"
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -291,19 +254,44 @@ fun StatisticsScreen(
                                         text = if (isConnected) "Connected" else "Disconnected",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = StatsTheme.TextPrimary
+                                        color = Color.White
                                     )
                                 }
                                 Text(
                                     text = "Latency: ${if (uiState.averagePing > 0) "${uiState.averagePing} ms" else "--"}",
                                     fontSize = 13.sp,
-                                    color = StatsTheme.TextSecondary
+                                    color = Color.White.copy(alpha=0.6f)
                                 )
                                 Text(
                                     text = "Success: ${String.format(Locale.getDefault(), "%.0f%%", uiState.getSuccessRate())}",
                                     fontSize = 13.sp,
-                                    color = StatsTheme.TextSecondary
+                                    color = Color.White.copy(alpha=0.6f)
                                 )
+                            }
+                            HorizontalDivider(color = StatsTheme.SurfaceHighlight)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(text = "Active Transport Protocol", fontSize = 11.sp, color = StatsTheme.TextTertiary)
+                                    Text(
+                                        text = uiState.activeProtocol,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF818CF8)
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(text = "Attempts (Pass / Fail)", fontSize = 11.sp, color = StatsTheme.TextTertiary)
+                                    Text(
+                                        text = "${uiState.successfulConnections} / ${uiState.failedConnections}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White.copy(alpha=0.6f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -311,19 +299,16 @@ fun StatisticsScreen(
 
                 // 2. Activity Chart (Canvas)
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = StatsTheme.SurfaceVariant),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, StatsTheme.SurfaceHighlight)
+                    GlassmorphicCard(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(StatsTheme.Space4)) {
+                        Column {
                             Text(
                                 text = "Weekly Activity",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StatsTheme.TextPrimary,
-                                modifier = Modifier.padding(bottom = StatsTheme.Space4)
+                                color = Color.White,
+                                modifier = Modifier.padding(bottom = 16.dp)
                             )
                             ActivityBarChart(dailyStats = uiState.dailyStats)
                         }
@@ -332,19 +317,16 @@ fun StatisticsScreen(
 
                 // 3. Gesture Breakdown
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = StatsTheme.SurfaceVariant),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, StatsTheme.SurfaceHighlight)
+                    GlassmorphicCard(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(StatsTheme.Space4)) {
+                        Column {
                             Text(
                                 text = "Gesture Breakdown",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StatsTheme.TextPrimary,
-                                modifier = Modifier.padding(bottom = StatsTheme.Space4)
+                                color = Color.White,
+                                modifier = Modifier.padding(bottom = 16.dp)
                             )
                             GestureDonutChart(breakdown = uiState.gestureBreakdown)
                         }
@@ -353,21 +335,17 @@ fun StatisticsScreen(
 
                 // 4. Performance Metrics
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = StatsTheme.SurfaceVariant),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, StatsTheme.SurfaceHighlight)
+                    GlassmorphicCard(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                            modifier = Modifier.padding(StatsTheme.Space4),
-                            verticalArrangement = Arrangement.spacedBy(StatsTheme.Space3)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
                                 text = "Performance Metrics",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StatsTheme.TextPrimary
+                                color = Color.White
                             )
                             val totalActions = uiState.clicks + uiState.doubleClicks + uiState.rightClicks + uiState.scrolls
                             val minutes = (uiState.sessionTime / 60f).coerceAtLeast(0.1f)
@@ -375,7 +353,7 @@ fun StatisticsScreen(
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(StatsTheme.Space3)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 MetricCard(
                                     title = "Success Rate",
@@ -400,23 +378,66 @@ fun StatisticsScreen(
                     }
                 }
 
-                // 5. Recent Activity Feed
+                // 4b. Device Resource Telemetry Card
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = StatsTheme.SurfaceVariant),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, StatsTheme.SurfaceHighlight)
+                    GlassmorphicCard(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                            modifier = Modifier.padding(StatsTheme.Space4),
-                            verticalArrangement = Arrangement.spacedBy(StatsTheme.Space3)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Device Resource Telemetry",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                MetricCard(
+                                    title = "CPU",
+                                    value = String.format(Locale.getDefault(), "%.1f%%", uiState.cpuUsage),
+                                    color = StatsTheme.AccentOrange,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricCard(
+                                    title = "Memory",
+                                    value = String.format(Locale.getDefault(), "%.1f%%", uiState.memoryUsage),
+                                    color = StatsTheme.AccentBlue,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricCard(
+                                    title = "Battery",
+                                    value = "${uiState.batteryUsage}%",
+                                    color = StatsTheme.Secondary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricCard(
+                                    title = "Temp",
+                                    value = String.format(Locale.getDefault(), "%.1f°C", uiState.temperature),
+                                    color = StatsTheme.AccentRed,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 5. Recent Activity Feed
+                item {
+                    GlassmorphicCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
                                 text = "Recent Activity",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = StatsTheme.TextPrimary
+                                color = Color.White
                             )
                             RecentActivityList(breakdown = uiState.gestureBreakdown)
                         }
@@ -428,12 +449,12 @@ fun StatisticsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = StatsTheme.Space4),
-                        horizontalArrangement = Arrangement.spacedBy(StatsTheme.Space3)
+                            .padding(vertical = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
                             onClick = { viewModel.showExportDialog(true) },
-                            colors = ButtonDefaults.buttonColors(containerColor = StatsTheme.Primary),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
                         ) {
@@ -456,7 +477,7 @@ fun StatisticsScreen(
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(StatsTheme.Space6))
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
@@ -481,7 +502,7 @@ fun StatisticsScreen(
                     Text(text = "Cancel")
                 }
             },
-            containerColor = StatsTheme.Surface
+            containerColor = Color(0xFF13161F)
         )
     }
 
@@ -501,7 +522,7 @@ fun StatisticsScreen(
                     Text(text = "Cancel")
                 }
             },
-            containerColor = StatsTheme.Surface
+            containerColor = Color(0xFF13161F)
         )
     }
 }
@@ -513,18 +534,44 @@ private fun MetricCard(
     color: Color,
     modifier: Modifier = Modifier
 ) {
+    var animatedIn by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { animatedIn = true }
+    val scaleFactor by animateFloatAsState(
+        targetValue = if (animatedIn) 1f else 0.88f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "MetricCardScale"
+    )
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.12f),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.25f))
+        modifier = modifier.scale(scaleFactor),
+        shape = RoundedCornerShape(14.dp),
+        color = color.copy(alpha = 0.10f),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.35f))
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = StatsTheme.Space3, vertical = StatsTheme.Space3),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(text = title, fontSize = 11.sp, color = StatsTheme.TextTertiary, maxLines = 1)
-            Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(
+                text = title,
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.55f),
+                maxLines = 1
+            )
+            AnimatedContent(
+                targetState = value,
+                transitionSpec = {
+                    (slideInVertically { -it } + fadeIn()) togetherWith
+                    (slideOutVertically { it } + fadeOut())
+                },
+                label = "MetricValue"
+            ) { v ->
+                Text(
+                    text = v,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+            }
         }
     }
 }
@@ -554,7 +601,7 @@ private fun ActivityBarChart(dailyStats: List<DailyStats>) {
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp)
-            .padding(top = StatsTheme.Space2)
+            .padding(top = 8.dp)
     ) {
         val width = size.width
         val height = size.height
@@ -579,9 +626,21 @@ private fun ActivityBarChart(dailyStats: List<DailyStats>) {
             val x = idx * (barWidth + gap)
             val y = height - barHeight - 20.dp.toPx()
 
-            // Draw Bar
+            // Neon glow layer (wider, softer, same gradient)
             drawRoundRect(
-                brush = Brush.verticalGradient(listOf(StatsTheme.PrimaryLight, StatsTheme.Primary)),
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFF818CF8).copy(alpha = 0.35f), Color(0xFF6366F1).copy(alpha = 0.2f))
+                ),
+                topLeft = Offset(x - 4.dp.toPx(), y),
+                size = Size(barWidth + 8.dp.toPx(), barHeight),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx(), 8.dp.toPx())
+            )
+
+            // Main bar
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFF818CF8), Color(0xFF6366F1))
+                ),
                 topLeft = Offset(x, y),
                 size = Size(barWidth, barHeight),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
@@ -621,7 +680,7 @@ private fun GestureDonutChart(breakdown: Map<String, Int>) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(StatsTheme.Space4)
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Canvas(
             modifier = Modifier
@@ -634,7 +693,7 @@ private fun GestureDonutChart(breakdown: Map<String, Int>) {
             var startAngle = -90f
 
             val colors = listOf(
-                StatsTheme.Primary,
+                Color(0xFF6366F1),
                 StatsTheme.Secondary,
                 StatsTheme.AccentOrange,
                 StatsTheme.AccentPurple,
@@ -643,6 +702,17 @@ private fun GestureDonutChart(breakdown: Map<String, Int>) {
 
             items.forEachIndexed { index, pair ->
                 val sweep = (pair.second / total) * 360f
+                // Outer glow
+                drawArc(
+                    color = colors[index % colors.size].copy(alpha = 0.18f),
+                    startAngle = startAngle,
+                    sweepAngle = sweep,
+                    useCenter = false,
+                    topLeft = Offset(centerX - radius - 4.dp.toPx(), centerY - radius - 4.dp.toPx()),
+                    size = Size(radius * 2 + 8.dp.toPx(), radius * 2 + 8.dp.toPx()),
+                    style = Stroke(width = 22.dp.toPx(), cap = StrokeCap.Round)
+                )
+                // Main ring
                 drawArc(
                     color = colors[index % colors.size],
                     startAngle = startAngle,
@@ -661,7 +731,7 @@ private fun GestureDonutChart(breakdown: Map<String, Int>) {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val colors = listOf(
-                StatsTheme.Primary,
+                Color(0xFF6366F1),
                 StatsTheme.Secondary,
                 StatsTheme.AccentOrange,
                 StatsTheme.AccentPurple,
@@ -682,7 +752,7 @@ private fun GestureDonutChart(breakdown: Map<String, Int>) {
                     Text(
                         text = "${pair.first}: $pct%",
                         fontSize = 13.sp,
-                        color = StatsTheme.TextSecondary,
+                        color = Color.White.copy(alpha=0.6f),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -717,23 +787,23 @@ private fun RecentActivityList(breakdown: Map<String, Int>) {
         list.take(5)
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(StatsTheme.Space3)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         feed.forEach { item ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(StatsTheme.SurfaceHighlight.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = StatsTheme.Space3, vertical = StatsTheme.Space3),
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(StatsTheme.Space3)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = StatsTheme.Primary.copy(alpha = 0.12f),
+                        color = Color(0xFF6366F1).copy(alpha = 0.12f),
                         modifier = Modifier.size(36.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -745,13 +815,13 @@ private fun RecentActivityList(breakdown: Map<String, Int>) {
                                     else -> Icons.Default.Gesture
                                 },
                                 contentDescription = null,
-                                tint = StatsTheme.Primary,
+                                tint = Color(0xFF6366F1),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
                     }
                     Column {
-                        Text(text = item.first, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = StatsTheme.TextPrimary)
+                        Text(text = item.first, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         Text(text = item.second, fontSize = 12.sp, color = StatsTheme.TextTertiary)
                     }
                 }
@@ -772,4 +842,16 @@ private fun StatisticsUiState.getSuccessRate(): Float {
     return if (connectionAttempts > 0) {
         (successfulConnections.toFloat() / connectionAttempts) * 100
     } else 100f
+}
+
+private object StatsTheme {
+    val TextTertiary = Color.White.copy(alpha = 0.5f)
+    val SurfaceHighlight = Color.White.copy(alpha = 0.1f)
+    val StatusSuccess = Color(0xFF10B981)
+    val StatusError = Color(0xFFEF4444)
+    val Secondary = Color(0xFF64748B)
+    val AccentBlue = Color(0xFF38BDF8)
+    val AccentPurple = Color(0xFF8B5CF6)
+    val AccentOrange = Color(0xFFF59E0B)
+    val AccentRed = Color(0xFFEF4444)
 }

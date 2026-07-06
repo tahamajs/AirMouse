@@ -8,33 +8,37 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
  * Interface for navigation actions used by ViewModels and Composables.
  */
 interface NavigationActions {
-    fun navigateTo(route: String)
-    fun navigateBack()
-    fun navigateToHome()
-    fun navigateToSettings()
-    fun navigateToCalibration()
-    fun navigateToCalibrationResult(quality: String)
-    fun navigateToStatistics()
-    fun navigateToHelp()
-    fun navigateToAbout()
-    fun navigateToProfiles()
-    fun navigateToTouchpad()
-    fun navigateToGamingMode()
-    fun navigateToScreenMirroring()
-    fun navigateToSyncStatus()
-    fun navigateToNotificationsCenter()
-    fun navigateToGestureStudio()
-    fun navigateToNetworkDiscovery()
-    fun navigateToProximity()
-    fun navigateToVoiceCommands()
-    fun navigateToEdgeGestures()
-    fun navigateToSensorVisualizer()
-    fun navigateToServerLogs()
-    fun navigateToThemes()
-    fun navigateToBattery()
-    fun navigateToAccessibility()
-    fun navigateToOnboarding()
-    fun navigateToTouchpadSettings()
+    fun navigateTo(route: String) {}
+    fun navigateBack() {}
+    fun navigateToHome() {}
+    fun navigateToSettings() {}
+    fun navigateToCalibration() {}
+    fun navigateToCalibrationResult(quality: String) {}
+    fun navigateToStatistics() {}
+    fun navigateToHelp() {}
+    fun navigateToAbout() {}
+    fun navigateToProfiles() {}
+    fun navigateToTouchpad() {}
+    fun navigateToGamingMode() {}
+    fun navigateToScreenMirroring() {}
+    fun navigateToSyncStatus() {}
+    fun navigateToNotificationsCenter() {}
+    fun navigateToGestureStudio() {}
+    fun navigateToNetworkDiscovery() {}
+    fun navigateToSearch() {}
+    fun navigateToProximity() {}
+    fun navigateToVoiceCommands() {}
+    fun navigateToEdgeGestures() {}
+    fun navigateToSensorVisualizer() {}
+    fun navigateToServerLogs() {}
+    fun navigateToThemes() {}
+    fun navigateToBattery() {}
+    fun navigateToAccessibility() {}
+    fun navigateToOnboarding() {}
+    fun navigateToTouchpadSettings() {}
+    fun navigateToGameProfiles() {}
+    fun navigateToBluetoothMouse() {}
+    fun navigateToGameController() {}
 }
 
 /**
@@ -117,6 +121,10 @@ class NavigationActionsImpl(
         navController.navigate(Destinations.NetworkDiscovery.route)
     }
 
+    override fun navigateToSearch() {
+        navController.navigate(Destinations.Search.route)
+    }
+
     override fun navigateToProximity() {
         navController.navigate(Destinations.Proximity.route)
     }
@@ -155,5 +163,17 @@ class NavigationActionsImpl(
 
     override fun navigateToTouchpadSettings() {
         navController.navigate(Destinations.TouchpadSettings.route)
+    }
+
+    override fun navigateToGameProfiles() {
+        navController.navigate(Destinations.GameProfiles.route)
+    }
+
+    override fun navigateToBluetoothMouse() {
+        navController.navigate(Destinations.BluetoothMouse.route)
+    }
+
+    override fun navigateToGameController() {
+        navController.navigate("game_controller")
     }
 }

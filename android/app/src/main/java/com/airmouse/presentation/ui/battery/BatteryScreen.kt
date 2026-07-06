@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import com.airmouse.presentation.ui.components.GlassmorphicNeonProgressBar
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -472,14 +473,16 @@ fun DetailsContent(uiState: BatteryUiState) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            LinearProgressIndicator(
-                progress = { healthPercent / 100f },
+            GlassmorphicNeonProgressBar(
+                progress = healthPercent / 100f,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = getHealthColor(healthPercent),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    .height(8.dp),
+                height = 8.dp,
+                colors = listOf(
+                    getHealthColor(healthPercent),
+                    getHealthColor(healthPercent).copy(alpha = 0.7f)
+                )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -729,17 +732,18 @@ fun AppBatteryUsageItem(appName: String, usage: Float, icon: ImageVector?) {
 
         Column(horizontalAlignment = Alignment.End) {
             Text(String.format(Locale.US, "%.1f%%", usage), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            LinearProgressIndicator(
-                progress = { usage / 100f },
-                modifier = Modifier
-                    .width(60.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp)),
-                color = when {
-                    usage > 20 -> Color(0xFFF44336)
-                    usage > 10 -> Color(0xFFFF9800)
-                    else -> Color(0xFF4CAF50)
-                }
+            GlassmorphicNeonProgressBar(
+                progress = usage / 100f,
+                modifier = Modifier.width(60.dp),
+                height = 4.dp,
+                colors = listOf(
+                    when {
+                        usage > 20 -> Color(0xFFEF4444)
+                        usage > 10 -> Color(0xFFF59E0B)
+                        else -> Color(0xFF10B981)
+                    },
+                    Color(0xFF6366F1).copy(alpha = 0.6f)
+                )
             )
         }
     }

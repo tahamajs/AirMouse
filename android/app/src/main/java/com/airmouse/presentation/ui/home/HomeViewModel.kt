@@ -9,6 +9,8 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.BatteryManager
 import android.os.Trace
+import android.os.Vibrator
+import android.os.VibrationEffect
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -114,13 +116,25 @@ class HomeViewModel @Inject constructor(
     private var lastClickTime = 0L
     private var lastDoubleClickTime = 0L
     private var lastScrollTime = 0L
+    private var lastScrollTimeZ = 0L
+    private var lastTiltLeft = false
+    private var lastTiltRight = false
+    private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     private var lastRightClickTime = 0L
     private val scrollCooldown = 300L
     private val doubleClickMaxInterval = 400L
     private val maxLogs = 50
 
+    private var lastGyroProcessTime = 0L
+    private var lastGyroSampleTime = 0L
+    private var lastAccelProcessTime = 0L
+    private var lastAccelSampleTime = 0L
+    private var lastMagProcessTime = 0L
+    private var lastMagSampleTime = 0L
+    private var lastRotProcessTime = 0L
+    private var lastRotSampleTime = 0L
+    private var lastFpsTime = System.currentTimeMillis()
     private var samplesProcessed = 0
-    private var lastSampleTime = 0L
     private var currentFps = 0
     private var approvalTimerJob: Job? = null
 
@@ -156,6 +170,13 @@ class HomeViewModel @Inject constructor(
     private val GESTURE_CHECK_INTERVAL_MS = 50L
     private val sensorProcessingScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    private var pendingGyroHistory: List<Float>? = null
+    private var pendingAccelHistory: List<Float>? = null
+    private var pendingMagHistory: List<Float>? = null
+    private var latestLastDx = 0f
+    private var latestLastDy = 0f
+    private var latestCurrentSpeed = 0f
+
     // ============================================================
     // Optimized Sensor Listener (Background Processing + Throttled UI Updates)
     // ============================================================
@@ -165,46 +186,29 @@ class HomeViewModel @Inject constructor(
             if (!_uiState.value.isActive) return
 
             val now = System.currentTimeMillis()
-            if (now - lastProcessTime < PROCESS_INTERVAL_MS) return
-            lastProcessTime = now
 
-            val dt = if (lastSampleTime > 0) (now - lastSampleTime) / 1000f else 0.016f
-            lastSampleTime = now
+            when (event.sensor.type) {
+                Sensor.TYPE_GYROSCOPE -> {
+                    if (now - lastGyroProcessTime < PROCESS_INTERVAL_MS) return
+                    val dt = if (lastGyroSampleTime > 0) (now - lastGyroSampleTime) / 1000f else 0.016f
+                    lastGyroProcessTime = now
+                    lastGyroSampleTime = now
 
-            sensorProcessingScope.launch {
-                Trace.beginSection("AirMouse#onSensorChanged")
-                try {
-                    when (event.sensor.type) {
-                        Sensor.TYPE_GYROSCOPE -> {
+                    sensorProcessingScope.launch {
+                        Trace.beginSection("AirMouse#onSensorChanged_Gyro")
+                        try {
                             val gyroData = processGyroscopeOffThread(event.values, dt)
 
-                            withContext(Dispatchers.Main) {
-                                updateSensorSeries(
-                                    gyroHistory = listOf(
-                                        hypot(event.values[0].toDouble(), event.values[1].toDouble()).toFloat(),
-                                        abs(event.values[2])
-                                    ),
-                                    accelHistory = null,
-                                    magHistory = null
-                                )
-                            }
-
-                            val shouldUpdateUi = now - lastUiUpdateTime >= UI_UPDATE_INTERVAL_MS
-                            if (shouldUpdateUi) {
-                                lastUiUpdateTime = now
-                                withContext(Dispatchers.Main) {
-                                    _sensorState.update {
-                                        it.copy(
-                                            lastDx = gyroData.first,
-                                            lastDy = gyroData.second,
-                                            currentSpeed = gyroData.third
-                                        )
-                                    }
-                                }
-                            }
+                            pendingGyroHistory = listOf(
+                                hypot(event.values[0].toDouble(), event.values[1].toDouble()).toFloat(),
+                                abs(event.values[2])
+                            )
+                            latestLastDx = gyroData.first
+                            latestLastDy = gyroData.second
+                            latestCurrentSpeed = gyroData.third
 
                             val shouldSendMove = now - lastMoveSentAt >= MOVE_SEND_INTERVAL_MS
-                            if (shouldSendMove && (gyroData.first != 0f || gyroData.second != 0f)) {
+                            if (shouldSendMove && (gyroData.first != 0f || gyroData.second != 0f) && _uiState.value.isMouseControlEnabled) {
                                 lastMoveSentAt = now
                                 withContext(Dispatchers.IO) {
                                     val sent = connectionManager.sendMove(gyroData.first, gyroData.second)
@@ -225,73 +229,172 @@ class HomeViewModel @Inject constructor(
                                     detectGesture(magnitude, now)
                                 }
                             }
-                        }
 
-                        Sensor.TYPE_ACCELEROMETER -> {
+                            // Rate-limit UI state updates (charts and indicators) to ~30Hz (33ms)
+                            val shouldUpdateUi = now - lastUiUpdateTime >= UI_UPDATE_INTERVAL_MS
+                            if (shouldUpdateUi) {
+                                lastUiUpdateTime = now
+                                val gyro = pendingGyroHistory
+                                val accel = pendingAccelHistory
+                                val mag = pendingMagHistory
+
+                                pendingGyroHistory = null
+                                pendingAccelHistory = null
+                                pendingMagHistory = null
+
+                                val dx = latestLastDx
+                                val dy = latestLastDy
+                                val speed = latestCurrentSpeed
+
+                                withContext(Dispatchers.Main) {
+                                    if (gyro != null || accel != null || mag != null) {
+                                        updateSensorSeries(gyro, accel, mag)
+                                    }
+                                    if (accel != null || mag != null) {
+                                        updateOrientationFromAccelMag()
+                                    }
+                                    _sensorState.update {
+                                        it.copy(
+                                            lastDx = dx,
+                                            lastDy = dy,
+                                            currentSpeed = speed
+                                        )
+                                    }
+                                }
+                            }
+
+                            var currentSamples = 0
+                            var elapsedMs = 0L
+                            synchronized(this@HomeViewModel) {
+                                samplesProcessed++
+                                if (samplesProcessed % 60 == 0) {
+                                    val t = System.currentTimeMillis()
+                                    elapsedMs = (t - lastFpsTime).coerceAtLeast(1L)
+                                    lastFpsTime = t
+                                    currentSamples = samplesProcessed
+                                    samplesProcessed = 0
+                                }
+                            }
+                            if (currentSamples > 0) {
+                                val fps = ((currentSamples * 1000L) / elapsedMs).coerceAtMost(120L).toInt()
+                                withContext(Dispatchers.Main) {
+                                    _sensorState.update { it.copy(fps = fps) }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("HomeViewModel", "Sensor processing error", e)
+                        } finally {
+                            Trace.endSection()
+                        }
+                    }
+                }
+
+                Sensor.TYPE_ACCELEROMETER -> {
+                    if (now - lastAccelProcessTime < PROCESS_INTERVAL_MS) return
+                    val dt = if (lastAccelSampleTime > 0) (now - lastAccelSampleTime) / 1000f else 0.016f
+                    lastAccelProcessTime = now
+                    lastAccelSampleTime = now
+
+                    sensorProcessingScope.launch {
+                        Trace.beginSection("AirMouse#onSensorChanged_Accel")
+                        try {
                             latestAccelX = event.values[0]
                             latestAccelY = event.values[1]
                             latestAccelZ = event.values[2]
                             System.arraycopy(event.values, 0, gravity, 0, 3)
 
-                            withContext(Dispatchers.Main) {
-                                updateSensorSeries(
-                                    gyroHistory = null,
-                                    accelHistory = listOf(
-                                        hypot(
-                                            hypot(event.values[0].toDouble(), event.values[1].toDouble()),
-                                            event.values[2].toDouble()
-                                        ).toFloat()
-                                    ),
-                                    magHistory = null
-                                )
-                                updateOrientationFromAccelMag()
-                            }
+                            pendingAccelHistory = listOf(
+                                hypot(
+                                    hypot(event.values[0].toDouble(), event.values[1].toDouble()),
+                                    event.values[2].toDouble()
+                                ).toFloat()
+                            )
+                        } finally {
+                            Trace.endSection()
                         }
+                    }
+                }
 
-                        Sensor.TYPE_MAGNETIC_FIELD -> {
+                Sensor.TYPE_MAGNETIC_FIELD -> {
+                    if (now - lastMagProcessTime < PROCESS_INTERVAL_MS) return
+                    val dt = if (lastMagSampleTime > 0) (now - lastMagSampleTime) / 1000f else 0.016f
+                    lastMagProcessTime = now
+                    lastMagSampleTime = now
+
+                    sensorProcessingScope.launch {
+                        Trace.beginSection("AirMouse#onSensorChanged_Mag")
+                        try {
                             System.arraycopy(event.values, 0, magnetic, 0, 3)
-                            withContext(Dispatchers.Main) {
-                                updateSensorSeries(
-                                    gyroHistory = null,
-                                    accelHistory = null,
-                                    magHistory = listOf(
-                                        hypot(
-                                            hypot(event.values[0].toDouble(), event.values[1].toDouble()),
-                                            event.values[2].toDouble()
-                                        ).toFloat()
-                                    )
-                                )
-                                updateOrientationFromAccelMag()
-                            }
-                        }
 
-                        Sensor.TYPE_ROTATION_VECTOR -> {
+                            pendingMagHistory = listOf(
+                                hypot(
+                                    hypot(event.values[0].toDouble(), event.values[1].toDouble()),
+                                    event.values[2].toDouble()
+                                ).toFloat()
+                            )
+                        } finally {
+                            Trace.endSection()
+                        }
+                    }
+                }
+
+                Sensor.TYPE_ROTATION_VECTOR -> {
+                    if (now - lastRotProcessTime < PROCESS_INTERVAL_MS) return
+                    val dt = if (lastRotSampleTime > 0) (now - lastRotSampleTime) / 1000f else 0.016f
+                    lastRotProcessTime = now
+                    lastRotSampleTime = now
+
+                    sensorProcessingScope.launch {
+                        Trace.beginSection("AirMouse#onSensorChanged_Rot")
+                        try {
                             withContext(Dispatchers.Main) {
                                 processRotationVector(event.values)
                             }
+                        } finally {
+                            Trace.endSection()
                         }
+                    }
+                }
 
-                        Sensor.TYPE_LINEAR_ACCELERATION -> {
-                            val linY = event.values[1]
+                Sensor.TYPE_LINEAR_ACCELERATION -> {
+                    val linX = event.values[0]
+                    val linY = event.values[1]
+                    val linZ = event.values[2]
+                    sensorProcessingScope.launch {
+                        Trace.beginSection("AirMouse#onSensorChanged_Lin")
+                        try {
+                            val activeMode = prefs.getActiveMode()
+                            if (activeMode.moveSource == "linear_accel" && _uiState.value.isMouseControlEnabled && _uiState.value.isActive) {
+                                val current = System.currentTimeMillis()
+                                if (current - lastMoveSentAt >= MOVE_SEND_INTERVAL_MS) {
+                                    lastMoveSentAt = current
+                                    val deadzone = 0.15f
+                                    var dx = 0f
+                                    var dy = 0f
+                                    if (abs(linX) > deadzone) {
+                                        dx = linX * activeMode.sensitivity * 50f
+                                    }
+                                    if (abs(linY) > deadzone) {
+                                        dy = -linY * activeMode.sensitivity * 50f
+                                    }
+                                    if (dx != 0f || dy != 0f) {
+                                        viewModelScope.launch(Dispatchers.IO) {
+                                            connectionManager.sendMove(dx, dy)
+                                        }
+                                        withContext(Dispatchers.Main) {
+                                            addMotionSample(dx, dy, 0.016f)
+                                        }
+                                    }
+                                }
+                            }
                             withContext(Dispatchers.Main) {
                                 detectLinearScroll(linY, now)
+                                detectLinearScrollZ(linZ, now)
                             }
+                        } finally {
+                            Trace.endSection()
                         }
                     }
-
-                    samplesProcessed++
-                    if (samplesProcessed % 60 == 0) {
-                        val elapsedMs = (System.currentTimeMillis() - lastSampleTime).coerceAtLeast(1L)
-                        val fps = ((samplesProcessed * 1000L) / elapsedMs).coerceAtMost(120L).toInt()
-                        withContext(Dispatchers.Main) {
-                            _sensorState.update { it.copy(fps = fps) }
-                        }
-                        samplesProcessed = 0
-                    }
-                } catch (e: Exception) {
-                    Log.e("HomeViewModel", "Sensor processing error", e)
-                } finally {
-                    Trace.endSection()
                 }
             }
         }
@@ -314,10 +417,10 @@ class HomeViewModel @Inject constructor(
         val invertY = prefs.getBoolean("invert_y", false)
         val smoothingEnabled = prefs.getBoolean("smoothing_enabled", true)
         val smoothingFactor = prefs.getFloat("smoothing_factor", 0.7f).coerceIn(0.05f, 0.95f)
-        val moveDeadzone = max(0.25f, prefs.getFloat("move_deadzone", 0.3f))
-        val maxMoveDelta = prefs.getFloat("max_move_delta", 8f).coerceIn(2f, 30f)
+        val moveDeadzone = prefs.getFloat("move_deadzone", 0.03f).coerceIn(0.005f, 1.0f)
+        val maxMoveDelta = prefs.getFloat("max_move_delta", 200f).coerceIn(10f, 1000f)
         val stationaryBiasAlpha = prefs.getFloat("stationary_bias_alpha", 0.01f).coerceIn(0.001f, 0.05f)
-        val stationaryThreshold = prefs.getFloat("stationary_threshold", 0.12f)
+        val stationaryThreshold = prefs.getFloat("stationary_threshold", 0.05f)
 
         var dx = (values[2] - gyroOffsetZ) * sensitivity
         var dy = (values[0] - gyroOffsetX) * sensitivity
@@ -353,26 +456,12 @@ class HomeViewModel @Inject constructor(
         dx = dx.coerceIn(-maxMoveDelta, maxMoveDelta)
         dy = dy.coerceIn(-maxMoveDelta, maxMoveDelta)
 
-        val mode = prefs.getControlMode().toControlMode()
-        when (mode) {
-            ControlMode.ACCEL -> {
-                val accelDx = (latestAccelX - prevAccelX) * sensitivity * 0.5f
-                val accelDy = (latestAccelY - prevAccelY) * sensitivity * 0.5f
-                prevAccelX = latestAccelX
-                prevAccelY = latestAccelY
-                dx = accelDx
-                dy = accelDy
-            }
-            ControlMode.HYBRID -> {
-                val alpha = 0.5f
-                val accelDx = (latestAccelX - prevAccelX) * sensitivity * 0.5f
-                val accelDy = (latestAccelY - prevAccelY) * sensitivity * 0.5f
-                prevAccelX = latestAccelX
-                prevAccelY = latestAccelY
-                dx = alpha * dx + (1 - alpha) * accelDx
-                dy = alpha * dy + (1 - alpha) * accelDy
-            }
-            ControlMode.GYRO -> { /* already gyro‑based */ }
+        val activeMode = prefs.getActiveMode()
+        if (activeMode.moveSource != "gyro") {
+            val rawMagnitude = hypot(dx.toDouble(), dy.toDouble()).toFloat()
+            dx = 0f
+            dy = 0f
+            return@withContext Triple(dx, dy, rawMagnitude)
         }
 
         val magnitude = sqrt(dx * dx + dy * dy)
@@ -384,6 +473,7 @@ class HomeViewModel @Inject constructor(
     // ============================================================
 
     private fun detectGesture(magnitude: Float, now: Long = System.currentTimeMillis()) {
+        if (!_uiState.value.isMouseControlEnabled) return
         if (now - lastGestureCheckTime < GESTURE_CHECK_INTERVAL_MS) return
         lastGestureCheckTime = now
 
@@ -446,6 +536,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun detectLinearScroll(linY: Float, now: Long) {
+        if (!_uiState.value.isMouseControlEnabled) return
         if (now - lastScrollTime < scrollCooldown) return
 
         val scrollLinearThreshold = max(2.5f, prefs.getFloat("scroll_threshold", 4f) * 0.7f)
@@ -465,6 +556,80 @@ class HomeViewModel @Inject constructor(
             addLogMessage("Scroll $scrollDelta")
             _uiState.update { it.copy(lastGesture = "Scroll") }
             lastScrollTime = now
+        }
+    }
+
+    private fun detectLinearScrollZ(linZ: Float, now: Long) {
+        if (!_uiState.value.isMouseControlEnabled) return
+        val activeMode = prefs.getActiveMode()
+        if (activeMode.scrollSource != "z_axis") return
+        if (now - lastScrollTimeZ < scrollCooldown) return
+
+        val scrollLinearThreshold = activeMode.zScrollThreshold
+        
+        if (abs(linZ) > scrollLinearThreshold) {
+            val scrollDelta = when {
+                abs(linZ) > scrollLinearThreshold * 1.5f -> 3
+                abs(linZ) > scrollLinearThreshold * 1.2f -> 2
+                else -> 1
+            }
+            // Pull inside (+Z) -> scroll up (+1), Push outside (-Z) -> scroll down (-1)
+            val direction = if (linZ > 0) 1 else -1
+
+            viewModelScope.launch(Dispatchers.IO) {
+                connectionManager.sendScroll(scrollDelta * direction)
+            }
+            updateGestureStats("scroll")
+            addLogMessage("Scroll Z (Inside/Outside) $scrollDelta")
+            _uiState.update { it.copy(lastGesture = "Scroll Z (Inside/Outside)") }
+            lastScrollTimeZ = now
+        }
+    }
+
+    private fun detectTiltClick(currentRoll: Float) {
+        if (!_uiState.value.isMouseControlEnabled) return
+        val activeMode = prefs.getActiveMode()
+        if (activeMode.clickSource != "roll_tilt") return
+
+        val threshold = activeMode.rollClickThreshold
+        // Left tilt -> Left Click
+        if (currentRoll > threshold) {
+            if (!lastTiltLeft) {
+                lastTiltLeft = true
+                viewModelScope.launch(Dispatchers.IO) {
+                    connectionManager.sendClick("left")
+                }
+                updateGestureStats("click")
+                addLogMessage("Left Tilt Click (Roll: ${currentRoll.toInt()}°)")
+                _uiState.update { it.copy(lastGesture = "Left Tilt Click") }
+                vibrate(40)
+            }
+        } else if (currentRoll < threshold - 10f) {
+            lastTiltLeft = false
+        }
+
+        // Right tilt -> Right Click
+        if (currentRoll < -threshold) {
+            if (!lastTiltRight) {
+                lastTiltRight = true
+                viewModelScope.launch(Dispatchers.IO) {
+                    connectionManager.sendClick("right")
+                }
+                updateGestureStats("right_click")
+                addLogMessage("Right Tilt Click (Roll: ${currentRoll.toInt()}°)")
+                _uiState.update { it.copy(lastGesture = "Right Tilt Click") }
+                vibrate(40)
+            }
+        } else if (currentRoll > -threshold + 10f) {
+            lastTiltRight = false
+        }
+    }
+
+    private fun vibrate(duration: Long) {
+        try {
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+        } catch (e: Exception) {
+            // Ignored
         }
     }
 
@@ -588,11 +753,11 @@ class HomeViewModel @Inject constructor(
             port = prefs.getInt("last_port", 0),
             protocol = try {
                 ConnectionProtocol.valueOf(
-                    (prefs.getString("last_protocol", prefs.getString("connection_protocol", "WEBSOCKET"))
-                        ?: "WEBSOCKET").uppercase()
+                    (prefs.getString("last_protocol", prefs.getString("connection_protocol", "UDP"))
+                        ?: "UDP").uppercase()
                 )
             } catch (_: Exception) {
-                ConnectionProtocol.WEBSOCKET
+                ConnectionProtocol.UDP
             },
             autoReconnect = autoConnectEnabled,
             timeoutMs = prefs.getInt("connection_timeout", 5000).toLong()
@@ -642,9 +807,9 @@ class HomeViewModel @Inject constructor(
             it.copy(
                 isAutoConnectEnabled = autoConnectEnabled,
                 serverIp = connectionConfig.ip,
-                serverPort = if (connectionConfig.port > 0) connectionConfig.port else ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
+                serverPort = if (connectionConfig.port > 0) connectionConfig.port else ConnectionConfig.DEFAULT_UDP_PORT,
                 selectedProtocol = connectionConfig.protocol,
-                controlMode = prefs.getString("control_mode", "motion"),
+                controlMode = prefs.getActiveMode().id,
                 isCalibrated = prefs.getBoolean("calibration_complete", false) ||
                         prefs.getBoolean("is_calibrated", false),
                 aiSmoothingEnabled = prefs.getBoolean("ai_smoothing_enabled", false),
@@ -699,22 +864,24 @@ class HomeViewModel @Inject constructor(
                 val mapped = when (status) {
                     ConnectionManager.ConnectionStatus.DISCONNECTED -> ConnectionStatus.DISCONNECTED
                     ConnectionManager.ConnectionStatus.CONNECTING -> ConnectionStatus.CONNECTING
+                    ConnectionManager.ConnectionStatus.PENDING_APPROVAL -> ConnectionStatus.PENDING_APPROVAL
                     ConnectionManager.ConnectionStatus.CONNECTED -> ConnectionStatus.CONNECTED
                     ConnectionManager.ConnectionStatus.ERROR -> ConnectionStatus.ERROR
                     ConnectionManager.ConnectionStatus.RECONNECTING -> ConnectionStatus.CONNECTING
-                    else -> ConnectionStatus.DISCONNECTED
                 }
 
                 _uiState.update {
                     it.copy(
                         connectionStatus = mapped,
                         isConnecting = status == ConnectionManager.ConnectionStatus.CONNECTING ||
-                                status == ConnectionManager.ConnectionStatus.RECONNECTING
+                                status == ConnectionManager.ConnectionStatus.RECONNECTING ||
+                                status == ConnectionManager.ConnectionStatus.PENDING_APPROVAL
                     )
                 }
 
                 when (status) {
-                    ConnectionManager.ConnectionStatus.CONNECTING -> {
+                    ConnectionManager.ConnectionStatus.CONNECTING,
+                    ConnectionManager.ConnectionStatus.PENDING_APPROVAL -> {
                         addLogMessage("Server is approving the connection...")
                         startApprovalCountdown()
                         notificationManager.showConnectionPendingNotification(
@@ -872,6 +1039,7 @@ class HomeViewModel @Inject constructor(
         pitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
         roll = Math.toDegrees(orientation[2].toDouble()).toFloat()
         updateOrientationDisplay()
+        detectTiltClick(roll)
     }
 
     private fun updateOrientationFromAccelMag() {
@@ -882,6 +1050,7 @@ class HomeViewModel @Inject constructor(
             pitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
             roll = Math.toDegrees(orientation[2].toDouble()).toFloat()
             updateOrientationDisplay()
+            detectTiltClick(roll)
         }
     }
 
@@ -1092,6 +1261,8 @@ class HomeViewModel @Inject constructor(
                     ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
                     ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
                     ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+                    ConnectionProtocol.USB_SERIAL -> ConnectionManager.ConnectionProtocol.USB_SERIAL
+                    ConnectionProtocol.BLUETOOTH -> ConnectionManager.ConnectionProtocol.BLUETOOTH
                 }
             )
             val success = connectionManager.connect(normalized.ip, normalized.port)
@@ -1116,13 +1287,13 @@ class HomeViewModel @Inject constructor(
     fun connect() {
         Trace.beginSection("AirMouse#connect")
         try {
+            val protocol = _uiState.value.selectedProtocol
             val ip = _uiState.value.serverIp
-            if (ip.isBlank()) {
+            if (ip.isBlank() && protocol != ConnectionProtocol.BLUETOOTH) {
                 addLogMessage("Please enter server IP")
                 return
             }
 
-            val protocol = _uiState.value.selectedProtocol
             val normalized = ConnectionConfig(
                 ip = ip,
                 port = _uiState.value.serverPort,
@@ -1148,6 +1319,8 @@ class HomeViewModel @Inject constructor(
                     ConnectionProtocol.TCP -> ConnectionManager.ConnectionProtocol.TCP
                     ConnectionProtocol.UDP -> ConnectionManager.ConnectionProtocol.UDP
                     ConnectionProtocol.WEBSOCKET -> ConnectionManager.ConnectionProtocol.WEBSOCKET
+                    ConnectionProtocol.USB_SERIAL -> ConnectionManager.ConnectionProtocol.USB_SERIAL
+                    ConnectionProtocol.BLUETOOTH -> ConnectionManager.ConnectionProtocol.BLUETOOTH
                 }
             )
 
@@ -1220,10 +1393,46 @@ class HomeViewModel @Inject constructor(
     // ============================================================
 
     fun setControlMode(mode: String) {
-        prefs.setControlMode(mode)
+        prefs.setActiveModeId(mode)
+        val legacyMode = when (mode) {
+            "motion_translation" -> "accel"
+            "touchpad_mode" -> "touchpad"
+            else -> "motion"
+        }
+        prefs.setControlMode(legacyMode)
         _uiState.update { it.copy(controlMode = mode) }
-        controlMode = mode.toControlMode()
-        addLogMessage("Control mode changed to $mode")
+        controlMode = legacyMode.toControlMode()
+        addLogMessage("Active mode changed to $mode")
+        connectionManager.sendModeChange(mode)
+    }
+
+    fun getCustomModes(): List<com.airmouse.domain.model.CustomControlMode> {
+        return prefs.getCustomModes()
+    }
+
+    fun saveCustomMode(mode: com.airmouse.domain.model.CustomControlMode) {
+        val currentModes = prefs.getCustomModes().toMutableList()
+        val index = currentModes.indexOfFirst { it.id == mode.id }
+        if (index != -1) {
+            currentModes[index] = mode
+        } else {
+            currentModes.add(mode)
+        }
+        prefs.saveCustomModes(currentModes)
+        addLogMessage("Saved custom mode: ${mode.name}")
+    }
+
+    fun deleteCustomMode(modeId: String) {
+        val currentModes = prefs.getCustomModes().filter { it.id != modeId }
+        prefs.saveCustomModes(currentModes)
+        if (prefs.getActiveMode().id == modeId) {
+            setControlMode("motion_gyro")
+        }
+        addLogMessage("Deleted custom mode")
+    }
+
+    fun getActiveMode(): com.airmouse.domain.model.CustomControlMode {
+        return prefs.getActiveMode()
     }
 
     fun setMouseControlEnabled(enabled: Boolean) {
@@ -1434,8 +1643,8 @@ class HomeViewModel @Inject constructor(
     data class HomeUiState(
         val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
         val serverIp: String = "",
-        val serverPort: Int = ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
-        val selectedProtocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET,
+        val serverPort: Int = ConnectionConfig.DEFAULT_UDP_PORT,
+        val selectedProtocol: ConnectionProtocol = ConnectionProtocol.UDP,
         val isMouseControlEnabled: Boolean = true,
         val calibrationProgress: Int = 0,
         val isAutoConnectEnabled: Boolean = true,

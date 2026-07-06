@@ -31,32 +31,31 @@ fun SensorVisualizer(
     size: VisualizerSize = VisualizerSize.MEDIUM,
     isCalibrated: Boolean = true
 ) {
-    val animatedRoll by animateFloatAsState(
-        targetValue = roll,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+    val infiniteTransition = rememberInfiniteTransition(label = "hud_pulse")
+    val pulseRadius by infiniteTransition.animateFloat(
+        initialValue = 8f,
+        targetValue = 28f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
         ),
-        label = "roll"
+        label = "pulseRadius"
     )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulseAlpha"
+    )
+
+    val animatedRoll = roll
     
-    val animatedPitch by animateFloatAsState(
-        targetValue = pitch,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "pitch"
-    )
+    val animatedPitch = pitch
     
-    val animatedYaw by animateFloatAsState(
-        targetValue = yaw,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "yaw"
-    )
+    val animatedYaw = yaw
 
     val visualizerSize = when (size) {
         VisualizerSize.SMALL -> 120.dp
@@ -79,75 +78,183 @@ fun SensorVisualizer(
             val phoneHeight = canvasHeight * 0.8f
             
             
+            // 3D parallax offset for phone frame perspective
+            val px = (animatedRoll / 45f) * 10f
+            val py = (animatedPitch / 45f) * 10f
+
+            // Background shadow (shifted oppositely)
             drawRoundRect(
-                color = Color.Black.copy(alpha = 0.3f),
-                topLeft = Offset(centerX - phoneWidth/2 + 4, centerY - phoneHeight/2 + 4),
+                color = Color.Black.copy(alpha = 0.35f),
+                topLeft = Offset(centerX - phoneWidth/2 + 6 + px, centerY - phoneHeight/2 + 6 + py),
                 size = Size(phoneWidth, phoneHeight),
-                cornerRadius = CornerRadius(20f)
+                cornerRadius = CornerRadius(24f)
             )
             
-            
             rotate(degrees = animatedYaw) {
-                
+                // Phone frame border
                 drawRoundRect(
-                    color = Color(0xFF1A1D24),
-                    topLeft = Offset(centerX - phoneWidth/2, centerY - phoneHeight/2),
+                    color = Color(0xFF1E222B),
+                    topLeft = Offset(centerX - phoneWidth/2 - px, centerY - phoneHeight/2 - py),
                     size = Size(phoneWidth, phoneHeight),
-                    cornerRadius = CornerRadius(20f)
+                    cornerRadius = CornerRadius(24f)
                 )
                 
-                
+                // Cyan bezel highlight outline
                 drawRoundRect(
-                    color = Color(0xFF00BCD4).copy(alpha = 0.3f),
-                    topLeft = Offset(centerX - phoneWidth/2, centerY - phoneHeight/2),
+                    color = Color(0xFF00E5FF).copy(alpha = 0.45f),
+                    topLeft = Offset(centerX - phoneWidth/2 - px, centerY - phoneHeight/2 - py),
                     size = Size(phoneWidth, phoneHeight),
-                    cornerRadius = CornerRadius(20f),
-                    style = Stroke(width = 2f)
+                    cornerRadius = CornerRadius(24f),
+                    style = Stroke(width = 2.5f)
                 )
                 
-                
+                // Screen body
                 drawRoundRect(
-                    color = Color(0xFF0F1115),
-                    topLeft = Offset(centerX - phoneWidth/2 + 8, centerY - phoneHeight/2 + 8),
-                    size = Size(phoneWidth - 16, phoneHeight - 50),
-                    cornerRadius = CornerRadius(12f)
+                    color = Color(0xFF0A0C10),
+                    topLeft = Offset(centerX - phoneWidth/2 + 8 - px, centerY - phoneHeight/2 + 8 - py),
+                    size = Size(phoneWidth - 16, phoneHeight - 16),
+                    cornerRadius = CornerRadius(18f)
                 )
-                
-                
+
+                val screenRadius = (phoneWidth - 16) / 2f
+                val activeCenterX = centerX - px
+                val activeCenterY = centerY - py
+
+                // Concentric Target Rings
+                drawCircle(
+                    color = Color(0xFF00E5FF).copy(alpha = 0.08f),
+                    radius = screenRadius * 0.4f,
+                    center = Offset(activeCenterX, activeCenterY),
+                    style = Stroke(width = 1f)
+                )
+                drawCircle(
+                    color = Color(0xFF00E5FF).copy(alpha = 0.06f),
+                    radius = screenRadius * 0.75f,
+                    center = Offset(activeCenterX, activeCenterY),
+                    style = Stroke(width = 1f)
+                )
+                drawCircle(
+                    color = Color(0xFF00E5FF).copy(alpha = 0.04f),
+                    radius = screenRadius,
+                    center = Offset(activeCenterX, activeCenterY),
+                    style = Stroke(width = 1.5f)
+                )
+
+                // Coordinate Grid Axes
                 drawLine(
-                    color = Color.White.copy(alpha = 0.2f),
-                    start = Offset(centerX - 30f, centerY),
-                    end = Offset(centerX + 30f, centerY),
+                    color = Color.White.copy(alpha = 0.08f),
+                    start = Offset(activeCenterX, activeCenterY - screenRadius),
+                    end = Offset(activeCenterX, activeCenterY + screenRadius),
                     strokeWidth = 1f
                 )
                 drawLine(
-                    color = Color.White.copy(alpha = 0.2f),
-                    start = Offset(centerX, centerY - 30f),
-                    end = Offset(centerX, centerY + 30f),
+                    color = Color.White.copy(alpha = 0.08f),
+                    start = Offset(activeCenterX - screenRadius, activeCenterY),
+                    end = Offset(activeCenterX + screenRadius, activeCenterY),
                     strokeWidth = 1f
                 )
-                
-                
-                val dotX = centerX + (animatedRoll / 45f) * (phoneWidth / 3)
-                val dotY = centerY + (animatedPitch / 45f) * (phoneHeight / 3)
-                
-                drawRect(
-                    color = Color(0xFF4CAF50),
-                    topLeft = Offset(
-                        dotX.coerceIn(centerX - phoneWidth/3, centerX + phoneWidth/3) - 8f,
-                        dotY.coerceIn(centerY - phoneHeight/3, centerY + phoneHeight/3) - 8f
-                    ),
-                    size = Size(16f, 16f)
+
+                // Chevron Directional Intensity Calculation
+                val maxRange = 25f
+                val intensityUp = ((-animatedPitch) / maxRange).coerceIn(0f, 1f)
+                val intensityDown = ((animatedPitch) / maxRange).coerceIn(0f, 1f)
+                val intensityLeft = ((-animatedRoll) / maxRange).coerceIn(0f, 1f)
+                val intensityRight = ((animatedRoll) / maxRange).coerceIn(0f, 1f)
+
+                val chevronSize = 12f
+
+                // UP Chevron
+                val upY = activeCenterY - screenRadius * 0.75f
+                val upColor = if (intensityUp > 0.05f) Color(0xFF00FFCC).copy(alpha = 0.2f + intensityUp * 0.8f) else Color.White.copy(alpha = 0.12f)
+                val upWidth = if (intensityUp > 0.05f) 3.5f else 1.5f
+                val upPath = Path().apply {
+                    moveTo(activeCenterX - chevronSize, upY + chevronSize * 0.5f)
+                    lineTo(activeCenterX, upY - chevronSize * 0.5f)
+                    lineTo(activeCenterX + chevronSize, upY + chevronSize * 0.5f)
+                }
+                drawPath(path = upPath, color = upColor, style = Stroke(width = upWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                if (intensityUp > 0.1f) {
+                    drawPath(path = upPath, color = Color(0xFF00FFCC).copy(alpha = intensityUp * 0.3f), style = Stroke(width = upWidth + 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
+
+                // DOWN Chevron
+                val downY = activeCenterY + screenRadius * 0.75f
+                val downColor = if (intensityDown > 0.05f) Color(0xFF00FFCC).copy(alpha = 0.2f + intensityDown * 0.8f) else Color.White.copy(alpha = 0.12f)
+                val downWidth = if (intensityDown > 0.05f) 3.5f else 1.5f
+                val downPath = Path().apply {
+                    moveTo(activeCenterX - chevronSize, downY - chevronSize * 0.5f)
+                    lineTo(activeCenterX, downY + chevronSize * 0.5f)
+                    lineTo(activeCenterX + chevronSize, downY - chevronSize * 0.5f)
+                }
+                drawPath(path = downPath, color = downColor, style = Stroke(width = downWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                if (intensityDown > 0.1f) {
+                    drawPath(path = downPath, color = Color(0xFF00FFCC).copy(alpha = intensityDown * 0.3f), style = Stroke(width = downWidth + 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
+
+                // LEFT Chevron
+                val leftX = activeCenterX - screenRadius * 0.75f
+                val leftColor = if (intensityLeft > 0.05f) Color(0xFF00FFCC).copy(alpha = 0.2f + intensityLeft * 0.8f) else Color.White.copy(alpha = 0.12f)
+                val leftWidth = if (intensityLeft > 0.05f) 3.5f else 1.5f
+                val leftPath = Path().apply {
+                    moveTo(leftX + chevronSize * 0.5f, activeCenterY - chevronSize)
+                    lineTo(leftX - chevronSize * 0.5f, activeCenterY)
+                    lineTo(leftX + chevronSize * 0.5f, activeCenterY + chevronSize)
+                }
+                drawPath(path = leftPath, color = leftColor, style = Stroke(width = leftWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                if (intensityLeft > 0.1f) {
+                    drawPath(path = leftPath, color = Color(0xFF00FFCC).copy(alpha = intensityLeft * 0.3f), style = Stroke(width = leftWidth + 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
+
+                // RIGHT Chevron
+                val rightX = activeCenterX + screenRadius * 0.75f
+                val rightColor = if (intensityRight > 0.05f) Color(0xFF00FFCC).copy(alpha = 0.2f + intensityRight * 0.8f) else Color.White.copy(alpha = 0.12f)
+                val rightWidth = if (intensityRight > 0.05f) 3.5f else 1.5f
+                val rightPath = Path().apply {
+                    moveTo(rightX - chevronSize * 0.5f, activeCenterY - chevronSize)
+                    lineTo(rightX + chevronSize * 0.5f, activeCenterY)
+                    lineTo(rightX - chevronSize * 0.5f, activeCenterY + chevronSize)
+                }
+                drawPath(path = rightPath, color = rightColor, style = Stroke(width = rightWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                if (intensityRight > 0.1f) {
+                    drawPath(path = rightPath, color = Color(0xFF00FFCC).copy(alpha = intensityRight * 0.3f), style = Stroke(width = rightWidth + 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
+
+                // Neon Tracker Bubble Position
+                val dotX = (activeCenterX + (animatedRoll / 45f) * screenRadius).coerceIn(activeCenterX - screenRadius + 14f, activeCenterX + screenRadius - 14f)
+                val dotY = (activeCenterY + (animatedPitch / 45f) * screenRadius).coerceIn(activeCenterY - screenRadius + 14f, activeCenterY + screenRadius - 14f)
+
+                // Ripple Pulse effect
+                drawCircle(
+                    color = Color(0xFF00E5FF).copy(alpha = pulseAlpha),
+                    radius = pulseRadius * (screenRadius / 50f),
+                    center = Offset(dotX, dotY),
+                    style = Stroke(width = 1.5f)
                 )
-                
-                
-                drawRect(
-                    color = Color(0xFF4CAF50).copy(alpha = 0.3f),
-                    topLeft = Offset(
-                        dotX.coerceIn(centerX - phoneWidth/3, centerX + phoneWidth/3) - 14f,
-                        dotY.coerceIn(centerY - phoneHeight/3, centerY + phoneHeight/3) - 14f
-                    ),
-                    size = Size(28f, 28f)
+
+                // Neon Radial Glow
+                val glowBrush = Brush.radialGradient(
+                    colors = listOf(Color(0xFF00FFCC), Color(0xFF00E5FF).copy(alpha = 0.15f), Color.Transparent),
+                    center = Offset(dotX, dotY),
+                    radius = 24.dp.toPx()
+                )
+                drawCircle(
+                    brush = glowBrush,
+                    radius = 24.dp.toPx(),
+                    center = Offset(dotX, dotY)
+                )
+
+                // Inner Glow Core
+                drawCircle(
+                    color = Color(0xFF00FFCC),
+                    radius = 8.dp.toPx(),
+                    center = Offset(dotX, dotY)
+                )
+
+                // Core White Point
+                drawCircle(
+                    color = Color.White,
+                    radius = 3.dp.toPx(),
+                    center = Offset(dotX, dotY)
                 )
             }
         }

@@ -5,7 +5,6 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class ProfileSettings(
-    
     val sensitivity: Float = 1.0f,
     val smoothingEnabled: Boolean = true,
     val smoothingFactor: Float = 0.5f,
@@ -14,7 +13,6 @@ data class ProfileSettings(
     val invertX: Boolean = false,
     val invertY: Boolean = false,
     
-    
     val clickThreshold: Float = 8f,
     val doubleClickInterval: Long = 300L,
     val scrollThreshold: Float = 6f,
@@ -22,37 +20,73 @@ data class ProfileSettings(
     val rightClickDuration: Long = 500L,
     val gestureDebounce: Long = 100L,
     
-    
     val aiSmoothing: Boolean = false,
     val aiBlendFactor: Float = 0.7f,
     val predictiveMovement: Boolean = true,
     val predictionStrength: Float = 0.5f,
     val kalmanEnabled: Boolean = true,
     
-    
     val hapticFeedback: Boolean = true,
     val hapticStrength: HapticStrengthType = HapticStrengthType.MEDIUM,
     val soundEnabled: Boolean = false,
     val visualFeedback: Boolean = true,
-    
     
     val theme: String = "system",
     val fontSize: Float = 16f,
     val showDebugInfo: Boolean = false,
     val keepScreenOn: Boolean = false,
     
-    
     val autoConnect: Boolean = true,
     val reconnectAttempts: Int = 5,
     val connectionTimeout: Int = 5000,
     val useWebSocket: Boolean = true,
     
-    
     val jitterCompensation: Boolean = true,
     val deadband: Float = 0.5f,
     val maxSpeed: Float = 100f,
     val minSpeed: Float = 0.5f
-) : Parcelable
+) : Parcelable {
+
+    companion object {
+        fun fromDomain(domain: com.airmouse.domain.model.ProfileSettings): ProfileSettings {
+            return ProfileSettings(
+                sensitivity = domain.sensitivity,
+                clickThreshold = domain.clickThreshold,
+                doubleClickInterval = domain.doubleClickInterval,
+                scrollThreshold = domain.scrollThreshold,
+                rightClickTilt = domain.rightClickTilt,
+                hapticFeedback = domain.hapticEnabled,
+                theme = domain.theme,
+                aiSmoothing = domain.aiSmoothing,
+                predictiveMovement = domain.predictiveMovement,
+                invertX = domain.invertX,
+                invertY = domain.invertY,
+                accelerationEnabled = domain.accelerationEnabled,
+                smoothingEnabled = domain.smoothingEnabled
+            )
+        }
+    }
+
+    fun toDomain(): com.airmouse.domain.model.ProfileSettings {
+        return com.airmouse.domain.model.ProfileSettings(
+            sensitivity = this.sensitivity,
+            clickThreshold = this.clickThreshold,
+            doubleClickInterval = this.doubleClickInterval,
+            scrollThreshold = this.scrollThreshold,
+            rightClickTilt = this.rightClickTilt,
+            hapticEnabled = this.hapticFeedback,
+            theme = this.theme,
+            aiSmoothing = this.aiSmoothing,
+            predictiveMovement = this.predictiveMovement,
+            invertX = this.invertX,
+            invertY = this.invertY,
+            accelerationEnabled = this.accelerationEnabled,
+            smoothingEnabled = this.smoothingEnabled,
+            edgeGesturesEnabled = false,
+            voiceCommandsEnabled = false
+        )
+    }
+}
 
 enum class HapticStrengthType(val displayName: String, val duration: Long) {
     LIGHT("Light", 20),

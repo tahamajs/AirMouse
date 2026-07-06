@@ -181,7 +181,8 @@ class NotificationManager @Inject constructor(
         icon: Int,
         priority: Int = PRIORITY_DEFAULT,
         autoCancel: Boolean = true,
-        intent: Intent? = null
+        intent: Intent? = null,
+        onlyAlertOnce: Boolean = true
     ): NotificationCompat.Builder {
         val pendingIntent = intent?.let {
             PendingIntent.getActivity(
@@ -201,6 +202,7 @@ class NotificationManager @Inject constructor(
             .setContentIntent(pendingIntent)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setColor(context.getColor(R.color.primary))
+            .setOnlyAlertOnce(onlyAlertOnce)
     }
 
     // ==========================================
