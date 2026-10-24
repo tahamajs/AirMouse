@@ -1,32 +1,133 @@
-*/--pycache--
-*.pyc
+# ==============================================================================
+# AirMouse Root .gitignore
+# Prevents repository bloat and accidental commits of builds, binaries, caches & OS files
+# ==============================================================================
+
+# OS & Filesystem Metadata
+# ------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor & IDE Directories
+# ------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+*~
+*.bak
+*.backup
+*.orig
+*.rej
+*.patch
+
+# Go Build Artifacts & Binaries
+# -----------------------------
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.bin
+airmouse-server
+airmouse-headless
+airmouse-server-*
+airmouse-quick
+dist/
+release/
+bin/
+
+# Go Tooling, Module & Coverage Caches
+# ------------------------------------
+.gocache/
+.gomodcache/
+*.coverprofile
+coverage.out
+coverage.html
+vendor/
+
+# Python Artifacts & Environments
+# -------------------------------
+__pycache__/
+*.py[cod]
 *.pyo
 *.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
-*====================
-# Android Studio / IntelliJ IDEA
-# ====================
-.idea/  
+# Android & Gradle Build Artifacts
+# --------------------------------
+.gradle/
+.gradlehome/
+build/
+*/build/
+**/build/
+.cxx/
+local.properties
+debug.keystore
+!android/app/debug.keystore
+*.apk
+*.aab
+*.dex
+*.class
+*.hprof
+*.trace
+/captures/
+/reports/
 
-# ====================
-# Gradle
-
-.gradle
-/build
-*/build
-    
-    
-
-*.lock
-
-
+# Machine Learning Models & Heavy Datasets (Keep under Git LFS or external CDN)
+# ----------------------------------------------------------------------------
+*.onnx
+*.pb
+*.tflite
+*.h5
+*.pt
+*.pth
+*.weights
 *.bin
+*.model
+!models/.gitkeep
 
-pc/airmouse-go/.gocache/*
-pc/airmouse-go/.gomodcache/*
+# Logs & Temporary Files
+# ----------------------
+*.log
+logs/
+*.log.*
+tmp/
+temp/
+*.tmp
+*.temp
 
-.md
-pc/airmouse_go_new/.gomodcache/*
-pc/airmouse_go_new/.gocache/*
-.gocache/*
-.gomodcache/*
+# Packaging & Archives
+# --------------------
+*.dmg
+*.iso
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+*.pkg
+*.deb
+*.rpm

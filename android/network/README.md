@@ -1,18 +1,20 @@
 # AirMouse :network module
 
-Provides coroutine-based TCP client and UDP discovery client for the AirMouse Android app.
+> **Android Protocol V2 Network Transport Engine**
 
-Files:
-- `Message.kt` - serializable message DTOs
-- `TcpClient.kt` - coroutine-friendly TCP client (basic)
-- `UdpDiscoveryClient.kt` - sends `AIRMOUSE_DISCOVER` and waits for `DiscoveryResponse` JSON
+---
 
-Usage (example):
+> [!IMPORTANT]
+> **Canonical Protocol Specification**: For the complete Protocol V2 wire envelope and message specifications, consult [**docs/PROTOCOL_V2.md**](../../docs/PROTOCOL_V2.md) and the master [**DOCUMENTATION.md**](../../DOCUMENTATION.md).
 
-```kotlin
-val client = TcpClient("192.168.1.10", 8080, onMessage = { line -> /* handle */ })
-client.start()
-// send: use coroutine scope to call sendMessage
-```
+---
 
-The module is intentionally small and focused; further features (ACK handling, pending receipts, reconnection policy) will be added in follow-up steps.
+## Overview
+
+Provides coroutine-based WebSocket client, TCP client, and UDP discovery client for the AirMouse Android app adhering strictly to **Protocol V2**:
+
+- `Message.kt` - Serializable Protocol V2 message DTOs (`v: 2`, `type`, `seq`, `ts`, `id`, `payload`)
+- `MessageTypes.kt` - Central catalog of all protocol message types and commands
+- `ConnectionManager.kt` - Reactive WebSocket/TCP connection state machine
+- `UdpDiscoveryClient.kt` - Auto-discovery client broadcasting on port 8082
+- `NetworkQualityMonitor.kt` - Latency and jitter telemetry

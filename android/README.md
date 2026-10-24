@@ -1,5 +1,8 @@
 # Air Mouse – Complete Application Documentation
 
+> [!IMPORTANT]
+> **Consolidated Project Documentation**: For the master system architecture, Protocol V2 specifications, security threat models, and build instructions across the whole AirMouse system, please refer directly to the root [**DOCUMENTATION.md**](../DOCUMENTATION.md) and [**docs/PROTOCOL_V2.md**](../docs/PROTOCOL_V2.md).
+
 ## 📋 Table of Contents
 
 1. [Project Overview](#project-overview)
