@@ -61,4 +61,21 @@ class OneEuroFilterTest {
         val afterReset = filter.filter(100.0f, 2000L)
         assertEquals(100.0f, afterReset, 0.0001f)
     }
+
+    @Test
+    fun testNanoPrecisionAndZeroDivisionGuards() {
+        val filter = OneEuroFilter(minCutoff = 1.0, beta = 0.007, dCutoff = 1.0)
+        // Test nanosecond filtering
+        val initial = filter.filterNano(10.0f, 1_000_000_000L)
+        assertEquals(10.0f, initial, 0.0001f)
+
+        // Successive call with identical or backward timestamp should not produce NaN or Infinity
+        val sameTime = filter.filterNano(12.0f, 1_000_000_000L)
+        assertFalse("Output must not be NaN", sameTime.isNaN())
+        assertFalse("Output must not be Infinite", sameTime.isInfinite())
+
+        // Pass NaN or Infinity inputs: should handle gracefully
+        val nanHandled = filter.filter(Float.NaN, 1_000_000_016L)
+        assertFalse("Output must recover from NaN", nanHandled.isNaN())
+    }
 }

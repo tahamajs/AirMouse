@@ -232,9 +232,25 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         updateSystemBarsColor()
+        if (::sensorService.isInitialized) {
+            sensorService.start()
+        }
+        if (!connectionManager.isConnected() && prefs.isAutoConnectEnabled()) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                connectionManager.reconnect()
+            }
+        }
         if (!isReady && getMissingPermissions().isEmpty()) {
             permissionGranted = true
             proceedToMain()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Pause sensor sampling when app goes into background or screen turns off
+        if (::sensorService.isInitialized) {
+            sensorService.stop()
         }
     }
 
