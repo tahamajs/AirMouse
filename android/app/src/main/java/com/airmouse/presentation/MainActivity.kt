@@ -235,7 +235,7 @@ class MainActivity : ComponentActivity() {
         if (::sensorService.isInitialized) {
             sensorService.start()
         }
-        if (!connectionManager.isConnected() && prefs.isAutoConnectEnabled()) {
+        if (!connectionManager.isConnected() && prefs.isAutoConnect()) {
             lifecycleScope.launch(Dispatchers.IO) {
                 connectionManager.reconnect()
             }

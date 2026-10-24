@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 520" width="100%" height="100%">
+  <defs>
+    <linearGradient id="serverBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <filter id="winShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <rect width="1100" height="520" rx="16" fill="#0b0f19"/>
+
+  <!-- Desktop Window Mockup -->
+  <g transform="translate(50, 40)" filter="url(#winShadow)">
+    <!-- Window Frame -->
+    <rect width="1000" height="440" rx="12" fill="url(#serverBg)" stroke="#334155" stroke-width="2"/>
+    
+    <!-- Titlebar -->
+    <rect width="1000" height="42" rx="12" fill="#1e293b"/>
+    <rect y="30" width="1000" height="12" fill="#1e293b"/>
+    <line x1="0" y1="42" x2="1000" y2="42" stroke="#334155"/>
+    <!-- Window controls -->
+    <circle cx="25" cy="21" r="6" fill="#ef4444"/>
+    <circle cx="45" cy="21" r="6" fill="#f59e0b"/>
+    <circle cx="65" cy="21" r="6" fill="#10b981"/>
+    <text x="440" y="26" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="600" fill="#94a3b8">AirMouse Desktop Server — Fyne 6-Tab GUI &amp; CLI</text>
+
+    <!-- Sidebar / Tabs -->
+    <rect x="0" y="42" width="200" height="398" fill="#0f172a"/>
+    <line x1="200" y1="42" x2="200" y2="440" stroke="#1e293b"/>
+
+    <!-- Tabs -->
+    <rect x="12" y="58" width="176" height="36" rx="8" fill="#1e293b"/>
+    <text x="32" y="81" font-family="sans-serif" font-size="13" font-weight="700" fill="#38bdf8">📊 Dashboard</text>
+
+    <text x="32" y="125" font-family="sans-serif" font-size="13" font-weight="500" fill="#94a3b8">📱 Devices (1)</text>
+    <text x="32" y="165" font-family="sans-serif" font-size="13" font-weight="500" fill="#94a3b8">🌐 Network / TLS</text>
+    <text x="32" y="205" font-family="sans-serif" font-size="13" font-weight="500" fill="#94a3b8">⚙️ Settings</text>
+    <text x="32" y="245" font-family="sans-serif" font-size="13" font-weight="500" fill="#94a3b8">📈 Analytics</text>
+    <text x="32" y="285" font-family="sans-serif" font-size="13" font-weight="500" fill="#94a3b8">📜 Logs</text>
+
+    <!-- Main Content Area -->
+    <!-- Metric Card 1: Throughput -->
+    <rect x="230" y="65" width="220" height="100" rx="10" fill="#1e293b" stroke="#334155"/>
+    <text x="250" y="95" font-family="sans-serif" font-size="12" fill="#94a3b8">Packet Rate</text>
+    <text x="250" y="135" font-family="sans-serif" font-size="28" font-weight="800" fill="#38bdf8">120 <tspan font-size="14" font-weight="500">msg/s</tspan></text>
+
+    <!-- Metric Card 2: Latency -->
+    <rect x="475" y="65" width="220" height="100" rx="10" fill="#1e293b" stroke="#334155"/>
+    <text x="495" y="95" font-family="sans-serif" font-size="12" fill="#94a3b8">Network RTT</text>
+    <text x="495" y="135" font-family="sans-serif" font-size="28" font-weight="800" fill="#10b981">2.8 <tspan font-size="14" font-weight="500">ms</tspan></text>
+
+    <!-- Metric Card 3: Active Client -->
+    <rect x="720" y="65" width="245" height="100" rx="10" fill="#1e293b" stroke="#334155"/>
+    <text x="740" y="95" font-family="sans-serif" font-size="12" fill="#94a3b8">Connected Client</text>
+    <text x="740" y="125" font-family="sans-serif" font-size="16" font-weight="700" fill="#f8fafc">Redmi Note 8T</text>
+    <text x="740" y="145" font-family="sans-serif" font-size="11" fill="#64748b">172.18.207.91:42407 (TLS 1.3)</text>
+
+    <!-- Real-Time Jitter Waveform Graph -->
+    <rect x="230" y="185" width="735" height="225" rx="10" fill="#0f172a" stroke="#1e293b"/>
+    <text x="250" y="215" font-family="sans-serif" font-size="13" font-weight="700" fill="#e2e8f0">Adaptive Jitter Buffer &amp; One Euro Filter Output</text>
+    
+    <!-- Waveform Lines -->
+    <!-- Raw Jitter (Red/Orange) -->
+    <path d="M 250 320 L 300 310 L 350 340 L 400 280 L 450 330 L 500 270 L 550 320 L 600 290 L 650 345 L 700 260 L 750 310 L 800 285 L 850 330 L 900 290 L 950 310" fill="none" stroke="#f43f5e" stroke-width="2" stroke-opacity="0.5"/>
+    <!-- Filtered Smooth Trajectory (Cyan) -->
+    <path d="M 250 315 Q 350 325 450 300 T 650 305 T 850 300 T 950 305" fill="none" stroke="#38bdf8" stroke-width="4"/>
+
+    <circle cx="950" cy="305" r="5" fill="#38bdf8"/>
+    <text x="830" y="240" font-family="sans-serif" font-size="11" fill="#f43f5e">━━ Raw Sensor Jitter</text>
+    <text x="830" y="260" font-family="sans-serif" font-size="11" fill="#38bdf8">━━ One Euro Smoothed</text>
+  </g>
+</svg>
