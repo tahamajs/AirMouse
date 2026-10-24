@@ -71,6 +71,12 @@ func NewOneEuroFilter(minCutoff, beta, dCutoff float64) *OneEuroFilter {
 
 // alpha calculates the smoothing factor alpha from cutoff frequency fc and sample interval dt.
 func alpha(dt, fc float64) float64 {
+	if fc <= 0 || math.IsNaN(fc) || math.IsInf(fc, 0) {
+		fc = 1e-4
+	}
+	if dt <= 0 || math.IsNaN(dt) || math.IsInf(dt, 0) {
+		dt = 0.016
+	}
 	tau := 1.0 / (2.0 * math.Pi * fc)
 	return 1.0 / (1.0 + tau/dt)
 }
