@@ -9,6 +9,9 @@ and event callbacks: on_connect, on_disconnect, on_move, on_click.
 
 import asyncio
 import logging
+import mimetypes
+import os
+from pathlib import Path
 import queue
 import socket
 import ssl
@@ -54,6 +57,7 @@ class AirMouseServer:
         tcp_port: int = 8080,
         ws_port: int = 8081,
         udp_port: int = 8083,
+        web_port: int = 8082,
         enable_tls: bool = True,
         auth_manager: Optional[AuthManager] = None,
         tls_manager: Optional[TLSManager] = None,
@@ -65,6 +69,7 @@ class AirMouseServer:
         self.tcp_port = tcp_port
         self.ws_port = ws_port
         self.udp_port = udp_port
+        self.web_port = web_port
         self.enable_tls = enable_tls
         self.server_name = server_name
 
@@ -89,6 +94,7 @@ class AirMouseServer:
         # Server handles
         self._tcp_server: Optional[asyncio.Server] = None
         self._ws_server: Optional[Any] = None
+        self._web_server: Optional[asyncio.Server] = None
         self._is_running = False
 
         # Session tracking
@@ -356,8 +362,72 @@ class AirMouseServer:
                 self._trigger_disconnect(session_id)
             logger.info(f"WS client disconnected: {session_id}")
 
+    async def _handle_http_client(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
+        """Lightweight embedded HTTP server for serving the mobile/fullscreen web client."""
+        try:
+            request_line = await reader.readline()
+            if not request_line:
+                return
+            parts = request_line.decode("utf-8").split()
+            if len(parts) < 2:
+                return
+            method, path = parts[0], parts[1]
+
+            # Read remaining headers
+            while True:
+                h_line = await reader.readline()
+                if not h_line or h_line == b"\r\n" or h_line == b"\n":
+                    break
+
+            if method != "GET":
+                resp = b"HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n"
+                writer.write(resp)
+                await writer.drain()
+                return
+
+            # Clean path
+            path = path.split("?")[0].lstrip("/")
+            if not path:
+                path = "index.html"
+
+            static_dir = Path(__file__).resolve().parent / "web_static"
+            file_path = (static_dir / path).resolve()
+
+            # Security check: prevent directory traversal
+            if not str(file_path).startswith(str(static_dir)) or not file_path.is_file():
+                resp = b"HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nNot Found"
+                writer.write(resp)
+                await writer.drain()
+                return
+
+            content = file_path.read_bytes()
+            content_type, _ = mimetypes.guess_type(str(file_path))
+            if not content_type:
+                content_type = "application/octet-stream"
+
+            headers = (
+                f"HTTP/1.1 200 OK\r\n"
+                f"Content-Type: {content_type}\r\n"
+                f"Content-Length: {len(content)}\r\n"
+                f"Connection: close\r\n"
+                f"Access-Control-Allow-Origin: *\r\n\r\n"
+            ).encode("utf-8")
+
+            writer.write(headers + content)
+            await writer.drain()
+        except Exception as e:
+            logger.debug(f"HTTP client error: {e}")
+        finally:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+
     async def start(self) -> None:
-        """Starts mouse actuator thread, UDP discovery, TCP server, and WebSocket server."""
+        """Starts mouse actuator thread, UDP discovery, TCP server, WebSocket server, and Web UI."""
         if self._is_running:
             return
         self._is_running = True
@@ -412,6 +482,18 @@ class AirMouseServer:
                 f"WebSocket server listening on {self.host}:{self.ws_port} (TLS={self.enable_tls})"
             )
 
+        # 6. Start Embedded Web App server (HTTP)
+        if self.web_port > 0:
+            try:
+                self._web_server = await asyncio.start_server(
+                    self._handle_http_client,
+                    self.host,
+                    self.web_port,
+                )
+                logger.info(f"Web Client UI hosted at http://{self.host}:{self.web_port}/")
+            except Exception as e:
+                logger.warning(f"Could not bind Web server on port {self.web_port}: {e}")
+
     async def stop(self) -> None:
         """Stops all servers, UDP discovery, and the mouse actuator worker thread."""
         self._is_running = False
@@ -427,6 +509,12 @@ class AirMouseServer:
             self._ws_server.close()
             await self._ws_server.wait_closed()
             self._ws_server = None
+
+        # Close Web server
+        if self._web_server:
+            self._web_server.close()
+            await self._web_server.wait_closed()
+            self._web_server = None
 
         # Stop UDP discovery
         if self.udp_discovery:

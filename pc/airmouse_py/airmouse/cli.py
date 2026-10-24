@@ -89,6 +89,12 @@ def parse_args(argv=None) -> argparse.Namespace:
         help="UDP discovery broadcast listening port (default: 8083)",
     )
     parser.add_argument(
+        "--web-port",
+        type=int,
+        default=8082,
+        help="HTTP web client listening port (default: 8082, 0 to disable)",
+    )
+    parser.add_argument(
         "--no-tls",
         action="store_true",
         help="Disable TLS encryption (TLS 1.2+ is enabled by default)",
@@ -140,6 +146,8 @@ async def run_server(args: argparse.Namespace) -> None:
     print(f"  LAN Address: {lan_ip}")
     print(f"  TCP Port   : {args.port} (TLS: {enable_tls})")
     print(f"  WS Port    : {args.ws_port} (TLS: {enable_tls})")
+    if args.web_port > 0:
+        print(f"  Web Client : http://{lan_ip}:{args.web_port}/?token={token}")
     print(f"  UDP Port   : {args.udp_port}")
     print(f"  Pairing Token: {token}")
     print("=" * 60)
@@ -156,6 +164,7 @@ async def run_server(args: argparse.Namespace) -> None:
         tcp_port=args.port,
         ws_port=args.ws_port,
         udp_port=args.udp_port,
+        web_port=args.web_port,
         enable_tls=enable_tls,
         auth_manager=auth_mgr,
         sensitivity=args.sensitivity,

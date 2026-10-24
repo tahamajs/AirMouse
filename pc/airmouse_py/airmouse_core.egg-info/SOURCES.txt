@@ -5,6 +5,9 @@ airmouse/__init__.py
 airmouse/cli.py
 airmouse/py.typed
 airmouse/server.py
+airmouse/web_static/app.js
+airmouse/web_static/index.html
+airmouse/web_static/style.css
 airmouse_core.egg-info/PKG-INFO
 airmouse_core.egg-info/SOURCES.txt
 airmouse_core.egg-info/dependency_links.txt
@@ -31,6 +34,7 @@ tests/test_protocol.py
 tests/test_protocol_edge_cases.py
 tests/test_tls_manager.py
 tests/test_udp_discovery.py
+tests/test_web_server.py
 tests/test_ws_server.py
 ui/app.py
 ui/tray_manager.py
