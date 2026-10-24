@@ -806,7 +806,10 @@ class ConnectionManager @Inject constructor(
                     sendPong()
                 }
                 MessageTypes.TYPE_ACK -> {
-                    val id = json.optString("id")
+                    val p = json.optJSONObject("payload")
+                    val id = p?.optString("ack_id")?.takeIf { it.isNotBlank() }
+                        ?: p?.optString("id")?.takeIf { it.isNotBlank() }
+                        ?: json.optString("id")
                     if (id.isNotEmpty()) {
                         pendingAcks.remove(id)
                         LogManager.debug("Acknowledged reliable packet removed: $id")

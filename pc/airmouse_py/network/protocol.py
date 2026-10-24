@@ -145,6 +145,11 @@ class OfferPayload(BaseModel):
     echo_nonce: str
 
 
+class EmptyPayload(BaseModel):
+    """Empty payload for ping, pong, and keep-alive messages."""
+    model_config = ConfigDict(extra="forbid")
+
+
 class WireEnvelope(BaseModel):
     """
     Standard wire envelope for Protocol V2.
@@ -239,7 +244,7 @@ class ProtocolParser:
             elif envelope.type == "offer":
                 typed_payload = OfferPayload.model_validate(envelope.payload)
             elif envelope.type in {"ping", "pong"}:
-                typed_payload = BaseModel()
+                typed_payload = EmptyPayload.model_validate(envelope.payload)
             else:
                 raise SchemaViolationError(f"Unknown message type: {envelope.type}")
         except BoundsViolationError:

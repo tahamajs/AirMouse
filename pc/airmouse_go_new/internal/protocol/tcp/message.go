@@ -69,6 +69,10 @@ func ackMessage(id *string) []byte {
 	body, _ := json.Marshal(map[string]any{
 		"type": "ack",
 		"id":   *id,
+		"payload": map[string]any{
+			"ack_id": *id,
+			"status": "ok",
+		},
 	})
 	return append(body, '\n')
 }

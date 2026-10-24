@@ -31,8 +31,11 @@ AirMouse turns an Android smartphone into a high-precision wireless air mouse, m
 | Document | Purpose |
 |----------|---------|
 | [**DOCUMENTATION.md**](DOCUMENTATION.md) | **Master System Documentation** (Architecture, Protocol V2, Security, Testing, Contributing) |
+| [**docs/ARCHITECTURAL_ANALYSIS_AND_IMPROVEMENT_ROADMAP.md**](docs/ARCHITECTURAL_ANALYSIS_AND_IMPROVEMENT_ROADMAP.md) | **Deep-Dive Architectural Analysis & Strategic Engineering Roadmap** |
 | [**docs/BUILD.md**](docs/BUILD.md) | Detailed build instructions for Headless (zero-CGO), GUI (Fyne), and ONNX builds |
 | [**docs/PROTOCOL_V2.md**](docs/PROTOCOL_V2.md) | Canonical Protocol V2 Wire Envelope & Complete Message Catalog |
+| [**docs/THREAT_MODEL.md**](docs/THREAT_MODEL.md) | STRIDE Threat Model & Cryptographic Security Controls |
+| [**docs/WEB_CLIENT.md**](docs/WEB_CLIENT.md) | iOS Safari & Mobile Browser Touchpad / Orientation Client |
 | [**CHANGELOG.md**](CHANGELOG.md) | Version history and remediation logs |
 | [**RELEASE_NOTES.md**](RELEASE_NOTES.md) | Official release notes for v1.0.0 / v2.0.0-remediated |
 

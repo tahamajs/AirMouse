@@ -59,30 +59,31 @@ class ProtocolContractTest {
 
     private fun assertMove(raw: String) {
         val json = JSONObject(raw)
+        assertEquals(2, json.getInt("v"))
         assertEquals("move", json.getString("type"))
-        assertEquals(12.5, json.getDouble("dx"), 0.0001)
-        assertEquals(-3.25, json.getDouble("dy"), 0.0001)
-        assertEquals(12.5, json.getDouble("DeltaX"), 0.0001)
-        assertEquals(-3.25, json.getDouble("DeltaY"), 0.0001)
-        assertFalse(json.has("payload"))
+        assertTrue(json.has("seq"))
+        assertTrue(json.has("ts"))
+        val payload = json.getJSONObject("payload")
+        assertEquals(12.5, payload.getDouble("dx"), 0.0001)
+        assertEquals(-3.25, payload.getDouble("dy"), 0.0001)
     }
 
     private fun assertReliableClick(raw: String) {
         val json = JSONObject(raw)
+        assertEquals(2, json.getInt("v"))
         assertEquals("click", json.getString("type"))
         assertEquals("msg_7", json.getString("id"))
-        assertEquals("left", json.getString("button"))
-        assertEquals("left", json.getString("Click"))
-        assertFalse(json.has("payload"))
+        val payload = json.getJSONObject("payload")
+        assertEquals("left", payload.getString("button"))
     }
 
     private fun assertReliableScroll(raw: String) {
         val json = JSONObject(raw)
+        assertEquals(2, json.getInt("v"))
         assertEquals("scroll", json.getString("type"))
         assertEquals("msg_8", json.getString("id"))
-        assertEquals(-4, json.getInt("delta"))
-        assertEquals(-4, json.getInt("Scroll"))
-        assertFalse(json.has("payload"))
+        val payload = json.getJSONObject("payload")
+        assertEquals(-4.0, payload.getDouble("delta"), 0.0001)
     }
 
     private fun assertGesture(raw: String) {

@@ -8,15 +8,28 @@ version = "2.0.0"
 description = "High-performance, secure Python server and protocol engine for AirMouse remote input devices"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
-    {name = "AirMouse Team"}
+    {name = "AirMouse Team", email = "dev@airmouse.io"}
 ]
-keywords = ["airmouse", "remote-input", "mouse", "imu", "websocket", "protocol-v2"]
+keywords = [
+    "airmouse",
+    "remote-mouse",
+    "input-devices",
+    "gyroscope",
+    "accelerometer",
+    "websocket",
+    "tcp",
+    "udp-discovery",
+    "one-euro-filter",
+    "jitter-buffer",
+    "zero-latency",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -25,6 +38,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: System :: Hardware :: Hardware Drivers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
 dependencies = [
@@ -40,7 +54,17 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/AirMouse/AirMouse"
+Documentation = "https://github.com/AirMouse/AirMouse/tree/main/pc/airmouse_py"
+Repository = "https://github.com/AirMouse/AirMouse.git"
+Issues = "https://github.com/AirMouse/AirMouse/issues"
+Changelog = "https://github.com/AirMouse/AirMouse/blob/main/CHANGELOG.md"
 
 [project.scripts]
 airmouse-server = "airmouse.cli:main"
@@ -53,5 +77,4 @@ include = ["airmouse*", "core*", "network*", "security*", "ui*"]
 airmouse = ["py.typed"]
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
 testpaths = ["tests"]

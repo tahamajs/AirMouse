@@ -3,6 +3,13 @@
 **Version:** 2.0.0-remediated (Release v1.0.0 / Protocol v2.0.0)  
 **Status:** Canonical & Frozen  
 
+> [!NOTE]
+> **Companion In-Depth Treatises**:
+> - [**Deep-Dive Architectural Analysis & Strategic Improvement Roadmap**](docs/ARCHITECTURAL_ANALYSIS_AND_IMPROVEMENT_ROADMAP.md)
+> - [**Comprehensive STRIDE Threat Model & Security Controls**](docs/THREAT_MODEL.md)
+> - [**Headless, GUI & ONNX Build Guide**](docs/BUILD.md)
+> - [**iOS Safari & Mobile Web Client Guide**](docs/WEB_CLIENT.md)
+
 ---
 
 ## Table of Contents
