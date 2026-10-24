@@ -1,12 +1,42 @@
 package protocol
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
+	"sync"
+	"time"
 )
 
 // ------------------------------------------------------------
-// WireMessage - Standard message format for all protocols
+// Protocol V2 Envelope & Constants
+// ------------------------------------------------------------
+
+// ProtocolVersion is the canonical protocol version (V2).
+const ProtocolVersion = 2
+
+// ReplayWindowMs is the sliding window size in milliseconds (+/-5000ms).
+const ReplayWindowMs int64 = 5000
+
+// MaxCoordinateLimit is the maximum absolute coordinate value allowed for move (|dx|, |dy| <= 500).
+const MaxCoordinateLimit float64 = 500.0
+
+// MaxScrollLimit is the maximum absolute scroll delta allowed (|delta| <= 10).
+const MaxScrollLimit float64 = 10.0
+
+// EnvelopeV2 represents the standard frozen Protocol V2 wire envelope.
+type EnvelopeV2 struct {
+	V       int             `json:"v"`
+	Type    string          `json:"type"`
+	Seq     uint64          `json:"seq"`
+	Ts      int64           `json:"ts"`
+	ID      *string         `json:"id,omitempty"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+// ------------------------------------------------------------
+// WireMessage - Legacy message format (backward compatibility)
 // ------------------------------------------------------------
 
 type WireMessage struct {
@@ -15,23 +45,62 @@ type WireMessage struct {
 	ID      *json.RawMessage `json:"id,omitempty"`
 }
 
-// ------------------------------------------------------------
 // MessageHandler interface
-// ------------------------------------------------------------
-
 type MessageHandler interface {
 	HandleMessage(msgType string, payload map[string]interface{}, clientID string) error
 }
 
 // ------------------------------------------------------------
-// Message decoding
+// Strict V2 Decoding with DisallowUnknownFields
 // ------------------------------------------------------------
 
-// DecodeWireMessage decodes a wire message from JSON bytes
+// DecodeWireMessageStrictV2 decodes and validates a Protocol V2 message with DisallowUnknownFields.
+func DecodeWireMessageStrictV2(line []byte) (*EnvelopeV2, error) {
+	dec := json.NewDecoder(bytes.NewReader(line))
+	dec.DisallowUnknownFields()
+
+	var env EnvelopeV2
+	if err := dec.Decode(&env); err != nil {
+		return nil, fmt.Errorf("invalid envelope: %w", err)
+	}
+
+	if dec.More() {
+		return nil, fmt.Errorf("invalid envelope: trailing data after JSON message")
+	}
+
+	if env.V != ProtocolVersion {
+		return nil, fmt.Errorf("protocol_v1_deprecated: invalid protocol version %d, expected %d", env.V, ProtocolVersion)
+	}
+
+	if env.Type == "" {
+		return nil, fmt.Errorf("missing type field")
+	}
+
+	if !IsValidType(env.Type) {
+		return nil, fmt.Errorf("unsupported message type: %s", env.Type)
+	}
+
+	trimmed := bytes.TrimSpace(env.Payload)
+	if len(trimmed) == 0 || trimmed[0] != '{' {
+		return nil, fmt.Errorf("invalid payload: payload must be a non-empty JSON object")
+	}
+
+	return &env, nil
+}
+
+// DecodeWireMessage decodes a wire message from JSON bytes (supporting both V2 and legacy envelope).
 func DecodeWireMessage(line []byte) (msgType string, payload map[string]any, id *string, err error) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(line, &raw); err != nil {
 		return "", nil, nil, fmt.Errorf("failed to unmarshal: %w", err)
+	}
+
+	// Check if this has a version tag
+	if vRaw, ok := raw["v"]; ok {
+		var ver int
+		if err := json.Unmarshal(vRaw, &ver); err == nil && ver != ProtocolVersion {
+			return "", nil, nil, fmt.Errorf("protocol_v1_deprecated: protocol version %d is not supported", ver)
+		}
 	}
 
 	// Extract type
@@ -50,9 +119,9 @@ func DecodeWireMessage(line []byte) (msgType string, payload map[string]any, id 
 			return "", nil, nil, fmt.Errorf("invalid payload: %w", err)
 		}
 	} else {
-		// Flat format: all non-type, non-id fields are payload
+		// Flat format: all non-envelope fields are payload
 		for k, v := range raw {
-			if k == "type" || k == "id" {
+			if k == "type" || k == "id" || k == "v" || k == "seq" || k == "ts" {
 				continue
 			}
 			var value any
@@ -73,7 +142,7 @@ func DecodeWireMessage(line []byte) (msgType string, payload map[string]any, id 
 	return msgType, payload, id, nil
 }
 
-// Backward-compatible aliases used by older tests and internal call sites.
+// Backward-compatible alias
 func decodeWireMessage(line []byte) (string, map[string]any, *string, error) {
 	return DecodeWireMessage(line)
 }
@@ -96,149 +165,242 @@ func rawMessageToString(raw json.RawMessage) (string, error) {
 }
 
 // ------------------------------------------------------------
-// Message encoding helpers
+// Replay Protection
 // ------------------------------------------------------------
 
-// AckMessage returns an ACK message for a given ID
-func AckMessage(id *string) []byte {
-	if id == nil || *id == "" {
+// ValidateTimestamp checks if the timestamp in milliseconds is within +/-5000ms of nowMs.
+func ValidateTimestamp(ts int64, nowMs int64) error {
+	diff := nowMs - ts
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > ReplayWindowMs {
+		return fmt.Errorf("replay_rejected: timestamp delta %d ms exceeds sliding window +/- %d ms (ts=%d, now=%d)", diff, ReplayWindowMs, ts, nowMs)
+	}
+	return nil
+}
+
+// ReplayDetector enforces strictly monotonic sequence numbers and sliding timestamp windows.
+type ReplayDetector struct {
+	mu          sync.Mutex
+	lastSeq     uint64
+	initialized bool
+	windowMs    int64
+}
+
+// NewReplayDetector creates a new ReplayDetector instance.
+func NewReplayDetector() *ReplayDetector {
+	return &ReplayDetector{
+		windowMs: ReplayWindowMs,
+	}
+}
+
+// CheckAndAdvanceSeq ensures seq is strictly greater than lastSeq.
+func (rd *ReplayDetector) CheckAndAdvanceSeq(seq uint64) error {
+	rd.mu.Lock()
+	defer rd.mu.Unlock()
+
+	if !rd.initialized {
+		rd.lastSeq = seq
+		rd.initialized = true
 		return nil
 	}
-	body, _ := json.Marshal(map[string]any{
-		"type": "ack",
-		"id":   *id,
-	})
-	return append(body, '\n')
+
+	if seq <= rd.lastSeq {
+		return fmt.Errorf("replay_detected: sequence %d is not strictly greater than %d", seq, rd.lastSeq)
+	}
+	rd.lastSeq = seq
+	return nil
 }
 
-func ackMessage(id *string) []byte {
-	return AckMessage(id)
+// ValidateMessage checks both timestamp sliding window and strictly monotonic sequence.
+func (rd *ReplayDetector) ValidateMessage(env *EnvelopeV2, nowMs int64) error {
+	if err := ValidateTimestamp(env.Ts, nowMs); err != nil {
+		return err
+	}
+	return rd.CheckAndAdvanceSeq(env.Seq)
 }
 
-// ErrorMessage returns an error message
-func ErrorMessage(errMsg string) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type":  "error",
-		"error": errMsg,
-	})
-	return append(body, '\n')
+// Reset resets the detector sequence tracking.
+func (rd *ReplayDetector) Reset() {
+	rd.mu.Lock()
+	defer rd.mu.Unlock()
+	rd.lastSeq = 0
+	rd.initialized = false
 }
 
-func errorMessage(errMsg string) []byte {
-	return ErrorMessage(errMsg)
-}
-
-// WelcomeMessage returns a welcome message
-func WelcomeMessage(serverName, version string) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type": "welcome",
-		"payload": map[string]string{
-			"server":  serverName,
-			"version": version,
-		},
-	})
-	return append(body, '\n')
-}
-
-func welcomeMessage(serverName, version string) []byte {
-	return WelcomeMessage(serverName, version)
-}
-
-// PongMessage returns a pong message
-func PongMessage() []byte {
-	return []byte(`{"type":"pong"}` + "\n")
-}
-
-// PingMessage returns a ping message
-func PingMessage() []byte {
-	return []byte(`{"type":"ping"}` + "\n")
+// LastSeq returns the highest valid sequence number observed.
+func (rd *ReplayDetector) LastSeq() uint64 {
+	rd.mu.Lock()
+	defer rd.mu.Unlock()
+	return rd.lastSeq
 }
 
 // ------------------------------------------------------------
-// Convenience constructors for common messages
+// Typed Payloads with Bounds Checking & DisallowUnknownFields
 // ------------------------------------------------------------
 
-// MoveMessage creates a movement message
-func MoveMessage(dx, dy float64) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type": "move",
-		"dx":   dx,
-		"dy":   dy,
-	})
-	return append(body, '\n')
+// MovePayloadV2 represents a movement message payload with strict schema and bounds validation.
+type MovePayloadV2 struct {
+	DX float64 `json:"dx"`
+	DY float64 `json:"dy"`
+	DT float64 `json:"dt,omitempty"`
 }
 
-// ClickMessage creates a click message
-func ClickMessage(button string) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type":   "click",
-		"button": button,
-	})
-	return append(body, '\n')
+// DecodeMovePayloadV2 decodes and validates a movement payload enforcing |dx|, |dy| <= 500 and no NaN/Inf.
+func DecodeMovePayloadV2(raw json.RawMessage) (*MovePayloadV2, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	var p MovePayloadV2
+	if err := dec.Decode(&p); err != nil {
+		return nil, fmt.Errorf("invalid move payload: %w", err)
+	}
+	if math.IsNaN(p.DX) || math.IsInf(p.DX, 0) || math.IsNaN(p.DY) || math.IsInf(p.DY, 0) {
+		return nil, fmt.Errorf("move coordinates cannot be NaN or Inf")
+	}
+	if math.Abs(p.DX) > MaxCoordinateLimit || math.Abs(p.DY) > MaxCoordinateLimit {
+		return nil, fmt.Errorf("move coordinates out of bounds (|dx|, |dy| <= %.1f): dx=%.2f, dy=%.2f", MaxCoordinateLimit, p.DX, p.DY)
+	}
+	if math.IsNaN(p.DT) || math.IsInf(p.DT, 0) || p.DT < 0 {
+		return nil, fmt.Errorf("invalid dt: dt must be non-negative finite number")
+	}
+	return &p, nil
 }
 
-// DoubleClickMessage creates a double click message
-func DoubleClickMessage() []byte {
-	return []byte(`{"type":"doubleclick"}` + "\n")
+// ClickPayloadV2 represents a click message payload.
+type ClickPayloadV2 struct {
+	Button string `json:"button"`
 }
 
-// RightClickMessage creates a right click message
-func RightClickMessage() []byte {
-	return []byte(`{"type":"rightclick"}` + "\n")
+// DecodeClickPayloadV2 decodes click payload with button validation.
+func DecodeClickPayloadV2(raw json.RawMessage) (*ClickPayloadV2, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	var p ClickPayloadV2
+	if err := dec.Decode(&p); err != nil {
+		return nil, fmt.Errorf("invalid click payload: %w", err)
+	}
+	switch p.Button {
+	case "left", "right", "middle", "double":
+		return &p, nil
+	default:
+		return nil, fmt.Errorf("invalid click button %q (allowed: left, right, middle, double)", p.Button)
+	}
 }
 
-// ScrollMessage creates a scroll message
-func ScrollMessage(delta int) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type":  "scroll",
-		"delta": delta,
-	})
-	return append(body, '\n')
+// ScrollPayloadV2 represents a scroll message payload with bounds check (|delta| <= 10.0).
+type ScrollPayloadV2 struct {
+	Delta float64 `json:"delta"`
 }
 
-// GestureMessage creates a gesture message
-func GestureMessage(gesture string, confidence float64) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type":       "gesture",
-		"gesture":    gesture,
-		"confidence": confidence,
-	})
-	return append(body, '\n')
+// DecodeScrollPayloadV2 decodes scroll payload with numeric limits.
+func DecodeScrollPayloadV2(raw json.RawMessage) (*ScrollPayloadV2, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	var p ScrollPayloadV2
+	if err := dec.Decode(&p); err != nil {
+		return nil, fmt.Errorf("invalid scroll payload: %w", err)
+	}
+	if math.IsNaN(p.Delta) || math.IsInf(p.Delta, 0) {
+		return nil, fmt.Errorf("scroll delta cannot be NaN or Inf")
+	}
+	if math.Abs(p.Delta) > MaxScrollLimit {
+		return nil, fmt.Errorf("scroll delta out of bounds (|delta| <= %.1f): %.2f", MaxScrollLimit, p.Delta)
+	}
+	return &p, nil
 }
 
-// ProximityMessage creates a proximity message
-func ProximityMessage(deviceID string, isNear bool, distance float32) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type":      "proximity",
-		"device_id": deviceID,
-		"is_near":   isNear,
-		"distance":  distance,
-	})
-	return append(body, '\n')
+// KeyPayloadV2 represents a keystroke payload.
+type KeyPayloadV2 struct {
+	Key       string   `json:"key"`
+	Modifiers []string `json:"modifiers,omitempty"`
 }
 
-// HelloMessage creates a hello message
-func HelloMessage(name, version string) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type":    "hello",
-		"name":    name,
-		"version": version,
-	})
-	return append(body, '\n')
+// DecodeKeyPayloadV2 decodes a key payload.
+func DecodeKeyPayloadV2(raw json.RawMessage) (*KeyPayloadV2, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	var p KeyPayloadV2
+	if err := dec.Decode(&p); err != nil {
+		return nil, fmt.Errorf("invalid key payload: %w", err)
+	}
+	if p.Key == "" {
+		return nil, fmt.Errorf("missing key field")
+	}
+	return &p, nil
 }
 
-// StatusMessage creates a status message
-func StatusMessage(running bool, clients int) []byte {
-	body, _ := json.Marshal(map[string]any{
-		"type":    "status",
-		"running": running,
-		"clients": clients,
-	})
-	return append(body, '\n')
+// HelloPayloadV2 represents a hello handshake payload with mandatory authentication token support.
+type HelloPayloadV2 struct {
+	DeviceID       string `json:"device_id,omitempty"`
+	Name           string `json:"name,omitempty"`
+	Version        string `json:"version,omitempty"`
+	Token          string `json:"token,omitempty"`
+	DeviceName     string `json:"device_name,omitempty"`
+	Model          string `json:"model,omitempty"`
+	Manufacturer   string `json:"manufacturer,omitempty"`
+	Brand          string `json:"brand,omitempty"`
+	AndroidVersion string `json:"android_version,omitempty"`
+	SDKInt         string `json:"sdk_int,omitempty"`
+	Protocol       string `json:"protocol,omitempty"`
+	Transport      string `json:"transport,omitempty"`
+}
+
+// DecodeHelloPayloadV2 decodes a hello payload with strict unknown field rejection.
+func DecodeHelloPayloadV2(raw json.RawMessage) (*HelloPayloadV2, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	var p HelloPayloadV2
+	if err := dec.Decode(&p); err != nil {
+		return nil, fmt.Errorf("invalid hello payload: %w", err)
+	}
+	return &p, nil
+}
+
+// WelcomePayloadV2 represents a welcome message payload.
+type WelcomePayloadV2 struct {
+	Server   string `json:"server"`
+	Version  string `json:"version"`
+	ClientID string `json:"client_id,omitempty"`
+	Approved bool   `json:"approved,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Approval string `json:"approval,omitempty"`
+}
+
+// AckPayloadV2 represents an acknowledgment payload.
+type AckPayloadV2 struct {
+	AckID  string `json:"ack_id"`
+	Status string `json:"status"`
+}
+
+// NackPayloadV2 represents a negative acknowledgment payload.
+type NackPayloadV2 struct {
+	NackID      string `json:"nack_id,omitempty"`
+	Error       string `json:"error"`
+	ExpectedSeq uint64 `json:"expected_seq,omitempty"`
+	MissingFrom uint64 `json:"missing_from,omitempty"`
+	MissingTo   uint64 `json:"missing_to,omitempty"`
+}
+
+// DiscoverPayloadV2 represents discovery broadcast payload.
+type DiscoverPayloadV2 struct {
+	ClientName string `json:"client_name,omitempty"`
+	Nonce      string `json:"nonce,omitempty"`
+}
+
+// OfferPayloadV2 represents discovery unicast offer payload.
+type OfferPayloadV2 struct {
+	ServerName      string `json:"server_name"`
+	InstanceID      string `json:"instance_id"`
+	TCPPort         int    `json:"tcp_port"`
+	WSPort          int    `json:"ws_port"`
+	TLS             bool   `json:"tls"`
+	CertFingerprint string `json:"cert_fingerprint,omitempty"`
+	EchoNonce       string `json:"echo_nonce,omitempty"`
 }
 
 // ------------------------------------------------------------
-// Decoding functions for specific message types
+// Legacy Types and Functions (Preserved with Bounds Checks)
 // ------------------------------------------------------------
 
 // MovePayload represents a movement message payload
@@ -247,7 +409,7 @@ type MovePayload struct {
 	DY float64 `json:"dy"`
 }
 
-// DecodeMovePayload decodes a movement payload
+// DecodeMovePayload decodes a movement payload and enforces bounds checks
 func DecodeMovePayload(payload map[string]any) (dx, dy float64, err error) {
 	dxVal, ok := payload["dx"]
 	if !ok {
@@ -265,6 +427,13 @@ func DecodeMovePayload(payload map[string]any) (dx, dy float64, err error) {
 	dy, ok = dyVal.(float64)
 	if !ok {
 		return 0, 0, fmt.Errorf("dy is not a number")
+	}
+
+	if math.IsNaN(dx) || math.IsInf(dx, 0) || math.IsNaN(dy) || math.IsInf(dy, 0) {
+		return 0, 0, fmt.Errorf("dx/dy cannot be NaN or Inf")
+	}
+	if math.Abs(dx) > MaxCoordinateLimit || math.Abs(dy) > MaxCoordinateLimit {
+		return 0, 0, fmt.Errorf("dx/dy out of bounds (|dx|, |dy| <= %.1f)", MaxCoordinateLimit)
 	}
 
 	return dx, dy, nil
@@ -293,29 +462,38 @@ type ScrollPayload struct {
 	Delta int `json:"delta"`
 }
 
-// DecodeScrollPayload decodes a scroll payload
+// DecodeScrollPayload decodes a scroll payload and enforces bounds
 func DecodeScrollPayload(payload map[string]any) (int, error) {
 	deltaVal, ok := payload["delta"]
 	if !ok {
 		return 0, fmt.Errorf("missing delta field")
 	}
-	// Handle different number formats
+	var delta int
 	switch v := deltaVal.(type) {
 	case float64:
-		return int(v), nil
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return 0, fmt.Errorf("delta cannot be NaN or Inf")
+		}
+		delta = int(v)
 	case int:
-		return v, nil
+		delta = v
 	case int64:
-		return int(v), nil
+		delta = int(v)
 	case json.Number:
 		i, err := v.Int64()
 		if err != nil {
 			return 0, fmt.Errorf("invalid delta: %w", err)
 		}
-		return int(i), nil
+		delta = int(i)
 	default:
 		return 0, fmt.Errorf("delta is not a number")
 	}
+
+	if math.Abs(float64(delta)) > MaxScrollLimit {
+		return 0, fmt.Errorf("delta out of bounds (|delta| <= %.1f): %d", MaxScrollLimit, delta)
+	}
+
+	return delta, nil
 }
 
 // HelloPayload represents a hello message payload
@@ -485,19 +663,28 @@ func IsValidType(msgType string) bool {
 		"move":             true,
 		"click":            true,
 		"doubleclick":      true,
+		"double_click":     true,
 		"rightclick":       true,
+		"right_click":      true,
+		"mouse_down":       true,
+		"mouse_up":         true,
 		"scroll":           true,
+		"key":              true,
 		"hello":            true,
+		"device_info":      true,
 		"gesture":          true,
 		"proximity":        true,
 		"control":          true,
 		"ping":             true,
 		"pong":             true,
 		"ack":              true,
+		"nack":             true,
 		"error":            true,
 		"welcome":          true,
 		"status":           true,
 		"file":             true,
+		"discover":         true,
+		"offer":            true,
 		"presentation":     true,
 		"orientation":      true,
 		"battery":          true,
@@ -509,4 +696,206 @@ func IsValidType(msgType string) bool {
 		"config":           true,
 	}
 	return validTypes[msgType]
+}
+
+// ------------------------------------------------------------
+// Message encoding helpers
+// ------------------------------------------------------------
+
+// AckMessage returns an ACK message for a given ID
+func AckMessage(id *string) []byte {
+	if id == nil || *id == "" {
+		return nil
+	}
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "ack",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"ack_id": *id,
+			"status": "ok",
+		},
+	})
+	return append(body, '\n')
+}
+
+func ackMessage(id *string) []byte {
+	return AckMessage(id)
+}
+
+// ErrorMessage returns an error message
+func ErrorMessage(errMsg string) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "error",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"message": errMsg,
+		},
+	})
+	return append(body, '\n')
+}
+
+func errorMessage(errMsg string) []byte {
+	return ErrorMessage(errMsg)
+}
+
+// WelcomeMessage returns a welcome message
+func WelcomeMessage(serverName, version string) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "welcome",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"server":   serverName,
+			"version":  version,
+			"approved": true,
+		},
+	})
+	return append(body, '\n')
+}
+
+func welcomeMessage(serverName, version string) []byte {
+	return WelcomeMessage(serverName, version)
+}
+
+// PongMessage returns a pong message
+func PongMessage() []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":       ProtocolVersion,
+		"type":    "pong",
+		"ts":      time.Now().UnixMilli(),
+		"payload": map[string]any{},
+	})
+	return append(body, '\n')
+}
+
+// PingMessage returns a ping message
+func PingMessage() []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":       ProtocolVersion,
+		"type":    "ping",
+		"ts":      time.Now().UnixMilli(),
+		"payload": map[string]any{},
+	})
+	return append(body, '\n')
+}
+
+// MoveMessage creates a movement message
+func MoveMessage(dx, dy float64) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "move",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"dx": dx,
+			"dy": dy,
+		},
+	})
+	return append(body, '\n')
+}
+
+// ClickMessage creates a click message
+func ClickMessage(button string) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "click",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"button": button,
+		},
+	})
+	return append(body, '\n')
+}
+
+// DoubleClickMessage creates a double click message
+func DoubleClickMessage() []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":       ProtocolVersion,
+		"type":    "doubleclick",
+		"ts":      time.Now().UnixMilli(),
+		"payload": map[string]any{},
+	})
+	return append(body, '\n')
+}
+
+// RightClickMessage creates a right click message
+func RightClickMessage() []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":       ProtocolVersion,
+		"type":    "rightclick",
+		"ts":      time.Now().UnixMilli(),
+		"payload": map[string]any{},
+	})
+	return append(body, '\n')
+}
+
+// ScrollMessage creates a scroll message
+func ScrollMessage(delta int) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "scroll",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"delta": delta,
+		},
+	})
+	return append(body, '\n')
+}
+
+// GestureMessage creates a gesture message
+func GestureMessage(gesture string, confidence float64) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "gesture",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"gesture":    gesture,
+			"confidence": confidence,
+		},
+	})
+	return append(body, '\n')
+}
+
+// ProximityMessage creates a proximity message
+func ProximityMessage(deviceID string, isNear bool, distance float32) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "proximity",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"device_id": deviceID,
+			"is_near":   isNear,
+			"distance":  distance,
+		},
+	})
+	return append(body, '\n')
+}
+
+// HelloMessage creates a hello message
+func HelloMessage(name, version string) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "hello",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"name":    name,
+			"version": version,
+		},
+	})
+	return append(body, '\n')
+}
+
+// StatusMessage creates a status message
+func StatusMessage(running bool, clients int) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "status",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"running": running,
+			"clients": clients,
+		},
+	})
+	return append(body, '\n')
 }

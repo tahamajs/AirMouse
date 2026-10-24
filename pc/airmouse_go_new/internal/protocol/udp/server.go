@@ -20,16 +20,18 @@ import (
 )
 
 type Server struct {
-	port      int
-	conn      *net.UDPConn
-	deviceMgr *device.Manager
-	mouse     mouse.Controller
-	authMgr   *auth.Manager
-	running   bool
-	mu        sync.RWMutex
-	clients   map[string]*UDPClient
-	callbacks []func(event UDPEvent)
+	port          int
+	conn          *net.UDPConn
+	deviceMgr     *device.Manager
+	mouse         mouse.Controller
+	authMgr       *auth.Manager
+	running       bool
+	mu            sync.RWMutex
+	clients       map[string]*UDPClient
+	callbacks     []func(event UDPEvent)
 	OnScreenFrame func(data []byte)
+	seenNonces    map[string]time.Time
+	nonceMu       sync.Mutex
 }
 
 type UDPClient struct {
@@ -51,12 +53,13 @@ type UDPEvent struct {
 
 func NewServer(port int, mouseCtrl mouse.Controller, deviceMgr *device.Manager, authMgr *auth.Manager) *Server {
 	return &Server{
-		port:      port,
-		mouse:     mouseCtrl,
-		deviceMgr: deviceMgr,
-		authMgr:   authMgr,
-		clients:   make(map[string]*UDPClient),
-		callbacks: make([]func(UDPEvent), 0),
+		port:       port,
+		mouse:      mouseCtrl,
+		deviceMgr:  deviceMgr,
+		authMgr:    authMgr,
+		clients:    make(map[string]*UDPClient),
+		callbacks:  make([]func(UDPEvent), 0),
+		seenNonces: make(map[string]time.Time),
 	}
 }
 
@@ -129,9 +132,50 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 		_ = s.deviceMgr.UpdateDeviceActivity(devID, 0, int64(len(msg)))
 	}
 
-	if msg == "AIRMOUSE_DISCOVER" || msg == "AIRMOUSE_DISCOVERY" {
-		s.sendDiscoveryResponse(clientAddr)
-		utils.LogDebug("UDP discovery request from %s", clientIP)
+	var isDiscovery bool
+	var nonce string
+	var isJSONDiscovery bool
+
+	trimmedMsg := strings.TrimSpace(msg)
+	if trimmedMsg == "AIRMOUSE_DISCOVER" || trimmedMsg == "AIRMOUSE_DISCOVERY" {
+		isDiscovery = true
+	} else if strings.HasPrefix(trimmedMsg, "AIRMOUSE_DISCOVER:") {
+		isDiscovery = true
+		parts := strings.SplitN(trimmedMsg, ":", 2)
+		if len(parts) == 2 {
+			nonce = strings.TrimSpace(parts[1])
+		}
+	} else if strings.HasPrefix(trimmedMsg, "AIRMOUSE_DISCOVERY:") {
+		isDiscovery = true
+		parts := strings.SplitN(trimmedMsg, ":", 2)
+		if len(parts) == 2 {
+			nonce = strings.TrimSpace(parts[1])
+		}
+	} else if strings.HasPrefix(trimmedMsg, "{") {
+		var discReq struct {
+			Type  string `json:"type"`
+			Nonce string `json:"nonce"`
+		}
+		if err := json.Unmarshal([]byte(trimmedMsg), &discReq); err == nil {
+			if discReq.Type == "discover" || discReq.Type == "discovery" {
+				isDiscovery = true
+				nonce = discReq.Nonce
+				isJSONDiscovery = true
+			}
+		}
+	}
+
+	if isDiscovery {
+		isDup := s.isDuplicateNonce(clientIP, nonce)
+		if isDup {
+			utils.LogDebug("UDP discovery deduplicated for nonce %q from %s", nonce, clientIP)
+			// Resend cached response without re-triggering discovery event
+			s.sendDiscoveryResponseWithNonce(clientAddr, nonce, isJSONDiscovery)
+			return
+		}
+		utils.LogDebug("UDP discovery request from %s (nonce: %s)", clientIP, nonce)
+		s.sendDiscoveryResponseWithNonce(clientAddr, nonce, isJSONDiscovery)
+		s.triggerEvent(UDPEvent{Type: "discovery", ClientIP: clientIP, Timestamp: time.Now()})
 		return
 	}
 
@@ -346,14 +390,151 @@ func (s *Server) handleMessage(msg string, clientAddr *net.UDPAddr) {
 	}
 }
 
+func (s *Server) isDuplicateNonce(clientIP, nonce string) bool {
+	if nonce == "" {
+		return false
+	}
+	s.nonceMu.Lock()
+	defer s.nonceMu.Unlock()
+
+	now := time.Now()
+	// Evict entries older than 10 seconds
+	for k, t := range s.seenNonces {
+		if now.Sub(t) > 10*time.Second {
+			delete(s.seenNonces, k)
+		}
+	}
+
+	key := clientIP + ":" + nonce
+	if lastSeen, found := s.seenNonces[key]; found {
+		if now.Sub(lastSeen) < 5*time.Second {
+			return true
+		}
+	}
+	s.seenNonces[key] = now
+	return false
+}
+
 func (s *Server) sendDiscoveryResponse(clientAddr *net.UDPAddr) {
+	s.sendDiscoveryResponseWithNonce(clientAddr, "", false)
+}
+
+func (s *Server) sendDiscoveryResponseWithNonce(clientAddr *net.UDPAddr, nonce string, jsonFormat bool) {
 	cfg := config.Get()
-	response := fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s", cfg.UDPPort, cfg.ServerName, cfg.Version)
-	_, err := s.conn.WriteToUDP([]byte(response), clientAddr)
+	var responseBytes []byte
+
+	if jsonFormat {
+		respMap := map[string]any{
+			"type":    "discovery_response",
+			"ip":      getLocalIP(),
+			"port":    cfg.UDPPort,
+			"name":    cfg.ServerName,
+			"version": cfg.Version,
+		}
+		if nonce != "" {
+			respMap["nonce"] = nonce
+		}
+		responseBytes, _ = json.Marshal(respMap)
+	} else {
+		var response string
+		if nonce != "" {
+			response = fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s:%s", cfg.UDPPort, cfg.ServerName, cfg.Version, nonce)
+		} else {
+			response = fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s", cfg.UDPPort, cfg.ServerName, cfg.Version)
+		}
+		responseBytes = []byte(response)
+	}
+
+	s.mu.RLock()
+	conn := s.conn
+	running := s.running
+	s.mu.RUnlock()
+	if !running || conn == nil {
+		return
+	}
+	_, err := conn.WriteToUDP(responseBytes, clientAddr)
 	if err != nil {
 		utils.LogDebug("Failed to send discovery response: %v", err)
 	}
-	utils.LogInfo("UDP discovery response sent to %s on port %d", clientAddr.IP.String(), cfg.UDPPort)
+	utils.LogInfo("UDP discovery response sent to %s on port %d (nonce: %s)",
+		clientAddr.IP.String(), cfg.UDPPort, nonce)
+}
+
+func (s *Server) sendDiscoveryResponseWithRetry(clientAddr *net.UDPAddr, nonce string, jsonFormat bool, retries int) {
+	if retries <= 1 {
+		s.sendDiscoveryResponseWithNonce(clientAddr, nonce, jsonFormat)
+		return
+	}
+	for i := 0; i < retries; i++ {
+		s.sendDiscoveryResponseWithNonce(clientAddr, nonce, jsonFormat)
+		if i < retries-1 {
+			time.Sleep(15 * time.Millisecond)
+		}
+	}
+}
+
+// BroadcastDiscovery broadcasts discovery presence with 3 retries across network interfaces.
+func (s *Server) BroadcastDiscovery() error {
+	return s.BroadcastDiscoveryWithRetries(3)
+}
+
+// BroadcastDiscoveryWithRetries broadcasts discovery presence with configurable retry count.
+func (s *Server) BroadcastDiscoveryWithRetries(retries int) error {
+	if retries <= 0 {
+		retries = 3
+	}
+	cfg := config.Get()
+	nonce := fmt.Sprintf("%x", time.Now().UnixNano())
+	payload := fmt.Sprintf("AIRMOUSE_SERVER:%d:%s:%s:%s", cfg.UDPPort, cfg.ServerName, cfg.Version, nonce)
+	data := []byte(payload)
+
+	var bcastAddrs []*net.UDPAddr
+	bcastAddrs = append(bcastAddrs, &net.UDPAddr{IP: net.IPv4bcast, Port: s.port})
+
+	if ifaces, err := net.Interfaces(); err == nil {
+		for _, iface := range ifaces {
+			if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+				continue
+			}
+			addrs, err := iface.Addrs()
+			if err != nil {
+				continue
+			}
+			for _, addr := range addrs {
+				if ipnet, ok := addr.(*net.IPNet); ok && ipnet.IP.To4() != nil {
+					ip := ipnet.IP.To4()
+					mask := ipnet.Mask
+					if len(mask) == 4 {
+						bcast := net.IPv4(
+							ip[0]|^mask[0],
+							ip[1]|^mask[1],
+							ip[2]|^mask[2],
+							ip[3]|^mask[3],
+						)
+						bcastAddrs = append(bcastAddrs, &net.UDPAddr{IP: bcast, Port: s.port})
+					}
+				}
+			}
+		}
+	}
+
+	for r := 0; r < retries; r++ {
+		s.mu.RLock()
+		conn := s.conn
+		running := s.running
+		s.mu.RUnlock()
+		if !running || conn == nil {
+			break
+		}
+		for _, bcast := range bcastAddrs {
+			_, _ = conn.WriteToUDP(data, bcast)
+		}
+		if r < retries-1 {
+			time.Sleep(25 * time.Millisecond)
+		}
+	}
+	utils.LogInfo("UDP discovery broadcast completed (%d retries, nonce: %s)", retries, nonce)
+	return nil
 }
 
 func (s *Server) handleHello(clientKey string, clientAddr *net.UDPAddr, client *UDPClient, payload map[string]any) {

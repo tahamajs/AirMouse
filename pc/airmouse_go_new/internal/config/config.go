@@ -91,6 +91,11 @@ type Config struct {
 	EnableParticleFilter       bool `json:"enable_particle_filter"`
 	ParticleFilterNumParticles int  `json:"particle_filter_num_particles"`
 
+	// TLS settings
+	TLSEnabled  bool   `json:"tls_enabled"`
+	TLSCertPath string `json:"tls_cert_path"`
+	TLSKeyPath  string `json:"tls_key_path"`
+
 	// Authentication
 	AuthEnabled     bool     `json:"auth_enabled"`
 	AuthSecret      string   `json:"auth_secret"`
@@ -256,8 +261,12 @@ func loadOrDefault() *Config {
 		EnableParticleFilter:       false,
 		ParticleFilterNumParticles: 500,
 
-		AuthEnabled:     false,
-		AuthSecret:      "",
+		TLSEnabled:  true,
+		TLSCertPath: "certs/server.crt",
+		TLSKeyPath:  "certs/server.key",
+
+		AuthEnabled:     true,
+		AuthSecret:      "airmouse-default-hmac-sha256-secret-32b",
 		AuthToken:       "",
 		AuthTokens:      []string{},
 		EncryptionKey:   "",
@@ -314,6 +323,22 @@ func loadOrDefault() *Config {
 			fmt.Printf("Warning: Failed to parse config: %v\n", err)
 		}
 	}
+
+	// Enforce mandatory security controls
+	cfg.AuthEnabled = true
+	if cfg.AuthSecret == "" {
+		cfg.AuthSecret = "airmouse-default-hmac-sha256-secret-32b"
+	}
+	if !cfg.TLSEnabled {
+		cfg.TLSEnabled = true
+	}
+	if cfg.TLSCertPath == "" {
+		cfg.TLSCertPath = "certs/server.crt"
+	}
+	if cfg.TLSKeyPath == "" {
+		cfg.TLSKeyPath = "certs/server.key"
+	}
+
 	return cfg
 }
 

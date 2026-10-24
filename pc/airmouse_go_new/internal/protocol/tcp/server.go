@@ -2,8 +2,10 @@ package tcp
 
 import (
 	"bufio"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net"
 	"strings"
 	"sync"
@@ -17,27 +19,72 @@ import (
 	"airmouse-go/internal/device"
 	websocketpkg "airmouse-go/internal/protocol/websocket"
 	"airmouse-go/internal/sysaction"
+	"airmouse-go/internal/tlsutil"
 	"airmouse-go/internal/utils"
 )
 
+const (
+	maxCoordLimit  = 500.0
+	maxScrollLimit = 10.0
+	replayWindowMs = 5000
+)
+
+type replayDetector struct {
+	mu          sync.Mutex
+	lastSeq     uint64
+	initialized bool
+}
+
+func newReplayDetector() *replayDetector {
+	return &replayDetector{}
+}
+
+func (rd *replayDetector) checkAndAdvanceSeq(seq uint64) error {
+	rd.mu.Lock()
+	defer rd.mu.Unlock()
+	if !rd.initialized {
+		rd.lastSeq = seq
+		rd.initialized = true
+		return nil
+	}
+	if seq <= rd.lastSeq {
+		return fmt.Errorf("replay_detected: seq %d <= last_seq %d", seq, rd.lastSeq)
+	}
+	rd.lastSeq = seq
+	return nil
+}
+
+func validateTimestamp(ts, nowMs int64) error {
+	diff := nowMs - ts
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > replayWindowMs {
+		return fmt.Errorf("replay_rejected: delta %d ms > %d ms", diff, replayWindowMs)
+	}
+	return nil
+}
+
 type Client struct {
-	ID          string
-	DeviceID    string
-	Name        string
-	Conn        net.Conn
-	ConnectedAt time.Time
-	LastActive  time.Time
-	BytesSent   int64
-	BytesRecv   int64
-	IP          string
-	Approved    bool
-	mu          sync.RWMutex
+	ID             string
+	DeviceID       string
+	Name           string
+	Conn           net.Conn
+	ConnectedAt    time.Time
+	LastActive     time.Time
+	BytesSent      int64
+	BytesRecv      int64
+	IP             string
+	Approved       bool
+	ReplayDetector *replayDetector
+	mu             sync.RWMutex
 }
 
 type Server struct {
 	host      string
 	port      int
 	listener  net.Listener
+	tlsConfig *tls.Config
 	clients   map[string]*Client
 	mouse     mouse.Controller
 	deviceMgr *device.Manager
@@ -66,18 +113,49 @@ func NewServer(host string, port int, mouseCtrl mouse.Controller, deviceMgr *dev
 	}
 }
 
+// SetTLSConfig explicitly sets or overrides the TLS configuration for the server.
+func (s *Server) SetTLSConfig(tlsConfig *tls.Config) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.tlsConfig = tlsConfig
+}
+
 func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %w", addr, err)
+	cfg := config.Get()
+
+	var listener net.Listener
+	var err error
+
+	useTLS := (s.tlsConfig != nil) || (cfg != nil && cfg.TLSEnabled)
+	if useTLS {
+		tlsCfg := s.tlsConfig
+		if tlsCfg == nil {
+			var tlsErr error
+			tlsCfg, tlsErr = tlsutil.GetServerTLSConfig(cfg.TLSCertPath, cfg.TLSKeyPath, []string{s.host, "localhost", "127.0.0.1"})
+			if tlsErr != nil {
+				return fmt.Errorf("failed to init TLS for TCP server: %w", tlsErr)
+			}
+			s.tlsConfig = tlsCfg
+		}
+		listener, err = tls.Listen("tcp", addr, tlsCfg)
+		if err != nil {
+			return fmt.Errorf("failed to listen on %s with TLS: %w", addr, err)
+		}
+		utils.LogInfo("TCP server started with TLS: address=%s", addr)
+	} else {
+		listener, err = net.Listen("tcp", addr)
+		if err != nil {
+			return fmt.Errorf("failed to listen on %s: %w", addr, err)
+		}
+		utils.LogInfo("TCP server started (cleartext): address=%s", addr)
 	}
+
 	s.mu.Lock()
 	s.listener = listener
 	s.running = true
 	s.mu.Unlock()
 	go s.acceptLoop()
-	utils.LogInfo("TCP server started: address=%s", addr)
 	utils.LogDebug("TCP listen socket ready on %s", addr)
 	return nil
 }
@@ -105,6 +183,17 @@ func (s *Server) acceptLoop() {
 }
 
 func (s *Server) handleClient(conn net.Conn) {
+	// If TLS connection, enforce handshake and reject cleartext
+	if tlsConn, ok := conn.(*tls.Conn); ok {
+		_ = tlsConn.SetDeadline(time.Now().Add(5 * time.Second))
+		if err := tlsConn.Handshake(); err != nil {
+			utils.LogInfo("TCP handshake rejected (cleartext or invalid TLS): %v", err)
+			_ = conn.Close()
+			return
+		}
+		_ = tlsConn.SetDeadline(time.Time{})
+	}
+
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		_ = tcpConn.SetNoDelay(true)
 		_ = tcpConn.SetKeepAlive(true)
@@ -113,13 +202,14 @@ func (s *Server) handleClient(conn net.Conn) {
 	clientID := utils.GenerateID()
 	clientIP := conn.RemoteAddr().String()
 	client := &Client{
-		ID:          clientID,
-		Name:        "Unknown",
-		Conn:        conn,
-		ConnectedAt: time.Now(),
-		LastActive:  time.Now(),
-		IP:          clientIP,
-		Approved:    false,
+		ID:             clientID,
+		Name:           "Unknown",
+		Conn:           conn,
+		ConnectedAt:    time.Now(),
+		LastActive:     time.Now(),
+		IP:             clientIP,
+		Approved:       false,
+		ReplayDetector: newReplayDetector(),
 	}
 	s.mu.Lock()
 	s.clients[clientID] = client
@@ -262,10 +352,38 @@ func (s *Server) processLine(client *Client, line []byte) {
 		return
 	}
 
+	// Replay and timestamp checks if seq/ts are present
+	if client.ReplayDetector != nil {
+		nowMs := time.Now().UnixMilli()
+		if tsVal, ok := payload["ts"]; ok {
+			ts := int64(number(tsVal))
+			if ts > 0 {
+				if err := validateTimestamp(ts, nowMs); err != nil {
+					utils.LogInfo("TCP replay rejection (timestamp): client=%s err=%v", client.ID, err)
+					return
+				}
+			}
+		}
+		if seqVal, ok := payload["seq"]; ok {
+			seq := uint64(number(seqVal))
+			if seq > 0 {
+				if err := client.ReplayDetector.checkAndAdvanceSeq(seq); err != nil {
+					utils.LogInfo("TCP replay rejection (sequence): client=%s err=%v", client.ID, err)
+					return
+				}
+			}
+		}
+	}
+
 	switch msgType {
 	case "move":
 		dx := firstNumber(payload, "dx", "DeltaX", "deltaX")
 		dy := firstNumber(payload, "dy", "DeltaY", "deltaY")
+		if math.IsNaN(dx) || math.IsInf(dx, 0) || math.IsNaN(dy) || math.IsInf(dy, 0) ||
+			math.Abs(dx) > maxCoordLimit || math.Abs(dy) > maxCoordLimit {
+			utils.LogInfo("TCP move dropped (out of bounds or NaN/Inf): dx=%.2f dy=%.2f", dx, dy)
+			return
+		}
 		utils.LogInfo("TCP move: client=%s dx=%.2f dy=%.2f", client.ID, dx, dy)
 		if s.mouse != nil {
 			s.mouse.Move(dx, dy)
@@ -319,6 +437,10 @@ func (s *Server) processLine(client *Client, line []byte) {
 
 	case "scroll":
 		delta := firstInt(payload, "delta", "Scroll", "scroll", "amount", "dy")
+		if math.Abs(float64(delta)) > maxScrollLimit {
+			utils.LogInfo("TCP scroll dropped (|delta| <= %.1f): delta=%d", maxScrollLimit, delta)
+			return
+		}
 		if s.mouse != nil {
 			s.mouse.Scroll(delta)
 		}

@@ -1,12 +1,17 @@
 package websocket
 
 import (
+	"bytes"
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash"
+	"image"
+	"image/jpeg"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -18,15 +23,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"bytes"
-	"image"
-	"image/jpeg"
 
 	gorilla "github.com/gorilla/websocket"
 	"github.com/kbinani/screenshot"
 	"github.com/nfnt/resize"
 
-	"airmouse-go/web"
 	"airmouse-go/control/common"
 	"airmouse-go/control/mouse"
 	"airmouse-go/control/syscmd"
@@ -35,8 +36,52 @@ import (
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/sysaction"
+	"airmouse-go/internal/tlsutil"
 	"airmouse-go/internal/utils"
+	"airmouse-go/web"
 )
+
+const (
+	maxCoordLimit  = 500.0
+	maxScrollLimit = 10.0
+	replayWindowMs = 5000
+)
+
+type replayDetector struct {
+	mu          sync.Mutex
+	lastSeq     uint64
+	initialized bool
+}
+
+func newReplayDetector() *replayDetector {
+	return &replayDetector{}
+}
+
+func (rd *replayDetector) checkAndAdvanceSeq(seq uint64) error {
+	rd.mu.Lock()
+	defer rd.mu.Unlock()
+	if !rd.initialized {
+		rd.lastSeq = seq
+		rd.initialized = true
+		return nil
+	}
+	if seq <= rd.lastSeq {
+		return fmt.Errorf("replay_detected: seq %d <= last_seq %d", seq, rd.lastSeq)
+	}
+	rd.lastSeq = seq
+	return nil
+}
+
+func validateTimestamp(ts, nowMs int64) error {
+	diff := nowMs - ts
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > replayWindowMs {
+		return fmt.Errorf("replay_rejected: delta %d ms > %d ms", diff, replayWindowMs)
+	}
+	return nil
+}
 
 var upgrader = gorilla.Upgrader{
 	CheckOrigin:       func(r *http.Request) bool { return true },
@@ -50,21 +95,32 @@ var upgrader = gorilla.Upgrader{
 // ------------------------------------------------------------
 
 type WSClient struct {
-	ID          string
-	DeviceID    string
-	Name        string
-	Conn        *gorilla.Conn
-	Send        chan []byte
-	BinarySend  chan []byte
-	ConnectedAt time.Time
-	LastActive  time.Time
-	BytesSent   int64
-	BytesRecv   int64
-	UserAgent   string
-	IP          string
-	Approved    atomic.Bool
-	Mode        string
-	Theme       string
+	ID             string
+	DeviceID       string
+	Name           string
+	Conn           *gorilla.Conn
+	Send           chan []byte
+	BinarySend     chan []byte
+	ConnectedAt    time.Time
+	LastActive     time.Time
+	BytesSent      int64
+	BytesRecv      int64
+	UserAgent      string
+	IP             string
+	Approved       atomic.Bool
+	Authenticated  atomic.Bool
+	ReplayDetector *replayDetector
+	Mode           string
+	Theme          string
+	closeOnce      sync.Once
+}
+
+func (c *WSClient) Close() {
+	c.closeOnce.Do(func() {
+		_ = c.Conn.Close()
+		close(c.Send)
+		close(c.BinarySend)
+	})
 }
 
 // ------------------------------------------------------------
@@ -74,6 +130,7 @@ type WSClient struct {
 type Server struct {
 	port         int
 	listener     net.Listener
+	tlsConfig    *tls.Config
 	clients      map[string]*WSClient
 	mouse        mouse.Controller
 	deviceMgr    *device.Manager
@@ -90,6 +147,13 @@ type Server struct {
 	
 	GlobalApproveDevice func(deviceID string) error
 	GlobalRejectDevice  func(deviceID string) error
+}
+
+// SetTLSConfig sets or overrides the TLS configuration for the WebSocket server.
+func (s *Server) SetTLSConfig(tlsConfig *tls.Config) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.tlsConfig = tlsConfig
 }
 
 type fileSession struct {
@@ -121,11 +185,31 @@ func NewServer(port int, mouseCtrl mouse.Controller, deviceMgr *device.Manager, 
 
 // Start starts the WebSocket server.
 func (s *Server) Start() error {
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", s.port))
+	cfg := config.Get()
+	addr := fmt.Sprintf("0.0.0.0:%d", s.port)
+	rawListener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to bind WebSocket port %d: %w", s.port, err)
 	}
-	s.listener = listener
+
+	useTLS := (s.tlsConfig != nil) || (cfg != nil && cfg.TLSEnabled)
+	if useTLS {
+		tlsCfg := s.tlsConfig
+		if tlsCfg == nil {
+			var tlsErr error
+			tlsCfg, tlsErr = tlsutil.GetServerTLSConfig(cfg.TLSCertPath, cfg.TLSKeyPath, []string{"localhost", "127.0.0.1"})
+			if tlsErr != nil {
+				_ = rawListener.Close()
+				return fmt.Errorf("failed to load TLS config for WebSocket: %w", tlsErr)
+			}
+			s.tlsConfig = tlsCfg
+		}
+		s.listener = tls.NewListener(rawListener, tlsCfg)
+		utils.LogInfo("WebSocket server started with TLS (WSS) on port %d", s.port)
+	} else {
+		s.listener = rawListener
+		utils.LogInfo("WebSocket server started (cleartext WS) on port %d", s.port)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", s.handleWebSocket)
@@ -213,9 +297,7 @@ func (s *Server) Stop() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, c := range s.clients {
-		close(c.Send)
-		close(c.BinarySend)
-		_ = c.Conn.Close()
+		c.Close()
 	}
 	s.clients = make(map[string]*WSClient)
 
@@ -227,12 +309,18 @@ func (s *Server) Stop() error {
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
 
+	// Authenticate if token provided via query parameter
+	authenticatedFromQuery := false
 	if cfg.AuthEnabled {
 		token := r.URL.Query().Get("token")
-		if token == "" || s.authMgr == nil || !s.authMgr.ValidateToken(token) {
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
-			return
+		if token != "" {
+			if s.authMgr != nil && s.authMgr.ValidateToken(token) {
+				authenticatedFromQuery = true
+			} else {
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
+				return
+			}
 		}
 	}
 
@@ -247,17 +335,19 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	id := utils.GenerateID()
 	client := &WSClient{
-		ID:          id,
-		Name:        "Unknown",
-		Conn:        conn,
-		Send:        make(chan []byte, 256),
-		BinarySend:  make(chan []byte, 128),
-		ConnectedAt: time.Now(),
-		LastActive:  time.Now(),
-		UserAgent:   r.UserAgent(),
-		IP:          r.RemoteAddr,
+		ID:             id,
+		Name:           "Unknown",
+		Conn:           conn,
+		Send:           make(chan []byte, 256),
+		BinarySend:     make(chan []byte, 128),
+		ConnectedAt:    time.Now(),
+		LastActive:     time.Now(),
+		UserAgent:      r.UserAgent(),
+		IP:             r.RemoteAddr,
+		ReplayDetector: newReplayDetector(),
 	}
 	client.Approved.Store(false)
+	client.Authenticated.Store(authenticatedFromQuery)
 
 	s.mu.Lock()
 	s.clients[id] = client
@@ -296,9 +386,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 // readLoop reads messages from the client.
 func (s *Server) readLoop(client *WSClient) {
 	defer func() {
-		_ = client.Conn.Close()
-		close(client.Send)
-		close(client.BinarySend)
+		client.Close()
 
 		s.mu.Lock()
 		delete(s.clients, client.ID)
@@ -436,10 +524,41 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 	}
 
+	// If auth is enabled, unauthenticated clients must authenticate via hello before sending actions
+	if cfg := config.Get(); cfg.AuthEnabled {
+		if !client.Authenticated.Load() && msgType != "hello" && msgType != "device_info" && msgType != "ping" {
+			utils.LogDebug("Ignoring WebSocket %s while unauthenticated: device=%s", msgType, client.ID)
+			return
+		}
+	}
+
 	approved := client.Approved.Load()
 	if !approved && msgType != "hello" && msgType != "device_info" && msgType != "ping" {
 		utils.LogDebug("Ignoring WebSocket %s while waiting for approval: device=%s", msgType, client.ID)
 		return
+	}
+
+	// Replay and timestamp checks if seq/ts are present
+	if client.ReplayDetector != nil {
+		nowMs := time.Now().UnixMilli()
+		if tsVal, ok := payload["ts"]; ok {
+			ts := int64(toFloat64(tsVal))
+			if ts > 0 {
+				if err := validateTimestamp(ts, nowMs); err != nil {
+					utils.LogInfo("WebSocket replay rejection (timestamp): client=%s err=%v", client.ID, err)
+					return
+				}
+			}
+		}
+		if seqVal, ok := payload["seq"]; ok {
+			seq := uint64(toFloat64(seqVal))
+			if seq > 0 {
+				if err := client.ReplayDetector.checkAndAdvanceSeq(seq); err != nil {
+					utils.LogInfo("WebSocket replay rejection (sequence): client=%s err=%v", client.ID, err)
+					return
+				}
+			}
+		}
 	}
 
 	switch msgType {
@@ -449,6 +568,11 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	case "move":
 		dx := firstFloat64(payload, "dx", "DeltaX", "deltaX")
 		dy := firstFloat64(payload, "dy", "DeltaY", "deltaY")
+		if math.IsNaN(dx) || math.IsInf(dx, 0) || math.IsNaN(dy) || math.IsInf(dy, 0) ||
+			math.Abs(dx) > maxCoordLimit || math.Abs(dy) > maxCoordLimit {
+			utils.LogInfo("WebSocket move dropped (out of bounds or NaN/Inf): dx=%.2f dy=%.2f", dx, dy)
+			return
+		}
 		if s.mouse != nil {
 			s.mouse.Move(dx, dy)
 		}
@@ -503,12 +627,34 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 
 	case "scroll":
 		delta := firstInt(payload, "delta", "Scroll", "scroll", "amount", "dy")
+		if math.Abs(float64(delta)) > maxScrollLimit {
+			utils.LogInfo("WebSocket scroll dropped (|delta| <= %.1f): delta=%d", maxScrollLimit, delta)
+			return
+		}
 		if s.mouse != nil {
 			s.mouse.Scroll(delta)
 		}
 		utils.LogDebug("Scroll received: device=%s, delta=%d", client.ID, delta)
 
 	case "hello", "device_info":
+		token, _ := payload["token"].(string)
+		if config.Get().AuthEnabled {
+			authenticated := client.Authenticated.Load()
+			if !authenticated {
+				if token != "" && s.authMgr != nil && s.authMgr.ValidateToken(token) {
+					client.Authenticated.Store(true)
+					authenticated = true
+				}
+			}
+			if !authenticated {
+				errMsg := `{"type":"error","payload":{"message":"connection rejected: invalid pairing token"}}` + "\n"
+				_ = client.Conn.WriteMessage(gorilla.TextMessage, []byte(errMsg))
+				_ = client.Conn.Close()
+				utils.LogInfo("WebSocket client rejected: id=%s reason=invalid token", client.ID)
+				return
+			}
+		}
+
 		name, _ := payload["name"].(string)
 		version, _ := payload["version"].(string)
 		deviceName, _ := payload["device_name"].(string)

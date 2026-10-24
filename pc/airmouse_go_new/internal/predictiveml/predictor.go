@@ -1,3 +1,5 @@
+//go:build onnx
+
 // Package predictiveml provides machine‑learning prediction for cursor movement.
 // It uses an ONNX runtime model to predict future cursor deltas.
 package predictiveml

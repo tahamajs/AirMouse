@@ -1,13 +1,13 @@
 # Air Mouse Pro Server Makefile
 
-.PHONY: build build-windows build-linux build-mac build-mac-arm build-all clean run run-debug test test-coverage bench deps lint fmt dist install uninstall docker-build docker-run docs help dmg-mac
+.PHONY: build build-gui build-full build-windows build-linux build-mac build-mac-arm build-all clean run run-debug test test-coverage bench deps lint fmt dist install uninstall docker-build docker-run docs help dmg-mac
 
 # Variables
 BINARY_NAME=airmouse-server
 VERSION=3.0.0
 BUILD_TIME=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME) -X main.gitCommit=$(GIT_COMMIT)"
+LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME) -X main.gitCommit=$(GIT_COMMIT)"
 
 # Go environment
 GOPROXY?=https://proxy.golang.org,direct
@@ -40,11 +40,23 @@ deps: setup
 	go mod tidy
 	@echo "$(GREEN)Dependencies installed$(NC)"
 
-# Build for current platform
+# Build headless zero-CGO server (<15MB default)
 build: setup
-	@echo "$(BLUE)Building for current platform...$(NC)"
-	CGO_ENABLED=1 go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/airmouse-server
-	@echo "$(GREEN)Build complete: $(BINARY_NAME)$(NC)"
+	@echo "$(BLUE)Building headless zero-CGO server (<15MB)...$(NC)"
+	CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $(BINARY_NAME) ./cmd/airmouse-server
+	@echo "$(GREEN)Build complete: $(BINARY_NAME) ($$(ls -lh $(BINARY_NAME) | awk '{print $$5}'))$(NC)"
+
+# Build with GUI (Fyne enabled)
+build-gui: setup
+	@echo "$(BLUE)Building server with Fyne GUI...$(NC)"
+	CGO_ENABLED=1 go build -tags gui $(LDFLAGS) -o $(BINARY_NAME)-gui ./cmd/airmouse-server
+	@echo "$(GREEN)Build complete: $(BINARY_NAME)-gui$(NC)"
+
+# Build full server with GUI and ONNX runtime
+build-full: setup
+	@echo "$(BLUE)Building full server with GUI and ONNX runtime...$(NC)"
+	CGO_ENABLED=1 go build -tags "gui onnx" $(LDFLAGS) -o $(BINARY_NAME)-full ./cmd/airmouse-server
+	@echo "$(GREEN)Build complete: $(BINARY_NAME)-full$(NC)"
 
 # Build without AI (safer for first build)
 build-noai: setup

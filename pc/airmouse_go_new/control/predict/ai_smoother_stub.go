@@ -1,4 +1,4 @@
-//go:build !ai
+//go:build !onnx
 
 package predict
 

@@ -69,6 +69,7 @@ func TestTCPServerHandshakeAndControl(t *testing.T) {
 	// Initialize configuration
 	cfg := config.Get()
 	cfg.AuthEnabled = false // disable auth for easy testing
+	cfg.TLSEnabled = false  // disable TLS for plain TCP test
 
 	mouseCtrl := &MockMouseController{}
 	deviceMgr := device.NewManager()

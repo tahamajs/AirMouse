@@ -265,6 +265,91 @@ func TestUDPServerHandshakeAndDiscovery(t *testing.T) {
 	}
 }
 
+func TestUDPDiscoveryWithNonceAndDeduplication(t *testing.T) {
+	mouseCtrl := &MockMouseController{}
+	deviceMgr := device.NewManager()
+
+	server := NewServer(0, mouseCtrl, deviceMgr, nil)
+	if err := server.Start(); err != nil {
+		t.Fatalf("Failed to start UDP server: %v", err)
+	}
+	defer server.Stop()
+
+	port := server.conn.LocalAddr().(*net.UDPAddr).Port
+
+	clientConn, err := net.DialUDP("udp", nil, &net.UDPAddr{
+		IP:   net.ParseIP("127.0.0.1"),
+		Port: port,
+	})
+	if err != nil {
+		t.Fatalf("Failed to dial UDP server: %v", err)
+	}
+	defer clientConn.Close()
+
+	// 1. Discovery with challenge nonce
+	nonce := "challenge-nonce-xyz"
+	_, err = clientConn.Write([]byte("AIRMOUSE_DISCOVER:" + nonce))
+	if err != nil {
+		t.Fatalf("Failed to send discovery: %v", err)
+	}
+
+	buf := make([]byte, 1024)
+	_ = clientConn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	n, err := clientConn.Read(buf)
+	if err != nil {
+		t.Fatalf("Failed to read response: %v", err)
+	}
+	resp := string(buf[:n])
+	if !tContains(resp, nonce) {
+		t.Errorf("Expected response to contain challenge nonce %s, got: %s", nonce, resp)
+	}
+
+	// 2. Duplicate nonce detection
+	clientIP := "127.0.0.1"
+	if !server.isDuplicateNonce(clientIP, nonce) {
+		t.Errorf("Expected nonce %s to be recognized as duplicate", nonce)
+	}
+
+	// 3. New nonce should not be duplicate
+	newNonce := "fresh-nonce-123"
+	if server.isDuplicateNonce(clientIP, newNonce) {
+		t.Errorf("New nonce should not be duplicate")
+	}
+
+	// 4. JSON Discovery Request
+	jsonReq := `{"type":"discover","nonce":"json-nonce-456"}`
+	_, _ = clientConn.Write([]byte(jsonReq))
+	_ = clientConn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	n, err = clientConn.Read(buf)
+	if err != nil {
+		t.Fatalf("Failed to read JSON discovery response: %v", err)
+	}
+	var jsonResp map[string]any
+	if err := json.Unmarshal(buf[:n], &jsonResp); err != nil {
+		t.Fatalf("Failed to unmarshal JSON response: %v", err)
+	}
+	if jsonResp["nonce"] != "json-nonce-456" {
+		t.Errorf("Expected JSON response to contain nonce json-nonce-456, got: %+v", jsonResp)
+	}
+}
+
+func TestUDPBroadcastDiscovery(t *testing.T) {
+	mouseCtrl := &MockMouseController{}
+	deviceMgr := device.NewManager()
+
+	server := NewServer(0, mouseCtrl, deviceMgr, nil)
+	if err := server.Start(); err != nil {
+		t.Fatalf("Failed to start UDP server: %v", err)
+	}
+	defer server.Stop()
+
+	// Test broadcast execution with 3 retries
+	err := server.BroadcastDiscovery()
+	if err != nil {
+		t.Errorf("BroadcastDiscovery failed: %v", err)
+	}
+}
+
 func tContains(s, substr string) bool {
 	return len(s) >= len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || len(s) > len(substr))
 }

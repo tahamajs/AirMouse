@@ -251,3 +251,77 @@ func BenchmarkJitterBufferPrediction(b *testing.B) {
 		jb.PredictNow()
 	}
 }
+
+func TestAdaptiveJitterBufferDynamicDepth(t *testing.T) {
+	cfg := DefaultJitterBufferConfig()
+	cfg.MinDepth = 2
+	cfg.MaxDepth = 12
+	cfg.NominalInterval = 10 * time.Millisecond
+	jb := NewJitterBuffer(cfg)
+
+	// Low latency, low jitter: target depth should remain at or near MinDepth
+	for i := 0; i < 20; i++ {
+		now := time.Now()
+		jb.AddMovement(5.0, 5.0, now.Add(-5*time.Millisecond))
+		time.Sleep(10 * time.Millisecond)
+	}
+	lowJitterDepth := jb.GetTargetDepth()
+	if lowJitterDepth < cfg.MinDepth || lowJitterDepth > cfg.MinDepth+2 {
+		t.Errorf("Expected low jitter depth around %d, got %d", cfg.MinDepth, lowJitterDepth)
+	}
+
+	// High latency variance / jitter: inject fluctuating latencies
+	latencies := []time.Duration{
+		5 * time.Millisecond,
+		80 * time.Millisecond,
+		10 * time.Millisecond,
+		95 * time.Millisecond,
+		15 * time.Millisecond,
+		120 * time.Millisecond,
+		20 * time.Millisecond,
+		100 * time.Millisecond,
+	}
+	for _, lat := range latencies {
+		now := time.Now()
+		jb.AddMovement(10.0, 10.0, now.Add(-lat))
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	highJitterDepth := jb.GetTargetDepth()
+	t.Logf("Low jitter depth: %d, High jitter depth: %d, Variance: %.2f",
+		lowJitterDepth, highJitterDepth, jb.GetJitterVariance())
+
+	if highJitterDepth <= lowJitterDepth {
+		t.Errorf("Expected high jitter depth (%d) to be greater than low jitter depth (%d)",
+			highJitterDepth, lowJitterDepth)
+	}
+	if highJitterDepth > cfg.MaxDepth {
+		t.Errorf("Target depth %d exceeds MaxDepth %d", highJitterDepth, cfg.MaxDepth)
+	}
+}
+
+func TestJitterBufferQueueOperations(t *testing.T) {
+	cfg := DefaultJitterBufferConfig()
+	cfg.MinDepth = 2
+	cfg.MaxDepth = 5
+	jb := NewJitterBuffer(cfg)
+
+	now := time.Now()
+	s1 := MovementSample{Timestamp: now, Dx: 1, Dy: 2, Latency: 10 * time.Millisecond}
+	s2 := MovementSample{Timestamp: now, Dx: 3, Dy: 4, Latency: 12 * time.Millisecond}
+
+	jb.Push(s1)
+	jb.Push(s2)
+
+	if jb.Len() != 2 {
+		t.Errorf("Expected len 2, got %d", jb.Len())
+	}
+
+	popped, ok := jb.Pop()
+	if !ok || popped.Dx != 1 {
+		t.Errorf("Expected popped dx=1, got ok=%v, dx=%f", ok, popped.Dx)
+	}
+	if jb.Len() != 1 {
+		t.Errorf("Expected len 1 after pop, got %d", jb.Len())
+	}
+}

@@ -94,6 +94,7 @@ func startTestServer(t *testing.T) (*Server, *MockMouseController, int) {
 	t.Helper()
 	cfg := config.Get()
 	cfg.AuthEnabled = false
+	cfg.TLSEnabled = false
 	cfg.ConfigPath = filepath.Join(t.TempDir(), "config.json")
 	cfg.TrustedDevices = []string{}
 

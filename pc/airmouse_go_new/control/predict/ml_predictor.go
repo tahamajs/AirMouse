@@ -1,4 +1,4 @@
-//go:build ml
+//go:build onnx
 
 package predict
 

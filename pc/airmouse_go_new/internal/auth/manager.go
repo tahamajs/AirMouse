@@ -197,7 +197,7 @@ func (m *Manager) ValidateAuthToken(tokenString string) (valid bool, deviceID st
 	defer m.mu.Unlock()
 
 	info, exists := m.tokens[tokenString]
-	if !exists || info.IsRevoked {
+	if !exists || info.IsRevoked || time.Now().After(info.ExpiresAt) {
 		return false, "", ""
 	}
 
