@@ -65,6 +65,33 @@ type Config struct {
 	RotateSize  int64         // max file size in MB (0 = no rotation)
 	RotateAge   time.Duration // max age of log file (0 = no rotation)
 	RotateCount int           // number of rotated files to keep (0 = keep all)
+	Output      io.Writer     // optional custom output writer
+}
+
+// New creates a new standalone Logger instance (useful for testing or custom sinks).
+func New(cfg Config) *Logger {
+	lvl := LevelInfo
+	switch cfg.Level {
+	case "debug":
+		lvl = LevelDebug
+	case "warn":
+		lvl = LevelWarn
+	case "error":
+		lvl = LevelError
+	}
+
+	outWriter := cfg.Output
+	if outWriter == nil {
+		outWriter = os.Stdout
+	}
+
+	return &Logger{
+		level:     lvl,
+		out:       outWriter,
+		useColor:  cfg.UseColor,
+		timestamp: cfg.Timestamp,
+		hooks:     make([]func(Level, string), 0),
+	}
 }
 
 var (
@@ -273,7 +300,86 @@ func (l *Logger) rotateNow() {
 	l.currentSize = 0
 }
 
-// Public logging functions
+// Methods on *Logger instance
+func (l *Logger) emitInstance(level Level, format string, args ...interface{}) {
+	if l == nil || level < l.level {
+		return
+	}
+
+	msg := fmt.Sprintf(format, args...)
+	_, file, line, ok := runtime.Caller(2)
+	if !ok {
+		file = "unknown"
+		line = 0
+	}
+	shortFile := filepath.Base(file)
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	var logMsg string
+	if l.timestamp {
+		timestamp := time.Now().Format("2006-01-02 15:04:05.000")
+		if l.useColor {
+			logMsg = fmt.Sprintf("%s %s[%s]%s %s:%d: %s\n",
+				timestamp,
+				levelColors[level],
+				levelNames[level],
+				colorReset,
+				shortFile, line, msg)
+		} else {
+			logMsg = fmt.Sprintf("%s [%s] %s:%d: %s\n",
+				timestamp, levelNames[level], shortFile, line, msg)
+		}
+	} else {
+		if l.useColor {
+			logMsg = fmt.Sprintf("%s[%s]%s %s:%d: %s\n",
+				levelColors[level],
+				levelNames[level],
+				colorReset,
+				shortFile, line, msg)
+		} else {
+			logMsg = fmt.Sprintf("[%s] %s:%d: %s\n",
+				levelNames[level], shortFile, line, msg)
+		}
+	}
+
+	written, _ := l.out.Write([]byte(logMsg))
+	l.currentSize += int64(written)
+
+	if l.rotateSize > 0 && l.rotateCount > 0 && l.currentSize >= l.rotateSize {
+		l.rotateNow()
+	}
+
+	for _, hook := range l.hooks {
+		hook(level, msg)
+	}
+
+	if level == LevelFatal {
+		if closer, ok := l.out.(io.Closer); ok {
+			_ = closer.Close()
+		} else if l.file != nil {
+			_ = l.file.Close()
+		}
+		os.Exit(1)
+	}
+}
+
+func (l *Logger) Debug(format string, args ...interface{}) { l.emitInstance(LevelDebug, format, args...) }
+func (l *Logger) Info(format string, args ...interface{})  { l.emitInstance(LevelInfo, format, args...) }
+func (l *Logger) Warn(format string, args ...interface{})  { l.emitInstance(LevelWarn, format, args...) }
+func (l *Logger) Error(format string, args ...interface{}) { l.emitInstance(LevelError, format, args...) }
+func (l *Logger) Fatal(format string, args ...interface{}) { l.emitInstance(LevelFatal, format, args...) }
+func (l *Logger) AddHook(hook func(level Level, msg string)) {
+	if hook == nil || l == nil {
+		return
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.hooks = append(l.hooks, hook)
+}
+
+// Public logging functions (default logger)
 func Debug(format string, args ...interface{}) { emit(LevelDebug, format, args...) }
 func Info(format string, args ...interface{})  { emit(LevelInfo, format, args...) }
 func Warn(format string, args ...interface{})  { emit(LevelWarn, format, args...) }

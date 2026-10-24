@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 airmouse/__init__.py
@@ -20,10 +21,16 @@ network/udp_discovery.py
 network/ws_server.py
 security/auth.py
 security/tls_manager.py
+tests/test_actuator_and_buffer.py
 tests/test_airmouse_server.py
 tests/test_auth.py
+tests/test_cli.py
 tests/test_filters.py
 tests/test_integration.py
 tests/test_protocol.py
+tests/test_protocol_edge_cases.py
+tests/test_tls_manager.py
+tests/test_udp_discovery.py
+tests/test_ws_server.py
 ui/app.py
 ui/tray_manager.py

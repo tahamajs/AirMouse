@@ -1,40 +1,68 @@
 package com.airmouse.network
 
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicLong
 
 object AirMouseProtocolMessages {
-    fun move(dx: Float, dy: Float): String = JSONObject().apply {
+    private val seqCounter = AtomicLong(0L)
+
+    private fun nextSeq(): Long = seqCounter.incrementAndGet()
+
+    fun move(dx: Float, dy: Float, dt: Float? = null, seq: Long = nextSeq()): String = JSONObject().apply {
+        put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_MOVE)
-        put("dx", dx)
-        put("dy", dy)
-        put("DeltaX", dx)
-        put("DeltaY", dy)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
+        put("id", "")
+        put("payload", JSONObject().apply {
+            put("dx", dx)
+            put("dy", dy)
+            if (dt != null) {
+                put("dt", dt)
+            }
+        })
     }.toString()
 
-    fun reliableClick(type: String, id: String, button: String): String = JSONObject().apply {
+    fun reliableClick(type: String, id: String, button: String, seq: Long = nextSeq()): String = JSONObject().apply {
+        put("v", 2)
         put("type", type)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
         put("id", id)
-        put("button", button)
-        put("Click", button)
+        put("payload", JSONObject().apply {
+            put("button", button)
+        })
     }.toString()
 
-    fun reliableScroll(id: String, delta: Int): String = JSONObject().apply {
+    fun reliableScroll(id: String, delta: Double, seq: Long = nextSeq()): String = JSONObject().apply {
+        put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_SCROLL)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
         put("id", id)
-        put("delta", delta)
-        put("Scroll", delta)
+        put("payload", JSONObject().apply {
+            put("delta", delta)
+        })
     }.toString()
 
-    fun gesture(gesture: String, confidence: Float): String = JSONObject().apply {
+    fun gesture(gesture: String, confidence: Float, seq: Long = nextSeq()): String = JSONObject().apply {
+        put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_GESTURE)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
+        put("id", "")
         put("payload", JSONObject().apply {
             put("gesture", gesture)
             put("confidence", confidence)
         })
     }.toString()
 
-    fun proximity(deviceId: String, isNear: Boolean, distance: Float): String = JSONObject().apply {
+    fun proximity(deviceId: String, isNear: Boolean, distance: Float, seq: Long = nextSeq()): String = JSONObject().apply {
+        put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_PROXIMITY)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
+        put("id", "")
         put("payload", JSONObject().apply {
             put("device_id", deviceId)
             put("is_near", isNear)
@@ -42,19 +70,33 @@ object AirMouseProtocolMessages {
         })
     }.toString()
 
-    fun control(command: String): String = JSONObject().apply {
+    fun control(command: String, seq: Long = nextSeq()): String = JSONObject().apply {
+        put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_CONTROL)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
+        put("id", "")
         put("payload", JSONObject().apply {
             put("command", command)
         })
     }.toString()
 
-    fun ping(): String = JSONObject().apply {
+    fun ping(seq: Long = nextSeq()): String = JSONObject().apply {
+        put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_PING)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
+        put("id", "")
+        put("payload", JSONObject())
     }.toString()
 
-    fun pong(): String = JSONObject().apply {
+    fun pong(seq: Long = nextSeq()): String = JSONObject().apply {
+        put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_PONG)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
+        put("id", "")
+        put("payload", JSONObject())
     }.toString()
 
     fun hello(
@@ -70,9 +112,14 @@ object AirMouseProtocolMessages {
         deviceId: String? = null,
         protocol: String,
         transport: String,
-        authToken: String? = null
+        authToken: String? = null,
+        seq: Long = nextSeq()
     ): String = JSONObject().apply {
+        put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_HELLO)
+        put("seq", seq)
+        put("ts", System.currentTimeMillis())
+        put("id", "")
         put("payload", JSONObject().apply {
             put("name", name)
             put("version", version)

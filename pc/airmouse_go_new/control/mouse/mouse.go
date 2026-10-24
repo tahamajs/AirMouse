@@ -270,7 +270,7 @@ func (m *mouseController) DoubleClick() {
 // Scroll sends a scroll event.
 func (m *mouseController) Scroll(delta int) {
 	m.executeScroll(delta)
-	atomic.AddInt64(&m.scrollCount, 1)
+	atomic.AddInt64(&m.scrollCount, int64(math.Abs(float64(delta))))
 }
 
 // Stats returns current usage counters.
