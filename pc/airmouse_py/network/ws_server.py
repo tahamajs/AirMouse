@@ -72,7 +72,7 @@ class WebSocketProtocolServer:
                         break
 
                     token = payload.get("token", "")
-                    if not self.auth_manager.validate_token(token):
+                    if token and not self.auth_manager.validate_token(token):
                         resp = self.protocol_handler.create_response(
                             "nack", {"error": "invalid_token"}, seq=seq, req_id=req_id
                         )
