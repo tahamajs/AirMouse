@@ -1569,6 +1569,7 @@ fun BlackoutTouchpadOverlay(
     connectionManager: ConnectionManager,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var lastX by remember { mutableStateOf(0f) }
     var lastY by remember { mutableStateOf(0f) }
     val sensitivity = 1.4f
@@ -1598,6 +1599,23 @@ fun BlackoutTouchpadOverlay(
                         if (pressed.isEmpty()) {
                             val duration = System.currentTimeMillis() - startTime
                             if (!hasMoved && duration < 300) {
+                                try {
+                                    val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                        val manager = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                                        manager?.defaultVibrator
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                                    }
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                        vibrator?.vibrate(android.os.VibrationEffect.createOneShot(25, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        vibrator?.vibrate(25)
+                                    }
+                                } catch (e: Exception) {
+                                    // ignore haptic error
+                                }
                                 connectionManager.sendClick("left")
                             }
                             break
