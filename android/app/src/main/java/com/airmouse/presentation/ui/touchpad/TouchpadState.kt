@@ -17,6 +17,8 @@ data class TouchpadUiState(
     val isActive: Boolean = false,
     val isConnected: Boolean = false,
     val isMouseControlEnabled: Boolean = true,
+    val transmissionProtocol: String = "WebSocket",
+    val pollingRate: String = "Standard (60 Hz)",
 
     
     val sensitivity: Float = 1.0f,

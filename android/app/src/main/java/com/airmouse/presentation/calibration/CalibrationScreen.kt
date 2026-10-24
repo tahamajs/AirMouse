@@ -534,6 +534,13 @@ private fun CalibrationStepScreen(
                                 accent = accent
                             )
                         }
+                        CalibrationPhase.POSITION_SUCCESS -> {
+                            SamplingProgressCard(
+                                stepIndex = stepIndex,
+                                uiState = uiState,
+                                accent = accent
+                            )
+                        }
                     }
                 }
 
@@ -658,6 +665,7 @@ private fun PhaseChip(phase: CalibrationPhase, accent: Color) {
         CalibrationPhase.INTRO -> "Ready"
         CalibrationPhase.COUNTDOWN -> "Preparing"
         CalibrationPhase.SAMPLING -> "Sampling"
+        CalibrationPhase.POSITION_SUCCESS -> "Success"
     }
     Surface(
         shape = RoundedCornerShape(10.dp),

@@ -98,6 +98,9 @@ fun AirMouseNavHost(
         composable(Destinations.GameProfiles.route) {
             GameProfilesScreen(navigationActions = NavigationActionsImpl(navController))
         }
+        composable("game_controller") {
+            com.airmouse.presentation.ui.gaming.GameControllerScreen(navigationActions = NavigationActionsImpl(navController))
+        }
         composable(Destinations.TouchpadSettings.route) {
             TouchpadSettingsScreen(navigationActions = NavigationActionsImpl(navController))
         }

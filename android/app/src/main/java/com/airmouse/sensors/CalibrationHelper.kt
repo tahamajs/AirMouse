@@ -474,9 +474,9 @@ class CalibrationHelper(
             sumZ += mz * mz
         }
         
-        accelScaleX = if (sumX > 0) sumXx / sumX else 1f
-        accelScaleY = if (sumY > 0) sumYy / sumY else 1f
-        accelScaleZ = if (sumZ > 0) sumZz / sumZ else 1f
+        accelScaleX = (if (sumX > 0) sumXx / sumX else 1f).coerceIn(0.85f, 1.15f)
+        accelScaleY = (if (sumY > 0) sumYy / sumY else 1f).coerceIn(0.85f, 1.15f)
+        accelScaleZ = (if (sumZ > 0) sumZz / sumZ else 1f).coerceIn(0.85f, 1.15f)
         
         
         var sumOx = 0f

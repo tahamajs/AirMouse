@@ -396,12 +396,7 @@ fun MainScreen(
                             )
                         }
                         else -> {
-                            AnimatedFAB(
-                                onClick = { navController.navigate(Destinations.Calibration.route) },
-                                icon = Icons.Default.Build,
-                                text = "Calibrate",
-                                gradient = listOf(Color(0xFFFF5722), Color(0xFFFF9800))
-                            )
+                            // Calibration action is accessible directly via the Modules grid and Quick Actions
                         }
                     }
                 }

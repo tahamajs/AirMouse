@@ -19,6 +19,7 @@ import com.airmouse.presentation.ui.statistics.StatisticsViewModel
 import com.airmouse.presentation.ui.themes.ThemesViewModel
 import com.airmouse.presentation.ui.voice.VoiceCommandsViewModel
 import com.airmouse.presentation.ui.search.SearchViewModel
+import com.airmouse.presentation.ui.gaming.GamingViewModel
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -118,4 +119,9 @@ abstract class ViewModelModule {
     @IntoMap
     @ViewModelKey(SearchViewModel::class)
     abstract fun bindSearchViewModel(viewModel: SearchViewModel): ViewModel
+
+    @Binds
+    @IntoMap
+    @ViewModelKey(GamingViewModel::class)
+    abstract fun bindGamingViewModel(viewModel: GamingViewModel): ViewModel
 }

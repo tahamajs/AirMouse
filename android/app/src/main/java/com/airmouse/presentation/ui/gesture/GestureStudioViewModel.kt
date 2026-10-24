@@ -66,6 +66,9 @@ class GestureStudioViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(GestureStudioUiState())
     val uiState: StateFlow<GestureStudioUiState> = _uiState.asStateFlow()
 
+    private val _gestureName = MutableStateFlow("")
+    val gestureName: StateFlow<String> = _gestureName.asStateFlow()
+
     private val _gestures = MutableStateFlow<List<CustomGestureTemplate>>(emptyList())
     val gestures: StateFlow<List<CustomGestureTemplate>> = _gestures.asStateFlow()
 
@@ -253,6 +256,7 @@ class GestureStudioViewModel @Inject constructor(
     }
 
     fun updateGestureName(name: String) {
+        _gestureName.value = name
         _uiState.update { it.copy(gestureName = name, errorMessage = null) }
     }
 

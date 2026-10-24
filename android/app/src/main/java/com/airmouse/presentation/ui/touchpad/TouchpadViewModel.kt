@@ -348,6 +348,12 @@ class TouchpadViewModel @Inject constructor(
         updateNaturalScrolling(preset.naturalScrolling)
 
         if (mode == TouchpadMode.GAMING) {
+            _uiState.update {
+                it.copy(
+                    transmissionProtocol = "UDP",
+                    pollingRate = "Maximum (120 Hz)"
+                )
+            }
             connectionManager.setProtocol(ConnectionManager.ConnectionProtocol.UDP)
             prefs.putBoolean("gaming_mode", true)
             prefs.putBoolean("use_websocket", false)
@@ -357,6 +363,12 @@ class TouchpadViewModel @Inject constructor(
                 }
             }
         } else {
+            _uiState.update {
+                it.copy(
+                    transmissionProtocol = "WebSocket",
+                    pollingRate = "Standard (60 Hz)"
+                )
+            }
             prefs.putBoolean("gaming_mode", false)
         }
 

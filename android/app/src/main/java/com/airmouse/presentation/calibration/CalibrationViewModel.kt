@@ -50,6 +50,12 @@ class CalibrationViewModel @Inject constructor(
         private const val TRANSITION_DELAY = 1000L
         private const val SENSOR_TIMEOUT_EXTRA_MS = 2500L
         private const val GRAVITY_EARTH = 9.80665f
+
+        fun calculateAxisScale(positive: Float, negative: Float): Float {
+            val span = abs(positive - negative) / 2f
+            val scale = if (span > 1.0f) 9.80665f / span else 1.0f
+            return scale.coerceIn(0.85f, 1.15f)
+        }
     }
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -139,6 +145,8 @@ class CalibrationViewModel @Inject constructor(
 
                 if (data?.isCalibrated == true) {
                     _calibrationData.value = data
+                    _calibrationProgress.value = 100
+                    _calibrationStatus.value = CalibrationStatus.COMPLETED
                     _uiState.update {
                         it.copy(
                             currentStep = 3,
@@ -253,6 +261,23 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
+    fun nextPosition() {
+        val currentPos = _uiState.value.currentPosition
+        if (currentPos >= ACCEL_POSITIONS_NEEDED) {
+            completeCalibration()
+        } else {
+            _uiState.update {
+                it.copy(
+                    calibrationPhase = CalibrationPhase.INTRO,
+                    statusMessage = "Position ${currentPos + 1} of 6: ${accelPositionsList[currentPos]}",
+                    stepInstruction = "Hold the phone in position and tap 'Record Position' when steady.",
+                    samplesCollected = 0,
+                    totalSamplesNeeded = ACCEL_SAMPLES_PER_POS
+                )
+            }
+        }
+    }
+
     fun nextStep() {
         val current = _uiState.value.currentStep
         if (current < 3) {
@@ -349,6 +374,8 @@ class CalibrationViewModel @Inject constructor(
                 }
 
                 _calibrationData.value = data
+                _calibrationProgress.value = 100
+                _calibrationStatus.value = CalibrationStatus.COMPLETED
 
                 _uiState.update {
                     it.copy(
@@ -585,15 +612,12 @@ class CalibrationViewModel @Inject constructor(
                         currentPosition = nextPos,
                         completedPositions = (it.completedPositions + currentPos).distinct(),
                         progress = (nextPos * 100 / ACCEL_POSITIONS_NEEDED),
-                        statusMessage = if (nextPos < ACCEL_POSITIONS_NEEDED) "Position $nextPos of 6 captured" else "Accelerometer complete",
-                        calibrationPhase = CalibrationPhase.INTRO,
-                        stepInstruction = if (nextPos < ACCEL_POSITIONS_NEEDED) "Prepare for: ${accelPositionsList.getOrNull(nextPos)}" else "All orientations completed",
+                        statusMessage = if (nextPos < ACCEL_POSITIONS_NEEDED) "Position $nextPos of 6 recorded!" else "All 6 positions recorded!",
+                        calibrationPhase = CalibrationPhase.POSITION_SUCCESS,
+                        stepInstruction = if (nextPos < ACCEL_POSITIONS_NEEDED) "Position $nextPos recorded successfully. Tap 'Next Position' to proceed." else "All positions captured! Tap 'Finish Calibration'.",
                         samplesCollected = samples.size,
                         totalSamplesNeeded = ACCEL_SAMPLES_PER_POS
                     )
-                }
-                if (nextPos >= ACCEL_POSITIONS_NEEDED) {
-                    nextStep()
                 }
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Accel sampling error")
@@ -708,8 +732,9 @@ class CalibrationViewModel @Inject constructor(
     }
 
     private fun calculateAxisScale(positive: Float, negative: Float): Float {
-        val measuredRange = abs(positive - negative)
-        return if (measuredRange > 0.0001f) (2f * GRAVITY_EARTH) / measuredRange else 1f
+        val span = abs(positive - negative) / 2f
+        val scale = if (span > 1.0f) 9.80665f / span else 1.0f
+        return scale.coerceIn(0.85f, 1.15f)
     }
 
     private fun calculateCalibrationQuality(): CalibrationQuality {

@@ -50,6 +50,7 @@ fun GestureStudioScreen(
     viewModel: GestureStudioViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val gestureName by viewModel.gestureName.collectAsStateWithLifecycle()
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     Scaffold(

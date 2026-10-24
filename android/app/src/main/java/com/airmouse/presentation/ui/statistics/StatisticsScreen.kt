@@ -606,24 +606,43 @@ private fun ActivityBarChart(dailyStats: List<DailyStats>) {
         val width = size.width
         val height = size.height
         val barCount = data.size
-        val gap = 16.dp.toPx()
+        val yAxisWidth = 32.dp.toPx()
+        val chartWidth = width - yAxisWidth
+        val gap = 12.dp.toPx()
         val totalGaps = gap * (barCount - 1)
-        val barWidth = (width - totalGaps) / barCount
+        val barWidth = (chartWidth - totalGaps) / barCount
 
         val gridLines = 4
+        val textPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.parseColor("#94A3B8")
+            textSize = 9.sp.toPx()
+            textAlign = android.graphics.Paint.Align.RIGHT
+        }
+
         for (i in 0..gridLines) {
             val y = height - (i.toFloat() / gridLines) * (height - 30.dp.toPx()) - 20.dp.toPx()
+            // Y-axis gridline
             drawLine(
                 color = StatsTheme.SurfaceHighlight,
-                start = Offset(0f, y),
+                start = Offset(yAxisWidth, y),
                 end = Offset(width, y),
                 strokeWidth = 1.dp.toPx()
+            )
+
+            // Y-axis label
+            val tickValue = (maxVal * i / gridLines)
+            val tickLabel = if (tickValue >= 1000) "${tickValue / 1000}k" else "$tickValue"
+            drawContext.canvas.nativeCanvas.drawText(
+                tickLabel,
+                yAxisWidth - 6.dp.toPx(),
+                y + 3.dp.toPx(),
+                textPaint
             )
         }
 
         data.forEachIndexed { idx, item ->
             val barHeight = ((item.clicks.toFloat() / maxVal) * (height - 50.dp.toPx())).coerceAtLeast(4.dp.toPx())
-            val x = idx * (barWidth + gap)
+            val x = yAxisWidth + idx * (barWidth + gap)
             val y = height - barHeight - 20.dp.toPx()
 
             // Neon glow layer (wider, softer, same gradient)
@@ -649,7 +668,7 @@ private fun ActivityBarChart(dailyStats: List<DailyStats>) {
             // Draw Label
             drawContext.canvas.nativeCanvas.apply {
                 val label = if (item.date.length > 3) item.date.take(3) else item.date
-                val textPaint = android.graphics.Paint().apply {
+                val labelPaint = android.graphics.Paint().apply {
                     color = android.graphics.Color.parseColor("#94A3B8")
                     textSize = 10.sp.toPx()
                     textAlign = android.graphics.Paint.Align.CENTER
@@ -658,7 +677,7 @@ private fun ActivityBarChart(dailyStats: List<DailyStats>) {
                     label,
                     x + barWidth / 2,
                     height - 2.dp.toPx(),
-                    textPaint
+                    labelPaint
                 )
             }
         }

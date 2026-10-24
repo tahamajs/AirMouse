@@ -217,7 +217,25 @@ fun NetworkDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Local IP address card
+            // Local IP address card / WiFi status banner
+            val isWifiConnected = viewModel.isWifiConnected()
+            val bannerColors = if (isWifiConnected) {
+                listOf(
+                    MaterialTheme.colorScheme.primaryContainer,
+                    MaterialTheme.colorScheme.tertiaryContainer
+                )
+            } else {
+                listOf(
+                    MaterialTheme.colorScheme.errorContainer,
+                    Color(0xFFE65100).copy(alpha = 0.85f)
+                )
+            }
+            val bannerContentColor = if (isWifiConnected) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onErrorContainer
+            }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -230,10 +248,7 @@ fun NetworkDiscoveryScreen(
                         .fillMaxWidth()
                         .background(
                             Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primaryContainer,
-                                    MaterialTheme.colorScheme.tertiaryContainer
-                                )
+                                colors = bannerColors
                             )
                         )
                 ) {
@@ -248,7 +263,7 @@ fun NetworkDiscoveryScreen(
                             Text(
                                 "Local IP Address",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                color = bannerContentColor.copy(alpha = 0.8f)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -256,19 +271,19 @@ fun NetworkDiscoveryScreen(
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontFamily = FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = bannerContentColor
                             )
                             if (uiState.lastScanTime != null) {
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     "Last scan: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(uiState.lastScanTime)}",
                                     fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                                    color = bannerContentColor.copy(alpha = 0.6f)
                                 )
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (viewModel.isWifiConnected()) {
+                            if (isWifiConnected) {
                                 Surface(
                                     shape = CircleShape,
                                     color = Color(0xFF4CAF50).copy(alpha = 0.15f)
@@ -361,7 +376,7 @@ fun NetworkDiscoveryScreen(
             Button(
                 onClick = { viewModel.scanNetwork() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isScanning,
+                enabled = !uiState.isScanning && isWifiConnected,
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (uiState.isScanning) {

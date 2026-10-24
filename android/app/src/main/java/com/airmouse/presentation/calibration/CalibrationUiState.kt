@@ -59,7 +59,8 @@ data class CalibrationUiState(
 enum class CalibrationPhase {
     INTRO,
     COUNTDOWN,
-    SAMPLING
+    SAMPLING,
+    POSITION_SUCCESS
 }
 
 data class SensorData(
