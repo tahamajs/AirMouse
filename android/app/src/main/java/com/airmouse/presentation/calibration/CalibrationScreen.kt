@@ -52,12 +52,30 @@ fun CalibrationScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val calibrationData by viewModel.calibrationData.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     var confettiActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isComplete) {
         if (uiState.isComplete) {
             confettiActive = true
+            try {
+                val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    val manager = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                    manager?.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator?.vibrate(android.os.VibrationEffect.createOneShot(120, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(120)
+                }
+            } catch (e: Exception) {
+                // Ignore if permission not granted
+            }
             delay(5000)
             confettiActive = false
         }
@@ -827,7 +845,7 @@ private fun SamplingProgressCard(
                 fontSize = 16.sp
             )
 
-            // Linear progress bar
+            // Linear progress bar with interactive status cues
             LinearProgressIndicator(
                 progress = { animatedProgress },
                 modifier = Modifier
@@ -838,17 +856,35 @@ private fun SamplingProgressCard(
                 trackColor = Color.White.copy(alpha = 0.08f)
             )
 
-            // Status label
-            Text(
-                when (stepIndex) {
-                    0 -> "Keep the phone still on the flat surface..."
-                    1 -> "Keep moving in a figure-8 pattern..."
-                    else -> "Hold this position steady..."
-                },
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center
-            )
+            // Dynamic interactive guidance cues
+            val guidanceCue = when {
+                animatedProgress < 0.25f -> when (stepIndex) {
+                    0 -> "🎯 Hold completely still for 1s: measuring initial bias..."
+                    1 -> "∞ Begin gentle figure-8 motion: expanding ellipsoid..."
+                    else -> "📐 Align position and hold still..."
+                }
+                animatedProgress < 0.85f -> when (stepIndex) {
+                    0 -> "⚡ Calibrating ZUPT & Gyro drift compensation..."
+                    1 -> "🧭 Rotating full 360° magnetometer coverage..."
+                    else -> "⚖️ Sampling gravity vector offsets..."
+                }
+                else -> "✨ Finalizing calibration matrix & zero-velocity thresholds..."
+            }
+
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = accent.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.25f))
+            ) {
+                Text(
+                    guidanceCue,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
