@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AirMouse iOS & Mobile Web Client</title>
+    <!-- iOS Web App Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AirMouse">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0e17">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,6 +30,19 @@
         </div>
     </header>
 
+    <!-- iOS HTTPS / WSS Self-Signed Certificate Helper Banner -->
+    <section id="certBanner" class="cert-alert-banner">
+        <div class="cert-alert-content">
+            <span class="cert-alert-icon">⚠️</span>
+            <div class="cert-alert-text">
+                <strong>iOS Safari Notice:</strong> If connecting over <code>wss://</code> fails, tap 
+                <a id="certLink" href="#" target="_blank" rel="noopener">Open Server HTTPS Certificate</a>, 
+                choose <em>"Show Details" &rarr; "Visit this website"</em> to trust the self-signed ECDSA certificate, then return here and tap Connect.
+            </div>
+            <button id="btnDismissCert" class="cert-alert-dismiss" type="button" aria-label="Dismiss">&times;</button>
+        </div>
+    </section>
+
     <main class="app-main">
         <!-- Settings & Connection Drawer / Bar -->
         <section class="control-panel glass-card">
@@ -41,10 +58,9 @@
             </div>
 
             <div class="row buttons-row">
-                <button id="btnConnect" class="btn btn-primary">Connect (wss://)</button>
-                <button id="btnGyroPermission" class="btn btn-secondary">Enable Gyro (iOS)</button>
-                <button id="btnFullscreen" class="btn btn-secondary" title="Fullscreen Touchpad">⛶ Fullscreen</button>
-                <button id="btnSettingsToggle" class="btn btn-icon" title="Toggle Settings" aria-label="Settings">⚙️</button>
+                <button id="btnConnect" class="btn btn-primary" type="button">Connect (wss://)</button>
+                <button id="btnGyroPermission" class="btn btn-secondary" type="button">Request Gyro Permission</button>
+                <button id="btnSettingsToggle" class="btn btn-icon" type="button" title="Toggle Settings" aria-label="Settings">⚙️</button>
             </div>
 
             <div id="settingsPanel" class="settings-drawer collapsed">
@@ -57,11 +73,21 @@
                     <input type="range" id="gyroSensitivity" min="0.5" max="5.0" step="0.1" value="1.8">
                 </div>
                 <div class="setting-item toggle-item">
-                    <label for="gyroToggle">Enable Air Gyroscope Mode</label>
+                    <label for="gyroToggle">
+                        <span>Air Gyroscope (Tilt Control)</span>
+                        <small style="display:block; color:var(--text-secondary); font-size:12px;">Toggle off to save battery</small>
+                    </label>
                     <input type="checkbox" id="gyroToggle">
                 </div>
                 <div class="setting-item toggle-item">
-                    <label for="hapticToggle">Haptic Feedback</label>
+                    <label for="wakeLockToggle">
+                        <span>Keep Screen Awake (Wake Lock)</span>
+                        <small style="display:block; color:var(--text-secondary); font-size:12px;">Prevents iPhone from sleeping while active</small>
+                    </label>
+                    <input type="checkbox" id="wakeLockToggle" checked>
+                </div>
+                <div class="setting-item toggle-item">
+                    <label for="hapticToggle">Audio / Haptic Click Feedback</label>
                     <input type="checkbox" id="hapticToggle" checked>
                 </div>
             </div>
@@ -82,9 +108,9 @@
 
             <!-- Virtual Mouse Buttons for Accessibility & Quick Action -->
             <div class="mouse-buttons-row">
-                <button id="btnLeftClick" class="btn mouse-btn">Left Click</button>
-                <button id="btnMiddleClick" class="btn mouse-btn">Middle</button>
-                <button id="btnRightClick" class="btn mouse-btn">Right Click</button>
+                <button id="btnLeftClick" class="btn mouse-btn" type="button">Left Click</button>
+                <button id="btnMiddleClick" class="btn mouse-btn" type="button">Middle</button>
+                <button id="btnRightClick" class="btn mouse-btn" type="button">Right Click</button>
             </div>
         </section>
     </main>
@@ -100,6 +126,9 @@
         <div class="stats-item">
             <span>Gyro:</span> <strong id="statGyro">Disabled</strong>
         </div>
+        <div class="stats-item">
+            <span>WakeLock:</span> <strong id="statWakeLock">Active</strong>
+        </div>
     </footer>
 
     <!-- Pairing Token Modal if needed -->
@@ -109,8 +138,8 @@
             <p>Please enter the AirMouse server pairing token from your desktop console or QR code:</p>
             <input type="text" id="modalTokenInput" class="modal-input" placeholder="Token string">
             <div class="modal-actions">
-                <button id="btnModalCancel" class="btn btn-secondary">Cancel</button>
-                <button id="btnModalSave" class="btn btn-primary">Save & Connect</button>
+                <button id="btnModalCancel" class="btn btn-secondary" type="button">Cancel</button>
+                <button id="btnModalSave" class="btn btn-primary" type="button">Save & Connect</button>
             </div>
         </div>
     </div>
