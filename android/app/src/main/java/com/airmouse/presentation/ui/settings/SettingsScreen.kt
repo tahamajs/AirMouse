@@ -173,13 +173,7 @@ fun SettingsMainScreen(
                 title = section.title,
                 description = section.description,
                 icon = section.icon,
-                onClick = {
-                    if (section == SettingsSection.THEMES) {
-                        navigationActions.navigateToThemes()
-                    } else {
-                        onSectionSelected(section)
-                    }
-                }
+                onClick = { onSectionSelected(section) }
             )
         }
         item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -463,8 +457,7 @@ fun SectionDetailScreen(
                 SettingsSection.AI -> item { AISettings(uiState, viewModel) }
                 SettingsSection.HAPTIC -> item { HapticSettings(uiState, viewModel) }
                 SettingsSection.NOTIFICATIONS -> item { NotificationSettings(uiState, viewModel) }
-                SettingsSection.DISPLAY -> item { DisplaySettings(uiState, viewModel, navigationActions) }
-                SettingsSection.THEMES -> item { ThemesShortcutCard(navigationActions) }
+                SettingsSection.APPEARANCE -> item { DisplaySettings(uiState, viewModel, navigationActions) }
                 SettingsSection.TOUCHPAD -> item { TouchpadSettings(uiState, viewModel, navigationActions) }
                 SettingsSection.CONNECTION -> item { ConnectionSettings(uiState, viewModel, navigationActions) }
                 SettingsSection.PRIVACY -> item { PrivacySettings(uiState, viewModel) }
