@@ -110,12 +110,10 @@ fun HomeScreen(
     var serverName by remember { mutableStateOf(homeUiState.userPreferences.serverName.ifBlank { "Air Mouse Pro" }) }
     var showQrPermissionDialog by remember { mutableStateOf(false) }
     var pendingUserName by rememberSaveable { mutableStateOf(homeUiState.userName) }
-    var showRegistrationDialog by rememberSaveable {
-        mutableStateOf(homeUiState.userName.isBlank() && !homeViewModel.hasRegisteredUser())
-    }
+    var showRegistrationDialog by rememberSaveable { mutableStateOf(false) }
     var showCalibrationRequiredDialog by remember { mutableStateOf(false) }
 
-    val isRegistered = homeViewModel.hasRegisteredUser() || homeUiState.userName.isNotBlank()
+    val isRegistered = true
     val selectedProtocol = homeUiState.selectedProtocol
     val isConnectionActive = homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.CONNECTED
     val isConnectionPending = homeUiState.isConnecting
@@ -165,10 +163,8 @@ fun HomeScreen(
     LaunchedEffect(homeUiState.userName) {
         if (homeUiState.userName.isNotBlank()) {
             pendingUserName = homeUiState.userName
-            showRegistrationDialog = false
-        } else if (!homeViewModel.hasRegisteredUser()) {
-            showRegistrationDialog = true
         }
+        showRegistrationDialog = false
     }
 
     LaunchedEffect(homeUiState.isAutoConnectEnabled, homeUiState.connectionStatus, homeUiState.serverIp, homeUiState.serverPort) {
