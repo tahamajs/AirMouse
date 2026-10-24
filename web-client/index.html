@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AirMouse iOS & Mobile Web Client</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AirMouse">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-left">
+            <span class="logo-icon">🖱️</span>
+            <div>
+                <h1 class="app-title">AirMouse</h1>
+                <span class="app-badge">Protocol v2</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div id="connectionStatus" class="status-indicator disconnected">
+                <span class="status-dot"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <!-- Settings & Connection Drawer / Bar -->
+        <section class="control-panel glass-card">
+            <div class="row host-row">
+                <div class="input-group">
+                    <label for="serverHost">Server Address</label>
+                    <input type="text" id="serverHost" placeholder="e.g. 192.168.1.50:8081" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                </div>
+                <div class="input-group">
+                    <label for="pairingToken">Pairing Token</label>
+                    <input type="password" id="pairingToken" placeholder="HMAC / Pairing Token" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                </div>
+            </div>
+
+            <div class="row buttons-row">
+                <button id="btnConnect" class="btn btn-primary">Connect (wss://)</button>
+                <button id="btnGyroPermission" class="btn btn-secondary">Enable Gyro (iOS)</button>
+                <button id="btnSettingsToggle" class="btn btn-icon" title="Toggle Settings" aria-label="Settings">⚙️</button>
+            </div>
+
+            <div id="settingsPanel" class="settings-drawer collapsed">
+                <div class="setting-item">
+                    <label for="touchSensitivity">Touch Sensitivity: <span id="valTouchSens">1.5</span></label>
+                    <input type="range" id="touchSensitivity" min="0.5" max="3.5" step="0.1" value="1.5">
+                </div>
+                <div class="setting-item">
+                    <label for="gyroSensitivity">Air Gyro Sensitivity: <span id="valGyroSens">1.8</span></label>
+                    <input type="range" id="gyroSensitivity" min="0.5" max="5.0" step="0.1" value="1.8">
+                </div>
+                <div class="setting-item toggle-item">
+                    <label for="gyroToggle">Enable Air Gyroscope Mode</label>
+                    <input type="checkbox" id="gyroToggle">
+                </div>
+                <div class="setting-item toggle-item">
+                    <label for="hapticToggle">Haptic Feedback</label>
+                    <input type="checkbox" id="hapticToggle" checked>
+                </div>
+            </div>
+        </section>
+
+        <!-- Touchpad Gesture Canvas -->
+        <section class="touchpad-section">
+            <div id="touchpad" class="touchpad-surface glass-card" tabindex="0" role="region" aria-label="Touchpad Gesture Area">
+                <div class="touchpad-grid"></div>
+                <div class="touchpad-crosshair"></div>
+                <div class="touchpad-instructions">
+                    <span class="icon">👆</span>
+                    <p>1 finger: Move cursor &bull; Tap: Left Click</p>
+                    <p>2 fingers: Tap: Right Click &bull; Drag: Scroll</p>
+                </div>
+                <div id="touchFeedback" class="touch-feedback-overlay"></div>
+            </div>
+
+            <!-- Virtual Mouse Buttons for Accessibility & Quick Action -->
+            <div class="mouse-buttons-row">
+                <button id="btnLeftClick" class="btn mouse-btn">Left Click</button>
+                <button id="btnMiddleClick" class="btn mouse-btn">Middle</button>
+                <button id="btnRightClick" class="btn mouse-btn">Right Click</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Stats & Info -->
+    <footer class="app-footer">
+        <div class="stats-item">
+            <span>Seq:</span> <strong id="statSeq">0</strong>
+        </div>
+        <div class="stats-item">
+            <span>Rate:</span> <strong id="statRate">0 msg/s</strong>
+        </div>
+        <div class="stats-item">
+            <span>Gyro:</span> <strong id="statGyro">Disabled</strong>
+        </div>
+    </footer>
+
+    <!-- Pairing Token Modal if needed -->
+    <div id="tokenModal" class="modal-overlay hidden">
+        <div class="modal-card glass-card">
+            <h3>Pairing Token Required</h3>
+            <p>Please enter the AirMouse server pairing token from your desktop console or QR code:</p>
+            <input type="text" id="modalTokenInput" class="modal-input" placeholder="Token string">
+            <div class="modal-actions">
+                <button id="btnModalCancel" class="btn btn-secondary">Cancel</button>
+                <button id="btnModalSave" class="btn btn-primary">Save & Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
