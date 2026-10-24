@@ -72,28 +72,28 @@ AirMouse delivers a production-grade user experience crafted specifically for hi
 ## 🏗️ System Architecture
 
 ```mermaid
-graph TD
-    subgraph Mobile Clients
+flowchart TD
+    subgraph MobileClients["Mobile Clients"]
         A["Android Native App<br/>(Jetpack Compose / Sensors HAL)"]
         B["iOS Safari / Mobile Web<br/>(HTML5 / WSS / WakeLock)"]
     end
 
-    subgraph Transport Layer
+    subgraph TransportLayer["Transport Layer"]
         C["TLS 1.2+ Encrypted TCP (Port 8080)"]
         D["WSS Secure WebSocket (Port 8081)"]
         E["UDP Fast Stream (Port 8080)"]
         F["UDP Discovery Responder (Port 8082)"]
     end
 
-    subgraph Desktop Host Server (Python or Go)
+    subgraph DesktopServer["Desktop Host Server (Python or Go)"]
         G["Protocol V2 Decoder & Validator<br/>(HMAC Auth / Monotonic Seq / Bounds)"]
         H["Adaptive Jitter Buffer & Queue"]
         I["Signal Filtering & Predictors<br/>(One Euro Filter / Kalman / ZUPT)"]
         J["Thread-Safe OS Actuator<br/>(Native Mouse / Keyboard Injection)"]
     end
 
-    A -->|UDP/TCP/WS| C
-    A -->|UDP/TCP/WS| D
+    A -->|UDP / TCP / WS| C
+    A -->|UDP / TCP / WS| D
     A -->|UDP Fast Motion| E
     A -.->|Challenge-Response| F
     B -->|WSS| D
