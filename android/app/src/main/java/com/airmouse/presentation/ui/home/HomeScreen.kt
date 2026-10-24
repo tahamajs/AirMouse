@@ -262,7 +262,7 @@ fun HomeScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // 1. Connection Status Banner
@@ -558,9 +558,7 @@ fun HomeScreen(
                         isRegistered = isRegistered,
                         isCalibrated = homeUiState.isCalibrated,
                         onModuleClick = { route ->
-                            if (!isRegistered) {
-                                showRegistrationDialog = true
-                            } else if (!homeUiState.isCalibrated && route != Destinations.Calibration.route) {
+                            if (!homeUiState.isCalibrated && route != Destinations.Calibration.route) {
                                 showCalibrationRequiredDialog = true
                             } else {
                                 navigationActions.navigateTo(route)

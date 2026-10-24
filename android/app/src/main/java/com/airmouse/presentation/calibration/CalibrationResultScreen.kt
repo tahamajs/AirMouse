@@ -66,8 +66,7 @@ import java.util.Locale
 /**
  * Calibration Result Screen
  *
- * Displays the results of the calibration process in a unified modern purple/green design.
- * Shows status, quality, and detailed calibration data.
+ * Displays the results of the calibration process in a unified Material 3 theme matching CalibrationScreen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,35 +93,40 @@ fun CalibrationResultScreen(
         label = "checkmark"
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Calibration Result", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navigationActions.navigateToHome() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF0F172A), Color(0xFF1E1B4B))))
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Calibration Summary",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        },
-        containerColor = Color.Transparent
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF0F172A), Color(0xFF1E1B4B))
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navigationActions.navigateToHome() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
                     )
                 )
-        ) {
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -132,10 +136,10 @@ fun CalibrationResultScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Celebration checkmark icon
+                // Celebration Icon
                 Box(
                     modifier = Modifier
-                        .size(90.dp)
+                        .size(100.dp)
                         .scale(checkScale)
                         .clip(CircleShape)
                         .background(
@@ -147,24 +151,24 @@ fun CalibrationResultScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(70.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF10B981)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.Check,
+                            imageVector = Icons.Default.Check,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(40.dp)
                         )
                     }
                 }
 
                 Text(
-                    text = "Calibration Complete! 🎉",
+                    text = "Calibration Verified 🎉",
                     color = Color.White,
-                    fontSize = 24.sp,
+                    fontSize = 26.sp,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center
                 )
@@ -189,50 +193,136 @@ fun CalibrationResultScreen(
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = qualityColor.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, qualityColor.copy(alpha = 0.35f))
+                    border = BorderStroke(1.dp, qualityColor.copy(alpha = 0.3f))
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(qualityEmoji, fontSize = 20.sp)
+                        Text(qualityEmoji, fontSize = 24.sp)
                         Text(
                             "Quality: ${effectiveQuality.name}",
                             color = qualityColor,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontSize = 18.sp
                         )
                     }
                 }
 
-                // Result Card with detailed telemetry
-                ResultCard(
-                    calibrationData = calibrationData,
-                    calibrationStatus = calibrationStatus,
-                    calibrationQuality = effectiveQuality,
-                    progress = progress
-                )
+                // Detailed Results Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f)),
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "📊 Sensor Offsets & Scale",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
 
-                // Sync status messages
+                        // Status Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Status", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                            Text(
+                                if (calibrationData?.isCalibrated == true || calibrationStatus == CalibrationStatus.COMPLETED) "✅ COMPLETED (100%)" else "⏳ IN PROGRESS",
+                                color = if (calibrationData?.isCalibrated == true || calibrationStatus == CalibrationStatus.COMPLETED) Color(0xFF10B981) else Color(0xFFF59E0B),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        if (calibrationData != null) {
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                            SensorDetailRow(
+                                label = "Gyro Bias",
+                                offsets = calibrationData.gyroBias,
+                                scale = null,
+                                color = Color(0xFF38BDF8)
+                            )
+
+                            SensorDetailRow(
+                                label = "Accelerometer",
+                                offsets = calibrationData.accelOffset,
+                                scale = Triple(calibrationData.accelOffset.scaleX, calibrationData.accelOffset.scaleY, calibrationData.accelOffset.scaleZ),
+                                color = Color(0xFF22C55E)
+                            )
+
+                            SensorDetailRow(
+                                label = "Magnetometer",
+                                offsets = calibrationData.magOffset,
+                                scale = Triple(calibrationData.magOffset.scaleX, calibrationData.magOffset.scaleY, calibrationData.magOffset.scaleZ),
+                                color = Color(0xFFF59E0B)
+                            )
+                        }
+
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Storage", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                            Text(
+                                if (calibrationData?.isCalibrated == true) "✅ Saved to device" else "⏳ Incomplete",
+                                color = if (calibrationData?.isCalibrated == true) Color(0xFF10B981) else Color(0xFFF59E0B),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                // Sync status feedback
                 if (uiState.statusMessage.contains("synchronized", ignoreCase = true)) {
-                    Text(
-                        text = uiState.statusMessage,
-                        color = Color(0xFF10B981),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(4.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF10B981).copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = uiState.statusMessage,
+                            color = Color(0xFF10B981),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(12.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
                 uiState.errorMessage?.let { error ->
-                    Text(
-                        text = error,
-                        color = Color(0xFFEF4444),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(4.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFEF4444).copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = error,
+                            color = Color(0xFFEF4444),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(12.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
 
-                // Sync to PC Button (only active if server is connected and data is calibrated)
+                // Sync to PC Button
                 if (calibrationData?.isCalibrated == true) {
                     Button(
                         onClick = { viewModel.syncToServer() },
@@ -241,21 +331,15 @@ fun CalibrationResultScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(16.dp),
                         enabled = uiState.isServerConnected,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF10B981),
-                            disabledContainerColor = Color.White.copy(alpha = 0.12f)
-                        )
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
                     ) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null)
+                        Icon(imageVector = Icons.Default.CloudUpload, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (uiState.isServerConnected) "Sync to PC Server" else "Sync to PC (Offline)",
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text(if (uiState.isServerConnected) "Sync to PC Server" else "Sync to PC (Offline)")
                     }
                 }
 
-                // Continue Button (Primary CTA in Modern Indigo/Purple)
+                // Continue Button
                 Button(
                     onClick = {
                         onContinue()
@@ -263,11 +347,11 @@ fun CalibrationResultScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(58.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
                 ) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = null)
+                    Icon(imageVector = Icons.Default.ArrowForward, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
                     Text("Continue to App", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
@@ -280,42 +364,28 @@ fun CalibrationResultScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(16.dp),
+                        .height(52.dp),
+                    shape = RoundedCornerShape(18.dp),
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
                     Spacer(Modifier.width(8.dp))
-                    Text("Recalibrate", color = Color.White.copy(alpha = 0.85f))
+                    Text("Recalibrate", color = Color.White.copy(alpha = 0.8f))
                 }
 
-                // Share Button (optional)
+                // Share / Export
                 if (onShare != null) {
                     OutlinedButton(
                         onClick = onShare,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
+                            .height(48.dp),
                         shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                        Icon(imageVector = Icons.Default.Share, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
                         Spacer(Modifier.width(8.dp))
-                        Text("Share Results", color = Color.White.copy(alpha = 0.85f))
-                    }
-                }
-
-                // Export Button (optional)
-                if (onExport != null) {
-                    OutlinedButton(
-                        onClick = onExport,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
-                    ) {
-                        Text("Export Data", color = Color.White.copy(alpha = 0.85f))
+                        Text("Share Results", color = Color.White.copy(alpha = 0.8f))
                     }
                 }
             }
@@ -323,146 +393,43 @@ fun CalibrationResultScreen(
     }
 }
 
-/**
- * Result Card displaying calibration details with modern dark styling and glowing indicators.
- */
 @Composable
-private fun ResultCard(
-    calibrationData: CalibrationData?,
-    calibrationStatus: CalibrationStatus,
-    calibrationQuality: CalibrationQuality,
-    progress: Int
+private fun SensorDetailRow(
+    label: String,
+    offsets: SensorCalibrationData,
+    scale: Triple<Float, Float, Float>?,
+    color: Color
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.06f)
-        ),
-        border = BorderStroke(1.dp, Color(0xFF6366F1).copy(alpha = 0.25f))
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(label, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             Text(
-                text = "📊 Telemetry & Calibration Data",
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                fontSize = 16.sp
+                "Offset: X=${"%.2f".format(Locale.US, offsets.offsetX)} Y=${"%.2f".format(Locale.US, offsets.offsetY)} Z=${"%.2f".format(Locale.US, offsets.offsetZ)}",
+                color = color,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Medium
             )
-
-            // Status
+        }
+        if (scale != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.End
             ) {
-                Text("Status:", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
                 Text(
-                    calibrationStatus.name,
-                    color = when (calibrationStatus) {
-                        CalibrationStatus.COMPLETED -> Color(0xFF10B981)
-                        CalibrationStatus.IN_PROGRESS -> Color(0xFF38BDF8)
-                        CalibrationStatus.FAILED -> Color(0xFFEF4444)
-                        else -> Color.White.copy(alpha = 0.7f)
-                    },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
+                    "Scale: X=${"%.2f".format(Locale.US, scale.first)} Y=${"%.2f".format(Locale.US, scale.second)} Z=${"%.2f".format(Locale.US, scale.third)}",
+                    color = color.copy(alpha = 0.75f),
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
                 )
-            }
-
-            // Quality
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Quality:", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-                Text(
-                    calibrationQuality.name,
-                    color = when (calibrationQuality) {
-                        CalibrationQuality.EXCELLENT -> Color(0xFF10B981)
-                        CalibrationQuality.GOOD -> Color(0xFF3B82F6)
-                        CalibrationQuality.FAIR -> Color(0xFFF59E0B)
-                        else -> Color.White.copy(alpha = 0.7f)
-                    },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
-            }
-
-            // Progress
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Progress:", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-                Text("$progress%", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            }
-
-            // Data saved status
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Data Storage:", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-                Text(
-                    if (calibrationData?.isCalibrated == true) "✅ Saved to device" else "❌ Missing",
-                    color = if (calibrationData?.isCalibrated == true) {
-                        Color(0xFF10B981)
-                    } else {
-                        Color(0xFFEF4444)
-                    },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
-            }
-
-            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 4.dp))
-
-            // Show detailed data if available
-            if (calibrationData != null && calibrationData.isCalibrated) {
-                TelemetryRow("Gyro Bias", formatOffset(calibrationData.gyroBias), Color(0xFF38BDF8))
-                TelemetryRow("Accel Offset", formatOffset(calibrationData.accelOffset), Color(0xFF22C55E))
-                TelemetryRow("Mag Offset", formatOffset(calibrationData.magOffset), Color(0xFFF59E0B))
-                TelemetryRow("Accel Scale", formatScale(calibrationData.accelOffset), Color(0xFF22C55E))
-                TelemetryRow("Mag Scale", formatScale(calibrationData.magOffset), Color(0xFFF59E0B))
             }
         }
     }
-}
-
-@Composable
-private fun TelemetryRow(label: String, value: String, accentColor: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-        Text(
-            value,
-            color = accentColor,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-/**
- * Format a sensor data's offsets as a string.
- */
-private fun formatOffset(data: SensorCalibrationData): String {
-    return String.format(Locale.US, "(%.2f, %.2f, %.2f)", data.offsetX, data.offsetY, data.offsetZ)
-}
-
-/**
- * Format a sensor data's scale factors as a string.
- */
-private fun formatScale(data: SensorCalibrationData): String {
-    return String.format(Locale.US, "(%.2f, %.2f, %.2f)", data.scaleX, data.scaleY, data.scaleZ)
 }
