@@ -50,7 +50,7 @@ enum class FontSizePreset(val label: String, val valueSp: Float) {
 
 
 data class SettingsUiState(
-    
+    // Cursor settings
     val sensitivity: Float = 0.5f,
     val accelerationEnabled: Boolean = false,
     val accelerationFactor: Float = 1.5f,
@@ -58,6 +58,9 @@ data class SettingsUiState(
     val invertY: Boolean = false,
     val smoothingEnabled: Boolean = true,
     val smoothingFactor: Float = 0.5f,
+    val oneEuroMinCutoff: Float = 1.0f,
+    val oneEuroBeta: Float = 0.007f,
+    val smoothnessPreset: String = "Office", // "Gaming", "Office", "Precision"
 
     
     val clickThreshold: Float = 10f,
@@ -154,6 +157,9 @@ sealed class SettingsEvent {
     object ToggleInvertY : SettingsEvent()
     object ToggleSmoothing : SettingsEvent()
     data class UpdateSmoothingFactor(val value: Float) : SettingsEvent()
+    data class UpdateOneEuroMinCutoff(val value: Float) : SettingsEvent()
+    data class UpdateOneEuroBeta(val value: Float) : SettingsEvent()
+    data class ApplySmoothnessPreset(val preset: String) : SettingsEvent()
 
     
     data class UpdateClickThreshold(val value: Float) : SettingsEvent()

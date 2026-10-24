@@ -50,39 +50,57 @@ class OneEuroFilter(
         val safeRate = if (rate <= 0.0 || rate.isNaN() || rate.isInfinite()) 60.0 else rate
         val tau = 1.0 / (2.0 * PI * safeCutoff)
         val te = 1.0 / safeRate
-        return 1.0 / (1.0 + tau / te)
+        val alphaVal = 1.0 / (1.0 + tau / te)
+        return alphaVal.coerceIn(0.0, 1.0)
     }
 
     /**
      * Filters the input value [x] with the associated timestamp in milliseconds [timestampMs].
      */
     fun filter(x: Double, timestampMs: Long = System.currentTimeMillis()): Double {
-        if (lastTime < 0L) {
-            lastTime = timestampMs
-            dxFilter.reset()
-            return xFilter.filter(x, 1.0)
+        if (x.isNaN() || x.isInfinite()) {
+            return if (xFilter.hasLast()) xFilter.last() else 0.0
         }
 
-        val dt = (timestampMs - lastTime) / 1000.0
+        if (lastTime < 0L || timestampMs <= lastTime) {
+            if (lastTime < 0L) {
+                lastTime = timestampMs
+                dxFilter.reset()
+                return xFilter.filter(x, 1.0)
+            }
+            // If timestamp did not advance or went backward, reuse previous state without corrupting derivative
+            return xFilter.filter(x, alpha(60.0, minCutoff))
+        }
+
+        val rawDt = (timestampMs - lastTime) / 1000.0
         lastTime = timestampMs
 
-        // Guard against zero, negative or unusually high dt
-        val rate = if (dt > 1e-5) 1.0 / dt else 60.0
+        // Guard against zero, negative or unusually high dt (clamp dt between 1ms and 500ms)
+        val dt = rawDt.coerceIn(0.001, 0.5)
+        val rate = 1.0 / dt
 
         // Estimate derivative (dx/dt)
-        val dx = if (xFilter.hasLast() && dt > 1e-5) {
+        val dx = if (xFilter.hasLast()) {
             (x - xFilter.last()) / dt
         } else {
             0.0
         }
 
-        val edx = dxFilter.filter(dx, alpha(rate, dCutoff))
-        val cutoff = minCutoff + beta * kotlin.math.abs(edx)
+        val safeDx = if (dx.isNaN() || dx.isInfinite()) 0.0 else dx
+        val edx = dxFilter.filter(safeDx, alpha(rate, dCutoff))
+        val cutoff = (minCutoff + beta * kotlin.math.abs(edx)).coerceAtLeast(1e-4)
         return xFilter.filter(x, alpha(rate, cutoff))
     }
 
     fun filter(x: Float, timestampMs: Long = System.currentTimeMillis()): Float {
         return filter(x.toDouble(), timestampMs).toFloat()
+    }
+
+    /**
+     * Filters with nanosecond timestamps for high precision SENSOR_DELAY_FASTEST/GAME HAL events.
+     */
+    fun filterNano(x: Float, timestampNs: Long): Float {
+        return filter(x.toDouble(), timestampNs / 1_000_000L).toFloat()
     }
 
     fun reset() {

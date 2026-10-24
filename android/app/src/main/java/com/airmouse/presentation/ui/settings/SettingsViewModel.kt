@@ -104,6 +104,9 @@ class SettingsViewModel @Inject constructor(
                 invertY = prefs.getBoolean("invert_y", false),
                 smoothingEnabled = prefs.getBoolean("smoothing_enabled", true),
                 smoothingFactor = prefs.getFloat("smoothing_factor", 0.5f),
+                oneEuroMinCutoff = prefs.getFloat("one_euro_min_cutoff", 1.0f),
+                oneEuroBeta = prefs.getFloat("one_euro_beta", 0.007f),
+                smoothnessPreset = prefs.getString("smoothness_preset", "Office"),
 
                 // ==================== GESTURE SETTINGS ====================
                 clickThreshold = prefs.getFloat("click_threshold", 10f),
@@ -218,6 +221,9 @@ class SettingsViewModel @Inject constructor(
                 SettingsEvent.ToggleInvertY -> toggleInvertY()
                 SettingsEvent.ToggleSmoothing -> toggleSmoothing()
                 is SettingsEvent.UpdateSmoothingFactor -> updateSmoothingFactor(event.value)
+                is SettingsEvent.UpdateOneEuroMinCutoff -> updateOneEuroMinCutoff(event.value)
+                is SettingsEvent.UpdateOneEuroBeta -> updateOneEuroBeta(event.value)
+                is SettingsEvent.ApplySmoothnessPreset -> applySmoothnessPreset(event.preset)
 
                 // ==================== GESTURE EVENTS ====================
                 is SettingsEvent.UpdateClickThreshold -> updateClickThreshold(event.value)
@@ -351,6 +357,35 @@ class SettingsViewModel @Inject constructor(
     private suspend fun updateSmoothingFactor(value: Float) {
         prefs.putFloat("smoothing_factor", value)
         _uiState.update { it.copy(smoothingFactor = value) }
+    }
+
+    private suspend fun updateOneEuroMinCutoff(value: Float) {
+        prefs.putFloat("one_euro_min_cutoff", value)
+        _uiState.update { it.copy(oneEuroMinCutoff = value) }
+    }
+
+    private suspend fun updateOneEuroBeta(value: Float) {
+        prefs.putFloat("one_euro_beta", value)
+        _uiState.update { it.copy(oneEuroBeta = value) }
+    }
+
+    private suspend fun applySmoothnessPreset(preset: String) {
+        val (cutoff, beta) = when (preset) {
+            "Gaming" -> Pair(1.5f, 0.05f)
+            "Precision" -> Pair(0.5f, 0.002f)
+            else -> Pair(1.0f, 0.007f) // "Office"
+        }
+        prefs.putString("smoothness_preset", preset)
+        prefs.putFloat("one_euro_min_cutoff", cutoff)
+        prefs.putFloat("one_euro_beta", beta)
+        _uiState.update {
+            it.copy(
+                smoothnessPreset = preset,
+                oneEuroMinCutoff = cutoff,
+                oneEuroBeta = beta
+            )
+        }
+        showToast("Applied $preset Smoothness Preset")
     }
 
     // ======================================================

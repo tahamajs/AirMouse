@@ -586,6 +586,65 @@ fun CursorSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
             formatValue = { "%.1fx".format(it) },
             description = "Higher values make cursor faster"
         )
+
+        // Smoothness Presets (Gaming, Office, Precision)
+        GlassmorphicCard(
+            modifier = Modifier.fillMaxWidth(),
+            cornerRadius = 16.dp
+        ) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Smoothness Presets",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "Switch algorithm ballistics for optimal response",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.55f)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val presets = listOf("Gaming", "Office", "Precision")
+                    presets.forEach { preset ->
+                        val isSelected = uiState.smoothnessPreset == preset
+                        Button(
+                            onClick = { viewModel.handleEvent(SettingsEvent.ApplySmoothnessPreset(preset)) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.1f),
+                                contentColor = if (isSelected) Color.Black else Color.White
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(preset, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 1€ Filter sliders
+        SettingsSlider(
+            title = "OneEuro Min Cutoff (fc_min)",
+            value = uiState.oneEuroMinCutoff,
+            onValueChange = { viewModel.handleEvent(SettingsEvent.UpdateOneEuroMinCutoff(it)) },
+            valueRange = 0.1f..3.0f, steps = 29,
+            formatValue = { "%.2f Hz".format(it) },
+            description = "Lower frequencies eliminate micro-jitter when hand is still"
+        )
+        SettingsSlider(
+            title = "OneEuro Beta Speed Coefficient",
+            value = uiState.oneEuroBeta,
+            onValueChange = { viewModel.handleEvent(SettingsEvent.UpdateOneEuroBeta(it)) },
+            valueRange = 0.001f..0.05f, steps = 49,
+            formatValue = { "%.3f".format(it) },
+            description = "Higher values drastically cut lag during quick mouse sweeps"
+        )
+
         SettingsSlider(
             title = "Smoothing Factor",
             value = uiState.smoothingFactor,
