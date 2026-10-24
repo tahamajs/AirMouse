@@ -59,7 +59,6 @@ class UserPreferencesSystem @Inject constructor(
         var theme: String = "system",
         var fontSize: Float = 16f,
         var showDebugInfo: Boolean = false,
-        var showFloatingPanel: Boolean = true,
         // Privacy
         var anonymousStats: Boolean = true,
         var crashReporting: Boolean = true
@@ -115,7 +114,6 @@ class UserPreferencesSystem @Inject constructor(
             theme = prefs.getTheme(),
             fontSize = prefs.getFloat("font_size", 16f),
             showDebugInfo = prefs.getBoolean("show_debug_info", false),
-            showFloatingPanel = prefs.getBoolean("show_floating_panel", true),
             anonymousStats = prefs.getBoolean("anonymous_stats", true),
             crashReporting = prefs.getBoolean("crash_reporting", true)
         )
@@ -155,7 +153,6 @@ class UserPreferencesSystem @Inject constructor(
         this.prefs.putString("theme", prefs.theme)
         this.prefs.putFloat("font_size", prefs.fontSize)
         this.prefs.putBoolean("show_debug_info", prefs.showDebugInfo)
-        this.prefs.putBoolean("show_floating_panel", prefs.showFloatingPanel)
         this.prefs.putBoolean("anonymous_stats", prefs.anonymousStats)
         this.prefs.putBoolean("crash_reporting", prefs.crashReporting)
     }

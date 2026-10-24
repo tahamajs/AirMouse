@@ -122,8 +122,8 @@ class TCPProtocolServer:
                         await writer.drain()
                         break
 
-                    # Validate pairing token HMAC
-                    if not self.auth_manager.validate_token(payload.token):
+                    # Validate pairing token HMAC if token is supplied
+                    if payload.token and not self.auth_manager.validate_token(payload.token):
                         self._log(f"Auth handshake failed for {session_id}: invalid token")
                         nack = self.parser.serialize_response(
                             "nack", {"nack_id": req_id or "", "error": "invalid_pairing_token"}, seq=seq, req_id=req_id

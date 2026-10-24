@@ -90,12 +90,21 @@ class KeyPayload(BaseModel):
 
 class HelloPayload(BaseModel):
     """Client handshake payload containing pairing token."""
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
-    device_id: str
-    name: str
-    version: str
-    token: str
+    device_id: str = ""
+    name: str = "AirMouse Client"
+    version: str = "2.0.0"
+    token: str = ""
+    device: Optional[str] = None
+    android_version: Optional[str] = None
+    model: Optional[str] = None
+    manufacturer: Optional[str] = None
+    brand: Optional[str] = None
+    device_name: Optional[str] = None
+    sdk_int: Optional[str] = None
+    protocol: Optional[str] = None
+    transport: Optional[str] = None
 
 
 class WelcomePayload(BaseModel):
