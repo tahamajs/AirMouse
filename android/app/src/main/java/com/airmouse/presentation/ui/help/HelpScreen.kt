@@ -326,7 +326,7 @@ fun InteractiveWalkthroughSection() {
                 val tabs = listOf(
                     Triple(0, "Mouse Movement", Icons.Default.Mouse),
                     Triple(1, "Gestures Guide", Icons.Default.TouchApp),
-                    Triple(2, "Calibration Sim", Icons.Default.Sensors),
+                    Triple(2, "Calibration", Icons.Default.Sensors),
                     Triple(3, "Wireless Pairing", Icons.Default.Wifi)
                 )
                 items(tabs) { (index, title, icon) ->
@@ -345,7 +345,7 @@ fun InteractiveWalkthroughSection() {
                         )
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
@@ -359,7 +359,9 @@ fun InteractiveWalkthroughSection() {
                                 text = title,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f)
+                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }

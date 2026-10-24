@@ -5,6 +5,8 @@ go 1.23.0
 require (
 	fyne.io/fyne/v2 v2.7.4
 	github.com/gorilla/websocket v1.5.3
+	github.com/kbinani/screenshot v0.0.0-20250624051815-089614a94018
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/yalue/onnxruntime_go v1.31.0
 	golang.org/x/sys v0.30.0
 )
@@ -30,11 +32,9 @@ require (
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
-	github.com/kbinani/screenshot v0.0.0-20250624051815-089614a94018 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mattn/go-runewidth v0.0.17 // indirect
-	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.5.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect

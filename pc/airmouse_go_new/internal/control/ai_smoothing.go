@@ -15,6 +15,7 @@ type AISmoother struct {
 	modelPath    string
 	onnxLoaded   bool
 	kalmanFilter *predictive.KalmanFilter2D
+	blendFactor  float64
 
 	enabled bool
 }
@@ -24,7 +25,8 @@ type AISmoother struct {
 func NewAISmoother(modelPath string, blendFactor float64) *AISmoother {
 	s := &AISmoother{
 		modelPath:    modelPath,
-		kalmanFilter: predictive.NewKalmanFilter2D(0.001, 0.1, blendFactor),
+		kalmanFilter: predictive.NewKalmanFilter2D(0.016),
+		blendFactor:  blendFactor,
 		enabled:      true,
 	}
 
@@ -50,21 +52,28 @@ func (s *AISmoother) initModel() {
 
 // Smooth processes (dx, dy, dt) through either the ONNX model or the Kalman Filter fallback.
 func (s *AISmoother) Smooth(dx, dy, dt float64) (float64, float64) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if !s.enabled {
 		return dx, dy
 	}
 
-	// If ONNX is loaded and operational, inference runs here.
-	// Otherwise, gracefully fallback to KalmanFilter2D.
-	if !s.onnxLoaded {
-		return s.kalmanFilter.Update(dx, dy, dt)
+	if dt <= 0.0001 {
+		dt = 0.016
+	} else if dt > 0.5 {
+		dt = 0.5
 	}
 
-	// Neural inference simulation/pass-through blended with Kalman
-	return s.kalmanFilter.Update(dx, dy, dt)
+	s.kalmanFilter.SetDT(dt)
+	s.kalmanFilter.Predict()
+	s.kalmanFilter.Update(dx, dy)
+	predDx, predDy := s.kalmanFilter.GetPredictedMovement()
+
+	smoothedDx := (1.0-s.blendFactor)*dx + s.blendFactor*predDx
+	smoothedDy := (1.0-s.blendFactor)*dy + s.blendFactor*predDy
+
+	return smoothedDx, smoothedDy
 }
 
 // SetEnabled toggles AI smoothing on/off.

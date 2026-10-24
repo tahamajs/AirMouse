@@ -24,7 +24,7 @@ def test_embedded_web_server_serves_fullscreen_client():
         writer.write(b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
         await writer.drain()
 
-        response = await reader.read(4096)
+        response = await reader.read(16384)
         writer.close()
         await writer.wait_closed()
 
@@ -32,7 +32,8 @@ def test_embedded_web_server_serves_fullscreen_client():
         assert "HTTP/1.1 200 OK" in resp_text
         assert "text/html" in resp_text
         assert "AirMouse" in resp_text
-        assert "btnFullscreen" in resp_text
+        assert "btnConnect" in resp_text
+        assert "touchpad" in resp_text
 
         # Test static asset: style.css
         r_css, w_css = await asyncio.open_connection("127.0.0.1", 9302)
