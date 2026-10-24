@@ -396,12 +396,8 @@ fun MainScreen(
                             )
                         }
                         else -> {
-                            AnimatedFAB(
-                                onClick = { navController.navigate(Destinations.Calibration.route) },
-                                icon = Icons.Default.Build,
-                                text = "Calibrate",
-                                gradient = listOf(Color(0xFFFF5722), Color(0xFFFF9800))
-                            )
+                            // Floating calibrate button removed to prevent overlapping the IP address input field.
+                            // Calibration is accessible via Modules grid and Quick Actions.
                         }
                     }
                 }
@@ -426,7 +422,7 @@ fun MainScreen(
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
 
-                if (isConnected && currentRoute != Destinations.Touchpad.route && currentRoute != Destinations.Onboarding.route) {
+                if (isConnected && currentRoute == Destinations.Home.route) {
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)

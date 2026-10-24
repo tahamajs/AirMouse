@@ -53,6 +53,11 @@ class NotificationManager @Inject constructor(
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val notificationManagerCompat = NotificationManagerCompat.from(context)
 
+    private var lastConnectedServer: String? = null
+    private var lastConnectedTime: Long = 0L
+    private var lastErrorText: String? = null
+    private var lastErrorTime: Long = 0L
+
     private val canPostNotifications: Boolean
         get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -211,6 +216,20 @@ class NotificationManager @Inject constructor(
 
     fun showConnectedNotification(serverName: String) {
         if (!canPostNotifications) return
+
+        val now = System.currentTimeMillis()
+        if (lastConnectedServer == serverName && (now - lastConnectedTime) < 3000L) {
+            // Debounce rapid duplicate connected notifications
+            return
+        }
+        lastConnectedServer = serverName
+        lastConnectedTime = now
+
+        // Clear any contradictory error, disconnected, or pending notifications
+        cancelNotification(NOTIFICATION_ERROR)
+        cancelNotification(NOTIFICATION_DISCONNECTED)
+        cancelNotification(NOTIFICATION_INFO)
+
         val intent = Intent(context, MainActivity::class.java).apply {
             putExtra("open_status_center", true)
         }
@@ -253,6 +272,12 @@ class NotificationManager @Inject constructor(
 
     fun showDisconnectedNotification(reason: String? = null) {
         if (!canPostNotifications) return
+
+        // Cancel connected notification and reset connected state
+        cancelNotification(NOTIFICATION_CONNECTED)
+        cancelNotification(NOTIFICATION_INFO)
+        lastConnectedServer = null
+
         val message = reason ?: "Waiting for approval."
         val notification = createBaseNotification(
             channelId = CHANNEL_CONNECTION,
@@ -320,6 +345,20 @@ class NotificationManager @Inject constructor(
 
     fun showConnectionErrorNotification(error: String) {
         if (!canPostNotifications) return
+
+        val now = System.currentTimeMillis()
+        if (lastErrorText == error && (now - lastErrorTime) < 3000L) {
+            // Debounce rapid identical error notifications
+            return
+        }
+        lastErrorText = error
+        lastErrorTime = now
+
+        // Never keep 'Connected' notification alive while erroring out!
+        cancelNotification(NOTIFICATION_CONNECTED)
+        cancelNotification(NOTIFICATION_INFO)
+        lastConnectedServer = null
+
         val notification = createBaseNotification(
             channelId = CHANNEL_ERROR,
             title = "Connection Error",
@@ -425,3 +464,5 @@ class NotificationManager @Inject constructor(
         notificationManagerCompat.cancelAll()
     }
 }
+
+typealias AirMouseNotificationManager = NotificationManager

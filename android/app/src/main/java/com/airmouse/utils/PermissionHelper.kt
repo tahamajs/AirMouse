@@ -12,12 +12,9 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
-
 object PermissionHelper {
 
     private const val PERMISSION_REQUEST_CODE = 100
-    private const val OVERLAY_REQUEST_CODE = 101
     private const val BLUETOOTH_REQUEST_CODE = 102
     private const val LOCATION_REQUEST_CODE = 103
 
@@ -110,21 +107,6 @@ object PermissionHelper {
 
         if (permissionsToRequest.isNotEmpty()) {
             ActivityCompat.requestPermissions(activity, permissionsToRequest, requestCode)
-        }
-    }
-
-    fun hasOverlayPermission(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(context)
-        } else true
-    }
-
-    fun requestOverlayPermission(activity: Activity, requestCode: Int = OVERLAY_REQUEST_CODE) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(activity)) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
-                data = Uri.parse("package:${activity.packageName}")
-            }
-            activity.startActivityForResult(intent, requestCode)
         }
     }
 

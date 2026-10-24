@@ -115,14 +115,18 @@ object AirMouseProtocolMessages {
         authToken: String? = null,
         seq: Long = nextSeq()
     ): String = JSONObject().apply {
+        val validDeviceId = if (deviceId.isNullOrBlank()) "android-device" else deviceId
+        val msgId = "hello-$seq"
         put("v", 2)
         put("type", ConnectionManager.MessageTypes.TYPE_HELLO)
         put("seq", seq)
         put("ts", System.currentTimeMillis())
-        put("id", "")
+        put("id", msgId)
         put("payload", JSONObject().apply {
-            put("name", name)
-            put("version", version)
+            put("device_id", validDeviceId)
+            put("name", name.ifBlank { "AirMouse Android" })
+            put("version", version.ifBlank { "2.0.0" })
+            put("token", authToken ?: "")
             put("device", device)
             put("android_version", androidVersion)
             model?.let { put("model", it) }
@@ -130,10 +134,8 @@ object AirMouseProtocolMessages {
             brand?.let { put("brand", it) }
             deviceName?.let { put("device_name", it) }
             sdkInt?.let { put("sdk_int", it) }
-            deviceId?.let { put("device_id", it) }
             put("protocol", protocol)
             put("transport", transport)
-            authToken?.takeIf { it.isNotBlank() }?.let { put("token", it) }
         })
     }.toString()
 }

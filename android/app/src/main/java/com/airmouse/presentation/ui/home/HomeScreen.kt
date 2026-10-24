@@ -2167,9 +2167,10 @@ fun ConnectionControlsCard(
                         end = androidx.compose.ui.geometry.Offset(gradientOffset + 500f, 1000f)
                     )
                 )
-                .padding(24.dp)
+                .padding(top = 28.dp, bottom = 24.dp, start = 24.dp, end = 24.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // 1. Title Row with Status Icon
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -2204,93 +2205,7 @@ fun ConnectionControlsCard(
                     }
                 }
 
-                if (!isRegistered) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Waiting for profile registration", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = ip,
-                    onValueChange = onIpChange,
-                    label = { Text(if (protocol == ConnectionProtocol.BLUETOOTH) "MAC Address" else "IP Address") },
-                    placeholder = { Text(if (protocol == ConnectionProtocol.BLUETOOTH) "00:11:22:33:44:55 (optional)" else "192.168.1.100") },
-                    leadingIcon = { 
-                        Icon(
-                            if (protocol == ConnectionProtocol.BLUETOOTH) Icons.Default.Bluetooth else Icons.Default.Wifi, 
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        ) 
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    enabled = !isConnecting && !isConnected,
-                    shape = RoundedCornerShape(20.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = if (protocol == ConnectionProtocol.BLUETOOTH || protocol == ConnectionProtocol.USB_SERIAL) ImeAction.Done else ImeAction.Next
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            focusManager.clearFocus()
-                            if (!isConnecting && !isConnected) onConnect()
-                        }
-                    )
-                )
-
-                AnimatedVisibility(
-                    visible = protocol != ConnectionProtocol.BLUETOOTH && protocol != ConnectionProtocol.USB_SERIAL,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    OutlinedTextField(
-                        value = port.toString(),
-                        onValueChange = { it.toIntOrNull()?.let(onPortChange) },
-                        label = { Text("Port") },
-                        placeholder = { Text("8082") },
-                        leadingIcon = { 
-                            Icon(
-                                Icons.Default.SettingsEthernet, 
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            ) 
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                focusManager.clearFocus()
-                                if (!isConnecting && !isConnected) onConnect()
-                            }
-                        ),
-                        enabled = !isConnecting && !isConnected,
-                        shape = RoundedCornerShape(20.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                        )
-                    )
-                }
-
+                // 2. Protocol Selector at the VERY TOP of the card
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         "Protocol",
@@ -2303,9 +2218,10 @@ fun ConnectionControlsCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            ConnectionProtocol.UDP to "UDP",
                             ConnectionProtocol.WEBSOCKET to "WebSocket",
+                            ConnectionProtocol.UDP to "UDP",
                             ConnectionProtocol.TCP to "TCP",
+                            ConnectionProtocol.BLUETOOTH to "Bluetooth",
                             ConnectionProtocol.USB_SERIAL to "USB"
                         ).forEach { (prot, label) ->
                             val isSelected = protocol == prot
@@ -2339,28 +2255,140 @@ fun ConnectionControlsCard(
                             ConnectionProtocol.WEBSOCKET -> "Reliable control with web-based servers."
                             ConnectionProtocol.TCP -> "Direct socket connection for custom setups."
                             ConnectionProtocol.USB_SERIAL -> "Zero-latency wired connection."
-                            ConnectionProtocol.BLUETOOTH -> "Native wireless mouse emulation."
+                            ConnectionProtocol.BLUETOOTH -> "Native wireless mouse emulation via Bluetooth HID."
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                if (!isRegistered) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Waiting for profile registration", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
 
+                // 3. Inputs: If Bluetooth, hide IP/Port/Token and show Bluetooth discover/broadcast
+                if (protocol == ConnectionProtocol.BLUETOOTH) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.BluetoothSearching, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Text("Bluetooth HID Peripheral Mode", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                            Text(
+                                "Your device emulates a standard Bluetooth wireless mouse. No desktop companion server required. Pair directly from your PC/Mac Bluetooth settings.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = ip,
+                        onValueChange = onIpChange,
+                        label = { Text("IP Address") },
+                        placeholder = { Text("192.168.1.100") },
+                        leadingIcon = { 
+                            Icon(
+                                Icons.Default.Wifi, 
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            ) 
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !isConnecting && !isConnected,
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = if (protocol == ConnectionProtocol.USB_SERIAL) ImeAction.Done else ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                focusManager.clearFocus()
+                                if (!isConnecting && !isConnected) onConnect()
+                            }
+                        )
+                    )
+
+                    AnimatedVisibility(
+                        visible = protocol != ConnectionProtocol.USB_SERIAL,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        OutlinedTextField(
+                            value = port.toString(),
+                            onValueChange = { it.toIntOrNull()?.let(onPortChange) },
+                            label = { Text("Port") },
+                            placeholder = { Text("8082") },
+                            leadingIcon = { 
+                                Icon(
+                                    Icons.Default.SettingsEthernet, 
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                ) 
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    focusManager.clearFocus()
+                                    if (!isConnecting && !isConnected) onConnect()
+                                }
+                            ),
+                            enabled = !isConnecting && !isConnected,
+                            shape = RoundedCornerShape(20.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // 4. Consolidated Single Primary Button
                 Button(
                     onClick = onConnect,
                     enabled = !isConnecting && isRegistered && !isConnected,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp),
-                    shape = RoundedCornerShape(24.dp),
+                        .height(60.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 8.dp,
+                        defaultElevation = 6.dp,
                         pressedElevation = 2.dp
                     )
                 ) {
@@ -2376,15 +2404,22 @@ fun ConnectionControlsCard(
                             )
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Connecting...", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(if (protocol == ConnectionProtocol.BLUETOOTH) "Broadcasting..." else "Connecting...", fontWeight = FontWeight.Bold, fontSize = 17.sp)
                     } else if (isConnected) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Connected", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("Connected", fontWeight = FontWeight.Bold, fontSize = 17.sp)
                     } else {
-                        Icon(Icons.Default.RocketLaunch, contentDescription = null)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(if (protocol == ConnectionProtocol.BLUETOOTH) "Broadcast" else "Launch Connection", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Icon(
+                            if (protocol == ConnectionProtocol.BLUETOOTH) Icons.Default.BluetoothAudio else Icons.Default.RocketLaunch, 
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            if (protocol == ConnectionProtocol.BLUETOOTH) "Broadcast Bluetooth Mouse" else "Connect", 
+                            fontWeight = FontWeight.Bold, 
+                            fontSize = 17.sp
+                        )
                     }
                 }
 
@@ -2393,8 +2428,8 @@ fun ConnectionControlsCard(
                         onClick = onScanQr,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(24.dp),
+                            .height(52.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.primary
                         ),
@@ -2403,7 +2438,7 @@ fun ConnectionControlsCard(
                     ) {
                         Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Quick Scan QR", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Quick Scan QR", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                 }
             }
