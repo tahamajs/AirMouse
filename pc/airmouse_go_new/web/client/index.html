@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AirMouse iOS & Mobile Web Client</title>
+    <!-- iOS Web App Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AirMouse">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0e17">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -41,9 +45,9 @@
             </div>
 
             <div class="row buttons-row">
-                <button id="btnConnect" class="btn btn-primary">Connect (wss://)</button>
-                <button id="btnGyroPermission" class="btn btn-secondary">Enable Gyro (iOS)</button>
-                <button id="btnSettingsToggle" class="btn btn-icon" title="Toggle Settings" aria-label="Settings">⚙️</button>
+                <button id="btnConnect" class="btn btn-primary" type="button">Connect (wss://)</button>
+                <button id="btnGyroPermission" class="btn btn-secondary" type="button">Enable Gyro (iOS)</button>
+                <button id="btnSettingsToggle" class="btn btn-icon" type="button" title="Toggle Settings" aria-label="Settings">⚙️</button>
             </div>
 
             <div id="settingsPanel" class="settings-drawer collapsed">
@@ -60,7 +64,7 @@
                     <input type="checkbox" id="gyroToggle">
                 </div>
                 <div class="setting-item toggle-item">
-                    <label for="hapticToggle">Haptic Feedback</label>
+                    <label for="hapticToggle">Audio / Haptic Click Feedback</label>
                     <input type="checkbox" id="hapticToggle" checked>
                 </div>
             </div>
@@ -81,9 +85,9 @@
 
             <!-- Virtual Mouse Buttons for Accessibility & Quick Action -->
             <div class="mouse-buttons-row">
-                <button id="btnLeftClick" class="btn mouse-btn">Left Click</button>
-                <button id="btnMiddleClick" class="btn mouse-btn">Middle</button>
-                <button id="btnRightClick" class="btn mouse-btn">Right Click</button>
+                <button id="btnLeftClick" class="btn mouse-btn" type="button">Left Click</button>
+                <button id="btnMiddleClick" class="btn mouse-btn" type="button">Middle</button>
+                <button id="btnRightClick" class="btn mouse-btn" type="button">Right Click</button>
             </div>
         </section>
     </main>
@@ -108,8 +112,8 @@
             <p>Please enter the AirMouse server pairing token from your desktop console or QR code:</p>
             <input type="text" id="modalTokenInput" class="modal-input" placeholder="Token string">
             <div class="modal-actions">
-                <button id="btnModalCancel" class="btn btn-secondary">Cancel</button>
-                <button id="btnModalSave" class="btn btn-primary">Save & Connect</button>
+                <button id="btnModalCancel" class="btn btn-secondary" type="button">Cancel</button>
+                <button id="btnModalSave" class="btn btn-primary" type="button">Save & Connect</button>
             </div>
         </div>
     </div>

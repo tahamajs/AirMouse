@@ -84,7 +84,7 @@ func (dc *DataCollector) AddSampleWithAcceleration(x, y, vx, vy, ax, ay float64)
 	dc.buffer = append(dc.buffer, sample)
 	dc.totalSamples++
 
-	dc.triggerEvent(CollectionEvent{
+	dc.triggerEventLocked(CollectionEvent{
 		Type:      "sample_added",
 		Count:     len(dc.buffer),
 		Timestamp: time.Now(),
@@ -94,7 +94,7 @@ func (dc *DataCollector) AddSampleWithAcceleration(x, y, vx, vy, ax, ay float64)
 	if cfg.EnablePersonalization &&
 		time.Since(dc.lastFineTune) > time.Duration(cfg.PersonalizationInterval)*time.Second &&
 		len(dc.buffer) >= cfg.PersonalizationBuffer {
-		dc.triggerEvent(CollectionEvent{
+		dc.triggerEventLocked(CollectionEvent{
 			Type:      "training_triggered",
 			Count:     len(dc.buffer),
 			Timestamp: time.Now(),
@@ -272,6 +272,14 @@ func (dc *DataCollector) triggerEvent(event CollectionEvent) {
 	callbacks := make([]func(CollectionEvent), len(dc.callbacks))
 	copy(callbacks, dc.callbacks)
 	dc.mu.Unlock()
+	for _, cb := range callbacks {
+		go cb(event)
+	}
+}
+
+func (dc *DataCollector) triggerEventLocked(event CollectionEvent) {
+	callbacks := make([]func(CollectionEvent), len(dc.callbacks))
+	copy(callbacks, dc.callbacks)
 	for _, cb := range callbacks {
 		go cb(event)
 	}

@@ -230,6 +230,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/mirror", s.handleScreenMirror)
 	mux.HandleFunc("/screen", s.handleScreenMirror)
 	mux.Handle("/static/", http.FileServer(http.FS(web.WebFS)))
+	mux.Handle("/client/", http.StripPrefix("/client/", http.FileServer(http.FS(web.WebFS))))
+	mux.HandleFunc("/mobile", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/client/index.html", http.StatusMovedPermanently)
+	})
+	mux.HandleFunc("/client", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/client/index.html", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			path := strings.TrimPrefix(r.URL.Path, "/")

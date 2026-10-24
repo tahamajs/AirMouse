@@ -123,7 +123,7 @@ func (f *Filter) Update(measurementX, measurementY float64) {
 
 	if f.effectiveN < float64(f.numParticles)*f.resampleThresh {
 		f.resample()
-		f.triggerEvent(FilterEvent{
+		f.triggerEventLocked(FilterEvent{
 			Type:      "resampled",
 			Timestamp: time.Now(),
 		})
@@ -250,6 +250,14 @@ func (f *Filter) triggerEvent(event FilterEvent) {
 	callbacks := make([]func(FilterEvent), len(f.callbacks))
 	copy(callbacks, f.callbacks)
 	f.mu.RUnlock()
+	for _, cb := range callbacks {
+		go cb(event)
+	}
+}
+
+func (f *Filter) triggerEventLocked(event FilterEvent) {
+	callbacks := make([]func(FilterEvent), len(f.callbacks))
+	copy(callbacks, f.callbacks)
 	for _, cb := range callbacks {
 		go cb(event)
 	}

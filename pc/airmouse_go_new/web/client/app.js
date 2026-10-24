@@ -4,12 +4,14 @@
  * - Protocol v2 compliant wire envelope (v: 2, seq, ts, id, nested payload)
  * - WebSocket / WSS transport with automatic URL discovery and pairing token query param
  * - HTML5 DeviceOrientation API with iOS Safari 13+ permission request
- * - Touchpad gestures:
+ * - Web Audio API synthesizer for tactile click feedback on iOS Safari (where navigator.vibrate is disabled)
+ * - Multi-touch gestures:
  *    - 1-finger drag -> move
  *    - 1-finger tap -> left click
  *    - 2-finger tap -> right click
  *    - 2-finger drag -> scroll
- * - Device fingerprinting & persistent settings
+ * - Touch identifiers tracking for smooth multi-touch tracking on iOS WebKit
+ * - Reconnection / auto-recovery logic & persistent settings
  */
 
 (function () {
@@ -21,32 +23,85 @@
     let messageCounter = 0;
     let rateInterval = null;
     let isConnected = false;
-    let lastActiveTimestamp = 0;
 
     // Gyroscope State
     let gyroActive = false;
-    let lastAlpha = null;
     let lastBeta = null;
     let lastGamma = null;
     let lastGyroTime = 0;
 
-    // Touch State
-    let activeTouches = new Map();
+    // Touch Tracking State (Map of identifier -> {x, y, startX, startY, startTime})
+    const touchMap = new Map();
     let touchStartTime = 0;
-    let initialTouchCount = 0;
     let maxTouchCount = 0;
     let isDragging = false;
-    let lastTouchX = 0;
-    let lastTouchY = 0;
-    let lastScrollY = 0;
+    let lastSingleTouchX = 0;
+    let lastSingleTouchY = 0;
+    let lastTwoTouchCenterY = 0;
     let totalMoveDistance = 0;
 
     // Config & Settings
-    const TAP_THRESHOLD_MS = 250;
-    const TAP_DISTANCE_THRESHOLD = 12; // px
+    const TAP_THRESHOLD_MS = 280;
+    const TAP_DISTANCE_THRESHOLD = 15; // px
     let touchSensitivity = 1.5;
     let gyroSensitivity = 1.8;
-    let hapticEnabled = true;
+    let feedbackEnabled = true;
+
+    // Web Audio Synthesizer Context (iOS AudioContext unlocked on first user gesture)
+    let audioCtx = null;
+
+    function getAudioContext() {
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                audioCtx = new AudioContextClass();
+            }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
+    }
+
+    function playTactileFeedback(type = 'light') {
+        if (!feedbackEnabled) return;
+
+        // Try standard navigator.vibrate if available
+        if (navigator.vibrate) {
+            try {
+                if (type === 'light') navigator.vibrate(10);
+                else if (type === 'medium') navigator.vibrate(25);
+                else if (type === 'heavy') navigator.vibrate(45);
+            } catch (e) {}
+        }
+
+        // On iOS Safari, navigator.vibrate is not supported in WebKit.
+        // We synthesize an ultra-short subtle click impulse via Web Audio API.
+        try {
+            const ctx = getAudioContext();
+            if (ctx && ctx.state === 'running') {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const now = ctx.currentTime;
+
+                const freq = type === 'light' ? 800 : (type === 'medium' ? 600 : 400);
+                const duration = type === 'light' ? 0.015 : 0.03;
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + duration);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + duration);
+            }
+        } catch (e) {}
+    }
 
     // DOM Elements
     const serverHostInput = document.getElementById('serverHost');
@@ -72,11 +127,11 @@
     const btnMiddleClick = document.getElementById('btnMiddleClick');
     const btnRightClick = document.getElementById('btnRightClick');
 
-    // Generate or retrieve persistent device fingerprint
+    // Persistent Device Identifier
     function getDeviceID() {
         let id = localStorage.getItem('airmouse_device_id');
         if (!id) {
-            id = 'web-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now().toString(36);
+            id = 'ios-web-' + Math.random().toString(36).substring(2, 12) + '-' + Date.now().toString(36);
             localStorage.setItem('airmouse_device_id', id);
         }
         return id;
@@ -84,7 +139,7 @@
 
     // UUID Generator for Protocol v2 id field
     function generateUUID() {
-        if (crypto && crypto.randomUUID) {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
             return crypto.randomUUID();
         }
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -94,16 +149,16 @@
         });
     }
 
-    // Load Settings
+    // Settings Initialization
     function initSettings() {
         const urlParams = new URLSearchParams(window.location.search);
-        
-        // Host resolution: URL param -> localStorage -> default to current host:port
+
+        // Server Host Resolution
         const defaultHost = window.location.host || '127.0.0.1:8081';
         const savedHost = urlParams.get('host') || urlParams.get('ip') || localStorage.getItem('airmouse_host') || defaultHost;
         serverHostInput.value = savedHost;
 
-        // Token resolution: URL param ?token=... -> localStorage
+        // Token Resolution (?token=... or stored)
         const paramToken = urlParams.get('token');
         if (paramToken) {
             pairingTokenInput.value = paramToken;
@@ -113,7 +168,7 @@
             pairingTokenInput.value = savedToken;
         }
 
-        // Sensitivity
+        // Sensitivities
         const savedTouchSens = localStorage.getItem('airmouse_touch_sens');
         if (savedTouchSens) {
             touchSensitivity = parseFloat(savedTouchSens);
@@ -128,26 +183,17 @@
             valGyroSens.textContent = gyroSensitivity.toFixed(1);
         }
 
-        const savedHaptic = localStorage.getItem('airmouse_haptic');
-        if (savedHaptic !== null) {
-            hapticEnabled = savedHaptic === 'true';
-            hapticToggle.checked = hapticEnabled;
+        const savedFeedback = localStorage.getItem('airmouse_feedback');
+        if (savedFeedback !== null) {
+            feedbackEnabled = savedFeedback === 'true';
+            hapticToggle.checked = feedbackEnabled;
         }
 
-        // Message rate statistics timer
+        // Message rate statistics counter
         rateInterval = setInterval(() => {
             statRate.textContent = messageCounter + ' msg/s';
             messageCounter = 0;
         }, 1000);
-    }
-
-    function triggerHaptic(type = 'light') {
-        if (!hapticEnabled) return;
-        if (navigator.vibrate) {
-            if (type === 'light') navigator.vibrate(10);
-            else if (type === 'medium') navigator.vibrate(25);
-            else if (type === 'heavy') navigator.vibrate(45);
-        }
     }
 
     // Protocol v2 Envelope Sender
@@ -173,33 +219,34 @@
             ws.send(JSON.stringify(envelope));
             return true;
         } catch (e) {
-            console.error('Failed to send envelope:', e);
+            console.error('Failed to send Protocol V2 envelope:', e);
             return false;
         }
     }
 
-    // Connect to WebSocket / WSS
+    // WebSocket / WSS Connection
     function connect() {
         if (ws) {
             disconnect();
             return;
         }
 
+        // Unlock audio context on user tap
+        getAudioContext();
+
         const host = serverHostInput.value.trim();
         const token = pairingTokenInput.value.trim();
 
         if (!host) {
-            alert('Please specify the server address (e.g. 192.168.1.50:8081)');
+            alert('Please specify the server host:port');
             return;
         }
 
         localStorage.setItem('airmouse_host', host);
         if (token) localStorage.setItem('airmouse_token', token);
 
-        // Determine protocol: WSS if page is HTTPS, or default to wss://
         let protocol = 'wss://';
         if (window.location.protocol === 'http:' && !host.includes('https')) {
-            // allow fallback for local non-tls testing if explicitly on http:
             protocol = 'ws://';
         }
 
@@ -216,8 +263,8 @@
         try {
             ws = new WebSocket(targetUrl);
         } catch (err) {
-            console.error('WebSocket creation error:', err);
-            updateStatus('disconnected', 'Connection Error');
+            console.error('WebSocket initialization error:', err);
+            updateStatus('disconnected', 'WS Init Error');
             btnConnect.textContent = 'Connect (wss://)';
             btnConnect.disabled = false;
             return;
@@ -229,18 +276,18 @@
             btnConnect.textContent = 'Disconnect';
             btnConnect.classList.add('connected');
             btnConnect.disabled = false;
-            triggerHaptic('medium');
+            playTactileFeedback('medium');
 
-            // Send Protocol V2 Hello
-            const userAgent = navigator.userAgent || 'WebClient';
-            const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+            const ua = navigator.userAgent || '';
+            const isIOS = /iPad|iPhone|iPod/.test(ua);
             const clientName = isIOS ? 'iOS Safari AirMouse' : 'Mobile Web AirMouse';
 
+            // Send Protocol V2 Hello Handshake
             sendProtocolV2('hello', {
                 device_id: getDeviceID(),
                 name: clientName,
                 device_name: clientName,
-                model: isIOS ? 'Apple iOS' : 'Mobile Browser',
+                model: isIOS ? 'Apple iPhone/iPad' : 'Mobile Browser',
                 brand: isIOS ? 'Apple' : 'Generic',
                 version: '2.0.0',
                 protocol: 'WEBSOCKET',
@@ -253,15 +300,14 @@
             try {
                 const data = JSON.parse(event.data);
                 if (data.type === 'welcome') {
-                    console.log('AirMouse Welcome received:', data);
-                } else if (data.type === 'ack') {
-                    // ACK received for click/scroll
+                    console.log('AirMouse Welcome Handshake:', data);
+                    updateStatus('connected', 'Ready');
                 } else if (data.type === 'error') {
-                    console.warn('AirMouse Server Error:', data.payload || data.error);
+                    const msg = (data.payload && data.payload.message) || data.error || 'Server rejected connection';
+                    alert('AirMouse Server Error: ' + msg);
+                    disconnect();
                 }
-            } catch (e) {
-                // non-JSON message
-            }
+            } catch (e) {}
         };
 
         ws.onerror = function (e) {
@@ -294,29 +340,31 @@
         statusText.textContent = text;
     }
 
-    // Touchpad Gestures
+    // Touchpad Gesture Engine (Optimized for iOS WebKit)
     function setupTouchpad() {
-        // Prevent browser gestures (pinch-zoom, scrolling)
-        touchpad.addEventListener('touchstart', onTouchStart, { passive: false });
-        touchpad.addEventListener('touchmove', onTouchMove, { passive: false });
-        touchpad.addEventListener('touchend', onTouchEnd, { passive: false });
-        touchpad.addEventListener('touchcancel', onTouchEnd, { passive: false });
+        // Prevent all default browser behaviors (pinch zoom, pull-to-refresh)
+        const opts = { passive: false };
+        touchpad.addEventListener('touchstart', onTouchStart, opts);
+        touchpad.addEventListener('touchmove', onTouchMove, opts);
+        touchpad.addEventListener('touchend', onTouchEnd, opts);
+        touchpad.addEventListener('touchcancel', onTouchEnd, opts);
 
-        // Fallback Mouse events for desktop browser testing
+        // Desktop mouse fallback
         let mouseIsDown = false;
         touchpad.addEventListener('mousedown', (e) => {
+            getAudioContext();
             mouseIsDown = true;
-            lastTouchX = e.clientX;
-            lastTouchY = e.clientY;
+            lastSingleTouchX = e.clientX;
+            lastSingleTouchY = e.clientY;
             touchpad.classList.add('active');
         });
 
         window.addEventListener('mousemove', (e) => {
             if (!mouseIsDown) return;
-            const dx = (e.clientX - lastTouchX) * touchSensitivity;
-            const dy = (e.clientY - lastTouchY) * touchSensitivity;
-            lastTouchX = e.clientX;
-            lastTouchY = e.clientY;
+            const dx = (e.clientX - lastSingleTouchX) * touchSensitivity;
+            const dy = (e.clientY - lastSingleTouchY) * touchSensitivity;
+            lastSingleTouchX = e.clientX;
+            lastSingleTouchY = e.clientY;
             sendProtocolV2('move', { dx: dx, dy: dy, dt: 0.016 });
         });
 
@@ -330,45 +378,71 @@
 
     function onTouchStart(e) {
         e.preventDefault();
-        touchStartTime = Date.now();
-        initialTouchCount = e.touches.length;
-        maxTouchCount = e.touches.length;
-        totalMoveDistance = 0;
-        isDragging = false;
+        getAudioContext();
+
+        const touches = e.touches;
+        const now = Date.now();
+
+        if (touches.length === 1 && touchMap.size === 0) {
+            touchStartTime = now;
+            totalMoveDistance = 0;
+            maxTouchCount = 1;
+            isDragging = false;
+        }
+
+        if (touches.length > maxTouchCount) {
+            maxTouchCount = touches.length;
+        }
+
         touchpad.classList.add('active');
 
-        if (e.touches.length === 1) {
-            lastTouchX = e.touches[0].clientX;
-            lastTouchY = e.touches[0].clientY;
-            showTouchIndicator(e.touches[0].clientX, e.touches[0].clientY);
-        } else if (e.touches.length === 2) {
-            lastScrollY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            removeTouchIndicator();
+        // Update active touches
+        touchMap.clear();
+        for (let i = 0; i < touches.length; i++) {
+            const t = touches[i];
+            touchMap.set(t.identifier, {
+                x: t.clientX,
+                y: t.clientY,
+                startX: t.clientX,
+                startY: t.clientY
+            });
+        }
+
+        if (touches.length === 1) {
+            lastSingleTouchX = touches[0].clientX;
+            lastSingleTouchY = touches[0].clientY;
+            updateTouchPointers(touches);
+        } else if (touches.length === 2) {
+            lastTwoTouchCenterY = (touches[0].clientY + touches[1].clientY) / 2;
+            updateTouchPointers(touches);
         }
     }
 
     function onTouchMove(e) {
         e.preventDefault();
-        if (e.touches.length > maxTouchCount) {
-            maxTouchCount = e.touches.length;
+        const touches = e.touches;
+
+        if (touches.length > maxTouchCount) {
+            maxTouchCount = touches.length;
         }
 
-        if (e.touches.length === 1) {
-            // 1-Finger Drag -> Mouse Move
-            const curX = e.touches[0].clientX;
-            const curY = e.touches[0].clientY;
-            const dx = (curX - lastTouchX) * touchSensitivity;
-            const dy = (curY - lastTouchY) * touchSensitivity;
+        updateTouchPointers(touches);
 
-            const dist = Math.hypot(curX - lastTouchX, curY - lastTouchY);
-            totalMoveDistance += dist;
+        if (touches.length === 1) {
+            // 1-Finger Drag -> Move Cursor
+            const curX = touches[0].clientX;
+            const curY = touches[0].clientY;
 
-            lastTouchX = curX;
-            lastTouchY = curY;
+            const dx = (curX - lastSingleTouchX) * touchSensitivity;
+            const dy = (curY - lastSingleTouchY) * touchSensitivity;
 
-            updateTouchIndicator(curX, curY);
+            const stepDist = Math.hypot(curX - lastSingleTouchX, curY - lastSingleTouchY);
+            totalMoveDistance += stepDist;
 
-            // Bounds check for Protocol V2: |dx| <= 500, |dy| <= 500
+            lastSingleTouchX = curX;
+            lastSingleTouchY = curY;
+
+            // Enforce Protocol V2 numeric bounds: |dx|, |dy| <= 500
             const clampedDx = Math.max(-500, Math.min(500, dx));
             const clampedDy = Math.max(-500, Math.min(500, dy));
 
@@ -380,18 +454,18 @@
                     dt: 0.016
                 });
             }
-        } else if (e.touches.length === 2) {
-            // 2-Finger Drag -> Scroll
-            const curScrollY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            const deltaY = (curScrollY - lastScrollY) * 0.25 * touchSensitivity;
-            const dist = Math.abs(curScrollY - lastScrollY);
+        } else if (touches.length === 2) {
+            // 2-Finger Drag -> Vertical Scroll
+            const curCenterY = (touches[0].clientY + touches[1].clientY) / 2;
+            const diffY = (curCenterY - lastTwoTouchCenterY) * 0.25 * touchSensitivity;
+            const dist = Math.abs(curCenterY - lastTwoTouchCenterY);
             totalMoveDistance += dist;
-            lastScrollY = curScrollY;
+            lastTwoTouchCenterY = curCenterY;
 
             if (dist > 1.0) {
                 isDragging = true;
-                // Positive delta scrolls up, negative scrolls down
-                const clampedDelta = Math.max(-10.0, Math.min(10.0, deltaY));
+                // Enforce Protocol V2 numeric bounds: |delta| <= 10.0
+                const clampedDelta = Math.max(-10.0, Math.min(10.0, diffY));
                 sendProtocolV2('scroll', {
                     delta: parseFloat(clampedDelta.toFixed(2))
                 });
@@ -401,51 +475,62 @@
 
     function onTouchEnd(e) {
         e.preventDefault();
-        touchpad.classList.remove('active');
-        removeTouchIndicator();
 
-        const elapsed = Date.now() - touchStartTime;
+        if (e.touches.length === 0) {
+            touchpad.classList.remove('active');
+            clearTouchPointers();
 
-        // Check for Tap gesture (short duration, minimal move distance)
-        if (elapsed <= TAP_THRESHOLD_MS && totalMoveDistance < TAP_DISTANCE_THRESHOLD) {
-            if (maxTouchCount === 1) {
-                // 1-Finger Tap -> Left Click
-                triggerHaptic('light');
-                sendProtocolV2('click', { button: 'left' });
-            } else if (maxTouchCount === 2) {
-                // 2-Finger Tap -> Right Click
-                triggerHaptic('medium');
-                sendProtocolV2('click', { button: 'right' });
+            const elapsed = Date.now() - touchStartTime;
+
+            // Check for Tap Gesture
+            if (elapsed <= TAP_THRESHOLD_MS && totalMoveDistance < TAP_DISTANCE_THRESHOLD) {
+                if (maxTouchCount === 1) {
+                    // 1-Finger Tap -> Left Click
+                    playTactileFeedback('light');
+                    sendProtocolV2('click', { button: 'left' });
+                } else if (maxTouchCount >= 2) {
+                    // 2-Finger Tap -> Right Click
+                    playTactileFeedback('medium');
+                    sendProtocolV2('click', { button: 'right' });
+                }
+            }
+
+            maxTouchCount = 0;
+            touchMap.clear();
+        } else {
+            // Re-anchor remaining fingers
+            updateTouchPointers(e.touches);
+            if (e.touches.length === 1) {
+                lastSingleTouchX = e.touches[0].clientX;
+                lastSingleTouchY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+                lastTwoTouchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             }
         }
     }
 
-    function showTouchIndicator(x, y) {
+    function updateTouchPointers(touches) {
         touchFeedback.innerHTML = '';
         const rect = touchpad.getBoundingClientRect();
-        const pointer = document.createElement('div');
-        pointer.className = 'touch-pointer';
-        pointer.id = 'activeTouchPoint';
-        pointer.style.left = `${x - rect.left}px`;
-        pointer.style.top = `${y - rect.top}px`;
-        touchFeedback.appendChild(pointer);
-    }
 
-    function updateTouchIndicator(x, y) {
-        const pointer = document.getElementById('activeTouchPoint');
-        if (pointer) {
-            const rect = touchpad.getBoundingClientRect();
-            pointer.style.left = `${x - rect.left}px`;
-            pointer.style.top = `${y - rect.top}px`;
+        for (let i = 0; i < touches.length; i++) {
+            const t = touches[i];
+            const p = document.createElement('div');
+            p.className = i === 0 ? 'touch-pointer' : 'touch-pointer-2';
+            p.style.left = `${t.clientX - rect.left}px`;
+            p.style.top = `${t.clientY - rect.top}px`;
+            touchFeedback.appendChild(p);
         }
     }
 
-    function removeTouchIndicator() {
+    function clearTouchPointers() {
         touchFeedback.innerHTML = '';
     }
 
-    // iOS DeviceOrientation API & Gyroscope Motion
+    // iOS DeviceOrientation API & Gyroscope Motion Handling
     async function requestDeviceOrientationPermission() {
+        getAudioContext();
+
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             try {
                 const response = await DeviceOrientationEvent.requestPermission();
@@ -454,19 +539,21 @@
                     gyroToggle.checked = true;
                     btnGyroPermission.textContent = 'Gyro Allowed ✓';
                     btnGyroPermission.disabled = true;
+                    playTactileFeedback('medium');
                 } else {
-                    alert('Motion sensor permission was denied.');
+                    alert('Motion sensor permission was denied in iOS settings.');
                 }
             } catch (err) {
-                console.error('Permission error:', err);
+                console.error('DeviceOrientation permission error:', err);
                 alert('DeviceOrientation error: ' + err.message);
             }
         } else {
-            // Non-iOS or older iOS versions
+            // Android, Chrome, or older iOS
             startGyroscope();
             gyroToggle.checked = true;
             btnGyroPermission.textContent = 'Gyro Active ✓';
             btnGyroPermission.disabled = true;
+            playTactileFeedback('light');
         }
     }
 
@@ -482,7 +569,6 @@
         if (!gyroActive) return;
         window.removeEventListener('deviceorientation', handleOrientation, true);
         gyroActive = false;
-        lastAlpha = null;
         lastBeta = null;
         lastGamma = null;
         statGyro.textContent = 'Disabled';
@@ -496,8 +582,8 @@
         const dt = lastGyroTime ? (now - lastGyroTime) / 1000 : 0.016;
         lastGyroTime = now;
 
-        const gamma = event.gamma; // Left to right tilt [-90, 90]
-        const beta = event.beta;   // Front to back tilt [-180, 180]
+        const gamma = event.gamma; // [-90, 90]
+        const beta = event.beta;   // [-180, 180]
 
         if (gamma === null || beta === null) return;
 
@@ -510,7 +596,7 @@
         let deltaGamma = gamma - lastGamma;
         let deltaBeta = beta - lastBeta;
 
-        // Threshold small noise / jitter
+        // Deadzone threshold for small trembling
         if (Math.abs(deltaGamma) < 0.15) deltaGamma = 0;
         if (Math.abs(deltaBeta) < 0.15) deltaBeta = 0;
 
@@ -519,7 +605,7 @@
 
         if (deltaGamma === 0 && deltaBeta === 0) return;
 
-        // Map tilt deltas to cursor delta (gamma -> dx, beta -> dy)
+        // Map tilt deltas to cursor coordinates
         const dx = deltaGamma * gyroSensitivity * 3.5;
         const dy = deltaBeta * gyroSensitivity * 3.5;
 
@@ -533,9 +619,10 @@
         });
     }
 
-    // UI Event Listeners
+    // UI Event Handlers
     function setupEventListeners() {
         btnConnect.addEventListener('click', () => {
+            getAudioContext();
             if (isConnected) disconnect();
             else connect();
         });
@@ -543,6 +630,7 @@
         btnGyroPermission.addEventListener('click', requestDeviceOrientationPermission);
 
         btnSettingsToggle.addEventListener('click', () => {
+            getAudioContext();
             settingsPanel.classList.toggle('collapsed');
         });
 
@@ -559,6 +647,7 @@
         });
 
         gyroToggle.addEventListener('change', (e) => {
+            getAudioContext();
             if (e.target.checked) {
                 if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                     requestDeviceOrientationPermission();
@@ -571,28 +660,28 @@
         });
 
         hapticToggle.addEventListener('change', (e) => {
-            hapticEnabled = e.target.checked;
-            localStorage.setItem('airmouse_haptic', hapticEnabled);
+            feedbackEnabled = e.target.checked;
+            localStorage.setItem('airmouse_feedback', feedbackEnabled);
         });
 
         // Virtual Mouse Buttons
         btnLeftClick.addEventListener('click', () => {
-            triggerHaptic('light');
+            playTactileFeedback('light');
             sendProtocolV2('click', { button: 'left' });
         });
 
         btnMiddleClick.addEventListener('click', () => {
-            triggerHaptic('medium');
+            playTactileFeedback('medium');
             sendProtocolV2('click', { button: 'middle' });
         });
 
         btnRightClick.addEventListener('click', () => {
-            triggerHaptic('medium');
+            playTactileFeedback('medium');
             sendProtocolV2('click', { button: 'right' });
         });
     }
 
-    // Initialization
+    // Initialize on DOM ready
     window.addEventListener('DOMContentLoaded', () => {
         initSettings();
         setupTouchpad();

@@ -18,7 +18,7 @@
     --radius-sm: 8px;
     --radius-md: 14px;
     --radius-lg: 20px;
-    --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 * {
@@ -28,6 +28,17 @@
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: fixed;
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
 }
 
 body {
@@ -37,12 +48,8 @@ body {
         radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.12) 0px, transparent 50%);
     color: var(--text-primary);
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    touch-action: none;
 }
 
 /* Glassmorphism utility */
@@ -62,10 +69,14 @@ body {
     align-items: center;
     padding: 12px 16px;
     padding-top: calc(12px + env(safe-area-inset-top));
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
     background: rgba(10, 14, 23, 0.85);
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
     z-index: 20;
+    flex-shrink: 0;
 }
 
 .header-left {
@@ -134,18 +145,22 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 12px 14px;
-    gap: 12px;
+    padding: 10px 14px;
+    padding-left: calc(14px + env(safe-area-inset-left));
+    padding-right: calc(14px + env(safe-area-inset-right));
+    gap: 10px;
     position: relative;
     overflow: hidden;
+    min-height: 0;
 }
 
 /* Controls Panel */
 .control-panel {
-    padding: 12px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .host-row {
@@ -168,18 +183,21 @@ body {
     font-weight: 600;
 }
 
+/* 16px font-size prevents iOS Safari automatic viewport zoom */
 .input-group input, .modal-input {
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
     padding: 8px 10px;
-    font-size: 0.85rem;
+    font-size: 16px;
     font-family: inherit;
     outline: none;
     user-select: auto;
     -webkit-user-select: auto;
     transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .input-group input:focus, .modal-input:focus {
@@ -197,17 +215,19 @@ body {
     border-radius: var(--radius-sm);
     font-size: 0.85rem;
     font-weight: 600;
-    padding: 9px 14px;
+    padding: 9px 12px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.1s ease, background 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-align: center;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .btn:active {
-    transform: scale(0.97);
+    transform: scale(0.96);
 }
 
 .btn-primary {
@@ -240,7 +260,7 @@ body {
 .settings-drawer {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     padding-top: 8px;
     border-top: 1px solid var(--border-color);
     max-height: 250px;
@@ -260,8 +280,8 @@ body {
 .setting-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    font-size: 0.8rem;
+    gap: 3px;
+    font-size: 0.78rem;
     color: var(--text-secondary);
 }
 
@@ -276,8 +296,8 @@ body {
 }
 
 .setting-item input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     accent-color: var(--primary);
 }
 
@@ -286,7 +306,7 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     min-height: 0;
 }
 
@@ -294,7 +314,7 @@ body {
     flex: 1;
     position: relative;
     border-radius: var(--radius-lg);
-    background: radial-gradient(circle at center, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+    background: radial-gradient(circle at center, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.95) 100%);
     border: 1.5px solid rgba(255, 255, 255, 0.15);
     overflow: hidden;
     cursor: crosshair;
@@ -303,6 +323,10 @@ body {
     justify-content: center;
     box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
     transition: border-color 0.2s ease;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    outline: none;
 }
 
 .touchpad-surface:active, .touchpad-surface.active {
@@ -323,19 +347,20 @@ body {
 .touchpad-instructions {
     text-align: center;
     color: var(--text-muted);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     pointer-events: none;
     line-height: 1.4;
+    padding: 0 16px;
 }
 
 .touchpad-instructions .icon {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     opacity: 0.6;
 }
 
-/* Touch Feedback Circle */
+/* Touch Feedback Circles */
 .touch-pointer {
     position: absolute;
     width: 44px;
@@ -346,14 +371,26 @@ body {
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
     pointer-events: none;
     transform: translate(-50%, -50%);
-    transition: transform 0.05s linear;
+}
+
+.touch-pointer-2 {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(6, 182, 212, 0.35);
+    border: 2px solid #22d3ee;
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
 }
 
 /* Mouse Buttons Row */
 .mouse-buttons-row {
     display: flex;
     gap: 8px;
-    height: 48px;
+    height: 44px;
+    flex-shrink: 0;
 }
 
 .mouse-btn {
@@ -377,10 +414,13 @@ body {
     justify-content: space-around;
     padding: 8px 12px;
     padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    padding-left: calc(12px + env(safe-area-inset-left));
+    padding-right: calc(12px + env(safe-area-inset-right));
     background: rgba(10, 14, 23, 0.9);
     border-top: 1px solid var(--border-color);
     font-size: 0.75rem;
     color: var(--text-secondary);
+    flex-shrink: 0;
 }
 
 .stats-item strong {
@@ -391,8 +431,9 @@ body {
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
