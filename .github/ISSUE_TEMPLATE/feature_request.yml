@@ -1,0 +1,46 @@
+name: Feature Request
+description: Suggest an idea or architectural improvement for AirMouse
+title: "[FEATURE]: "
+labels: ["enhancement", "proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make AirMouse even better? We'd love to hear your proposal!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a specific limitation or pain point?
+      placeholder: "It's difficult or cumbersome to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: Detailed description of what you want to happen and how it fits into the architecture.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Approaches
+      description: Any alternative solutions or workarounds you've considered.
+
+  - type: dropdown
+    id: target_subsystem
+    attributes:
+      label: Primary Target Subsystem
+      options:
+        - "Sensor Fusion & Filtering (One Euro / Madgwick / Kalman / ML)"
+        - "Protocol V2 & Network Transport"
+        - "Android Client & Compose UI"
+        - "iOS Web Client & Mobile Web"
+        - "Desktop Host Server (Go / Python)"
+        - "Developer Experience & Tooling"
+    validations:
+      required: true

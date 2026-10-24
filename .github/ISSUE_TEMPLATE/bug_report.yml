@@ -1,0 +1,78 @@
+name: Bug Report
+description: Create a report to help us improve AirMouse
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug in AirMouse! Please fill out the sections below as thoroughly as possible.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which part of the AirMouse ecosystem is experiencing the issue?
+      options:
+        - "Python Desktop Server (airmouse-core)"
+        - "Go Desktop Server (airmouse-go)"
+        - "Android Client App (android/)"
+        - "iOS Safari / Mobile Web Client (web-client/)"
+        - "Protocol V2 Wire Engine"
+        - "Build / CI / Packaging"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: AirMouse Version
+      description: Which version or commit hash are you using? (e.g. v2.1.0, git main-xxx)
+      placeholder: "v2.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os_environment
+    attributes:
+      label: Operating System & Hardware
+      description: What OS and hardware are you running on?
+      placeholder: "Desktop: macOS 14.5 / Phone: Redmi Note 8T, Android 11"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro_steps
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the unexpected behavior.
+      placeholder: |
+        1. Run `airmouse-server --qr`
+        2. Scan QR code on mobile client
+        3. Attempt to move cursor or click
+        4. See error in logs...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log Output & Stack Traces
+      description: Paste any relevant terminal logs, stack traces, or adb logcat output.
+      render: shell
