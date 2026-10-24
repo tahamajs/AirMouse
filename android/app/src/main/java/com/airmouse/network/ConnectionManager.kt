@@ -126,9 +126,9 @@ class ConnectionManager @Inject constructor(
         private const val MAX_RECONNECT_ATTEMPTS = 10
         private const val PING_TIMEOUT_MS = 5000L
         private const val MAX_HEARTBEAT_FAILURES = 3
-        private const val RETRANSMIT_INTERVAL_MS = 1000L
+        private const val RETRANSMIT_INTERVAL_MS = 500L
         private const val MAX_RETRANSMIT_ATTEMPTS = 5
-        private const val ACK_TIMEOUT_MS = 30000L
+        private const val ACK_TIMEOUT_MS = 500L
     }
 
     // ============================================================
@@ -994,12 +994,19 @@ class ConnectionManager @Inject constructor(
 
     fun send(message: String): Boolean = sendRawString(message)
 
+    private var messageSeqCounter = 0L
+
     private fun sendReliablePacket(type: String, block: JSONObject.() -> Unit): Boolean {
-        val id = "msg_${synchronized(this) { messageIdCounter++ }}"
+        val id = java.util.UUID.randomUUID().toString()
+        val seq = synchronized(this) { ++messageSeqCounter }
+        val payloadObj = JSONObject().apply { block() }
         val rawPayload = JSONObject().apply {
+            put("v", 2)
             put("type", type)
+            put("seq", seq)
+            put("ts", System.currentTimeMillis())
             put("id", id)
-            block()
+            put("payload", payloadObj)
         }.toString()
         val success = sendRawString(rawPayload)
         if (success) {
@@ -1061,9 +1068,26 @@ class ConnectionManager @Inject constructor(
     private var btAccumulatedX = 0f
     private var btAccumulatedY = 0f
 
-    private var lastFilteredX = 0f
-    private var lastFilteredY = 0f
-    private var isFirstMove = true
+    // One Euro Filters for smooth cursor control with low jitter and zero lag
+    private val filterX = com.airmouse.sensors.OneEuroFilter(minCutoff = 1.0, beta = 0.007, dCutoff = 1.0)
+    private val filterY = com.airmouse.sensors.OneEuroFilter(minCutoff = 1.0, beta = 0.007, dCutoff = 1.0)
+
+    // 32-message ring buffer for move packets
+    private val moveRingBuffer = Array<String?>(32) { null }
+    private var moveRingHead = 0
+    private var moveRingCount = 0
+
+    private fun bufferMovePacket(packet: String) {
+        synchronized(moveRingBuffer) {
+            val index = (moveRingHead + moveRingCount) % 32
+            moveRingBuffer[index] = packet
+            if (moveRingCount < 32) {
+                moveRingCount++
+            } else {
+                moveRingHead = (moveRingHead + 1) % 32
+            }
+        }
+    }
 
     fun sendMove(dx: Float, dy: Float): Boolean {
         if (!isMouseControlEnabled) return false
@@ -1087,39 +1111,13 @@ class ConnectionManager @Inject constructor(
         val accelerationEnabled = prefs.getBoolean("acceleration_enabled", true)
         val accelerationFactor = prefs.getFloat("acceleration_factor", 1.5f)
 
-        // Speed-adaptive smoothing: only filter micro-jitter, never delay real movement
-        val rawSpeed = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+        // Apply One Euro Filter for adaptive smoothing
+        val now = System.currentTimeMillis()
+        val smoothedDx = filterX.filter(dx, now)
+        val smoothedDy = filterY.filter(dy, now)
 
-        val finalDx: Float
-        val finalDy: Float
-
-        if (rawSpeed < 0.5f) {
-            // Sub-pixel jitter — suppress completely
-            return false
-        } else if (rawSpeed < 2.0f) {
-            // Very slow/small movement — gentle smoothing to remove noise
-            val alpha = 0.6f  // Responsive but smooth
-            if (isFirstMove) {
-                lastFilteredX = dx
-                lastFilteredY = dy
-                isFirstMove = false
-            } else {
-                lastFilteredX += alpha * (dx - lastFilteredX)
-                lastFilteredY += alpha * (dy - lastFilteredY)
-            }
-            finalDx = lastFilteredX
-            finalDy = lastFilteredY
-        } else {
-            // Normal/fast movement — pass through immediately, zero lag
-            lastFilteredX = dx
-            lastFilteredY = dy
-            isFirstMove = false
-            finalDx = dx
-            finalDy = dy
-        }
-
-        var scaledX = finalDx * sensitivity
-        var scaledY = finalDy * sensitivity
+        var scaledX = smoothedDx * sensitivity
+        var scaledY = smoothedDy * sensitivity
 
         if (accelerationEnabled) {
             val speed = sqrt((scaledX * scaledX + scaledY * scaledY).toDouble()).toFloat()
@@ -1135,7 +1133,10 @@ class ConnectionManager @Inject constructor(
             val dist = sqrt((scaledX * scaledX + scaledY * scaledY).toDouble()).toFloat()
             statisticsRepository.recordMovement(dist, 10)
         }
-        return sendRawString(AirMouseProtocolMessages.move(scaledX, scaledY))
+
+        val wirePacket = AirMouseProtocolMessages.move(scaledX, scaledY)
+        bufferMovePacket(wirePacket)
+        return sendRawString(wirePacket)
     }
 
     fun sendClick(button: String = MessageTypes.BUTTON_LEFT): Boolean {

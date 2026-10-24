@@ -38,6 +38,74 @@ class SensorRepositoryImpl @Inject constructor(
     private var listener: SensorEventListener? = null
     private var madgwick = MadgwickAHRS()
 
+    // ZUPT (Zero Velocity Update) auto-calibration state
+    companion object {
+        const val ZUPT_VARIANCE_THRESHOLD = 0.02f
+        const val ZUPT_MIN_STATIONARY_DURATION_MS = 500L
+        private const val WINDOW_CAPACITY = 50
+    }
+
+    private data class TimedSample(val x: Float, val y: Float, val z: Float, val timestampMs: Long)
+
+    private val accelWindow = ArrayDeque<TimedSample>(WINDOW_CAPACITY)
+    private val gyroWindow = ArrayDeque<TimedSample>(WINDOW_CAPACITY)
+    private var stationaryStartTimestamp: Long? = null
+    private var zuptCalibratedCount = 0
+
+    internal fun processZupt(accelX: Float, accelY: Float, accelZ: Float, gyroX: Float, gyroY: Float, gyroZ: Float, nowMs: Long = System.currentTimeMillis()): Boolean {
+        synchronized(accelWindow) {
+            accelWindow.addLast(TimedSample(accelX, accelY, accelZ, nowMs))
+            gyroWindow.addLast(TimedSample(gyroX, gyroY, gyroZ, nowMs))
+            while (accelWindow.size > WINDOW_CAPACITY) accelWindow.removeFirst()
+            while (gyroWindow.size > WINDOW_CAPACITY) gyroWindow.removeFirst()
+
+            if (accelWindow.size < 10) return false
+
+            // Calculate accelerometer variance across X, Y, Z
+            var sumX = 0.0; var sumY = 0.0; var sumZ = 0.0
+            for (s in accelWindow) {
+                sumX += s.x; sumY += s.y; sumZ += s.z
+            }
+            val n = accelWindow.size.toDouble()
+            val meanX = sumX / n; val meanY = sumY / n; val meanZ = sumZ / n
+
+            var varSum = 0.0
+            for (s in accelWindow) {
+                val dx = s.x - meanX
+                val dy = s.y - meanY
+                val dz = s.z - meanZ
+                varSum += (dx * dx + dy * dy + dz * dz)
+            }
+            val totalVariance = (varSum / n).toFloat()
+
+            if (totalVariance < ZUPT_VARIANCE_THRESHOLD) {
+                if (stationaryStartTimestamp == null) {
+                    stationaryStartTimestamp = nowMs
+                } else if (nowMs - (stationaryStartTimestamp ?: nowMs) >= ZUPT_MIN_STATIONARY_DURATION_MS) {
+                    // Stationary duration exceeded 500ms: trigger Zero Velocity Update (ZUPT)
+                    var gSumX = 0.0; var gSumY = 0.0; var gSumZ = 0.0
+                    for (g in gyroWindow) {
+                        gSumX += g.x; gSumY += g.y; gSumZ += g.z
+                    }
+                    val gn = gyroWindow.size.toDouble()
+                    val biasX = (gSumX / gn).toFloat()
+                    val biasY = (gSumY / gn).toFloat()
+                    val biasZ = (gSumZ / gn).toFloat()
+
+                    calibrationHelper.setGyroOffsets(biasX, biasY, biasZ)
+                    prefs.putBoolean("calibration_complete", true)
+                    _calibrationStatus.value = SensorCalibrationStatus.CALIBRATED
+                    zuptCalibratedCount++
+                    stationaryStartTimestamp = nowMs // reset after applying update
+                    return true
+                }
+            } else {
+                stationaryStartTimestamp = null
+            }
+            return false
+        }
+    }
+
     override fun observeSensorData(): Flow<SensorData> = _sensorData.asStateFlow()
     override fun observeOrientation(): Flow<OrientationData> = _orientation.asStateFlow()
     override suspend fun getCurrentSensorData(): SensorData = _sensorData.value
@@ -86,6 +154,8 @@ class SensorRepositoryImpl @Inject constructor(
                         )
                     }
                 }
+                val cur = _sensorData.value
+                processZupt(cur.accelX, cur.accelY, cur.accelZ, cur.gyroX, cur.gyroY, cur.gyroZ)
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
