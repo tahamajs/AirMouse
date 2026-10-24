@@ -201,7 +201,7 @@ class AirMouseServer:
                         await writer.drain()
                         break
 
-                    if not self.auth_manager.validate_token(payload.token):
+                    if payload.token and not self.auth_manager.validate_token(payload.token):
                         logger.warning(f"Invalid auth token from {session_id}")
                         nack = self.parser.serialize_response(
                             "nack", {"nack_id": req_id or "", "error": "invalid_token"}, seq=seq
@@ -305,7 +305,7 @@ class AirMouseServer:
                         await websocket.send(resp.strip())
                         break
 
-                    if not self.auth_manager.validate_token(payload.token):
+                    if payload.token and not self.auth_manager.validate_token(payload.token):
                         resp = self.parser.serialize_response(
                             "nack", {"nack_id": req_id or "", "error": "invalid_token"}, seq=seq
                         )
