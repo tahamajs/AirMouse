@@ -803,12 +803,14 @@ class HomeViewModel @Inject constructor(
             averageSpeed = prefs.getFloat("movement_average_speed", 0f),
             lastUpdated = prefs.getLong("movement_last_updated", System.currentTimeMillis())
         )
+        val savedToken = prefs.getString("auth_token", "")
         _uiState.update {
             it.copy(
                 isAutoConnectEnabled = autoConnectEnabled,
                 serverIp = connectionConfig.ip,
-                serverPort = if (connectionConfig.port > 0) connectionConfig.port else ConnectionConfig.DEFAULT_UDP_PORT,
+                serverPort = if (connectionConfig.port > 0) connectionConfig.port else ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
                 selectedProtocol = connectionConfig.protocol,
+                pairingToken = savedToken,
                 controlMode = prefs.getActiveMode().id,
                 isCalibrated = prefs.getBoolean("calibration_complete", false) ||
                         prefs.getBoolean("is_calibrated", false),
@@ -870,8 +872,24 @@ class HomeViewModel @Inject constructor(
                     ConnectionManager.ConnectionStatus.RECONNECTING -> ConnectionStatus.CONNECTING
                 }
 
+                val connState: ConnectionState = when (status) {
+                    ConnectionManager.ConnectionStatus.DISCONNECTED -> ConnectionState.Disconnected
+                    ConnectionManager.ConnectionStatus.CONNECTING,
+                    ConnectionManager.ConnectionStatus.RECONNECTING -> ConnectionState.Connecting()
+                    ConnectionManager.ConnectionStatus.PENDING_APPROVAL -> ConnectionState.WaitingForApproval(_approvalCountdownMs.value.coerceAtLeast(1000L))
+                    ConnectionManager.ConnectionStatus.CONNECTED -> ConnectionState.Connected(
+                        serverName = connectionManager.serverName.value.ifBlank { connectionManager.currentIp.value },
+                        ip = connectionManager.currentIp.value,
+                        port = connectionManager.currentPort.value
+                    )
+                    ConnectionManager.ConnectionStatus.ERROR -> ConnectionState.Error(
+                        connectionManager.lastError.value ?: "Connection error"
+                    )
+                }
+
                 _uiState.update {
                     it.copy(
+                        connectionState = connState,
                         connectionStatus = mapped,
                         isConnecting = status == ConnectionManager.ConnectionStatus.CONNECTING ||
                                 status == ConnectionManager.ConnectionStatus.RECONNECTING ||
@@ -880,7 +898,10 @@ class HomeViewModel @Inject constructor(
                 }
 
                 when (status) {
-                    ConnectionManager.ConnectionStatus.CONNECTING,
+                    ConnectionManager.ConnectionStatus.CONNECTING -> {
+                        addLogMessage("Connecting to server...")
+                        stopApprovalCountdown()
+                    }
                     ConnectionManager.ConnectionStatus.PENDING_APPROVAL -> {
                         addLogMessage("Server is approving the connection...")
                         startApprovalCountdown()
@@ -899,6 +920,11 @@ class HomeViewModel @Inject constructor(
                             it.copy(
                                 isConnecting = false,
                                 isActive = true,
+                                connectionState = ConnectionState.Connected(
+                                    serverName = connectionManager.serverName.value.ifBlank { connectionManager.currentIp.value },
+                                    ip = connectionManager.currentIp.value,
+                                    port = connectionManager.currentPort.value
+                                ),
                                 connectionStatus = ConnectionStatus.CONNECTED
                             )
                         }
@@ -915,6 +941,7 @@ class HomeViewModel @Inject constructor(
                             it.copy(
                                 isConnecting = false,
                                 isActive = false,
+                                connectionState = ConnectionState.Disconnected,
                                 connectionStatus = ConnectionStatus.DISCONNECTED
                             )
                         }
@@ -922,14 +949,14 @@ class HomeViewModel @Inject constructor(
                     }
                     ConnectionManager.ConnectionStatus.ERROR -> {
                         stopApprovalCountdown()
-                        addLogMessage(connectionManager.lastError.value ?: "Connection error")
-                        notificationManager.showConnectionErrorNotification(
-                            connectionManager.lastError.value ?: "Connection error"
-                        )
+                        val errMsg = connectionManager.lastError.value ?: "Connection error"
+                        addLogMessage(errMsg)
+                        notificationManager.showConnectionErrorNotification(errMsg)
                         _uiState.update {
                             it.copy(
                                 isConnecting = false,
                                 isActive = false,
+                                connectionState = ConnectionState.Error(errMsg),
                                 connectionStatus = ConnectionStatus.ERROR
                             )
                         }
@@ -964,10 +991,21 @@ class HomeViewModel @Inject constructor(
         approvalTimerJob = viewModelScope.launch {
             var remaining = 30_000L
             _approvalCountdownMs.value = remaining
+            _uiState.update { current ->
+                if (current.connectionStatus == ConnectionStatus.PENDING_APPROVAL) {
+                    current.copy(connectionState = ConnectionState.WaitingForApproval(remaining))
+                } else current
+            }
             while (remaining > 0 && _uiState.value.isConnecting) {
                 delay(1_000)
                 remaining -= 1_000
-                _approvalCountdownMs.value = remaining.coerceAtLeast(0L)
+                val safeRemaining = remaining.coerceAtLeast(0L)
+                _approvalCountdownMs.value = safeRemaining
+                _uiState.update { current ->
+                    if (current.connectionStatus == ConnectionStatus.PENDING_APPROVAL) {
+                        current.copy(connectionState = ConnectionState.WaitingForApproval(safeRemaining))
+                    } else current
+                }
             }
         }
     }
@@ -1211,6 +1249,14 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun updatePairingToken(token: String) {
+        val trimmed = token.trim()
+        prefs.putString("auth_token", trimmed)
+        _uiState.update {
+            it.copy(pairingToken = trimmed)
+        }
+    }
+
     fun updateConnectionProtocol(protocol: ConnectionProtocol) {
         val normalizedPort = ConnectionConfig(
             ip = _uiState.value.serverIp,
@@ -1349,14 +1395,20 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun cancelConnection() {
+        disconnect()
+    }
+
     fun disconnect() {
-        val shouldAutoReconnect = _uiState.value.isAutoConnectEnabled
+        val wasConnected = _uiState.value.connectionStatus == ConnectionStatus.CONNECTED
+        val shouldAutoReconnect = _uiState.value.isAutoConnectEnabled && wasConnected
         connectionManager.disconnect()
         stopApprovalCountdown()
         _uiState.update {
             it.copy(
                 isActive = false,
                 isConnecting = false,
+                connectionState = ConnectionState.Disconnected,
                 connectionStatus = ConnectionStatus.DISCONNECTED
             )
         }
@@ -1365,7 +1417,7 @@ class HomeViewModel @Inject constructor(
             if (shouldAutoReconnect) {
                 "Disconnected. Auto-reconnect is ON, reconnecting shortly..."
             } else {
-                "Disconnected. Auto-reconnect is OFF."
+                "Disconnected."
             }
         )
         if (shouldAutoReconnect) {
@@ -1640,11 +1692,29 @@ class HomeViewModel @Inject constructor(
         val magSeries: List<Float> = emptyList()
     )
 
+    // ============================================================
+    // Sealed State for Connection State Machine
+    // ============================================================
+
+    sealed class ConnectionState {
+        object Disconnected : ConnectionState()
+        data class Connecting(val message: String = "Connecting...") : ConnectionState()
+        data class WaitingForApproval(val remainingMs: Long = 30_000L) : ConnectionState()
+        data class Connected(
+            val serverName: String = "",
+            val ip: String = "",
+            val port: Int = 0
+        ) : ConnectionState()
+        data class Error(val message: String) : ConnectionState()
+    }
+
     data class HomeUiState(
+        val connectionState: ConnectionState = ConnectionState.Disconnected,
         val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
         val serverIp: String = "",
-        val serverPort: Int = ConnectionConfig.DEFAULT_UDP_PORT,
-        val selectedProtocol: ConnectionProtocol = ConnectionProtocol.UDP,
+        val serverPort: Int = ConnectionConfig.DEFAULT_WEBSOCKET_PORT,
+        val selectedProtocol: ConnectionProtocol = ConnectionProtocol.WEBSOCKET,
+        val pairingToken: String = "",
         val isMouseControlEnabled: Boolean = true,
         val calibrationProgress: Int = 0,
         val isAutoConnectEnabled: Boolean = true,
