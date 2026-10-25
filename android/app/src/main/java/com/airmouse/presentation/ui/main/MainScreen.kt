@@ -287,7 +287,6 @@ fun MainScreen(
     val isMouseControlEnabled by viewModel.isMouseControlEnabled.collectAsStateWithLifecycle(true)
     val serverInfo by viewModel.serverInfo.collectAsState()
     val currentIp by viewModel.currentIp.collectAsStateWithLifecycle("")
-    val connectionQuality by viewModel.connectionQuality.collectAsStateWithLifecycle(com.airmouse.network.ConnectionQuality())
     val currentProtocol by viewModel.currentProtocol.collectAsStateWithLifecycle()
 
     LaunchedEffect(pendingRoute) {
@@ -351,7 +350,7 @@ fun MainScreen(
                 serverName = serverInfo.first,
                 serverVersion = serverInfo.second,
                 serverIp = currentIp,
-                connectionQuality = connectionQuality,
+                connectionQualityFlow = viewModel.connectionQuality,
                 protocol = currentProtocol,
                 onDisconnect = { viewModel.disconnect() }
             )
@@ -437,31 +436,10 @@ fun MainScreen(
                             border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.35f)),
                             shadowElevation = 6.dp
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .background(Color(0xFF10B981), CircleShape)
-                                )
-                                Text(
-                                    text = "${currentProtocol.name} • ${connectionQuality.ping} ms",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.White
-                                )
-                                if (connectionQuality.packetLoss > 0f) {
-                                    Text(
-                                        text = "Loss: ${(connectionQuality.packetLoss * 100).toInt()}%",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFEF4444)
-                                    )
-                                }
-                            }
+                            ConnectionQualityPill(
+                                connectionQualityFlow = viewModel.connectionQuality,
+                                currentProtocol = currentProtocol
+                            )
                         }
 
                         // Mouse Control Toggle Pill
@@ -654,7 +632,7 @@ fun ModernDrawerContent(
     serverName: String,
     serverVersion: String,
     serverIp: String,
-    connectionQuality: com.airmouse.network.ConnectionQuality,
+    connectionQualityFlow: StateFlow<com.airmouse.network.ConnectionQuality>,
     protocol: ConnectionManager.ConnectionProtocol,
     onDisconnect: () -> Unit
 ) {
@@ -858,21 +836,11 @@ fun ModernDrawerContent(
                                 color = RedesignTheme.TextSecondary
                             )
                         }
-                        if (protocol != ConnectionManager.ConnectionProtocol.BLUETOOTH && isConnected) {
-                            val signalText = when (connectionQuality.signalStrength) {
-                                com.airmouse.network.ConnectionQuality.SignalStrength.EXCELLENT -> "📶 Signal: Excellent (${connectionQuality.ping} ms)"
-                                com.airmouse.network.ConnectionQuality.SignalStrength.GOOD -> "📶 Signal: Good (${connectionQuality.ping} ms)"
-                                com.airmouse.network.ConnectionQuality.SignalStrength.FAIR -> "📶 Signal: Fair (${connectionQuality.ping} ms)"
-                                com.airmouse.network.ConnectionQuality.SignalStrength.POOR -> "📶 Signal: Poor (${connectionQuality.ping} ms)"
-                                com.airmouse.network.ConnectionQuality.SignalStrength.VERY_POOR -> "📶 Signal: Very Poor (${connectionQuality.ping} ms)"
-                                else -> "📶 Signal: Unknown"
-                            }
-                            Text(
-                                text = signalText,
-                                fontSize = 12.sp,
-                                color = RedesignTheme.TextSecondary
-                            )
-                        }
+                        DrawerSignalQualityText(
+                            connectionQualityFlow = connectionQualityFlow,
+                            isConnected = isConnected,
+                            protocol = protocol
+                        )
                     }
                 }
 
@@ -1259,6 +1227,72 @@ fun ModernDrawerContent(
                 }
             },
             containerColor = RedesignTheme.Surface
+        )
+    }
+}
+
+/**
+ * Isolated leaf composable for top bar connection quality and ping.
+ * Prevents full MainScreen recomposition sweeps when ping updates.
+ */
+@Composable
+private fun ConnectionQualityPill(
+    connectionQualityFlow: StateFlow<com.airmouse.network.ConnectionQuality>,
+    currentProtocol: ConnectionManager.ConnectionProtocol,
+    modifier: Modifier = Modifier
+) {
+    val quality by connectionQualityFlow.collectAsStateWithLifecycle()
+    Row(
+        modifier = modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .background(Color(0xFF10B981), CircleShape)
+        )
+        Text(
+            text = "${currentProtocol.name} • ${quality.ping} ms",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.White
+        )
+        if (quality.packetLoss > 0f) {
+            Text(
+                text = "Loss: ${(quality.packetLoss * 100).toInt()}%",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFEF4444)
+            )
+        }
+    }
+}
+
+/**
+ * Isolated leaf composable for navigation drawer signal quality and ping.
+ * Recomposes independently without re-evaluating drawer items or main scaffold.
+ */
+@Composable
+private fun DrawerSignalQualityText(
+    connectionQualityFlow: StateFlow<com.airmouse.network.ConnectionQuality>,
+    isConnected: Boolean,
+    protocol: ConnectionManager.ConnectionProtocol
+) {
+    if (protocol != ConnectionManager.ConnectionProtocol.BLUETOOTH && isConnected) {
+        val quality by connectionQualityFlow.collectAsStateWithLifecycle()
+        val signalText = when (quality.signalStrength) {
+            com.airmouse.network.ConnectionQuality.SignalStrength.EXCELLENT -> "📶 Signal: Excellent (${quality.ping} ms)"
+            com.airmouse.network.ConnectionQuality.SignalStrength.GOOD -> "📶 Signal: Good (${quality.ping} ms)"
+            com.airmouse.network.ConnectionQuality.SignalStrength.FAIR -> "📶 Signal: Fair (${quality.ping} ms)"
+            com.airmouse.network.ConnectionQuality.SignalStrength.POOR -> "📶 Signal: Poor (${quality.ping} ms)"
+            com.airmouse.network.ConnectionQuality.SignalStrength.VERY_POOR -> "📶 Signal: Very Poor (${quality.ping} ms)"
+            else -> "📶 Signal: Unknown"
+        }
+        Text(
+            text = signalText,
+            fontSize = 12.sp,
+            color = RedesignTheme.TextSecondary
         )
     }
 }

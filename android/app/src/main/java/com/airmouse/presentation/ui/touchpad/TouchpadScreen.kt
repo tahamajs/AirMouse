@@ -124,6 +124,8 @@ fun TouchpadScreen(
                 item {
                     TouchpadSurface(
                         uiState = uiState,
+                        touchPointsFlow = viewModel.touchPoints,
+                        isTouchActiveFlow = viewModel.isTouchActive,
                         onTouchEvent = { x, y, count, pointers, p ->
                             viewModel.handleEvent(TouchpadEvent.TouchEvent(x, y, count, pointers, p))
                         },
@@ -353,6 +355,8 @@ private fun TouchpadDomainSummaryCard(uiState: TouchpadUiState) {
 @Composable
 fun TouchpadSurface(
     uiState: TouchpadUiState,
+    touchPointsFlow: kotlinx.coroutines.flow.StateFlow<List<TouchPoint>>? = null,
+    isTouchActiveFlow: kotlinx.coroutines.flow.StateFlow<Boolean>? = null,
     onTouchEvent: (Float, Float, Int, List<Pair<Float, Float>>, Float) -> Unit,
     onTap: (Offset) -> Unit,
     onLongPress: () -> Unit,
@@ -465,27 +469,13 @@ fun TouchpadSurface(
                 )
             }
 
-            // Touch point visualisation
+            // Touch point visualisation (isolated in leaf overlay to avoid whole-screen recomposition)
             if (uiState.showTouchPoints) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    uiState.touchPoints.forEach { point ->
-                        drawCircle(
-                            Color.White.copy(alpha = 0.4f),
-                            radius = 30f,
-                            center = Offset(point.x, point.y)
-                        )
-                        drawCircle(
-                            Color.White,
-                            radius = 12f,
-                            center = Offset(point.x, point.y)
-                        )
-                        drawCircle(
-                            Color.White.copy(alpha = 0.3f),
-                            radius = 20f + point.pressure * 20f,
-                            center = Offset(point.x, point.y)
-                        )
-                    }
-                }
+                TouchPointsOverlay(
+                    touchPointsFlow = touchPointsFlow,
+                    fallbackPoints = uiState.touchPoints,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             // Placeholder text when inactive or paused
@@ -506,18 +496,76 @@ fun TouchpadSurface(
                         color = labelColor
                     )
                 }
-            } else if (uiState.touchPoints.isEmpty()) {
-                Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(42.dp))
-                    Spacer(Modifier.height(8.dp))
-                    Text("Touchpad Active", color = labelColor)
-                    Text(
-                        "Swipe, tap, two-finger scroll, and long press for click actions.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = labelColor
-                    )
-                }
+            } else {
+                TouchpadActiveHint(
+                    isTouchActiveFlow = isTouchActiveFlow,
+                    fallbackHasTouch = uiState.touchPoints.isNotEmpty(),
+                    labelColor = labelColor,
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun TouchPointsOverlay(
+    touchPointsFlow: kotlinx.coroutines.flow.StateFlow<List<TouchPoint>>?,
+    fallbackPoints: List<TouchPoint>,
+    modifier: Modifier = Modifier
+) {
+    val points = if (touchPointsFlow != null) {
+        val statePoints by touchPointsFlow.collectAsStateWithLifecycle()
+        statePoints
+    } else {
+        fallbackPoints
+    }
+    if (points.isNotEmpty()) {
+        Canvas(modifier = modifier) {
+            points.forEach { point ->
+                drawCircle(
+                    Color.White.copy(alpha = 0.4f),
+                    radius = 30f,
+                    center = Offset(point.x, point.y)
+                )
+                drawCircle(
+                    Color.White,
+                    radius = 12f,
+                    center = Offset(point.x, point.y)
+                )
+                drawCircle(
+                    Color.White.copy(alpha = 0.3f),
+                    radius = 20f + point.pressure * 20f,
+                    center = Offset(point.x, point.y)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TouchpadActiveHint(
+    isTouchActiveFlow: kotlinx.coroutines.flow.StateFlow<Boolean>?,
+    fallbackHasTouch: Boolean,
+    labelColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val hasTouch = if (isTouchActiveFlow != null) {
+        val active by isTouchActiveFlow.collectAsStateWithLifecycle()
+        active
+    } else {
+        fallbackHasTouch
+    }
+    if (!hasTouch) {
+        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(42.dp))
+            Spacer(Modifier.height(8.dp))
+            Text("Touchpad Active", color = labelColor)
+            Text(
+                "Swipe, tap, two-finger scroll, and long press for click actions.",
+                style = MaterialTheme.typography.bodySmall,
+                color = labelColor
+            )
         }
     }
 }

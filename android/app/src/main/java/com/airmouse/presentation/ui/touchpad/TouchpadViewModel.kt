@@ -395,15 +395,13 @@ class TouchpadViewModel @Inject constructor(
     ) {
         if (!_uiState.value.isActive || !_uiState.value.isMouseControlEnabled) return
 
-        // Update UI state with touch points
-        _uiState.update {
-            it.copy(
-                currentX = x,
-                currentY = y,
-                touchPoints = pointers.mapIndexed { i, p ->
-                    TouchPoint(i, p.first, p.second, pressure)
-                }
-            )
+        // Update high-frequency touch points in dedicated flow without forcing full-screen recomposition
+        val points = pointers.mapIndexed { i, p ->
+            TouchPoint(i, p.first, p.second, pressure)
+        }
+        _touchPoints.value = points
+        if (!_isTouchActive.value) {
+            _isTouchActive.value = true
         }
 
         when (pointerCount) {
@@ -616,6 +614,8 @@ class TouchpadViewModel @Inject constructor(
     }
 
     fun resetGestureState() {
+        _touchPoints.value = emptyList()
+        _isTouchActive.value = false
         // Reset all tracking variables
         lastX = 0f
         lastY = 0f
