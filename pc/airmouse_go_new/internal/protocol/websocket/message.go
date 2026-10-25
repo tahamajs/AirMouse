@@ -199,6 +199,32 @@ func StatusMessage(running bool, clients int) []byte {
 	return append(body, '\n')
 }
 
+// ServerClosingMessage creates a clean server closing notification
+func ServerClosingMessage() []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    2,
+		"type": "server_closing",
+		"payload": map[string]any{
+			"reason": "shutdown",
+		},
+	})
+	return append(body, '\n')
+}
+
+// StatsRespMessage creates a stats response message
+func StatsRespMessage(stats map[string]any, reqID *string) []byte {
+	env := map[string]any{
+		"v":       2,
+		"type":    "stats_resp",
+		"payload": stats,
+	}
+	if reqID != nil && *reqID != "" {
+		env["id"] = *reqID
+	}
+	body, _ := json.Marshal(env)
+	return append(body, '\n')
+}
+
 // ------------------------------------------------------------
 // Decoding functions for specific message types
 // ------------------------------------------------------------

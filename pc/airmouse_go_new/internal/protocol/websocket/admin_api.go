@@ -16,6 +16,7 @@ import (
 	"airmouse-go/internal/config"
 	"airmouse-go/internal/device"
 	"airmouse-go/internal/sysaction"
+	"airmouse-go/internal/utils"
 )
 
 // handleAPIStats returns system statistics
@@ -63,6 +64,16 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 	activeTheme := common.GetActiveTheme()
 
 	cfg := config.Get()
+	snap := utils.GetTelemetrySnapshot()
+	if snap.TotalPacketsIn > 0 {
+		totalPackets = snap.TotalPacketsIn
+	}
+	if snap.TotalBytesIn > 0 {
+		totalBytes = snap.TotalBytesIn
+	}
+
+	sessions := s.GetClientSessions()
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"clicks":           clicks,
@@ -78,6 +89,20 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		"active_theme":     activeTheme,
 		"total_packets":    totalPackets,
 		"total_bytes":      totalBytes,
+		"dropped_packets":  snap.DroppedPackets,
+		"packets_per_sec":  snap.PacketsPerSec,
+		"bytes_in_kbps":    snap.BytesInKBps,
+		"bytes_out_kbps":   snap.BytesOutKBps,
+		"average_ping_ms":  snap.AveragePingMs,
+		"sessions":         sessions,
+		"metrics": map[string]interface{}{
+			"packets_total":   totalPackets,
+			"packets_per_sec": snap.PacketsPerSec,
+			"bytes_in_kbps":   snap.BytesInKBps,
+			"bytes_out_kbps":  snap.BytesOutKBps,
+			"dropped_packets": snap.DroppedPackets,
+			"avg_ping_ms":     snap.AveragePingMs,
+		},
 		"ports": map[string]int{
 			"websocket": cfg.WebSocketPort,
 			"tcp":       cfg.Port,
@@ -93,9 +118,70 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 		"quality": map[string]interface{}{
 			"level":   "excellent",
 			"text":    "Excellent",
-			"latency": 5,
+			"latency": int(snap.AveragePingMs),
 			"signal":  "Strong",
 		},
+	})
+}
+
+// handleAPIStatus provides a REST health and live telemetry endpoint (/api/status, /status).
+func (s *Server) handleAPIStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	uptime := time.Since(s.startTime).Seconds()
+	s.mu.RUnlock()
+
+	var clicks, scrolls int64
+	if s.mouse != nil {
+		c, _, _, scr := s.mouse.Stats()
+		clicks = c
+		scrolls = scr
+	}
+
+	cfg := config.Get()
+	snap := utils.GetTelemetrySnapshot()
+	sessions := s.GetClientSessions()
+
+	activeDevices := 0
+	if s.deviceMgr != nil {
+		activeDevices = len(s.deviceMgr.GetActiveDevices())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":          "online",
+		"server":          cfg.ServerName,
+		"version":         cfg.Version,
+		"uptime_seconds":  uptime,
+		"paused":          common.IsMovementPaused(),
+		"clients_count":   len(sessions),
+		"active_devices":  activeDevices,
+		"sessions":        sessions,
+		"metrics": map[string]interface{}{
+			"packets_total":   snap.TotalPackets,
+			"packets_in":      snap.TotalPacketsIn,
+			"packets_out":     snap.TotalPacketsOut,
+			"packets_per_sec": snap.PacketsPerSec,
+			"bytes_in_kbps":   snap.BytesInKBps,
+			"bytes_out_kbps":  snap.BytesOutKBps,
+			"dropped_packets": snap.DroppedPackets,
+			"avg_ping_ms":     snap.AveragePingMs,
+			"last_ping_ms":    snap.LastPingMs,
+		},
+		"mouse": map[string]interface{}{
+			"clicks":  clicks,
+			"scrolls": scrolls,
+		},
+		"ports": map[string]int{
+			"websocket": cfg.WebSocketPort,
+			"tcp":       cfg.Port,
+			"udp":       cfg.UDPPort,
+		},
+		"ips": getLocalIPs(),
 	})
 }
 

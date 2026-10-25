@@ -1,6 +1,8 @@
 package adaptivesmoothing
 
 import (
+	"math"
+	"math/rand"
 	"testing"
 )
 
@@ -86,3 +88,70 @@ func TestHumanizer(t *testing.T) {
 		t.Errorf("Expected stats to be reset")
 	}
 }
+
+func TestAdaptiveSmoothingMathStress(t *testing.T) {
+	cfg := DefaultHumanizerConfig()
+	// Disable random noise injection for strict deterministic settling verification
+	cfg.NoiseAmplitude = 0.0
+	cfg.EnableTremor = false
+	h := NewHumanizer(cfg)
+
+	r := rand.New(rand.NewSource(99))
+
+	var jitterOutputsX []float64
+	var jitterOutputsY []float64
+
+	// 1. Feed 1,000 rapid jitter cycles
+	for i := 0; i < 1000; i++ {
+		sign := 1.0
+		if i%2 == 0 {
+			sign = -1.0
+		}
+		jx := sign * (3.0 + r.Float64()*10.0)
+		jy := -sign * (3.0 + r.Float64()*10.0)
+
+		outX, outY := h.Process(jx, jy, float64(i*5), float64(i*3))
+		if math.IsNaN(outX) || math.IsInf(outX, 0) || math.IsNaN(outY) || math.IsInf(outY, 0) {
+			t.Fatalf("Step %d: NaN or Inf output in Humanizer: outX=%f, outY=%f", i, outX, outY)
+		}
+
+		jitterOutputsX = append(jitterOutputsX, outX)
+		jitterOutputsY = append(jitterOutputsY, outY)
+	}
+
+	// Calculate and verify non-negative variance
+	var sumX, sumY float64
+	for i := 0; i < len(jitterOutputsX); i++ {
+		sumX += jitterOutputsX[i]
+		sumY += jitterOutputsY[i]
+	}
+	meanX := sumX / float64(len(jitterOutputsX))
+	meanY := sumY / float64(len(jitterOutputsY))
+
+	var varX, varY float64
+	for i := 0; i < len(jitterOutputsX); i++ {
+		varX += (jitterOutputsX[i] - meanX) * (jitterOutputsX[i] - meanX)
+		varY += (jitterOutputsY[i] - meanY) * (jitterOutputsY[i] - meanY)
+	}
+	varX /= float64(len(jitterOutputsX))
+	varY /= float64(len(jitterOutputsY))
+
+	if varX < 0 || varY < 0 {
+		t.Fatalf("Variance must be non-negative: varX=%f, varY=%f", varX, varY)
+	}
+
+	// 2. Sudden 0-motion steps (100 steps)
+	var finalX, finalY float64
+	for i := 0; i < 100; i++ {
+		finalX, finalY = h.Process(0.0, 0.0, 5000.0, 3000.0)
+		if math.IsNaN(finalX) || math.IsInf(finalX, 0) || math.IsNaN(finalY) || math.IsInf(finalY, 0) {
+			t.Fatalf("Zero step %d: NaN or Inf: (%f, %f)", i, finalX, finalY)
+		}
+	}
+
+	// 3. Verify zero oscillation and decay to zero
+	if math.Abs(finalX) > 1e-3 || math.Abs(finalY) > 1e-3 {
+		t.Errorf("Expected humanizer to settle to 0 after 100 zero steps, got (%f, %f)", finalX, finalY)
+	}
+}
+

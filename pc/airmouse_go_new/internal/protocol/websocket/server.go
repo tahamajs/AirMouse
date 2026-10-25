@@ -216,6 +216,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/stats", s.handleStats) // legacy
 	mux.HandleFunc("/api/stats", s.handleAPIStats)
+	mux.HandleFunc("/api/status", s.handleAPIStatus)
+	mux.HandleFunc("/status", s.handleAPIStatus)
 	mux.HandleFunc("/api/devices", s.handleAPIDevices)
 	mux.HandleFunc("/api/devices/approve", s.handleDeviceApprove)
 	mux.HandleFunc("/api/devices/reject", s.handleDeviceReject)
@@ -292,24 +294,85 @@ func (s *Server) Stop() error {
 		return nil
 	}
 	s.running = false
-	s.mu.Unlock()
+	listener := s.listener
+	s.listener = nil
+	server := s.server
+	s.server = nil
 
-	if s.listener != nil {
-		_ = s.listener.Close()
-	}
-	if s.server != nil {
-		_ = s.server.Close()
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	clients := make([]*WSClient, 0, len(s.clients))
 	for _, c := range s.clients {
-		c.Close()
+		clients = append(clients, c)
 	}
 	s.clients = make(map[string]*WSClient)
+	s.mu.Unlock()
 
-	utils.LogInfo("WebSocket server stopped on port %d", s.port)
+	// 1. Broadcast server_closing packet to all connected WebSocket clients
+	closingMsg := ServerClosingMessage()
+	for _, c := range clients {
+		_ = c.Conn.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
+		_ = c.Conn.WriteMessage(gorilla.TextMessage, closingMsg)
+	}
+	time.Sleep(50 * time.Millisecond) // Short buffer flush window
+
+	// 2. Close listener and HTTP server
+	if listener != nil {
+		_ = listener.Close()
+	}
+	if server != nil {
+		_ = server.Close()
+	}
+
+	// 3. Close all client connections
+	for _, c := range clients {
+		c.Close()
+	}
+
+	// 4. Release mouse buttons and keys so nothing remains stuck
+	if s.mouse != nil {
+		s.mouse.MouseUp("left")
+		s.mouse.MouseUp("right")
+		s.mouse.MouseUp("middle")
+	}
+	sysaction.ReleaseAllKeys()
+
+	utils.LogInfo("WebSocket server stopped cleanly with graceful teardown on port %d", s.port)
 	return nil
+}
+
+// ClientSessionSnapshot represents connected WebSocket client details for live metrics.
+type ClientSessionSnapshot struct {
+	ID          string    `json:"id"`
+	DeviceID    string    `json:"device_id"`
+	Name        string    `json:"name"`
+	IP          string    `json:"ip"`
+	Protocol    string    `json:"protocol"`
+	ConnectedAt time.Time `json:"connected_at"`
+	LastActive  time.Time `json:"last_active"`
+	BytesSent   int64     `json:"bytes_sent"`
+	BytesRecv   int64     `json:"bytes_recv"`
+	Approved    bool      `json:"approved"`
+}
+
+// GetClientSessions returns snapshots of all currently connected WebSocket clients.
+func (s *Server) GetClientSessions() []ClientSessionSnapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	sessions := make([]ClientSessionSnapshot, 0, len(s.clients))
+	for _, c := range s.clients {
+		sessions = append(sessions, ClientSessionSnapshot{
+			ID:          c.ID,
+			DeviceID:    c.DeviceID,
+			Name:        c.Name,
+			IP:          c.IP,
+			Protocol:    "WebSocket",
+			ConnectedAt: c.ConnectedAt,
+			LastActive:  c.LastActive,
+			BytesSent:   c.BytesSent,
+			BytesRecv:   c.BytesRecv,
+			Approved:    c.Approved.Load(),
+		})
+	}
+	return sessions
 }
 
 // handleWebSocket handles WebSocket connections.
@@ -395,6 +458,13 @@ func (s *Server) readLoop(client *WSClient) {
 	defer func() {
 		client.Close()
 
+		if s.mouse != nil {
+			s.mouse.MouseUp("left")
+			s.mouse.MouseUp("right")
+			s.mouse.MouseUp("middle")
+		}
+		sysaction.ReleaseAllKeys()
+
 		s.mu.Lock()
 		delete(s.clients, client.ID)
 		if session, ok := s.fileSessions[client.ID]; ok {
@@ -433,6 +503,7 @@ func (s *Server) readLoop(client *WSClient) {
 			devID = client.ID
 		}
 		s.mu.Unlock()
+		utils.RecordPacketIn(int64(len(data)))
 
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.UpdateDeviceActivity(devID, 0, int64(len(data)))
@@ -475,6 +546,7 @@ func (s *Server) writeLoop(client *WSClient) {
 				utils.LogDebug("WebSocket write error: %v", err)
 				return
 			}
+			utils.RecordPacketOut(int64(len(msg)))
 			s.mu.Lock()
 			client.BytesSent += int64(len(msg))
 			devID := client.DeviceID

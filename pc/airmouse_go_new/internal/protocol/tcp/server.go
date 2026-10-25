@@ -745,7 +745,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 	case "laser", "draw", "annotation":
 		utils.LogInfo("Received %s data from client %s over TCP", msgType, client.ID)
 
-	case "keypress", "keydown", "keyup", "key":
+	case "keypress", "key_press", "key":
 		keyVal, _ := payload["key"].(string)
 		if keyVal == "" {
 			keyVal, _ = payload["code"].(string)
@@ -756,6 +756,47 @@ func (s *Server) processLine(client *Client, line []byte) {
 		if keyVal != "" {
 			utils.LogInfo("TCP key event %s: key=%s client=%s", msgType, keyVal, client.ID)
 			go sysaction.KeyTap(keyVal)
+		}
+
+	case "keydown", "key_down":
+		keyVal, _ := payload["key"].(string)
+		if keyVal == "" {
+			keyVal, _ = payload["code"].(string)
+		}
+		if keyVal == "" {
+			keyVal, _ = payload["value"].(string)
+		}
+		if keyVal != "" {
+			utils.LogInfo("TCP key down event: key=%s client=%s", keyVal, client.ID)
+			go sysaction.KeyDown(keyVal)
+		}
+
+	case "keyup", "key_up":
+		keyVal, _ := payload["key"].(string)
+		if keyVal == "" {
+			keyVal, _ = payload["code"].(string)
+		}
+		if keyVal == "" {
+			keyVal, _ = payload["value"].(string)
+		}
+		if keyVal != "" {
+			utils.LogInfo("TCP key up event: key=%s client=%s", keyVal, client.ID)
+			go sysaction.KeyUp(keyVal)
+		}
+
+	case "hotkey":
+		keyVal, _ := payload["key"].(string)
+		var modStr string
+		if rawMods, ok := payload["modifiers"].([]any); ok {
+			for _, m := range rawMods {
+				if ms, ok := m.(string); ok {
+					modStr += ms + "+"
+				}
+			}
+		}
+		if keyVal != "" {
+			utils.LogInfo("TCP hotkey event: mod=%s key=%s client=%s", modStr, keyVal, client.ID)
+			go sysaction.KeyTap(modStr + keyVal)
 		}
 
 	case "type", "text":
@@ -852,6 +893,7 @@ func (s *Server) writeAck(client *Client, id *string) {
 		utils.LogDebug("TCP ack write error: %v", err)
 		return
 	}
+	utils.RecordPacketOut(int64(len(ack)))
 	client.mu.Lock()
 	client.BytesSent += int64(len(ack))
 	devID := client.DeviceID
@@ -913,18 +955,87 @@ func (s *Server) ApproveDevice(deviceID string) error {
 	return nil
 }
 
+// ClientSessionSnapshot represents connected TCP client details for live metrics.
+type ClientSessionSnapshot struct {
+	ID          string    `json:"id"`
+	DeviceID    string    `json:"device_id"`
+	Name        string    `json:"name"`
+	IP          string    `json:"ip"`
+	Protocol    string    `json:"protocol"`
+	ConnectedAt time.Time `json:"connected_at"`
+	LastActive  time.Time `json:"last_active"`
+	BytesSent   int64     `json:"bytes_sent"`
+	BytesRecv   int64     `json:"bytes_recv"`
+	Approved    bool      `json:"approved"`
+}
+
+func (s *Server) GetClientSessions() []ClientSessionSnapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	sessions := make([]ClientSessionSnapshot, 0, len(s.clients))
+	for _, c := range s.clients {
+		c.mu.RLock()
+		sessions = append(sessions, ClientSessionSnapshot{
+			ID:          c.ID,
+			DeviceID:    c.DeviceID,
+			Name:        c.Name,
+			IP:          c.IP,
+			Protocol:    "TCP",
+			ConnectedAt: c.ConnectedAt,
+			LastActive:  c.LastActive,
+			BytesSent:   c.BytesSent,
+			BytesRecv:   c.BytesRecv,
+			Approved:    c.Approved,
+		})
+		c.mu.RUnlock()
+	}
+	return sessions
+}
+
 func (s *Server) Stop() {
 	s.mu.Lock()
-	s.running = false
-	if s.listener != nil {
-		_ = s.listener.Close()
+	if !s.running {
+		s.mu.Unlock()
+		return
 	}
+	s.running = false
+	listener := s.listener
+	s.listener = nil
+
+	clients := make([]*Client, 0, len(s.clients))
 	for _, c := range s.clients {
-		_ = c.Conn.Close()
+		clients = append(clients, c)
 	}
 	s.clients = make(map[string]*Client)
 	s.mu.Unlock()
-	utils.LogInfo("TCP server stopped")
+
+	// 1. Broadcast server_closing packet to all connected clients
+	closingMsg := serverClosingMessage()
+	for _, c := range clients {
+		_ = c.Conn.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
+		_, _ = c.Conn.Write(closingMsg)
+	}
+	time.Sleep(50 * time.Millisecond) // Short buffer flush window
+
+	// 2. Close listener socket
+	if listener != nil {
+		_ = listener.Close()
+	}
+
+	// 3. Close all client connections cleanly
+	for _, c := range clients {
+		_ = c.Conn.Close()
+	}
+
+	// 4. Reset mouse buttons and keys so nothing remains stuck
+	if s.mouse != nil {
+		s.mouse.MouseUp("left")
+		s.mouse.MouseUp("right")
+		s.mouse.MouseUp("middle")
+	}
+	sysaction.ReleaseAllKeys()
+
+	utils.LogInfo("TCP server stopped cleanly with graceful teardown")
 }
 
 func (s *Server) GetStats() map[string]interface{} {
