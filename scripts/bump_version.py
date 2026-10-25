@@ -183,7 +183,7 @@ def get_all_sync_targets() -> List[SyncTarget]:
             "android/app/src/main/java/com/airmouse/presentation/ui/about/AboutViewModel.kt",
             "Android About Screen ViewModel Feedback Toast",
             [
-                (r'("AirMouse Pro is up to date \(v)[^)]+(\)\)")', r'\g<1>{version}\2', 0),
+                (r'("AirMouse Pro is up to date \(v)[^)]+(\)")', r'\g<1>{version}\2', 0),
             ]
         ),
         RegexSyncTarget(
@@ -232,13 +232,6 @@ def get_all_sync_targets() -> List[SyncTarget]:
             "Go Server Internal Config Default Version",
             [
                 (r'(Version:\s*")[^"]+(")', r'\g<1>{version}\2', 0),
-            ]
-        ),
-        RegexSyncTarget(
-            "pc/airmouse_go_new/web/index.html",
-            "Go Embedded Web Index Badge",
-            [
-                (r'(<span class="app-badge">v)[^<]+(</span>)', r'\g<1>{version}\2', 0),
             ]
         ),
         RegexSyncTarget(

@@ -5,53 +5,62 @@
 # 🖱️ AirMouse Pro (v1.0.1)
 ### Next-Generation Spatial Air Mouse, Multi-Touch Trackpad & Presentation Controller
 
+[![GitHub Release](https://img.shields.io/github/v/release/tahamajs/AirMouse?color=blue&logo=github)](https://github.com/tahamajs/AirMouse/releases/tag/v1.0.1)
 [![PyPI Version](https://img.shields.io/pypi/v/airmouse-core.svg?color=blue&logo=pypi)](https://pypi.org/project/airmouse-core/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/airmouse-core.svg?logo=python)](https://pypi.org/project/airmouse-core/)
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://go.dev/)
 [![Android Platform](https://img.shields.io/badge/Android-8.0%2B%20(API%2026%2B)-3DDC84?logo=android)](https://developer.android.com)
-[![iOS Safari](https://img.shields.io/badge/iOS-Safari%2013%2B-black?logo=apple)](docs/WEB_CLIENT.md)
+[![iOS Safari](https://img.shields.io/badge/iOS-Safari%2013%2B-black?logo=apple)](docs/AUDIT_4_WEB_CLIENT_CROSS_BROWSER.md)
 [![Protocol](https://img.shields.io/badge/Protocol-V2%20Canonical-blueviolet)](docs/PROTOCOL_V2.md)
-[![Build Status](https://img.shields.io/badge/Build-Passing%20(APK%20Ready)-success)](#native-android-client-application)
-[![Coverage](https://img.shields.io/badge/Coverage-100%25%20Verified-brightgreen)](#testing-and-verification)
+[![R8 Full Mode](https://img.shields.io/badge/R8%20Full%20Mode-6.83MB%20DEX-brightgreen)](android/docs/R8_OPTIMIZATION.md)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 <br/>
 
-[**Live UI Previews**](#-application-ui--design-showcase) •
-[**Official Releases & Installers**](#-official-releases--installers-all-platforms) •
-[**Quickstart**](#-quickstart--installation) •
+[**Downloads**](#-official-releases--downloads-all-platforms) •
+[**Quickstart**](#-quickstart--getting-started) •
+[**Subsystems Breakdown**](#-comprehensive-subsystems-breakdown) •
 [**Architecture**](#-system-architecture) •
-[**Protocol V2**](#-canonical-protocol-v2-wire-envelope) •
-[**Testing**](#-testing-and-verification) •
-[**Documentation**](#-full-documentation-index)
+[**Protocol V2 Wire Spec**](#-canonical-protocol-v2-wire-envelope) •
+[**OS Setup Guides**](#-operating-system-setup-guides) •
+[**Single Source of Truth**](#-single-source-of-truth-ssot-versioning) •
+[**Audits & Technical Reports**](#-deep-audits--technical-reports)
 
 </div>
 
 ---
 
-## 📦 Official Releases & Installers (All Platforms)
+## 📖 Overview
 
-Download pre-compiled, verified release packages for all supported platforms:
+**AirMouse Pro** is an ultra-low-latency, cross-platform spatial input synthesis ecosystem that transforms smartphones and mobile devices into precision desktop controllers. It seamlessly combines:
+1. **6-DOF Spatial Air Mouse**: Move the desktop cursor with natural wrist motion using digital signal processing (One Euro Filter + ZUPT drift suppression).
+2. **Multi-Touch Virtual Trackpad**: Smooth kinetic scrolling, 1/2/3-finger gestures, and tactile haptic clicks.
+3. **Presentation & Media Remote**: Next/previous slide transitions, virtual laser pointer overlays, and volume dials.
+4. **Zero-Install Web Client**: Instant connectivity for iPhone/iPad (iOS Safari) and mobile browsers without App Store installation.
+
+---
+
+## 📦 Official Releases & Downloads (All Platforms)
+
+Download pre-compiled, signed, production-ready release packages for version **v1.0.1**:
 
 | Platform | Target Architecture | Release Artifact | Quick Installation |
 | :--- | :--- | :--- | :--- |
-| **🤖 Android** | ARM64 / ARMv7 / x86_64 | [**`AirMouse-v1.0.1.apk`**](releases/android/AirMouse-v1.0.1.apk) | `adb install -r AirMouse-v1.0.1.apk` |
-| **🪟 Windows** | x86_64 (Windows 10/11) | [**`AirMouse-v1.0.1-windows-x64.zip`**](releases/windows/AirMouse-v1.0.1-windows-x64.zip) | Extract & run `Start-AirMouse.bat` |
-| **🪟 Windows** | x86_64 Portable EXE | [**`AirMouse-Server-v1.0.1-windows-x64.exe`**](releases/windows/AirMouse-Server-v1.0.1-windows-x64.exe) | Portable zero-dependency executable |
-| **🍎 macOS** | Universal (Apple Silicon M1-M4 + Intel) | [**`AirMouse-v1.0.1-macos-universal.tar.gz`**](releases/macos/AirMouse-v1.0.1-macos-universal.tar.gz) | Extract & move `AirMouse.app` to `/Applications` |
-| **🍎 macOS** | Universal CLI Daemon | [**`AirMouse-Server-v1.0.1-macos-universal`**](releases/macos/AirMouse-Server-v1.0.1-macos-universal) | `./AirMouse-Server-v1.0.1-macos-universal` |
-| **🐧 Linux** | x86_64 (Ubuntu/Debian/Fedora/Arch) | [**`AirMouse-v1.0.1-linux-x64.tar.gz`**](releases/linux/AirMouse-v1.0.1-linux-x64.tar.gz) | Extract & run `./start-airmouse.sh` |
-| **🐧 Linux** | ARM64 (Raspberry Pi 4/5 / SBC) | [**`AirMouse-v1.0.1-linux-arm64.tar.gz`**](releases/linux/AirMouse-v1.0.1-linux-arm64.tar.gz) | Extract & run `./start-airmouse.sh` |
+| **🤖 Android** | ARM64 / ARMv7 / x86_64 | [**`AirMouse-v1.0.1.apk`**](https://github.com/tahamajs/AirMouse/releases/download/v1.0.1/AirMouse-v1.0.1.apk) | `adb install -r AirMouse-v1.0.1.apk` |
+| **🪟 Windows** | x86_64 (Windows 10/11) | [**`AirMouse-v1.0.1-windows-x64.zip`**](https://github.com/tahamajs/AirMouse/releases/download/v1.0.1/AirMouse-v1.0.1-windows-x64.zip) | Extract & run `Start-AirMouse.bat` |
+| **🪟 Windows** | x86_64 Portable EXE | [**`AirMouse-Server-v1.0.1-windows-x64.exe`**](https://github.com/tahamajs/AirMouse/releases/download/v1.0.1/AirMouse-Server-v1.0.1-windows-x64.exe) | Standalone zero-dependency executable |
+| **🍎 macOS** | Universal (Apple Silicon M1-M4 + Intel) | [**`AirMouse-v1.0.1-macos-universal.tar.gz`**](https://github.com/tahamajs/AirMouse/releases/download/v1.0.1/AirMouse-v1.0.1-macos-universal.tar.gz) | Extract & run `AirMouse.app` |
+| **🍎 macOS** | Universal CLI Daemon | [**`AirMouse-Server-v1.0.1-macos-universal`**](https://github.com/tahamajs/AirMouse/releases/download/v1.0.1/AirMouse-Server-v1.0.1-macos-universal) | Standalone Mach-O Universal binary |
+| **🐧 Linux** | x86_64 (Ubuntu/Debian/Fedora/Arch) | [**`AirMouse-v1.0.1-linux-x64.tar.gz`**](https://github.com/tahamajs/AirMouse/releases/download/v1.0.1/AirMouse-v1.0.1-linux-x64.tar.gz) | Extract & run `./start-airmouse.sh` |
+| **🐧 Linux** | ARM64 (Raspberry Pi 4/5 / SBC) | [**`AirMouse-v1.0.1-linux-arm64.tar.gz`**](https://github.com/tahamajs/AirMouse/releases/download/v1.0.1/AirMouse-v1.0.1-linux-arm64.tar.gz) | Extract & run `./start-airmouse.sh` |
 
-> 🔐 **Checksums**: Verify SHA256 integrity using [**`releases/SHA256SUMS.txt`**](releases/SHA256SUMS.txt).
+> 🔐 **Checksums**: Verify package integrity using [**`releases/SHA256SUMS.txt`**](https://github.com/tahamajs/AirMouse/releases/download/v1.0.1/SHA256SUMS.txt).
 > 
 > ⚡ **Rebuild All Releases from Source**: Run [`./scripts/build_all_releases.sh`](scripts/build_all_releases.sh) to regenerate all binaries and archives.
 
 ---
 
 ## 📱 Application UI & Design Showcase
-
-AirMouse delivers a production-grade user experience crafted specifically for high-precision cursor manipulation and low-latency feedback:
 
 <div align="center">
   <img src="docs/assets/app_screens_mockup.svg" alt="AirMouse Android App Screens" width="100%">
@@ -67,26 +76,54 @@ AirMouse delivers a production-grade user experience crafted specifically for hi
 
 ---
 
-## 🌟 Key Highlights & Engineering Features
+## 🧩 Comprehensive Subsystems Breakdown
 
-- **📱 Native Android Client (`android/`)**:
-  - **APK Ready**: Built and verified clean with Kotlin Symbol Processing (`KSP`) & Hilt DI (`app-debug.apk`).
-  - **One Euro Filter**: Sub-millimeter cursor stabilization with dynamic cutoff frequency ($f_c = f_{c_{min}} + \beta |\dot{x}|$).
-  - **Zero Velocity Update (ZUPT)**: Real-time drift suppression continuously recalibrating gyro bias when the hand is stationary.
-  - **Floating Status Pill**: Live Material 3 indicator displaying protocol type, round-trip ping ($ms$), and packet loss percentage.
-  - **Tactile Haptics**: Native vibration pulses confirming clicks, mode switches, and calibration success.
-- **🍎 Apple iOS Safari & Mobile Web Client (`web-client/`)**:
-  - **Zero-Install Touchpad**: Operates directly in Safari over encrypted WebSocket (`wss://`).
-  - **Screen Wake Lock API**: Prevents the iPhone display from locking during mouse activity with auto-recovery on tab focus.
-  - **Tactile Web Audio Synthesizer**: Generates low-latency tactile click impulses where WebKit disables vibration.
-  - **Gyroscope Battery Saver**: Toggles hardware orientation listeners on/off to preserve iPhone battery.
-- **🚀 Dual High-Performance Desktop Servers**:
-  - **Go Daemon (`pc/airmouse_go_new`)**: Zero-CGO, headless executable compiling under **7.3 MB** with microsecond-level OS dispatching.
-  - **Python Package (`airmouse-core` on PyPI)**: Full `pip install airmouse-core` support with interactive ANSI QR code pairing and embedded HTTP web client.
-- **🔒 Protocol V2 Cryptographic Security**:
-  - HMAC-SHA256 authentication tokens guarding against unauthorized control.
-  - Replay protection with strictly monotonic sequence numbers (`seq`) and bounded timestamps (`ts ±5000ms`).
-  - Bounds enforcement ($|dx|, |dy| \le 500$) and 32-message ring buffer ACK retransmission.
+AirMouse Pro is structured into four primary engineering modules:
+
+```
+AirMouse/
+├── android/            # Native Android Client (Kotlin, Jetpack Compose M3, Hilt, Room, R8)
+├── pc/
+│   ├── airmouse_go_new/# Go High-Performance Server (Zero-CGO, native OS input synthesis)
+│   └── airmouse_py/    # Python Reference Server (Asyncio, pynput, PyPI package)
+├── web-client/         # Zero-Install Mobile Web Client (iOS Safari / PWA / Web Audio)
+├── packaging/          # Linux udev rules, systemd services, and desktop shortcuts
+└── scripts/            # Single Source of Truth versioning and automated release builders
+```
+
+### 1. 🤖 Android Native Client (`android/`)
+* **Jetpack Compose Material 3 UI**: Modern dark theme with spring physics, custom dials, and glassmorphic surface cards.
+* **Telemetry Isolation**: High-frequency sensor streams (100 Hz) are decoupled from the root composables into leaf components (`IsolatedOrientationTelemetry`, `ConnectionQualityPill`, `TouchPointsOverlay`) to prevent frame drops on 90Hz/120Hz displays.
+* **Sensor Fusion DSP**:
+  * **One Euro Filter**: Non-linear adaptive low-pass filter ($f_c = f_{c_{min}} + \beta |\dot{x}|$) eliminating micro-jitter during slow precision aiming while providing instant response during fast flicks.
+  * **ZUPT (Zero-Velocity Update)**: Autonomous drift cancellation recalibrating gyroscope bias during stationary intervals.
+* **Robust Background Service (`AirMouseService.kt`)**: Android Foreground Service with strict 2-hour WakeLock timeout and automatic lifecycle unbinding.
+* **Backpressure Management**: All high-frequency Kotlin `Flow` streams utilize `buffer(64, BufferOverflow.DROP_OLDEST)` to prevent Out-Of-Memory (OOM) errors and GC pauses.
+* **R8 Optimization**: Fully shrunk with R8 Full Mode, reducing uncompressed DEX from **58.6 MB down to 6.83 MB (-88.3%)** with **92.2% obfuscation**.
+
+### 2. ⚡ Go Desktop Server (`pc/airmouse_go_new/`)
+* **Zero-CGO Native OS Input Injection**:
+  * **macOS**: Synthesizes native CoreGraphics events (`CGEventCreateMouseEvent`, `CGEventPost`) via direct syscalls without CGO compilation overhead.
+  * **Windows**: Injects hardware mouse and keyboard events using `user32.dll` `SendInput`.
+  * **Linux**: Communicates directly with `/dev/uinput` to provide true kernel-level virtual mouse/keyboard emulation compatible with both Wayland and X11.
+* **High-Throughput Concurrency**:
+  * Bounded worker pool with non-blocking `SafeSend` and panic recovery to isolate slow clients.
+  * Graceful shutdown on `SIGINT`/`SIGTERM` with 5-second drain timeout.
+  * Dynamic configuration reloading via `SIGHUP`.
+* **Fyne GUI Dashboard**: 6-tab native desktop dashboard displaying live jitter analytics, client pairing, QR codes, and latency histograms.
+
+### 3. 🐍 Python Core Server (`pc/airmouse_py/`)
+* **PyPI Availability**: Installable via `pip install airmouse-core`.
+* **Asynchronous Networking**: Built on Python `asyncio` handling TLS TCP, WebSockets, and UDP broadcast discovery.
+* **Decoupled Actuator Thread (`MouseActuatorThread`)**: Offloads OS mouse operations to a dedicated worker thread with a thread-safe `queue.Queue` and non-blocking timers (`threading.Timer`) for click actions, preventing event loop starvation.
+* **Interactive Terminal CLI**: Features an ANSI QR code generator for instant mobile camera pairing.
+
+### 4. 🌐 Zero-Install Mobile Web Client (`web-client/`)
+* **iOS 13+ User-Gesture Modal**: Prompts the user with a glassmorphic onboarding dialog to satisfy Apple's strict `DeviceMotionEvent.requestPermission()` requirement.
+* **Pooled Web Audio Click Synthesis**: Pre-synthesizes three band-limited PCM audio impulses (14ms, 24ms, 38ms) and pre-warms the WebKit audio pipeline on first touch to deliver zero-latency clicks on iOS where vibration is blocked.
+* **Screen Wake Lock Fallback**: Uses the W3C Screen Wake Lock API on modern browsers and falls back to an invisible looping base64 video container for older iOS Safari versions.
+* **2D Orientation Matrix**: Automatically transforms gyro delta vectors when switching between portrait and landscape modes:
+  $$\begin{pmatrix} \text{rotDx} \\ \text{rotDy} \end{pmatrix} = \begin{pmatrix} \cos\theta & \sin\theta \\ -\sin\theta & \cos\theta \end{pmatrix} \begin{pmatrix} \Delta\gamma \\ \Delta\beta \end{pmatrix}$$
 
 ---
 
@@ -99,107 +136,52 @@ flowchart TD
         B["iOS Safari / Mobile Web<br/>(HTML5 / WSS / WakeLock)"]
     end
 
-    subgraph TransportLayer["Transport Layer"]
-        C["TLS 1.2+ Encrypted TCP (Port 8080)"]
-        D["WSS Secure WebSocket (Port 8081)"]
-        E["UDP Fast Stream (Port 8080)"]
-        F["UDP Discovery Responder (Port 8082)"]
+    subgraph TransportLayer["Transport Layer (Protocol V2)"]
+        C["TLS TCP Control & Pairing (Port 8080)"]
+        D["WSS Real-Time WebSocket (Port 8081)"]
+        E["HTTP Web Client PWA (Port 8082)"]
+        F["UDP Fast Motion & Discovery (Port 8083)"]
     end
 
-    subgraph DesktopServer["Desktop Host Server (Python or Go)"]
-        G["Protocol V2 Decoder & Validator<br/>(HMAC Auth / Monotonic Seq / Bounds)"]
-        H["Adaptive Jitter Buffer & Queue"]
-        I["Signal Filtering & Predictors<br/>(One Euro Filter / Kalman / ZUPT)"]
-        J["Thread-Safe OS Actuator<br/>(Native Mouse / Keyboard Injection)"]
+    subgraph DesktopHost["Desktop Host Engine (Go or Python)"]
+        G["Protocol V2 Decoder & Validator<br/>(Constant-Time HMAC / Replay Guard)"]
+        H["Adaptive Jitter Buffer & Channel Pool"]
+        I["DSP Signal Pipeline<br/>(One Euro Filter / ZUPT)"]
+        J["Native OS Input Actuator<br/>(CoreGraphics / SendInput / uinput)"]
     end
 
     A -->|UDP / TCP / WS| C
     A -->|UDP / TCP / WS| D
-    A -->|UDP Fast Motion| E
-    A -.->|Challenge-Response| F
+    A -->|UDP Fast Motion| F
     B -->|WSS| D
+    B -.->|HTTP PWA| E
 
     C --> G
     D --> G
-    E --> G
+    F --> G
     G --> H
     H --> I
     I --> J
-    J --> K["Desktop Operating System<br/>(macOS / Linux / Windows)"]
+    J --> K["Desktop Host OS<br/>(macOS / Windows / Linux)"]
 ```
-
----
-
-## ⚡ Quickstart & Installation
-
-### Option 1: Python PyPI Package (`airmouse-core`)
-
-Run directly on macOS, Linux, or Windows with zero setup:
-
-```bash
-# 1. Install from PyPI
-pip install airmouse-core
-
-# 2. Launch the server with interactive QR code and embedded web client
-airmouse-server --qr --port 8080 --web-port 8082
-```
-
-Scan the printed QR code with your smartphone or visit: `http://<desktop-ip>:8082/?token=<pairing-token>`.
-
-### Option 2: Go Zero-CGO Server (Ultra-Lightweight & Fast)
-
-```bash
-# 1. Navigate to Go server directory
-cd pc/airmouse_go_new
-
-# 2. Compile standalone binary (< 7.5 MB)
-make build
-
-# 3. Start server
-./airmouse-server -port 8080 -ws-port 8081
-```
-
-### Option 3: Native Android Client Application
-
-The Android app is fully compiled and ready in `android/app/build/outputs/apk/debug/app-debug.apk`:
-
-```bash
-# 1. Connect phone via USB or Wireless Debugging
-adb connect <phone-ip>:<wireless-port>
-
-# 2. Install APK directly
-adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-
-# 3. Launch AirMouse on device
-adb shell am start -n com.airmouse/.presentation.MainActivity
-```
-
-### V2 Connection Flow
-
-1. Start the server: `cd pc/airmouse_go_new && go run ./cmd/server`
-2. Install the Android APK (release build)
-3. Open AirMouse app → enter your PC's IP and port (default: 9000)
-4. Enter your auth token (shown in server terminal output)
-5. Tap **Connect** — app shows "Connected" status pill
-6. Tilt phone to move cursor; tap touchpad area for clicks
 
 ---
 
 ## 📡 Canonical Protocol V2 Wire Envelope
 
-All communication across TCP, WebSocket, and UDP adheres to the canonical **Protocol V2** envelope:
+All communication across TCP, WebSocket, and UDP adheres to the hardened **Protocol V2** envelope:
 
 ```json
 {
   "v": 2,
   "type": "move",
-  "seq": 1420,
-  "ts": 1729772400123,
+  "seq": 10429,
+  "ts": 1729858291042,
   "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "token": "a6c8e3f...",
   "payload": {
-    "dx": 12.45,
-    "dy": -6.80,
+    "dx": -3.42,
+    "dy": 1.18,
     "dt": 0.016
   }
 }
@@ -207,69 +189,119 @@ All communication across TCP, WebSocket, and UDP adheres to the canonical **Prot
 
 ### Supported Message Catalog:
 | Type | Description | Key Payload Attributes |
-|------|-------------|------------------------|
+|---|---|---|
 | `hello` | Handshake initiation & client identity | `name`, `model`, `version`, `protocol`, `token` |
 | `welcome` | Handshake approval & server metadata | `session_id`, `heartbeat_ms`, `capabilities` |
 | `move` | High-frequency cursor displacement | `dx` (-500 to 500), `dy` (-500 to 500), `dt` |
 | `click` | Mouse button press/release/click | `button` (`left`, `right`, `middle`, `double`) |
 | `scroll` | Vertical or horizontal scroll wheel | `delta` (-10.0 to 10.0) |
-| `gesture`| 3D spatial motion gesture triggers | `name` (`circle`, `swipe_left`, `shake`), `confidence` |
-| `proximity`| Hover and device approach data | `state`, `distance_cm`, `hover_active` |
+| `gesture` | 3D spatial motion gesture triggers | `name` (`circle`, `swipe_left`, `shake`), `confidence` |
+| `proximity` | Hover and device approach data | `state`, `distance_cm`, `hover_active` |
 | `control` | System & presentation shortcuts | `action` (`presentation_next`, `presentation_blackout`) |
 | `ack` | Delivery acknowledgement | `ack_id`, `status` (`ok`) |
 | `ping`/`pong`| Round-trip latency calculation | Empty payload |
 
 ---
 
-## 🧪 Testing and Verification
+## 💻 Operating System Setup Guides
 
-AirMouse enforces a strict quality bar verified through automated test suites:
+### 🍎 macOS Setup
+1. **Accessibility Permissions**: macOS requires Accessibility permissions to synthesize mouse events:
+   - Open **System Settings $\rightarrow$ Privacy & Security $\rightarrow$ Accessibility**.
+   - Enable `AirMouse.app` or `AirMouse-Server`.
+2. **Gatekeeper Notice**: For downloaded Universal binaries:
+   ```bash
+   xattr -cr /Applications/AirMouse.app
+   ```
+3. Run the application or standalone binary:
+   ```bash
+   ./AirMouse-Server-v1.0.1-macos-universal
+   ```
 
-### ✅ Test Results (v1.0.0)
-- Android Unit Tests: **100% pass** (ComprehensiveMouseMovementPipelineTest — 4/4)
-- Python Server Tests: **47/47 pass** (`pytest pc/airmouse_py/tests`)
-- Go Server: **Build clean** across all packages
+### 🪟 Windows Setup
+1. Extract `AirMouse-v1.0.1-windows-x64.zip`.
+2. Double-click `Start-AirMouse.bat` (Window mode) or `Start-AirMouse-Console.bat` (Console mode).
+3. **Firewall**: On first launch, Windows Defender Firewall will prompt to allow network access. Allow access on private networks.
 
-- **Python Suite (`pc/airmouse_py`)**:
-  ```bash
-  pytest pc/airmouse_py/tests/
-  # Result: 47 passed in 3.9s (100% pass rate)
-  ```
-- **Go Suite (`pc/airmouse_go_new`)**:
-  ```bash
-  cd pc/airmouse_go_new && go test ./...
-  # Result: All 22 packages pass cleanly
-  ```
-- **Android Quality Suite (`android/`)**:
-  ```bash
-  cd android && ./gradlew testDebugUnitTest
-  # Result: 100% pass across SensorRepositoryTest, AckRetransmissionTest, OneEuroFilterTest, ComprehensiveMouseMovementPipelineTest (4/4)
-  ```
-- **Documentation Parity Check**:
-  ```bash
-  ./scripts/check_docs.sh
-  # Result: 100% Protocol V2 parity verified across all 42 message types
-  ```
+### 🐧 Linux Setup (uinput without root)
+AirMouse uses the Linux kernel's `/dev/uinput` subsystem for input synthesis.
+1. Install the provided udev rule:
+   ```bash
+   sudo cp packaging/udev/99-airmouse-uinput.rules /etc/udev/rules.d/
+   ```
+2. Add your user to the `input` group:
+   ```bash
+   sudo usermod -aG input $USER
+   ```
+3. Reload rules:
+   ```bash
+   sudo udevadm control --reload-rules && sudo udevadm trigger
+   ```
+4. Run the server:
+   ```bash
+   ./airmouse-server-v1.0.1-linux-x64
+   ```
+*(For detailed steps, see [**`docs/LINUX_SETUP.md`**](docs/LINUX_SETUP.md))*
 
 ---
 
-## 📚 Full Documentation Index
+## 🔄 Single Source of Truth (SSOT) Versioning
 
-| Document | Purpose |
-|----------|---------|
-| [**DOCUMENTATION.md**](DOCUMENTATION.md) | **Master System Documentation** (Single source of truth) |
-| [**docs/ARCHITECTURAL_ANALYSIS_AND_IMPROVEMENT_ROADMAP.md**](docs/ARCHITECTURAL_ANALYSIS_AND_IMPROVEMENT_ROADMAP.md) | **In-Depth Architectural Breakdown, Mathematical Formulations & Engineering Roadmap** |
-| [**docs/PROTOCOL_V2.md**](docs/PROTOCOL_V2.md) | Canonical Protocol V2 Wire Specification |
-| [**docs/THREAT_MODEL.md**](docs/THREAT_MODEL.md) | STRIDE Security Model & Defense Analysis |
-| [**docs/BUILD.md**](docs/BUILD.md) | Compilation guide for Headless, GUI, and ONNX builds |
-| [**docs/WEB_CLIENT.md**](docs/WEB_CLIENT.md) | iOS Safari & Mobile Browser Touchpad setup |
-| [**CONTRIBUTING.md**](CONTRIBUTING.md) | Guidelines for contributing and pull request process |
-| [**SECURITY.md**](SECURITY.md) | Vulnerability disclosure policy and cryptographic guardrails |
-| [**RELEASE_NOTES.md**](RELEASE_NOTES.md) | Official release notes for v2.1.0 |
+Like enterprise open-source projects (Docker, Kubernetes, VS Code), AirMouse manages its versioning through a single canonical file:
+* **Canonical Version File**: [`VERSION`](VERSION) (e.g. `1.0.1`)
+* **Unified Bumping Script**: [`scripts/bump_version.py`](scripts/bump_version.py)
+
+### How to Bump or Sync Versions:
+```bash
+# 1. Bump version across all 19 target files (Android, Go, Python, Web, Docs)
+python3 scripts/bump_version.py 1.0.2
+
+# 2. Check for version drift in CI
+python3 scripts/bump_version.py --check
+
+# 3. Dry-run preview
+python3 scripts/bump_version.py --dry-run 1.0.2
+```
+
+---
+
+## 📊 Deep Audits & Technical Reports
+
+The codebase has undergone comprehensive architectural, cryptographic, and performance audits. Read the detailed reports in `docs/`:
+
+1. [**docs/AUDIT_1_SYSTEM_ARCHITECTURE_PROTOCOL.md**](docs/AUDIT_1_SYSTEM_ARCHITECTURE_PROTOCOL.md): Protocol V2 wire format, JSON vs binary framing, monotonic sequence hazards, and multiplatform sync.
+2. [**docs/AUDIT_2_ANDROID_CLIENT_DEEP_DIVE.md**](docs/AUDIT_2_ANDROID_CLIENT_DEEP_DIVE.md): Jetpack Compose recomposition elimination, One Euro Filter tuning, and WakeLock power management.
+3. [**docs/AUDIT_3_DESKTOP_DAEMONS_GO_AND_PYTHON.md**](docs/AUDIT_3_DESKTOP_DAEMONS_GO_AND_PYTHON.md): Low-level OS input injection (CGEvent, SendInput, uinput), Wayland security models, and Python asyncio concurrency.
+4. [**docs/AUDIT_4_WEB_CLIENT_CROSS_BROWSER.md**](docs/AUDIT_4_WEB_CLIENT_CROSS_BROWSER.md): iOS Safari WebKit sandbox constraints, DeviceMotionEvent permissions, Web Audio tactile impulses, and Screen Wake Lock fallbacks.
+5. [**docs/AUDIT_5_SECURITY_DEVOPS_ROADMAP.md**](docs/AUDIT_5_SECURITY_DEVOPS_ROADMAP.md): Cryptographic threat modeling, timing attack remediation, and prioritized P0–P3 roadmap.
+6. [**android/docs/R8_OPTIMIZATION.md**](android/docs/R8_OPTIMIZATION.md): R8 Full Mode verification metrics, reducing DEX by 88.3% to 6.83 MB.
+7. [**docs/LINUX_SETUP.md**](docs/LINUX_SETUP.md): Comprehensive Linux uinput and udev guide.
+
+---
+
+## 🧪 Testing and Quality Verification
+
+AirMouse maintains automated test suites across all layers:
+
+- **Go Test Suite (`pc/airmouse_go_new`)**:
+  ```bash
+  cd pc/airmouse_go_new && go test ./...
+  # Result: 100% Pass across all 22 packages
+  ```
+- **Python Test Suite (`pc/airmouse_py`)**:
+  ```bash
+  pytest pc/airmouse_py/tests/
+  # Result: 68/68 passed in 4.6s (100% Pass Rate)
+  ```
+- **Android Quality Verification**:
+  ```bash
+  cd android && ./gradlew testDebugUnitTest
+  # Result: 100% pass rate
+  ```
 
 ---
 
 ## 🛡️ License
 
 This project is licensed under the [MIT License](LICENSE).  
-Embedded Systems Laboratory — University of Tehran.
+Copyright (c) 2026 Taha Majs & Contributors.
