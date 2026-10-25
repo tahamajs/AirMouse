@@ -472,3 +472,40 @@ body {
     gap: 10px;
     justify-content: flex-end;
 }
+
+/* iOS Motion Permission Modal */
+.motion-modal-card {
+    text-align: center;
+    align-items: center;
+}
+
+.motion-modal-icon {
+    font-size: 2.8rem;
+    line-height: 1;
+    margin-top: 4px;
+    filter: drop-shadow(0 0 12px rgba(14, 165, 233, 0.5));
+}
+
+.motion-modal-card h3 {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.motion-modal-card p {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.motion-modal-actions {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+    justify-content: stretch;
+    margin-top: 6px;
+}
+
+.motion-modal-actions .btn {
+    flex: 1;
+}
+

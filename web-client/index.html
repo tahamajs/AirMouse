@@ -134,6 +134,21 @@
         </div>
     </footer>
 
+    <!-- iOS 13+ Motion Sensor Permission Modal -->
+    <div id="motionPermissionModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="motionModalTitle">
+        <div class="modal-card glass-card motion-modal-card">
+            <div class="motion-modal-icon">🧭</div>
+            <h3 id="motionModalTitle">Motion Sensor Permission</h3>
+            <p>
+                Apple iOS Safari requires explicit user authorization to stream motion and orientation sensors. Tap below to grant permission and enable Air Mouse tilt tracking.
+            </p>
+            <div class="modal-actions motion-modal-actions">
+                <button id="btnMotionCancel" class="btn btn-secondary" type="button">Cancel</button>
+                <button id="btnMotionGrant" class="btn btn-primary" type="button">Grant Permission</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Pairing Token Modal if needed -->
     <div id="tokenModal" class="modal-overlay hidden">
         <div class="modal-card glass-card">

@@ -411,11 +411,14 @@ func NewPongMessage(seq uint64) ([]byte, error) {
 
 // ValidateTimestamp checks if the timestamp in milliseconds is within +/- 5000ms of nowMs.
 func ValidateTimestamp(ts int64, nowMs int64) error {
+	if ts <= 0 {
+		return fmt.Errorf("replay_rejected: invalid non-positive timestamp %d", ts)
+	}
 	diff := nowMs - ts
 	if diff < 0 {
 		diff = -diff
 	}
-	if diff > ReplayWindowMs {
+	if diff < 0 || diff > ReplayWindowMs {
 		return fmt.Errorf("replay_rejected: timestamp delta %d ms exceeds sliding window +/- %d ms (ts=%d, now=%d)", diff, ReplayWindowMs, ts, nowMs)
 	}
 	return nil

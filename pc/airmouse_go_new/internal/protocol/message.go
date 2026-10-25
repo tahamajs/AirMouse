@@ -170,6 +170,9 @@ func rawMessageToString(raw json.RawMessage) (string, error) {
 
 // ValidateTimestamp checks if the timestamp in milliseconds is within +/-5000ms of nowMs.
 func ValidateTimestamp(ts int64, nowMs int64) error {
+	if ts <= 0 {
+		return fmt.Errorf("replay_rejected: invalid non-positive timestamp %d", ts)
+	}
 	diff := nowMs - ts
 	if diff < 0 {
 		diff = -diff

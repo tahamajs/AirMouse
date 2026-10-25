@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex" // <-- add this line
 
@@ -464,7 +465,8 @@ func (m *Manager) parseClaims(tokenString string) (*tokenClaims, error) {
 		return nil, fmt.Errorf("invalid signature: %w", err)
 	}
 
-	if !hmac.Equal(sig, expected) {
+	// Constant-time HMAC comparison to prevent timing side-channel attacks
+	if subtle.ConstantTimeCompare(sig, expected) != 1 {
 		return nil, fmt.Errorf("invalid signature")
 	}
 
@@ -472,6 +474,12 @@ func (m *Manager) parseClaims(tokenString string) (*tokenClaims, error) {
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return nil, fmt.Errorf("invalid claims: %w", err)
 	}
+
+	// Reject tokens with issue time claiming to be far in the future (+300s window)
+	if claims.Iat > time.Now().Add(5*time.Minute).Unix() {
+		return nil, fmt.Errorf("token issued in the future (skew > 300s)")
+	}
+
 	return &claims, nil
 }
 

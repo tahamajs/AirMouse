@@ -1,4 +1,4 @@
-64730e5408707d93a1109fa84001e111bd630071ce79508e2fe656abbda4a334  android/AirMouse-v1.0.0.apk
+2102aca76bc319f4a354106d2af9d680d0d6b278a25fe9ef85ef3b0a2196093a  android/AirMouse-v1.0.0.apk
 53bbe12f9abfe59f54f90a5b14f4ff8da41b05f35332e4814bb7f5a6035f7bf1  windows/AirMouse-Server-v1.0.0-windows-x64.exe
 ea771c320ec486465beb5fe763647251f04ca2c09bbdceb47f16833b8e3d7607  windows/AirMouse-v1.0.0-windows-x64.zip
 acdfd7069219589d1a605051b5e34dfa1d8703bbfd62fbdfbb742642b6c0a2e9  macos/AirMouse-Server-v1.0.0-macos-universal

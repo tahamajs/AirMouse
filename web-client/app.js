@@ -48,26 +48,93 @@
     let gyroSensitivity = 1.8;
     let feedbackEnabled = true;
 
-    // Web Audio Synthesizer Context (iOS AudioContext unlocked on first user gesture)
+    // Web Audio Synthesizer Context & Pooled Buffers (iOS AudioContext unlocked on touch)
     let audioCtx = null;
+    let audioBuffers = {
+        light: null,
+        medium: null,
+        heavy: null
+    };
+    let isAudioUnlocked = false;
 
-    function getAudioContext() {
+    function initAudio() {
         if (!audioCtx) {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (AudioContextClass) {
                 audioCtx = new AudioContextClass();
+                generatePooledBuffers(audioCtx);
             }
         }
         if (audioCtx && audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
-        return audioCtx;
+    }
+
+    // Warm-up and unlock AudioContext immediately on touch to avoid clipping & delay
+    function unlockAudioOnTouch() {
+        if (!audioCtx) {
+            initAudio();
+        } else if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        if (audioCtx && !isAudioUnlocked) {
+            try {
+                // Play a silent 1-sample buffer to warm up the iOS WebKit audio hardware pipeline
+                const silentBuf = audioCtx.createBuffer(1, 1, 22050);
+                const src = audioCtx.createBufferSource();
+                src.buffer = silentBuf;
+                src.connect(audioCtx.destination);
+                src.start(0);
+                isAudioUnlocked = true;
+            } catch (e) {}
+        }
+    }
+
+    // Pre-synthesize clean tactile click PCM impulses into reusable AudioBuffers
+    function generatePooledBuffers(ctx) {
+        const sampleRate = ctx.sampleRate;
+
+        function createImpulse(durationSec, fStart, fEnd, peakGain) {
+            const numSamples = Math.max(1, Math.floor(sampleRate * durationSec));
+            const buf = ctx.createBuffer(1, numSamples, sampleRate);
+            const chan = buf.getChannelData(0);
+
+            let phase = 0;
+            for (let i = 0; i < numSamples; i++) {
+                const t = i / numSamples;
+                const freq = fEnd + (fStart - fEnd) * Math.cos(t * Math.PI * 0.5);
+                phase += (2 * Math.PI * freq) / sampleRate;
+
+                // Attack envelope (first 4%), smooth exponential decay, zero fade-out at end
+                let envelope;
+                if (t < 0.04) {
+                    envelope = t / 0.04;
+                } else {
+                    envelope = Math.exp(-7.5 * (t - 0.04));
+                }
+                if (t > 0.88) {
+                    envelope *= (1 - (t - 0.88) / 0.12);
+                }
+
+                chan[i] = Math.sin(phase) * envelope * peakGain;
+            }
+            return buf;
+        }
+
+        // Pooled buffers:
+        // Light: 14ms crisp tap for 1-finger click
+        audioBuffers.light = createImpulse(0.014, 950, 220, 0.4);
+        // Medium: 24ms firm click for 2-finger tap & middle click
+        audioBuffers.medium = createImpulse(0.024, 750, 160, 0.5);
+        // Heavy: 38ms deeper click for long-press / drag actions
+        audioBuffers.heavy = createImpulse(0.038, 520, 110, 0.6);
     }
 
     function playTactileFeedback(type = 'light') {
         if (!feedbackEnabled) return;
 
-        // Try standard navigator.vibrate if available
+        // Try standard navigator.vibrate if available (Android Chrome)
         if (navigator.vibrate) {
             try {
                 if (type === 'light') navigator.vibrate(10);
@@ -76,50 +143,91 @@
             } catch (e) {}
         }
 
-        // On iOS Safari, navigator.vibrate is disabled in WebKit.
-        // Synthesize an ultra-short subtle click impulse via Web Audio API.
+        // Pooled Web Audio tactile synthesis for iOS Safari (WebKit blocks navigator.vibrate)
         try {
-            const ctx = getAudioContext();
-            if (ctx && ctx.state === 'running') {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                const now = ctx.currentTime;
-
-                const freq = type === 'light' ? 800 : (type === 'medium' ? 600 : 400);
-                const duration = type === 'light' ? 0.015 : 0.03;
-
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, now);
-                osc.frequency.exponentialRampToValueAtTime(120, now + duration);
-
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(now);
-                osc.stop(now + duration);
+            if (!audioCtx) initAudio();
+            if (audioCtx) {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const buffer = audioBuffers[type] || audioBuffers.light;
+                if (buffer) {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audioCtx.destination);
+                    source.start(0);
+                }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('Tactile feedback synthesis error:', e);
+        }
     }
 
-    // Screen Wake Lock Implementation
+    // Screen Wake Lock Implementation with Video Fallback for older iOS Safari (< 16.4)
+    let wakeLock = null;
+    let wakeLockVideo = null;
+    let wakeLockMode = 'none'; // 'native' | 'video' | 'none'
+    let wakeLockRequested = true;
+
+    // Ultralight silent looping MP4 data URI for WebKit fallback
+    const FALLBACK_VIDEO_MP4 = "data:video/mp4;base64,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";
+
+    function ensureFallbackVideo() {
+        if (!wakeLockVideo) {
+            wakeLockVideo = document.createElement('video');
+            wakeLockVideo.setAttribute('playsinline', '');
+            wakeLockVideo.setAttribute('webkit-playsinline', '');
+            wakeLockVideo.setAttribute('muted', '');
+            wakeLockVideo.setAttribute('loop', '');
+            wakeLockVideo.muted = true;
+            wakeLockVideo.loop = true;
+            wakeLockVideo.playsInline = true;
+            wakeLockVideo.style.position = 'fixed';
+            wakeLockVideo.style.top = '-9999px';
+            wakeLockVideo.style.left = '-9999px';
+            wakeLockVideo.style.width = '1px';
+            wakeLockVideo.style.height = '1px';
+            wakeLockVideo.style.opacity = '0.001';
+            wakeLockVideo.style.pointerEvents = 'none';
+            wakeLockVideo.src = FALLBACK_VIDEO_MP4;
+            document.body.appendChild(wakeLockVideo);
+        }
+        return wakeLockVideo;
+    }
+
     async function requestWakeLock() {
         if (!wakeLockRequested) return;
-        if ('wakeLock' in navigator) {
+
+        // 1. Try native Screen Wake Lock API (iOS 16.4+, Chrome, modern mobile browsers)
+        if ('wakeLock' in navigator && navigator.wakeLock && typeof navigator.wakeLock.request === 'function') {
             try {
                 wakeLock = await navigator.wakeLock.request('screen');
-                updateWakeLockStatus(true);
+                wakeLockMode = 'native';
+                updateWakeLockStatus(true, 'Active');
                 wakeLock.addEventListener('release', () => {
-                    updateWakeLockStatus(false);
+                    if (wakeLockMode === 'native') {
+                        updateWakeLockStatus(false);
+                    }
                 });
+                return;
             } catch (err) {
-                console.warn('Screen WakeLock error:', err.name, err.message);
-                updateWakeLockStatus(false);
+                console.warn('Native WakeLock error, trying video fallback:', err.name, err.message);
             }
-        } else {
-            updateWakeLockStatus(false, 'Unsupported');
+        }
+
+        // 2. Fallback for older iOS Safari engines (< 16.4) via silent looping video
+        try {
+            const vid = ensureFallbackVideo();
+            const playPromise = vid.play();
+            if (playPromise !== undefined) {
+                await playPromise;
+            }
+            wakeLockMode = 'video';
+            updateWakeLockStatus(true, 'Active (Video)');
+        } catch (vidErr) {
+            console.warn('Video wake lock fallback failed:', vidErr);
+            wakeLockMode = 'none';
+            updateWakeLockStatus(false, 'Unavailable');
         }
     }
 
@@ -130,6 +238,12 @@
             } catch (e) {}
             wakeLock = null;
         }
+        if (wakeLockVideo) {
+            try {
+                wakeLockVideo.pause();
+            } catch (e) {}
+        }
+        wakeLockMode = 'none';
         updateWakeLockStatus(false);
     }
 
@@ -137,9 +251,9 @@
         if (!statWakeLock) return;
         if (customText) {
             statWakeLock.textContent = customText;
-            statWakeLock.style.color = 'var(--text-secondary)';
+            statWakeLock.style.color = active ? 'var(--success)' : 'var(--text-secondary)';
         } else if (active) {
-            statWakeLock.textContent = 'Active';
+            statWakeLock.textContent = wakeLockMode === 'video' ? 'Active (Video)' : 'Active';
             statWakeLock.style.color = 'var(--success)';
         } else {
             statWakeLock.textContent = 'Idle';
@@ -147,10 +261,16 @@
         }
     }
 
-    // Re-acquire Wake Lock when tab/page regains visibility
+    // Re-acquire Wake Lock when tab/page regains visibility; pause video fallback when hidden
     document.addEventListener('visibilitychange', async () => {
         if (wakeLockRequested && isConnected && document.visibilityState === 'visible') {
             await requestWakeLock();
+        } else if (document.visibilityState === 'hidden') {
+            if (wakeLockVideo && wakeLockMode === 'video') {
+                try {
+                    wakeLockVideo.pause();
+                } catch (e) {}
+            }
         }
     });
 
@@ -182,6 +302,9 @@
     const btnLeftClick = document.getElementById('btnLeftClick');
     const btnMiddleClick = document.getElementById('btnMiddleClick');
     const btnRightClick = document.getElementById('btnRightClick');
+    const motionPermissionModal = document.getElementById('motionPermissionModal');
+    const btnMotionGrant = document.getElementById('btnMotionGrant');
+    const btnMotionCancel = document.getElementById('btnMotionCancel');
 
     // Persistent Device Identifier
     function getDeviceID() {
@@ -312,8 +435,8 @@
             return;
         }
 
-        // Unlock audio context on user tap
-        getAudioContext();
+        // Unlock audio context immediately within user gesture
+        unlockAudioOnTouch();
 
         const host = serverHostInput.value.trim();
         const token = pairingTokenInput.value.trim();
@@ -471,7 +594,8 @@
 
     function onTouchStart(e) {
         e.preventDefault();
-        getAudioContext();
+        // Unlock / resume AudioContext on touchstart to guarantee zero click delay & no clipping
+        unlockAudioOnTouch();
 
         const touches = e.touches;
         const now = Date.now();
@@ -740,12 +864,34 @@
             localStorage.setItem('airmouse_gyro_sens', gyroSensitivity);
         });
 
+        const motionModal = document.getElementById('motionPermissionModal');
+        const btnMotionGrant = document.getElementById('btnMotionGrant');
+        const btnMotionCancel = document.getElementById('btnMotionCancel');
+
+        if (btnMotionGrant) {
+            btnMotionGrant.addEventListener('click', async () => {
+                if (motionModal) motionModal.classList.add('hidden');
+                await requestDeviceOrientationPermission();
+            });
+        }
+        if (btnMotionCancel) {
+            btnMotionCancel.addEventListener('click', () => {
+                if (motionModal) motionModal.classList.add('hidden');
+                gyroToggle.checked = false;
+                stopGyroscope();
+            });
+        }
+
         // Gyro Battery Saver Toggle
         gyroToggle.addEventListener('change', (e) => {
             getAudioContext();
             if (e.target.checked) {
                 if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    requestDeviceOrientationPermission();
+                    if (motionModal) {
+                        motionModal.classList.remove('hidden');
+                    } else {
+                        requestDeviceOrientationPermission();
+                    }
                 } else {
                     startGyroscope();
                 }

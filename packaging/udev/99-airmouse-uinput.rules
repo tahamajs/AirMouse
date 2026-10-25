@@ -1,0 +1,8 @@
+# AirMouse Pro Linux uinput Permissions
+# Grants non-root access to the /dev/uinput kernel device for virtual mouse and keyboard synthesis.
+
+# Active systemd-logind / console seat access (systemd / Wayland / X11)
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+
+# Fallback: grant read/write access to members of the 'input' group
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"

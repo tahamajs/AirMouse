@@ -55,11 +55,14 @@ func (rd *replayDetector) checkAndAdvanceSeq(seq uint64) error {
 }
 
 func validateTimestamp(ts, nowMs int64) error {
+	if ts <= 0 {
+		return fmt.Errorf("replay_rejected: invalid non-positive timestamp %d", ts)
+	}
 	diff := nowMs - ts
 	if diff < 0 {
 		diff = -diff
 	}
-	if diff > replayWindowMs {
+	if diff < 0 || diff > replayWindowMs {
 		return fmt.Errorf("replay_rejected: delta %d ms > %d ms", diff, replayWindowMs)
 	}
 	return nil

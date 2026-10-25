@@ -258,6 +258,7 @@ func TestUDPServerHandshakeAndDiscovery(t *testing.T) {
 	// Ping/Pong message
 	pingMsg := websocketpkg.PingMessage()
 	_, _ = clientConn.Write(pingMsg)
+	_ = clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	n, _ = clientConn.Read(buf)
 	_ = json.Unmarshal(buf[:n], &ackResp)
 	if ackResp["type"] != "pong" {
