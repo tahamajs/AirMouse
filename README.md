@@ -118,13 +118,40 @@ The Android application delivers a zero-latency spatial mouse and multi-touch tr
 
 ---
 
-### 2. 🎯 Sensor Fusion & Digital Signal Processing (DSP) Pipeline
+### 2. ᛒ Bluetooth HID Hardware Emulation (Server-Less Mode)
+
+AirMouse includes a native **Bluetooth HID Device Profile** ([`BluetoothHidMouseHelper.kt`](android/app/src/main/java/com/airmouse/network/BluetoothHidMouseHelper.kt)) that turns your Android phone into an actual, standard Bluetooth hardware mouse:
+
+<div align="center">
+  <img src="docs/assets/module_bluetooth_hid.svg" alt="Bluetooth HID Hardware Emulation" width="100%">
+  <p><em>Figure 2: Bluetooth HID Hardware Emulation — <b>Zero-Server Standalone Bluetooth Mouse Mode</b></em></p>
+</div>
+
+* **Zero-Server & Zero-Install**:
+  - **No software, server, or driver required on the target machine!**
+  - Your phone connects to any target device via standard Bluetooth, just like an Apple Magic Mouse, Logitech MX Master, or standard Bluetooth trackpad.
+* **Broad Device Compatibility**:
+  - **Smart TVs & Streaming Boxes**: Android TV, Google TV, Apple TV, Samsung Tizen, LG webOS, Amazon Fire TV Stick.
+  - **Tablets & Mobile OS**: Apple iPad (full iPadOS pointer circle), Samsung Galaxy Tab, ChromeOS.
+  - **Computers & Consoles**: Windows 10/11, macOS, Linux, Steam Deck, ASUS ROG Ally.
+* **Standard 4-Byte HID Descriptor (`SUBCLASS1_MOUSE`)**:
+  - Synthesizes compliant USB HID mouse reports directly over Bluetooth L2CAP:
+    - **Byte 0**: Button bits (`Bit 0: Left`, `Bit 1: Right`, `Bit 2: Middle`).
+    - **Byte 1**: Signed 8-bit $\Delta X$ displacement ($-127$ to $+127$).
+    - **Byte 2**: Signed 8-bit $\Delta Y$ displacement ($-127$ to $+127$).
+    - **Byte 3**: Signed 8-bit scroll wheel delta ($-127$ to $+127$).
+* **Spatial Air Mouse over Pure Bluetooth**:
+  - Combines on-device sensor fusion with Bluetooth HID: tilt your phone in the air to move the cursor on your Smart TV or PC without needing any local Wi-Fi network.
+
+---
+
+### 3. 🎯 Sensor Fusion & Digital Signal Processing (DSP) Pipeline
 
 The spatial air mouse uses an advanced sensor fusion pipeline to translate raw smartphone accelerometer and gyroscope measurements into sub-millimeter cursor displacements:
 
 <div align="center">
   <img src="docs/assets/module_sensor_dsp.svg" alt="AirMouse Sensor Fusion DSP Engine" width="100%">
-  <p><em>Figure 2: AirMouse Sensor Fusion DSP Pipeline — <b>Raw IMU Ingestion</b>, <b>AHRS Fusion</b>, <b>1€ Filter</b>, and <b>ZUPT Stationary Lock</b></em></p>
+  <p><em>Figure 3: AirMouse Sensor Fusion DSP Pipeline — <b>Raw IMU Ingestion</b>, <b>AHRS Fusion</b>, <b>1€ Filter</b>, and <b>ZUPT Stationary Lock</b></em></p>
 </div>
 
 * **Raw IMU Ingestion (100 Hz)**:
@@ -141,13 +168,13 @@ The spatial air mouse uses an advanced sensor fusion pipeline to translate raw s
 
 ---
 
-### 3. ⚡ Multi-OS Desktop Host Daemons (Go & Python)
+### 4. ⚡ Multi-OS Desktop Host Daemons (Go & Python)
 
 AirMouse features two independent desktop server implementations tailored for maximum performance and portability:
 
 <div align="center">
   <img src="docs/assets/module_desktop_kernel.svg" alt="Multi-OS Kernel Input Synthesis" width="100%">
-  <p><em>Figure 3: Multi-OS Kernel Input Synthesis Engine — <b>Go High-Throughput Ingest</b>, <b>CoreGraphics (macOS)</b>, <b>SendInput (Windows)</b>, and <b>/dev/uinput (Linux)</b></em></p>
+  <p><em>Figure 4: Multi-OS Kernel Input Synthesis Engine — <b>Go High-Throughput Ingest</b>, <b>CoreGraphics (macOS)</b>, <b>SendInput (Windows)</b>, and <b>/dev/uinput (Linux)</b></em></p>
 </div>
 
 #### A. Go High-Performance Server (`pc/airmouse_go_new/`)
@@ -163,7 +190,7 @@ AirMouse features two independent desktop server implementations tailored for ma
 
 <div align="center">
   <img src="docs/assets/desktop_gui_mockup.svg" alt="AirMouse Desktop Fyne Server" width="100%">
-  <p><em>Figure 4: AirMouse Desktop Host Server — <b>6-Tab Fyne GUI Dashboard</b> with Live Waveform &amp; Jitter Analytics</em></p>
+  <p><em>Figure 5: AirMouse Desktop Host Server — <b>6-Tab Fyne GUI Dashboard</b> with Live Waveform &amp; Jitter Analytics</em></p>
 </div>
 
 #### B. Python Reference Server (`pc/airmouse_py/`)
@@ -175,13 +202,13 @@ AirMouse features two independent desktop server implementations tailored for ma
 
 ---
 
-### 4. 🌐 Zero-Install Mobile Web Client (`web-client/`)
+### 5. 🌐 Zero-Install Mobile Web Client (`web-client/`)
 
 A zero-install Progressive Web App (PWA) allowing immediate touch and spatial mouse control on Apple iOS (Safari) and Android (Chrome) without installing an app:
 
 <div align="center">
   <img src="docs/assets/module_web_client.svg" alt="AirMouse Mobile Web Client" width="100%">
-  <p><em>Figure 5: Zero-Install Mobile Web Client — <b>iOS 13+ Onboarding Dialog</b>, <b>Web Audio Haptic Impulses</b>, and <b>Screen Wake Lock Fallback</b></em></p>
+  <p><em>Figure 6: Zero-Install Mobile Web Client — <b>iOS 13+ Onboarding Dialog</b>, <b>Web Audio Haptic Impulses</b>, and <b>Screen Wake Lock Fallback</b></em></p>
 </div>
 
 * **iOS 13+ Sensor Permission Dialog**:
