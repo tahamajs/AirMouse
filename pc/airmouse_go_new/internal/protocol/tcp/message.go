@@ -3,6 +3,7 @@ package tcp
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 func decodeWireMessage(line []byte) (msgType string, payload map[string]any, id *string, err error) {
@@ -93,4 +94,28 @@ func number(v any) float64 {
 	default:
 		return 0
 	}
+}
+
+func serverClosingMessage() []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":       2,
+		"type":    "server_closing",
+		"ts":      time.Now().UnixMilli(),
+		"payload": map[string]any{"reason": "shutdown"},
+	})
+	return append(body, '\n')
+}
+
+func statsRespMessage(stats map[string]any, reqID *string) []byte {
+	env := map[string]any{
+		"v":       2,
+		"type":    "stats_resp",
+		"ts":      time.Now().UnixMilli(),
+		"payload": stats,
+	}
+	if reqID != nil && *reqID != "" {
+		env["id"] = *reqID
+	}
+	body, _ := json.Marshal(env)
+	return append(body, '\n')
 }

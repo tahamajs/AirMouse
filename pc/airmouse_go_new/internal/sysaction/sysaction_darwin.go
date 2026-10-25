@@ -216,4 +216,28 @@ func init() {
 		// Let's execute: defaults write -g com.apple.mouse.scaling <speed>
 		_ = exec.Command("defaults", "write", "-g", "com.apple.mouse.scaling", fmt.Sprintf("%.2f", speed)).Run()
 	}
+	keyDown = func(key string) {
+		_ = exec.Command("osascript", "-e", fmt.Sprintf(`tell application "System Events" to key down "%s"`, key)).Run()
+	}
+	keyUp = func(key string) {
+		_ = exec.Command("osascript", "-e", fmt.Sprintf(`tell application "System Events" to key up "%s"`, key)).Run()
+	}
+	mouseHScroll = func(delta int) {
+		amount := 5
+		if delta < 0 {
+			amount = -5
+		}
+		pyCode := fmt.Sprintf(`from Quartz.CoreGraphics import CGEventCreateScrollWheelEvent, CGEventPost, kCGHIDEventTap; CGEventPost(kCGHIDEventTap, CGEventCreateScrollWheelEvent(None, 0, 2, 0, %d))`, amount)
+		_ = exec.Command("python3", "-c", pyCode).Run()
+	}
+	adjustBrightness = func(direction string, amount float64) {
+		if direction == "up" {
+			_ = exec.Command("osascript", "-e", `tell application "System Events" to key code 144`).Run()
+		} else {
+			_ = exec.Command("osascript", "-e", `tell application "System Events" to key code 145`).Run()
+		}
+	}
+	releaseAllKeys = func() {
+		_ = exec.Command("osascript", "-e", `tell application "System Events" to key up {shift, control, option, command}`).Run()
+	}
 }

@@ -63,6 +63,8 @@ type DeviceInfo struct {
 	SDKInt         string       `json:"sdk_int,omitempty"`
 	Protocol       string       `json:"protocol,omitempty"`
 	Transport      string       `json:"transport,omitempty"`
+	BatteryLevel   int          `json:"battery_level,omitempty"`
+	BatteryCharging bool        `json:"battery_charging,omitempty"`
 }
 
 // DeviceEvent is emitted when a device changes state.
@@ -478,6 +480,25 @@ func (m *DeviceManager) UpdateDeviceStatus(id string, status DeviceStatus) error
 		Timestamp:  time.Now(),
 	})
 	logInfo("Device status changed: %s -> %s (%s)", id, status, device.Name)
+	return nil
+}
+
+// UpdateDeviceBattery updates the battery level and charging status of a device.
+func (m *DeviceManager) UpdateDeviceBattery(id string, level int, charging bool) error {
+	if !m.initialized || id == "" {
+		return fmt.Errorf("device manager not initialized or invalid id")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	device, exists := m.devices[id]
+	if !exists {
+		return fmt.Errorf("device not found: %s", id)
+	}
+	device.BatteryLevel = level
+	device.BatteryCharging = charging
+	device.LastActive = time.Now()
+	m.persistLocked()
+	logDebug("Device battery updated: %s -> %d%% (charging=%v)", id, level, charging)
 	return nil
 }
 

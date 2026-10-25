@@ -352,6 +352,13 @@ func (kf *KalmanFilter2D) GetConfidence() float64 {
 	return conf
 }
 
+// GetVariances returns the diagonal elements of the error covariance matrix P: varX, varY, varVx, varVy.
+func (kf *KalmanFilter2D) GetVariances() (float64, float64, float64, float64) {
+	kf.mu.RLock()
+	defer kf.mu.RUnlock()
+	return kf.P[0][0], kf.P[1][1], kf.P[2][2], kf.P[3][3]
+}
+
 // Reset resets the filter to its initial state.
 func (kf *KalmanFilter2D) Reset() {
 	kf.mu.Lock()

@@ -89,3 +89,10 @@ func (s *AISmoother) IsONNXLoaded() bool {
 	defer s.mu.RUnlock()
 	return s.onnxLoaded
 }
+
+// GetKalmanFilter returns the underlying Kalman filter.
+func (s *AISmoother) GetKalmanFilter() *predictive.KalmanFilter2D {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.kalmanFilter
+}

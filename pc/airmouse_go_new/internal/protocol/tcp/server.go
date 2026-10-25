@@ -272,6 +272,7 @@ func (s *Server) handleClient(conn net.Conn) {
 			devID = client.ID
 		}
 		client.mu.Unlock()
+		utils.RecordPacketIn(int64(len(line)))
 		if s.deviceMgr != nil {
 			_ = s.deviceMgr.UpdateDeviceActivity(devID, 0, int64(len(line)))
 		}
@@ -279,6 +280,12 @@ func (s *Server) handleClient(conn net.Conn) {
 	}
 
 	_ = conn.Close()
+	if s.mouse != nil {
+		s.mouse.MouseUp("left")
+		s.mouse.MouseUp("right")
+		s.mouse.MouseUp("middle")
+	}
+	sysaction.ReleaseAllKeys()
 	s.mu.Lock()
 	delete(s.clients, clientID)
 	s.mu.Unlock()
@@ -342,12 +349,15 @@ func (s *Server) processLine(client *Client, line []byte) {
 	client.mu.RUnlock()
 
 	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll" ||
-		msgType == "left_click" || msgType == "right_click" || msgType == "double_click" || msgType == "middle_click" ||
-		msgType == "key" || msgType == "text" || msgType == "voice_command") {
+		msgType == "left_click" || msgType == "right_click" || msgType == "double_click" || msgType == "middle_click" || msgType == "middleclick" ||
+		msgType == "hscroll" || msgType == "key" || msgType == "keypress" || msgType == "key_press" || msgType == "keydown" ||
+		msgType == "key_down" || msgType == "keyup" || msgType == "key_up" || msgType == "hotkey" || msgType == "type" || msgType == "text" ||
+		msgType == "slide_next" || msgType == "slide_prev" || msgType == "volume_up" || msgType == "volume_down" || msgType == "mute" ||
+		msgType == "play_pause" || msgType == "lock_screen" || msgType == "power_sleep" || msgType == "brightness" || msgType == "voice_command") {
 		s.writeAck(client, id)
 	}
 
-	if !approved && msgType != "hello" && msgType != "device_info" && msgType != "ping" {
+	if !approved && msgType != "hello" && msgType != "device_info" && msgType != "ping" && msgType != "heartbeat" {
 		utils.LogDebug("Ignoring TCP %s while waiting for approval: client=%s", msgType, client.ID)
 		return
 	}
@@ -359,6 +369,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 			ts := int64(number(tsVal))
 			if ts > 0 {
 				if err := validateTimestamp(ts, nowMs); err != nil {
+					utils.RecordDroppedPacket()
 					utils.LogInfo("TCP replay rejection (timestamp): client=%s err=%v", client.ID, err)
 					return
 				}
@@ -368,6 +379,7 @@ func (s *Server) processLine(client *Client, line []byte) {
 			seq := uint64(number(seqVal))
 			if seq > 0 {
 				if err := client.ReplayDetector.checkAndAdvanceSeq(seq); err != nil {
+					utils.RecordDroppedPacket()
 					utils.LogInfo("TCP replay rejection (sequence): client=%s err=%v", client.ID, err)
 					return
 				}
@@ -376,11 +388,12 @@ func (s *Server) processLine(client *Client, line []byte) {
 	}
 
 	switch msgType {
-	case "move":
+	case "move", "move_rel":
 		dx := firstNumber(payload, "dx", "DeltaX", "deltaX")
 		dy := firstNumber(payload, "dy", "DeltaY", "deltaY")
 		if math.IsNaN(dx) || math.IsInf(dx, 0) || math.IsNaN(dy) || math.IsInf(dy, 0) ||
 			math.Abs(dx) > maxCoordLimit || math.Abs(dy) > maxCoordLimit {
+			utils.RecordDroppedPacket()
 			utils.LogInfo("TCP move dropped (out of bounds or NaN/Inf): dx=%.2f dy=%.2f", dx, dy)
 			return
 		}
@@ -389,6 +402,36 @@ func (s *Server) processLine(client *Client, line []byte) {
 			s.mouse.Move(dx, dy)
 		}
 		utils.LogDebug("TCP move forwarded: client=%s dx=%.2f dy=%.2f", client.ID, dx, dy)
+
+	case "move_abs":
+		targetX := firstNumber(payload, "x", "target_x", "X")
+		targetY := firstNumber(payload, "y", "target_y", "Y")
+		if math.IsNaN(targetX) || math.IsInf(targetX, 0) || math.IsNaN(targetY) || math.IsInf(targetY, 0) {
+			utils.RecordDroppedPacket()
+			utils.LogInfo("TCP move_abs dropped (NaN/Inf): x=%.2f y=%.2f", targetX, targetY)
+			return
+		}
+		if s.mouse != nil {
+			curX, curY := s.mouse.GetPosition()
+			dx := targetX - curX
+			dy := targetY - curY
+			if math.Abs(dx) > maxCoordLimit {
+				if dx > 0 {
+					dx = maxCoordLimit
+				} else {
+					dx = -maxCoordLimit
+				}
+			}
+			if math.Abs(dy) > maxCoordLimit {
+				if dy > 0 {
+					dy = maxCoordLimit
+				} else {
+					dy = -maxCoordLimit
+				}
+			}
+			s.mouse.Move(dx, dy)
+		}
+		utils.LogDebug("TCP move_abs forwarded: client=%s target=(%.2f, %.2f)", client.ID, targetX, targetY)
 
 	case "click", "left_click":
 		button, _ := payload["button"].(string)
@@ -424,20 +467,24 @@ func (s *Server) processLine(client *Client, line []byte) {
 		if s.mouse != nil {
 			s.mouse.DoubleClick()
 		}
+		utils.LogDebug("TCP double_click forwarded: client=%s", client.ID)
 
 	case "rightclick", "right_click":
 		if s.mouse != nil {
 			s.mouse.Click("right")
 		}
+		utils.LogDebug("TCP right_click forwarded: client=%s", client.ID)
 
-	case "middle_click":
+	case "middle_click", "middleclick":
 		if s.mouse != nil {
 			s.mouse.Click("middle")
 		}
+		utils.LogDebug("TCP middle_click forwarded: client=%s", client.ID)
 
 	case "scroll":
 		delta := firstInt(payload, "delta", "Scroll", "scroll", "amount", "dy")
 		if math.Abs(float64(delta)) > maxScrollLimit {
+			utils.RecordDroppedPacket()
 			utils.LogInfo("TCP scroll dropped (|delta| <= %.1f): delta=%d", maxScrollLimit, delta)
 			return
 		}
@@ -445,6 +492,65 @@ func (s *Server) processLine(client *Client, line []byte) {
 			s.mouse.Scroll(delta)
 		}
 		utils.LogDebug("TCP scroll forwarded: client=%s delta=%d", client.ID, delta)
+
+	case "hscroll":
+		delta := firstInt(payload, "delta", "hscroll", "amount", "dx")
+		if math.Abs(float64(delta)) > maxScrollLimit {
+			utils.RecordDroppedPacket()
+			utils.LogInfo("TCP hscroll dropped (|delta| <= %.1f): delta=%d", maxScrollLimit, delta)
+			return
+		}
+		sysaction.MouseHScroll(delta)
+		utils.LogDebug("TCP hscroll forwarded: client=%s delta=%d", client.ID, delta)
+
+	case "slide_next":
+		utils.LogInfo("TCP slide_next received: client=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("slide_next")
+
+	case "slide_prev":
+		utils.LogInfo("TCP slide_prev received: client=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("slide_prev")
+
+	case "volume_up":
+		utils.LogInfo("TCP volume_up received: client=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("volume_up")
+
+	case "volume_down":
+		utils.LogInfo("TCP volume_down received: client=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("volume_down")
+
+	case "mute":
+		utils.LogInfo("TCP mute received: client=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("mute")
+
+	case "play_pause":
+		utils.LogInfo("TCP play_pause received: client=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("play_pause")
+
+	case "lock_screen":
+		utils.LogInfo("TCP lock_screen received: client=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("lock_screen")
+
+	case "power_sleep":
+		utils.LogInfo("TCP power_sleep received: client=%s", client.ID)
+		sysaction.Execute(sysaction.ActionSleep)
+
+	case "brightness":
+		dir, _ := payload["direction"].(string)
+		if dir == "" {
+			dir, _ = payload["action"].(string)
+		}
+		delta := firstNumber(payload, "delta", "amount", "value")
+		if delta < 0 {
+			dir = "down"
+		} else if dir == "" {
+			dir = "up"
+		}
+		if delta == 0 {
+			delta = 10.0
+		}
+		utils.LogInfo("TCP brightness received: dir=%s delta=%.1f client=%s", dir, delta, client.ID)
+		sysaction.AdjustBrightness(dir, math.Abs(delta))
 
 	case "hello", "device_info":
 		name, _ := payload["name"].(string)

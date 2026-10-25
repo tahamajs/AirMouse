@@ -63,6 +63,16 @@ func appleScriptForCommand(command string) (string, error) {
 		return `tell application "System Events" to keystroke "m" using command down`, nil
 	case "window_fullscreen":
 		return `tell application "System Events" to keystroke "f" using {command down, control down}`, nil
+	case "slide_next":
+		return `tell application "System Events" to key code 124`, nil
+	case "slide_prev":
+		return `tell application "System Events" to key code 123`, nil
+	case "brightness_up":
+		return `tell application "System Events" to key code 144`, nil
+	case "brightness_down":
+		return `tell application "System Events" to key code 145`, nil
+	case "power_sleep":
+		return `tell application "Finder" to sleep`, nil
 	case "browser_back":
 		return `tell application "System Events" to keystroke "[" using command down`, nil
 	case "browser_forward":

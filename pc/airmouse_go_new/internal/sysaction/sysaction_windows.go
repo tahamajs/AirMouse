@@ -231,6 +231,40 @@ func init() {
 		// SPI_SETMOUSESPEED is 0x0071, SPIF_SENDCHANGE is 0x02
 		procSystemParametersInfo.Call(0x0071, 0, uintptr(winSpeed), 0x02)
 	}
+	keyDown = func(key string) {
+		if vk, ok := winKeyMap[key]; ok {
+			keybdEvent(vk, KEYEVENTF_KEYDOWN)
+		}
+	}
+	keyUp = func(key string) {
+		if vk, ok := winKeyMap[key]; ok {
+			keybdEvent(vk, KEYEVENTF_KEYUP)
+		}
+	}
+	mouseHScroll = func(delta int) {
+		const MOUSEEVENTF_HWHEEL = 0x01000
+		procMouseEvent.Call(MOUSEEVENTF_HWHEEL, 0, 0, uintptr(int32(delta*120)), 0)
+	}
+	adjustBrightness = func(direction string, amount float64) {
+		// PowerShell WmiMonitorBrightnessMethods
+		step := int(amount)
+		if step <= 0 {
+			step = 10
+		}
+		if direction == "down" {
+			step = -step
+		}
+		psCmd := fmt.Sprintf(`$b = (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).CurrentBrightness + (%d); if ($b -gt 100) {$b = 100}; if ($b -lt 0) {$b = 0}; (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods).WmiSetBrightness(1, $b)`, step)
+		_ = exec.Command("powershell", "-NoProfile", "-Command", psCmd).Run()
+	}
+	releaseAllKeys = func() {
+		// VK_SHIFT=0x10, VK_CONTROL=0x11, VK_MENU=0x12, VK_LWIN=0x5B, VK_RWIN=0x5C
+		keybdEvent(0x10, KEYEVENTF_KEYUP)
+		keybdEvent(0x11, KEYEVENTF_KEYUP)
+		keybdEvent(0x12, KEYEVENTF_KEYUP)
+		keybdEvent(0x5B, KEYEVENTF_KEYUP)
+		keybdEvent(0x5C, KEYEVENTF_KEYUP)
+	}
 }
 
 func keybdEvent(vk byte, flags uint32) {

@@ -202,4 +202,27 @@ func init() {
 		accel := fmt.Sprintf("%d", int(speed*2))
 		_ = exec.Command("xset", "m", accel, "10").Run()
 	}
+	keyDown = func(key string) {
+		_ = exec.Command("xdotool", "keydown", key).Run()
+	}
+	keyUp = func(key string) {
+		_ = exec.Command("xdotool", "keyup", key).Run()
+	}
+	mouseHScroll = func(delta int) {
+		if delta > 0 {
+			_ = exec.Command("xdotool", "click", "7").Run()
+		} else {
+			_ = exec.Command("xdotool", "click", "6").Run()
+		}
+	}
+	adjustBrightness = func(direction string, amount float64) {
+		if direction == "up" {
+			_ = exec.Command("xbacklight", "-inc", "10").Run()
+		} else {
+			_ = exec.Command("xbacklight", "-dec", "10").Run()
+		}
+	}
+	releaseAllKeys = func() {
+		_ = exec.Command("xdotool", "keyup", "Control_L", "Control_R", "Shift_L", "Shift_R", "Alt_L", "Alt_R", "Super_L", "Super_R").Run()
+	}
 }

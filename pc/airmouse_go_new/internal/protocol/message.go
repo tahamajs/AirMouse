@@ -174,7 +174,7 @@ func ValidateTimestamp(ts int64, nowMs int64) error {
 	if diff < 0 {
 		diff = -diff
 	}
-	if diff > ReplayWindowMs {
+	if diff < 0 || diff > ReplayWindowMs {
 		return fmt.Errorf("replay_rejected: timestamp delta %d ms exceeds sliding window +/- %d ms (ts=%d, now=%d)", diff, ReplayWindowMs, ts, nowMs)
 	}
 	return nil
@@ -474,6 +474,9 @@ func DecodeScrollPayload(payload map[string]any) (int, error) {
 		if math.IsNaN(v) || math.IsInf(v, 0) {
 			return 0, fmt.Errorf("delta cannot be NaN or Inf")
 		}
+		if math.Abs(v) > MaxScrollLimit {
+			return 0, fmt.Errorf("delta out of bounds (|delta| <= %.1f): %f", MaxScrollLimit, v)
+		}
 		delta = int(v)
 	case int:
 		delta = v
@@ -661,15 +664,30 @@ func DecodeCalibrationPayload(payload map[string]any) (CalibrationPayload, error
 func IsValidType(msgType string) bool {
 	validTypes := map[string]bool{
 		"move":             true,
+		"move_rel":         true,
+		"move_abs":         true,
 		"click":            true,
+		"left_click":       true,
 		"doubleclick":      true,
 		"double_click":     true,
 		"rightclick":       true,
 		"right_click":      true,
+		"middleclick":      true,
+		"middle_click":     true,
 		"mouse_down":       true,
 		"mouse_up":         true,
 		"scroll":           true,
+		"hscroll":          true,
 		"key":              true,
+		"keypress":         true,
+		"key_press":        true,
+		"keydown":          true,
+		"key_down":         true,
+		"keyup":            true,
+		"key_up":           true,
+		"hotkey":           true,
+		"type":             true,
+		"text":             true,
 		"hello":            true,
 		"device_info":      true,
 		"gesture":          true,
@@ -677,6 +695,7 @@ func IsValidType(msgType string) bool {
 		"control":          true,
 		"ping":             true,
 		"pong":             true,
+		"heartbeat":        true,
 		"ack":              true,
 		"nack":             true,
 		"error":            true,
@@ -686,14 +705,35 @@ func IsValidType(msgType string) bool {
 		"discover":         true,
 		"offer":            true,
 		"presentation":     true,
+		"slide_next":       true,
+		"slide_prev":       true,
+		"media":            true,
+		"volume_up":        true,
+		"volume_down":      true,
+		"mute":             true,
+		"play_pause":       true,
+		"lock_screen":      true,
+		"power_sleep":      true,
+		"brightness":       true,
 		"orientation":      true,
 		"battery":          true,
+		"battery_report":   true,
 		"log":              true,
 		"custom":           true,
 		"calibration_data": true,
 		"stats":            true,
+		"stats_req":        true,
+		"stats_resp":       true,
 		"notification":     true,
 		"config":           true,
+		"laser":            true,
+		"draw":             true,
+		"annotation":       true,
+		"voice_command":    true,
+		"steering":         true,
+		"shooter":          true,
+		"smarthome":        true,
+		"server_closing":   true,
 	}
 	return validTypes[msgType]
 }
@@ -897,5 +937,33 @@ func StatusMessage(running bool, clients int) []byte {
 			"clients": clients,
 		},
 	})
+	return append(body, '\n')
+}
+
+// ServerClosingMessage creates a clean server closing notification
+func ServerClosingMessage() []byte {
+	body, _ := json.Marshal(map[string]any{
+		"v":    ProtocolVersion,
+		"type": "server_closing",
+		"ts":   time.Now().UnixMilli(),
+		"payload": map[string]any{
+			"reason": "shutdown",
+		},
+	})
+	return append(body, '\n')
+}
+
+// StatsRespMessage creates a stats response message
+func StatsRespMessage(stats map[string]any, reqID *string) []byte {
+	env := map[string]any{
+		"v":       ProtocolVersion,
+		"type":    "stats_resp",
+		"ts":      time.Now().UnixMilli(),
+		"payload": stats,
+	}
+	if reqID != nil && *reqID != "" {
+		env["id"] = *reqID
+	}
+	body, _ := json.Marshal(env)
 	return append(body, '\n')
 }

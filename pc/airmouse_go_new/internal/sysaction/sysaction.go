@@ -91,6 +91,10 @@ const (
 	ActionShutdown Action = "shutdown"
 	ActionRestart  Action = "restart"
 	ActionLogout   Action = "logout"
+
+	// Brightness Controls
+	ActionBrightnessUp   Action = "brightness_up"
+	ActionBrightnessDown Action = "brightness_down"
 )
 
 // ActionMap maps gesture names to system actions.
@@ -257,6 +261,12 @@ func Execute(a Action) {
 	case ActionLogout:
 		logoutSystem()
 
+	// Brightness Controls
+	case ActionBrightnessUp:
+		AdjustBrightness("up", 10.0)
+	case ActionBrightnessDown:
+		AdjustBrightness("down", 10.0)
+
 	default:
 		log.Printf("Unknown action: %s", a)
 	}
@@ -376,6 +386,41 @@ func SetSystemMouseSpeed(speed float64) {
 	}
 }
 
+// KeyDown holds a keyboard key down.
+func KeyDown(key string) {
+	if keyDown != nil {
+		keyDown(key)
+	}
+}
+
+// KeyUp releases a held keyboard key.
+func KeyUp(key string) {
+	if keyUp != nil {
+		keyUp(key)
+	}
+}
+
+// AdjustBrightness changes the screen brightness up or down.
+func AdjustBrightness(direction string, amount float64) {
+	if adjustBrightness != nil {
+		adjustBrightness(direction, amount)
+	}
+}
+
+// MouseHScroll simulates horizontal scrolling.
+func MouseHScroll(delta int) {
+	if mouseHScroll != nil {
+		mouseHScroll(delta)
+	}
+}
+
+// ReleaseAllKeys releases any stuck or held modifier and keyboard keys.
+func ReleaseAllKeys() {
+	if releaseAllKeys != nil {
+		releaseAllKeys()
+	}
+}
+
 // The following functions are platform-specific and defined in the respective
 // *_linux.go, *_darwin.go, *_windows.go files.
 var (
@@ -386,12 +431,15 @@ var (
 	mouseClick          func(btn string)
 	mouseDoubleClick    func()
 	mouseScroll         func(delta int)
+	mouseHScroll        func(delta int)
 	lockScreen          func()
 	showDesktop         func()
 	taskView            func()
 	switchWindow        func()
 	keyCombination      func(key, modifier string)
 	keyTap              func(key string)
+	keyDown             func(key string)
+	keyUp               func(key string)
 	typeText            func(txt string)
 	zoomIn              func()
 	zoomOut             func()
@@ -405,4 +453,6 @@ var (
 	restartSystem       func()
 	logoutSystem        func()
 	setSystemMouseSpeed func(speed float64)
+	adjustBrightness    func(direction string, amount float64)
+	releaseAllKeys      func()
 )
