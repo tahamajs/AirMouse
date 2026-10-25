@@ -38,9 +38,9 @@ class AirMouseApplication : Application(), WorkConfiguration.Provider {
         lateinit var instance: AirMouseApplication
             private set
 
-        const val APP_VERSION = "1.0.0"
+        const val APP_VERSION = "1.0.1"
         const val APP_NAME = "Air Mouse Pro"
-        const val BUILD_NUMBER = 1
+        const val BUILD_NUMBER = 2
         const val PREF_APP_START_TIME = "app_start_time"
         const val PREF_LAST_EXIT_TIME = "last_exit_time"
         const val PREF_TOTAL_UPTIME = "total_uptime"

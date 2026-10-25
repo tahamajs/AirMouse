@@ -14,6 +14,8 @@
 (function () {
     'use strict';
 
+    const CLIENT_VERSION = '1.0.1';
+
     // State Variables
     let ws = null;
     let seq = 0;

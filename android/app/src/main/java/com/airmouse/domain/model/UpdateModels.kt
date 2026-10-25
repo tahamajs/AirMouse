@@ -60,8 +60,8 @@ data class UpdateResult(
  */
 @Parcelize
 data class VersionInfo(
-    val versionName: String = "1.0.0",
-    val versionCode: Int = 1,
+    val versionName: String = "1.0.1",
+    val versionCode: Int = 2,
     val buildDate: Long = System.currentTimeMillis(),
     val minSupportedVersion: String = "1.0.0"
 ) : Parcelable {

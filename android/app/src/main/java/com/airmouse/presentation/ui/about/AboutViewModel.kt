@@ -57,7 +57,7 @@ class AboutViewModel @Inject constructor(
                     _effect.value = AboutEffect.ShowToast("Update available: v${result.version}")
                 } else {
                     _uiState.update { it.copy(isUpdateAvailable = false, isLoading = false) }
-                    _effect.value = AboutEffect.ShowToast("AirMouse Pro is up to date (v1.0.0)")
+                    _effect.value = AboutEffect.ShowToast("AirMouse Pro is up to date (v1.0.1)")
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -66,7 +66,7 @@ class AboutViewModel @Inject constructor(
                         errorMessage = e.message ?: "Failed to check for updates"
                     )
                 }
-                _effect.value = AboutEffect.ShowToast("AirMouse Pro is up to date (v1.0.0)")
+                _effect.value = AboutEffect.ShowToast("AirMouse Pro is up to date (v1.0.1)")
             }
         }
     }

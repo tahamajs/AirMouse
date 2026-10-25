@@ -1,6 +1,6 @@
 # AirMouse: Master Architecture & Technical Documentation
 **Canonical System Reference Document**  
-**Version:** 2.0.0-remediated (Release v1.0.0 / Protocol v2.0.0)  
+**Version:** 2.0.0-remediated (Release v1.0.1 / Protocol v2.0.0)  
 **Status:** Canonical & Frozen  
 
 > [!NOTE]

@@ -1514,7 +1514,7 @@ fun AboutSection(viewModel: SettingsViewModel) {
             Text("🎯", fontSize = 48.sp)
             Spacer(modifier = Modifier.height(16.dp))
             Text("Air Mouse Pro", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
-            Text("Version 1.0.0 (Release v1.0.0-final)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+            Text("Version 1.0.1 (Release v1.0.1)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
             Text("Turn your phone into a wireless air mouse", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(16.dp))

@@ -14,8 +14,16 @@ import urllib.request
 import urllib.error
 
 REPO = "tahamajs/AirMouse"
-TAG = "v1.0.0"
-RELEASE_TITLE = "AirMouse Pro v1.0.0 — Canonical Multi-Platform Release"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+VERSION_FILE = ROOT_DIR / "VERSION"
+VERSION = (
+    sys.argv[1].lstrip("vV")
+    if len(sys.argv) > 1 and not sys.argv[1].startswith("-")
+    else (VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "1.0.1")
+)
+
+TAG = f"v{VERSION}"
+RELEASE_TITLE = f"AirMouse Pro v{VERSION} — Canonical Multi-Platform Release"
 
 TOKEN = os.getenv("GITHUB_TOKEN")
 if not TOKEN:
@@ -45,9 +53,16 @@ HEADERS = {
     "User-Agent": "AirMouse-Release-Publisher",
 }
 
-RELEASE_BODY = """# 🖱️ AirMouse Pro v1.0.0 (Canonical Production Release)
+def build_release_body(ver: str) -> str:
+    sha_file = ROOT_DIR / "releases" / "SHA256SUMS.txt"
+    sha_text = (
+        sha_file.read_text(encoding="utf-8").strip()
+        if sha_file.exists()
+        else "# Checksums generated during release build"
+    )
+    return f"""# 🖱️ AirMouse Pro v1.0.1 (Canonical Production Release)
 
-Welcome to the official **AirMouse Pro v1.0.0** multi-platform release! AirMouse turns your smartphone or tablet into a sub-millisecond, low-latency spatial air mouse, presentation remote, and multi-touch trackpad for your computer.
+Welcome to the official **AirMouse Pro v{ver}** multi-platform release! AirMouse turns your smartphone or tablet into a sub-millisecond, low-latency spatial air mouse, presentation remote, and multi-touch trackpad for your computer.
 
 ---
 
@@ -55,14 +70,14 @@ Welcome to the official **AirMouse Pro v1.0.0** multi-platform release! AirMouse
 
 | Platform | Installer / Package | Description |
 | :--- | :--- | :--- |
-| **Android** | [`AirMouse-v1.0.0.apk`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0.apk) | Signed Release APK for Android 8.0+ devices |
-| **Windows** | [`AirMouse-v1.0.0-windows-x64.zip`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0-windows-x64.zip) | Portable bundle with GUI launcher, batch scripts & web-client |
-| **Windows** | [`AirMouse-Server-v1.0.0-windows-x64.exe`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-Server-v1.0.0-windows-x64.exe) | Standalone portable Go server binary |
-| **macOS** | [`AirMouse-v1.0.0-macos-universal.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0-macos-universal.tar.gz) | Universal native `AirMouse.app` for Apple Silicon & Intel |
-| **macOS** | [`AirMouse-Server-v1.0.0-macos-universal`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-Server-v1.0.0-macos-universal) | Fat universal CLI server binary |
-| **Linux (x64)** | [`AirMouse-v1.0.0-linux-x64.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0-linux-x64.tar.gz) | Complete Linux x86_64 bundle with systemd service |
-| **Linux (ARM64)** | [`AirMouse-v1.0.0-linux-arm64.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0-linux-arm64.tar.gz) | Raspberry Pi 4/5 & Linux ARM64 bundle |
-| **Integrity** | [`SHA256SUMS.txt`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/SHA256SUMS.txt) | Cryptographic verification hashes |
+| **Android** | [`AirMouse-v{ver}.apk`](https://github.com/tahamajs/AirMouse/releases/download/v{ver}/AirMouse-v{ver}.apk) | Signed Release APK for Android 8.0+ devices |
+| **Windows** | [`AirMouse-v{ver}-windows-x64.zip`](https://github.com/tahamajs/AirMouse/releases/download/v{ver}/AirMouse-v{ver}-windows-x64.zip) | Portable bundle with GUI launcher, batch scripts & web-client |
+| **Windows** | [`AirMouse-Server-v{ver}-windows-x64.exe`](https://github.com/tahamajs/AirMouse/releases/download/v{ver}/AirMouse-Server-v{ver}-windows-x64.exe) | Standalone portable Go server binary |
+| **macOS** | [`AirMouse-v{ver}-macos-universal.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v{ver}/AirMouse-v{ver}-macos-universal.tar.gz) | Universal native `AirMouse.app` for Apple Silicon & Intel |
+| **macOS** | [`AirMouse-Server-v{ver}-macos-universal`](https://github.com/tahamajs/AirMouse/releases/download/v{ver}/AirMouse-Server-v{ver}-macos-universal) | Fat universal CLI server binary |
+| **Linux (x64)** | [`AirMouse-v{ver}-linux-x64.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v{ver}/AirMouse-v{ver}-linux-x64.tar.gz) | Complete Linux x86_64 bundle with systemd service |
+| **Linux (ARM64)** | [`AirMouse-v{ver}-linux-arm64.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v{ver}/AirMouse-v{ver}-linux-arm64.tar.gz) | Raspberry Pi 4/5 & Linux ARM64 bundle |
+| **Integrity** | [`SHA256SUMS.txt`](https://github.com/tahamajs/AirMouse/releases/download/v{ver}/SHA256SUMS.txt) | Cryptographic verification hashes |
 
 ---
 
@@ -83,15 +98,12 @@ Welcome to the official **AirMouse Pro v1.0.0** multi-platform release! AirMouse
 ### 🛡️ SHA-256 Checksums
 
 ```text
-c692d235d8bdddbf46955473800775630137ac76a97a17621e3abcedd14a38b8  android/AirMouse-v1.0.0.apk
-36932ae4d1ff0751ca58b3c5bc4c1f256a507626af45ec7d430c90fe4b412fe8  windows/AirMouse-Server-v1.0.0-windows-x64.exe
-21284dad8b04cd4ee923055b2e4a84ecaa21a52996d5d557942da831ddf70909  windows/AirMouse-v1.0.0-windows-x64.zip
-00125c96757b09e942dc17f8020d0a365f57422c400708406a08be583ea9a6b9  macos/AirMouse-Server-v1.0.0-macos-universal
-fd8b7439ee445b63e1079923b6ca3e730133af75275c315ac3a62e47e545423e  macos/AirMouse-v1.0.0-macos-universal.tar.gz
-8de807d8b5cbffa9c66d2236dbc42550d2b30b722b16a6bd7364b14978d5721b  linux/AirMouse-v1.0.0-linux-x64.tar.gz
-a83edac9e8d0591b5e4d19c983e9528e18b17e80cfa40b31ef40e651fcf0ec06  linux/AirMouse-v1.0.0-linux-arm64.tar.gz
+{sha_text}
 ```
 """
+
+
+RELEASE_BODY = build_release_body(VERSION)
 
 
 def get_or_create_release():
@@ -178,13 +190,13 @@ def main():
 
     # Gather all assets to upload
     assets = [
-        rel_dir / "android" / "AirMouse-v1.0.0.apk",
-        rel_dir / "windows" / "AirMouse-v1.0.0-windows-x64.zip",
-        rel_dir / "windows" / "AirMouse-Server-v1.0.0-windows-x64.exe",
-        rel_dir / "macos" / "AirMouse-v1.0.0-macos-universal.tar.gz",
-        rel_dir / "macos" / "AirMouse-Server-v1.0.0-macos-universal",
-        rel_dir / "linux" / "AirMouse-v1.0.0-linux-x64.tar.gz",
-        rel_dir / "linux" / "AirMouse-v1.0.0-linux-arm64.tar.gz",
+        rel_dir / "android" / f"AirMouse-v{VERSION}.apk",
+        rel_dir / "windows" / f"AirMouse-v{VERSION}-windows-x64.zip",
+        rel_dir / "windows" / f"AirMouse-Server-v{VERSION}-windows-x64.exe",
+        rel_dir / "macos" / f"AirMouse-v{VERSION}-macos-universal.tar.gz",
+        rel_dir / "macos" / f"AirMouse-Server-v{VERSION}-macos-universal",
+        rel_dir / "linux" / f"AirMouse-v{VERSION}-linux-x64.tar.gz",
+        rel_dir / "linux" / f"AirMouse-v{VERSION}-linux-arm64.tar.gz",
         rel_dir / "SHA256SUMS.txt",
     ]
 

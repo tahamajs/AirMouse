@@ -117,7 +117,7 @@ class ServerLogsViewModel @Inject constructor(
 
     private fun setupCustomLogCapture() {
         
-        addLogEntry(LogLevel.INFO, "System", "Log viewer initialized", "Version 1.0.0")
+        addLogEntry(LogLevel.INFO, "System", "Log viewer initialized", "Version 1.0.1")
         addLogEntry(LogLevel.DEBUG, "Storage", "Log retention: ${_uiState.value.logRetentionDays} days")
     }
 

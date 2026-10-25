@@ -666,7 +666,7 @@ fun HomeScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Air Mouse Pro v1.0.0",
+                        text = "Air Mouse Pro v1.0.1",
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.fillMaxWidth(),

@@ -3,8 +3,8 @@ package com.airmouse.presentation.ui.about
 
 data class AboutUiState(
     val appName: String = "AirMouse Pro",
-    val versionName: String = "1.0.0",
-    val versionCode: Int = 1,
+    val versionName: String = "1.0.1",
+    val versionCode: Int = 2,
     val buildDate: String = "October 2026",
     val protocolVersion: String = "Protocol V2 (Canonical)",
     val totalDownloads: Int = 25000,

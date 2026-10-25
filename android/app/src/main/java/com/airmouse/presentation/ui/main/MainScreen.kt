@@ -735,7 +735,7 @@ fun ModernDrawerContent(
                             color = RedesignTheme.TextPrimary
                         )
                         Text(
-                            text = "v1.0.0",
+                            text = "v1.0.1",
                             fontSize = 12.sp,
                             color = RedesignTheme.TextTertiary
                         )

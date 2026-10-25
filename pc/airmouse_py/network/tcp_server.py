@@ -27,6 +27,7 @@ from security.auth import AuthManager
 from security.tls_manager import TLSManager
 
 logger = logging.getLogger("AirMouse.TCPServer")
+SERVER_VERSION = "1.0.1"
 
 # Event tuples forwarded to the mouse worker thread:
 # ("move", dx, dy), ("click", button), ("scroll", delta)
@@ -139,7 +140,7 @@ class TCPProtocolServer:
                         "welcome",
                         {
                             "server": "AirMouse Hardened Python Server",
-                            "version": "2.0.0",
+                            "version": "1.0.1",
                             "client_id": session_id,
                             "approved": True,
                         },

@@ -82,7 +82,7 @@ class WebSocketProtocolServer:
                     self.authenticated_sessions.add(session_id)
                     welcome = self.protocol_handler.create_response(
                         "welcome",
-                        {"server": "AirMouse WS Python", "version": "2.0.0", "client_id": session_id, "approved": True},
+                        {"server": "AirMouse WS Python", "version": "1.0.1", "client_id": session_id, "approved": True},
                         seq=seq,
                         req_id=req_id,
                     )

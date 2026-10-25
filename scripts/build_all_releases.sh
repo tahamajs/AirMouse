@@ -11,7 +11,10 @@ set -e
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$REPO_DIR/releases"
-VERSION="1.0.0"
+VERSION="1.0.1"
+if [[ -f "$REPO_DIR/VERSION" ]]; then
+    VERSION="$(cat "$REPO_DIR/VERSION" | tr -d '[:space:]')"
+fi
 
 echo "=============================================================================="
 echo "  🚀  Building AirMouse Pro v${VERSION} Release Packages for All Platforms"

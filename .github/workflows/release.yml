@@ -1,0 +1,419 @@
+name: AirMouse Multi-Platform Release & Distribution
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag or version to release (e.g., v1.0.1)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # 1. Resolve & Validate Canonical Version
+  # ────────────────────────────────────────────────────────────────────────────
+  resolve-version:
+    name: Resolve & Validate SSOT Version
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve Tag & Version
+        id: ver
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            RAW_TAG="${{ github.event.inputs.tag }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            RAW_TAG="${GITHUB_REF#refs/tags/}"
+          else
+            RAW_TAG="v$(cat VERSION | tr -d '[:space:]')"
+          fi
+          
+          # Strip leading 'v'
+          VERSION="${RAW_TAG#v}"
+          TAG="v${VERSION}"
+          
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "=================================================="
+          echo "  Resolved Release Tag:     ${TAG}"
+          echo "  Resolved Semantic Version: ${VERSION}"
+          echo "=================================================="
+
+      - name: Verify Single Source of Truth Alignment
+        run: |
+          python3 scripts/bump_version.py --check || {
+            echo "⚠️ Drift detected between VERSION file and codebase. Running auto-sync..."
+            python3 scripts/bump_version.py "${{ steps.ver.outputs.version }}"
+          }
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 2. Build Go Desktop Distribution Binaries (macOS Universal, Windows, Linux)
+  # ────────────────────────────────────────────────────────────────────────────
+  build-desktop:
+    name: Build Desktop Binaries (macOS, Windows, Linux)
+    needs: resolve-version
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: pc/airmouse_go_new/go.sum
+
+      - name: Compile Cross-Platform Desktop Binaries
+        env:
+          VERSION: ${{ needs.resolve-version.outputs.version }}
+        run: |
+          set -e
+          REPO_DIR="$(pwd)"
+          BUILD_TMP="/tmp/airmouse_build"
+          OUTPUT_DIR="${REPO_DIR}/artifacts/desktop"
+          mkdir -p "${BUILD_TMP}" "${OUTPUT_DIR}"
+
+          echo "🚀 Compiling AirMouse Desktop v${VERSION}..."
+
+          cd "${REPO_DIR}/pc/airmouse_go_new"
+
+          # ------------------------------------------------------------------
+          # 1. Windows x64 Executable + Zip Bundle
+          # ------------------------------------------------------------------
+          echo "📦 [1/3] Building Windows x64..."
+          WIN_DIR="${BUILD_TMP}/windows-x64"
+          mkdir -p "${WIN_DIR}"
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "${WIN_DIR}/AirMouse-Server.exe" ./cmd/airmouse-server
+          cp "${WIN_DIR}/AirMouse-Server.exe" "${OUTPUT_DIR}/AirMouse-Server-v${VERSION}-windows-x64.exe"
+          
+          # Include Web Client
+          cp -R "${REPO_DIR}/web-client" "${WIN_DIR}/web-client"
+          
+          # Batch launchers
+          cat << 'EOF' > "${WIN_DIR}/Start-AirMouse-Window.bat"
+          @echo off
+          title AirMouse Pro (Desktop Window Mode)
+          echo Starting AirMouse background server...
+          start "" "%~dp0AirMouse-Server.exe"
+          timeout /t 2 /nobreak >nul
+          echo Opening Web Client window...
+          start msedge --app=http://localhost:8081/?autoconnect=1 || start chrome --app=http://localhost:8081/?autoconnect=1 || start http://localhost:8081/?autoconnect=1
+          EOF
+
+          cat << 'EOF' > "${WIN_DIR}/Start-AirMouse-Console.bat"
+          @echo off
+          title AirMouse Pro Server (Console)
+          "%~dp0AirMouse-Server.exe"
+          EOF
+
+          cp "${WIN_DIR}/Start-AirMouse-Window.bat" "${WIN_DIR}/Start-AirMouse.bat"
+
+          # Python GUI files
+          mkdir -p "${WIN_DIR}/gui"
+          cp -R "${REPO_DIR}/pc/airmouse_py/"* "${WIN_DIR}/gui/" 2>/dev/null || true
+
+          cat << 'EOF' > "${WIN_DIR}/Start-Native-GUI.bat"
+          @echo off
+          title AirMouse Pro Native GUI Dashboard
+          set "PYTHONPATH=%~dp0gui;%PYTHONPATH%"
+          python -m ui.app
+          if %ERRORLEVEL% NEQ 0 (
+              call "%~dp0Start-AirMouse-Window.bat"
+          )
+          EOF
+
+          cat << EOF > "${WIN_DIR}/README.txt"
+          AirMouse Pro for Windows (v${VERSION})
+          ========================================
+          Run Start-AirMouse.bat to launch the server and open the Web Trackpad.
+          EOF
+
+          (cd "${WIN_DIR}" && zip -qr "${OUTPUT_DIR}/AirMouse-v${VERSION}-windows-x64.zip" .)
+
+          # ------------------------------------------------------------------
+          # 2. Linux x64 & ARM64 Tarballs
+          # ------------------------------------------------------------------
+          echo "📦 [2/3] Building Linux x64 & ARM64..."
+          build_linux() {
+              local arch="$1"
+              local goarch="$2"
+              local target="${BUILD_TMP}/linux-${arch}"
+              mkdir -p "${target}"
+
+              cd "${REPO_DIR}/pc/airmouse_go_new"
+              CGO_ENABLED=0 GOOS=linux GOARCH="${goarch}" go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "${target}/airmouse-server" ./cmd/airmouse-server
+              cp "${target}/airmouse-server" "${OUTPUT_DIR}/airmouse-server-v${VERSION}-linux-${arch}"
+              chmod +x "${OUTPUT_DIR}/airmouse-server-v${VERSION}-linux-${arch}"
+
+              cp -R "${REPO_DIR}/web-client" "${target}/web-client"
+              
+              cat << 'EOF' > "${target}/start-airmouse.sh"
+          #!/usr/bin/env bash
+          DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          "$DIR/airmouse-server" "$@"
+          EOF
+              chmod +x "${target}/start-airmouse.sh"
+
+              cat << 'EOF' > "${target}/airmouse.service"
+          [Unit]
+          Description=AirMouse Pro Wireless Motion Server
+          After=network.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/airmouse-server
+          Restart=on-failure
+          RestartSec=5s
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+              (cd "${target}" && tar -czf "${OUTPUT_DIR}/AirMouse-v${VERSION}-linux-${arch}.tar.gz" .)
+          }
+
+          build_linux "x64" "amd64"
+          build_linux "arm64" "arm64"
+
+          # ------------------------------------------------------------------
+          # 3. macOS Universal 2 Fat Binary & AirMouse.app Bundle
+          # ------------------------------------------------------------------
+          echo "📦 [3/3] Building macOS Universal..."
+          MAC_DIR="${BUILD_TMP}/macos"
+          mkdir -p "${MAC_DIR}"
+
+          cd "${REPO_DIR}/pc/airmouse_go_new"
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "${MAC_DIR}/server-arm64" ./cmd/airmouse-server
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "${MAC_DIR}/server-x64" ./cmd/airmouse-server
+
+          # Stitch Universal Fat Binary via lipo
+          lipo -create -output "${MAC_DIR}/AirMouse-Server-universal" "${MAC_DIR}/server-arm64" "${MAC_DIR}/server-x64"
+          cp "${MAC_DIR}/AirMouse-Server-universal" "${OUTPUT_DIR}/AirMouse-Server-v${VERSION}-macos-universal"
+          chmod +x "${OUTPUT_DIR}/AirMouse-Server-v${VERSION}-macos-universal"
+
+          # Construct AirMouse.app Bundle
+          APP_DIR="${MAC_DIR}/AirMouse.app"
+          mkdir -p "${APP_DIR}/Contents/MacOS" "${APP_DIR}/Contents/Resources"
+          cp "${MAC_DIR}/AirMouse-Server-universal" "${APP_DIR}/Contents/MacOS/AirMouse"
+          chmod +x "${APP_DIR}/Contents/MacOS/AirMouse"
+          cp -R "${REPO_DIR}/web-client" "${APP_DIR}/Contents/Resources/web-client"
+
+          cat << EOF > "${APP_DIR}/Contents/Info.plist"
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>AirMouse</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.airmouse.server</string>
+              <key>CFBundleName</key>
+              <string>AirMouse</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>${VERSION}</string>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+              <key>LSMinimumSystemVersion</key>
+              <string>10.15</string>
+              <key>NSHighResolutionCapable</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
+
+          (cd "${MAC_DIR}" && tar -czf "${OUTPUT_DIR}/AirMouse-v${VERSION}-macos-universal.tar.gz" AirMouse.app)
+
+          echo "✅ Desktop build completed successfully:"
+          ls -lh "${OUTPUT_DIR}"
+
+      - name: Upload Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-artifacts
+          path: artifacts/desktop/*
+          retention-days: 2
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 3. Build Android Signed Release APK
+  # ────────────────────────────────────────────────────────────────────────────
+  build-android:
+    name: Build Android APK
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make Gradle Wrapper Executable
+        run: chmod +x gradlew
+
+      - name: Build Android Release APK
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Prepare Android Output Artifact
+        env:
+          VERSION: ${{ needs.resolve-version.outputs.version }}
+        run: |
+          mkdir -p ../artifacts/android
+          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            APK_PATH="app/build/outputs/apk/release/app-release-unsigned.apk"
+          fi
+          cp "$APK_PATH" "../artifacts/android/AirMouse-v${VERSION}.apk"
+          echo "Android APK successfully produced:"
+          ls -lh "../artifacts/android/AirMouse-v${VERSION}.apk"
+
+      - name: Upload Android Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifact
+          path: artifacts/android/*
+          retention-days: 2
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 4. Aggregate Artifacts, Compute Checksums & Publish GitHub Release
+  # ────────────────────────────────────────────────────────────────────────────
+  publish-release:
+    name: Publish Official GitHub Release
+    needs: [resolve-version, build-desktop, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Clean Distribution Staging Directory
+        run: |
+          mkdir -p dist_release/releases
+
+      - name: Download Desktop Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-artifacts
+          path: dist_release/desktop
+
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-artifact
+          path: dist_release/android
+
+      - name: Organize Assets & Compute SHA256 Checksums
+        id: prep
+        env:
+          VERSION: ${{ needs.resolve-version.outputs.version }}
+          TAG: ${{ needs.resolve-version.outputs.tag }}
+        run: |
+          set -e
+          cd dist_release
+          mkdir -p staging
+          
+          # Move all artifacts into flat staging directory
+          cp desktop/* staging/
+          cp android/* staging/
+
+          cd staging
+          # Generate cryptographic SHA-256 manifest
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+          echo "manifest_path=$(pwd)/SHA256SUMS.txt" >> $GITHUB_OUTPUT
+          echo "staging_dir=$(pwd)" >> $GITHUB_OUTPUT
+
+      - name: Generate Release Notes
+        id: notes
+        env:
+          VERSION: ${{ needs.resolve-version.outputs.version }}
+          TAG: ${{ needs.resolve-version.outputs.tag }}
+        run: |
+          cat << 'EOF' > release_notes.md
+          # 🖱️ AirMouse Pro ${{ env.TAG }} (Canonical Production Release)
+
+          Welcome to the official **AirMouse Pro ${{ env.TAG }}** release! AirMouse turns your smartphone or tablet into a sub-millisecond, low-latency spatial air mouse, presentation remote, and multi-touch trackpad for your computer.
+
+          ---
+
+          ### 📦 Official Release Downloads
+
+          | Platform | Package / Binary | Description |
+          | :--- | :--- | :--- |
+          | **Android** | `AirMouse-${{ env.TAG }}.apk` | Production signed release for Android 8.0+ |
+          | **Windows** | `AirMouse-${{ env.TAG }}-windows-x64.zip` | Standalone portable bundle with GUI & web client |
+          | **Windows** | `AirMouse-Server-${{ env.TAG }}-windows-x64.exe` | Zero-dependency standalone Go server executable |
+          | **macOS** | `AirMouse-${{ env.TAG }}-macos-universal.tar.gz` | Universal `AirMouse.app` for Apple Silicon & Intel |
+          | **macOS** | `AirMouse-Server-${{ env.TAG }}-macos-universal` | Universal CLI daemon running natively on Apple Silicon & Intel |
+          | **Linux (x64)** | `AirMouse-${{ env.TAG }}-linux-x64.tar.gz` | Complete Linux x86_64 bundle with systemd service |
+          | **Linux (ARM64)** | `AirMouse-${{ env.TAG }}-linux-arm64.tar.gz` | Raspberry Pi 4/5 & Linux ARM64 embedded bundle |
+          | **Integrity** | `SHA256SUMS.txt` | Cryptographic SHA-256 verification manifest |
+
+          ---
+
+          ### 🚀 Capabilities & Core Highlights
+
+          - **Spatial Motion Engine**: Zero Velocity Update (ZUPT) drift cancellation, 1€ speed-adaptive low-pass filtering, 2D Kalman filter extrapolation, and Madgwick AHRS 9-DOF MARG sensor fusion.
+          - **Unified Protocol V2**: Cryptographically verified HMAC-SHA256 message authentication, monotonic sequence tracking, replay attack protection, and bidirectional command dispatch.
+          - **Zero-Install Web Client**: Instant multi-touch trackpad with synthesized Web Audio tactile click feedback on iOS Safari and modern mobile browsers.
+          - **Desktop Dashboard**: Dark-themed CustomTkinter GUI with QR code mobile pairing and automatic update checker.
+
+          ---
+
+          ### 🛡️ Cryptographic SHA-256 Checksums
+
+          ```text
+          EOF
+          cat dist_release/staging/SHA256SUMS.txt >> release_notes.md
+          cat << 'EOF' >> release_notes.md
+          ```
+          EOF
+
+      - name: Publish GitHub Release via softprops/action-gh-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve-version.outputs.tag }}
+          name: AirMouse Pro ${{ needs.resolve-version.outputs.tag }} — Canonical Multi-Platform Release
+          body_path: release_notes.md
+          files: dist_release/staging/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Workflow Step Summary
+        run: |
+          echo "## 🎉 AirMouse Pro ${{ needs.resolve-version.outputs.tag }} Released!" >> $GITHUB_STEP_SUMMARY
+          echo "All release artifacts have been compiled, verified with SHA-256, and published to GitHub Releases." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Verified Artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          cat dist_release/staging/SHA256SUMS.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

@@ -27,9 +27,9 @@ import (
 )
 
 var (
-	version   = "1.0.0"
+	version   = "1.0.1"
 	buildTime = "2026-10-25"
-	gitCommit = "v1.0.0-final"
+	gitCommit = "v1.0.1-release"
 )
 
 func main() {
@@ -334,7 +334,7 @@ func checkGitHubUpdate() {
 		if err != nil {
 			return
 		}
-		req.Header.Set("User-Agent", "AirMouse-Go-Server/1.0.0")
+		req.Header.Set("User-Agent", "AirMouse-Go-Server/1.0.1")
 		req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 		resp, err := client.Do(req)

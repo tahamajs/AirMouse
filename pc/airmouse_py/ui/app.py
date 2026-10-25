@@ -23,7 +23,7 @@ logger = logging.getLogger("AirMouseGUI")
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 PROTOCOL_VERSION = "Protocol V2 (Canonical)"
 GITHUB_REPO = "tahamajs/AirMouse"
 
