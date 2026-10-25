@@ -592,11 +592,15 @@ func (s *Server) writeLoop(client *WSClient) {
 // processMessage processes incoming messages.
 func (s *Server) processMessage(client *WSClient, msgType string, payload map[string]any, id *string) {
 	if id != nil && (msgType == "click" || msgType == "doubleclick" || msgType == "rightclick" || msgType == "scroll" ||
-		msgType == "left_click" || msgType == "right_click" || msgType == "double_click" || msgType == "middle_click" ||
-		msgType == "key" || msgType == "text" || msgType == "voice_command") {
+		msgType == "left_click" || msgType == "right_click" || msgType == "double_click" || msgType == "middle_click" || msgType == "middleclick" ||
+		msgType == "hscroll" || msgType == "key" || msgType == "keypress" || msgType == "key_press" || msgType == "keydown" ||
+		msgType == "key_down" || msgType == "keyup" || msgType == "key_up" || msgType == "hotkey" || msgType == "type" || msgType == "text" ||
+		msgType == "slide_next" || msgType == "slide_prev" || msgType == "volume_up" || msgType == "volume_down" || msgType == "mute" ||
+		msgType == "play_pause" || msgType == "lock_screen" || msgType == "power_sleep" || msgType == "brightness" || msgType == "voice_command") {
 		if ack := AckMessage(id); len(ack) > 0 {
 			select {
 			case client.Send <- ack:
+				utils.RecordPacketOut(int64(len(ack)))
 			default:
 				utils.LogDebug("WebSocket ack dropped (client send buffer full): %s", client.ID)
 			}
@@ -605,14 +609,14 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 
 	// If auth is enabled, unauthenticated clients must authenticate via hello before sending actions
 	if cfg := config.Get(); cfg.AuthEnabled {
-		if !client.Authenticated.Load() && msgType != "hello" && msgType != "device_info" && msgType != "ping" {
+		if !client.Authenticated.Load() && msgType != "hello" && msgType != "device_info" && msgType != "ping" && msgType != "heartbeat" {
 			utils.LogDebug("Ignoring WebSocket %s while unauthenticated: device=%s", msgType, client.ID)
 			return
 		}
 	}
 
 	approved := client.Approved.Load()
-	if !approved && msgType != "hello" && msgType != "device_info" && msgType != "ping" {
+	if !approved && msgType != "hello" && msgType != "device_info" && msgType != "ping" && msgType != "heartbeat" {
 		utils.LogDebug("Ignoring WebSocket %s while waiting for approval: device=%s", msgType, client.ID)
 		return
 	}
@@ -624,6 +628,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			ts := int64(toFloat64(tsVal))
 			if ts > 0 {
 				if err := validateTimestamp(ts, nowMs); err != nil {
+					utils.RecordDroppedPacket()
 					utils.LogInfo("WebSocket replay rejection (timestamp): client=%s err=%v", client.ID, err)
 					return
 				}
@@ -633,6 +638,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			seq := uint64(toFloat64(seqVal))
 			if seq > 0 {
 				if err := client.ReplayDetector.checkAndAdvanceSeq(seq); err != nil {
+					utils.RecordDroppedPacket()
 					utils.LogInfo("WebSocket replay rejection (sequence): client=%s err=%v", client.ID, err)
 					return
 				}
@@ -644,15 +650,45 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	case "file":
 		s.processFileMessage(client, payload)
 
-	case "move":
+	case "move", "move_rel":
 		dx := firstFloat64(payload, "dx", "DeltaX", "deltaX")
 		dy := firstFloat64(payload, "dy", "DeltaY", "deltaY")
 		if math.IsNaN(dx) || math.IsInf(dx, 0) || math.IsNaN(dy) || math.IsInf(dy, 0) ||
 			math.Abs(dx) > maxCoordLimit || math.Abs(dy) > maxCoordLimit {
+			utils.RecordDroppedPacket()
 			utils.LogInfo("WebSocket move dropped (out of bounds or NaN/Inf): dx=%.2f dy=%.2f", dx, dy)
 			return
 		}
 		if s.mouse != nil {
+			s.mouse.Move(dx, dy)
+		}
+
+	case "move_abs":
+		targetX := firstFloat64(payload, "x", "target_x", "X")
+		targetY := firstFloat64(payload, "y", "target_y", "Y")
+		if math.IsNaN(targetX) || math.IsInf(targetX, 0) || math.IsNaN(targetY) || math.IsInf(targetY, 0) {
+			utils.RecordDroppedPacket()
+			utils.LogInfo("WebSocket move_abs dropped (NaN/Inf): x=%.2f y=%.2f", targetX, targetY)
+			return
+		}
+		if s.mouse != nil {
+			curX, curY := s.mouse.GetPosition()
+			dx := targetX - curX
+			dy := targetY - curY
+			if math.Abs(dx) > maxCoordLimit {
+				if dx > 0 {
+					dx = maxCoordLimit
+				} else {
+					dx = -maxCoordLimit
+				}
+			}
+			if math.Abs(dy) > maxCoordLimit {
+				if dy > 0 {
+					dy = maxCoordLimit
+				} else {
+					dy = -maxCoordLimit
+				}
+			}
 			s.mouse.Move(dx, dy)
 		}
 
@@ -698,7 +734,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		}
 		utils.LogDebug("Right click received: device=%s", client.ID)
 
-	case "middle_click":
+	case "middle_click", "middleclick":
 		if s.mouse != nil {
 			s.mouse.Click("middle")
 		}
@@ -707,6 +743,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 	case "scroll":
 		delta := firstInt(payload, "delta", "Scroll", "scroll", "amount", "dy")
 		if math.Abs(float64(delta)) > maxScrollLimit {
+			utils.RecordDroppedPacket()
 			utils.LogInfo("WebSocket scroll dropped (|delta| <= %.1f): delta=%d", maxScrollLimit, delta)
 			return
 		}
@@ -714,6 +751,65 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			s.mouse.Scroll(delta)
 		}
 		utils.LogDebug("Scroll received: device=%s, delta=%d", client.ID, delta)
+
+	case "hscroll":
+		delta := firstInt(payload, "delta", "hscroll", "amount", "dx")
+		if math.Abs(float64(delta)) > maxScrollLimit {
+			utils.RecordDroppedPacket()
+			utils.LogInfo("WebSocket hscroll dropped (|delta| <= %.1f): delta=%d", maxScrollLimit, delta)
+			return
+		}
+		sysaction.MouseHScroll(delta)
+		utils.LogDebug("WebSocket hscroll received: device=%s, delta=%d", client.ID, delta)
+
+	case "slide_next":
+		utils.LogInfo("WebSocket slide_next received: device=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("slide_next")
+
+	case "slide_prev":
+		utils.LogInfo("WebSocket slide_prev received: device=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("slide_prev")
+
+	case "volume_up":
+		utils.LogInfo("WebSocket volume_up received: device=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("volume_up")
+
+	case "volume_down":
+		utils.LogInfo("WebSocket volume_down received: device=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("volume_down")
+
+	case "mute":
+		utils.LogInfo("WebSocket mute received: device=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("mute")
+
+	case "play_pause":
+		utils.LogInfo("WebSocket play_pause received: device=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("play_pause")
+
+	case "lock_screen":
+		utils.LogInfo("WebSocket lock_screen received: device=%s", client.ID)
+		_ = syscmd.ExecuteSystemCommand("lock_screen")
+
+	case "power_sleep":
+		utils.LogInfo("WebSocket power_sleep received: device=%s", client.ID)
+		sysaction.Execute(sysaction.ActionSleep)
+
+	case "brightness":
+		dir, _ := payload["direction"].(string)
+		if dir == "" {
+			dir, _ = payload["action"].(string)
+		}
+		delta := firstFloat64(payload, "delta", "amount", "value")
+		if delta < 0 {
+			dir = "down"
+		} else if dir == "" {
+			dir = "up"
+		}
+		if delta == 0 {
+			delta = 10.0
+		}
+		utils.LogInfo("WebSocket brightness received: dir=%s delta=%.1f device=%s", dir, delta, client.ID)
+		sysaction.AdjustBrightness(dir, math.Abs(delta))
 
 	case "hello", "device_info":
 		token, _ := payload["token"].(string)

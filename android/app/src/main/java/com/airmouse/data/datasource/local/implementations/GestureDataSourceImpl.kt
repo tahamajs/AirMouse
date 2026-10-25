@@ -4,7 +4,6 @@ import com.airmouse.data.datasource.local.dao.GestureDao
 import com.airmouse.data.datasource.local.dao.TrainingSampleDao
 import com.airmouse.data.datasource.local.entity.GestureTemplateEntity
 import com.airmouse.data.datasource.local.entity.TrainingSampleEntity
-import com.airmouse.data.mapper.DomainToEntityMapper
 import com.airmouse.domain.model.CustomGestureTemplate
 import com.airmouse.domain.model.GestureTrainingStats
 import kotlinx.coroutines.sync.Mutex
@@ -28,17 +27,17 @@ class GestureDataSourceImpl @Inject constructor(
     // ============================================================
 
     override suspend fun getAllTemplates(): List<CustomGestureTemplate> {
-        return gestureDao.getAllTemplates().map { DomainToEntityMapper.mapToDomain(it) }
+        return gestureDao.getAllTemplates().map { it.toDomainModel() }
     }
 
     override suspend fun saveAllTemplates(templates: List<CustomGestureTemplate>) {
         templates.forEach { template ->
-            gestureDao.insertTemplate(DomainToEntityMapper.mapToEntity(template))
+            gestureDao.insertTemplate(GestureTemplateEntity.fromDomainModel(template))
         }
     }
 
     override suspend fun saveGestureTemplate(template: CustomGestureTemplate) {
-        val entity = DomainToEntityMapper.mapToEntity(template)
+        val entity = GestureTemplateEntity.fromDomainModel(template)
         gestureDao.insertTemplate(entity)
     }
 
@@ -52,11 +51,11 @@ class GestureDataSourceImpl @Inject constructor(
     // ============================================================
 
     override suspend fun getGestureTemplate(id: String): CustomGestureTemplate? {
-        return gestureDao.getTemplateById(id)?.let { DomainToEntityMapper.mapToDomain(it) }
+        return gestureDao.getTemplateById(id)?.toDomainModel()
     }
 
     override suspend fun updateGestureTemplate(template: CustomGestureTemplate) {
-        val entity = DomainToEntityMapper.mapToEntity(template)
+        val entity = GestureTemplateEntity.fromDomainModel(template)
         gestureDao.updateTemplate(entity)
     }
 
@@ -66,7 +65,7 @@ class GestureDataSourceImpl @Inject constructor(
     }
 
     override suspend fun getFavoriteTemplates(): List<CustomGestureTemplate> {
-        return gestureDao.getFavoriteTemplates().map { DomainToEntityMapper.mapToDomain(it) }
+        return gestureDao.getFavoriteTemplates().map { it.toDomainModel() }
     }
 
     override suspend fun saveTrainingSamples(gestureName: String, samples: List<FloatArray>) {
@@ -148,7 +147,7 @@ class GestureDataSourceImpl @Inject constructor(
     }
 
     override suspend fun getMostUsedGestures(limit: Int): List<CustomGestureTemplate> {
-        return gestureDao.getAllTemplatesByUsage().take(limit).map { DomainToEntityMapper.mapToDomain(it) }
+        return gestureDao.getAllTemplatesByUsage().take(limit).map { it.toDomainModel() }
     }
 
     override suspend fun setConfidenceThreshold(threshold: Float) {

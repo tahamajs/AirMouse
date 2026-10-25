@@ -3,6 +3,8 @@ package com.airmouse.data.datasource.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.airmouse.domain.model.CustomGestureTemplate
+import com.airmouse.domain.model.GestureType
 
 @Entity(tableName = "gesture_templates")
 data class GestureTemplateEntity(
@@ -62,4 +64,40 @@ data class GestureTemplateEntity(
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis()
-)
+) {
+    fun toDomainModel(): CustomGestureTemplate {
+        return CustomGestureTemplate(
+            id = id,
+            name = name,
+            type = try { GestureType.valueOf(type) } catch (_: Exception) { GestureType.CUSTOM },
+            action = action,
+            confidence = confidenceThreshold,
+            isEnabled = isEnabled,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            usageCount = detectionCount,
+            description = description ?: ""
+        )
+    }
+
+    companion object {
+        fun fromDomainModel(template: CustomGestureTemplate): GestureTemplateEntity {
+            return GestureTemplateEntity(
+                id = template.id,
+                name = template.name,
+                type = template.type.name,
+                action = template.action,
+                confidence = template.confidence,
+                isEnabled = template.isEnabled,
+                isCustom = template.type == GestureType.CUSTOM,
+                isSystem = template.type != GestureType.CUSTOM,
+                isFavorite = template.isFavorite,
+                detectionCount = template.usageCount,
+                confidenceThreshold = template.confidence,
+                createdAt = template.createdAt,
+                updatedAt = template.updatedAt,
+                description = template.description
+            )
+        }
+    }
+}
