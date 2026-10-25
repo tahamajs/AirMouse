@@ -45,23 +45,48 @@ cp "$WIN_BUILD_DIR/AirMouse-Server.exe" "$DIST_DIR/windows/AirMouse-Server-v${VE
 # Copy Web Client for offline web UI serving
 cp -R "$REPO_DIR/web-client" "$WIN_BUILD_DIR/web-client"
 
-# Windows 1-click batch launcher
-cat << 'EOF' > "$WIN_BUILD_DIR/Start-AirMouse.bat"
+# Windows 1-click batch launcher (Window mode)
+cat << 'EOF' > "$WIN_BUILD_DIR/Start-AirMouse-Window.bat"
 @echo off
-title AirMouse Pro Server
+title AirMouse Pro (Desktop Window Mode)
 echo ===================================================
-echo     AirMouse Pro Server - Universal Wireless Mouse
+echo     AirMouse Pro Server - Window Application Mode
 echo ===================================================
 echo.
 echo Starting AirMouse background server...
 start "" "%~dp0AirMouse-Server.exe"
-echo Server started! Opening web client...
 timeout /t 2 /nobreak >nul
-start "" "http://localhost:8080/?autoconnect=1"
+echo Opening standalone application window...
+start msedge --app=http://localhost:8081/?autoconnect=1 || start chrome --app=http://localhost:8081/?autoconnect=1 || start http://localhost:8081/?autoconnect=1
+EOF
+
+# Windows 1-click batch launcher (Console mode)
+cat << 'EOF' > "$WIN_BUILD_DIR/Start-AirMouse-Console.bat"
+@echo off
+title AirMouse Pro Server (Console)
+echo ===================================================
+echo     AirMouse Pro Server - Console Mode
+echo ===================================================
 echo.
-echo To pair phone, scan the QR code displayed in the console
-echo or navigate to http://<YOUR_PC_IP>:8080 on your phone.
-pause
+"%~dp0AirMouse-Server.exe"
+EOF
+
+cp "$WIN_BUILD_DIR/Start-AirMouse-Window.bat" "$WIN_BUILD_DIR/Start-AirMouse.bat"
+
+# Copy Python Desktop GUI files into the Windows bundle
+mkdir -p "$WIN_BUILD_DIR/gui"
+cp -R "$REPO_DIR/pc/airmouse_py/"* "$WIN_BUILD_DIR/gui/" 2>/dev/null || true
+
+cat << 'EOF' > "$WIN_BUILD_DIR/Start-Native-GUI.bat"
+@echo off
+title AirMouse Pro Native GUI Dashboard
+echo Launching Native Desktop GUI Window...
+set "PYTHONPATH=%~dp0gui;%PYTHONPATH%"
+python -m ui.app
+if %ERRORLEVEL% NEQ 0 (
+    echo Python GUI failed. Starting Web App Window mode...
+    call "%~dp0Start-AirMouse-Window.bat"
+)
 EOF
 
 # Quickstart README for Windows
