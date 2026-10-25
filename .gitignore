@@ -18,10 +18,12 @@ $RECYCLE.BIN/
 # Editor & IDE Directories
 # ------------------------
 .idea/
+**/.idea/
 *.iml
 *.ipr
 *.iws
 .vscode/
+**/.vscode/
 *.swp
 *.swo
 *~
@@ -60,9 +62,12 @@ vendor/
 # Python Artifacts & Environments
 # -------------------------------
 __pycache__/
+**/*__pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.egg-info/
+**/*.egg-info/
 .Python
 env/
 venv/
@@ -79,6 +84,7 @@ htmlcov/
 # Android & Gradle Build Artifacts
 # --------------------------------
 .gradle/
+**/.gradle/
 .gradlehome/
 .gradle-home/
 **/.gradle-home/
@@ -86,6 +92,7 @@ build/
 */build/
 **/build/
 .cxx/
+**/cxx/
 local.properties
 debug.keystore
 !android/app/debug.keystore

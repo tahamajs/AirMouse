@@ -1,3 +1,0 @@
-[console_scripts]
-airmouse-gui = ui.app:main
-airmouse-server = airmouse.cli:main
