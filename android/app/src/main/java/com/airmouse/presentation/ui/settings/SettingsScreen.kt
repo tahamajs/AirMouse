@@ -1514,9 +1514,9 @@ fun AboutSection(viewModel: SettingsViewModel) {
             Text("🎯", fontSize = 48.sp)
             Spacer(modifier = Modifier.height(16.dp))
             Text("Air Mouse Pro", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
-            Text("Version 4.9.9", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+            Text("Version 1.0.0 (Release v1.0.0-final)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Turn your phone into a wireless mouse", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f))
+            Text("Turn your phone into a wireless air mouse", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
             Spacer(modifier = Modifier.height(16.dp))
@@ -1528,12 +1528,12 @@ fun AboutSection(viewModel: SettingsViewModel) {
                 Text("🏛️ University of Tehran", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
                 Text("📱 Built with Kotlin & Compose", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
                 Text(
-                    "🔗 github.com/airmouse",
+                    "🔗 github.com/tahamajs/AirMouse",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { viewModel.handleEvent(SettingsEvent.OpenGitHub) }
                 )
-                Text("© 2025 Air Mouse Team", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.5f))
+                Text("© 2026 Air Mouse Team • MIT License", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.5f))
             }
             Spacer(modifier = Modifier.height(16.dp))
             Button(
