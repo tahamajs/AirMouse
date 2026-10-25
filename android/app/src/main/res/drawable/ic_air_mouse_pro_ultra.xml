@@ -2,8 +2,9 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="144dp"
     android:height="144dp"
-    android:viewportWidth="144"
-    android:viewportHeight="144">
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+    <group android:translateX="72" android:translateY="72">
 
     <!-- Background layers -->
     <path
@@ -147,4 +148,5 @@
     <path android:strokeColor="#4A6FA5" android:strokeWidth="1.5" android:pathData="M12,132 L20,132 M12,132 L12,124"/>
     <path android:strokeColor="#4A6FA5" android:strokeWidth="1.5" android:pathData="M132,132 L124,132 M132,132 L132,124"/>
 
+    </group>
 </vector>

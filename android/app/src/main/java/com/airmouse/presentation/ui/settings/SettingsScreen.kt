@@ -332,7 +332,7 @@ fun SettingsQuickActionsCard(
                 Button(
                     onClick = { viewModel.handleEvent(SettingsEvent.SaveSettings) },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1), contentColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
                 ) {
                     Text("Save Config")
                 }
@@ -400,7 +400,7 @@ fun SectionDetailScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(section.icon, contentDescription = section.title, tint = Color(0xFF00E5FF))
+                        Icon(section.icon, contentDescription = section.title, tint = MaterialTheme.colorScheme.primary)
                         Text(section.title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 },
@@ -434,10 +434,10 @@ fun SectionDetailScreen(
                                 modifier = Modifier
                                     .size(44.dp)
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(Color(0xFF00E5FF).copy(alpha = 0.12f)),
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(section.icon, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(24.dp))
+                                Icon(section.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                             }
                             Column {
                                 Text(section.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge, color = Color.White)
@@ -508,8 +508,8 @@ fun SettingsSwitch(
                 onCheckedChange = onCheckedChange,
                 enabled = enabled,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF00E5FF),
-                    checkedTrackColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                     uncheckedThumbColor = Color.White.copy(alpha = 0.6f),
                     uncheckedTrackColor = Color.White.copy(alpha = 0.15f)
                 )
@@ -542,7 +542,7 @@ fun SettingsSlider(
                 Text(
                     formatValue(value),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF00E5FF),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -555,8 +555,8 @@ fun SettingsSlider(
                 valueRange = valueRange,
                 steps = steps,
                 colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFF00E5FF),
-                    activeTrackColor = Color(0xFF00E5FF),
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
                     inactiveTrackColor = Color.White.copy(alpha = 0.2f)
                 )
             )
@@ -608,7 +608,7 @@ fun CursorSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
                             onClick = { viewModel.handleEvent(SettingsEvent.ApplySmoothnessPreset(preset)) },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.1f),
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
                                 contentColor = if (isSelected) Color.Black else Color.White
                             ),
                             shape = RoundedCornerShape(10.dp)
@@ -793,10 +793,10 @@ fun HapticSettings(uiState: SettingsUiState, viewModel: SettingsViewModel) {
                         FilterChip(
                             selected = uiState.hapticStrength == strength,
                             onClick = { viewModel.handleEvent(SettingsEvent.UpdateHapticStrength(strength)) },
-                            label = { Text(strength.displayName, color = if (uiState.hapticStrength == strength) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                            label = { Text(strength.displayName, color = if (uiState.hapticStrength == strength) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)) },
                             modifier = Modifier.weight(1f),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                                 containerColor = Color.White.copy(alpha = 0.06f)
                             )
                         )
@@ -876,40 +876,40 @@ fun NotificationSettings(uiState: SettingsUiState, viewModel: SettingsViewModel)
                     FilterChip(
                         selected = uiState.notificationsEnabled,
                         onClick = { viewModel.handleEvent(SettingsEvent.ToggleNotifications) },
-                        label = { Text("Enabled", color = if (uiState.notificationsEnabled) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        label = { Text("Enabled", color = if (uiState.notificationsEnabled) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)) },
                         modifier = Modifier.weight(1f),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                             containerColor = Color.White.copy(alpha = 0.06f)
                         )
                     )
                     FilterChip(
                         selected = uiState.notificationOnGesture,
                         onClick = { viewModel.handleEvent(SettingsEvent.ToggleNotificationOnGesture) },
-                        label = { Text("Gesture", color = if (uiState.notificationOnGesture) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        label = { Text("Gesture", color = if (uiState.notificationOnGesture) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)) },
                         modifier = Modifier.weight(1f),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                             containerColor = Color.White.copy(alpha = 0.06f)
                         )
                     )
                     FilterChip(
                         selected = uiState.soundEnabled,
                         onClick = { viewModel.handleEvent(SettingsEvent.ToggleSound) },
-                        label = { Text("Sound", color = if (uiState.soundEnabled) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        label = { Text("Sound", color = if (uiState.soundEnabled) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)) },
                         modifier = Modifier.weight(1f),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                             containerColor = Color.White.copy(alpha = 0.06f)
                         )
                     )
                     FilterChip(
                         selected = uiState.visualFeedback,
                         onClick = { viewModel.handleEvent(SettingsEvent.ToggleVisualFeedback) },
-                        label = { Text("Visual", color = if (uiState.visualFeedback) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        label = { Text("Visual", color = if (uiState.visualFeedback) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)) },
                         modifier = Modifier.weight(1f),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                             containerColor = Color.White.copy(alpha = 0.06f)
                         )
                     )
@@ -966,7 +966,7 @@ fun DisplaySettings(
                 Text("Theme", style = MaterialTheme.typography.bodyLarge, color = Color.White, fontWeight = FontWeight.Medium)
                 Text("Choose app color scheme", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.55f))
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Quick themes", style = MaterialTheme.typography.labelLarge, color = Color(0xFF00E5FF))
+                Text("Quick themes", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("system", "light", "dark", "pure_black", "high_contrast").forEach { theme ->
@@ -979,11 +979,11 @@ fun DisplaySettings(
                                     "pure_black" -> "Pure Black"; "high_contrast" -> "High Contrast"
                                     else -> theme
                                 },
-                                color = if (uiState.theme == theme) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)
+                                color = if (uiState.theme == theme) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)
                             ) },
                             modifier = Modifier.weight(1f),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                                 containerColor = Color.White.copy(alpha = 0.06f)
                             )
                         )
@@ -1048,7 +1048,7 @@ fun ThemesShortcutCard(navigationActions: NavigationActions? = null) {
             if (navigationActions != null) {
                 Button(
                     onClick = { navigationActions.navigateToThemes() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD500F9).copy(alpha = 0.8f), contentColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Open Themes") }
             }
@@ -1079,10 +1079,10 @@ fun SettingsFontSizeCard(
                     FilterChip(
                         selected = preset == selectedPreset,
                         onClick = { onSelected(preset.valueSp) },
-                        label = { Text(preset.label, color = if (preset == selectedPreset) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.8f)) },
+                        label = { Text(preset.label, color = if (preset == selectedPreset) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)) },
                         modifier = Modifier.weight(1f),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.18f),
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                             containerColor = Color.White.copy(alpha = 0.06f)
                         )
                     )
@@ -1315,13 +1315,13 @@ fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel, n
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF00E5FF).copy(alpha = 0.15f)),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Bluetooth,
                             contentDescription = null,
-                            tint = Color(0xFF00E5FF),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -1333,7 +1333,7 @@ fun ConnectionSettings(uiState: SettingsUiState, viewModel: SettingsViewModel, n
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = Color(0xFF00E5FF)
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -1514,7 +1514,7 @@ fun AboutSection(viewModel: SettingsViewModel) {
             Text("🎯", fontSize = 48.sp)
             Spacer(modifier = Modifier.height(16.dp))
             Text("Air Mouse Pro", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
-            Text("Version 4.9.9", style = MaterialTheme.typography.bodyLarge, color = Color(0xFF00E5FF))
+            Text("Version 4.9.9", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
             Text("Turn your phone into a wireless mouse", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(16.dp))
@@ -1530,7 +1530,7 @@ fun AboutSection(viewModel: SettingsViewModel) {
                 Text(
                     "🔗 github.com/airmouse",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF00E5FF),
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { viewModel.handleEvent(SettingsEvent.OpenGitHub) }
                 )
                 Text("© 2025 Air Mouse Team", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.5f))
@@ -1539,7 +1539,7 @@ fun AboutSection(viewModel: SettingsViewModel) {
             Button(
                 onClick = { viewModel.handleEvent(SettingsEvent.OpenLicense) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1), contentColor = Color.White)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
             ) {
                 Text("Open Source Licenses")
             }

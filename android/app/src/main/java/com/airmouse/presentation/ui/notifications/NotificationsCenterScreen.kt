@@ -55,19 +55,12 @@ fun NotificationsCenterScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Gradient Header Card
-            val gradientBrush = Brush.linearGradient(
-                colors = listOf(
-                    MaterialTheme.colorScheme.primary,
-                    MaterialTheme.colorScheme.secondary
-                )
-            )
-
+            // Sleek Surface Card (Replaces random bright gradient)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
-                    .background(gradientBrush)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(24.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

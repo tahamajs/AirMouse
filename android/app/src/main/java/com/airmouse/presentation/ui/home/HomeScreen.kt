@@ -46,6 +46,10 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airmouse.files.TransferState
+import com.airmouse.presentation.theme.Success
+import com.airmouse.presentation.theme.Warning
+import com.airmouse.presentation.theme.Info
+import com.airmouse.presentation.theme.Error as ThemeError
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
@@ -144,11 +148,18 @@ fun HomeScreen(
         is HomeViewModel.ConnectionState.Disconnected -> "Disconnected"
     }
     val statusAccent = when (connectionState) {
-        is HomeViewModel.ConnectionState.Connected -> Color(0xFF10B981)
-        is HomeViewModel.ConnectionState.WaitingForApproval -> Color(0xFFF59E0B)
-        is HomeViewModel.ConnectionState.Connecting -> Color(0xFF3B82F6)
-        is HomeViewModel.ConnectionState.Error -> Color(0xFFEF4444)
-        is HomeViewModel.ConnectionState.Disconnected -> Color(0xFF64748B)
+        is HomeViewModel.ConnectionState.Connected -> Success
+        is HomeViewModel.ConnectionState.WaitingForApproval -> Warning
+        is HomeViewModel.ConnectionState.Connecting -> Info
+        is HomeViewModel.ConnectionState.Error -> MaterialTheme.colorScheme.error
+        is HomeViewModel.ConnectionState.Disconnected -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    LaunchedEffect(connectionState) {
+        if (connectionState is HomeViewModel.ConnectionState.Error) {
+            val msg = connectionState.message.ifBlank { "Please check server IP and port." }
+            snackbarHostState.showSnackbar("Connection failed: $msg")
+        }
     }
 
     LaunchedEffect(isConnectionPending, approvalCountdownMs) {
@@ -854,7 +865,7 @@ fun ConnectionToggleButton(
                         },
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        color = if (isConnected) accentColor else if (isAutoConnectEnabled) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurface
+                        color = if (isConnected) accentColor else if (isAutoConnectEnabled) Warning else MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = statusText,
@@ -872,7 +883,7 @@ fun ConnectionToggleButton(
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (isAutoConnectSwitchEnabled) {
-                            if (isAutoConnectEnabled) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
+                            if (isAutoConnectEnabled) Success else MaterialTheme.colorScheme.onSurfaceVariant
                         } else {
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         }
@@ -883,7 +894,7 @@ fun ConnectionToggleButton(
                         enabled = isAutoConnectSwitchEnabled,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF10B981),
+                            checkedTrackColor = Success,
                             uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
@@ -900,9 +911,9 @@ fun ConnectionToggleButton(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = when {
-                        isConnected -> Color(0xFFEF4444)
-                        isConnecting -> Color(0xFFF59E0B)
-                        else -> Color(0xFF10B981)
+                        isConnected -> ThemeError
+                        isConnecting -> Warning
+                        else -> Success
                     },
                     contentColor = Color.White,
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -983,7 +994,7 @@ fun ConnectionToggleButton(
                 Text(
                     text = "Auto-reconnect is ON. Disconnect closes this session, then reconnects automatically.",
                     fontSize = 11.sp,
-                    color = Color(0xFFF59E0B),
+                    color = Warning,
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (!isConnected && !isAutoConnectEnabled) {
@@ -997,7 +1008,7 @@ fun ConnectionToggleButton(
                 Text(
                     text = "Connected to server. Mouse control is active.",
                     fontSize = 11.sp,
-                    color = Color(0xFF10B981),
+                    color = Success,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -1024,10 +1035,10 @@ fun AnimatedStatusDot(
 
     val color by animateColorAsState(
         targetValue = when {
-            isConnected -> Color(0xFF10B981)
-            isConnecting -> Color(0xFFF59E0B)
-            isAutoConnectEnabled -> Color(0xFFF59E0B)
-            else -> Color(0xFFEF4444)
+            isConnected -> Success
+            isConnecting -> Warning
+            isAutoConnectEnabled -> Warning
+            else -> ThemeError
         },
         animationSpec = tween(500),
         label = "statusColor"
@@ -1160,9 +1171,9 @@ private fun SensorVisualizerShortcutCard(
 ) {
     val ready = isRegistered && isCalibrated
     val accent = when {
-        isConnected -> Color(0xFF10B981)
-        ready -> Color(0xFF38BDF8)
-        else -> Color(0xFFF59E0B)
+        isConnected -> Success
+        ready -> Info
+        else -> Warning
     }
 
     Card(
@@ -1285,19 +1296,19 @@ private fun InlineSensorChartsCard(
                 MiniChartColumn(
                     title = "Gyro",
                     values = gyroSeries,
-                    color = Color(0xFF38BDF8),
+                    color = Info,
                     modifier = Modifier.weight(1f)
                 )
                 MiniChartColumn(
                     title = "Accel",
                     values = accelSeries,
-                    color = Color(0xFF22C55E),
+                    color = Success,
                     modifier = Modifier.weight(1f)
                 )
                 MiniChartColumn(
                     title = "Mag",
                     values = magSeries,
-                    color = Color(0xFFF59E0B),
+                    color = Warning,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -1316,9 +1327,9 @@ private fun DeviceIdentityCard(
     isCalibrated: Boolean
 ) {
     val statusColor = when {
-        isConnected && isCalibrated -> Color(0xFF10B981)
-        isConnected -> Color(0xFF3B82F6)
-        else -> Color(0xFFF59E0B)
+        isConnected && isCalibrated -> Success
+        isConnected -> Info
+        else -> Warning
     }
 
     Card(
@@ -1425,9 +1436,9 @@ private fun CollaborationGateCard(
         else -> "Approved"
     }
     val gateColor = when {
-        isConnected -> Color(0xFF10B981)
-        ready -> Color(0xFF3B82F6)
-        else -> Color(0xFFF59E0B)
+        isConnected -> Success
+        ready -> Info
+        else -> Warning
     }
 
     Card(
@@ -1546,7 +1557,7 @@ fun HomeTopBar(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         StatusChip(
                             label = if (isConnected) "Connected" else "Waiting",
-                            color = if (isConnected) Color(0xFF10B981) else Color(0xFFF59E0B)
+                            color = if (isConnected) Success else Warning
                         )
                         Text(
                             statusText,
@@ -1740,7 +1751,7 @@ private fun StateOverviewBanner(
                     text = approvalCountdownText,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFF59E0B)
+                    color = Warning
                 )
             }
 
@@ -1802,8 +1813,8 @@ private fun StateOverviewBanner(
                         .height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFEF4444),
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
                     )
                 ) {
                     Icon(
@@ -1896,11 +1907,11 @@ private fun NotificationCenterCard(
     onOpenLogs: () -> Unit
 ) {
     val accent = when {
-        isConnected && isCalibrated -> Color(0xFF10B981)
-        isConnecting -> Color(0xFFF59E0B)
+        isConnected && isCalibrated -> Success
+        isConnecting -> Warning
         needsRecalibration -> Color(0xFFF97316)
-        isCalibrated -> Color(0xFF38BDF8)
-        else -> Color(0xFFEF4444)
+        isCalibrated -> Info
+        else -> ThemeError
     }
 
     Card(
@@ -1933,8 +1944,8 @@ private fun NotificationCenterCard(
                     },
                     color = when {
                         needsRecalibration -> Color(0xFFF97316)
-                        isCalibrated -> Color(0xFF10B981)
-                        else -> Color(0xFFF59E0B)
+                        isCalibrated -> Success
+                        else -> Warning
                     }
                 )
             }
@@ -1963,9 +1974,9 @@ private fun AccessGateCard(
         colors = CardDefaults.cardColors(
             containerColor = when {
                 !isRegistered -> Color(0xFF7C3AED).copy(alpha = 0.14f)
-                !isCalibrated -> Color(0xFFF59E0B).copy(alpha = 0.14f)
-                !isConnected -> Color(0xFF38BDF8).copy(alpha = 0.14f)
-                else -> Color(0xFF10B981).copy(alpha = 0.14f)
+                !isCalibrated -> Warning.copy(alpha = 0.14f)
+                !isConnected -> Info.copy(alpha = 0.14f)
+                else -> Success.copy(alpha = 0.14f)
             }
         )
     ) {
@@ -2513,7 +2524,7 @@ fun ConnectionControlsCard(
                             .height(60.dp),
                         shape = RoundedCornerShape(20.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isConnected) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
+                            containerColor = if (isConnected) Success else MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         elevation = ButtonDefaults.buttonElevation(
@@ -2571,7 +2582,7 @@ fun ConnectedInfoCard(
     onToggleMouseControl: (Boolean) -> Unit,
     onDisconnect: () -> Unit
 ) {
-    val connectedGreen = Color(0xFF10B981)
+    val connectedGreen = Success
 
     GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
@@ -2717,7 +2728,7 @@ fun ConnectedInfoCard(
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFEF4444),
+                    containerColor = ThemeError,
                     contentColor = Color.White
                 )
             ) {
@@ -2905,7 +2916,7 @@ fun MouseMotionPreviewCard(
                                 translationY = boxY * 100.dp.toPx()
                             }
                             .background(
-                                color = if (isActive) Color(0xFF22C55E) else Color(0xFF38BDF8),
+                                color = if (isActive) Success else Info,
                                 shape = RoundedCornerShape(8.dp)
                             )
                     )
@@ -3062,12 +3073,12 @@ fun PerformanceCard(batteryLevel: Int, isCharging: Boolean, cpuUsage: Int, memor
                     Text("Battery", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                    GlassmorphicNeonProgressBar(progress = cpuUsage / 100f, modifier = Modifier.width(40.dp), height = 4.dp, colors = listOf(Color(0xFF6366F1), Color(0xFF3B82F6)))
+                    GlassmorphicNeonProgressBar(progress = cpuUsage / 100f, modifier = Modifier.width(40.dp), height = 4.dp, colors = listOf(Color(0xFF6366F1), Info))
                     Text("$cpuUsage%", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("CPU", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                    GlassmorphicNeonProgressBar(progress = memoryUsage / 100f, modifier = Modifier.width(40.dp), height = 4.dp, colors = listOf(Color(0xFF10B981), Color(0xFF6366F1)))
+                    GlassmorphicNeonProgressBar(progress = memoryUsage / 100f, modifier = Modifier.width(40.dp), height = 4.dp, colors = listOf(Success, Color(0xFF6366F1)))
                     Text("$memoryUsage%", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("RAM", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -3222,9 +3233,9 @@ fun LiveMotionCenterCard(
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SensorAxisCard(label = "Dx", value = sensorState.lastDx, color = Color(0xFF38BDF8), modifier = Modifier.weight(1f))
-                SensorAxisCard(label = "Dy", value = sensorState.lastDy, color = Color(0xFF22C55E), modifier = Modifier.weight(1f))
-                SensorAxisCard(label = "Samples", value = sensorState.sampleCount.toFloat(), color = Color(0xFFF59E0B), modifier = Modifier.weight(1f))
+                SensorAxisCard(label = "Dx", value = sensorState.lastDx, color = Info, modifier = Modifier.weight(1f))
+                SensorAxisCard(label = "Dy", value = sensorState.lastDy, color = Success, modifier = Modifier.weight(1f))
+                SensorAxisCard(label = "Samples", value = sensorState.sampleCount.toFloat(), color = Warning, modifier = Modifier.weight(1f))
             }
         }
     }

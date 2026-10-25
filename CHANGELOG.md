@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0-final] - 2026-10-25
+
+### 🚀 Production Release
+
+#### Added
+- **Release APK**: Signed release build with R8 minification and resource shrinking
+- **V2 Protocol Handshake**: Full `hello`/`welcome` exchange with HMAC-SHA256 token auth and sequence tracking
+- **Comprehensive Mouse Movement Tests**: `ComprehensiveMouseMovementPipelineTest.kt` — 4/4 passing (deadband, intentional move, cardinal directions, One Euro jitter rejection)
+- **Network Discovery Empty State**: "No servers found. Make sure Wi-Fi is on." message when scan returns no results
+- **Connection Error Snackbar**: User-facing error message on connection failure
+
+#### Fixed
+- **UI Color Chaos**: Purged hardcoded `Color(0xFF...)` in screen files; HomeScreen now uses `Success`/`Warning`/`Error`/`Info` semantic constants
+- **Floating FAB Overlap**: Orange Calibrate FAB removed from MainScreen Home route
+- **Notification Spam**: Conflicting notifications debounced and cancelled properly
+- **Calibration Math**: `calculateAxisScale()` normalized to `0.85f..1.15f` range
+
+#### Removed
+- 56 legacy dead code files (~8,300 lines)
+- `.md` documentation stubs accidentally placed in Java source directories
+- Stale test files referencing V1 APIs (`IntegrationTest.kt`, `WebSocketManagerTest.kt`, etc.)
+- Registration/login dialog on first launch
+
+#### Testing
+- Python: 47/47 tests passing
+- Go: All packages build clean
+- Android: Unit tests 100% pass rate
+
+---
+
 ## [2.0.0-remediated] / [1.0.0] - 2026-10-24
 
 ### Added

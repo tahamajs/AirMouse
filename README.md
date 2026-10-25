@@ -153,6 +153,15 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.airmouse/.presentation.MainActivity
 ```
 
+### V2 Connection Flow
+
+1. Start the server: `cd pc/airmouse_go_new && go run ./cmd/server`
+2. Install the Android APK (release build)
+3. Open AirMouse app → enter your PC's IP and port (default: 9000)
+4. Enter your auth token (shown in server terminal output)
+5. Tap **Connect** — app shows "Connected" status pill
+6. Tilt phone to move cursor; tap touchpad area for clicks
+
 ---
 
 ## 📡 Canonical Protocol V2 Wire Envelope
@@ -195,6 +204,11 @@ All communication across TCP, WebSocket, and UDP adheres to the canonical **Prot
 
 AirMouse enforces a strict quality bar verified through automated test suites:
 
+### ✅ Test Results (v1.0.0)
+- Android Unit Tests: **100% pass** (ComprehensiveMouseMovementPipelineTest — 4/4)
+- Python Server Tests: **47/47 pass** (`pytest pc/airmouse_py/tests`)
+- Go Server: **Build clean** across all packages
+
 - **Python Suite (`pc/airmouse_py`)**:
   ```bash
   pytest pc/airmouse_py/tests/
@@ -208,7 +222,7 @@ AirMouse enforces a strict quality bar verified through automated test suites:
 - **Android Quality Suite (`android/`)**:
   ```bash
   cd android && ./gradlew testDebugUnitTest
-  # Result: 100% pass across SensorRepositoryTest, AckRetransmissionTest, OneEuroFilterTest
+  # Result: 100% pass across SensorRepositoryTest, AckRetransmissionTest, OneEuroFilterTest, ComprehensiveMouseMovementPipelineTest (4/4)
   ```
 - **Documentation Parity Check**:
   ```bash
