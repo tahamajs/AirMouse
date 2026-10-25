@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 from typing import Optional, Set
 from core.one_euro import OneEuroFilter
@@ -62,16 +63,34 @@ class MouseController:
         else:
             logger.debug(f"[Virtual Mouse] move_abs x={x:.2f}, y={y:.2f}")
 
-    def click(self, button_name: str = "left") -> None:
+    def click(self, button_name: str = "left", hold_duration: float = 0.015) -> None:
+        """
+        Synthesize mouse click non-blockingly without blocking time.sleep().
+        Dispatches press immediately and schedules release via a daemon timer.
+        """
         if not self._controller:
             logger.debug(f"[Virtual Mouse] Click: {button_name}")
             return
 
         if button_name in ("double", "double_click"):
-            self._controller.click(Button.left, 2)
-        else:
-            btn = self._to_button(button_name)
-            self._controller.click(btn, 1)
+            self.double_click()
+            return
+
+        btn = self._to_button(button_name)
+        try:
+            self._controller.press(btn)
+            timer = threading.Timer(hold_duration, self._safe_release, args=(btn,))
+            timer.daemon = True
+            timer.start()
+        except Exception as e:
+            logger.error(f"Mouse click error: {e}")
+
+    def _safe_release(self, btn) -> None:
+        if self._controller and btn:
+            try:
+                self._controller.release(btn)
+            except Exception as e:
+                logger.debug(f"Mouse click release error: {e}")
 
     def mouse_down(self, button_name: str = "left") -> None:
         self._held_buttons.add(button_name)
@@ -95,8 +114,18 @@ class MouseController:
         except Exception as e:
             logger.error(f"Mouse release error: {e}")
 
-    def double_click(self) -> None:
-        self.click("double")
+    def double_click(self, interval: float = 0.04, hold_duration: float = 0.015) -> None:
+        """
+        Synthesize double-click non-blockingly without blocking time.sleep().
+        """
+        if not self._controller:
+            logger.debug("[Virtual Mouse] Double-click")
+            return
+
+        self.click("left", hold_duration=hold_duration)
+        timer = threading.Timer(interval, self.click, args=("left", hold_duration))
+        timer.daemon = True
+        timer.start()
 
     def scroll(self, delta: float) -> None:
         if not self._controller:

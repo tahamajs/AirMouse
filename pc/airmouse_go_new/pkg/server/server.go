@@ -288,11 +288,21 @@ func (s *Server) Stop() error {
 	s.running = false
 	s.mu.Unlock()
 
-	if s.protoServer != nil {
-		s.protoServer.Stop()
-	}
-	if s.deviceMgr != nil {
-		s.deviceMgr.Stop()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if s.protoServer != nil {
+			s.protoServer.Stop()
+		}
+		if s.deviceMgr != nil {
+			s.deviceMgr.Stop()
+		}
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		logger.Warn("Server shutdown timed out after 5s")
 	}
 	return nil
 }
