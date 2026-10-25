@@ -50,6 +50,7 @@ fun StatisticsScreen(
     viewModel: StatisticsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isConnected = uiState.isTracking || uiState.averagePing > 0 || uiState.activeProtocol == "BLUETOOTH"
 
     PremiumDashboardBackground {
     Scaffold(
@@ -262,8 +263,13 @@ fun StatisticsScreen(
                                     fontSize = 13.sp,
                                     color = Color.White.copy(alpha=0.6f)
                                 )
+                                val successText = if (!isConnected && (uiState.connectionAttempts == 0 || (uiState.clicks + uiState.doubleClicks + uiState.rightClicks + uiState.scrolls) == 0)) {
+                                    "N/A"
+                                } else {
+                                    String.format(Locale.getDefault(), "%.0f%%", uiState.getSuccessRate())
+                                }
                                 Text(
-                                    text = "Success: ${String.format(Locale.getDefault(), "%.0f%%", uiState.getSuccessRate())}",
+                                    text = "Success: $successText",
                                     fontSize = 13.sp,
                                     color = Color.White.copy(alpha=0.6f)
                                 )
@@ -350,6 +356,11 @@ fun StatisticsScreen(
                             val totalActions = uiState.clicks + uiState.doubleClicks + uiState.rightClicks + uiState.scrolls
                             val minutes = (uiState.sessionTime / 60f).coerceAtLeast(0.1f)
                             val apm = (totalActions / minutes).toInt()
+                            val metricSuccessRate = if (!isConnected && (uiState.connectionAttempts == 0 || totalActions == 0)) {
+                                "N/A"
+                            } else {
+                                String.format(Locale.getDefault(), "%.1f%%", uiState.getSuccessRate())
+                            }
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -357,7 +368,7 @@ fun StatisticsScreen(
                             ) {
                                 MetricCard(
                                     title = "Success Rate",
-                                    value = String.format(Locale.getDefault(), "%.1f%%", uiState.getSuccessRate()),
+                                    value = metricSuccessRate,
                                     color = StatsTheme.Secondary,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -667,7 +678,14 @@ private fun ActivityBarChart(dailyStats: List<DailyStats>) {
 
             // Draw Label
             drawContext.canvas.nativeCanvas.apply {
-                val label = if (item.date.length > 3) item.date.take(3) else item.date
+                val label = try {
+                    val inputFormat = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val outputFormat = java.text.SimpleDateFormat("EEE", Locale.getDefault())
+                    val parsedDate = inputFormat.parse(item.date)
+                    if (parsedDate != null) outputFormat.format(parsedDate) else item.date.takeLast(5)
+                } catch (e: Exception) {
+                    item.date.takeLast(5)
+                }
                 val labelPaint = android.graphics.Paint().apply {
                     color = android.graphics.Color.parseColor("#94A3B8")
                     textSize = 10.sp.toPx()

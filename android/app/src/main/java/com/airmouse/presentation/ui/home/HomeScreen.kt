@@ -117,30 +117,38 @@ fun HomeScreen(
 
     val isRegistered = homeViewModel.hasRegisteredUser() || homeUiState.userName.isNotBlank()
     val selectedProtocol = homeUiState.selectedProtocol
-    val isConnectionActive = homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.CONNECTED
-    val isConnectionPending = homeUiState.isConnecting
+    val connectionState = homeUiState.connectionState
+    val isConnectionActive = connectionState is HomeViewModel.ConnectionState.Connected
+    val isConnectionPending = connectionState is HomeViewModel.ConnectionState.Connecting ||
+            connectionState is HomeViewModel.ConnectionState.WaitingForApproval ||
+            homeUiState.isConnecting
+    val isWaitingForApproval = connectionState is HomeViewModel.ConnectionState.WaitingForApproval
     val isAutoConnectEnabled = homeUiState.isAutoConnectEnabled
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
-    val approvalCountdownText = remember(isConnectionPending, approvalCountdownMs) {
-        if (!isConnectionPending || approvalCountdownMs <= 0L) "" else {
+    val approvalCountdownText = remember(connectionState, approvalCountdownMs) {
+        if (connectionState is HomeViewModel.ConnectionState.WaitingForApproval) {
+            val seconds = (connectionState.remainingMs + 999) / 1000
+            "Server approval timeout in ${seconds}s"
+        } else if (isConnectionPending && approvalCountdownMs > 0L) {
             val seconds = (approvalCountdownMs + 999) / 1000
             "Server approval timeout in ${seconds}s"
-        }
+        } else ""
     }
-    val connectionStatusText = when {
-        isConnectionActive && homeUiState.isCalibrated -> "Connected"
-        isConnectionActive -> "Approved"
-        isConnectionPending -> "Server approving"
-        homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.ERROR -> "Approval needed"
-        homeUiState.isCalibrated -> "Approved"
-        else -> "Approval needed"
+    val connectionStatusText = when (connectionState) {
+        is HomeViewModel.ConnectionState.Connected -> "Connected"
+        is HomeViewModel.ConnectionState.WaitingForApproval -> "Waiting for approval"
+        is HomeViewModel.ConnectionState.Connecting -> "Connecting..."
+        is HomeViewModel.ConnectionState.Error -> "Connection failed: ${connectionState.message}"
+        is HomeViewModel.ConnectionState.Disconnected -> "Disconnected"
     }
-    val statusAccent = when {
-        isConnectionActive && homeUiState.isCalibrated -> Color(0xFF10B981)
-        isConnectionPending -> Color(0xFFF59E0B)
-        homeUiState.connectionStatus == com.airmouse.domain.model.ConnectionStatus.ERROR -> Color(0xFFEF4444)
-        homeUiState.isCalibrated -> Color(0xFF3B82F6)
-        else -> Color(0xFF64748B)
+    val statusAccent = when (connectionState) {
+        is HomeViewModel.ConnectionState.Connected -> Color(0xFF10B981)
+        is HomeViewModel.ConnectionState.WaitingForApproval -> Color(0xFFF59E0B)
+        is HomeViewModel.ConnectionState.Connecting -> Color(0xFF3B82F6)
+        is HomeViewModel.ConnectionState.Error -> Color(0xFFEF4444)
+        is HomeViewModel.ConnectionState.Disconnected -> Color(0xFF64748B)
     }
 
     LaunchedEffect(isConnectionPending, approvalCountdownMs) {
@@ -193,7 +201,15 @@ fun HomeScreen(
     fun toggleConnection() {
         if (isConnectionActive) {
             homeViewModel.disconnect()
+        } else if (isConnectionPending) {
+            homeViewModel.cancelConnection()
         } else {
+            if (selectedProtocol != ConnectionProtocol.BLUETOOTH && homeUiState.pairingToken.isBlank()) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Token is required for V2 Security")
+                }
+                return
+            }
             if (!homeUiState.isCalibrated) {
                 showCalibrationRequiredDialog = true
             } else {
@@ -232,6 +248,7 @@ fun HomeScreen(
     PremiumDashboardBackground {
         Scaffold(
             containerColor = Color.Transparent,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
             HomeTopBar(
                 onDrawerClick = { onOpenDrawer?.invoke() },
@@ -240,23 +257,6 @@ fun HomeScreen(
                 isConnected = isConnectionActive,
                 statusText = connectionStatusText
             )
-        },
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = isConnectionActive,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
-            ) {
-                FloatingActionButton(
-                    onClick = { homeViewModel.disconnect() },
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                    shape = CircleShape,
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = "Disconnect", tint = MaterialTheme.colorScheme.onError)
-                }
-            }
         }
     ) { paddingValues ->
         Box(
@@ -266,7 +266,7 @@ fun HomeScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // 1. Connection Status Banner
@@ -277,6 +277,7 @@ fun HomeScreen(
                             isCalibrated = homeUiState.isCalibrated,
                             needsRecalibration = homeUiState.calibrationState.needsRecalibration,
                             isConnecting = isConnectionPending,
+                            isWaitingForApproval = isWaitingForApproval,
                             statusText = connectionStatusText,
                             approvalCountdownText = approvalCountdownText,
                             accent = statusAccent,
@@ -520,6 +521,7 @@ fun HomeScreen(
                         ConnectionControlsCard(
                             ip = serverIp,
                             port = serverPort,
+                            pairingToken = homeUiState.pairingToken,
                             protocol = selectedProtocol,
                             onIpChange = {
                                 serverIp = it
@@ -529,8 +531,12 @@ fun HomeScreen(
                                 serverPort = it
                                 homeViewModel.updatePort(it)
                             },
+                            onTokenChange = {
+                                homeViewModel.updatePairingToken(it)
+                            },
                             onProtocolChange = { homeViewModel.updateConnectionProtocol(it) },
                             onConnect = { toggleConnection() },
+                            onCancel = { homeViewModel.cancelConnection() },
                             onScanQr = {
                                 if (ContextCompat.checkSelfPermission(
                                         context,
@@ -819,6 +825,7 @@ fun ConnectionToggleButton(
     onToggle: () -> Unit,
     onToggleAutoConnect: () -> Unit
 ) {
+    val isAutoConnectSwitchEnabled = isConnected || isConnecting
     GlassmorphicCard(
         modifier = Modifier.fillMaxWidth(),
         cornerRadius = 24.dp
@@ -864,7 +871,7 @@ fun ConnectionToggleButton(
                         text = if (isAutoConnectEnabled) "Auto ON" else "Auto OFF",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (!isConnected) {
+                        color = if (isAutoConnectSwitchEnabled) {
                             if (isAutoConnectEnabled) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
                         } else {
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
@@ -872,8 +879,8 @@ fun ConnectionToggleButton(
                     )
                     Switch(
                         checked = isAutoConnectEnabled,
-                        onCheckedChange = { if (!isConnected) onToggleAutoConnect() },
-                        enabled = !isConnected,
+                        onCheckedChange = { if (isAutoConnectSwitchEnabled) onToggleAutoConnect() },
+                        enabled = isAutoConnectSwitchEnabled,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Color(0xFF10B981),
@@ -1661,6 +1668,7 @@ private fun StateOverviewBanner(
     isCalibrated: Boolean,
     needsRecalibration: Boolean,
     isConnecting: Boolean,
+    isWaitingForApproval: Boolean = false,
     statusText: String,
     approvalCountdownText: String,
     accent: Color,
@@ -1672,17 +1680,19 @@ private fun StateOverviewBanner(
 ) {
     val headline = when {
         isConnected && isCalibrated -> "Connected"
-        isConnecting -> "Waiting for approval"
+        isWaitingForApproval -> "Waiting for approval"
+        isConnecting -> "Connecting..."
         isCalibrated -> "Calibration complete"
-        needsRecalibration -> "Approved"
-        else -> "Waiting for approval"
+        needsRecalibration -> "Recalibration recommended"
+        else -> "Ready to connect"
     }
     val detail = when {
         isConnected && isCalibrated -> "Approved and connected. Touchpad, gestures, and mouse control are active."
-        isConnecting -> "Waiting for approval from the desktop."
-        isCalibrated -> "Approved for pairing. Connect whenever you are ready."
-        needsRecalibration -> "Approved, but recalibration is recommended before the next session."
-        else -> "Waiting for approval to start a session."
+        isWaitingForApproval -> "Waiting for approval from the desktop."
+        isConnecting -> "Attempting connection to the desktop server..."
+        isCalibrated -> "Sensors calibrated and ready. Connect whenever you are ready."
+        needsRecalibration -> "Sensors ready, but recalibration is recommended before the next session."
+        else -> "Ready to connect. Verify your server details below."
     }
 
     GlassmorphicCard(
@@ -2126,11 +2136,14 @@ fun GreetingCard(text: String, userName: String, onEditProfile: () -> Unit) {
 fun ConnectionControlsCard(
     ip: String,
     port: Int,
+    pairingToken: String = "",
     protocol: ConnectionProtocol,
     onIpChange: (String) -> Unit,
     onPortChange: (Int) -> Unit,
+    onTokenChange: (String) -> Unit = {},
     onProtocolChange: (ConnectionProtocol) -> Unit,
     onConnect: () -> Unit,
+    onCancel: () -> Unit = {},
     onScanQr: () -> Unit,
     isConnecting: Boolean,
     isConnected: Boolean = false,
@@ -2191,7 +2204,7 @@ fun ConnectionControlsCard(
                     ) {
                         listOf(
                             ConnectionProtocol.WEBSOCKET to "WebSocket",
-                            ConnectionProtocol.UDP to "UDP",
+                            ConnectionProtocol.UDP to "UDP ⚠️ Unencrypted",
                             ConnectionProtocol.TCP to "TCP",
                             ConnectionProtocol.BLUETOOTH to "Bluetooth",
                             ConnectionProtocol.USB_SERIAL to "USB"

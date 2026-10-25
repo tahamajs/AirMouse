@@ -542,11 +542,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = themeColors.background
                     ) {
-                        val startDest = if (prefs.isOnboardingCompleted()) {
-                            Destinations.Home.route
-                        } else {
-                            Destinations.Onboarding.route
-                        }
+                        val startDest = Destinations.Splash.route
                         MainScreen(
                             startDestination = startDest,
                             pendingRoute = pendingRoute,

@@ -92,10 +92,13 @@ class ProximityViewModelTest {
         advanceUntilIdle()
 
         viewModel.toggleService(true)
-        advanceUntilIdle()
+        testDispatcher.scheduler.runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue("Service should enable once a device is selected", state.isEnabled)
+
+        viewModel.toggleService(false)
+        testDispatcher.scheduler.runCurrent()
     }
 
     @Test

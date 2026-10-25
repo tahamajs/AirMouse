@@ -57,7 +57,8 @@ class HomeViewModelTest {
 
         // Mock context system services
         every { mockContext.getSystemService(Context.SENSOR_SERVICE) } returns mockSensorManager
-        every { mockContext.getSystemService(Context.VIBRATOR_SERVICE) } returns mockk(relaxed = true)
+        val mockVibrator = mockk<android.os.Vibrator>(relaxed = true)
+        every { mockContext.getSystemService(Context.VIBRATOR_SERVICE) } returns mockVibrator
 
         // Mock preferences default values
         every { mockPrefs.getControlMode() } returns "motion"

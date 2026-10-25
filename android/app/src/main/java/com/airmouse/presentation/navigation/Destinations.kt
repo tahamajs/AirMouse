@@ -209,6 +209,13 @@ sealed class Destinations(
         icon = Icons.Filled.Accessibility
     )
 
+    /** Splash screen */
+    object Splash : Destinations(
+        route = ROUTE_SPLASH,
+        title = "Splash",
+        icon = Icons.Filled.Mouse
+    )
+
     /** Onboarding screen */
     object Onboarding : Destinations(
         route = ROUTE_ONBOARDING,
@@ -239,6 +246,7 @@ sealed class Destinations(
         // ROUTE CONSTANTS
         // ------------------------------------------
 
+        const val ROUTE_SPLASH = "splash"
         const val ROUTE_FILE_TRANSFER = "file_transfer"
 
         const val ROUTE_HOME = "home"
@@ -349,6 +357,7 @@ sealed class Destinations(
                 ROUTE_SYNC_STATUS -> SyncStatus
                 ROUTE_NOTIFICATIONS_CENTER -> NotificationsCenter
                 ROUTE_SEARCH -> Search
+                ROUTE_SPLASH -> Splash
                 else -> null
             }
 

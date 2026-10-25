@@ -65,6 +65,7 @@ import com.airmouse.presentation.ui.logs.ServerLogsScreen
 import com.airmouse.presentation.ui.network.NetworkDiscoveryScreen
 import com.airmouse.presentation.ui.onboarding.OnboardingScreen
 import com.airmouse.presentation.ui.search.SearchScreen
+import com.airmouse.presentation.ui.splash.SplashScreen
 import com.airmouse.presentation.ui.profiles.ProfilesScreen
 import com.airmouse.presentation.ui.proximity.ProximityScreen
 import com.airmouse.presentation.ui.notifications.NotificationsCenterScreen
@@ -421,7 +422,7 @@ fun MainScreen(
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
 
-                if (isConnected && currentRoute != Destinations.Touchpad.route && currentRoute != Destinations.Onboarding.route) {
+                if (isConnected && currentRoute == Destinations.Home.route) {
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -1363,6 +1364,22 @@ fun MainNavHost(
                     slideOutHorizontally(animationSpec = tween(300)) { it }
         }
     ) {
+        // Splash
+        composable(Destinations.Splash.route) {
+            SplashScreen(
+                onSplashComplete = {
+                    val nextRoute = if (navController.context.getSharedPreferences("airmouse_prefs", android.content.Context.MODE_PRIVATE).getBoolean("onboarding_completed", false)) {
+                        Destinations.Home.route
+                    } else {
+                        Destinations.Onboarding.route
+                    }
+                    navController.navigate(nextRoute) {
+                        popUpTo(Destinations.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         // Bottom navigation screens
         composable(Destinations.Home.route) {
             HomeScreen(

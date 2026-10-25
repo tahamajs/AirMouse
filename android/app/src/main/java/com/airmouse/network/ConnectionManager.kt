@@ -397,9 +397,7 @@ class ConnectionManager @Inject constructor(
                 }
                 LogManager.debug("connect(): transport setup completed success=$success protocol=${currentProtocol.name}")
 
-                val accepted = if (currentProtocol == ConnectionProtocol.UDP) {
-                    success
-                } else if (success) {
+                val accepted = if (success) {
                     _connectionStatus.value = ConnectionStatus.PENDING_APPROVAL
                     onStatusChanged?.invoke(ConnectionStatus.PENDING_APPROVAL)
                     val timeout = if (currentProtocol == ConnectionProtocol.BLUETOOTH) 60000L else ACK_TIMEOUT_MS
@@ -424,7 +422,6 @@ class ConnectionManager @Inject constructor(
                     consecutiveFailures = 0
                     onStatusChanged?.invoke(ConnectionStatus.CONNECTED)
                     onConnected?.invoke()
-                    onError?.invoke("Connection approved")
                     LogManager.info("Connected to $ip:$port via ${currentProtocol.name}")
                     true
                 } else {
@@ -433,10 +430,10 @@ class ConnectionManager @Inject constructor(
                     welcomeDeferred = null
                     disconnect()
                     _connectionStatus.value = ConnectionStatus.ERROR
-                    _lastError.value = "Connection not accepted by server"
+                    val err = _lastError.value ?: "Connection not accepted by server"
+                    _lastError.value = err
                     onStatusChanged?.invoke(ConnectionStatus.ERROR)
-                    onError?.invoke("Approval needed")
-                    onError?.invoke("Connection not accepted by server")
+                    onError?.invoke(err)
                     false
                 }
             } catch (e: ConnectException) {
@@ -828,9 +825,14 @@ class ConnectionManager @Inject constructor(
                         LogManager.info("Received control command to resume mouse transmission from server", TAG)
                     }
                 }
-                MessageTypes.TYPE_ERROR -> {
-                    val error = json.optJSONObject("payload")?.optString("message") ?: "Unknown error"
+                MessageTypes.TYPE_ERROR, "nack" -> {
+                    val payload = json.optJSONObject("payload")
+                    val error = payload?.optString("error")
+                        ?: payload?.optString("message")
+                        ?: json.optString("error")
+                        ?: "Connection rejected by server"
                     _lastError.value = error
+                    welcomeDeferred?.complete(false)
                     onError?.invoke(error)
                 }
             }

@@ -35,6 +35,7 @@ interface NavigationActions {
     fun navigateToBattery() {}
     fun navigateToAccessibility() {}
     fun navigateToOnboarding() {}
+    fun navigateToSplash() {}
     fun navigateToTouchpadSettings() {}
     fun navigateToGameProfiles() {}
     fun navigateToBluetoothMouse() {}
@@ -159,6 +160,10 @@ class NavigationActionsImpl(
 
     override fun navigateToOnboarding() {
         navController.navigate(Destinations.Onboarding.route)
+    }
+
+    override fun navigateToSplash() {
+        navController.navigate(Destinations.Splash.route)
     }
 
     override fun navigateToTouchpadSettings() {

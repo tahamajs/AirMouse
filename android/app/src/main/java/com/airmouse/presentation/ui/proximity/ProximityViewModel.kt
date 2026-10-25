@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import javax.inject.Inject
 import kotlin.math.log10
 import kotlin.math.pow
@@ -147,7 +148,6 @@ class ProximityViewModel @Inject constructor(
     init {
         initializeBluetooth()
         loadSettings()
-        startProximityMonitoring()
     }
 
     @Suppress("DEPRECATION")
@@ -240,6 +240,8 @@ class ProximityViewModel @Inject constructor(
                         statusColor = 0xFFF59E0B
                     )
                 }
+            } else if (prefs.getBoolean("proximity_enabled", false)) {
+                startProximityMonitoring()
             }
         }
     }
@@ -257,12 +259,11 @@ class ProximityViewModel @Inject constructor(
 
     private fun startProximityMonitoring() {
         monitoringJob?.cancel()
+        if (!_uiState.value.isEnabled || _uiState.value.deviceMac.isEmpty()) return
         monitoringJob = viewModelScope.launch {
-            while (true) {
-                if (_uiState.value.isEnabled && _uiState.value.deviceMac.isNotEmpty()) {
-                    updateDistance()
-                    checkProximityState()
-                }
+            while (isActive && _uiState.value.isEnabled && _uiState.value.deviceMac.isNotEmpty()) {
+                updateDistance()
+                checkProximityState()
                 delay(1000)
             }
         }
@@ -409,9 +410,11 @@ class ProximityViewModel @Inject constructor(
             _uiState.update { it.copy(isEnabled = enabled) }
             if (enabled) {
                 startScanning()
+                startProximityMonitoring()
                 _uiState.update { it.copy(status = "Service waiting for trusted device signal...") }
             } else {
                 stopScanning()
+                monitoringJob?.cancel()
                 _uiState.update {
                     it.copy(
                         status = "Service stopped",
