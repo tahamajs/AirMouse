@@ -1845,9 +1845,9 @@ private fun ScreenSleepHintCard(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (enabled) {
-                Color(0xFF0F766E).copy(alpha = 0.16f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.16f)
             } else {
-                Color(0xFF334155).copy(alpha = 0.16f)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.16f)
             }
         )
     ) {
@@ -1859,7 +1859,7 @@ private fun ScreenSleepHintCard(
             Icon(
                 imageVector = Icons.Default.Smartphone,
                 contentDescription = null,
-                tint = if (enabled) Color(0xFF5EEAD4) else Color(0xFF94A3B8)
+                tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -1909,7 +1909,7 @@ private fun NotificationCenterCard(
     val accent = when {
         isConnected && isCalibrated -> Success
         isConnecting -> Warning
-        needsRecalibration -> Color(0xFFF97316)
+        needsRecalibration -> Warning
         isCalibrated -> Info
         else -> ThemeError
     }
@@ -1943,7 +1943,7 @@ private fun NotificationCenterCard(
                         else -> "Needs calibration"
                     },
                     color = when {
-                        needsRecalibration -> Color(0xFFF97316)
+                        needsRecalibration -> Warning
                         isCalibrated -> Success
                         else -> Warning
                     }
@@ -1973,7 +1973,7 @@ private fun AccessGateCard(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                !isRegistered -> Color(0xFF7C3AED).copy(alpha = 0.14f)
+                !isRegistered -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f)
                 !isCalibrated -> Warning.copy(alpha = 0.14f)
                 !isConnected -> Info.copy(alpha = 0.14f)
                 else -> Success.copy(alpha = 0.14f)
@@ -2759,10 +2759,10 @@ fun QuickActionsRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        QuickActionButton(onClick = onCalibrate, icon = Icons.Default.Build, label = "Calibrate", color = Color(0xFFFF5722))
-        QuickActionButton(onClick = onGestureStudio, icon = Icons.Default.Gesture, label = "Gestures", color = Color(0xFF9C27B0))
-        QuickActionButton(onClick = onVoiceCommands, icon = Icons.Default.Mic, label = "Voice", color = Color(0xFF2196F3))
-        QuickActionButton(onClick = onNetworkDiscovery, icon = Icons.Default.Wifi, label = "Network", color = Color(0xFF4CAF50))
+        QuickActionButton(onClick = onCalibrate, icon = Icons.Default.Build, label = "Calibrate", color = MaterialTheme.colorScheme.primary)
+        QuickActionButton(onClick = onGestureStudio, icon = Icons.Default.Gesture, label = "Gestures", color = MaterialTheme.colorScheme.secondary)
+        QuickActionButton(onClick = onVoiceCommands, icon = Icons.Default.Mic, label = "Voice", color = Info)
+        QuickActionButton(onClick = onNetworkDiscovery, icon = Icons.Default.Wifi, label = "Network", color = Success)
     }
 }
 
@@ -2986,9 +2986,9 @@ fun StatsRow(clicks: Int, scrolls: Int, sessionDuration: String) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        StatsCard(title = "Clicks", value = clicks.toString(), icon = Icons.Default.Mouse, color = Color(0xFF00BCD4), modifier = Modifier.weight(1f))
-        StatsCard(title = "Scrolls", value = scrolls.toString(), icon = Icons.Default.SwapVert, color = Color(0xFF4CAF50), modifier = Modifier.weight(1f))
-        StatsCard(title = "Session", value = sessionDuration, icon = Icons.Default.Timer, color = Color(0xFFFF9800), modifier = Modifier.weight(1f))
+        StatsCard(title = "Clicks", value = clicks.toString(), icon = Icons.Default.Mouse, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        StatsCard(title = "Scrolls", value = scrolls.toString(), icon = Icons.Default.SwapVert, color = Success, modifier = Modifier.weight(1f))
+        StatsCard(title = "Session", value = sessionDuration, icon = Icons.Default.Timer, color = Warning, modifier = Modifier.weight(1f))
     }
 }
 
@@ -3007,7 +3007,7 @@ fun StatsCard(title: String, value: String, icon: androidx.compose.ui.graphics.v
     }
 
     val backgroundColor by animateColorAsState(
-        targetValue = if (triggerFlash) color.copy(alpha = 0.4f) else Color(0xFF13161F).copy(alpha = 0.45f),
+        targetValue = if (triggerFlash) color.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
         animationSpec = tween(durationMillis = 150),
         label = "flashAnimation"
     )
@@ -3068,22 +3068,22 @@ fun PerformanceCard(batteryLevel: Int, isCharging: Boolean, cpuUsage: Int, memor
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                    Icon(if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull, contentDescription = null, tint = Color(0xFF4CAF50))
+                    Icon(if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull, contentDescription = null, tint = Success)
                     Text("$batteryLevel%", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("Battery", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                    GlassmorphicNeonProgressBar(progress = cpuUsage / 100f, modifier = Modifier.width(40.dp), height = 4.dp, colors = listOf(Color(0xFF6366F1), Info))
+                    GlassmorphicNeonProgressBar(progress = cpuUsage / 100f, modifier = Modifier.width(40.dp), height = 4.dp, colors = listOf(MaterialTheme.colorScheme.primary, Info))
                     Text("$cpuUsage%", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("CPU", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                    GlassmorphicNeonProgressBar(progress = memoryUsage / 100f, modifier = Modifier.width(40.dp), height = 4.dp, colors = listOf(Success, Color(0xFF6366F1)))
+                    GlassmorphicNeonProgressBar(progress = memoryUsage / 100f, modifier = Modifier.width(40.dp), height = 4.dp, colors = listOf(Success, MaterialTheme.colorScheme.primary))
                     Text("$memoryUsage%", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("RAM", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                    Text("$frameRate", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+                    Text("$frameRate", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Success)
                     Text("FPS", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -3600,7 +3600,7 @@ fun EmbeddedTouchpad(
             .fillMaxWidth()
             .height(260.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF161920))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
             .pointerInput(Unit) {
                 awaitEachGesture {

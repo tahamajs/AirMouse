@@ -2,6 +2,7 @@ package com.airmouse.data.datasource.local
 
 import com.airmouse.data.datasource.local.dao.GestureDao
 import com.airmouse.data.datasource.local.dao.TrainingSampleDao
+import com.airmouse.data.datasource.local.entity.GestureTemplateEntity
 import com.airmouse.data.datasource.local.entity.TrainingSampleEntity
 import com.airmouse.data.mapper.DomainToEntityMapper
 import com.airmouse.domain.model.CustomGestureTemplate
@@ -122,11 +123,10 @@ class GestureDataSourceImpl @Inject constructor(
             if (stats != null) return stats
 
             val totalGestures = gestureDao.getTemplateCount()
-            val totalDetections = gestureDao.getTotalDetections()
+            val mostUsed = gestureDao.getAllTemplatesByUsage().firstOrNull()?.name ?: "NONE"
             return GestureTrainingStats(
                 totalGestures = totalGestures,
-                totalSamples = trainingSampleDao.getSampleCount(),
-                totalDetections = totalDetections,
+                mostUsedGesture = mostUsed,
                 averageConfidence = gestureDao.getAverageConfidenceThreshold()
             )
         }
