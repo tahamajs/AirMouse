@@ -1,211 +1,133 @@
 package com.airmouse.data.datasource.local
 
+import com.airmouse.data.datasource.local.dao.CalibrationDao
+import com.airmouse.data.datasource.local.entity.CalibrationEntity
 import com.airmouse.domain.model.CalibrationData
 import com.airmouse.domain.model.CalibrationQuality
 import com.airmouse.domain.model.CalibrationStatus
-import com.airmouse.domain.model.SensorCalibrationData
-import com.airmouse.utils.PreferencesManager
-import com.airmouse.utils.PreferencesKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CalibrationDataSourceImpl @Inject constructor(
-    private val prefs: PreferencesManager
+    private val calibrationDao: CalibrationDao
 ) : ICalibrationDataSource {
+
+    private val accelPositions = ConcurrentHashMap<Int, Triple<Float, Float, Float>>()
+    private val accelPositionsCompleted = AtomicInteger(0)
+    private val calibrationProgress = AtomicInteger(0)
+    private val currentStep = AtomicInteger(0)
+    private val gyroSampleCount = AtomicInteger(0)
+    private val magSampleCount = AtomicInteger(0)
+
+    private suspend fun getOrCreate(): CalibrationEntity {
+        return calibrationDao.getCalibration() ?: CalibrationEntity()
+    }
 
     override suspend fun saveCalibrationData(data: CalibrationData) {
         withContext(Dispatchers.IO) {
-            saveGyroBias(
-                data.gyroBias.offsetX,
-                data.gyroBias.offsetY,
-                data.gyroBias.offsetZ
-            )
-            saveAccelOffset(
-                data.accelOffset.offsetX,
-                data.accelOffset.offsetY,
-                data.accelOffset.offsetZ
-            )
-            saveAccelScale(
-                data.accelOffset.scaleX,
-                data.accelOffset.scaleY,
-                data.accelOffset.scaleZ
-            )
-            saveMagOffset(
-                data.magOffset.offsetX,
-                data.magOffset.offsetY,
-                data.magOffset.offsetZ
-            )
-            saveMagScale(
-                data.magOffset.scaleX,
-                data.magOffset.scaleY,
-                data.magOffset.scaleZ
-            )
-            setCalibrationStatus(
-                if (data.isCalibrated) CalibrationStatus.COMPLETED else CalibrationStatus.NOT_STARTED
-            )
-            setCalibrationQuality(data.quality)
-            setCalibrationTimestamp(data.timestamp)
-            setCalibrationComplete(data.isCalibrated)
+            val entity = CalibrationEntity.fromDomainModel(data)
+            calibrationDao.insertCalibration(entity)
         }
     }
 
     override suspend fun getCalibrationData(): CalibrationData {
         return withContext(Dispatchers.IO) {
-            val (gx, gy, gz) = getGyroBias()
-            val (aox, aoy, aoz) = getAccelOffset()
-            val (asx, asy, asz) = getAccelScale()
-            val (mox, moy, moz) = getMagOffset()
-            val (msx, msy, msz) = getMagScale()
-
-            CalibrationData(
-                gyroBias = SensorCalibrationData(
-                    offsetX = gx,
-                    offsetY = gy,
-                    offsetZ = gz
-                ),
-                accelOffset = SensorCalibrationData(
-                    offsetX = aox,
-                    offsetY = aoy,
-                    offsetZ = aoz,
-                    scaleX = asx,
-                    scaleY = asy,
-                    scaleZ = asz
-                ),
-                magOffset = SensorCalibrationData(
-                    offsetX = mox,
-                    offsetY = moy,
-                    offsetZ = moz,
-                    scaleX = msx,
-                    scaleY = msy,
-                    scaleZ = msz
-                ),
-                isCalibrated = isCalibrationComplete(),
-                quality = getCalibrationQuality(),
-                timestamp = getCalibrationTimestamp()
-            )
+            val entity = calibrationDao.getCalibration()
+            entity?.toDomainModel() ?: CalibrationData()
         }
     }
 
     override suspend fun clearCalibrationData() {
-        resetAll()
+        withContext(Dispatchers.IO) {
+            resetAll()
+        }
     }
 
     override suspend fun hasCalibrationData(): Boolean {
         return withContext(Dispatchers.IO) {
-            val (gx, gy, gz) = getGyroBias()
-            val (aox, aoy, aoz) = getAccelOffset()
-            val (mox, moy, moz) = getMagOffset()
-            gx != 0f || gy != 0f || gz != 0f ||
-                    aox != 0f || aoy != 0f || aoz != 0f ||
-                    mox != 0f || moy != 0f || moz != 0f
+            calibrationDao.exists()
         }
     }
 
     override suspend fun resetAll() {
         withContext(Dispatchers.IO) {
-            resetGyro()
-            resetAccel()
-            resetMag()
-            prefs.remove(PreferencesKeys.KEY_CALIBRATION_STATUS)
-            prefs.remove(PreferencesKeys.KEY_CALIBRATION_QUALITY)
-            prefs.remove(PreferencesKeys.KEY_CALIBRATION_PROGRESS)
-            prefs.remove(PreferencesKeys.KEY_CALIBRATION_COMPLETE)
-            prefs.remove(PreferencesKeys.KEY_CALIBRATION_TIMESTAMP)
-            prefs.remove(PreferencesKeys.KEY_CALIBRATION_CURRENT_STEP)
-            prefs.remove(PreferencesKeys.KEY_ACCEL_POSITIONS_COMPLETED)
-            for (i in 0..5) {
-                prefs.remove(PreferencesKeys.getAccelPositionKey(i, "x"))
-                prefs.remove(PreferencesKeys.getAccelPositionKey(i, "y"))
-                prefs.remove(PreferencesKeys.getAccelPositionKey(i, "z"))
-            }
+            calibrationDao.deleteAll()
+            accelPositions.clear()
+            accelPositionsCompleted.set(0)
+            calibrationProgress.set(0)
+            currentStep.set(0)
+            gyroSampleCount.set(0)
+            magSampleCount.set(0)
         }
     }
 
     override suspend fun getCalibrationSummary(): Map<String, Any> {
         return withContext(Dispatchers.IO) {
-            val (gx, gy, gz) = getGyroBias()
-            val (aox, aoy, aoz) = getAccelOffset()
-            val (mox, moy, moz) = getMagOffset()
+            val e = getOrCreate()
             mapOf(
-                "gyro_bias" to mapOf("x" to gx, "y" to gy, "z" to gz),
-                "accel_offset" to mapOf("x" to aox, "y" to aoy, "z" to aoz),
-                "mag_offset" to mapOf("x" to mox, "y" to moy, "z" to moz),
-                "status" to getCalibrationStatus().name,
-                "quality" to getCalibrationQuality().name,
-                "progress" to getCalibrationProgress(),
-                "is_complete" to isCalibrationComplete(),
-                "timestamp" to getCalibrationTimestamp()
+                "gyro_bias" to mapOf("x" to e.gyroBiasX, "y" to e.gyroBiasY, "z" to e.gyroBiasZ),
+                "accel_offset" to mapOf("x" to e.accelOffsetX, "y" to e.accelOffsetY, "z" to e.accelOffsetZ),
+                "mag_offset" to mapOf("x" to e.magOffsetX, "y" to e.magOffsetY, "z" to e.magOffsetZ),
+                "quality" to e.calibrationQuality,
+                "is_complete" to e.isCalibrated,
+                "timestamp" to e.timestamp
             )
         }
     }
 
-    // ---- Gyroscope ----
+    // ============================================================
+    // Gyroscope
+    // ============================================================
+
     override suspend fun saveGyroBias(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_BIAS_X, x)
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_BIAS_Y, y)
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_BIAS_Z, z)
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_OFFSET_X, x)
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_OFFSET_Y, y)
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_OFFSET_Z, z)
+            val updated = getOrCreate().copy(gyroBiasX = x, gyroBiasY = y, gyroBiasZ = z)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getGyroBias(): Triple<Float, Float, Float> {
         return withContext(Dispatchers.IO) {
-            Triple(
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_X, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_Y, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_BIAS_Z, 0f)
-            )
+            val e = getOrCreate()
+            Triple(e.gyroBiasX, e.gyroBiasY, e.gyroBiasZ)
         }
     }
+
     override suspend fun saveGyroVariance(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_VARIANCE_X, x)
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_VARIANCE_Y, y)
-            prefs.putFloat(PreferencesKeys.KEY_GYRO_VARIANCE_Z, z)
+            val updated = getOrCreate().copy(gyroVarianceX = x, gyroVarianceY = y, gyroVarianceZ = z)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getGyroVariance(): Triple<Float, Float, Float> {
         return withContext(Dispatchers.IO) {
-            Triple(
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_VARIANCE_X, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_VARIANCE_Y, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_GYRO_VARIANCE_Z, 0f)
-            )
+            val e = getOrCreate()
+            Triple(e.gyroVarianceX, e.gyroVarianceY, e.gyroVarianceZ)
         }
     }
 
     override suspend fun saveGyroSampleCount(count: Int) {
-        withContext(Dispatchers.IO) {
-            prefs.putInt(PreferencesKeys.KEY_GYRO_SAMPLES, count)
-        }
+        gyroSampleCount.set(count)
     }
 
     override suspend fun getGyroSampleCount(): Int {
-        return withContext(Dispatchers.IO) {
-            prefs.getInt(PreferencesKeys.KEY_GYRO_SAMPLES, 0)
-        }
+        return gyroSampleCount.get()
     }
 
     override suspend fun resetGyro() {
         withContext(Dispatchers.IO) {
-            prefs.remove(PreferencesKeys.KEY_GYRO_BIAS_X)
-            prefs.remove(PreferencesKeys.KEY_GYRO_BIAS_Y)
-            prefs.remove(PreferencesKeys.KEY_GYRO_BIAS_Z)
-            prefs.remove(PreferencesKeys.KEY_GYRO_OFFSET_X)
-            prefs.remove(PreferencesKeys.KEY_GYRO_OFFSET_Y)
-            prefs.remove(PreferencesKeys.KEY_GYRO_OFFSET_Z)
-            prefs.remove(PreferencesKeys.KEY_GYRO_VARIANCE_X)
-            prefs.remove(PreferencesKeys.KEY_GYRO_VARIANCE_Y)
-            prefs.remove(PreferencesKeys.KEY_GYRO_VARIANCE_Z)
-            prefs.remove(PreferencesKeys.KEY_GYRO_SAMPLES)
-            prefs.remove(PreferencesKeys.KEY_GYRO_CALIBRATED)
+            val updated = getOrCreate().copy(
+                gyroBiasX = 0f, gyroBiasY = 0f, gyroBiasZ = 0f,
+                gyroVarianceX = 0f, gyroVarianceY = 0f, gyroVarianceZ = 0f
+            )
+            calibrationDao.insertCalibration(updated)
+            gyroSampleCount.set(0)
         }
     }
 
@@ -215,94 +137,61 @@ class CalibrationDataSourceImpl @Inject constructor(
 
     override suspend fun saveAccelOffset(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
-            prefs.putFloat(PreferencesKeys.KEY_ACCEL_OFFSET_X, x)
-            prefs.putFloat(PreferencesKeys.KEY_ACCEL_OFFSET_Y, y)
-            prefs.putFloat(PreferencesKeys.KEY_ACCEL_OFFSET_Z, z)
+            val updated = getOrCreate().copy(accelOffsetX = x, accelOffsetY = y, accelOffsetZ = z)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getAccelOffset(): Triple<Float, Float, Float> {
         return withContext(Dispatchers.IO) {
-            Triple(
-                prefs.getFloat(PreferencesKeys.KEY_ACCEL_OFFSET_X, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_ACCEL_OFFSET_Y, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_ACCEL_OFFSET_Z, 0f)
-            )
+            val e = getOrCreate()
+            Triple(e.accelOffsetX, e.accelOffsetY, e.accelOffsetZ)
         }
     }
 
     override suspend fun saveAccelScale(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
-            prefs.putFloat(PreferencesKeys.KEY_ACCEL_SCALE_X, x)
-            prefs.putFloat(PreferencesKeys.KEY_ACCEL_SCALE_Y, y)
-            prefs.putFloat(PreferencesKeys.KEY_ACCEL_SCALE_Z, z)
+            val updated = getOrCreate().copy(accelScaleX = x, accelScaleY = y, accelScaleZ = z)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getAccelScale(): Triple<Float, Float, Float> {
         return withContext(Dispatchers.IO) {
-            Triple(
-                prefs.getFloat(PreferencesKeys.KEY_ACCEL_SCALE_X, 1f),
-                prefs.getFloat(PreferencesKeys.KEY_ACCEL_SCALE_Y, 1f),
-                prefs.getFloat(PreferencesKeys.KEY_ACCEL_SCALE_Z, 1f)
-            )
+            val e = getOrCreate()
+            Triple(e.accelScaleX, e.accelScaleY, e.accelScaleZ)
         }
     }
 
     override suspend fun saveAccelPosition(position: Int, values: Triple<Float, Float, Float>) {
-        withContext(Dispatchers.IO) {
-            prefs.putFloat(PreferencesKeys.getAccelPositionKey(position, "x"), values.first)
-            prefs.putFloat(PreferencesKeys.getAccelPositionKey(position, "y"), values.second)
-            prefs.putFloat(PreferencesKeys.getAccelPositionKey(position, "z"), values.third)
-        }
+        accelPositions[position] = values
     }
 
     override suspend fun getAccelPosition(position: Int): Triple<Float, Float, Float>? {
-        return withContext(Dispatchers.IO) {
-            val x = prefs.getFloat(PreferencesKeys.getAccelPositionKey(position, "x"), Float.NaN)
-            val y = prefs.getFloat(PreferencesKeys.getAccelPositionKey(position, "y"), Float.NaN)
-            val z = prefs.getFloat(PreferencesKeys.getAccelPositionKey(position, "z"), Float.NaN)
-            if (x.isNaN() || y.isNaN() || z.isNaN()) null else Triple(x, y, z)
-        }
+        return accelPositions[position]
     }
 
     override suspend fun getAllAccelPositions(): Map<Int, Triple<Float, Float, Float>> {
-        return withContext(Dispatchers.IO) {
-            val result = mutableMapOf<Int, Triple<Float, Float, Float>>()
-            for (i in 0..5) {
-                getAccelPosition(i)?.let { result[i] = it }
-            }
-            result
-        }
+        return HashMap(accelPositions)
     }
 
     override suspend fun saveAccelPositionsCompleted(count: Int) {
-        withContext(Dispatchers.IO) {
-            prefs.putInt(PreferencesKeys.KEY_ACCEL_POSITIONS_COMPLETED, count)
-        }
+        accelPositionsCompleted.set(count)
     }
 
     override suspend fun getAccelPositionsCompleted(): Int {
-        return withContext(Dispatchers.IO) {
-            prefs.getInt(PreferencesKeys.KEY_ACCEL_POSITIONS_COMPLETED, 0)
-        }
+        return accelPositionsCompleted.get()
     }
 
     override suspend fun resetAccel() {
         withContext(Dispatchers.IO) {
-            prefs.remove(PreferencesKeys.KEY_ACCEL_OFFSET_X)
-            prefs.remove(PreferencesKeys.KEY_ACCEL_OFFSET_Y)
-            prefs.remove(PreferencesKeys.KEY_ACCEL_OFFSET_Z)
-            prefs.remove(PreferencesKeys.KEY_ACCEL_SCALE_X)
-            prefs.remove(PreferencesKeys.KEY_ACCEL_SCALE_Y)
-            prefs.remove(PreferencesKeys.KEY_ACCEL_SCALE_Z)
-            prefs.remove(PreferencesKeys.KEY_ACCEL_CALIBRATED)
-            prefs.remove(PreferencesKeys.KEY_ACCEL_POSITIONS_COMPLETED)
-            for (i in 0..5) {
-                prefs.remove(PreferencesKeys.getAccelPositionKey(i, "x"))
-                prefs.remove(PreferencesKeys.getAccelPositionKey(i, "y"))
-                prefs.remove(PreferencesKeys.getAccelPositionKey(i, "z"))
-            }
+            val updated = getOrCreate().copy(
+                accelOffsetX = 0f, accelOffsetY = 0f, accelOffsetZ = 0f,
+                accelScaleX = 1f, accelScaleY = 1f, accelScaleZ = 1f
+            )
+            calibrationDao.insertCalibration(updated)
+            accelPositions.clear()
+            accelPositionsCompleted.set(0)
         }
     }
 
@@ -312,81 +201,68 @@ class CalibrationDataSourceImpl @Inject constructor(
 
     override suspend fun saveMagOffset(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
-            prefs.putFloat(PreferencesKeys.KEY_MAG_OFFSET_X, x)
-            prefs.putFloat(PreferencesKeys.KEY_MAG_OFFSET_Y, y)
-            prefs.putFloat(PreferencesKeys.KEY_MAG_OFFSET_Z, z)
+            val updated = getOrCreate().copy(magOffsetX = x, magOffsetY = y, magOffsetZ = z)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getMagOffset(): Triple<Float, Float, Float> {
         return withContext(Dispatchers.IO) {
-            Triple(
-                prefs.getFloat(PreferencesKeys.KEY_MAG_OFFSET_X, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_MAG_OFFSET_Y, 0f),
-                prefs.getFloat(PreferencesKeys.KEY_MAG_OFFSET_Z, 0f)
-            )
+            val e = getOrCreate()
+            Triple(e.magOffsetX, e.magOffsetY, e.magOffsetZ)
         }
     }
 
     override suspend fun saveMagScale(x: Float, y: Float, z: Float) {
         withContext(Dispatchers.IO) {
-            prefs.putFloat(PreferencesKeys.KEY_MAG_SCALE_X, x)
-            prefs.putFloat(PreferencesKeys.KEY_MAG_SCALE_Y, y)
-            prefs.putFloat(PreferencesKeys.KEY_MAG_SCALE_Z, z)
+            val updated = getOrCreate().copy(magScaleX = x, magScaleY = y, magScaleZ = z)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getMagScale(): Triple<Float, Float, Float> {
         return withContext(Dispatchers.IO) {
-            Triple(
-                prefs.getFloat(PreferencesKeys.KEY_MAG_SCALE_X, 1f),
-                prefs.getFloat(PreferencesKeys.KEY_MAG_SCALE_Y, 1f),
-                prefs.getFloat(PreferencesKeys.KEY_MAG_SCALE_Z, 1f)
-            )
+            val e = getOrCreate()
+            Triple(e.magScaleX, e.magScaleY, e.magScaleZ)
         }
     }
 
     override suspend fun saveMagSampleCount(count: Int) {
-        withContext(Dispatchers.IO) {
-            prefs.putInt(PreferencesKeys.KEY_MAG_SAMPLES, count)
-        }
+        magSampleCount.set(count)
     }
 
     override suspend fun getMagSampleCount(): Int {
-        return withContext(Dispatchers.IO) {
-            prefs.getInt(PreferencesKeys.KEY_MAG_SAMPLES, 0)
-        }
+        return magSampleCount.get()
     }
 
     override suspend fun resetMag() {
         withContext(Dispatchers.IO) {
-            prefs.remove(PreferencesKeys.KEY_MAG_OFFSET_X)
-            prefs.remove(PreferencesKeys.KEY_MAG_OFFSET_Y)
-            prefs.remove(PreferencesKeys.KEY_MAG_OFFSET_Z)
-            prefs.remove(PreferencesKeys.KEY_MAG_SCALE_X)
-            prefs.remove(PreferencesKeys.KEY_MAG_SCALE_Y)
-            prefs.remove(PreferencesKeys.KEY_MAG_SCALE_Z)
-            prefs.remove(PreferencesKeys.KEY_MAG_SAMPLES)
-            prefs.remove(PreferencesKeys.KEY_MAG_CALIBRATED)
+            val updated = getOrCreate().copy(
+                magOffsetX = 0f, magOffsetY = 0f, magOffsetZ = 0f,
+                magScaleX = 1f, magScaleY = 1f, magScaleZ = 1f
+            )
+            calibrationDao.insertCalibration(updated)
+            magSampleCount.set(0)
         }
     }
 
     // ============================================================
-    // Calibration Status
+    // Calibration Status & Metadata
     // ============================================================
 
     override suspend fun setCalibrationStatus(status: CalibrationStatus) {
         withContext(Dispatchers.IO) {
-            prefs.putString(PreferencesKeys.KEY_CALIBRATION_STATUS, status.name)
+            val updated = getOrCreate().copy(calibrationQuality = status.name)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getCalibrationStatus(): CalibrationStatus {
         return withContext(Dispatchers.IO) {
-            val status = prefs.getString(PreferencesKeys.KEY_CALIBRATION_STATUS, "NOT_STARTED")
+            val quality = getOrCreate().calibrationQuality
             try {
-                CalibrationStatus.valueOf(status)
-            } catch (e: Exception) {
+                CalibrationStatus.valueOf(quality)
+            } catch (_: Exception) {
                 CalibrationStatus.NOT_STARTED
             }
         }
@@ -394,68 +270,61 @@ class CalibrationDataSourceImpl @Inject constructor(
 
     override suspend fun setCalibrationQuality(quality: CalibrationQuality) {
         withContext(Dispatchers.IO) {
-            prefs.putString(PreferencesKeys.KEY_CALIBRATION_QUALITY, quality.name)
+            val updated = getOrCreate().copy(calibrationQuality = quality.name)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getCalibrationQuality(): CalibrationQuality {
         return withContext(Dispatchers.IO) {
-            val quality = prefs.getString(PreferencesKeys.KEY_CALIBRATION_QUALITY, "UNKNOWN")
+            val quality = getOrCreate().calibrationQuality
             try {
                 CalibrationQuality.valueOf(quality)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 CalibrationQuality.UNKNOWN
             }
         }
     }
 
     override suspend fun setCalibrationProgress(progress: Int) {
-        withContext(Dispatchers.IO) {
-            prefs.putInt(PreferencesKeys.KEY_CALIBRATION_PROGRESS, progress.coerceIn(0, 100))
-        }
+        calibrationProgress.set(progress.coerceIn(0, 100))
     }
 
     override suspend fun getCalibrationProgress(): Int {
-        return withContext(Dispatchers.IO) {
-            prefs.getInt(PreferencesKeys.KEY_CALIBRATION_PROGRESS, 0)
-        }
+        return calibrationProgress.get()
     }
 
     override suspend fun setCurrentStep(step: Int) {
-        withContext(Dispatchers.IO) {
-            prefs.putInt(PreferencesKeys.KEY_CALIBRATION_CURRENT_STEP, step.coerceIn(0, 3))
-        }
+        currentStep.set(step.coerceIn(0, 3))
     }
 
     override suspend fun getCurrentStep(): Int {
-        return withContext(Dispatchers.IO) {
-            prefs.getInt(PreferencesKeys.KEY_CALIBRATION_CURRENT_STEP, 0)
-        }
+        return currentStep.get()
     }
 
     override suspend fun setCalibrationComplete(complete: Boolean) {
         withContext(Dispatchers.IO) {
-            prefs.putBoolean(PreferencesKeys.KEY_CALIBRATION_COMPLETE, complete)
-            prefs.putBoolean("is_calibrated", complete)
+            val updated = getOrCreate().copy(isCalibrated = complete)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun isCalibrationComplete(): Boolean {
         return withContext(Dispatchers.IO) {
-            prefs.getBoolean(PreferencesKeys.KEY_CALIBRATION_COMPLETE, false) ||
-                    prefs.getBoolean("is_calibrated", false)
+            getOrCreate().isCalibrated
         }
     }
 
     override suspend fun setCalibrationTimestamp(timestamp: Long) {
         withContext(Dispatchers.IO) {
-            prefs.putLong(PreferencesKeys.KEY_CALIBRATION_TIMESTAMP, timestamp)
+            val updated = getOrCreate().copy(timestamp = timestamp)
+            calibrationDao.insertCalibration(updated)
         }
     }
 
     override suspend fun getCalibrationTimestamp(): Long {
         return withContext(Dispatchers.IO) {
-            prefs.getLong(PreferencesKeys.KEY_CALIBRATION_TIMESTAMP, 0L)
+            getOrCreate().timestamp
         }
     }
 }

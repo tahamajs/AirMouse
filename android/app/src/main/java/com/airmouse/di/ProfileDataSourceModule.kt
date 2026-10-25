@@ -2,7 +2,7 @@ package com.airmouse.di
 
 import com.airmouse.data.datasource.local.IProfileDataSource
 import com.airmouse.data.datasource.local.ProfileDataSourceImpl
-import com.airmouse.utils.PreferencesManager
+import com.airmouse.data.datasource.local.dao.ProfileDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,8 +16,8 @@ object ProfileDataSourceModule {
     @Provides
     @Singleton
     fun provideProfileDataSource(
-        prefs: PreferencesManager
+        profileDao: ProfileDao
     ): IProfileDataSource {
-        return ProfileDataSourceImpl(prefs)
+        return ProfileDataSourceImpl(profileDao)
     }
 }

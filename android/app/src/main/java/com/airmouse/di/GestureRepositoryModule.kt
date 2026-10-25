@@ -1,13 +1,12 @@
-
 package com.airmouse.di
 
-import android.content.Context
 import com.airmouse.data.datasource.local.GestureDataSourceImpl
 import com.airmouse.data.datasource.local.IGestureDataSource
+import com.airmouse.data.datasource.local.dao.GestureDao
+import com.airmouse.data.datasource.local.dao.TrainingSampleDao
 import com.airmouse.data.repository.GestureRepositoryImpl
 import com.airmouse.domain.repository.IGestureRepository
 import com.airmouse.sensors.EnhancedGestureDetector
-import com.airmouse.utils.PreferencesManager
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -33,9 +32,10 @@ object GestureRepositoryProvidersModule {
     @Provides
     @Singleton
     fun provideGestureDataSource(
-        prefs: PreferencesManager
+        gestureDao: GestureDao,
+        trainingSampleDao: TrainingSampleDao
     ): IGestureDataSource {
-        return GestureDataSourceImpl(prefs)
+        return GestureDataSourceImpl(gestureDao, trainingSampleDao)
     }
 
     @Provides

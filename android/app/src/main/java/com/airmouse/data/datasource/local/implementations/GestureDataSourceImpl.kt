@@ -1,53 +1,49 @@
 package com.airmouse.data.datasource.local
 
+import com.airmouse.data.datasource.local.dao.GestureDao
+import com.airmouse.data.datasource.local.dao.TrainingSampleDao
+import com.airmouse.data.datasource.local.entity.TrainingSampleEntity
+import com.airmouse.data.mapper.DomainToEntityMapper
 import com.airmouse.domain.model.CustomGestureTemplate
 import com.airmouse.domain.model.GestureTrainingStats
-import com.airmouse.utils.PreferencesManager
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class GestureDataSourceImpl @Inject constructor(
-    private val prefs: PreferencesManager
+    private val gestureDao: GestureDao,
+    private val trainingSampleDao: TrainingSampleDao
 ) : IGestureDataSource {
 
-    private val gson = Gson()
-    private val templatesKey = "gesture_templates"
-    private val trainingKeyPrefix = "training_"
-    private val statsKey = "gesture_stats"
-    private val favoritesKey = "favorite_gestures"
-    private val confidenceThresholdKey = "gesture_confidence_threshold"
-    private val cooldownMsKey = "gesture_cooldown_ms"
+    private val mutex = Mutex()
+    private var confidenceThreshold: Float = 0.7f
+    private var cooldownMs: Long = 500L
+    private var customStats: GestureTrainingStats? = null
 
     // ============================================================
     // Sync methods
     // ============================================================
 
     override suspend fun getAllTemplates(): List<CustomGestureTemplate> {
-        return getGestureTemplates()
+        return gestureDao.getAllTemplates().map { DomainToEntityMapper.mapToDomain(it) }
     }
 
     override suspend fun saveAllTemplates(templates: List<CustomGestureTemplate>) {
-        saveTemplatesToPrefs(templates)
+        templates.forEach { template ->
+            gestureDao.insertTemplate(DomainToEntityMapper.mapToEntity(template))
+        }
     }
 
     override suspend fun saveGestureTemplate(template: CustomGestureTemplate) {
-        val templates = getGestureTemplates().toMutableList()
-        val existingIndex = templates.indexOfFirst { it.id == template.id }
-        if (existingIndex >= 0) {
-            templates[existingIndex] = template
-        } else {
-            templates.add(template)
-        }
-        saveTemplatesToPrefs(templates)
+        val entity = DomainToEntityMapper.mapToEntity(template)
+        gestureDao.insertTemplate(entity)
     }
 
     override suspend fun deleteGestureTemplate(id: String) {
-        val templates = getGestureTemplates().toMutableList()
-        templates.removeAll { it.id == id }
-        saveTemplatesToPrefs(templates)
+        gestureDao.deleteTemplate(id)
+        trainingSampleDao.deleteSamplesByGesture(id)
     }
 
     // ============================================================
@@ -55,130 +51,129 @@ class GestureDataSourceImpl @Inject constructor(
     // ============================================================
 
     override suspend fun getGestureTemplate(id: String): CustomGestureTemplate? {
-        return getGestureTemplates().find { it.id == id }
+        return gestureDao.getTemplateById(id)?.let { DomainToEntityMapper.mapToDomain(it) }
     }
 
     override suspend fun updateGestureTemplate(template: CustomGestureTemplate) {
-        saveGestureTemplate(template)
+        val entity = DomainToEntityMapper.mapToEntity(template)
+        gestureDao.updateTemplate(entity)
     }
 
     override suspend fun toggleFavorite(id: String) {
-        val favorites = getFavorites().toMutableList()
-        if (favorites.contains(id)) {
-            favorites.remove(id)
-        } else {
-            favorites.add(id)
-        }
-        prefs.putString(favoritesKey, gson.toJson(favorites))
+        val template = gestureDao.getTemplateById(id) ?: return
+        gestureDao.setFavorite(id, !template.isFavorite)
     }
 
     override suspend fun getFavoriteTemplates(): List<CustomGestureTemplate> {
-        val favoriteIds = getFavorites()
-        return getGestureTemplates().filter { it.id in favoriteIds }
+        return gestureDao.getFavoriteTemplates().map { DomainToEntityMapper.mapToDomain(it) }
     }
 
     override suspend fun saveTrainingSamples(gestureName: String, samples: List<FloatArray>) {
-        val key = trainingKeyPrefix + gestureName
-        val json = gson.toJson(samples.map { it.toList() })
-        prefs.putString(key, json)
+        val entities = samples.map { sample ->
+            TrainingSampleEntity(
+                gestureId = gestureName,
+                label = gestureName,
+                gyroX = sample.getOrElse(0) { 0f },
+                gyroY = sample.getOrElse(1) { 0f },
+                gyroZ = sample.getOrElse(2) { 0f },
+                accelX = sample.getOrElse(3) { 0f },
+                accelY = sample.getOrElse(4) { 0f },
+                accelZ = sample.getOrElse(5) { 0f },
+                magX = sample.getOrElse(6) { 0f },
+                magY = sample.getOrElse(7) { 0f },
+                magZ = sample.getOrElse(8) { 0f },
+                confidence = 1.0f,
+                timestamp = System.currentTimeMillis()
+            )
+        }
+        trainingSampleDao.insertSamples(entities)
+        val template = gestureDao.getTemplateByName(gestureName)
+        if (template != null) {
+            gestureDao.incrementTrainingSamples(template.id)
+        }
     }
 
     override suspend fun getTrainingSamples(gestureName: String): List<FloatArray> {
-        val key = trainingKeyPrefix + gestureName
-        val json = prefs.getString(key, "[]")
-        val type = object : TypeToken<List<List<Float>>>() {}.type
-        val list: List<List<Float>> = gson.fromJson(json, type)
-        return list.map { it.toFloatArray() }
+        val samples = trainingSampleDao.getSamplesByGesture(gestureName).ifEmpty {
+            trainingSampleDao.getSamplesByLabel(gestureName)
+        }
+        return samples.map { sample ->
+            floatArrayOf(
+                sample.gyroX, sample.gyroY, sample.gyroZ,
+                sample.accelX, sample.accelY, sample.accelZ,
+                sample.magX, sample.magY, sample.magZ
+            )
+        }
     }
 
     override suspend fun clearTrainingData(gestureName: String) {
-        prefs.remove(trainingKeyPrefix + gestureName)
+        trainingSampleDao.deleteSamplesByGesture(gestureName)
     }
 
     override suspend fun updateGestureStats(stats: GestureTrainingStats) {
-        val json = gson.toJson(stats)
-        prefs.putString(statsKey, json)
+        mutex.withLock {
+            customStats = stats
+        }
     }
 
     override suspend fun getGestureStats(): GestureTrainingStats {
-        val json = prefs.getString(statsKey, "{}")
-        val type = object : TypeToken<GestureTrainingStats>() {}.type
-        return gson.fromJson(json, type) ?: GestureTrainingStats()
+        mutex.withLock {
+            val stats = customStats
+            if (stats != null) return stats
+
+            val totalGestures = gestureDao.getTemplateCount()
+            val totalDetections = gestureDao.getTotalDetections()
+            return GestureTrainingStats(
+                totalGestures = totalGestures,
+                totalSamples = trainingSampleDao.getSampleCount(),
+                totalDetections = totalDetections,
+                averageConfidence = gestureDao.getAverageConfidenceThreshold()
+            )
+        }
     }
 
     override suspend fun incrementGestureCount(gestureName: String, confidence: Float) {
-        val stats = getGestureStats()
-        val updatedStats = stats.copy(
-            totalGestures = stats.totalGestures + 1,
-            lastGestureTime = System.currentTimeMillis(),
-            averageConfidence = (stats.averageConfidence * stats.totalGestures + confidence) / (stats.totalGestures + 1)
-        )
-        updateGestureStats(updatedStats)
-
-        val key = "detection_count_$gestureName"
-        val currentCount = prefs.getInt(key, 0)
-        prefs.putInt(key, currentCount + 1)
+        val template = gestureDao.getTemplateByName(gestureName)
+        if (template != null) {
+            gestureDao.incrementDetectionCount(template.id, System.currentTimeMillis())
+        }
     }
 
     override suspend fun getGestureCount(): Int {
-        val stats = getGestureStats()
-        return stats.gesturesByType.values.sum()
+        return gestureDao.getTemplateCount()
     }
 
     override suspend fun getTotalDetections(): Int {
-        val stats = getGestureStats()
-        return stats.totalGestures
+        return gestureDao.getTotalDetections()
     }
 
     override suspend fun getMostUsedGestures(limit: Int): List<CustomGestureTemplate> {
-        val templates = getGestureTemplates()
-        return templates.sortedByDescending { it.usageCount }.take(limit)
+        return gestureDao.getAllTemplatesByUsage().take(limit).map { DomainToEntityMapper.mapToDomain(it) }
     }
 
     override suspend fun setConfidenceThreshold(threshold: Float) {
-        prefs.putFloat(confidenceThresholdKey, threshold)
+        mutex.withLock {
+            confidenceThreshold = threshold
+        }
     }
 
     override suspend fun getConfidenceThreshold(): Float {
-        return prefs.getFloat(confidenceThresholdKey, 0.7f)
+        return mutex.withLock { confidenceThreshold }
     }
 
     override suspend fun setCooldownMs(cooldown: Long) {
-        prefs.putLong(cooldownMsKey, cooldown)
+        mutex.withLock {
+            cooldownMs = cooldown
+        }
     }
 
     override suspend fun getCooldownMs(): Long {
-        return prefs.getLong(cooldownMsKey, 500L)
+        return mutex.withLock { cooldownMs }
     }
 
     override suspend fun resetAllStats() {
-        prefs.remove(statsKey)
-        val allKeys = prefs.getAllKeys()
-        allKeys.filter { it.startsWith("detection_count_") }.forEach { prefs.remove(it) }
-    }
-
-    // ============================================================
-    // Private Helpers
-    // ============================================================
-
-    private fun getGestureTemplates(): List<CustomGestureTemplate> {
-        val json = prefs.getString(templatesKey, "[]")
-        return parseTemplatesFromJson(json)
-    }
-
-    private fun getFavorites(): List<String> {
-        val json = prefs.getString(favoritesKey, "[]")
-        val type = object : TypeToken<List<String>>() {}.type
-        return gson.fromJson(json, type)
-    }
-
-    private fun parseTemplatesFromJson(json: String): List<CustomGestureTemplate> {
-        val type = object : TypeToken<List<CustomGestureTemplate>>() {}.type
-        return gson.fromJson(json, type) ?: emptyList()
-    }
-
-    private fun saveTemplatesToPrefs(templates: List<CustomGestureTemplate>) {
-        val json = gson.toJson(templates)
-        prefs.putString(templatesKey, json)
+        mutex.withLock {
+            customStats = null
+        }
     }
 }
