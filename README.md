@@ -18,6 +18,7 @@
 <br/>
 
 [**Live UI Previews**](#-application-ui--design-showcase) •
+[**Official Releases & Installers**](#-official-releases--installers-all-platforms) •
 [**Quickstart**](#-quickstart--installation) •
 [**Architecture**](#-system-architecture) •
 [**Protocol V2**](#-canonical-protocol-v2-wire-envelope) •
@@ -25,6 +26,26 @@
 [**Documentation**](#-full-documentation-index)
 
 </div>
+
+---
+
+## 📦 Official Releases & Installers (All Platforms)
+
+Download pre-compiled, verified release packages for all supported platforms:
+
+| Platform | Target Architecture | Release Artifact | Quick Installation |
+| :--- | :--- | :--- | :--- |
+| **🤖 Android** | ARM64 / ARMv7 / x86_64 | [**`AirMouse-v1.0.0.apk`**](releases/android/AirMouse-v1.0.0.apk) | `adb install -r AirMouse-v1.0.0.apk` |
+| **🪟 Windows** | x86_64 (Windows 10/11) | [**`AirMouse-v1.0.0-windows-x64.zip`**](releases/windows/AirMouse-v1.0.0-windows-x64.zip) | Extract & run `Start-AirMouse.bat` |
+| **🪟 Windows** | x86_64 Portable EXE | [**`AirMouse-Server-v1.0.0-windows-x64.exe`**](releases/windows/AirMouse-Server-v1.0.0-windows-x64.exe) | Portable zero-dependency executable |
+| **🍎 macOS** | Universal (Apple Silicon M1-M4 + Intel) | [**`AirMouse-v1.0.0-macos-universal.tar.gz`**](releases/macos/AirMouse-v1.0.0-macos-universal.tar.gz) | Extract & move `AirMouse.app` to `/Applications` |
+| **🍎 macOS** | Universal CLI Daemon | [**`AirMouse-Server-v1.0.0-macos-universal`**](releases/macos/AirMouse-Server-v1.0.0-macos-universal) | `./AirMouse-Server-v1.0.0-macos-universal` |
+| **🐧 Linux** | x86_64 (Ubuntu/Debian/Fedora/Arch) | [**`AirMouse-v1.0.0-linux-x64.tar.gz`**](releases/linux/AirMouse-v1.0.0-linux-x64.tar.gz) | Extract & run `./start-airmouse.sh` |
+| **🐧 Linux** | ARM64 (Raspberry Pi 4/5 / SBC) | [**`AirMouse-v1.0.0-linux-arm64.tar.gz`**](releases/linux/AirMouse-v1.0.0-linux-arm64.tar.gz) | Extract & run `./start-airmouse.sh` |
+
+> 🔐 **Checksums**: Verify SHA256 integrity using [**`releases/SHA256SUMS.txt`**](releases/SHA256SUMS.txt).
+> 
+> ⚡ **Rebuild All Releases from Source**: Run [`./scripts/build_all_releases.sh`](scripts/build_all_releases.sh) to regenerate all binaries and archives.
 
 ---
 

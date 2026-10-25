@@ -131,3 +131,7 @@ temp/
 *.pkg
 *.deb
 *.rpm
+
+# Keep release manifest and checksums in repo
+!releases/README.md
+!releases/SHA256SUMS.txt

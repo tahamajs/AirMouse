@@ -1,0 +1,9 @@
+6a280940403331aeedae645c5544749866b45578fd0b9e7a00f3e24b8324379a  ./android/AirMouse-v1.0.0.apk
+966e39209e5d4253704879c5ce5fd539f642934dec93155af84a7776f01256bc  ./linux/AirMouse-v1.0.0-linux-arm64.tar.gz
+8513a3873bf420434ec725ace65b01fe24d3b1ac9d2a83dcf372a782752c9e44  ./linux/AirMouse-v1.0.0-linux-x64.tar.gz
+d53b9559e729796f3640902953f67d108eace1952435b5e1b18b4764bbc16f85  ./linux/airmouse-server-v1.0.0-linux-arm64
+7d22b0086360671cfaf62ccd6a538002d21818c32764e5d37928987f1e767af4  ./linux/airmouse-server-v1.0.0-linux-x64
+0d07b8f20b61333867d8d03fa473c02969e8f50622cd5287f74a000207a25de5  ./macos/AirMouse-Server-v1.0.0-macos-universal
+40c17133db2e4cd48e4392e1f08f51553d9f3bc7ba669d20f3085eb43828ccc0  ./macos/AirMouse-v1.0.0-macos-universal.tar.gz
+25d76543630c4d03144ce1aadcbb8c9e89254ea081f70d10e8bcf684ec14536a  ./windows/AirMouse-Server-v1.0.0-windows-x64.exe
+6b1db4332669c3a2e4193676ad2cd8c2d71bb494170d59fec6036d433ae2f4de  ./windows/AirMouse-v1.0.0-windows-x64.zip
