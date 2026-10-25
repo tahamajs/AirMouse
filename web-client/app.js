@@ -216,8 +216,10 @@
     function initSettings() {
         const urlParams = new URLSearchParams(window.location.search);
 
-        // Server Host Resolution
-        const defaultHost = window.location.host || '127.0.0.1:8081';
+        // Server Host Resolution: default to matching host with WS port 8081
+        const defaultHost = (window.location.hostname && window.location.hostname !== '') 
+            ? `${window.location.hostname}:8081` 
+            : '127.0.0.1:8081';
         const savedHost = urlParams.get('host') || urlParams.get('ip') || localStorage.getItem('airmouse_host') || defaultHost;
         serverHostInput.value = savedHost;
         updateCertLink();
@@ -264,6 +266,15 @@
             statRate.textContent = messageCounter + ' msg/s';
             messageCounter = 0;
         }, 1000);
+
+        // Frictionless One-Touch / QR Auto-Connect
+        if (urlParams.get('autoconnect') === '1' || urlParams.get('auto') === 'true') {
+            setTimeout(() => {
+                if (!isConnected && btnConnect) {
+                    btnConnect.click();
+                }
+            }, 300);
+        }
     }
 
     // Protocol v2 Envelope Sender

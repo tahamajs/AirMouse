@@ -9,6 +9,7 @@ import com.airmouse.data.datasource.local.dao.GestureDao
 import com.airmouse.data.datasource.local.dao.ProfileDao
 import com.airmouse.data.datasource.local.dao.SettingsDao
 import com.airmouse.data.datasource.local.dao.StatisticsDao
+import com.airmouse.data.datasource.local.dao.TrainingSampleDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -61,5 +62,11 @@ object DatabaseModule {
     @Singleton
     fun provideProfileDao(database: AppDatabase): ProfileDao {
         return database.profileDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideTrainingSampleDao(database: AppDatabase): TrainingSampleDao {
+        return database.trainingSampleDao()
     }
 }
