@@ -617,13 +617,59 @@ func (s *Server) processLine(client *Client, line []byte) {
 		}
 		utils.LogInfo("TCP client awaiting approval: id=%s name=%s", client.ID, client.Name)
 
-	case "ping":
-		utils.LogDebug("TCP ping received from client=%s, sending pong", client.ID)
+	case "ping", "heartbeat":
+		utils.LogDebug("TCP ping/heartbeat received from client=%s, sending pong", client.ID)
 		_ = client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		_, _ = client.Conn.Write([]byte(`{"type":"pong"}` + "\n"))
+		utils.RecordPacketOut(16)
 
 	case "pong":
 		utils.LogDebug("TCP pong received from client=%s", client.ID)
+		if tsVal, ok := payload["ts"]; ok {
+			ts := int64(number(tsVal))
+			if ts > 0 {
+				rtt := float64(time.Now().UnixMilli() - ts)
+				if rtt >= 0 && rtt < 10000 {
+					utils.RecordPingLatency(rtt)
+				}
+			}
+		}
+
+	case "stats_req":
+		snap := utils.GetTelemetrySnapshot()
+		var clicks, scrolls int64
+		if s.mouse != nil {
+			c, _, _, scr := s.mouse.Stats()
+			clicks, scrolls = c, scr
+		}
+		resp := statsRespMessage(map[string]any{
+			"clicks":          clicks,
+			"scrolls":         scrolls,
+			"uptime_seconds":  snap.UptimeSeconds,
+			"packets_per_sec": snap.PacketsPerSec,
+			"bytes_in_kbps":   snap.BytesInKBps,
+			"bytes_out_kbps":  snap.BytesOutKBps,
+			"dropped_packets": snap.DroppedPackets,
+			"avg_ping_ms":     snap.AveragePingMs,
+		}, id)
+		_ = client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		_, _ = client.Conn.Write(resp)
+		utils.RecordPacketOut(int64(len(resp)))
+
+	case "stats_resp", "stats":
+		utils.LogDebug("TCP stats update received from client=%s", client.ID)
+
+	case "battery", "battery_report":
+		level := firstInt(payload, "level", "battery")
+		charging, _ := payload["charging"].(bool)
+		devID := client.DeviceID
+		if devID == "" {
+			devID = client.ID
+		}
+		utils.LogInfo("TCP battery report received from client=%s: level=%d%% charging=%v", client.ID, level, charging)
+		if s.deviceMgr != nil {
+			_ = s.deviceMgr.UpdateDeviceBattery(devID, level, charging)
+		}
 
 	case "gesture":
 		gesture, _ := payload["gesture"].(string)
