@@ -372,6 +372,19 @@ func KeyTap(key string) {
 	}
 }
 
+// Hotkey presses modifier keys, taps the key, and releases the modifiers.
+func Hotkey(modifiers []string, key string) {
+	for _, m := range modifiers {
+		KeyDown(m)
+	}
+	if key != "" {
+		KeyTap(key)
+	}
+	for i := len(modifiers) - 1; i >= 0; i-- {
+		KeyUp(modifiers[i])
+	}
+}
+
 // TypeText simulates typing a string of text.
 func TypeText(txt string) {
 	if typeText != nil {

@@ -15,6 +15,7 @@ import (
 	"airmouse-go/internal/protocol/usb"
 	websocketpkg "airmouse-go/internal/protocol/websocket"
 	"airmouse-go/internal/proximity"
+	"airmouse-go/internal/sysaction"
 	"airmouse-go/internal/utils"
 )
 
@@ -249,6 +250,14 @@ func (s *ProtocolServer) Stop() {
 		usbServer.Stop()
 		utils.LogInfo("USB server stopped")
 	}
+
+	// Reset any active emulation states (mouse buttons and keyboard keys)
+	if s.mouseCtrl != nil {
+		s.mouseCtrl.MouseUp("left")
+		s.mouseCtrl.MouseUp("right")
+		s.mouseCtrl.MouseUp("middle")
+	}
+	sysaction.ReleaseAllKeys()
 
 	s.triggerEvent(ServerEvent{
 		Type:      "stop",

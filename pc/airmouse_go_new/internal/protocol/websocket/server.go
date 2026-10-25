@@ -1003,7 +1003,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			go sysaction.KeyTap("r")
 		}
 
-	case "keypress", "keydown", "keyup", "key":
+	case "keypress", "key_press", "key":
 		keyVal, _ := payload["key"].(string)
 		if keyVal == "" {
 			keyVal, _ = payload["code"].(string)
@@ -1014,6 +1014,54 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		if keyVal != "" {
 			utils.LogInfo("WebSocket key event %s: key=%s client=%s", msgType, keyVal, client.ID)
 			go sysaction.KeyTap(keyVal)
+		}
+
+	case "keydown", "key_down":
+		keyVal, _ := payload["key"].(string)
+		if keyVal == "" {
+			keyVal, _ = payload["code"].(string)
+		}
+		if keyVal == "" {
+			keyVal, _ = payload["value"].(string)
+		}
+		if keyVal != "" {
+			utils.LogInfo("WebSocket keydown: key=%s client=%s", keyVal, client.ID)
+			go sysaction.KeyDown(keyVal)
+		}
+
+	case "keyup", "key_up":
+		keyVal, _ := payload["key"].(string)
+		if keyVal == "" {
+			keyVal, _ = payload["code"].(string)
+		}
+		if keyVal == "" {
+			keyVal, _ = payload["value"].(string)
+		}
+		if keyVal != "" {
+			utils.LogInfo("WebSocket keyup: key=%s client=%s", keyVal, client.ID)
+			go sysaction.KeyUp(keyVal)
+		}
+
+	case "hotkey":
+		keyVal, _ := payload["key"].(string)
+		var modifiers []string
+		if modsRaw, ok := payload["modifiers"].([]interface{}); ok {
+			for _, m := range modsRaw {
+				if ms, ok := m.(string); ok {
+					modifiers = append(modifiers, ms)
+				}
+			}
+		} else if modsStr, ok := payload["modifiers"].(string); ok {
+			for _, part := range strings.Split(modsStr, "+") {
+				part = strings.TrimSpace(part)
+				if part != "" {
+					modifiers = append(modifiers, part)
+				}
+			}
+		}
+		if keyVal != "" || len(modifiers) > 0 {
+			utils.LogInfo("WebSocket hotkey: key=%s mods=%v client=%s", keyVal, modifiers, client.ID)
+			go sysaction.Hotkey(modifiers, keyVal)
 		}
 
 	case "type", "text":
@@ -1042,7 +1090,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		utils.LogInfo("WebSocket calibration_data received: device=%s, quality=%s, gyro_bias=(%.4f,%.4f,%.4f), accel_bias=(%.4f,%.4f,%.4f)",
 			client.ID, cp.Quality, cp.Gyro.X, cp.Gyro.Y, cp.Gyro.Z, cp.Accel.X, cp.Accel.Y, cp.Accel.Z)
 
-	case "ping":
+	case "ping", "heartbeat":
 		select {
 		case client.Send <- PongMessage():
 		default:
@@ -1050,6 +1098,56 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 
 	case "pong":
 		utils.LogDebug("Pong received from: %s", client.ID)
+		if ts, ok := payload["timestamp"].(float64); ok && ts > 0 {
+			nowMs := float64(time.Now().UnixMilli())
+			rttMs := nowMs - ts
+			if rttMs >= 0 && rttMs < 10000 {
+				utils.RecordPingLatency(rttMs)
+			}
+		}
+
+	case "stats_req":
+		snapshot := utils.GetTelemetrySnapshot()
+		resp := StatsRespMessage(map[string]any{
+			"packets_received":  snapshot.TotalPacketsIn,
+			"packets_sent":      snapshot.TotalPacketsOut,
+			"bytes_received":    snapshot.TotalBytesIn,
+			"bytes_sent":        snapshot.TotalBytesOut,
+			"throughput_kbps":   snapshot.BytesInKBps,
+			"dropped_packets":   snapshot.DroppedPackets,
+			"avg_ping_ms":       snapshot.AveragePingMs,
+			"uptime_seconds":    snapshot.UptimeSeconds,
+			"clients_connected": s.GetClientCount(),
+		}, nil)
+		select {
+		case client.Send <- resp:
+		default:
+		}
+
+	case "stats_resp", "stats":
+		utils.LogDebug("WebSocket stats received from client: %s", client.ID)
+
+	case "battery", "battery_report":
+		var level int = -1
+		var charging bool
+		if lvl, ok := payload["level"].(float64); ok {
+			level = int(lvl)
+		} else if pct, ok := payload["percentage"].(float64); ok {
+			level = int(pct)
+		}
+		if chg, ok := payload["charging"].(bool); ok {
+			charging = chg
+		} else if isChg, ok := payload["is_charging"].(bool); ok {
+			charging = isChg
+		}
+		if level >= 0 && s.deviceMgr != nil {
+			devID := client.DeviceID
+			if devID == "" {
+				devID = client.ID
+			}
+			s.deviceMgr.UpdateDeviceBattery(devID, level, charging)
+			utils.LogInfo("Updated device battery: id=%s level=%d%% charging=%v", devID, level, charging)
+		}
 
 	case "voice_command":
 		command, _ := payload["command"].(string)
