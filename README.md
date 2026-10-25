@@ -264,13 +264,62 @@ To eliminate hand jitter during delicate button clicks while maintaining instant
 
 ---
 
-### 5. ⚡ Multi-OS Desktop Host Daemons (Go & Python)
+### 5. 🔄 End-to-End Synchronization, Auto-Discovery & Reconnection Engine
+
+Reliable wireless input demands continuous synchronization across connection discovery, cryptographic handshakes, clock offsets, jitter buffers, and network transitions. AirMouse implements a multi-tier synchronization pipeline that guarantees zero configuration and instant recovery:
+
+<div align="center">
+  <img src="docs/assets/module_sync_lifecycle.svg" alt="AirMouse Device Synchronization Lifecycle" width="100%">
+  <p><em>Figure 5: AirMouse Synchronization Lifecycle — <b>UDP LAN Beaconing</b>, <b>HMAC-SHA256 QR Pairing</b>, <b>NTP Clock Sync</b>, <b>Exponential Backoff Reconnect</b>, and <b>State Mirroring</b></em></p>
+</div>
+
+#### A. Zero-Config LAN Discovery (`UdpDiscovery.kt`)
+* **Broadcast Beaconing**: When the user opens AirMouse, the client broadcasts `AIRMOUSE_DISCOVER` packets over UDP port 8082 across standard broadcast addresses (`255.255.255.255`, `192.168.1.255`, `192.168.0.255`, `10.0.0.255`, `172.16.0.255`).
+* **Instant Daemon Announcement**: The Desktop server (Go or Python) replies immediately with its metadata: `{ "port": 8080, "name": "Host-PC", "version": "1.0.1", "ws_port": 8081 }`.
+* **Dynamic DHCP Adaptation**: If your router assigns a new local IP to the host computer, discovery detects the updated endpoint within 50ms without manual IP re-entry.
+
+#### B. Cryptographic Pairing & HMAC-SHA256 Token Exchange
+* **QR Code Pairing**: The Desktop server displays a QR code containing an ephemeral pairing token:
+  - **HMAC-SHA256 Signed**: Created with a high-entropy secret key and a unique `JTI` nonce.
+  - **5-Minute Expiry**: Pairing tokens expire automatically after 5 minutes to prevent replay or man-in-the-middle pairing.
+* **Constant-Time Verification**: The server verifies token authenticity via `crypto/subtle.ConstantTimeCompare`, neutralizing side-channel timing attacks.
+* **Long-Lived Session Key**: Upon successful pairing, the server issues a durable 24-hour authentication token (`tokenTTL`), safely persisted inside Android Encrypted Preferences. Subsequent connections authenticate automatically in under 50ms without scanning the QR code again.
+
+#### C. Canonical Handshake (`hello` ⟷ `welcome`)
+* **Client Handshake (`hello`)**: Transmits hardware fingerprint (`device_id`), device model, Android SDK level, transport protocol (`TCP`, `WSS`, `UDP`), and authentication token.
+* **Server Handshake (`welcome`)**: Returns a cryptographically random session ID, agreed heartbeat interval ($1000\text{ ms}$), and active display dimensions ($W \times H$) for absolute coordinate clipping.
+* **Monotonic Sequence Enforcement**: Both sides initialize packet counters (`seq = 1000`), enforcing strict packet ordering and dropping replayed or out-of-order UDP datagrams.
+
+#### D. Clock Synchronization & Dynamic Jitter Buffering
+* **NTP-Style Round-Trip Ping/Pong**: Exchanging periodic heartbeat packets tracks true network round-trip time ($RTT$):
+  $$RTT = t_{\text{receive}} - t_{\text{send}}, \quad \Delta t_{\text{clock}} = \frac{(t_2 - t_1) + (t_3 - t_4)}{2}$$
+* **Exponentially Weighted Moving Average (EWMA) Jitter**:
+  $$\text{Jitter}_k = (1 - \alpha) \cdot \text{Jitter}_{k-1} + \alpha \cdot |(t_{\text{arr},k} - t_{\text{arr},k-1}) - (t_{\text{tx},k} - t_{\text{tx},k-1})|$$
+* **Adaptive Jitter Buffer (1–16 ms)**: The Go desktop daemon maintains an adaptive queue that expands during Wi-Fi congestion and shrinks during clean transmission, absorbing network packet bursts without visual cursor stutter.
+* **Dead Reckoning Packet Loss Concealment**: If a high-frequency UDP motion packet is dropped, the server uses cubic B-Spline interpolation to extrapolate cursor motion from previous velocity vectors.
+
+#### E. Resilient Reconnection with Exponential Backoff (`AutoReconnectManager.kt`)
+* **Network Interruption Detection**: If Wi-Fi signals drop or the phone roams between access points, the client instantly transitions to `RECONNECTING` status.
+* **Exponential Backoff Formula**: Reconnection attempts scale progressively to prevent network flooding:
+  $$\text{Delay}_k = \min\left(3000\text{ ms} \times 2^{\min(k, 4)}, 60000\text{ ms}\right)$$
+* **Bounded Retries**: Executes up to 10 reconnection attempts before falling back to safe dormant sleep.
+* **WakeLock Guard**: Holds an Android `PARTIAL_WAKE_LOCK` (capped at 2 hours) ensuring background reconnection tasks are not terminated by Android Doze mode.
+* **Fast Reconnect**: Re-authenticates via the cached auth token in $<350\text{ ms}$ once network connectivity returns.
+
+#### F. Bi-Directional Multiplatform State Synchronization
+* **Dynamic Theme Synchronization**: When you toggle Dark/Light mode or select dynamic Material You colors on your Android device, the hex color tokens are mirrored in real time to the Go desktop dashboard and Web Client UI.
+* **Telemetry & Battery Mirroring**: Real-time smartphone battery percentage, charging state, and Wi-Fi RSSI signal quality are displayed live on the desktop system tray.
+* **Operational Mode Sync**: Switching between Touchpad, Spatial Air Mouse, or Presentation Mode synchronizes input handling across all desktop input listeners instantly.
+
+---
+
+### 6. ⚡ Multi-OS Desktop Host Daemons (Go & Python)
 
 AirMouse features two independent desktop server implementations tailored for maximum performance and portability:
 
 <div align="center">
   <img src="docs/assets/module_desktop_kernel.svg" alt="Multi-OS Kernel Input Synthesis" width="100%">
-  <p><em>Figure 5: Multi-OS Kernel Input Synthesis Engine — <b>Go High-Throughput Ingest</b>, <b>CoreGraphics (macOS)</b>, <b>SendInput (Windows)</b>, and <b>/dev/uinput (Linux)</b></em></p>
+  <p><em>Figure 6: Multi-OS Kernel Input Synthesis Engine — <b>Go High-Throughput Ingest</b>, <b>CoreGraphics (macOS)</b>, <b>SendInput (Windows)</b>, and <b>/dev/uinput (Linux)</b></em></p>
 </div>
 
 #### A. Go High-Performance Server (`pc/airmouse_go_new/`)
@@ -286,7 +335,7 @@ AirMouse features two independent desktop server implementations tailored for ma
 
 <div align="center">
   <img src="docs/assets/desktop_gui_mockup.svg" alt="AirMouse Desktop Fyne Server" width="100%">
-  <p><em>Figure 6: AirMouse Desktop Host Server — <b>6-Tab Fyne GUI Dashboard</b> with Live Waveform &amp; Jitter Analytics</em></p>
+  <p><em>Figure 7: AirMouse Desktop Host Server — <b>6-Tab Fyne GUI Dashboard</b> with Live Waveform &amp; Jitter Analytics</em></p>
 </div>
 
 #### B. Python Reference Server (`pc/airmouse_py/`)
@@ -298,13 +347,13 @@ AirMouse features two independent desktop server implementations tailored for ma
 
 ---
 
-### 6. 🌐 Zero-Install Mobile Web Client (`web-client/`)
+### 7. 🌐 Zero-Install Mobile Web Client (`web-client/`)
 
 A zero-install Progressive Web App (PWA) allowing immediate touch and spatial mouse control on Apple iOS (Safari) and Android (Chrome) without installing an app:
 
 <div align="center">
   <img src="docs/assets/module_web_client.svg" alt="AirMouse Mobile Web Client" width="100%">
-  <p><em>Figure 7: Zero-Install Mobile Web Client — <b>iOS 13+ Onboarding Dialog</b>, <b>Web Audio Haptic Impulses</b>, and <b>Screen Wake Lock Fallback</b></em></p>
+  <p><em>Figure 8: Zero-Install Mobile Web Client — <b>iOS 13+ Onboarding Dialog</b>, <b>Web Audio Haptic Impulses</b>, and <b>Screen Wake Lock Fallback</b></em></p>
 </div>
 
 * **iOS 13+ Sensor Permission Dialog**:

@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#080d1a"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1000" height="500" rx="16" fill="url(#bgGrad)"/>
+  <rect width="998" height="498" x="1" y="1" rx="15" fill="none" stroke="#334155" stroke-width="1.5"/>
+
+  <!-- Header Badge -->
+  <rect x="30" y="20" width="370" height="34" rx="17" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2"/>
+  <circle cx="48" cy="37" r="6" fill="#38bdf8" filter="url(#glowCyan)"/>
+  <text x="64" y="42" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" letter-spacing="0.5">AIRMOUSE DEVICE SYNCHRONIZATION</text>
+  <text x="680" y="42" fill="#94a3b8" font-family="sans-serif" font-size="12">Discovery, Pairing, Clock Sync &amp; Reconnection</text>
+
+  <!-- 4 Step Sequential Process Cards across top/middle -->
+
+  <!-- Step 1: Discovery & Zero-Config Beaconing -->
+  <g transform="translate(30, 72)">
+    <rect width="220" height="210" rx="12" fill="url(#cardGrad)" stroke="#38bdf8" stroke-width="1.5"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#0284c7" fill-opacity="0.25"/>
+    <text x="22" y="38" font-size="18">📡</text>
+    <text x="56" y="27" fill="#f8fafc" font-family="sans-serif" font-size="13" font-weight="700">1. Discovery</text>
+    <text x="56" y="42" fill="#38bdf8" font-family="sans-serif" font-size="10.5">UDP Port 8082 Broadcast</text>
+
+    <rect x="10" y="58" width="200" height="48" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="16" y="74" fill="#38bdf8" font-family="monospace" font-size="9.5">TX: AIRMOUSE_DISCOVER</text>
+    <text x="16" y="88" fill="#94a3b8" font-family="monospace" font-size="9.5">to 255.255.255.255 / LAN</text>
+    <text x="16" y="100" fill="#34d399" font-family="monospace" font-size="9">RX: {port:8080, name, ver}</text>
+
+    <text x="10" y="124" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Subnet scan across 7 ranges</text>
+    <text x="10" y="140" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Fast response (&lt; 50ms)</text>
+    <text x="10" y="156" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Auto-IP resolution on DHCP</text>
+    <text x="10" y="172" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Zero manual typing</text>
+  </g>
+
+  <!-- Step 2: Cryptographic Pairing (HMAC & QR) -->
+  <g transform="translate(270, 72)">
+    <rect width="220" height="210" rx="12" fill="url(#cardGrad)" stroke="#a855f7" stroke-width="1.5"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#7c3aed" fill-opacity="0.25"/>
+    <text x="22" y="38" font-size="18">🔐</text>
+    <text x="56" y="27" fill="#f8fafc" font-family="sans-serif" font-size="13" font-weight="700">2. Secure Pairing</text>
+    <text x="56" y="42" fill="#c084fc" font-family="sans-serif" font-size="10.5">HMAC-SHA256 Token</text>
+
+    <rect x="10" y="58" width="200" height="48" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="16" y="74" fill="#c084fc" font-family="monospace" font-size="9.5">Scan QR / PIN Code</text>
+    <text x="16" y="88" fill="#94a3b8" font-family="monospace" font-size="9.5">JTI Nonce + 5-min TTL</text>
+    <text x="16" y="100" fill="#34d399" font-family="monospace" font-size="9">Constant-time verification</text>
+
+    <text x="10" y="124" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Device fingerprint binding</text>
+    <text x="10" y="140" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Prevents rogue takeovers</text>
+    <text x="10" y="156" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Replaces with 24h auth token</text>
+    <text x="10" y="172" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Secure Android KeyStore</text>
+  </g>
+
+  <!-- Step 3: Canonical Handshake (Hello/Welcome) -->
+  <g transform="translate(510, 72)">
+    <rect width="220" height="210" rx="12" fill="url(#cardGrad)" stroke="#34d399" stroke-width="1.5"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#059669" fill-opacity="0.25"/>
+    <text x="22" y="38" font-size="18">🤝</text>
+    <text x="56" y="27" fill="#f8fafc" font-family="sans-serif" font-size="13" font-weight="700">3. Handshake</text>
+    <text x="56" y="42" fill="#34d399" font-family="sans-serif" font-size="10.5">Protocol V2 Session Init</text>
+
+    <rect x="10" y="58" width="200" height="48" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="16" y="74" fill="#34d399" font-family="monospace" font-size="9.5">C-&gt;S: hello {name, ver, tok}</text>
+    <text x="16" y="88" fill="#94a3b8" font-family="monospace" font-size="9.5">S-&gt;C: welcome {session_id}</text>
+    <text x="16" y="100" fill="#38bdf8" font-family="monospace" font-size="9">Channel: TCP / WSS / UDP</text>
+
+    <text x="10" y="124" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Monotonic seq initialization</text>
+    <text x="10" y="140" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Heartbeat interval: 1000ms</text>
+    <text x="10" y="156" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Screen resolution negotiation</text>
+    <text x="10" y="172" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Multi-monitor target mapping</text>
+  </g>
+
+  <!-- Step 4: Clock Sync & Network Quality -->
+  <g transform="translate(750, 72)">
+    <rect width="220" height="210" rx="12" fill="url(#cardGrad)" stroke="#fbbf24" stroke-width="1.5"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#d97706" fill-opacity="0.25"/>
+    <text x="22" y="38" font-size="18">⏱️</text>
+    <text x="56" y="27" fill="#f8fafc" font-family="sans-serif" font-size="13" font-weight="700">4. Clock &amp; QoS</text>
+    <text x="56" y="42" fill="#fbbf24" font-family="sans-serif" font-size="10.5">NTP Ping/Pong &amp; Jitter</text>
+
+    <rect x="10" y="58" width="200" height="48" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="16" y="74" fill="#fbbf24" font-family="monospace" font-size="9.5">RTT = T_receive - T_send</text>
+    <text x="16" y="88" fill="#94a3b8" font-family="monospace" font-size="9.5">Jitter = EWMA(|ΔArrival|)</text>
+    <text x="16" y="100" fill="#34d399" font-family="monospace" font-size="9">Dynamic 1-16ms jitter buffer</text>
+
+    <text x="10" y="124" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Real-time RTT telemetry</text>
+    <text x="10" y="140" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Dead reckoning packet fill</text>
+    <text x="10" y="156" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Signal level: EXCELLENT..POOR</text>
+    <text x="10" y="172" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">• Dropped packet count &lt; 0.1%</text>
+  </g>
+
+  <!-- Flow Arrows between Cards -->
+  <path d="M 250 177 L 270 177" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 490 177 L 510 177" stroke="#a855f7" stroke-width="2"/>
+  <path d="M 730 177 L 750 177" stroke="#34d399" stroke-width="2"/>
+
+  <!-- Bottom Panel: Robust Reconnection & Multiplatform State Sync -->
+  <g transform="translate(30, 298)">
+    <rect width="940" height="180" rx="12" fill="url(#cardGrad)" stroke="#6366f1" stroke-width="1.5"/>
+
+    <!-- Left: Exponential Backoff Reconnect -->
+    <g transform="translate(20, 16)">
+      <rect width="36" height="36" rx="8" fill="#4f46e5" fill-opacity="0.25"/>
+      <text x="8" y="26" font-size="20">🔄</text>
+      <text x="46" y="18" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Auto-Reconnect with Exponential Backoff</text>
+      <text x="46" y="33" fill="#818cf8" font-family="sans-serif" font-size="11">Zero-Manual Recovery upon Wi-Fi / AP Switch</text>
+
+      <rect x="0" y="46" width="430" height="96" rx="6" fill="#0f172a" stroke="#1e293b"/>
+      <text x="10" y="64" fill="#818cf8" font-family="monospace" font-size="11">Formula: Delay = min(3000ms · 2^k, 60000ms)</text>
+      <text x="10" y="82" fill="#cbd5e1" font-family="sans-serif" font-size="11">• Max Attempts: 10 retries before safe dormant sleep</text>
+      <text x="10" y="100" fill="#cbd5e1" font-family="sans-serif" font-size="11">• WakeLock Protection: 2h timeout avoids background death</text>
+      <text x="10" y="118" fill="#cbd5e1" font-family="sans-serif" font-size="11">• Seamless fast-token reauth: Skips QR scan entirely</text>
+      <text x="10" y="134" fill="#34d399" font-family="sans-serif" font-size="10.5">✓ Reconnection time: &lt; 350ms upon network return</text>
+    </g>
+
+    <!-- Center Divider -->
+    <line x1="475" y1="15" x2="475" y2="165" stroke="#334155" stroke-width="1.5"/>
+
+    <!-- Right: Real-Time Multiplatform State Sync -->
+    <g transform="translate(495, 16)">
+      <rect width="36" height="36" rx="8" fill="#0284c7" fill-opacity="0.25"/>
+      <text x="8" y="26" font-size="20">🎨</text>
+      <text x="46" y="18" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Bi-Directional Multiplatform State Sync</text>
+      <text x="46" y="33" fill="#38bdf8" font-family="sans-serif" font-size="11">Phone ↔ Desktop Host ↔ Mobile Web Dashboard</text>
+
+      <rect x="0" y="46" width="425" height="96" rx="6" fill="#0f172a" stroke="#1e293b"/>
+      <text x="10" y="64" fill="#38bdf8" font-family="sans-serif" font-size="11">• <b>Theme Synchronization</b>: Phone M3 palette mirrors to Web UI</text>
+      <text x="10" y="82" fill="#cbd5e1" font-family="sans-serif" font-size="11">• <b>Battery &amp; Hardware Telemetry</b>: Real-time % display on PC</text>
+      <text x="10" y="100" fill="#cbd5e1" font-family="sans-serif" font-size="11">• <b>Mode Coordination</b>: Trackpad / Air Mouse / Presentation sync</text>
+      <text x="10" y="118" fill="#cbd5e1" font-family="sans-serif" font-size="11">• <b>Gesture Mappings</b>: Hotkey triggers sync live across clients</text>
+      <text x="10" y="134" fill="#34d399" font-family="sans-serif" font-size="10.5">✓ Zero state inconsistency across concurrent clients</text>
+    </g>
+  </g>
+</svg>
