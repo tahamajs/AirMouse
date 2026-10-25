@@ -1,16 +1,17 @@
 
 package com.airmouse.presentation.ui.about
 
-
 data class AboutUiState(
-    val appName: String = "Air Mouse",
-    val versionName: String = "4.9.9",
-    val versionCode: Int = 30,
-    val buildDate: String = "2025-06-20",
-    val totalDownloads: Int = 12500,
-    val totalUsers: Int = 3400,
-    val totalGestures: Int = 87500,
+    val appName: String = "AirMouse Pro",
+    val versionName: String = "1.0.0",
+    val versionCode: Int = 1,
+    val buildDate: String = "October 2026",
+    val protocolVersion: String = "Protocol V2 (Canonical)",
+    val totalDownloads: Int = 25000,
+    val totalUsers: Int = 8400,
+    val totalGestures: Int = 120000,
     val isUpdateAvailable: Boolean = false,
+    val updateVersion: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )

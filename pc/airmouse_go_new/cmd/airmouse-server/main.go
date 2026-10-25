@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,13 +24,12 @@ import (
 	"airmouse-go/internal/protocol"
 	"airmouse-go/internal/proximity"
 	"airmouse-go/internal/sysaction"
-	"os/exec"
 )
 
 var (
-	version   = "3.0.0"
-	buildTime = "2025-01-15"
-	gitCommit = "unknown"
+	version   = "1.0.0"
+	buildTime = "2026-10-25"
+	gitCommit = "v1.0.0-final"
 )
 
 func main() {
@@ -80,6 +84,7 @@ func main() {
 
 	printBanner()
 	logSystemInfo()
+	checkGitHubUpdate()
 
 	mouseCtrl := mouse.NewController(cfg.Sensitivity)
 	sysaction.SetSystemMouseSpeed(cfg.Sensitivity)
@@ -291,4 +296,71 @@ func handleSignals(ctx context.Context, server *protocol.ProtocolServer,
 			return
 		}
 	}
+}
+
+// checkGitHubUpdate queries GitHub Releases in background on startup to notify user of available updates
+func checkGitHubUpdate() {
+	go func() {
+		client := &http.Client{Timeout: 4 * time.Second}
+		req, err := http.NewRequest("GET", "https://api.github.com/repos/tahamajs/AirMouse/releases/latest", nil)
+		if err != nil {
+			return
+		}
+		req.Header.Set("User-Agent", "AirMouse-Go-Server/1.0.0")
+		req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return // offline or unreachable
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return
+		}
+
+		var rel struct {
+			TagName string `json:"tag_name"`
+			HTMLURL string `json:"html_url"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
+			return
+		}
+
+		remoteVer := strings.TrimPrefix(rel.TagName, "v")
+		if isRemoteNewer(remoteVer, version) {
+			logger.Info("✨ New AirMouse version available: v%s (Current: v%s) -> %s", remoteVer, version, rel.HTMLURL)
+		} else {
+			logger.Info("GitHub check: AirMouse Pro is up to date (v%s)", version)
+		}
+	}()
+}
+
+func isRemoteNewer(remote, local string) bool {
+	rParts := parseSemVer(remote)
+	lParts := parseSemVer(local)
+	for i := 0; i < len(rParts) && i < len(lParts); i++ {
+		if rParts[i] > lParts[i] {
+			return true
+		}
+		if rParts[i] < lParts[i] {
+			return false
+		}
+	}
+	return len(rParts) > len(lParts)
+}
+
+func parseSemVer(v string) []int {
+	v = strings.Split(v, "-")[0]
+	parts := strings.Split(v, ".")
+	var res []int
+	for _, p := range parts {
+		if n, err := strconv.Atoi(p); err == nil {
+			res = append(res, n)
+		}
+	}
+	for len(res) < 3 {
+		res = append(res, 0)
+	}
+	return res
 }

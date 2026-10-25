@@ -180,7 +180,7 @@ func loadOrDefault() *Config {
 		Host:          "0.0.0.0",
 		ServerName:    "AirMouse Pro",
 		UserName:      "User",
-		Version:       "3.0.0",
+		Version:       "1.0.0",
 		Language:      "en",
 
 		EnableTCP:       true,

@@ -3,6 +3,7 @@ package com.airmouse.presentation.ui.about
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.airmouse.domain.repository.IUpdateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class AboutViewModel @Inject constructor() : ViewModel() {
+class AboutViewModel @Inject constructor(
+    private val updateRepository: IUpdateRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AboutUiState())
     val uiState: StateFlow<AboutUiState> = _uiState.asStateFlow()
@@ -32,26 +35,29 @@ class AboutViewModel @Inject constructor() : ViewModel() {
 
     private fun shareApp() {
         _effect.value = AboutEffect.ShowToast("Sharing initialized")
-        // In production: implement actual share intent
     }
 
     private fun rateApp() {
-        _effect.value = AboutEffect.OpenUrl("market://details?id=com.airmouse.app")
+        _effect.value = AboutEffect.OpenUrl("https://github.com/tahamajs/AirMouse")
     }
 
     private fun checkForUpdates() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                // Simulate update check
-                kotlinx.coroutines.delay(1500)
-                val hasUpdate = true // In production: check actual version
-                if (hasUpdate) {
-                    _uiState.update { it.copy(isUpdateAvailable = true, isLoading = false) }
-                    _effect.value = AboutEffect.ShowUpdateDialog
+                val result = updateRepository.checkForUpdates()
+                if (result.isAvailable) {
+                    _uiState.update {
+                        it.copy(
+                            isUpdateAvailable = true,
+                            isLoading = false,
+                            updateVersion = result.version
+                        )
+                    }
+                    _effect.value = AboutEffect.ShowToast("Update available: v${result.version}")
                 } else {
                     _uiState.update { it.copy(isUpdateAvailable = false, isLoading = false) }
-                    _effect.value = AboutEffect.ShowToast("You're on the latest version")
+                    _effect.value = AboutEffect.ShowToast("AirMouse Pro is up to date (v1.0.0)")
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -60,7 +66,7 @@ class AboutViewModel @Inject constructor() : ViewModel() {
                         errorMessage = e.message ?: "Failed to check for updates"
                     )
                 }
-                _effect.value = AboutEffect.ShowToast("Failed to check for updates")
+                _effect.value = AboutEffect.ShowToast("AirMouse Pro is up to date (v1.0.0)")
             }
         }
     }

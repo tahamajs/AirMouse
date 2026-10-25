@@ -67,21 +67,31 @@ class UpdateRepositoryImpl @Inject constructor(
     // Check for Updates
     // ============================================================
 
+    private data class CachedRelease(
+        val version: String,
+        val releaseNotes: String,
+        val downloadUrl: String,
+        val fileSize: Long,
+        val fetchedAt: Long
+    )
+    private var cachedRelease: CachedRelease? = null
+
     override suspend fun checkForUpdates(): UpdateResult = withContext(Dispatchers.IO) {
-        Timber.d("Checking for updates...")
+        Timber.d("Checking for updates via GitHub...")
         _isChecking.value = true
 
         try {
             val currentVersion = _currentVersion.value.versionName
-            val latestVersion = fetchLatestVersionFromServer()
+            val remoteRelease = fetchGitHubRelease()
+            val latestVersion = remoteRelease?.version
 
-            val result = if (latestVersion != null && latestVersion > currentVersion) {
+            val result = if (latestVersion != null && isVersionNewer(latestVersion, currentVersion)) {
                 UpdateResult(
                     isAvailable = true,
                     version = latestVersion,
-                    releaseNotes = fetchReleaseNotes(latestVersion),
-                    fileSize = fetchFileSize(latestVersion),
-                    downloadUrl = fetchDownloadUrl(latestVersion)
+                    releaseNotes = remoteRelease.releaseNotes,
+                    fileSize = remoteRelease.fileSize,
+                    downloadUrl = remoteRelease.downloadUrl
                 )
             } else {
                 UpdateResult(
@@ -97,9 +107,9 @@ class UpdateRepositoryImpl @Inject constructor(
             _isChecking.value = false
 
             if (result.isAvailable) {
-                Timber.i("Update available: ${result.version}")
+                Timber.i("Update available on GitHub: ${result.version}")
             } else {
-                Timber.d("No updates available")
+                Timber.d("No updates available (current: $currentVersion)")
             }
 
             result
@@ -343,57 +353,91 @@ class UpdateRepositoryImpl @Inject constructor(
     }
 
     // ============================================================
-    // Private Helpers - Server Communication
+    // Private Helpers - GitHub Releases Integration
     // ============================================================
 
-    private suspend fun fetchLatestVersionFromServer(): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                // In production, fetch from a server
-                // For now, return hardcoded value for testing
-                "3.0.1"
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to fetch latest version")
+    private suspend fun fetchGitHubRelease(): CachedRelease? = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val cached = cachedRelease
+        if (cached != null && (now - cached.fetchedAt) < 60_000L) {
+            return@withContext cached
+        }
+
+        try {
+            val url = URL("https://api.github.com/repos/tahamajs/AirMouse/releases/latest")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+            conn.setRequestProperty("User-Agent", "AirMouse-Android/${BuildConfig.VERSION_NAME}")
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+
+            if (conn.responseCode == 200) {
+                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(responseText)
+                val tagName = json.optString("tag_name", "").removePrefix("v").trim()
+                val body = json.optString("body", "AirMouse Pro Latest Release")
+                var downloadUrl = ""
+                var fileSize = 0L
+
+                val assets = json.optJSONArray("assets")
+                if (assets != null) {
+                    for (i in 0 until assets.length()) {
+                        val asset = assets.getJSONObject(i)
+                        val name = asset.optString("name", "")
+                        if (name.endsWith(".apk", ignoreCase = true)) {
+                            downloadUrl = asset.optString("browser_download_url", "")
+                            fileSize = asset.optLong("size", 0L)
+                            break
+                        }
+                    }
+                }
+
+                if (downloadUrl.isEmpty()) {
+                    downloadUrl = json.optString("html_url", "https://github.com/tahamajs/AirMouse/releases")
+                }
+
+                val release = CachedRelease(
+                    version = tagName,
+                    releaseNotes = body,
+                    downloadUrl = downloadUrl,
+                    fileSize = fileSize,
+                    fetchedAt = now
+                )
+                cachedRelease = release
+                release
+            } else {
                 null
             }
+        } catch (e: Exception) {
+            Timber.w(e, "GitHub update check failed (offline or network error)")
+            null
         }
     }
 
-    private suspend fun fetchReleaseNotes(version: String): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                // In production, fetch from a server
-                "Bug fixes and performance improvements for version $version"
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to fetch release notes")
-                null
+    private fun isVersionNewer(remote: String, local: String): Boolean {
+        return try {
+            val rParts = remote.split("-")[0].split(".").mapNotNull { it.toIntOrNull() }
+            val lParts = local.split("-")[0].split(".").mapNotNull { it.toIntOrNull() }
+            val maxLen = maxOf(rParts.size, lParts.size)
+            for (i in 0 until maxLen) {
+                val r = rParts.getOrElse(i) { 0 }
+                val l = lParts.getOrElse(i) { 0 }
+                if (r > l) return true
+                if (r < l) return false
             }
+            false
+        } catch (e: Exception) {
+            false
         }
     }
 
-    private suspend fun fetchFileSize(version: String): Long {
-        return withContext(Dispatchers.IO) {
-            try {
-                // In production, fetch from a server
-                4L * 1024L * 1024L // 4MB
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to fetch file size")
-                0L
-            }
-        }
-    }
+    private suspend fun fetchLatestVersionFromServer(): String? = fetchGitHubRelease()?.version
 
-    private suspend fun fetchDownloadUrl(version: String): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                // In production, fetch from a server
-                "https://airmouse.io/downloads/airmouse-$version.apk"
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to fetch download URL")
-                null
-            }
-        }
-    }
+    private suspend fun fetchReleaseNotes(version: String): String? = fetchGitHubRelease()?.releaseNotes
+
+    private suspend fun fetchFileSize(version: String): Long = fetchGitHubRelease()?.fileSize ?: 0L
+
+    private suspend fun fetchDownloadUrl(version: String): String? = fetchGitHubRelease()?.downloadUrl
 
     private fun createTempFile(prefix: String, suffix: String): File {
         val tempDir = File(android.os.Environment.getExternalStorageDirectory(), ".airmouse_updates")

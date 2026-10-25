@@ -1,14 +1,14 @@
 Metadata-Version: 2.4
 Name: airmouse-core
-Version: 2.1.0
+Version: 1.0.0
 Summary: High-performance, secure Python server and protocol engine for AirMouse remote input devices
 Author-email: AirMouse Team <dev@airmouse.io>
 License-Expression: MIT
-Project-URL: Homepage, https://github.com/AirMouse/AirMouse
-Project-URL: Documentation, https://github.com/AirMouse/AirMouse/tree/main/pc/airmouse_py
-Project-URL: Repository, https://github.com/AirMouse/AirMouse.git
-Project-URL: Issues, https://github.com/AirMouse/AirMouse/issues
-Project-URL: Changelog, https://github.com/AirMouse/AirMouse/blob/main/CHANGELOG.md
+Project-URL: Homepage, https://github.com/tahamajs/AirMouse
+Project-URL: Documentation, https://github.com/tahamajs/AirMouse/tree/main/pc/airmouse_py
+Project-URL: Repository, https://github.com/tahamajs/AirMouse.git
+Project-URL: Issues, https://github.com/tahamajs/AirMouse/issues
+Project-URL: Changelog, https://github.com/tahamajs/AirMouse/releases
 Keywords: airmouse,remote-mouse,input-devices,gyroscope,accelerometer,websocket,tcp,udp-discovery,one-euro-filter,jitter-buffer,zero-latency
 Classifier: Development Status :: 5 - Production/Stable
 Classifier: Intended Audience :: Developers

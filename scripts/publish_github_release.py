@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""
+AirMouse Pro — GitHub Release & Asset Publisher
+Creates the official v1.0.0 Release on GitHub (tahamajs/AirMouse)
+and uploads all binary artifacts for Android, Windows, macOS, and Linux.
+"""
+
+import json
+import mimetypes
+import os
+from pathlib import Path
+import sys
+import urllib.request
+import urllib.error
+
+REPO = "tahamajs/AirMouse"
+TAG = "v1.0.0"
+RELEASE_TITLE = "AirMouse Pro v1.0.0 — Canonical Multi-Platform Release"
+
+TOKEN = os.getenv("GITHUB_TOKEN")
+if not TOKEN:
+    # Try reading from git credential helper
+    import subprocess
+    try:
+        p = subprocess.run(
+            ["git", "credential", "fill"],
+            input="protocol=https\nhost=github.com\n\n".encode("utf-8"),
+            capture_output=True,
+            check=True
+        )
+        for line in p.stdout.decode("utf-8").splitlines():
+            if line.startswith("password="):
+                TOKEN = line.split("=", 1)[1].strip()
+                break
+    except Exception:
+        pass
+
+if not TOKEN:
+    print("❌ Error: GITHUB_TOKEN environment variable or git credential not found.")
+    sys.exit(1)
+
+HEADERS = {
+    "Authorization": f"token {TOKEN}",
+    "Accept": "application/vnd.github.v3+json",
+    "User-Agent": "AirMouse-Release-Publisher",
+}
+
+RELEASE_BODY = """# 🖱️ AirMouse Pro v1.0.0 (Canonical Production Release)
+
+Welcome to the official **AirMouse Pro v1.0.0** multi-platform release! AirMouse turns your smartphone or tablet into a sub-millisecond, low-latency spatial air mouse, presentation remote, and multi-touch trackpad for your computer.
+
+---
+
+### 📦 Release Assets & Downloads
+
+| Platform | Installer / Package | Description |
+| :--- | :--- | :--- |
+| **Android** | [`AirMouse-v1.0.0.apk`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0.apk) | Signed Release APK for Android 8.0+ devices |
+| **Windows** | [`AirMouse-v1.0.0-windows-x64.zip`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0-windows-x64.zip) | Portable bundle with GUI launcher, batch scripts & web-client |
+| **Windows** | [`AirMouse-Server-v1.0.0-windows-x64.exe`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-Server-v1.0.0-windows-x64.exe) | Standalone portable Go server binary |
+| **macOS** | [`AirMouse-v1.0.0-macos-universal.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0-macos-universal.tar.gz) | Universal native `AirMouse.app` for Apple Silicon & Intel |
+| **macOS** | [`AirMouse-Server-v1.0.0-macos-universal`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-Server-v1.0.0-macos-universal) | Fat universal CLI server binary |
+| **Linux (x64)** | [`AirMouse-v1.0.0-linux-x64.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0-linux-x64.tar.gz) | Complete Linux x86_64 bundle with systemd service |
+| **Linux (ARM64)** | [`AirMouse-v1.0.0-linux-arm64.tar.gz`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/AirMouse-v1.0.0-linux-arm64.tar.gz) | Raspberry Pi 4/5 & Linux ARM64 bundle |
+| **Integrity** | [`SHA256SUMS.txt`](https://github.com/tahamajs/AirMouse/releases/download/v1.0.0/SHA256SUMS.txt) | Cryptographic verification hashes |
+
+---
+
+### 🚀 Key Capabilities & Architecture
+
+- **Zero Latency Spatial Pipeline**:
+  - Zero Velocity Update (**ZUPT**) drift cancellation.
+  - **1€ Filter**: Speed-adaptive jitter low-pass filter for rock-solid stationary cursor stability.
+  - **Kalman 2D Filter**: Real-time forward trajectory extrapolator.
+  - **Madgwick AHRS**: 9-DOF MARG sensor fusion algorithm.
+- **Wire Engine**: Canonical Protocol V2 over **TCP/TLS 1.3** and **WebSocket** with automatic UDP discovery.
+- **Zero-Install Web Client**: Open any browser (Safari, Chrome, Edge) on your local network to use the multi-touch trackpad with synthesized audio haptic feedback on iOS!
+- **Desktop Dashboard**: Dark-themed CustomTkinter GUI with one-click web browser launcher and instant mobile QR code pairing.
+- **Automatic GitHub Updates**: Built-in update checker across Desktop GUI, Go server, and Android client.
+
+---
+
+### 🛡️ SHA-256 Checksums
+
+```text
+c692d235d8bdddbf46955473800775630137ac76a97a17621e3abcedd14a38b8  android/AirMouse-v1.0.0.apk
+36932ae4d1ff0751ca58b3c5bc4c1f256a507626af45ec7d430c90fe4b412fe8  windows/AirMouse-Server-v1.0.0-windows-x64.exe
+21284dad8b04cd4ee923055b2e4a84ecaa21a52996d5d557942da831ddf70909  windows/AirMouse-v1.0.0-windows-x64.zip
+00125c96757b09e942dc17f8020d0a365f57422c400708406a08be583ea9a6b9  macos/AirMouse-Server-v1.0.0-macos-universal
+fd8b7439ee445b63e1079923b6ca3e730133af75275c315ac3a62e47e545423e  macos/AirMouse-v1.0.0-macos-universal.tar.gz
+8de807d8b5cbffa9c66d2236dbc42550d2b30b722b16a6bd7364b14978d5721b  linux/AirMouse-v1.0.0-linux-x64.tar.gz
+a83edac9e8d0591b5e4d19c983e9528e18b17e80cfa40b31ef40e651fcf0ec06  linux/AirMouse-v1.0.0-linux-arm64.tar.gz
+```
+"""
+
+
+def get_or_create_release():
+    print(f"🔍 Checking existing releases for {REPO}...")
+    url = f"https://api.github.com/repos/{REPO}/releases"
+    req = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(req) as resp:
+        releases = json.loads(resp.read().decode("utf-8"))
+        for r in releases:
+            if r.get("tag_name") == TAG:
+                print(f"✅ Found existing release for {TAG} (ID: {r['id']})")
+                return r
+
+    # Create new release
+    print(f"🚀 Creating new GitHub Release {TAG} on {REPO}...")
+    payload = {
+        "tag_name": TAG,
+        "target_commitish": "main",
+        "name": RELEASE_TITLE,
+        "body": RELEASE_BODY,
+        "draft": False,
+        "prerelease": False,
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={**HEADERS, "Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req) as resp:
+        rel = json.loads(resp.read().decode("utf-8"))
+        print(f"🎉 Created Release: {rel.get('html_url')} (ID: {rel.get('id')})")
+        return rel
+
+
+def upload_asset(release_id: int, file_path: Path):
+    if not file_path.exists():
+        print(f"⚠️ Asset file not found: {file_path}")
+        return
+
+    name = file_path.name
+    size = file_path.stat().st_size
+    print(f"📤 Uploading {name} ({size / (1024*1024):.2f} MB)...")
+
+    mime_type, _ = mimetypes.guess_type(str(file_path))
+    if not mime_type:
+        mime_type = "application/octet-stream"
+    if name.endswith(".apk"):
+        mime_type = "application/vnd.android.package-archive"
+
+    upload_url = f"https://uploads.github.com/repos/{REPO}/releases/{release_id}/assets?name={name}"
+
+    with open(file_path, "rb") as f:
+        data = f.read()
+
+    req = urllib.request.Request(
+        upload_url,
+        data=data,
+        headers={
+            "Authorization": f"token {TOKEN}",
+            "Content-Type": mime_type,
+            "Content-Length": str(size),
+            "User-Agent": "AirMouse-Release-Publisher",
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(req) as resp:
+            res = json.loads(resp.read().decode("utf-8"))
+            print(f"   ✅ Uploaded: {res.get('browser_download_url')}")
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode("utf-8")
+        if "already_exists" in err_msg:
+            print(f"   ℹ️ Asset {name} already uploaded.")
+        else:
+            print(f"   ❌ Upload failed for {name}: {e.code} {err_msg}")
+
+
+def main():
+    root = Path(__file__).resolve().parent.parent
+    rel_dir = root / "releases"
+
+    release = get_or_create_release()
+    rel_id = release["id"]
+
+    # Gather all assets to upload
+    assets = [
+        rel_dir / "android" / "AirMouse-v1.0.0.apk",
+        rel_dir / "windows" / "AirMouse-v1.0.0-windows-x64.zip",
+        rel_dir / "windows" / "AirMouse-Server-v1.0.0-windows-x64.exe",
+        rel_dir / "macos" / "AirMouse-v1.0.0-macos-universal.tar.gz",
+        rel_dir / "macos" / "AirMouse-Server-v1.0.0-macos-universal",
+        rel_dir / "linux" / "AirMouse-v1.0.0-linux-x64.tar.gz",
+        rel_dir / "linux" / "AirMouse-v1.0.0-linux-arm64.tar.gz",
+        rel_dir / "SHA256SUMS.txt",
+    ]
+
+    for asset in assets:
+        upload_asset(rel_id, asset)
+
+    print("\n🎉 GitHub Release published successfully!")
+    print(f"🔗 View Release: https://github.com/{REPO}/releases/tag/{TAG}")
+
+
+if __name__ == "__main__":
+    main()

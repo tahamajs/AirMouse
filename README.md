@@ -2,7 +2,7 @@
 
 <img src="docs/assets/banner.svg" alt="AirMouse Banner" width="100%">
 
-# 🖱️ AirMouse (v2.1.0)
+# 🖱️ AirMouse Pro (v1.0.0)
 ### Next-Generation Spatial Air Mouse, Multi-Touch Trackpad & Presentation Controller
 
 [![PyPI Version](https://img.shields.io/pypi/v/airmouse-core.svg?color=blue&logo=pypi)](https://pypi.org/project/airmouse-core/)

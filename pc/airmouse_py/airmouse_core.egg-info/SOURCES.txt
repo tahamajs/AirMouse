@@ -16,6 +16,7 @@ airmouse_core.egg-info/requires.txt
 airmouse_core.egg-info/top_level.txt
 core/actuator.py
 core/jitter_buffer.py
+core/keyboard_controller.py
 core/mouse_controller.py
 core/one_euro.py
 network/protocol.py
@@ -27,6 +28,7 @@ security/tls_manager.py
 tests/test_actuator_and_buffer.py
 tests/test_airmouse_server.py
 tests/test_auth.py
+tests/test_chaos_stress.py
 tests/test_cli.py
 tests/test_filters.py
 tests/test_integration.py
@@ -37,4 +39,3 @@ tests/test_udp_discovery.py
 tests/test_web_server.py
 tests/test_ws_server.py
 ui/app.py
-ui/tray_manager.py

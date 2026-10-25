@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "airmouse-core"
-version = "2.1.0"
+version = "1.0.0"
 description = "High-performance, secure Python server and protocol engine for AirMouse remote input devices"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -60,14 +60,15 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/AirMouse/AirMouse"
-Documentation = "https://github.com/AirMouse/AirMouse/tree/main/pc/airmouse_py"
-Repository = "https://github.com/AirMouse/AirMouse.git"
-Issues = "https://github.com/AirMouse/AirMouse/issues"
-Changelog = "https://github.com/AirMouse/AirMouse/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/tahamajs/AirMouse"
+Documentation = "https://github.com/tahamajs/AirMouse/tree/main/pc/airmouse_py"
+Repository = "https://github.com/tahamajs/AirMouse.git"
+Issues = "https://github.com/tahamajs/AirMouse/issues"
+Changelog = "https://github.com/tahamajs/AirMouse/releases"
 
 [project.scripts]
 airmouse-server = "airmouse.cli:main"
+airmouse-gui = "ui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

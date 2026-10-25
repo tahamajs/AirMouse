@@ -62,7 +62,7 @@ fun AboutScreen(
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_SUBJECT, "Air Mouse Pro")
-                putExtra(Intent.EXTRA_TEXT, "Try Air Mouse Pro: https://github.com/airmouse")
+                putExtra(Intent.EXTRA_TEXT, "Try AirMouse Pro: https://github.com/tahamajs/AirMouse")
             }
             context.startActivity(Intent.createChooser(shareIntent, "Share Air Mouse Pro"))
         }.onFailure {
@@ -585,9 +585,9 @@ fun QuickLinksCard(onOpenUrl: (String) -> Unit) {
             Text("🔗 Connect", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
             Spacer(modifier = Modifier.height(16.dp))
             
-            QuickLinkItem(Icons.Default.Code, "GitHub", "View Source", { onOpenUrl("https://github.com/airmouse") })
-            QuickLinkItem(Icons.Default.Language, "Website", "airmouse.io", { onOpenUrl("https://www.airmouse.io") })
-            QuickLinkItem(Icons.AutoMirrored.Filled.Chat, "Discord", "Join Community", { onOpenUrl("https://discord.gg/airmouse") })
+            QuickLinkItem(Icons.Default.Code, "GitHub", "View Source & Releases", { onOpenUrl("https://github.com/tahamajs/AirMouse") })
+            QuickLinkItem(Icons.Default.Language, "Releases", "Download Packages", { onOpenUrl("https://github.com/tahamajs/AirMouse/releases") })
+            QuickLinkItem(Icons.AutoMirrored.Filled.Chat, "Documentation", "Architecture & Protocols", { onOpenUrl("https://github.com/tahamajs/AirMouse#readme") })
         }
     }
 }
