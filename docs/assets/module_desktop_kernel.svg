@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 360" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0f1d"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="appleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+    <linearGradient id="winGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="linuxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1000" height="360" rx="16" fill="url(#bgGrad)"/>
+  <rect width="998" height="358" x="1" y="1" rx="15" fill="none" stroke="#334155" stroke-width="1.5"/>
+
+  <!-- Title Badge -->
+  <rect x="30" y="24" width="290" height="32" rx="16" fill="#1e293b" stroke="#10b981" stroke-width="1"/>
+  <circle cx="46" cy="40" r="5" fill="#10b981" filter="url(#glow)"/>
+  <text x="60" y="45" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" letter-spacing="0.5">MULTI-OS KERNEL INPUT SYNTHESIS</text>
+
+  <!-- Subtitle -->
+  <text x="690" y="45" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">Zero-CGO Hardware Driver Interop (Go &amp; Python)</text>
+
+  <!-- Left: Go Ingest Engine -->
+  <g transform="translate(30, 80)">
+    <rect width="260" height="235" rx="12" fill="url(#cardGrad)" stroke="#38bdf8" stroke-width="1.5"/>
+    <rect x="18" y="18" width="40" height="40" rx="8" fill="#0284c7" fill-opacity="0.2"/>
+    <text x="26" y="45" font-size="22">⚡</text>
+    <text x="68" y="36" fill="#f8fafc" font-family="sans-serif" font-size="15" font-weight="700">AirMouse Go Daemon</text>
+    <text x="68" y="52" fill="#38bdf8" font-family="sans-serif" font-size="11">High-Throughput Ingest</text>
+
+    <!-- Specs List -->
+    <text x="20" y="90" fill="#cbd5e1" font-family="sans-serif" font-size="12">• Non-Blocking Channel Pool</text>
+    <text x="20" y="112" fill="#cbd5e1" font-family="sans-serif" font-size="12">• Panic-Guarded <tspan fill="#38bdf8">SafeSend</tspan></text>
+    <text x="20" y="134" fill="#cbd5e1" font-family="sans-serif" font-size="12">• Sub-Millisecond Event Dispatch</text>
+    <text x="20" y="156" fill="#cbd5e1" font-family="sans-serif" font-size="12">• Graceful 5s Signal Timeout</text>
+    <text x="20" y="178" fill="#cbd5e1" font-family="sans-serif" font-size="12">• SIGHUP Dynamic Config Reload</text>
+
+    <!-- Metric Badge -->
+    <rect x="16" y="196" width="228" height="26" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="32" y="213" fill="#10b981" font-family="monospace" font-size="11" font-weight="700">Latency: 0.12ms | Memory: &lt;18MB</text>
+  </g>
+
+  <!-- Split Arrow Routing -->
+  <path d="M 290 195 L 340 195" fill="none" stroke="#38bdf8" stroke-width="2"/>
+  <path d="M 340 195 L 340 135 L 360 135" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M 340 195 L 360 195" fill="none" stroke="#38bdf8" stroke-width="2"/>
+  <path d="M 340 195 L 340 255 L 360 255" fill="none" stroke="#fbbf24" stroke-width="2"/>
+
+  <!-- OS Platform 1: macOS -->
+  <g transform="translate(365, 80)">
+    <rect width="595" height="68" rx="10" fill="url(#cardGrad)" stroke="#475569" stroke-width="1"/>
+    <rect x="14" y="14" width="40" height="40" rx="8" fill="#334155"/>
+    <text x="24" y="41" font-size="22">🍎</text>
+    <text x="64" y="32" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Apple macOS (CoreGraphics Framework)</text>
+    <text x="64" y="48" fill="#94a3b8" font-family="sans-serif" font-size="11">Direct C-ABI Syscall: <tspan fill="#e2e8f0" font-family="monospace">CGEventCreateMouseEvent()</tspan> &amp; <tspan fill="#e2e8f0" font-family="monospace">CGEventPost(kCGHIDEventTap)</tspan></text>
+    <rect x="470" y="20" width="110" height="26" rx="4" fill="#0f172a"/>
+    <text x="480" y="37" fill="#38bdf8" font-family="sans-serif" font-size="11" font-weight="600">Universal M1-M4</text>
+  </g>
+
+  <!-- OS Platform 2: Windows -->
+  <g transform="translate(365, 163)">
+    <rect width="595" height="68" rx="10" fill="url(#cardGrad)" stroke="#0284c7" stroke-width="1.5"/>
+    <rect x="14" y="14" width="40" height="40" rx="8" fill="#0369a1" fill-opacity="0.3"/>
+    <text x="24" y="41" font-size="22">🪟</text>
+    <text x="64" y="32" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Microsoft Windows (User32 High-Resolution Subsystem)</text>
+    <text x="64" y="48" fill="#94a3b8" font-family="sans-serif" font-size="11">Direct Win32 API: <tspan fill="#e2e8f0" font-family="monospace">user32.dll SendInput(INPUT_MOUSE, MOUSEEVENTF_MOVE)</tspan></text>
+    <rect x="470" y="20" width="110" height="26" rx="4" fill="#0f172a"/>
+    <text x="488" y="37" fill="#38bdf8" font-family="sans-serif" font-size="11" font-weight="600">Zero-CGO EXE</text>
+  </g>
+
+  <!-- OS Platform 3: Linux -->
+  <g transform="translate(365, 246)">
+    <rect width="595" height="68" rx="10" fill="url(#cardGrad)" stroke="#d97706" stroke-width="1"/>
+    <rect x="14" y="14" width="40" height="40" rx="8" fill="#b45309" fill-opacity="0.3"/>
+    <text x="24" y="41" font-size="22">🐧</text>
+    <text x="64" y="32" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Linux Kernel Virtual Device Subsystem (/dev/uinput)</text>
+    <text x="64" y="48" fill="#94a3b8" font-family="sans-serif" font-size="11">Kernel Interop: <tspan fill="#e2e8f0" font-family="monospace">uinput (Wayland &amp; X11 Compatible)</tspan> with dedicated udev non-root rules</text>
+    <rect x="470" y="20" width="110" height="26" rx="4" fill="#0f172a"/>
+    <text x="478" y="37" fill="#fbbf24" font-family="sans-serif" font-size="11" font-weight="600">Wayland + X11</text>
+  </g>
+</svg>

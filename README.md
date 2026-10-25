@@ -78,7 +78,7 @@ Download pre-compiled, signed, production-ready release packages for version **v
 
 ## 🧩 Comprehensive Subsystems Breakdown
 
-AirMouse Pro is structured into four primary engineering modules:
+AirMouse Pro is architected into four decoupled, production-grade engineering modules:
 
 ```
 AirMouse/
@@ -91,39 +91,110 @@ AirMouse/
 └── scripts/            # Single Source of Truth versioning and automated release builders
 ```
 
+---
+
 ### 1. 🤖 Android Native Client (`android/`)
-* **Jetpack Compose Material 3 UI**: Modern dark theme with spring physics, custom dials, and glassmorphic surface cards.
-* **Telemetry Isolation**: High-frequency sensor streams (100 Hz) are decoupled from the root composables into leaf components (`IsolatedOrientationTelemetry`, `ConnectionQualityPill`, `TouchPointsOverlay`) to prevent frame drops on 90Hz/120Hz displays.
-* **Sensor Fusion DSP**:
-  * **One Euro Filter**: Non-linear adaptive low-pass filter ($f_c = f_{c_{min}} + \beta |\dot{x}|$) eliminating micro-jitter during slow precision aiming while providing instant response during fast flicks.
-  * **ZUPT (Zero-Velocity Update)**: Autonomous drift cancellation recalibrating gyroscope bias during stationary intervals.
-* **Robust Background Service (`AirMouseService.kt`)**: Android Foreground Service with strict 2-hour WakeLock timeout and automatic lifecycle unbinding.
-* **Backpressure Management**: All high-frequency Kotlin `Flow` streams utilize `buffer(64, BufferOverflow.DROP_OLDEST)` to prevent Out-Of-Memory (OOM) errors and GC pauses.
-* **R8 Optimization**: Fully shrunk with R8 Full Mode, reducing uncompressed DEX from **58.6 MB down to 6.83 MB (-88.3%)** with **92.2% obfuscation**.
 
-### 2. ⚡ Go Desktop Server (`pc/airmouse_go_new/`)
+The Android application delivers a zero-latency spatial mouse and multi-touch trackpad built strictly with modern Android architecture guidelines (MVI/MVVM, Clean Architecture, Jetpack Compose Material 3, and Hilt).
+
+<div align="center">
+  <img src="docs/assets/app_screens_mockup.svg" alt="AirMouse Android App Screens" width="100%">
+  <p><em>Figure 1: AirMouse Android Client — <b>Touchpad &amp; Live Stats</b>, <b>ZUPT Sensor Calibration</b>, and <b>One Euro Filter Customization</b></em></p>
+</div>
+
+* **Jetpack Compose Material 3 UI**:
+  - Fluid 120 FPS spring animations, frosted glass cards, and dynamic theme switching.
+  - Dual operational modes: **Spatial Air Mouse** (6-DOF IMU wrist pointing) and **Virtual Trackpad** (1/2/3-finger gestures).
+* **Decoupled Telemetry Architecture**:
+  - High-frequency sensor streams (100 Hz) and ping metrics are strictly isolated from parent composables into leaf components (`IsolatedOrientationTelemetry`, `ConnectionQualityPill`, `TouchPointsOverlay`). This guarantees **zero dropped frames (0 jank)** on 90Hz/120Hz displays.
+* **Persistent Foreground Service ([`AirMouseService.kt`](android/app/src/main/java/com/airmouse/service/AirMouseService.kt))**:
+  - Runs with `connectedDevice|dataSync` foreground service types.
+  - Enforces a bounded 2-hour WakeLock timeout (`MAX_WAKELOCK_TIMEOUT_MS = 7,200,000ms`) with automatic release upon disconnection to protect phone battery life.
+* **Backpressure Buffer Guards**:
+  - All high-frequency Kotlin `callbackFlow` pipelines are guarded with `.buffer(64, BufferOverflow.DROP_OLDEST)` on `Dispatchers.IO`, completely eliminating Out-Of-Memory (OOM) risk and GC pause spikes.
+* **R8 Full Mode Optimization ([`R8_OPTIMIZATION.md`](android/docs/R8_OPTIMIZATION.md))**:
+  - Releases are compiled with `minifyEnabled true`, `shrinkResources true`, and `proguard-android-optimize.txt`.
+  - Uncompressed DEX reduced from **58.6 MB down to 6.83 MB (-88.3%)** with **92.2% obfuscation**, exceeding Google Play Store 2027 security standards.
+
+---
+
+### 2. 🎯 Sensor Fusion & Digital Signal Processing (DSP) Pipeline
+
+The spatial air mouse uses an advanced sensor fusion pipeline to translate raw smartphone accelerometer and gyroscope measurements into sub-millimeter cursor displacements:
+
+<div align="center">
+  <img src="docs/assets/module_sensor_dsp.svg" alt="AirMouse Sensor Fusion DSP Engine" width="100%">
+  <p><em>Figure 2: AirMouse Sensor Fusion DSP Pipeline — <b>Raw IMU Ingestion</b>, <b>AHRS Fusion</b>, <b>1€ Filter</b>, and <b>ZUPT Stationary Lock</b></em></p>
+</div>
+
+* **Raw IMU Ingestion (100 Hz)**:
+  - Continuously samples hardware gyroscope (rad/s) and linear accelerometer (m/s²) via Android Sensors HAL.
+* **AHRS Orientation Fusion**:
+  - Madgwick/Mahony quaternion filter integrating angular velocity with gravity vector corrections, isolating pitch, roll, and yaw angles while compensating for thermal gyroscope drift.
+* **One Euro Filter ($1€$)**:
+  - Adaptive dual-speed low-pass filter with dynamic cutoff frequency:
+    $$f_c = f_{c_{\min}} + \beta |\dot{x}|$$
+  - During stationary and slow micro-movements (precision cursor clicking), cutoff drops to $1.0\text{ Hz}$, eliminating all hand tremors and micro-shaking.
+  - During rapid flick gestures, cutoff scales instantaneously with velocity, delivering sub-millisecond responsiveness without perceptible tracking lag.
+* **Zero-Velocity Update (ZUPT)**:
+  - Continuously tracks rolling variance across all 3 gyro axes. If $\sigma^2 < 0.015\text{ rad/s}$ for $>500\text{ ms}$, the system locks the cursor coordinates and auto-calibrates zero bias in the background, eliminating creeping cursor drift permanently.
+
+---
+
+### 3. ⚡ Multi-OS Desktop Host Daemons (Go & Python)
+
+AirMouse features two independent desktop server implementations tailored for maximum performance and portability:
+
+<div align="center">
+  <img src="docs/assets/module_desktop_kernel.svg" alt="Multi-OS Kernel Input Synthesis" width="100%">
+  <p><em>Figure 3: Multi-OS Kernel Input Synthesis Engine — <b>Go High-Throughput Ingest</b>, <b>CoreGraphics (macOS)</b>, <b>SendInput (Windows)</b>, and <b>/dev/uinput (Linux)</b></em></p>
+</div>
+
+#### A. Go High-Performance Server (`pc/airmouse_go_new/`)
 * **Zero-CGO Native OS Input Injection**:
-  * **macOS**: Synthesizes native CoreGraphics events (`CGEventCreateMouseEvent`, `CGEventPost`) via direct syscalls without CGO compilation overhead.
-  * **Windows**: Injects hardware mouse and keyboard events using `user32.dll` `SendInput`.
-  * **Linux**: Communicates directly with `/dev/uinput` to provide true kernel-level virtual mouse/keyboard emulation compatible with both Wayland and X11.
-* **High-Throughput Concurrency**:
-  * Bounded worker pool with non-blocking `SafeSend` and panic recovery to isolate slow clients.
-  * Graceful shutdown on `SIGINT`/`SIGTERM` with 5-second drain timeout.
-  * Dynamic configuration reloading via `SIGHUP`.
-* **Fyne GUI Dashboard**: 6-tab native desktop dashboard displaying live jitter analytics, client pairing, QR codes, and latency histograms.
+  - **macOS**: Direct C-ABI syscalls executing `CGEventCreateMouseEvent()` and `CGEventPost(kCGHIDEventTap)` natively without CGO compilation overhead.
+  - **Windows**: High-resolution mouse coordinate dispatch using `user32.dll` `SendInput` with `MOUSEEVENTF_MOVE`.
+  - **Linux**: Kernel-level virtual device emulation via `/dev/uinput` with dedicated udev rules, fully compatible with both **Wayland** (Ubuntu 22.04+, Fedora) and **X11** without root privileges.
+* **Ultra-Low Latency Concurrency**:
+  - Bounded worker pool with non-blocking `SafeSend` and panic recovery to isolate slow clients.
+  - Graceful shutdown on `SIGINT`/`SIGTERM` with 5-second drain timeout and `SIGHUP` live configuration reloading.
+* **Fyne GUI Dashboard**:
+  - Native 6-tab desktop dashboard with real-time jitter waveforms, ping latency monitors, and pairing QR codes.
 
-### 3. 🐍 Python Core Server (`pc/airmouse_py/`)
-* **PyPI Availability**: Installable via `pip install airmouse-core`.
-* **Asynchronous Networking**: Built on Python `asyncio` handling TLS TCP, WebSockets, and UDP broadcast discovery.
-* **Decoupled Actuator Thread (`MouseActuatorThread`)**: Offloads OS mouse operations to a dedicated worker thread with a thread-safe `queue.Queue` and non-blocking timers (`threading.Timer`) for click actions, preventing event loop starvation.
-* **Interactive Terminal CLI**: Features an ANSI QR code generator for instant mobile camera pairing.
+<div align="center">
+  <img src="docs/assets/desktop_gui_mockup.svg" alt="AirMouse Desktop Fyne Server" width="100%">
+  <p><em>Figure 4: AirMouse Desktop Host Server — <b>6-Tab Fyne GUI Dashboard</b> with Live Waveform &amp; Jitter Analytics</em></p>
+</div>
+
+#### B. Python Reference Server (`pc/airmouse_py/`)
+* **PyPI Distribution**: Available worldwide via `pip install airmouse-core`.
+* **Asyncio Networking**: Asynchronous TCP (TLS 1.3), WebSocket, and UDP broadcast listener.
+* **Decoupled Actuator Thread ([`MouseActuatorThread`](pc/airmouse_py/core/actuator.py))**:
+  - Offloads OS mouse manipulation from the asyncio event loop to a dedicated worker thread with a thread-safe `queue.Queue`.
+  - Double-click and mouse button holds use non-blocking background daemon timers (`threading.Timer`), eliminating event loop starvation and cursor jitter.
+
+---
 
 ### 4. 🌐 Zero-Install Mobile Web Client (`web-client/`)
-* **iOS 13+ User-Gesture Modal**: Prompts the user with a glassmorphic onboarding dialog to satisfy Apple's strict `DeviceMotionEvent.requestPermission()` requirement.
-* **Pooled Web Audio Click Synthesis**: Pre-synthesizes three band-limited PCM audio impulses (14ms, 24ms, 38ms) and pre-warms the WebKit audio pipeline on first touch to deliver zero-latency clicks on iOS where vibration is blocked.
-* **Screen Wake Lock Fallback**: Uses the W3C Screen Wake Lock API on modern browsers and falls back to an invisible looping base64 video container for older iOS Safari versions.
-* **2D Orientation Matrix**: Automatically transforms gyro delta vectors when switching between portrait and landscape modes:
-  $$\begin{pmatrix} \text{rotDx} \\ \text{rotDy} \end{pmatrix} = \begin{pmatrix} \cos\theta & \sin\theta \\ -\sin\theta & \cos\theta \end{pmatrix} \begin{pmatrix} \Delta\gamma \\ \Delta\beta \end{pmatrix}$$
+
+A zero-install Progressive Web App (PWA) allowing immediate touch and spatial mouse control on Apple iOS (Safari) and Android (Chrome) without installing an app:
+
+<div align="center">
+  <img src="docs/assets/module_web_client.svg" alt="AirMouse Mobile Web Client" width="100%">
+  <p><em>Figure 5: Zero-Install Mobile Web Client — <b>iOS 13+ Onboarding Dialog</b>, <b>Web Audio Haptic Impulses</b>, and <b>Screen Wake Lock Fallback</b></em></p>
+</div>
+
+* **iOS 13+ Sensor Permission Dialog**:
+  - Apple WebKit blocks motion sensors if requested without a direct, top-level user tap.
+  - AirMouse integrates a dedicated glassmorphic permission modal where the user taps **"Grant Permission"**, directly executing `DeviceMotionEvent.requestPermission()` and unlocking full spatial tilt tracking.
+* **Pooled Web Audio Click Synthesizer**:
+  - Bypasses Apple's restriction on `navigator.vibrate` by pre-synthesizing three band-limited PCM audio impulses (Light: 14ms @ 950→220Hz, Medium: 24ms @ 750→160Hz, Heavy: 38ms @ 520→110Hz).
+  - Pre-warms the WebKit audio pipeline on first touch (`touchstart`) to deliver instant, zero-delay mechanical click sound feedback.
+* **Screen Wake Lock with Video Loop Fallback**:
+  - Acquires `navigator.wakeLock` on modern browsers and falls back to an invisible looping base64 MP4 container for older iOS Safari versions, keeping the WebSocket connection alive without screen dimming.
+* **2D Orientation Matrix**:
+  - Dynamically calculates the viewport angle ($\theta \in \{0^\circ, 90^\circ, 180^\circ, 270^\circ\}$) and transforms sensor vectors so cursor movement remains intuitive whether the device is held in Portrait, Landscape Left, or Landscape Right:
+    $$\begin{pmatrix} \text{rotDx} \\ \text{rotDy} \end{pmatrix} = \begin{pmatrix} \cos\theta & \sin\theta \\ -\sin\theta & \cos\theta \end{pmatrix} \begin{pmatrix} \Delta\gamma \\ \Delta\beta \end{pmatrix}$$
 
 ---
 

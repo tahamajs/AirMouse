@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 360" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0f1d"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="phoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#182234"/>
+      <stop offset="100%" stop-color="#0b1120"/>
+    </linearGradient>
+    <linearGradient id="touchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1000" height="360" rx="16" fill="url(#bgGrad)"/>
+  <rect width="998" height="358" x="1" y="1" rx="15" fill="none" stroke="#334155" stroke-width="1.5"/>
+
+  <!-- Title Badge -->
+  <rect x="30" y="24" width="280" height="32" rx="16" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
+  <circle cx="46" cy="40" r="5" fill="#38bdf8"/>
+  <text x="60" y="45" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" letter-spacing="0.5">ZERO-INSTALL MOBILE WEB CLIENT</text>
+  <text x="710" y="45" fill="#94a3b8" font-family="sans-serif" font-size="12">PWA • iOS Safari 13+ • Android Chrome</text>
+
+  <!-- iPhone Frame Mockup (Left) -->
+  <g transform="translate(40, 75)">
+    <!-- Chassis -->
+    <rect width="160" height="255" rx="28" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <!-- Screen Bezel -->
+    <rect x="6" y="6" width="148" height="243" rx="22" fill="url(#phoneGrad)"/>
+    <!-- Dynamic Island / Notch -->
+    <rect x="52" y="12" width="56" height="12" rx="6" fill="#000000"/>
+    
+    <!-- App Header in Screen -->
+    <text x="18" y="42" fill="#f8fafc" font-family="sans-serif" font-size="10" font-weight="700">AirMouse Web</text>
+    <rect x="100" y="32" width="42" height="14" rx="4" fill="#059669" fill-opacity="0.3"/>
+    <text x="106" y="42" fill="#34d399" font-family="sans-serif" font-size="8" font-weight="600">CONNECTED</text>
+
+    <!-- Virtual Touch Surface -->
+    <rect x="14" y="54" width="132" height="135" rx="10" fill="url(#touchGrad)" stroke="#0ea5e9" stroke-width="1" stroke-dasharray="3,3"/>
+    <circle cx="80" cy="115" r="18" fill="#38bdf8" fill-opacity="0.25"/>
+    <circle cx="80" cy="115" r="6" fill="#38bdf8"/>
+    <text x="50" y="145" fill="#94a3b8" font-family="sans-serif" font-size="8">Multi-Touch Area</text>
+
+    <!-- Mouse Click Buttons -->
+    <rect x="14" y="196" width="62" height="26" rx="6" fill="#1e293b" stroke="#334155"/>
+    <text x="32" y="212" fill="#e2e8f0" font-family="sans-serif" font-size="9" font-weight="600">LEFT</text>
+    <rect x="84" y="196" width="62" height="26" rx="6" fill="#1e293b" stroke="#334155"/>
+    <text x="98" y="212" fill="#e2e8f0" font-family="sans-serif" font-size="9" font-weight="600">RIGHT</text>
+
+    <!-- Home Indicator -->
+    <rect x="50" y="238" width="60" height="3" rx="1.5" fill="#94a3b8"/>
+  </g>
+
+  <!-- Feature Cards (Right Column) -->
+  <!-- Card 1: iOS 13+ User Gesture Modal -->
+  <g transform="translate(230, 75)">
+    <rect width="730" height="72" rx="10" fill="url(#cardGrad)" stroke="#38bdf8" stroke-width="1"/>
+    <rect x="16" y="16" width="40" height="40" rx="8" fill="#0284c7" fill-opacity="0.2"/>
+    <text x="26" y="42" font-size="20">🧭</text>
+    <text x="68" y="34" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">iOS 13+ Sensor Permission Dialog (User-Gesture Compliant)</text>
+    <text x="68" y="52" fill="#94a3b8" font-family="sans-serif" font-size="11">Solves Apple WebKit restriction: Prompts modal with explicit tap on <tspan fill="#38bdf8">DeviceMotionEvent.requestPermission()</tspan>, preventing silent sensor rejection.</text>
+  </g>
+
+  <!-- Card 2: Web Audio Tactile Synthesis -->
+  <g transform="translate(230, 160)">
+    <rect width="730" height="72" rx="10" fill="url(#cardGrad)" stroke="#a855f7" stroke-width="1"/>
+    <rect x="16" y="16" width="40" height="40" rx="8" fill="#7c3aed" fill-opacity="0.2"/>
+    <text x="26" y="42" font-size="20">🔊</text>
+    <text x="68" y="34" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Pre-Warmed Web Audio Haptic Synthesizer</text>
+    <text x="68" y="52" fill="#94a3b8" font-family="sans-serif" font-size="11">Bypasses iOS lack of <tspan fill="#c084fc">navigator.vibrate</tspan>: Pre-synthesizes pooled PCM impulse buffers (14ms, 24ms, 38ms) with instant audio pipeline warm-up on touchstart.</text>
+  </g>
+
+  <!-- Card 3: Screen Wake Lock & 2D Rotation -->
+  <g transform="translate(230, 245)">
+    <rect width="730" height="72" rx="10" fill="url(#cardGrad)" stroke="#10b981" stroke-width="1"/>
+    <rect x="16" y="16" width="40" height="40" rx="8" fill="#059669" fill-opacity="0.2"/>
+    <text x="26" y="42" font-size="20">🔋</text>
+    <text x="68" y="34" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Dual Wake Lock &amp; 2D Orientation Matrix Transformation</text>
+    <text x="68" y="52" fill="#94a3b8" font-family="sans-serif" font-size="11">Prevents screen dimming via standard Wake Lock API + invisible video loop fallback. Automatically rotates coordinate frame between Portrait and Landscape.</text>
+  </g>
+</svg>
