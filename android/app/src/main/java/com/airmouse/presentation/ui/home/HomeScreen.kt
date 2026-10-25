@@ -2436,48 +2436,100 @@ fun ConnectionControlsCard(
                             )
                         )
                     }
+
+                    // Pairing Token (HMAC-SHA256) input field
+                    OutlinedTextField(
+                        value = pairingToken,
+                        onValueChange = onTokenChange,
+                        label = { Text("Pairing Token (HMAC-SHA256)") },
+                        placeholder = { Text("Enter security pairing token") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Key,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                focusManager.clearFocus()
+                                if (!isConnecting && !isConnected) onConnect()
+                            }
+                        ),
+                        enabled = !isConnecting && !isConnected,
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        )
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // 4. Single Consolidated Material 3 Connection Button
-                Button(
-                    onClick = onConnect,
-                    enabled = !isConnecting && isRegistered && !isConnected,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isConnected) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 6.dp,
-                        pressedElevation = 2.dp
-                    )
-                ) {
-                    if (isConnecting) {
+                if (isConnecting) {
+                    Button(
+                        onClick = onCancel,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 2.dp
+                        )
+                    ) {
                         SweepGradientGlowRing(
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.5.dp,
                             glowRadius = 4.dp,
                             colors = listOf(
-                                MaterialTheme.colorScheme.onPrimary,
-                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f),
-                                MaterialTheme.colorScheme.onPrimary
+                                MaterialTheme.colorScheme.onError,
+                                MaterialTheme.colorScheme.onError.copy(alpha = 0.3f),
+                                MaterialTheme.colorScheme.onError
                             )
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Connecting...", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                    } else if (isConnected) {
-                        Icon(Icons.Default.Check, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Connected", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                    } else {
-                        Icon(if (protocol == ConnectionProtocol.BLUETOOTH) Icons.Default.Bluetooth else Icons.Default.PlayArrow, contentDescription = null)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(if (protocol == ConnectionProtocol.BLUETOOTH) "Broadcast Mouse" else "Connect", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text("Connecting... (Tap to Cancel)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                } else {
+                    Button(
+                        onClick = onConnect,
+                        enabled = isRegistered && !isConnected,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isConnected) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 2.dp
+                        )
+                    ) {
+                        if (isConnected) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Connected", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        } else {
+                            Icon(if (protocol == ConnectionProtocol.BLUETOOTH) Icons.Default.Bluetooth else Icons.Default.PlayArrow, contentDescription = null)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(if (protocol == ConnectionProtocol.BLUETOOTH) "Broadcast Mouse" else "Connect", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        }
                     }
                 }
 
