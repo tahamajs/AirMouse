@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070b14"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="gyroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="magGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="accelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="zuptGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glowAmber" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1000" height="480" rx="16" fill="url(#bgGrad)"/>
+  <rect width="998" height="478" x="1" y="1" rx="15" fill="none" stroke="#334155" stroke-width="1.5"/>
+
+  <!-- Header Badge -->
+  <rect x="30" y="22" width="340" height="34" rx="17" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2"/>
+  <circle cx="48" cy="39" r="6" fill="#38bdf8" filter="url(#glowCyan)"/>
+  <text x="64" y="44" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" letter-spacing="0.5">AIRMOUSE CALIBRATION &amp; DRIFT ENGINE</text>
+  <text x="710" y="44" fill="#94a3b8" font-family="sans-serif" font-size="12">Hardware Bias Compensation &amp; ZUPT Lock</text>
+
+  <!-- Top 3 Static Calibration Stages -->
+
+  <!-- Stage 1: Gyroscope Static Bias -->
+  <g transform="translate(30, 75)">
+    <rect width="300" height="185" rx="12" fill="url(#cardGrad)" stroke="#38bdf8" stroke-width="1.5"/>
+    <rect x="14" y="14" width="36" height="36" rx="8" fill="#0284c7" fill-opacity="0.25"/>
+    <text x="22" y="39" font-size="20">🎯</text>
+    <text x="58" y="29" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Stage 1: Gyro Zero-Rate</text>
+    <text x="58" y="44" fill="#38bdf8" font-family="sans-serif" font-size="11">Stationary Surface (N = 250..1000)</text>
+
+    <!-- Formula Box -->
+    <rect x="14" y="60" width="272" height="46" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="22" y="77" fill="#38bdf8" font-family="monospace" font-size="11">b_gyro = (1/N) * Σ ω_i</text>
+    <text x="22" y="94" fill="#94a3b8" font-family="monospace" font-size="11">σ²_gyro = (1/N)*Σ(ω_i - b)²</text>
+
+    <text x="14" y="125" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Eliminates thermal &amp; zero-point drift</text>
+    <text x="14" y="143" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Computes residual variance (Quality gate)</text>
+    <text x="14" y="161" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Runtime correction: ω_corr = ω_raw - b</text>
+  </g>
+
+  <!-- Stage 2: Magnetometer Ellipsoid -->
+  <g transform="translate(350, 75)">
+    <rect width="300" height="185" rx="12" fill="url(#cardGrad)" stroke="#a855f7" stroke-width="1.5"/>
+    <rect x="14" y="14" width="36" height="36" rx="8" fill="#7c3aed" fill-opacity="0.25"/>
+    <text x="22" y="39" font-size="20">🧭</text>
+    <text x="58" y="29" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Stage 2: Compass Ellipsoid</text>
+    <text x="58" y="44" fill="#c084fc" font-family="sans-serif" font-size="11">Figure-8 3D Sweep (N = 500)</text>
+
+    <!-- Formula Box -->
+    <rect x="14" y="60" width="272" height="46" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="22" y="77" fill="#c084fc" font-family="monospace" font-size="11">V_hard = (min + max) / 2</text>
+    <text x="22" y="94" fill="#94a3b8" font-family="monospace" font-size="11">S_soft = avg_range / (max - min)</text>
+
+    <text x="14" y="125" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Hard-Iron: Shifting sphere center to origin</text>
+    <text x="14" y="143" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Soft-Iron: Distorted ellipsoid normalization</text>
+    <text x="14" y="161" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Absolute heading alignment &amp; yaw stability</text>
+  </g>
+
+  <!-- Stage 3: Accelerometer 6-Orientation -->
+  <g transform="translate(670, 75)">
+    <rect width="300" height="185" rx="12" fill="url(#cardGrad)" stroke="#34d399" stroke-width="1.5"/>
+    <rect x="14" y="14" width="36" height="36" rx="8" fill="#059669" fill-opacity="0.25"/>
+    <text x="22" y="39" font-size="20">⚖️</text>
+    <text x="58" y="29" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Stage 3: 6-Axis Gravity Alignment</text>
+    <text x="58" y="44" fill="#34d399" font-family="sans-serif" font-size="11">6 Static Poses (1G Earth Reference)</text>
+
+    <!-- Formula Box -->
+    <rect x="14" y="60" width="272" height="46" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="22" y="77" fill="#34d399" font-family="monospace" font-size="11">span = |a_pos - a_neg| / 2</text>
+    <text x="22" y="94" fill="#94a3b8" font-family="monospace" font-size="11">scale = 9.80665 / span  [0.85 .. 1.15]</text>
+
+    <text x="14" y="125" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Positions: Flat Up/Down, L/R, Top/Bottom</text>
+    <text x="14" y="143" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Exact orthogonal gravity vector extraction</text>
+    <text x="14" y="161" fill="#cbd5e1" font-family="sans-serif" font-size="11.5">• Precise pitch &amp; roll tilt angle measurement</text>
+  </g>
+
+  <!-- Flow Arrows connecting Stages to Runtime Engine -->
+  <path d="M 180 260 L 180 280 L 500 280 L 500 295" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4"/>
+  <path d="M 500 260 L 500 295" fill="none" stroke="#a855f7" stroke-width="2" stroke-dasharray="4,4"/>
+  <path d="M 820 260 L 820 280 L 500 280 L 500 295" fill="none" stroke="#34d399" stroke-width="2" stroke-dasharray="4,4"/>
+  <polygon points="500,300 495,290 505,290" fill="#38bdf8"/>
+
+  <!-- Bottom Panel: Runtime Dynamic ZUPT & 1€ Filter Engine -->
+  <g transform="translate(30, 305)">
+    <rect width="940" height="155" rx="12" fill="url(#cardGrad)" stroke="#fbbf24" stroke-width="1.5"/>
+
+    <!-- Left: ZUPT Auto-Drift Killer -->
+    <g transform="translate(20, 16)">
+      <rect width="36" height="36" rx="8" fill="#d97706" fill-opacity="0.25"/>
+      <text x="8" y="25" font-size="20">⚡</text>
+      <text x="46" y="18" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Real-Time ZUPT (Zero Velocity Update)</text>
+      <text x="46" y="33" fill="#fbbf24" font-family="sans-serif" font-size="11">Background Stationary Drift Eliminator</text>
+
+      <rect x="0" y="46" width="430" height="78" rx="6" fill="#0f172a" stroke="#1e293b"/>
+      <text x="10" y="64" fill="#fbbf24" font-family="monospace" font-size="11">Window = 50 samples (~500 ms) | Threshold = 0.02</text>
+      <text x="10" y="80" fill="#e2e8f0" font-family="sans-serif" font-size="11">IF σ²(accel_x,y,z) &lt; 0.02 AND t_still &gt; 500ms THEN:</text>
+      <text x="18" y="96" fill="#34d399" font-family="monospace" font-size="11">↳ Lock cursor position (Δx = 0, Δy = 0)</text>
+      <text x="18" y="112" fill="#38bdf8" font-family="monospace" font-size="11">↳ Re-estimate bias: b_gyro = Mean(gyroWindow)</text>
+    </g>
+
+    <!-- Center Divider -->
+    <line x1="475" y1="15" x2="475" y2="140" stroke="#334155" stroke-width="1.5"/>
+
+    <!-- Right: 1€ Filter & Quality Gates -->
+    <g transform="translate(495, 16)">
+      <rect width="36" height="36" rx="8" fill="#0284c7" fill-opacity="0.25"/>
+      <text x="8" y="25" font-size="20">🔬</text>
+      <text x="46" y="18" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">1€ Filter &amp; Calibration Quality Gates</text>
+      <text x="46" y="33" fill="#38bdf8" font-family="sans-serif" font-size="11">Dynamic Cutoff + Health Matrix</text>
+
+      <!-- Quality Badges Grid -->
+      <g transform="translate(0, 46)">
+        <!-- Excellent -->
+        <rect x="0" y="0" width="102" height="34" rx="6" fill="#059669" fill-opacity="0.2" stroke="#10b981"/>
+        <text x="8" y="15" fill="#34d399" font-family="sans-serif" font-size="10" font-weight="700">EXCELLENT</text>
+        <text x="8" y="27" fill="#94a3b8" font-family="monospace" font-size="9">σ² &lt; 0.01 rad/s</text>
+
+        <!-- Good -->
+        <rect x="110" y="0" width="102" height="34" rx="6" fill="#0284c7" fill-opacity="0.2" stroke="#38bdf8"/>
+        <text x="118" y="15" fill="#38bdf8" font-family="sans-serif" font-size="10" font-weight="700">GOOD</text>
+        <text x="118" y="27" fill="#94a3b8" font-family="monospace" font-size="9">σ² &lt; 0.05 rad/s</text>
+
+        <!-- Fair -->
+        <rect x="220" y="0" width="102" height="34" rx="6" fill="#d97706" fill-opacity="0.2" stroke="#fbbf24"/>
+        <text x="228" y="15" fill="#fbbf24" font-family="sans-serif" font-size="10" font-weight="700">FAIR</text>
+        <text x="228" y="27" fill="#94a3b8" font-family="monospace" font-size="9">σ² &lt; 0.10 rad/s</text>
+
+        <!-- Poor -->
+        <rect x="330" y="0" width="98" height="34" rx="6" fill="#dc2626" fill-opacity="0.2" stroke="#f87171"/>
+        <text x="338" y="15" fill="#f87171" font-family="sans-serif" font-size="10" font-weight="700">POOR</text>
+        <text x="338" y="27" fill="#94a3b8" font-family="monospace" font-size="9">Recalibrate</text>
+      </g>
+
+      <text x="0" y="98" fill="#cbd5e1" font-family="sans-serif" font-size="11">Adaptive cutoff: fc = fc_min (1.0 Hz) + β (0.007) · |dx/dt|</text>
+      <text x="0" y="116" fill="#94a3b8" font-family="sans-serif" font-size="10.5">Slow: Zero jitter clicks | Fast: Instant flick response (sub-ms latency)</text>
+    </g>
+  </g>
+</svg>

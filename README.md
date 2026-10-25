@@ -168,13 +168,109 @@ The spatial air mouse uses an advanced sensor fusion pipeline to translate raw s
 
 ---
 
-### 4. ⚡ Multi-OS Desktop Host Daemons (Go & Python)
+### 4. 📐 Precision Multi-Stage Calibration & Dynamic Drift Elimination Engine
+
+Spatial air mice require immaculate sensor calibration to prevent cursor creep and erratic jumping caused by micro-electro-mechanical systems (MEMS) imperfections, ambient temperature shifts, and local magnetic field distortion. AirMouse implements a dual-mode calibration system: a **Guided 3-Stage Static Calibration Wizard** and a **Real-Time Continuous Zero Velocity Update (ZUPT)** auto-calibrator.
+
+<div align="center">
+  <img src="docs/assets/module_calibration_pipeline.svg" alt="AirMouse Calibration & Drift Engine" width="100%">
+  <p><em>Figure 4: AirMouse Precision Calibration Engine — <b>3-Stage Static Calibration</b>, <b>3D Ellipsoid Normalization</b>, <b>ZUPT Dynamic Drift Lock</b>, and <b>Quality Gate Matrix</b></em></p>
+</div>
+
+#### A. The Guided 3-Stage Static Calibration Pipeline
+
+Accessed via the app's Calibration tab ([`CalibrationScreen.kt`](android/app/src/main/java/com/airmouse/presentation/calibration/CalibrationScreen.kt) & [`CalibrationHelper.kt`](android/app/src/main/java/com/airmouse/sensors/CalibrationHelper.kt)), this guided wizard measures hardware offsets and scale factors across all physical sensors:
+
+##### 1. Stage 1: Gyroscope Static Zero-Rate Bias & Noise Variance
+* **Physical Instruction**: The user places the smartphone completely flat on an immobile desk or table.
+* **Sampling Protocol**: Collects $N = 250$ to $1000$ consecutive samples from the hardware gyroscope (`Sensor.TYPE_GYROSCOPE`) at maximum rate (`SENSOR_DELAY_FASTEST`, $\sim 100\text{ Hz}$) with a safety timeout guard.
+* **Mathematical Bias Estimation**:
+  $$\vec{b}_{gyro} = \begin{pmatrix} b_x \\ b_y \\ b_z \end{pmatrix} = \frac{1}{N} \sum_{i=1}^N \begin{pmatrix} \omega_{x,i} \\ \omega_{y,i} \\ \omega_{z,i} \end{pmatrix}$$
+* **Residual Noise Variance Calculation**:
+  $$\sigma_x^2 = \frac{1}{N} \sum_{i=1}^N \omega_{x,i}^2 - b_x^2, \quad \sigma_y^2 = \frac{1}{N} \sum_{i=1}^N \omega_{y,i}^2 - b_y^2, \quad \sigma_z^2 = \frac{1}{N} \sum_{i=1}^N \omega_{z,i}^2 - b_z^2$$
+* **Runtime Correction**: Every subsequent angular rate reading is offset-compensated:
+  $$\vec{\omega}_{corrected} = \vec{\omega}_{raw} - \vec{b}_{gyro}$$
+* **Haptic Confirmation**: Triggers a clean haptic pulse upon zero-bias convergence.
+
+##### 2. Stage 2: Magnetometer 3D Ellipsoid Fitting (Hard-Iron & Soft-Iron Correction)
+* **Physical Instruction**: The user waves the smartphone in a slow 3-dimensional Figure-8 sweep away from metallic desks and magnetic speaker magnets.
+* **Sampling Protocol**: Accumulates $N = 500$ 3D magnetic field vectors over a $10$-second observation window.
+* **Hard-Iron Offset Correction**: Ferromagnetic components inside the smartphone (battery casing, speakers, shielding) produce constant permanent magnetic field shifts, displacing the center of the magnetic sphere away from the origin:
+  $$\vec{V}_{offset} = \begin{pmatrix} V_x \\ V_y \\ V_z \end{pmatrix} = \frac{1}{2} \begin{pmatrix} \max(M_x) + \min(M_x) \\ \max(M_y) + \min(M_y) \\ \max(M_z) + \min(M_z) \end{pmatrix}$$
+* **Soft-Iron Axis Scale Normalization**: Nearby magnetically permeable materials deform the sphere into a skewed ellipsoid with unequal semi-axes. AirMouse calculates axis ranges and normalizes them to an equivalent spherical radius:
+  $$R_x = \max(M_x) - \min(M_x), \quad R_y = \max(M_y) - \min(M_y), \quad R_z = \max(M_z) - \min(M_z)$$
+  $$R_{avg} = \frac{R_x + R_y + R_z}{3}$$
+  $$S_x = \frac{R_{avg}}{R_x}, \quad S_y = \frac{R_{avg}}{R_y}, \quad S_z = \frac{R_{avg}}{R_z}$$
+* **Ellipsoidal Normalization (`correctMagnetometerAdvanced`)**:
+  $$M'_{k} = (M_{k,raw} - V_{k}) \cdot S_k, \quad \hat{\vec{M}} = \frac{\vec{M}'}{\|\vec{M}'\|}$$
+  This provides drift-free magnetic heading alignment for long-session yaw stabilization.
+
+##### 3. Stage 3: Accelerometer 6-Orientation Gravity Alignment
+* **Physical Instruction**: The phone is held sequentially in 6 orthogonal cardinal poses for 100 samples each:
+  1. **Flat (Screen Up)**: Target $Z = +9.80665\text{ m/s}^2$
+  2. **Flat (Screen Down)**: Target $Z = -9.80665\text{ m/s}^2$
+  3. **Left Edge Down**: Target $X = -9.80665\text{ m/s}^2$
+  4. **Right Edge Down**: Target $X = +9.80665\text{ m/s}^2$
+  5. **Top Edge Down**: Target $Y = -9.80665\text{ m/s}^2$
+  6. **Bottom Edge Down**: Target $Y = +9.80665\text{ m/s}^2$
+* **Scale Factor Extraction**: For each orthogonal axis $k \in \{X, Y, Z\}$:
+  $$\text{Span}_k = \frac{|a_{k,pos} - a_{k,neg}|}{2}, \quad \text{Scale}_k = \left( \frac{9.80665}{\text{Span}_k} \right)_{\text{clamped}[0.85, 1.15]}$$
+* **Orthogonal Bias Offset**:
+  $$\text{Offset}_k = \frac{1}{6} \sum_{i=1}^6 \left( g_{\text{target},i} - a_{\text{meas},i} \cdot \text{Scale}_k \right)$$
+* **Runtime Gravity Vector**:
+  $$\vec{a}_{corrected} = \frac{\vec{a}_{raw} - \vec{\text{Offset}}}{\vec{\text{Scale}}}$$
+
+---
+
+#### B. Dynamic Background Drift Killer: Real-Time ZUPT Engine
+
+Even after static calibration, smartphone gyroscopes experience **thermal drift** as the device CPU and battery warm up during use. AirMouse integrates an automated **Zero Velocity Update (ZUPT)** engine in [`SensorRepositoryImpl.kt`](android/app/src/main/java/com/airmouse/data/repository/SensorRepositoryImpl.kt) that runs continuously during cursor operation without interrupting the user:
+
+1. **Stationary Window Buffer**: Maintains a circular rolling buffer of the last 50 accelerometer and gyroscope samples ($500\text{ ms}$ at $100\text{ Hz}$).
+2. **Stationary Detection Threshold**: Calculates the total tri-axial acceleration variance:
+   $$\sigma^2_{total} = \frac{1}{N} \sum_{i=1}^N \left( (a_{x,i} - \bar{a}_x)^2 + (a_{y,i} - \bar{a}_y)^2 + (a_{z,i} - \bar{a}_z)^2 \right)$$
+   If $\sigma^2_{total} < 0.02\text{ (m/s}^2)^2$ continuously for $\ge 500\text{ ms}$, the system classifies the device as absolutely stationary (e.g., resting on a table or steady hand pause).
+3. **Double Action on ZUPT Trigger**:
+   - **Cursor Lock**: Instantly locks cursor displacement ($\Delta X = 0, \Delta Y = 0$), preventing creeping cursor drift.
+   - **Online Bias Recalibration**: Computes the mean angular rate across the stationary window ($\vec{b}_{window} = \frac{1}{M}\sum \vec{\omega}_{window}$) and smoothly updates the active gyroscope offset vector in real time.
+
+---
+
+#### C. Adaptive One Euro Filter ($1€$) Tuning
+
+To eliminate hand jitter during delicate button clicks while maintaining instant responsiveness during fast arm swings, AirMouse utilizes the Casiez et al. **One Euro Filter** ([`OneEuroFilter.kt`](android/app/src/main/java/com/airmouse/sensors/OneEuroFilter.kt)):
+
+* **Dynamic Cutoff Formula**:
+  $$f_c = f_{c_{\min}} + \beta \cdot |\dot{x}_{filtered}|$$
+  - $f_{c_{\min}} = 1.0\text{ Hz}$: When hand velocity $|\dot{x}| \approx 0$, cutoff drops to $1\text{ Hz}$, filtering high-frequency muscle tremor completely.
+  - $\beta = 0.007$: As movement accelerates, $f_c$ scales linearly, reducing phase lag to $<1\text{ ms}$.
+  - $f_{c,\text{deriv}} = 1.0\text{ Hz}$: Stabilizes numerical differentiation $\frac{\Delta x}{\Delta t}$ against sensor noise spikes.
+* **Low-Pass Filter Discrete Step**:
+  $$\tau = \frac{1}{2\pi f_c}, \quad T_e = \Delta t, \quad \alpha = \frac{1}{1 + \tau / T_e}$$
+  $$\hat{x}_k = \alpha x_k + (1 - \alpha) \hat{x}_{k-1}$$
+
+---
+
+#### D. Calibration Quality Gates & Origin Re-Zeroing
+
+* **Automated Quality Classification**: After calibration, the app evaluates average residual gyro variance $\bar{\sigma}^2 = \frac{\sigma_x^2 + \sigma_y^2 + \sigma_z^2}{3}$:
+  - 🟢 **`EXCELLENT`** ($\bar{\sigma}^2 < 0.01\text{ rad}^2/\text{s}^2$): Sub-pixel tracking accuracy.
+  - 🔵 **`GOOD`** ($0.01 \le \bar{\sigma}^2 < 0.05\text{ rad}^2/\text{s}^2$): Reliable daily precision.
+  - 🟡 **`FAIR`** ($0.05 \le \bar{\sigma}^2 < 0.10\text{ rad}^2/\text{s}^2$): Usable, minor jitter in high-DPI displays.
+  - 🔴 **`POOR`** ($\bar{\sigma}^2 \ge 0.10\text{ rad}^2/\text{s}^2$): High ambient vibration detected; prompts immediate recalibration.
+* **Center Origin Re-Zeroing**: Tapping the **Recenter** button or double-tapping the air mouse touchpad captures the current attitude quaternion $\mathbf{q}_{\text{recenter}} = \mathbf{q}_{\text{current}}$. All subsequent spatial tilts are evaluated relative to this new forward reference origin:
+  $$\mathbf{q}_{\text{relative}} = \mathbf{q}_{\text{recenter}}^{-1} \otimes \mathbf{q}_{\text{current}}$$
+  allowing the user to reposition their arm comfortably without resetting sensor calibrations.
+
+---
+
+### 5. ⚡ Multi-OS Desktop Host Daemons (Go & Python)
 
 AirMouse features two independent desktop server implementations tailored for maximum performance and portability:
 
 <div align="center">
   <img src="docs/assets/module_desktop_kernel.svg" alt="Multi-OS Kernel Input Synthesis" width="100%">
-  <p><em>Figure 4: Multi-OS Kernel Input Synthesis Engine — <b>Go High-Throughput Ingest</b>, <b>CoreGraphics (macOS)</b>, <b>SendInput (Windows)</b>, and <b>/dev/uinput (Linux)</b></em></p>
+  <p><em>Figure 5: Multi-OS Kernel Input Synthesis Engine — <b>Go High-Throughput Ingest</b>, <b>CoreGraphics (macOS)</b>, <b>SendInput (Windows)</b>, and <b>/dev/uinput (Linux)</b></em></p>
 </div>
 
 #### A. Go High-Performance Server (`pc/airmouse_go_new/`)
@@ -190,7 +286,7 @@ AirMouse features two independent desktop server implementations tailored for ma
 
 <div align="center">
   <img src="docs/assets/desktop_gui_mockup.svg" alt="AirMouse Desktop Fyne Server" width="100%">
-  <p><em>Figure 5: AirMouse Desktop Host Server — <b>6-Tab Fyne GUI Dashboard</b> with Live Waveform &amp; Jitter Analytics</em></p>
+  <p><em>Figure 6: AirMouse Desktop Host Server — <b>6-Tab Fyne GUI Dashboard</b> with Live Waveform &amp; Jitter Analytics</em></p>
 </div>
 
 #### B. Python Reference Server (`pc/airmouse_py/`)
@@ -202,13 +298,13 @@ AirMouse features two independent desktop server implementations tailored for ma
 
 ---
 
-### 5. 🌐 Zero-Install Mobile Web Client (`web-client/`)
+### 6. 🌐 Zero-Install Mobile Web Client (`web-client/`)
 
 A zero-install Progressive Web App (PWA) allowing immediate touch and spatial mouse control on Apple iOS (Safari) and Android (Chrome) without installing an app:
 
 <div align="center">
   <img src="docs/assets/module_web_client.svg" alt="AirMouse Mobile Web Client" width="100%">
-  <p><em>Figure 6: Zero-Install Mobile Web Client — <b>iOS 13+ Onboarding Dialog</b>, <b>Web Audio Haptic Impulses</b>, and <b>Screen Wake Lock Fallback</b></em></p>
+  <p><em>Figure 7: Zero-Install Mobile Web Client — <b>iOS 13+ Onboarding Dialog</b>, <b>Web Audio Haptic Impulses</b>, and <b>Screen Wake Lock Fallback</b></em></p>
 </div>
 
 * **iOS 13+ Sensor Permission Dialog**:
