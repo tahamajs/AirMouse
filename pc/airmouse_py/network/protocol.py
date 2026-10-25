@@ -8,6 +8,7 @@ Provides backward-compatibility aliases for legacy adapters.
 """
 
 import math
+import threading
 import time
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -183,10 +184,12 @@ class SessionTracker:
     def __init__(self, replay_window_ms: int = 5000) -> None:
         self.replay_window_ms = replay_window_ms
         self._session_sequences: Dict[str, int] = {}
+        self._lock = threading.Lock()
 
     def reset_session(self, session_id: str) -> None:
         """Removes session state when a client disconnects."""
-        self._session_sequences.pop(session_id, None)
+        with self._lock:
+            self._session_sequences.pop(session_id, None)
 
     def validate_envelope(
         self, envelope: WireEnvelope, session_id: str
@@ -196,17 +199,18 @@ class SessionTracker:
         per-session monotonic sequence progression.
         """
         current_time_ms = int(time.time() * 1000)
-        if abs(current_time_ms - envelope.ts) > self.replay_window_ms:
+        if envelope.ts <= 0 or abs(current_time_ms - envelope.ts) > self.replay_window_ms:
             raise ReplayAttackError(
                 f"Timestamp {envelope.ts} outside replay window (+/- {self.replay_window_ms}ms, current: {current_time_ms})"
             )
 
-        last_seq = self._session_sequences.get(session_id, -1)
-        if envelope.seq <= last_seq:
-            raise ReplayAttackError(
-                f"Session {session_id}: Duplicate or out-of-order sequence {envelope.seq} (last seen: {last_seq})"
-            )
-        self._session_sequences[session_id] = envelope.seq
+        with self._lock:
+            last_seq = self._session_sequences.get(session_id, -1)
+            if envelope.seq <= last_seq:
+                raise ReplayAttackError(
+                    f"Session {session_id}: Duplicate or out-of-order sequence {envelope.seq} (last seen: {last_seq})"
+                )
+            self._session_sequences[session_id] = envelope.seq
 
 
 class ProtocolParser:

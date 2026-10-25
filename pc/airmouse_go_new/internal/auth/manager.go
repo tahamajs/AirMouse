@@ -25,6 +25,7 @@ type Manager struct {
 	tokenTTL     time.Duration
 	cleanupTick  *time.Ticker
 	stopCleanup  chan struct{}
+	stopOnce     sync.Once
 }
 
 // TokenInfo stores information about an issued token.
@@ -381,7 +382,9 @@ func (m *Manager) cleanupLoop() {
 
 // StopCleanup stops the background cleanup goroutine.
 func (m *Manager) StopCleanup() {
-	close(m.stopCleanup)
+	m.stopOnce.Do(func() {
+		close(m.stopCleanup)
+	})
 }
 
 // GetPairingQRData generates a pairing URL with a token.

@@ -160,3 +160,50 @@ func TestRevokeToken(t *testing.T) {
 		t.Errorf("Revoked token must not be valid")
 	}
 }
+
+func TestFutureTokenRejection(t *testing.T) {
+	secret := "test-secret-key-that-is-at-least-32-bytes-long!"
+	mgr := NewManager(secret)
+	defer mgr.StopCleanup()
+
+	// Forge claims with Iat 10 minutes in the future
+	futureClaims := tokenClaims{
+		Exp:        time.Now().Add(24 * time.Hour).Unix(),
+		Iat:        time.Now().Add(10 * time.Minute).Unix(),
+		Type:       "auth",
+		JTI:        "future-token-id",
+		DeviceID:   "future-dev",
+		DeviceName: "Future Phone",
+		Version:    1,
+	}
+
+	futureToken, err := mgr.signClaims(futureClaims)
+	if err != nil {
+		t.Fatalf("signClaims failed: %v", err)
+	}
+
+	valid, _, _ := mgr.ValidateAuthToken(futureToken)
+	if valid {
+		t.Errorf("Expected token with future iat to be rejected")
+	}
+}
+
+func TestMalformedTokens(t *testing.T) {
+	secret := "test-secret-key-that-is-at-least-32-bytes-long!"
+	mgr := NewManager(secret)
+	defer mgr.StopCleanup()
+
+	testCases := []string{
+		"",
+		"nodot",
+		"too.many.dots.here",
+		"invalidbase64!@#.invalidsig!@#",
+		"eyJhbGciOiJIUzI1NiJ9.dGVzdA", // signature length mismatch
+	}
+
+	for _, tc := range testCases {
+		if mgr.ValidateToken(tc) {
+			t.Errorf("Expected malformed token %q to be rejected", tc)
+		}
+	}
+}

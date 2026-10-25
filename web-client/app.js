@@ -21,10 +21,6 @@
     let rateInterval = null;
     let isConnected = false;
 
-    // Screen Wake Lock API State
-    let wakeLock = null;
-    let wakeLockRequested = true;
-
     // Gyroscope State & Battery Saver
     let gyroActive = false;
     let lastBeta = null;
@@ -743,27 +739,74 @@
         touchFeedback.innerHTML = '';
     }
 
-    // iOS DeviceOrientation API & Gyroscope Battery Saver Handling
-    async function requestDeviceOrientationPermission() {
-        getAudioContext();
+    // iOS DeviceOrientation / DeviceMotionEvent API & Gyroscope Battery Saver Handling
+    let motionPermissionGranted = false;
 
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    function isMotionPermissionRequired() {
+        return (
+            (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') ||
+            (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')
+        );
+    }
+
+    function showMotionPermissionModal() {
+        if (motionPermissionModal) {
+            motionPermissionModal.classList.remove('hidden');
+        }
+    }
+
+    function hideMotionPermissionModal() {
+        if (motionPermissionModal) {
+            motionPermissionModal.classList.add('hidden');
+        }
+    }
+
+    // Direct user-gesture execution for iOS 13+ sensor permissions (DeviceMotionEvent.requestPermission)
+    async function requestMotionPermissions() {
+        unlockAudioOnTouch();
+        let granted = true;
+
+        // iOS 13+ DeviceMotionEvent permission
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
             try {
-                const response = await DeviceOrientationEvent.requestPermission();
-                if (response === 'granted') {
-                    startGyroscope();
-                    gyroToggle.checked = true;
-                    btnGyroPermission.textContent = 'Gyro Allowed ✓';
-                    btnGyroPermission.disabled = true;
-                    playTactileFeedback('medium');
-                } else {
-                    alert('Motion sensor permission was denied in iOS settings.');
+                const res = await DeviceMotionEvent.requestPermission();
+                if (res !== 'granted') {
+                    granted = false;
                 }
             } catch (err) {
-                console.error('DeviceOrientation permission error:', err);
-                alert('DeviceOrientation error: ' + err.message);
+                console.warn('DeviceMotionEvent.requestPermission error:', err);
+                granted = false;
+            }
+        }
+
+        // iOS 13+ DeviceOrientationEvent permission
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+                const res = await DeviceOrientationEvent.requestPermission();
+                if (res !== 'granted') {
+                    granted = false;
+                }
+            } catch (err) {
+                console.warn('DeviceOrientationEvent.requestPermission error:', err);
+                granted = false;
+            }
+        }
+
+        return granted;
+    }
+
+    function requestDeviceOrientationPermission() {
+        unlockAudioOnTouch();
+
+        if (isMotionPermissionRequired()) {
+            if (motionPermissionGranted) {
+                startGyroscope();
+                gyroToggle.checked = true;
+            } else {
+                showMotionPermissionModal();
             }
         } else {
+            motionPermissionGranted = true;
             startGyroscope();
             gyroToggle.checked = true;
             btnGyroPermission.textContent = 'Gyro Active ✓';
@@ -789,6 +832,24 @@
         lastGamma = null;
         statGyro.textContent = 'Disabled';
         statGyro.style.color = 'var(--text-secondary)';
+    }
+
+    function getScreenOrientationAngle() {
+        // Modern standard ScreenOrientation API
+        if (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === 'number') {
+            return window.screen.orientation.angle;
+        }
+        // iOS Safari / older mobile engines fallback
+        if (typeof window.orientation === 'number') {
+            return window.orientation;
+        }
+        return 0;
+    }
+
+    function resetOrientationTracking() {
+        lastBeta = null;
+        lastGamma = null;
+        lastGyroTime = null;
     }
 
     function handleOrientation(event) {
@@ -821,9 +882,24 @@
 
         if (deltaGamma === 0 && deltaBeta === 0) return;
 
+        // Screen orientation coordinate transformation:
+        // Converts device-body coordinates to current viewport coordinates (portrait vs landscape)
+        const orientationAngle = getScreenOrientationAngle();
+        const angleRad = (orientationAngle * Math.PI) / 180;
+        const cosA = Math.cos(angleRad);
+        const sinA = Math.sin(angleRad);
+
+        // 2D Rotation matrix:
+        // angle=0 (portrait): rotDx = deltaGamma, rotDy = deltaBeta
+        // angle=90 (landscape left): rotDx = deltaBeta, rotDy = -deltaGamma
+        // angle=180 (portrait inverted): rotDx = -deltaGamma, rotDy = -deltaBeta
+        // angle=270/-90 (landscape right): rotDx = -deltaBeta, rotDy = deltaGamma
+        const rotDx = deltaGamma * cosA + deltaBeta * sinA;
+        const rotDy = -deltaGamma * sinA + deltaBeta * cosA;
+
         // Map tilt deltas to cursor coordinates
-        const dx = deltaGamma * gyroSensitivity * 3.5;
-        const dy = deltaBeta * gyroSensitivity * 3.5;
+        const dx = rotDx * gyroSensitivity * 3.5;
+        const dy = rotDy * gyroSensitivity * 3.5;
 
         const clampedDx = Math.max(-500, Math.min(500, dx));
         const clampedDy = Math.max(-500, Math.min(500, dy));
@@ -838,7 +914,7 @@
     // UI Event Handlers
     function setupEventListeners() {
         btnConnect.addEventListener('click', () => {
-            getAudioContext();
+            unlockAudioOnTouch();
             if (isConnected) disconnect();
             else connect();
         });
@@ -846,7 +922,7 @@
         btnGyroPermission.addEventListener('click', requestDeviceOrientationPermission);
 
         btnSettingsToggle.addEventListener('click', () => {
-            getAudioContext();
+            unlockAudioOnTouch();
             settingsPanel.classList.toggle('collapsed');
         });
 
@@ -864,19 +940,30 @@
             localStorage.setItem('airmouse_gyro_sens', gyroSensitivity);
         });
 
-        const motionModal = document.getElementById('motionPermissionModal');
-        const btnMotionGrant = document.getElementById('btnMotionGrant');
-        const btnMotionCancel = document.getElementById('btnMotionCancel');
-
+        // Motion Permission Modal Actions
         if (btnMotionGrant) {
             btnMotionGrant.addEventListener('click', async () => {
-                if (motionModal) motionModal.classList.add('hidden');
-                await requestDeviceOrientationPermission();
+                hideMotionPermissionModal();
+                const granted = await requestMotionPermissions();
+                if (granted) {
+                    motionPermissionGranted = true;
+                    btnGyroPermission.textContent = 'Gyro Allowed ✓';
+                    btnGyroPermission.disabled = true;
+                    gyroToggle.checked = true;
+                    startGyroscope();
+                    playTactileFeedback('medium');
+                } else {
+                    gyroToggle.checked = false;
+                    statGyro.textContent = 'Denied';
+                    statGyro.style.color = 'var(--text-secondary)';
+                    alert('Motion sensor permission was denied in iOS settings.');
+                }
             });
         }
+
         if (btnMotionCancel) {
             btnMotionCancel.addEventListener('click', () => {
-                if (motionModal) motionModal.classList.add('hidden');
+                hideMotionPermissionModal();
                 gyroToggle.checked = false;
                 stopGyroscope();
             });
@@ -884,14 +971,11 @@
 
         // Gyro Battery Saver Toggle
         gyroToggle.addEventListener('change', (e) => {
-            getAudioContext();
+            unlockAudioOnTouch();
             if (e.target.checked) {
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    if (motionModal) {
-                        motionModal.classList.remove('hidden');
-                    } else {
-                        requestDeviceOrientationPermission();
-                    }
+                if (isMotionPermissionRequired() && !motionPermissionGranted) {
+                    e.target.checked = false;
+                    showMotionPermissionModal();
                 } else {
                     startGyroscope();
                 }
@@ -934,6 +1018,17 @@
         btnRightClick.addEventListener('click', () => {
             playTactileFeedback('medium');
             sendProtocolV2('click', { button: 'right' });
+        });
+
+        // Screen orientation tracking reset
+        window.addEventListener('orientationchange', resetOrientationTracking);
+        if (window.screen && window.screen.orientation) {
+            window.screen.orientation.addEventListener('change', resetOrientationTracking);
+        }
+
+        // Universal touch/click audio wake-up (resumes AudioContext on first touch)
+        ['touchstart', 'touchend', 'pointerdown', 'mousedown'].forEach(evt => {
+            window.addEventListener(evt, unlockAudioOnTouch, { passive: true, capture: true });
         });
     }
 

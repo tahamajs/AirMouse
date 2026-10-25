@@ -250,6 +250,10 @@ func (s *ProtocolServer) Stop() {
 		usbServer.Stop()
 		utils.LogInfo("USB server stopped")
 	}
+	if s.authMgr != nil {
+		s.authMgr.StopCleanup()
+		utils.LogInfo("Auth manager stopped")
+	}
 
 	// Reset any active emulation states (mouse buttons and keyboard keys)
 	if s.mouseCtrl != nil {

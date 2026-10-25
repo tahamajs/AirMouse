@@ -117,12 +117,6 @@ func main() {
 
 	wireLifecycleLogging(protocolServer, deviceMgr)
 
-	// Context for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go handleSignals(ctx, protocolServer, deviceMgr, proxMgr, fusion, cfg)
-
 	logger.Info("Application started successfully")
 	logger.Info("WebSocket server will listen on port %d", cfg.WebSocketPort)
 	logger.Info("TCP server will listen on port %d", cfg.Port)
@@ -144,20 +138,54 @@ func main() {
 
 	logger.Info("Air Mouse Pro Server is running. Press Ctrl+C to stop.")
 
-	// Wait for SIGINT/SIGTERM
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
+	// Set up signal channel for SIGHUP (config reload) and SIGINT/SIGTERM (graceful shutdown)
+	sigChan := make(chan os.Signal, 2)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	logger.Info("Shutting down server...")
-	protocolServer.Stop()
-	deviceMgr.Stop()
-	if proxMgr != nil && fusion != nil {
-		configDir := filepath.Dir(cfg.ConfigPath)
-		statePath := filepath.Join(configDir, "proximity_state.json")
-		_ = fusion.SaveState(statePath)
+	for sig := range sigChan {
+		if sig == syscall.SIGHUP {
+			logger.Info("Received SIGHUP: reloading configuration...")
+			if err := config.Get().Reload(); err != nil {
+				logger.Error("Failed to reload config: %v", err)
+			} else {
+				logger.Info("Configuration reloaded successfully")
+			}
+			continue
+		}
+
+		logger.Info("Received termination signal (%v). Initiating graceful shutdown...", sig)
+		break
 	}
-	logger.Info("Shutdown complete")
+
+	// Graceful shutdown with 5-second timeout
+	shutdownDone := make(chan struct{})
+	go func() {
+		defer close(shutdownDone)
+		if protocolServer != nil {
+			logger.Info("Stopping protocol server...")
+			protocolServer.Stop()
+			logger.Info("Protocol server stopped")
+		}
+		if deviceMgr != nil {
+			logger.Info("Stopping device manager...")
+			deviceMgr.Stop()
+			logger.Info("Device manager stopped")
+		}
+		if proxMgr != nil && fusion != nil {
+			configDir := filepath.Dir(cfg.ConfigPath)
+			statePath := filepath.Join(configDir, "proximity_state.json")
+			_ = fusion.SaveState(statePath)
+		}
+	}()
+
+	select {
+	case <-shutdownDone:
+		logger.Info("Graceful shutdown completed successfully")
+	case <-time.After(5 * time.Second):
+		logger.Warn("Graceful shutdown timed out (5s limit reached) – forcing exit")
+	case sig := <-sigChan:
+		logger.Warn("Received second signal (%v) – forcing immediate exit", sig)
+	}
 }
 
 func openBrowser(url string) {

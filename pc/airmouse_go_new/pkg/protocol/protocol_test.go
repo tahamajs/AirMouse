@@ -134,6 +134,23 @@ func TestReplayProtection(t *testing.T) {
 	if err := rd.ValidateMessage(envStaleTime, now); err == nil {
 		t.Fatalf("Expected replay rejection for stale timestamp, got none")
 	}
+
+	// 6. Non-positive timestamps (0 or negative)
+	envZeroTime := &EnvelopeV2{V: 2, Type: "move", Seq: 13, Ts: 0}
+	if err := rd.ValidateMessage(envZeroTime, now); err == nil {
+		t.Fatalf("Expected replay rejection for ts=0, got none")
+	}
+
+	envNegTime := &EnvelopeV2{V: 2, Type: "move", Seq: 14, Ts: -100}
+	if err := rd.ValidateMessage(envNegTime, now); err == nil {
+		t.Fatalf("Expected replay rejection for negative ts, got none")
+	}
+
+	// 7. Future timestamp beyond 5000ms window
+	envFutureTime := &EnvelopeV2{V: 2, Type: "move", Seq: 15, Ts: now + 5001}
+	if err := rd.ValidateMessage(envFutureTime, now); err == nil {
+		t.Fatalf("Expected replay rejection for future drift > 5000ms, got none")
+	}
 }
 
 func TestMessageEncoders(t *testing.T) {

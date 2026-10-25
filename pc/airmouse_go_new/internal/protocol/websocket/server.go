@@ -126,6 +126,38 @@ func (c *WSClient) Close() {
 	})
 }
 
+// SafeSend sends text data non-blockingly to the client send queue without panicking if closed.
+func (c *WSClient) SafeSend(data []byte) bool {
+	if c == nil {
+		return false
+	}
+	defer func() {
+		_ = recover()
+	}()
+	select {
+	case c.Send <- data:
+		return true
+	default:
+		return false
+	}
+}
+
+// SafeSendBinary sends binary data non-blockingly to the client binary send queue without panicking if closed.
+func (c *WSClient) SafeSendBinary(data []byte) bool {
+	if c == nil {
+		return false
+	}
+	defer func() {
+		_ = recover()
+	}()
+	select {
+	case c.BinarySend <- data:
+		return true
+	default:
+		return false
+	}
+}
+
 // ------------------------------------------------------------
 // Server - WebSocket server
 // ------------------------------------------------------------
@@ -601,10 +633,9 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 		msgType == "slide_next" || msgType == "slide_prev" || msgType == "volume_up" || msgType == "volume_down" || msgType == "mute" ||
 		msgType == "play_pause" || msgType == "lock_screen" || msgType == "power_sleep" || msgType == "brightness" || msgType == "voice_command") {
 		if ack := AckMessage(id); len(ack) > 0 {
-			select {
-			case client.Send <- ack:
+			if client.SafeSend(ack) {
 				utils.RecordPacketOut(int64(len(ack)))
-			default:
+			} else {
 				utils.LogDebug("WebSocket ack dropped (client send buffer full): %s", client.ID)
 			}
 		}
@@ -1094,10 +1125,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			client.ID, cp.Quality, cp.Gyro.X, cp.Gyro.Y, cp.Gyro.Z, cp.Accel.X, cp.Accel.Y, cp.Accel.Z)
 
 	case "ping", "heartbeat":
-		select {
-		case client.Send <- PongMessage():
-		default:
-		}
+		_ = client.SafeSend(PongMessage())
 
 	case "pong":
 		utils.LogDebug("Pong received from: %s", client.ID)
@@ -1122,10 +1150,7 @@ func (s *Server) processMessage(client *WSClient, msgType string, payload map[st
 			"uptime_seconds":    snapshot.UptimeSeconds,
 			"clients_connected": s.GetClientCount(),
 		}, nil)
-		select {
-		case client.Send <- resp:
-		default:
-		}
+		_ = client.SafeSend(resp)
 
 	case "stats_resp", "stats":
 		utils.LogDebug("WebSocket stats received from client: %s", client.ID)
@@ -1215,15 +1240,14 @@ func (s *Server) autoApproveWSClient(client *WSClient, fingerprint string) bool 
 
 	cfg := config.Get()
 	welcomeMsg := WelcomeMessage(cfg.ServerName, cfg.Version)
-	select {
-	case client.Send <- welcomeMsg:
+	if client.SafeSend(welcomeMsg) {
 		client.Approved.Store(true)
 		client.DeviceID = fingerprint
 		common.SetMovementPaused(false)
 		common.ClearPause()
 		utils.LogInfo("WebSocket auto-approved trusted device: %s (fingerprint: %s)", client.ID, fingerprint)
 		return true
-	default:
+	} else {
 		utils.LogWarn("WebSocket auto-approve welcome send blocked: %s", client.ID)
 		return false
 	}
@@ -1269,10 +1293,9 @@ func (s *Server) ApproveDevice(deviceID string) error {
 	cfg.AddTrustedDevice(deviceID)
 
 	welcomeMsg := WelcomeMessage(cfg.ServerName, cfg.Version)
-	select {
-	case client.Send <- welcomeMsg:
+	if client.SafeSend(welcomeMsg) {
 		utils.LogInfo("WebSocket approval accepted and welcome sent: device=%s", deviceID)
-	default:
+	} else {
 		utils.LogWarn("WebSocket approval accepted but welcome send blocked (channel full): device=%s", deviceID)
 	}
 	return nil
@@ -1283,27 +1306,11 @@ func (s *Server) ApproveDevice(deviceID string) error {
 // ---------------------------------------------------------------------
 
 func (s *Server) safeSendBinary(client *WSClient, data []byte) bool {
-	defer func() {
-		_ = recover()
-	}()
-	select {
-	case client.BinarySend <- data:
-		return true
-	default:
-		return false
-	}
+	return client.SafeSendBinary(data)
 }
 
 func (s *Server) safeSendText(client *WSClient, data []byte) bool {
-	defer func() {
-		_ = recover()
-	}()
-	select {
-	case client.Send <- data:
-		return true
-	default:
-		return false
-	}
+	return client.SafeSend(data)
 }
 
 func fileMD5(path string) (string, error) {
@@ -1496,10 +1503,7 @@ func (s *Server) handleBinaryFileChunk(client *WSClient, data []byte) bool {
 		return false
 	}
 	if _, err := session.file.Write(data); err != nil {
-		select {
-		case client.Send <- []byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", session.id, err.Error())):
-		default:
-		}
+		_ = client.SafeSend([]byte(fmt.Sprintf(`{"type":"file","action":"error","id":"%s","message":"%s"}`+"\n", session.id, err.Error())))
 		return true
 	}
 	session.received += int64(len(data))
