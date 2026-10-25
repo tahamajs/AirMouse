@@ -3,8 +3,11 @@ package server
 import (
 	"fmt"
 	"math"
+	"os"
+	"os/signal"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"airmouse-go/control/mouse"
@@ -61,6 +64,24 @@ func NewWithConfig(cfg Config, opts ...Option) (*Server, error) {
 		opt(o)
 	}
 	return newWithConfigAndCustomMouse(o.cfg, o.customCtrl)
+}
+
+// QuickStart provides a frictionless 1-liner to launch the AirMouse server,
+// blocking until an interrupt signal (SIGINT/SIGTERM) is received.
+func QuickStart(opts ...Option) error {
+	s, err := New(opts...)
+	if err != nil {
+		return fmt.Errorf("quickstart init failed: %w", err)
+	}
+	if err := s.Start(); err != nil {
+		return fmt.Errorf("quickstart start failed: %w", err)
+	}
+	defer s.Stop()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	<-sigChan
+	return nil
 }
 
 func newWithConfigAndCustomMouse(cfg Config, customCtrl mouse.Controller) (*Server, error) {
