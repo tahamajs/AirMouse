@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.airmouse.network.ConnectionManager
 import com.airmouse.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -23,7 +24,10 @@ class EdgeGesturesViewModel @Inject constructor(
     private val _stats = MutableStateFlow(EdgeGesturesStats())
     val stats: StateFlow<EdgeGesturesStats> = _stats.asStateFlow()
 
-    private val _gestureDetected = MutableSharedFlow<EdgeGestureEvent>()
+    private val _gestureDetected = MutableSharedFlow<EdgeGestureEvent>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     
     val gestureDetected: SharedFlow<EdgeGestureEvent> = _gestureDetected.asSharedFlow()
 

@@ -94,9 +94,13 @@ class ConnectionManager @Inject constructor(
             if (wakeLock == null) {
                 val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
                 wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "AirMouse::ConnectionWakeLock").apply {
-                    acquire(10 * 60 * 1000L) // 10 minutes timeout
+                    setReferenceCounted(false)
+                    acquire(MAX_WAKELOCK_TIMEOUT_MS)
                 }
-                LogManager.info("WakeLock acquired to keep connection alive in background", TAG)
+                LogManager.info("WakeLock acquired with strict 2-hour timeout ($MAX_WAKELOCK_TIMEOUT_MS ms) to keep connection alive in background", TAG)
+            } else if (wakeLock?.isHeld == false) {
+                wakeLock?.acquire(MAX_WAKELOCK_TIMEOUT_MS)
+                LogManager.info("Existing WakeLock re-acquired with strict timeout", TAG)
             }
         } catch (e: Exception) {
             LogManager.error("Failed to acquire WakeLock", e)
@@ -119,6 +123,7 @@ class ConnectionManager @Inject constructor(
 
     companion object {
         private const val TAG = "ConnectionManager"
+        const val MAX_WAKELOCK_TIMEOUT_MS = 2 * 60 * 60 * 1000L // 2 hours max session timeout
         private const val DEFAULT_PORT = 8082
         private const val WEBSOCKET_PORT = 8081
         private const val HEARTBEAT_INTERVAL_MS = 30000L

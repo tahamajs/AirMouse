@@ -70,6 +70,15 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    data class OrientationTelemetry(
+        val yaw: Float = 0f,
+        val pitch: Float = 0f,
+        val roll: Float = 0f
+    )
+
+    private val _orientationTelemetry = MutableStateFlow(OrientationTelemetry())
+    val orientationTelemetry: StateFlow<OrientationTelemetry> = _orientationTelemetry.asStateFlow()
+
     private val _sensorState = MutableStateFlow(SensorState())
     val sensorState: StateFlow<SensorState> = _sensorState.asStateFlow()
 
@@ -1092,14 +1101,17 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private var lastOrientationUiUpdateTime = 0L
+
     private fun updateOrientationDisplay() {
-        _uiState.update {
-            it.copy(
-                orientationYaw = yaw,
-                orientationPitch = pitch,
-                orientationRoll = roll
-            )
-        }
+        val now = System.currentTimeMillis()
+        if (now - lastOrientationUiUpdateTime < 33L) return // Cap UI telemetry updates to ~30Hz
+        lastOrientationUiUpdateTime = now
+        _orientationTelemetry.value = OrientationTelemetry(
+            yaw = yaw,
+            pitch = pitch,
+            roll = roll
+        )
     }
 
     private fun updateSensorSeries(

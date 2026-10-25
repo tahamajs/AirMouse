@@ -157,6 +157,12 @@
 
         <!-- ==================== SERVICES ==================== -->
         <service
+            android:name="com.airmouse.service.AirMouseService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice|dataSync" />
+
+        <service
             android:name="com.airmouse.mirroring.ScreenMirroringService"
             android:enabled="true"
             android:exported="false"

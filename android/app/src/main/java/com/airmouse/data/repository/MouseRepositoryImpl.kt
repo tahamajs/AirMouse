@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,7 +36,10 @@ class MouseRepositoryImpl @Inject constructor(
     private val _statistics = MutableStateFlow(MouseStatistics())
     override fun observeStatistics(): Flow<MouseStatistics> = _statistics.asStateFlow()
 
-    private val _events = MutableSharedFlow<MouseEvent>(extraBufferCapacity = 64)
+    private val _events = MutableSharedFlow<MouseEvent>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     override fun observeMouseEvents(): Flow<MouseEvent> = _events.asSharedFlow()
 
     init {

@@ -46,6 +46,12 @@ class TouchpadViewModel @Inject constructor(
     private val _effect = MutableStateFlow<TouchpadEffect?>(null)
     val effect: StateFlow<TouchpadEffect?> = _effect.asStateFlow()
 
+    private val _touchPoints = MutableStateFlow<List<TouchPoint>>(emptyList())
+    val touchPoints: StateFlow<List<TouchPoint>> = _touchPoints.asStateFlow()
+
+    private val _isTouchActive = MutableStateFlow(false)
+    val isTouchActive: StateFlow<Boolean> = _isTouchActive.asStateFlow()
+
     // ============================================================
     // Gesture Tracking State
     // ============================================================

@@ -11,8 +11,10 @@ import androidx.core.content.ContextCompat
 import com.airmouse.utils.PreferencesManager
 import com.airmouse.sensors.CalibrationHelper
 import com.airmouse.sensors.MadgwickAHRS
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.Dispatchers
@@ -106,7 +108,7 @@ class SensorRepository(context: Context) {
         awaitClose {
             sensorManager.unregisterListener(listener)
         }
-    }.flowOn(Dispatchers.IO)
+    }.buffer(capacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST).flowOn(Dispatchers.IO)
 
     data class SensorData(
         val roll: Float,   
