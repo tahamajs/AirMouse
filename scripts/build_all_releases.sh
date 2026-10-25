@@ -176,8 +176,16 @@ rm -rf "$MAC_BUILD_DIR"
 mkdir -p "$MAC_BUILD_DIR"
 
 cd "$REPO_DIR/pc/airmouse_go_new"
-CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "$MAC_BUILD_DIR/airmouse-arm64" ./cmd/airmouse-server
-CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "$MAC_BUILD_DIR/airmouse-x64" ./cmd/airmouse-server
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "  -> Compiling Darwin arm64 with CGO (Native CoreGraphics)..."
+    CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "$MAC_BUILD_DIR/airmouse-arm64" ./cmd/airmouse-server
+    echo "  -> Compiling Darwin amd64 with clang cross-compiler and CGO..."
+    CC="clang -target x86_64-apple-macos10.13" CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "$MAC_BUILD_DIR/airmouse-x64" ./cmd/airmouse-server
+else
+    echo "  -> Non-macOS host detected, building Darwin without CGO..."
+    CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "$MAC_BUILD_DIR/airmouse-arm64" ./cmd/airmouse-server
+    CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -tags noai -ldflags="-s -w -X main.version=${VERSION}" -o "$MAC_BUILD_DIR/airmouse-x64" ./cmd/airmouse-server
+fi
 
 # Create Universal Fat Binary
 lipo -create -output "$MAC_BUILD_DIR/AirMouse-Server-universal" "$MAC_BUILD_DIR/airmouse-arm64" "$MAC_BUILD_DIR/airmouse-x64"

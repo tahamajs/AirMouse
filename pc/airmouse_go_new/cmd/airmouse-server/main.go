@@ -88,6 +88,18 @@ func main() {
 
 	mouseCtrl := mouse.NewController(cfg.Sensitivity)
 	sysaction.SetSystemMouseSpeed(cfg.Sensitivity)
+
+	// On macOS, verify and prompt for Accessibility permissions if needed
+	if runtime.GOOS == "darwin" {
+		if !mouse.HasAccessibilityPermission() {
+			logger.Warn("⚠️  macOS Accessibility permission is NOT granted. Mouse movement will be blocked by macOS.")
+			logger.Info("Prompting for macOS Accessibility permissions... Please grant permission in System Settings.")
+			mouse.RequestAccessibilityPermission()
+		} else {
+			logger.Info("✅ macOS Accessibility permission is verified and active.")
+		}
+	}
+
 	deviceMgr := device.NewManager()
 	authMgr := initAuth(cfg)
 

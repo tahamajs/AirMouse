@@ -128,3 +128,18 @@ func (m *mouseController) executeScroll(delta int) {
 		syscall.Write(uinputFd, (*(*[24]byte)(unsafe.Pointer(&ev)))[:])
 	}
 }
+
+// HasAccessibilityPermission returns true on Linux.
+func HasAccessibilityPermission() bool {
+	return true
+}
+
+// RequestAccessibilityPermission is a no-op on Linux.
+func RequestAccessibilityPermission() bool {
+	return true
+}
+
+// OpenAccessibilitySettings is a no-op on Linux.
+func OpenAccessibilitySettings() error {
+	return nil
+}

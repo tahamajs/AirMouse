@@ -69,3 +69,18 @@ func (m *mouseController) executeDoubleClick() {
 func (m *mouseController) executeScroll(delta int) {
 	mouseEvent.Call(MOUSEEVENTF_WHEEL, 0, 0, uintptr(delta*120), 0)
 }
+
+// HasAccessibilityPermission returns true on Windows.
+func HasAccessibilityPermission() bool {
+	return true
+}
+
+// RequestAccessibilityPermission is a no-op on Windows.
+func RequestAccessibilityPermission() bool {
+	return true
+}
+
+// OpenAccessibilitySettings is a no-op on Windows.
+func OpenAccessibilitySettings() error {
+	return nil
+}
